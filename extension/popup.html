@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #f8f9fa;
+    }
+    .header {
+      background: #1e40af;
+      color: white;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header span { font-size: 18px; }
+    .container { padding: 12px 16px; }
+    .form-group { margin-bottom: 10px; }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 3px;
+      color: #374151;
+      font-size: 12px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    textarea { resize: vertical; min-height: 50px; }
+    .btn {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .btn-primary {
+      background: #1e40af;
+      color: white;
+    }
+    .btn-primary:hover { background: #1e3a8a; }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+    .btn-settings {
+      background: #e5e7eb;
+      color: #374151;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .btn-settings:hover { background: #d1d5db; }
+    .status {
+      text-align: center;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      display: none;
+    }
+    .status.success { display: block; background: #dcfce7; color: #166534; }
+    .status.error { display: block; background: #fef2f2; color: #991b1b; }
+    .settings-page { display: none; }
+    .settings-page.active { display: block; }
+    .main-page.active { display: block; }
+    .main-page { display: none; }
+    .row { display: flex; gap: 8px; }
+    .row .form-group { flex: 1; }
+  </style>
+    <style>
+      #linkedin-toggle:checked + #toggle-slider {
+        background: #16a34a !important;
+      }
+      #linkedin-toggle:checked + #toggle-slider::before {
+        transform: translateX(18px) !important;
+      }
+      #toggle-slider::before {
+        content: '';
+        position: absolute;
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+      }
+    </style>
+</head>
+<body>
+  <div class="header">
+    <span>&#128188;</span> The Navigator
+  </div>
+
+  <div class="main-page active" id="mainPage">
+    <div class="container">
+    <!-- LinkedIn Capture Section -->
+    <div id="linkedin-section" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 13px; color: #0369a1;">LinkedIn Capture</span>
+        <label style="position: relative; display: inline-block; width: 40px; height: 22px;">
+          <input type="checkbox" id="linkedin-toggle" style="opacity: 0; width: 0; height: 0;">
+          <span id="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 22px; transition: 0.2s;"></span>
+        </label>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span id="linkedin-count" style="font-size: 12px; color: #64748b;">0 jobs captured</span>
+        <div style="display: flex; gap: 6px;">
+          <button id="linkedin-clear" style="background: none; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer;" disabled>Clear</button>
+          <button id="linkedin-send" style="background: #2563eb; color: white; border: none; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: 500;" disabled>Send to JobNavigator</button>
+        </div>
+      </div>
+      <div id="linkedin-status" style="font-size: 11px; margin-top: 6px; display: none;"></div>
+    </div>
+      <div class="form-group">
+        <label>Job Title</label>
+        <input type="text" id="title" placeholder="e.g. Senior Technical Program Manager">
+      </div>
+      <div class="form-group">
+        <label>Company</label>
+        <input type="text" id="company" placeholder="e.g. Microsoft">
+      </div>
+      <div class="form-group">
+        <label>Job URL</label>
+        <input type="text" id="url" placeholder="https://..." readonly>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 6px;">
+        <button class="btn" id="saveJobBtn" style="flex: 1; margin-top: 0; background: #0d9488; color: white;">Save to Job Feed</button>
+        <button class="btn btn-primary" id="saveBtn" style="flex: 1; margin-top: 0;">Save Application</button>
+      </div>
+      <div class="status" id="status"></div>
+      <button class="btn btn-settings" id="settingsBtn">Settings</button>
+    </div>
+  </div>
+
+  <div class="settings-page" id="settingsPage">
+    <div class="container">
+      <div class="form-group">
+        <label>Server URL</label>
+        <input type="text" id="serverUrl" placeholder="http://localhost or https://your-vps.com">
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="Your dashboard API key">
+      </div>
+      <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+      <button class="btn btn-settings" id="backBtn">Back</button>
+      <div class="status" id="settingsStatus"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+:80 {
+    # API routes to backend (8 min timeout for long-running scrape tests)
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            transport http {
+                read_timeout 480s
+            }
+        }
+    }
+
+    # Health check
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    # Telegram webhook
+    handle /api/telegram/webhook {
+        reverse_proxy backend:8000
+    }
+
+    # Swagger UI, ReDoc, OpenAPI schema
+    handle /docs {
+        reverse_proxy backend:8000
+    }
+    handle /docs/* {
+        reverse_proxy backend:8000
+    }
+    handle /redoc {
+        reverse_proxy backend:8000
+    }
+    handle /openapi.json {
+        reverse_proxy backend:8000
+    }
+
+    # Tracer link redirects
+    handle /cv/* {
+        reverse_proxy backend:8000
+    }
+
+    # Everything else to frontend
+    handle {
+        reverse_proxy frontend:80
+    }
+}

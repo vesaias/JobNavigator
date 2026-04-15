@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "The Navigator",
+  "version": "1.1.0",
+  "description": "Job navigation automation - application tracking & LinkedIn capture",
+  "permissions": ["activeTab", "storage", "scripting", "declarativeNetRequest"],
+  "host_permissions": ["http://*/*", "https://*/*", "<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/collections/*"
+      ],
+      "js": ["content_linkedin.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

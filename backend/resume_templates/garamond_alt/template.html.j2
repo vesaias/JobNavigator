@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ header.name }} -- Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@page {
+  size: {{ 'letter' if page_format == 'letter' else 'A4' }};
+  margin: 0;
+}
+
+html, body {
+  font-family: 'EB Garamond', 'Times New Roman', serif;
+  font-size: 10.5pt;
+  line-height: 1.2;
+  color: #111;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.page {
+  width: {{ '8.5in' if page_format == 'letter' else '210mm' }};
+  padding: 0.5in 0.55in;
+  margin: 0 auto;
+}
+
+/* --- Header: left-aligned, name + title inline --- */
+.header {
+  border-bottom: 1px solid #333;
+  padding-bottom: 5pt;
+  margin-bottom: 8pt;
+}
+
+.header .name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8pt;
+}
+
+.header h1 {
+  font-size: 18pt;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.header .title-text {
+  font-size: 10.5pt;
+  font-weight: 400;
+  color: #444;
+  font-style: italic;
+  border-left: 1.5px solid #999;
+  padding-left: 8pt;
+}
+
+.header .contact {
+  font-size: 9.5pt;
+  color: #444;
+  margin-top: 3pt;
+}
+
+.header .contact a { color: #444; text-decoration: none; }
+.header .contact .sep { margin: 0 5pt; color: #bbb; }
+
+/* --- Section --- */
+.section { margin-top: 8pt; }
+
+.section-title {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #222;
+  border-bottom: 0.5px solid #bbb;
+  padding-bottom: 1.5pt;
+  margin-bottom: 4pt;
+}
+
+/* --- Summary --- */
+.summary-text {
+  font-size: 10.5pt;
+  line-height: 1.25;
+  color: #222;
+}
+
+/* --- Experience --- */
+.entry { margin-bottom: 5pt; }
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.entry-title { font-weight: 600; font-size: 10.5pt; }
+.entry-date {
+  font-size: 10pt;
+  color: #555;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: 8pt;
+}
+
+.entry-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.entry-company {
+  font-style: italic;
+  font-size: 10pt;
+  color: #333;
+}
+.entry-location {
+  font-size: 9.5pt;
+  color: #555;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: 8pt;
+}
+
+.entry-description {
+  margin-top: 1pt;
+  font-size: 10pt;
+  color: #444;
+}
+
+.entry-url {
+  font-size: 9pt;
+  color: #555;
+  margin-top: 1pt;
+}
+.entry-url a { color: #555; text-decoration: none; }
+
+ul.bullets {
+  list-style: none;
+  margin-left: 2pt;
+  margin-top: 2pt;
+}
+
+ul.bullets li {
+  margin-bottom: 1.5pt;
+  font-size: 10.5pt;
+  line-height: 1.15;
+  padding-left: 12pt;
+  text-indent: -11pt;
+}
+
+ul.bullets li::before {
+  content: "\25B8";
+  font-size: 7pt;
+  margin-right: 5pt;
+  color: #888;
+  vertical-align: 1pt;
+}
+
+/* --- Skills --- */
+.skill-line {
+  font-size: 10pt;
+  margin-bottom: 1pt;
+  line-height: 1.15;
+}
+.skill-label { font-weight: 600; }
+
+/* --- Education --- */
+.edu-entry { margin-bottom: 4pt; }
+.edu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.edu-school { font-weight: 600; font-size: 10.5pt; }
+.edu-location {
+  font-size: 9.5pt;
+  color: #555;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: 8pt;
+}
+.edu-degree { font-size: 10pt; color: #333; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  {% if header %}
+  <div class="header">
+    <div class="name-row">
+      <h1>{{ header.name }}</h1>
+      {% if header.title %}<span class="title-text">{{ header.title }}</span>{% endif %}
+    </div>
+    <div class="contact">
+      {% set contact_parts = [] %}
+      {% for item in (header.contact_items or []) %}
+        {% if item.url %}
+          {% set href = item.url if (item.url.startswith('http') or item.url.startswith('mailto')) else 'https://' ~ item.url %}
+          {% set _ = contact_parts.append('<a href="' ~ href ~ '">' ~ item.text ~ '</a>') %}
+        {% else %}
+          {% set _ = contact_parts.append(item.text) %}
+        {% endif %}
+      {% endfor %}
+      {{ contact_parts | join('<span class="sep">&bull;</span>') }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if summary %}
+  <div class="section" style="margin-top: 0">
+    <div class="summary-text">{{ summary }}</div>
+  </div>
+  {% endif %}
+
+  {% if experience %}
+  <div class="section">
+    <div class="section-title">Experience</div>
+    {% for job in experience %}
+    <div class="entry">
+      <div class="entry-header">
+        <span class="entry-title">{{ job.title }}</span>
+        <span class="entry-date">{{ job.dates }}</span>
+      </div>
+      <div class="entry-sub">
+        <span class="entry-company">{{ job.company }}</span>
+        <span class="entry-location">{{ job.location }}</span>
+      </div>
+      {% if job.description %}
+      <div class="entry-description">{{ job.description }}</div>
+      {% endif %}
+      {% if job.bullets %}
+      <ul class="bullets">
+        {% for bullet in job.bullets %}
+        <li>{{ bullet | bold }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if skills %}
+  <div class="section">
+    <div class="section-title">Skills</div>
+    {% if skills is mapping %}
+      {% for label, value in skills.items() %}
+      <div class="skill-line"><span class="skill-label">{{ label }}:</span> {{ value }}</div>
+      {% endfor %}
+    {% else %}
+      {% for sk in skills %}
+      <div class="skill-line"><span class="skill-label">{{ sk.category }}:</span> {{ sk.items }}</div>
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if education %}
+  <div class="section">
+    <div class="section-title">Education</div>
+    {% for edu in education %}
+    <div class="edu-entry">
+      <div class="edu-row">
+        <span class="edu-school">{{ edu.school }}</span>
+        <span class="edu-location">{{ edu.location }}</span>
+      </div>
+      {% if edu.degree %}
+      <div class="edu-degree">{{ edu.degree }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if projects %}
+  <div class="section">
+    <div class="section-title">Projects</div>
+    {% for project in projects %}
+    <div class="entry">
+      <div class="entry-title">{{ project.name or project.title }}</div>
+      {% if project.url %}<div class="entry-url"><a href="{{ project.url }}">{{ project.url }}</a></div>{% endif %}
+      {% if project.description %}<div class="entry-description">{{ project.description }}</div>{% endif %}
+      {% if project.bullets %}
+      <ul class="bullets">
+        {% for bullet in project.bullets %}<li>{{ bullet | bold }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if publications %}
+  <div class="section">
+    <div class="section-title">Publications</div>
+    {% for pub in publications %}
+    <div class="entry">
+      <div class="entry-title">{{ pub.name or pub.title }}</div>
+      {% if pub.description %}<div class="entry-description">{{ pub.description }}</div>{% endif %}
+      {% if pub.bullets %}
+      <ul class="bullets">
+        {% for bullet in pub.bullets %}<li>{{ bullet | bold }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Global dark background */
+  html.dark {
+    @apply bg-gray-900;
+  }
+
+  /* Default text color */
+  body {
+    @apply text-gray-900;
+  }
+  .dark body {
+    color-scheme: dark;
+    @apply text-gray-200;
+  }
+
+  /* Form elements in dark mode */
+  .dark select,
+  .dark input[type="text"],
+  .dark input[type="password"],
+  .dark input[type="number"],
+  .dark input[type="email"],
+  .dark input[type="url"],
+  .dark input[type="search"],
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark textarea {
+    color-scheme: dark;
+    @apply bg-gray-700 text-gray-200 border-gray-600;
+  }
+
+  /* Checkboxes & radios */
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply accent-blue-600;
+  }
+  .dark input[type="checkbox"],
+  .dark input[type="radio"] {
+    @apply accent-blue-500;
+  }
+
+  /* Option elements (can't use Tailwind dark: on these) */
+  .dark option {
+    @apply bg-gray-700 text-gray-200;
+  }
+
+  /* Placeholder text */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    @apply text-gray-500;
+  }
+}
