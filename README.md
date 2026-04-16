@@ -3,7 +3,7 @@
 Self-hosted job search automation — scraping, AI scoring, resume tailoring, and tracking in one system.
 
 <p align="center">
-  <img src="docs/jobnavigator.gif" alt="JobNavigator Demo" width="800">
+  <img src="docs/jobnavigator.gif" alt="JobNavigator Demo" width="100%">
 </p>
 
 ## How It Works
@@ -83,7 +83,7 @@ Self-hosted job search automation — scraping, AI scoring, resume tailoring, an
 |---------|-------------|
 | **Multi-Source Discovery** | 6 scraping tiers: career pages (Playwright + 10 ATS), JobSpy (4 boards), LinkedIn Personal, Levels.fyi, Jobright.ai, Chrome Extension |
 | **AI CV Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-CV comparison, keyword analysis, requirement mapping, ATS tips |
-| **Resume Builder** | 8 templates (auto-discovered), AI tailoring per job, PDF export, tracer links to track opens |
+| **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens |
 | **Smart Dedup** | Two-layer: URL hash + cross-source content hash. Configurable tracking param stripping |
 | **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations |
 | **Application Board** | Kanban pipeline with drag-and-drop, status transition history |
