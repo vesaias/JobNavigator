@@ -1,6 +1,6 @@
 # JobNavigator
 
-Self-hosted job search automation — scraping, AI scoring, resume tailoring, and tracking in one system.
+Self-hosted job search automation — scrape any career portal or use job aggregator, AI scoring against your profile, resume tailoring with custom themes, Telegram notifications and tracking in one system. 
 
 <p align="center">
   <img src="docs/jobnavigator.gif" alt="JobNavigator Demo" width="100%">
