@@ -90,9 +90,14 @@ def _normalize_url(url: str) -> str:
 
 
 def make_external_id(company: str, title: str, url: str) -> str:
-    """Generate SHA256 hash for deduplication. URL is normalized to strip tracking params."""
+    """Generate SHA256 hash for deduplication. Uses normalized URL only — title/company
+    changes on the same posting (e.g. 'PM - X' vs 'PM, X') won't bypass dedup.
+    Falls back to company+title if URL is empty."""
     clean_url = _normalize_url(url)
-    raw = f"{company or ''}{title or ''}{clean_url}"
+    if clean_url:
+        return hashlib.sha256(clean_url.encode()).hexdigest()
+    # Fallback for jobs without URLs
+    raw = f"{company or ''}{title or ''}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
