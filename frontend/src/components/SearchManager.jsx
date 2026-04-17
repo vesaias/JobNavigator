@@ -406,7 +406,7 @@ export default function SearchManager() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Search Manager</h1>
         <button onClick={() => { setEditing('new'); setEditData({ ...DEFAULT_FORM }) }}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-hover">
+          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus size={14} /> New Search
         </button>
       </div>
@@ -414,9 +414,9 @@ export default function SearchManager() {
       {/* Test Results Modal */}
       {testResult && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setTestResult(null)}>
-          <div className="bg-card dark:bg-card-dark rounded-xl shadow-2xl w-[950px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[950px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border dark:border-border-dark flex-shrink-0">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 Test Search {testResult.error ? '— Error' : `— ${testResult.search_name}`}
               </h2>
@@ -428,7 +428,7 @@ export default function SearchManager() {
             ) : (
               <div className="overflow-y-auto flex-1">
                 {/* Config info */}
-                <div className="text-xs text-gray-500 dark:text-gray-400 px-5 py-2 border-b border-border dark:border-border-dark space-y-0.5 bg-gray-50 dark:bg-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400 px-5 py-2 border-b border-gray-200 dark:border-gray-700 space-y-0.5 bg-gray-50 dark:bg-gray-700">
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {testResult.config?.mode === 'jobright' ? (
                       <>
@@ -478,7 +478,7 @@ export default function SearchManager() {
 
                 {/* Source & Company breakdowns */}
                 {(Object.keys(testResult.source_breakdown || {}).length > 0 || Object.keys(testResult.company_breakdown || {}).length > 0) && (
-                  <div className="px-5 py-2 border-b border-border dark:border-border-dark bg-blue-50/50 dark:bg-gray-700/50 flex gap-8 text-xs">
+                  <div className="px-5 py-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50/50 dark:bg-gray-700/50 flex gap-8 text-xs">
                     {Object.keys(testResult.source_breakdown || {}).length > 0 && (
                       <div>
                         <span className="font-medium text-gray-600 dark:text-gray-400">By source: </span>
@@ -507,10 +507,10 @@ export default function SearchManager() {
                 )}
 
                 {/* Filter tabs */}
-                <div className="px-5 py-2 border-b border-border dark:border-border-dark flex items-center gap-2 bg-card dark:bg-card-dark">
+                <div className="px-5 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white dark:bg-gray-800">
                   {['all', 'kept', 'filtered'].map(f => (
                     <button key={f} onClick={() => setTestFilter(f)}
-                      className={`px-2.5 py-1 text-xs rounded ${testFilter === f ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                      className={`px-2.5 py-1 text-xs rounded ${testFilter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
                       {f === 'all' && `All (${testResult.jobs?.length || 0})`}
                       {f === 'kept' && `Kept (${testResult.after_filter || 0})`}
                       {f === 'filtered' && `Filtered (${(testResult.raw_count || 0) - (testResult.after_filter || 0)})`}
@@ -603,7 +603,7 @@ export default function SearchManager() {
       <div className="space-y-3">
         {/* New search card (inline at top) */}
         {editing === 'new' && (
-          <div className="bg-card dark:bg-card-dark border-2 border-blue-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-gray-800 border-2 border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">New Search Config</h3>
               <div className="flex items-center gap-1">
@@ -622,7 +622,7 @@ export default function SearchManager() {
         {searches.length === 0 && editing !== 'new' ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">No search configs yet. Click "New Search" to create one.</div>
         ) : searches.map(s => (
-          <div key={s.id} className={`bg-card dark:bg-card-dark border border-border dark:border-border-dark rounded-lg p-4 ${editing === s.id ? 'border-blue-200 border-2' : ''}`}>
+          <div key={s.id} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 ${editing === s.id ? 'border-blue-400 dark:border-blue-500 border-2' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
