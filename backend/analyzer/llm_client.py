@@ -31,11 +31,15 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
     finally:
         db.close()
 
+    # Only claude_api supports explicit prompt caching — other providers get the
+    # prefix concatenated into the prompt (no cache discount).
+    caching = bool(cached_prefix) and provider == "claude_api"
+
     # Try primary with retries
     last_primary_err = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            logger.info(f"LLM call: provider={provider}, model={model}, attempt={attempt}/{MAX_ATTEMPTS}, cached={bool(cached_prefix)}")
+            logger.info(f"LLM call: provider={provider}, model={model}, attempt={attempt}/{MAX_ATTEMPTS}, caching={'on' if caching else 'off'}")
             return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens, cached_prefix=cached_prefix)
         except Exception as e:
             last_primary_err = e
@@ -48,10 +52,11 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
 
     # Try fallback with retries
     if fallback_provider and fallback_model:
+        fb_caching = bool(cached_prefix) and fallback_provider == "claude_api"
         last_fallback_err = None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                logger.info(f"LLM fallback: provider={fallback_provider}, model={fallback_model}, attempt={attempt}/{MAX_ATTEMPTS}")
+                logger.info(f"LLM fallback: provider={fallback_provider}, model={fallback_model}, attempt={attempt}/{MAX_ATTEMPTS}, caching={'on' if fb_caching else 'off'}")
                 return await _dispatch(fallback_provider, fallback_model, fb_api_key, fb_base_url, prompt, system, max_tokens, cached_prefix=cached_prefix)
             except Exception as e:
                 last_fallback_err = e
