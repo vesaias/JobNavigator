@@ -4,7 +4,7 @@ sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 pdfplumber==0.11.4
-python-multipart==0.0.20
+python-multipart==0.0.26
 apscheduler==3.10.4
 httpx==0.28.1
 anthropic==0.42.0
