@@ -17,56 +17,14 @@ from backend.scraper.deduplicator import make_external_id, make_content_hash
 logger = logging.getLogger("jobnavigator.playwright")
 
 
-# ── URL cleaning ──────────────────────────────────────────────────────────────
-
-def _get_url_tracking_params():
-    from backend.scraper.deduplicator import _get_tracking_params
-    return _get_tracking_params()
-
-
-def _clean_application_url(url: str) -> str:
-    """Strip referral/tracking params from application URLs, preserving functional params like gh_jid."""
-    if not url:
-        return url
-    parsed = urlparse(url)
-    qs = parse_qs(parsed.query, keep_blank_values=True)
-    cleaned = {k: v for k, v in qs.items() if k.lower() not in _get_url_tracking_params()}
-    new_query = urlencode(cleaned, doseq=True)
-    return urlunparse(parsed._replace(query=new_query))
-
-
-def _host_matches(url: str, *domains: str) -> bool:
-    """True if URL's hostname equals or is a subdomain of any of the given domains.
-
-    Uses strict hostname comparison (not substring) to avoid attacker-controlled
-    lookalike domains matching (e.g. "evil-metacareers.com").
-    """
-    if not url:
-        return False
-    try:
-        host = (urlparse(url).hostname or "").lower()
-    except Exception:
-        return False
-    if not host:
-        return False
-    for raw in domains:
-        d = (raw or "").lower().strip().rstrip("/")
-        if not d:
-            continue
-        if host == d or host.endswith("." + d):
-            return True
-    return False
-
-
-def _path_contains(url: str, *needles: str) -> bool:
-    """True if URL's path contains any of the given needles (case-insensitive)."""
-    if not url:
-        return False
-    try:
-        path = (urlparse(url).path or "").lower()
-    except Exception:
-        return False
-    return any(n.lower() in path for n in needles if n)
+# ── Re-exports from _shared (Task 2) ──────────────────────────────────────────
+from backend.scraper._shared.urls import (  # noqa: F401
+    _get_url_tracking_params, _clean_application_url,
+    host_matches, path_contains,
+)
+# Back-compat aliases for existing callers inside this file
+_host_matches = host_matches
+_path_contains = path_contains
 
 
 # Known garbage strings to discard (case-insensitive exact match)
