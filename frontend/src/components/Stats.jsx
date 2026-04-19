@@ -310,9 +310,6 @@ export default function Stats() {
         ))}
       </div>
 
-      {/* LLM Cost Panel */}
-      <LlmCostPanel />
-
       {/* Charts */}
       {stats && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -403,6 +400,9 @@ export default function Stats() {
           <div className="flex items-center justify-center h-[250px] text-sm text-gray-400 dark:text-gray-500">No timeline data available</div>
         )}
       </section>
+
+      {/* LLM Cost Panel */}
+      <LlmCostPanel />
 
       {/* Schedules */}
       <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg overflow-hidden mb-8">
