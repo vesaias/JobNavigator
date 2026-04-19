@@ -253,13 +253,26 @@ export default function ResumeBuilder() {
     }, 500)
   }
 
+  // Guard against prototype pollution when the user (or a caller) injects
+  // special keys like "__proto__", "constructor", or "prototype" into the
+  // dotted `path` argument. Such keys would otherwise let a recursive set
+  // walk off the edit object and mutate Object.prototype.
+  const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
   const updateField = (path, value) => {
+    const keys = String(path).split('.')
+    if (keys.some(k => DANGEROUS_KEYS.has(k))) {
+      console.warn('updateField: refusing to write reserved key in path', path)
+      return
+    }
     const updated = JSON.parse(JSON.stringify(editData))
-    const keys = path.split('.')
     let obj = updated
     for (let i = 0; i < keys.length - 1; i++) {
-      obj = obj[keys[i]]
+      const k = keys[i]
+      if (obj == null || typeof obj !== 'object') return
+      obj = obj[k]
     }
+    if (obj == null || typeof obj !== 'object') return
     obj[keys[keys.length - 1]] = value
     setEditData(updated)
     triggerSave(updated)
