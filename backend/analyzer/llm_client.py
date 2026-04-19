@@ -118,17 +118,23 @@ async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -
 async def _dispatch(provider: str, model: str, api_key: str, base_url: str,
                     prompt: str, system: str, max_tokens: int,
                     cached_prefix: str | None = None) -> dict:
-    """Route to the correct provider. All providers return {text, usage} dict."""
+    """Route to the correct provider. All providers return {text, usage} dict.
+
+    Only `claude_api` supports Anthropic prompt caching — for other providers the
+    cached_prefix is concatenated into the prompt so the full content still reaches
+    the model (without the cache discount).
+    """
     if provider == "claude_api":
         return await _call_claude_api(prompt, system, model, api_key, max_tokens, cached_prefix=cached_prefix)
-    elif provider == "claude_code":
-        return await _call_claude_code(prompt, system, model, max_tokens)
+    combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
+    if provider == "claude_code":
+        return await _call_claude_code(combined, system, model, max_tokens)
     elif provider == "openai":
-        return await _call_openai(prompt, system, model, api_key, max_tokens)
+        return await _call_openai(combined, system, model, api_key, max_tokens)
     elif provider == "ollama":
-        return await _call_ollama(prompt, system, model, max_tokens)
+        return await _call_ollama(combined, system, model, max_tokens)
     elif provider == "openai_compat":
-        return await _call_openai(prompt, system, model, api_key, max_tokens, base_url=base_url)
+        return await _call_openai(combined, system, model, api_key, max_tokens, base_url=base_url)
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")
 
