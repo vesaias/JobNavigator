@@ -128,6 +128,7 @@ function LlmCostPanel() {
           <thead>
             <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
               <th className="py-1">Purpose</th>
+              <th className="py-1">Provider</th>
               <th className="py-1">Model</th>
               <th className="py-1 text-right">Calls</th>
               <th className="py-1 text-right">Cost</th>
@@ -138,6 +139,7 @@ function LlmCostPanel() {
             {data.by_purpose.map((g, i) => (
               <tr key={i} className="border-b border-gray-100 dark:border-gray-700">
                 <td className="py-1 text-gray-900 dark:text-gray-100">{g.purpose}</td>
+                <td className="py-1 text-gray-500 dark:text-gray-400">{g.provider || '—'}</td>
                 <td className="py-1 text-gray-500 dark:text-gray-400">{g.model}</td>
                 <td className="py-1 text-right">{g.calls}</td>
                 <td className="py-1 text-right text-gray-900 dark:text-gray-100">${g.cost_usd.toFixed(4)}</td>

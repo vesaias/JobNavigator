@@ -344,8 +344,13 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     if not _model:
         _m2 = db.query(Setting).filter(Setting.key == "llm_model").first()
         _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
+    _p = db.query(Setting).filter(Setting.key == "cv_tailor_llm_provider").first()
+    _provider = _p.value if _p and _p.value else None
+    if not _provider:
+        _p2 = db.query(Setting).filter(Setting.key == "llm_provider").first()
+        _provider = _p2.value if _p2 and _p2.value else "claude_api"
     try:
-        async with track_llm_call("tailor", _model, job_id=job_id) as _tracker:
+        async with track_llm_call("tailor", _provider, _model, job_id=job_id) as _tracker:
             _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
             _tracker.usage = _resp.get("usage", _tracker.usage)
             raw = _resp["text"]
@@ -570,7 +575,9 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
         # Determine model for logging
         _m = db.query(Setting).filter(Setting.key == "llm_model").first()
         _model = _m.value if _m and _m.value else "claude-sonnet-4-6"
-        async with track_llm_call("pdf", _model) as _tracker:
+        _p = db.query(Setting).filter(Setting.key == "llm_provider").first()
+        _provider = _p.value if _p and _p.value else "claude_api"
+        async with track_llm_call("pdf", _provider, _model) as _tracker:
             _resp = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
             _tracker.usage = _resp.get("usage", _tracker.usage)
             raw_response = _resp["text"]

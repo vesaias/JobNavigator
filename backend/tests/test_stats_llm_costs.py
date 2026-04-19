@@ -18,19 +18,19 @@ def seeded_db(monkeypatch):
     s = Session()
     now = datetime.now(timezone.utc)
     # Day 0: 2 light scoring calls, 1 full
-    s.add(LlmCallLog(purpose="score_light", model="claude-sonnet-4-6",
+    s.add(LlmCallLog(purpose="score_light", provider="claude_api", model="claude-sonnet-4-6",
                      input_tokens=1000, output_tokens=100,
                      cache_read_tokens=0, cache_write_tokens=2400,
                      cost_usd=0.012, duration_ms=800, created_at=now))
-    s.add(LlmCallLog(purpose="score_light", model="claude-sonnet-4-6",
+    s.add(LlmCallLog(purpose="score_light", provider="claude_api", model="claude-sonnet-4-6",
                      input_tokens=1000, output_tokens=100,
                      cache_read_tokens=2400, cache_write_tokens=0,
                      cost_usd=0.004, duration_ms=500, created_at=now))
-    s.add(LlmCallLog(purpose="score_full", model="claude-sonnet-4-6",
+    s.add(LlmCallLog(purpose="score_full", provider="claude_api", model="claude-sonnet-4-6",
                      input_tokens=1200, output_tokens=1000,
                      cost_usd=0.019, duration_ms=1500, created_at=now))
     # 8 days ago: should be excluded from 7-day window
-    s.add(LlmCallLog(purpose="score_light", model="claude-sonnet-4-6",
+    s.add(LlmCallLog(purpose="score_light", provider="claude_api", model="claude-sonnet-4-6",
                      cost_usd=0.99, created_at=now - timedelta(days=8)))
     s.commit()
     yield s
@@ -48,6 +48,7 @@ def test_llm_costs_aggregation_7d(seeded_db):
     # Grouping
     score_light = [r for r in result["by_purpose"] if r["purpose"] == "score_light"][0]
     assert score_light["calls"] == 2
+    assert score_light["provider"] == "claude_api"
     assert score_light["cost_usd"] == pytest.approx(0.016, rel=0.05)
 
     # Cache hit rate on score_light (calls with cache_read > 0 / all calls with cache involvement)

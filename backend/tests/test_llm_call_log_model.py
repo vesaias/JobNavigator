@@ -28,6 +28,7 @@ def test_llm_call_log_can_insert(test_db):
     from backend.models.db import LlmCallLog
     row = LlmCallLog(
         purpose="score_light",
+        provider="claude_api",
         model="claude-sonnet-4-6",
         input_tokens=1200,
         output_tokens=200,
@@ -41,6 +42,7 @@ def test_llm_call_log_can_insert(test_db):
     test_db.commit()
     back = test_db.query(LlmCallLog).first()
     assert back.purpose == "score_light"
+    assert back.provider == "claude_api"
     assert back.model == "claude-sonnet-4-6"
     assert back.input_tokens == 1200
     assert back.cache_write_tokens == 2400
@@ -55,6 +57,7 @@ def test_llm_call_log_defaults(test_db):
     test_db.add(row)
     test_db.commit()
     back = test_db.query(LlmCallLog).first()
+    assert back.provider == ""
     assert back.input_tokens == 0
     assert back.output_tokens == 0
     assert back.cache_read_tokens == 0

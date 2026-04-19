@@ -28,6 +28,7 @@ def scorer_db(monkeypatch):
     s.add(Setting(key="scoring_output_full",
                   value='FULL JSON SCHEMA HERE'))
     s.add(Setting(key="llm_model", value="claude-sonnet-4-6"))
+    s.add(Setting(key="llm_provider", value="claude_api"))
     s.commit()
     s.close()
 

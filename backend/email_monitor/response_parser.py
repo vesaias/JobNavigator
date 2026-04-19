@@ -133,9 +133,14 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
             if not _model:
                 _m2 = _db.query(Setting).filter(Setting.key == "llm_model").first()
                 _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
+            _p = _db.query(Setting).filter(Setting.key == "email_llm_provider").first()
+            _provider = _p.value if _p and _p.value else None
+            if not _provider:
+                _p2 = _db.query(Setting).filter(Setting.key == "llm_provider").first()
+                _provider = _p2.value if _p2 and _p2.value else "claude_api"
         finally:
             _db.close()
-        async with track_llm_call("email", _model) as _tracker:
+        async with track_llm_call("email", _provider, _model) as _tracker:
             _resp = await call_email_llm(prompt, system, max_tokens=150)
             _tracker.usage = _resp.get("usage", _tracker.usage)
             raw = _resp["text"]

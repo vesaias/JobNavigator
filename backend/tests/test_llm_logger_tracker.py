@@ -23,13 +23,14 @@ async def test_track_llm_call_logs_success(test_db):
     from backend.analyzer.llm_logger import track_llm_call
     from backend.models.db import LlmCallLog
 
-    async with track_llm_call("email", "claude-sonnet-4-6") as tracker:
+    async with track_llm_call("email", "claude_api", "claude-sonnet-4-6") as tracker:
         tracker.usage = {"input_tokens": 500, "output_tokens": 50,
                          "cache_read_tokens": 0, "cache_write_tokens": 0}
 
     row = test_db.query(LlmCallLog).first()
     assert row is not None
     assert row.purpose == "email"
+    assert row.provider == "claude_api"
     assert row.input_tokens == 500
     assert row.output_tokens == 50
     assert row.success is True
@@ -43,7 +44,7 @@ async def test_track_llm_call_logs_failure(test_db):
     from backend.models.db import LlmCallLog
 
     with pytest.raises(RuntimeError, match="boom"):
-        async with track_llm_call("tailor", "claude-sonnet-4-6") as tracker:
+        async with track_llm_call("tailor", "claude_api", "claude-sonnet-4-6") as tracker:
             raise RuntimeError("boom")
 
     row = test_db.query(LlmCallLog).first()
@@ -61,7 +62,7 @@ async def test_track_llm_call_job_id(test_db):
     from backend.models.db import LlmCallLog
 
     jid = uuid.uuid4()
-    async with track_llm_call("score_full", "claude-sonnet-4-6", job_id=jid) as tracker:
+    async with track_llm_call("score_full", "claude_api", "claude-sonnet-4-6", job_id=jid) as tracker:
         tracker.usage = {"input_tokens": 100, "output_tokens": 10,
                          "cache_read_tokens": 0, "cache_write_tokens": 0}
 

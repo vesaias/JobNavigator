@@ -13,6 +13,7 @@ logger = logging.getLogger("jobnavigator.llm_logger")
 
 def log_llm_call(
     purpose: str,
+    provider: str,
     model: str,
     usage: dict,
     duration_ms: int = 0,
@@ -26,6 +27,7 @@ def log_llm_call(
     """
     try:
         cost = calc_cost(
+            provider,
             model,
             input_tokens=usage.get("input_tokens", 0),
             output_tokens=usage.get("output_tokens", 0),
@@ -36,6 +38,7 @@ def log_llm_call(
         try:
             row = LlmCallLog(
                 purpose=purpose,
+                provider=provider,
                 model=model,
                 job_id=job_id,
                 input_tokens=usage.get("input_tokens", 0),
@@ -56,11 +59,11 @@ def log_llm_call(
 
 
 @asynccontextmanager
-async def track_llm_call(purpose: str, model: str, job_id=None):
+async def track_llm_call(purpose: str, provider: str, model: str, job_id=None):
     """Async context manager that logs an LLM call to llm_call_log.
 
     Usage:
-        async with track_llm_call("email", model) as tracker:
+        async with track_llm_call("email", provider, model) as tracker:
             resp = await call_email_llm(...)
             tracker.usage = resp.get("usage", tracker.usage)
             raw = resp["text"]
@@ -88,6 +91,7 @@ async def track_llm_call(purpose: str, model: str, job_id=None):
         try:
             log_llm_call(
                 purpose=purpose,
+                provider=provider,
                 model=model,
                 usage=t.usage,
                 duration_ms=int((time.monotonic() - started) * 1000),

@@ -144,6 +144,8 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         output_schema = schema_row.value if schema_row and schema_row.value else ""
         model_row = settings_db.query(Setting).filter(Setting.key == "llm_model").first()
         model_for_log = model_row.value if model_row and model_row.value else "claude-sonnet-4-6"
+        provider_row = settings_db.query(Setting).filter(Setting.key == "llm_provider").first()
+        provider_for_log = provider_row.value if provider_row and provider_row.value else "claude_api"
     finally:
         if not db:
             settings_db.close()
@@ -222,6 +224,7 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         try:
             log_llm_call(
                 purpose=purpose,
+                provider=provider_for_log,
                 model=model_for_log,
                 usage=usage,
                 duration_ms=duration_ms,

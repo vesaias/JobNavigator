@@ -927,12 +927,13 @@ def _llm_costs_stats(days: int = 7) -> dict:
         total_cost = sum(r.cost_usd or 0 for r in rows)
         total_calls = len(rows)
 
-        # Group by (purpose, model)
+        # Group by (purpose, provider, model)
         groups = {}
         for r in rows:
-            key = (r.purpose, r.model)
+            key = (r.purpose, r.provider, r.model)
             g = groups.setdefault(key, {
                 "purpose": r.purpose,
+                "provider": r.provider or "",
                 "model": r.model,
                 "calls": 0,
                 "cost_usd": 0.0,

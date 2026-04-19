@@ -270,6 +270,7 @@ def run_migrations(db):
         # the live constraint to ON DELETE SET NULL. Safe idempotent SQL.
         """ALTER TABLE llm_call_log DROP CONSTRAINT IF EXISTS llm_call_log_job_id_fkey""",
         """ALTER TABLE llm_call_log ADD CONSTRAINT llm_call_log_job_id_fkey FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL""",
+        "ALTER TABLE llm_call_log ADD COLUMN IF NOT EXISTS provider VARCHAR NOT NULL DEFAULT ''",
     ]
     for sql in migrations:
         try:
