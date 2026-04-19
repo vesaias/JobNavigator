@@ -82,6 +82,8 @@ const formatDuration = (seconds) => {
 function LlmCostPanel() {
   const [data, setData] = useState(null)
   const [days, setDays] = useState(7)
+  const [sortKey, setSortKey] = useState('cost_usd')
+  const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
     api.get(`/stats/llm-costs?days=${days}`)
@@ -90,6 +92,34 @@ function LlmCostPanel() {
   }, [days])
 
   if (!data) return null
+
+  const toggleSort = key => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'purpose' || key === 'provider' || key === 'model' ? 'asc' : 'desc')
+    }
+  }
+
+  const sortedRows = [...(data.by_purpose || [])].sort((a, b) => {
+    const av = a[sortKey] ?? ''
+    const bv = b[sortKey] ?? ''
+    const cmp = typeof av === 'number' && typeof bv === 'number'
+      ? av - bv
+      : String(av).localeCompare(String(bv))
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  const arrow = key => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+  const th = (key, label, align = 'left') => (
+    <th
+      className={`py-1 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 ${align === 'right' ? 'text-right' : ''}`}
+      onClick={() => toggleSort(key)}
+    >
+      {label}{arrow(key)}
+    </th>
+  )
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
@@ -127,16 +157,16 @@ function LlmCostPanel() {
         <table className="w-full text-xs">
           <thead>
             <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-              <th className="py-1">Purpose</th>
-              <th className="py-1">Provider</th>
-              <th className="py-1">Model</th>
-              <th className="py-1 text-right">Calls</th>
-              <th className="py-1 text-right">Cost</th>
-              <th className="py-1 text-right">Cache hit</th>
+              {th('purpose', 'Purpose')}
+              {th('provider', 'Provider')}
+              {th('model', 'Model')}
+              {th('calls', 'Calls', 'right')}
+              {th('cost_usd', 'Cost', 'right')}
+              {th('cache_hit_ratio', 'Cache hit', 'right')}
             </tr>
           </thead>
           <tbody>
-            {data.by_purpose.map((g, i) => (
+            {sortedRows.map((g, i) => (
               <tr key={i} className="border-b border-gray-100 dark:border-gray-700">
                 <td className="py-1 text-gray-900 dark:text-gray-100">{g.purpose}</td>
                 <td className="py-1 text-gray-500 dark:text-gray-400">{g.provider || '—'}</td>
