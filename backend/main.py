@@ -911,6 +911,72 @@ def get_stats_sankey():
         db.close()
 
 
+# ── LLM cost stats ───────────────────────────────────────────────────────────
+
+def _llm_costs_stats(days: int = 7) -> dict:
+    """Aggregate llm_call_log rows within the last `days` days."""
+    from datetime import datetime, timedelta, timezone
+    from backend.models.db import LlmCallLog
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    db = SessionLocal()
+    try:
+        q = db.query(LlmCallLog).filter(LlmCallLog.created_at >= since)
+        rows = q.all()
+
+        total_cost = sum(r.cost_usd or 0 for r in rows)
+        total_calls = len(rows)
+
+        # Group by (purpose, model)
+        groups = {}
+        for r in rows:
+            key = (r.purpose, r.model)
+            g = groups.setdefault(key, {
+                "purpose": r.purpose,
+                "model": r.model,
+                "calls": 0,
+                "cost_usd": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cache_involving": 0,
+                "cache_hits": 0,
+            })
+            g["calls"] += 1
+            g["cost_usd"] += r.cost_usd or 0
+            g["input_tokens"] += r.input_tokens or 0
+            g["output_tokens"] += r.output_tokens or 0
+            g["cache_read_tokens"] += r.cache_read_tokens or 0
+            g["cache_write_tokens"] += r.cache_write_tokens or 0
+            if (r.cache_read_tokens or 0) > 0 or (r.cache_write_tokens or 0) > 0:
+                g["cache_involving"] += 1
+            if (r.cache_read_tokens or 0) > 0:
+                g["cache_hits"] += 1
+
+        by_purpose = []
+        for g in groups.values():
+            g["cache_hit_ratio"] = (
+                g["cache_hits"] / g["cache_involving"] if g["cache_involving"] > 0 else 0.0
+            )
+            by_purpose.append(g)
+
+        return {
+            "window_days": days,
+            "total_calls": total_calls,
+            "total_cost_usd": round(total_cost, 6),
+            "by_purpose": sorted(by_purpose, key=lambda x: -x["cost_usd"]),
+        }
+    finally:
+        db.close()
+
+
+@app.get("/api/stats/llm-costs", tags=["stats"], summary="LLM cost + cache hit stats")
+async def llm_costs(days: int = 7):
+    """Returns spend and cache hit rate aggregated by (purpose, model) for the last N days."""
+    return _llm_costs_stats(days=days)
+
+
 @app.get("/api/stats", tags=["stats"], summary="Dashboard statistics")
 def get_stats():
     """Aggregate counts: total jobs, new jobs, saved jobs, total applications,

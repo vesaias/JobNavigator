@@ -79,6 +79,78 @@ const formatDuration = (seconds) => {
   return `${m}m ${s}s`
 }
 
+function LlmCostPanel() {
+  const [data, setData] = useState(null)
+  const [days, setDays] = useState(7)
+
+  useEffect(() => {
+    api.get(`/stats/llm-costs?days=${days}`)
+      .then(r => setData(r.data))
+      .catch(() => setData({ total_calls: 0, total_cost_usd: 0, by_purpose: [] }))
+  }, [days])
+
+  if (!data) return null
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">LLM Costs — last {days} days</h2>
+        <select
+          value={days}
+          onChange={e => setDays(parseInt(e.target.value, 10))}
+          className="text-xs border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+        >
+          <option value={1}>1d</option>
+          <option value={7}>7d</option>
+          <option value={30}>30d</option>
+        </select>
+      </div>
+      <div className="grid grid-cols-3 gap-4 mb-3">
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Total spend</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            ${data.total_cost_usd?.toFixed(4) || '0.0000'}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Total calls</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{data.total_calls}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Avg $ / call</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            ${data.total_calls > 0 ? (data.total_cost_usd / data.total_calls).toFixed(4) : '0.0000'}
+          </div>
+        </div>
+      </div>
+      {data.by_purpose?.length > 0 && (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+              <th className="py-1">Purpose</th>
+              <th className="py-1">Model</th>
+              <th className="py-1 text-right">Calls</th>
+              <th className="py-1 text-right">Cost</th>
+              <th className="py-1 text-right">Cache hit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.by_purpose.map((g, i) => (
+              <tr key={i} className="border-b border-gray-100 dark:border-gray-700">
+                <td className="py-1 text-gray-900 dark:text-gray-100">{g.purpose}</td>
+                <td className="py-1 text-gray-500 dark:text-gray-400">{g.model}</td>
+                <td className="py-1 text-right">{g.calls}</td>
+                <td className="py-1 text-right text-gray-900 dark:text-gray-100">${g.cost_usd.toFixed(4)}</td>
+                <td className="py-1 text-right">{(g.cache_hit_ratio * 100).toFixed(0)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
 export default function Stats() {
   const [stats, setStats] = useState(null)
   const [schedulerJobs, setSchedulerJobs] = useState([])
@@ -235,6 +307,9 @@ export default function Stats() {
           </div>
         ))}
       </div>
+
+      {/* LLM Cost Panel */}
+      <LlmCostPanel />
 
       {/* Charts */}
       {stats && (
