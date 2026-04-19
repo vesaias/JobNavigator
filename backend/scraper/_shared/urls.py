@@ -10,8 +10,7 @@ logger = logging.getLogger("jobnavigator.scraper.urls")
 
 
 def _get_url_tracking_params():
-    """Lazy import to avoid circular dependency; tracking params live in dedup module."""
-    from backend.scraper.deduplicator import _get_tracking_params
+    from backend.scraper._shared.dedup import _get_tracking_params
     return _get_tracking_params()
 
 
