@@ -123,7 +123,8 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
     try:
         from backend.analyzer.llm_client import call_email_llm
         import json
-        raw = await call_email_llm(prompt, system, max_tokens=150)
+        _resp = await call_email_llm(prompt, system, max_tokens=150)
+        raw = _resp["text"]
 
         # Extract JSON from response — handles markdown fences and trailing commentary
         import re

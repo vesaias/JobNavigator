@@ -338,7 +338,8 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     # Call LLM
     from backend.analyzer.llm_client import call_cv_tailor_llm
     try:
-        raw = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
+        _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
+        raw = _resp["text"]
     except Exception as e:
         logger.error(f"CV tailoring LLM failed: {e}")
         raise HTTPException(500, f"LLM tailoring failed: {e}")
@@ -556,7 +557,8 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
 
     try:
         from backend.analyzer.llm_client import call_llm
-        raw_response = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
+        _resp = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
+        raw_response = _resp["text"]
 
         # Strip markdown fences if present
         cleaned = raw_response.strip()
