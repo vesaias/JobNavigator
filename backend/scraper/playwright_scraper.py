@@ -84,6 +84,13 @@ from backend.scraper.ats.phenom import (  # noqa: F401
 _is_phenom_post = is_phenom  # back-compat alias (note: old name had _post suffix)
 
 
+# ── Re-exports from ats/talentbrew (Task 13) ─────────────────────────────────
+from backend.scraper.ats.talentbrew import (  # noqa: F401
+    is_talentbrew, scrape as _scrape_talentbrew_ajax,
+)
+_is_talentbrew_ajax = is_talentbrew  # back-compat alias (note: old name had _ajax suffix)
+
+
 # Back-compat re-exports — Task 1 (migrated to _shared/browser.py)
 from backend.scraper._shared.browser import (  # noqa: F401
     _STEALTH_ARGS, _USER_AGENT,
@@ -377,44 +384,6 @@ async def _click_next_page(page, debug: bool = False) -> bool | dict:
     if debug:
         return debug_info
     return False
-
-
-# ── TalentBrew AJAX scraper ──────────────────────────────────────────────────
-
-async def _scrape_talentbrew_ajax(url: str, debug: bool = False) -> list[dict] | tuple:
-    """Fetch TalentBrew AJAX search-results URL via HTTP and parse job links from JSON."""
-    import json
-    parsed = urlparse(url)
-    origin = f"{parsed.scheme}://{parsed.netloc}"
-    jobs = []
-    rejected = []
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-        resp = await client.get(url, headers={"X-Requested-With": "XMLHttpRequest"})
-
-    data = json.loads(resp.text)
-    results_html = data.get("results", "")
-
-    for m in re.finditer(r'<a\s[^>]*href="(/job/[^"]+)"[^>]*>(.*?)</a>', results_html, re.DOTALL):
-        href, raw_title = m.group(1), m.group(2)
-        title = re.sub(r'<[^>]+>', '', raw_title).strip()
-        if '\n' in title:
-            title = title.split('\n')[0].strip()
-        full_url = f"{origin}{href}"
-        reason = _validate_job(title, full_url)
-        if reason is None:
-            jobs.append({"title": title, "url": full_url})
-        elif debug:
-            rejected.append({"title": title, "url": full_url, "selector": "talentbrew_ajax", "reason": reason})
-
-    logger.info(f"TalentBrew AJAX: parsed {len(jobs)} valid jobs from {url[:80]}...")
-    if debug:
-        return jobs, rejected
-    return jobs
-
-
-def _is_talentbrew_ajax(url: str) -> bool:
-    """Check if URL is a TalentBrew AJAX search-results endpoint (BlackRock, Intuit, etc.)."""
-    return "/search-jobs/results?" in url.lower()
 
 
 # ── Google Careers scraper (Playwright DOM) ────────────────────────────────
