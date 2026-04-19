@@ -4,10 +4,9 @@ _fetch_description_ats is a dispatcher that tries each supported ATS's descripti
 API (Oracle HCM ById, Workday JSON, Lever, Greenhouse, etc.) before falling back to
 generic HTML extraction via _fetch_job_description.
 
-During Phase 2 of the refactor this module still imports some helpers from
-playwright_scraper (e.g. _oracle_hcm_host). Workday helpers now come from
-ats/workday. Remaining imports will be updated in Tasks 8-15 as each ATS
-module is created.
+During Phase 2 of the refactor this module pulls ATS-specific helpers from
+their dedicated modules (ats/workday, ats/oracle_hcm, ...). Remaining imports
+will be updated in Tasks 12-15 as each ATS module is created.
 """
 import asyncio
 import json
@@ -76,7 +75,7 @@ async def _fetch_description_ats(url: str) -> str | None:
 
     # Lazy imports for helpers still in playwright_scraper.py (avoid circular imports).
     # These will move into ats/ modules in Tasks 7-15.
-    from backend.scraper.playwright_scraper import _oracle_hcm_host
+    from backend.scraper.ats.oracle_hcm import _oracle_hcm_host
     from backend.scraper.ats.workday import _parse_workday_url, _LOCALE_PATH_RE
 
     parsed = _urlparse(url)

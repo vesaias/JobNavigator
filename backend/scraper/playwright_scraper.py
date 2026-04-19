@@ -62,6 +62,14 @@ from backend.scraper.ats.ashby import (  # noqa: F401
 _is_ashby = is_ashby  # back-compat alias
 
 
+# ── Re-exports from ats/oracle_hcm (Task 11) ──────────────────────────────────
+from backend.scraper.ats.oracle_hcm import (  # noqa: F401
+    is_oracle_hcm, scrape as _scrape_oracle_hcm,
+    _oracle_hcm_host, _ORACLE_HCM_HOSTS,
+)
+_is_oracle_hcm = is_oracle_hcm  # back-compat alias
+
+
 # Back-compat re-exports — Task 1 (migrated to _shared/browser.py)
 from backend.scraper._shared.browser import (  # noqa: F401
     _STEALTH_ARGS, _USER_AGENT,
@@ -355,136 +363,6 @@ async def _click_next_page(page, debug: bool = False) -> bool | dict:
     if debug:
         return debug_info
     return False
-
-
-# ── Oracle HCM scraper ───────────────────────────────────────────────────────
-
-def _is_oracle_hcm(url: str) -> bool:
-    return "oraclecloud.com/hcmUI/CandidateExperience" in url or "/sites/" in url and "/jobs" in url and _oracle_hcm_host(url) is not None
-
-# Map custom career domains to their Oracle HCM API backend
-_ORACLE_HCM_HOSTS = {
-    "careers.oracle.com": "eeho.fa.us2.oraclecloud.com",
-}
-
-def _oracle_hcm_host(url: str) -> str | None:
-    """Return the Oracle HCM API host for a given URL, or None."""
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-    if host == "oraclecloud.com" or host.endswith(".oraclecloud.com"):
-        return parsed.netloc
-    return _ORACLE_HCM_HOSTS.get(host)
-
-
-async def _scrape_oracle_hcm(url: str, debug: bool = False) -> list[dict] | tuple:
-    """Fetch Oracle HCM job listings via REST API."""
-    import json
-    from urllib.parse import parse_qs, urlparse as _urlparse, unquote
-
-    parsed = _urlparse(url)
-    ui_origin = f"{parsed.scheme}://{parsed.netloc}"
-    api_host = _oracle_hcm_host(url)
-    api_origin = f"https://{api_host}" if api_host else ui_origin
-    params = parse_qs(parsed.query)
-
-    # Extract site number from path: .../sites/CX_1001/jobs
-    path_parts = parsed.path.split("/")
-    site = ""
-    for i, p in enumerate(path_parts):
-        if p == "sites" and i + 1 < len(path_parts):
-            site = path_parts[i + 1]
-            break
-
-    # Detect path prefix: oraclecloud.com URLs need /hcmUI/CandidateExperience,
-    # custom domains (e.g. careers.oracle.com) route directly
-    job_path_prefix = ""
-    if "hcmUI/CandidateExperience" in parsed.path:
-        job_path_prefix = "/hcmUI/CandidateExperience"
-
-    # Build facets list
-    facets = []
-    categories = params.get("selectedCategoriesFacet", [""])[0].replace("%3B", ";")
-    location_id = params.get("locationId", [""])[0]
-    locations_facet = params.get("selectedLocationsFacet", [""])[0].replace("%3B", ";")
-    posting_dates = params.get("selectedPostingDatesFacet", [""])[0]
-    flex_fields = unquote(params.get("selectedFlexFieldsFacets", [""])[0])
-
-    if posting_dates:
-        facets.append(f"POSTING_DATES;{posting_dates}")
-    if categories:
-        facets.append(f"CATEGORIES;{categories}")
-    if location_id:
-        facets.append(f"LOCATIONS;{location_id}")
-    elif locations_facet:
-        facets.append(f"LOCATIONS;{locations_facet}")
-    if flex_fields:
-        facets.append(f"FLEX_FIELDS;{flex_fields}")
-    facets_str = "|".join(facets)
-
-    last_facet = params.get("lastSelectedFacet", ["POSTING_DATES"])[0]
-
-    jobs = []
-    rejected = []
-    offset = 0
-    limit = 200
-
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-        while True:
-            finder_parts = [
-                f"siteNumber={site}",
-                f"facetsList={facets_str}",
-                f"lastSelectedFacet={last_facet}",
-            ]
-            if categories:
-                finder_parts.append(f"selectedCategoriesFacet={categories}")
-            if location_id:
-                finder_parts.append(f"selectedLocationsFacet={location_id}")
-            elif locations_facet:
-                finder_parts.append(f"selectedLocationsFacet={locations_facet}")
-            if posting_dates:
-                finder_parts.append(f"selectedPostingDatesFacet={posting_dates}")
-            if flex_fields:
-                finder_parts.append(f"selectedFlexFieldsFacets={flex_fields}")
-            finder_parts.extend([
-                "sortBy=POSTING_DATES_DESC",
-                f"limit={limit}",
-                f"offset={offset}",
-            ])
-
-            api_url = (
-                f"{api_origin}/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
-                f"?onlyData=true&expand=requisitionList.secondaryLocations,flexFieldsFacet.values"
-                f"&finder=findReqs;{','.join(finder_parts)}"
-            )
-
-            resp = await client.get(api_url)
-            data = json.loads(resp.text)
-
-            items = data.get("items", [])
-            if not items:
-                break
-
-            req_list = items[0].get("requisitionList", [])
-            total = items[0].get("TotalJobsCount", 0)
-
-            for req in req_list:
-                title = req.get("Title", "").strip()
-                req_id = req.get("Id", "")
-                job_url = f"{ui_origin}{job_path_prefix}/en/sites/{site}/job/{req_id}"
-                reason = _validate_job(title, job_url)
-                if reason is None:
-                    jobs.append({"title": title, "url": job_url})
-                elif debug:
-                    rejected.append({"title": title, "url": job_url, "selector": "oracle_hcm_api", "reason": reason})
-
-            offset += len(req_list)
-            if offset >= total or len(req_list) == 0:
-                break
-
-    logger.info(f"Oracle HCM: fetched {len(jobs)} jobs from {api_origin}/.../{site}")
-    if debug:
-        return jobs, rejected
-    return jobs
 
 
 # ── Phenom People scraper (Cisco, etc.) ──────────────────────────────────────
