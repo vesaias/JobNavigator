@@ -142,7 +142,6 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Test only supports keyword, levels_fyi, linkedin_personal, and jobright searches")
 
     # ── Keyword (JobSpy) test — runs synchronously ──
-    import asyncio
     import re
     import time
     import pandas as pd
