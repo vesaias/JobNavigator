@@ -11,9 +11,10 @@ def _get_setting(db, key, default=""):
     return row.value if row and row.value else default
 
 
-async def call_llm(prompt: str, system: str, max_tokens: int = 1200) -> str:
+async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
+                   cached_prefix: str | None = None) -> dict:
     """Route to configured LLM provider with retry + automatic fallback.
-    Tries primary 4 times with exponential backoff, then fallback 4 times."""
+    Returns {text, usage} dict. Pass cached_prefix to enable prompt caching on Claude API."""
     MAX_ATTEMPTS = 4
     BACKOFF_BASE = 2  # seconds: 2, 4, 8
 
@@ -34,8 +35,8 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200) -> str:
     last_primary_err = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            logger.info(f"LLM call: provider={provider}, model={model}, attempt={attempt}/{MAX_ATTEMPTS}")
-            return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens)
+            logger.info(f"LLM call: provider={provider}, model={model}, attempt={attempt}/{MAX_ATTEMPTS}, cached={bool(cached_prefix)}")
+            return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens, cached_prefix=cached_prefix)
         except Exception as e:
             last_primary_err = e
             if attempt < MAX_ATTEMPTS:
@@ -51,7 +52,7 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200) -> str:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 logger.info(f"LLM fallback: provider={fallback_provider}, model={fallback_model}, attempt={attempt}/{MAX_ATTEMPTS}")
-                return await _dispatch(fallback_provider, fallback_model, fb_api_key, fb_base_url, prompt, system, max_tokens)
+                return await _dispatch(fallback_provider, fallback_model, fb_api_key, fb_base_url, prompt, system, max_tokens, cached_prefix=cached_prefix)
             except Exception as e:
                 last_fallback_err = e
                 if attempt < MAX_ATTEMPTS:
@@ -70,8 +71,8 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200) -> str:
     raise last_primary_err
 
 
-async def call_email_llm(prompt: str, system: str, max_tokens: int = 150) -> str:
-    """Route to email-specific LLM provider, falling back to primary if not configured."""
+async def call_email_llm(prompt: str, system: str, max_tokens: int = 150) -> dict:
+    """Route to email-specific LLM provider. Returns {text, usage}."""
     db = SessionLocal()
     try:
         # Read email-specific settings
@@ -93,8 +94,8 @@ async def call_email_llm(prompt: str, system: str, max_tokens: int = 150) -> str
     return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens)
 
 
-async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -> str:
-    """Route to CV-tailoring-specific LLM provider, falling back to primary if not configured."""
+async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -> dict:
+    """Route to CV-tailoring-specific LLM provider. Returns {text, usage}."""
     db = SessionLocal()
     try:
         provider = _get_setting(db, "cv_tailor_llm_provider", "")
@@ -115,10 +116,11 @@ async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -
 
 
 async def _dispatch(provider: str, model: str, api_key: str, base_url: str,
-                    prompt: str, system: str, max_tokens: int) -> str:
-    """Route to the correct provider."""
+                    prompt: str, system: str, max_tokens: int,
+                    cached_prefix: str | None = None) -> dict:
+    """Route to the correct provider. All providers return {text, usage} dict."""
     if provider == "claude_api":
-        return await _call_claude_api(prompt, system, model, api_key, max_tokens)
+        return await _call_claude_api(prompt, system, model, api_key, max_tokens, cached_prefix=cached_prefix)
     elif provider == "claude_code":
         return await _call_claude_code(prompt, system, model, max_tokens)
     elif provider == "openai":
@@ -172,9 +174,8 @@ async def _call_claude_api(prompt: str, system: str, model: str, api_key: str,
     }
 
 
-async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: int) -> str:
-    """Call Claude via claude CLI subprocess (uses Max/Pro subscription via OAuth token).
-    Pipes prompt via stdin to avoid command-line length limits on large scoring prompts."""
+async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: int) -> dict:
+    """Call Claude via claude CLI subprocess. Returns {text, usage}. Caching not supported."""
     import os
     import json as _json
     full_prompt = f"{system}\n\n{prompt}"
@@ -199,17 +200,21 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
         error = stderr.decode().strip()
         raise RuntimeError(f"claude-code subprocess failed (rc={process.returncode}): {error}")
 
-    # Parse JSON output format — result is in the "result" field
     raw = stdout.decode().strip()
     try:
         data = _json.loads(raw)
-        return data.get("result", raw)
+        text = data.get("result", raw)
     except _json.JSONDecodeError:
-        return raw
+        text = raw
+
+    return {
+        "text": text.strip(),
+        "usage": {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0},
+    }
 
 
-async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_tokens: int, base_url: str = None) -> str:
-    """Call OpenAI or OpenAI-compatible API."""
+async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_tokens: int, base_url: str = None) -> dict:
+    """Call OpenAI or OpenAI-compatible API. Returns {text, usage}."""
     from openai import AsyncOpenAI
     kwargs = {"api_key": api_key}
     if base_url:
@@ -223,11 +228,20 @@ async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_t
             {"role": "user", "content": prompt},
         ],
     )
-    return response.choices[0].message.content.strip()
+    usage = response.usage
+    return {
+        "text": response.choices[0].message.content.strip(),
+        "usage": {
+            "input_tokens": getattr(usage, "prompt_tokens", 0),
+            "output_tokens": getattr(usage, "completion_tokens", 0),
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+        },
+    }
 
 
-async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) -> str:
-    """Call local Ollama instance."""
+async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) -> dict:
+    """Call local Ollama instance. Returns {text, usage}."""
     import httpx
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
@@ -241,4 +255,13 @@ async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) ->
             },
         )
         response.raise_for_status()
-        return response.json()["response"].strip()
+        data = response.json()
+    return {
+        "text": data["response"].strip(),
+        "usage": {
+            "input_tokens": data.get("prompt_eval_count", 0),
+            "output_tokens": data.get("eval_count", 0),
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+        },
+    }
