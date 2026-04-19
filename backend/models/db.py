@@ -237,6 +237,30 @@ class JobRun(Base):
     meta = Column(JSON, nullable=True)
 
 
+# ── LLM Call Log (observability for prompt caching / cost tracking) ─────────
+class LlmCallLog(Base):
+    __tablename__ = "llm_call_log"
+    __table_args__ = (
+        Index("ix_llm_call_log_created_at", "created_at"),
+        Index("ix_llm_call_log_purpose", "purpose"),
+        Index("ix_llm_call_log_job_id", "job_id"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    purpose = Column(String, nullable=False)  # score_light, score_full, tailor, email, pdf
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)
+    model = Column(String, nullable=False, default="")
+    input_tokens = Column(Integer, default=0, nullable=False)
+    output_tokens = Column(Integer, default=0, nullable=False)
+    cache_read_tokens = Column(Integer, default=0, nullable=False)
+    cache_write_tokens = Column(Integer, default=0, nullable=False)
+    cost_usd = Column(Float, default=0.0, nullable=False)
+    duration_ms = Column(Integer, default=0, nullable=False)
+    success = Column(Boolean, default=True, nullable=False)
+    error = Column(Text, nullable=True)
+
+
 # ── Activity Log ────────────────────────────────────────────────────────────
 class ActivityLog(Base):
     __tablename__ = "activity_log_v2"
