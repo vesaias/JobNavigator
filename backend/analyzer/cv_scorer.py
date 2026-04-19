@@ -2,7 +2,9 @@
 import asyncio
 import json
 import logging
+import time
 from backend.analyzer.llm_client import call_llm
+from backend.analyzer.llm_logger import log_llm_call
 from backend.models.db import SessionLocal, Job, CV, Setting
 
 logger = logging.getLogger("jobnavigator.cv_scorer")
@@ -113,7 +115,12 @@ async def score_job_sync(job: Job, cv_texts: dict, db=None, depth="light", prelo
 
 
 async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", preloaded_text: str = None) -> dict:
-    """Inner scoring logic (called under semaphore)."""
+    """Inner scoring logic (called under semaphore).
+
+    Prompt is split into a cacheable prefix (rubric + CVs + schema) and a per-job suffix
+    (just the JD). On Claude API this uses Anthropic prompt caching — subsequent calls
+    with the same CV set hit the cache for ~10x cheaper input tokens.
+    """
     job_text = preloaded_text or await _get_job_text(job, db)
     if not job_text:
         logger.warning(f"Job {job.id} has no text (description, cache, or live), skipping scoring")
@@ -123,7 +130,7 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         logger.warning("No CVs uploaded, skipping scoring")
         return None
 
-    # Read prompts from settings (quick DB read, released immediately)
+    # Read prompts + model from settings (quick DB read, released immediately)
     settings_db = db or SessionLocal()
     try:
         rubric_row = settings_db.query(Setting).filter(Setting.key == "scoring_rubric").first()
@@ -131,11 +138,13 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         schema_key = "scoring_output_full" if depth == "full" else "scoring_output_light"
         schema_row = settings_db.query(Setting).filter(Setting.key == schema_key).first()
         output_schema = schema_row.value if schema_row and schema_row.value else ""
+        model_row = settings_db.query(Setting).filter(Setting.key == "llm_model").first()
+        model_for_log = model_row.value if model_row and model_row.value else "claude-sonnet-4-6"
     finally:
         if not db:
             settings_db.close()
 
-    # Build CV sections dynamically (same as before)
+    # Build CV sections dynamically
     cv_sections = []
     cv_names = list(cv_texts.keys())
     for i, (name, text) in enumerate(cv_texts.items(), 1):
@@ -148,21 +157,31 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         best_cv_options = " | ".join(f'"{name}"' for name in cv_names)
         output_schema = output_schema.replace('"CV_NAME"', best_cv_options)
 
-    # Build the prompt
-    user_prompt = f"""{rubric}
-
-JOB DESCRIPTION:
-{job_text[:8000]}
+    # CACHEABLE PREFIX: rubric + CV sections + schema. Invariant across jobs scored
+    # against the same CV set. Anthropic ephemeral cache TTL = 5 min.
+    cached_prefix = f"""{rubric}
 
 {chr(10).join(cv_sections)}
 
 {output_schema}"""
 
+    # PER-JOB SUFFIX: just the JD. Changes every call.
+    user_prompt = f"JOB DESCRIPTION:\n{job_text[:8000]}"
+
     max_tokens = 2000 if depth == "full" else 600
     system_msg = "You are a senior tech recruiter evaluating candidate-job fit. Score precisely using the rubric provided. Return ONLY valid JSON, no markdown."
 
+    purpose = "score_full" if depth == "full" else "score_light"
+    started = time.monotonic()
+    call_success = True
+    call_error = None
+    usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0}
+    return_value = None
+
     try:
-        text = await call_llm(user_prompt, system_msg, max_tokens)
+        resp = await call_llm(user_prompt, system_msg, max_tokens, cached_prefix=cached_prefix)
+        text = resp["text"]
+        usage = resp.get("usage", usage)
 
         # Parse JSON — handle markdown wrapping and trailing commentary
         import re
@@ -180,16 +199,36 @@ JOB DESCRIPTION:
                 if key in result:
                     report[key] = result[key]
             if report:
-                return {**result, "_scoring_report": report}
-
-        return result
+                return_value = {**result, "_scoring_report": report}
+            else:
+                return_value = result
+        else:
+            return_value = result
 
     except json.JSONDecodeError as e:
+        call_success = False
+        call_error = f"JSON decode: {e}"
         logger.error(f"Failed to parse LLM response as JSON: {e}")
-        return None
     except Exception as e:
+        call_success = False
+        call_error = str(e)
         logger.error(f"LLM call failed: {e}")
-        return None
+    finally:
+        duration_ms = int((time.monotonic() - started) * 1000)
+        try:
+            log_llm_call(
+                purpose=purpose,
+                model=model_for_log,
+                usage=usage,
+                duration_ms=duration_ms,
+                job_id=getattr(job, "id", None),
+                success=call_success,
+                error=call_error,
+            )
+        except Exception as e:
+            logger.warning(f"log_llm_call failed in scorer (non-fatal): {e}")
+
+    return return_value
 
 
 def _find_company_for_job(db, job: Job):
