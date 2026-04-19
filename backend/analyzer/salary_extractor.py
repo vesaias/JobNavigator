@@ -18,6 +18,10 @@ def extract_salary(description: str, h1b_median_salary: int = None) -> dict:
             }
         return {"salary_min": None, "salary_max": None, "salary_source": "unknown"}
 
+    # Cap input size before any regex runs. Matches the scraper's existing 30K truncation.
+    # Bounds polynomial-time HTML stripper + salary regex to defend against pathological input.
+    description = description[:30_000]
+
     # Strip HTML tags and decode entities before parsing
     if "<" in description and ">" in description:
         import html as _html
