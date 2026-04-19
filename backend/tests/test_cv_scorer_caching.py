@@ -133,3 +133,27 @@ async def test_score_job_full_depth_uses_score_full_purpose(scorer_db, monkeypat
                                     preloaded_text="JD")
 
     assert captured_log.get("purpose") == "score_full"
+
+
+@pytest.mark.asyncio
+async def test_score_job_logs_failure_when_call_llm_raises(scorer_db, monkeypatch):
+    """When call_llm raises, log_llm_call still runs with success=False + error."""
+    captured_log = {}
+
+    async def fake_call_llm(prompt, system, max_tokens, cached_prefix=None):
+        raise RuntimeError("simulated provider outage")
+
+    monkeypatch.setattr("backend.analyzer.cv_scorer.call_llm", fake_call_llm)
+    monkeypatch.setattr("backend.analyzer.cv_scorer.log_llm_call",
+                        lambda **kw: captured_log.update(kw))
+
+    from backend.analyzer import cv_scorer
+    job = FakeJob()
+    result = await cv_scorer.score_job_sync(job, {"PM": "CV"}, db=None, depth="light",
+                                             preloaded_text="JD")
+
+    assert result is None
+    assert captured_log.get("success") is False
+    assert "simulated provider outage" in (captured_log.get("error") or "")
+    assert captured_log.get("purpose") == "score_light"
+    assert captured_log.get("job_id") == job.id

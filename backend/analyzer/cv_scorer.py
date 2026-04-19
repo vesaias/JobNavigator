@@ -38,9 +38,13 @@ def reset_scoring_semaphore():
 
 
 def _get_cv_texts(db) -> dict:
-    """Load all CV extracted texts from DB. Returns {version_name: text}."""
+    """Load all CV extracted texts from DB. Returns {version_name: text}.
+
+    Ordered by CV.id so the resulting dict has stable insertion order across calls —
+    critical for Anthropic prompt caching in cv_scorer._score_job_inner.
+    """
     cvs = {}
-    for cv in db.query(CV).all():
+    for cv in db.query(CV).order_by(CV.id).all():
         if cv.extracted_text:
             cvs[cv.version] = cv.extracted_text
     return cvs
@@ -61,7 +65,7 @@ def _get_cv_texts_for_company(db, company) -> dict:
     """Load CVs selected for a specific company. Falls back to default CV if none selected."""
     if company and company.selected_cv_ids and len(company.selected_cv_ids) > 0:
         cvs = {}
-        for cv in db.query(CV).all():
+        for cv in db.query(CV).order_by(CV.id).all():
             if str(cv.id) in company.selected_cv_ids and cv.extracted_text:
                 cvs[cv.version] = cv.extracted_text
         if cvs:
