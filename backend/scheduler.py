@@ -93,8 +93,8 @@ async def run_all_scrapes():
     try:
         async with tracked_run("scrape_all", "scheduler"):
             logger.info("Running all scrapes...")
-            from backend.scraper.jobspy_scraper import run_all_searches
-            await run_all_searches()
+            from backend.scraper.orchestrator import run_all
+            await run_all()
             # CV scoring happens per-search/company based on their auto_scoring_depth setting
             # Also score any saved-but-unscored jobs (from manual saves)
             from backend.analyzer.cv_scorer import analyze_unscored_jobs
