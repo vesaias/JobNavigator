@@ -325,7 +325,8 @@ async def _extract_apply_url(page, job_id: str = "") -> str:
         if url_param:
             return unquote(url_param[0])
         # If no url param but it's already external, return as-is
-        if not "linkedin.com" in apply_url:
+        apply_host = (parsed.hostname or "").lower()
+        if not (apply_host == "linkedin.com" or apply_host.endswith(".linkedin.com")):
             return apply_url
 
     # Strategy 2: Search <code> elements (legacy LinkedIn pages)

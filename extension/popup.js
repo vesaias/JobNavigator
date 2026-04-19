@@ -1,3 +1,14 @@
+// Hostname-safe URL matching helper. Avoids "substring of URL" pitfalls where
+// e.g. "evil-rippling.com" would match a naive `hostname.includes('rippling.com')`.
+function hostMatches(url, ...domains) {
+  let host
+  try { host = new URL(url).hostname.toLowerCase() } catch { return false }
+  return domains.some(raw => {
+    const d = (raw || '').toLowerCase().replace(/\/$/, '')
+    return d && (host === d || host.endsWith('.' + d))
+  })
+}
+
 // Known company domains for auto-detection
 const COMPANY_DOMAINS = {
   'microsoft.com': 'Microsoft', 'salesforce.com': 'Salesforce',
@@ -90,8 +101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Rippling: ats.rippling.com/{company} or rippling.com/careers/{company}
-        if (!detected && hostname.includes('rippling.com') && pathParts.length >= 1) {
-          const slug = hostname.startsWith('ats.') ? pathParts[0] : (pathParts[0] === 'careers' && pathParts[1] ? pathParts[1] : '');
+        if (!detected && hostMatches(tab.url, 'rippling.com') && pathParts.length >= 1) {
+          const slug = hostname === 'ats.rippling.com' || hostname.endsWith('.ats.rippling.com')
+            ? pathParts[0]
+            : (pathParts[0] === 'careers' && pathParts[1] ? pathParts[1] : '');
           if (slug) detected = titleCase(slug);
         }
 
@@ -99,10 +112,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!detected && hostname === 'jobs.apple.com') detected = 'Apple';
 
         // Meta: metacareers.com
-        if (!detected && hostname.includes('metacareers.com')) detected = 'Meta';
+        if (!detected && hostMatches(tab.url, 'metacareers.com')) detected = 'Meta';
 
         // Google: google.com/about/careers
-        if (!detected && hostname.includes('google.com') && parsed.pathname.includes('/careers')) detected = 'Google';
+        if (!detected && hostMatches(tab.url, 'google.com') && parsed.pathname.includes('/careers')) detected = 'Google';
       }
 
       // Layer 3: fallback — extract from core domain

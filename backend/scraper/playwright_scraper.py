@@ -34,6 +34,41 @@ def _clean_application_url(url: str) -> str:
     new_query = urlencode(cleaned, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
 
+
+def _host_matches(url: str, *domains: str) -> bool:
+    """True if URL's hostname equals or is a subdomain of any of the given domains.
+
+    Uses strict hostname comparison (not substring) to avoid attacker-controlled
+    lookalike domains matching (e.g. "evil-metacareers.com").
+    """
+    if not url:
+        return False
+    try:
+        host = (urlparse(url).hostname or "").lower()
+    except Exception:
+        return False
+    if not host:
+        return False
+    for raw in domains:
+        d = (raw or "").lower().strip().rstrip("/")
+        if not d:
+            continue
+        if host == d or host.endswith("." + d):
+            return True
+    return False
+
+
+def _path_contains(url: str, *needles: str) -> bool:
+    """True if URL's path contains any of the given needles (case-insensitive)."""
+    if not url:
+        return False
+    try:
+        path = (urlparse(url).path or "").lower()
+    except Exception:
+        return False
+    return any(n.lower() in path for n in needles if n)
+
+
 # Known garbage strings to discard (case-insensitive exact match)
 GARBAGE_TITLES = {
     "apply", "apply now", "contact", "contact us", "search", "search jobs",
@@ -172,7 +207,7 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Workday: myworkdayjobs.com/{site}/job/{slug}/{id} ──
-    if "myworkdayjobs.com/" in url.lower():
+    if _host_matches(url, "myworkdayjobs.com"):
         origin, company_slug, site, _ = _parse_workday_url(url)
         # Extract externalPath from URL: everything after /{site}
         path_parts = [p for p in parsed.path.strip("/").split("/") if p]
@@ -204,9 +239,9 @@ async def _fetch_description_ats(url: str) -> str | None:
     # Known custom domains: apply.careers.microsoft.com, paypal.eightfold.ai, etc.
     # API: GET https://{domain}/api/apply/v2/jobs/{id} → JSON with job_description (HTML)
     eightfold_job_id = None
-    if "eightfold.ai/" in url.lower() and "/job/" in parsed.path:
+    if _host_matches(url, "eightfold.ai") and "/job/" in parsed.path:
         eightfold_job_id = parsed.path.rstrip("/").split("/")[-1]
-    elif "apply.careers.microsoft.com" in url.lower() and "/job/" in parsed.path:
+    elif _host_matches(url, "apply.careers.microsoft.com") and "/job/" in parsed.path:
         eightfold_job_id = parsed.path.rstrip("/").split("/")[-1]
     if eightfold_job_id:
         api_url = f"{parsed.scheme}://{parsed.hostname}/api/apply/v2/jobs/{eightfold_job_id}"
@@ -226,7 +261,7 @@ async def _fetch_description_ats(url: str) -> str | None:
             logger.debug(f"Eightfold API failed for {url}: {e}")
 
     # ── Apple: jobs.apple.com/en-us/details/{id}/... ──
-    if "jobs.apple.com/" in url.lower() and "/details/" in url:
+    if _host_matches(url, "jobs.apple.com") and "/details/" in url:
         import re as _re
         m = _re.search(r'/details/(\d+)', url)
         if m:
@@ -263,7 +298,7 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Visa: corporate.visa.com/en/jobs/{refNumber} ──
-    if "visa.com/" in url.lower() and "/jobs/" in url:
+    if _host_matches(url, "visa.com") and "/jobs/" in url:
         ref_match = re.search(r'/jobs/(REF\w+)', url)
         if ref_match:
             ref_number = ref_match.group(1)
@@ -315,7 +350,7 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Meta Careers: metacareers.com/v2/jobs/{id} ──
-    if "metacareers.com/" in url.lower() and ("/jobs/" in url or "/job_details/" in url):
+    if _host_matches(url, "metacareers.com") and ("/jobs/" in url or "/job_details/" in url):
         try:
             async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
                 resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
@@ -337,7 +372,7 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Ashby: jobs.ashbyhq.com/{company}/{id} ──
-    if "jobs.ashbyhq.com/" in url.lower():
+    if _host_matches(url, "jobs.ashbyhq.com"):
         def _ashby_append_comp(desc, posting_data):
             """Append Ashby compensation summary to description for salary extraction."""
             comp = posting_data.get("scrapeableCompensationSalarySummary") or posting_data.get("compensationTierSummary") or ""
@@ -413,7 +448,7 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Greenhouse: boards.greenhouse.io/{company}/jobs/{id} ──
-    if "greenhouse.io/" in url.lower() and "/jobs/" in url:
+    if _host_matches(url, "greenhouse.io") and "/jobs/" in url:
         path_parts = [p for p in parsed.path.strip("/").split("/") if p]
         # Format: /{company}/jobs/{id}
         company_slug = job_id = ""
@@ -947,9 +982,10 @@ _ORACLE_HCM_HOSTS = {
 def _oracle_hcm_host(url: str) -> str | None:
     """Return the Oracle HCM API host for a given URL, or None."""
     parsed = urlparse(url)
-    if "oraclecloud.com" in parsed.netloc:
+    host = (parsed.hostname or "").lower()
+    if host == "oraclecloud.com" or host.endswith(".oraclecloud.com"):
         return parsed.netloc
-    return _ORACLE_HCM_HOSTS.get(parsed.netloc)
+    return _ORACLE_HCM_HOSTS.get(host)
 
 
 async def _scrape_oracle_hcm(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -1251,7 +1287,7 @@ _LOCALE_PATH_RE = re.compile(r'^[a-z]{2}(-[A-Z]{2})?$')  # en-US, en, de-DE, etc
 
 def _is_workday(url: str) -> bool:
     """Check if URL is a Workday career site (myworkdayjobs.com)."""
-    return "myworkdayjobs.com/" in url.lower()
+    return _host_matches(url, "myworkdayjobs.com")
 
 
 def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
@@ -1369,8 +1405,7 @@ async def _scrape_workday(url: str, debug: bool = False) -> list[dict] | tuple:
 
 def _is_greenhouse(url: str) -> bool:
     """Check if URL is a Greenhouse job board."""
-    low = url.lower()
-    return "greenhouse.io/" in low or "boards.greenhouse.io/" in low
+    return _host_matches(url, "greenhouse.io", "boards.greenhouse.io")
 
 
 def _parse_greenhouse_url(url: str) -> tuple[str, set[int], set[int]]:
@@ -1529,7 +1564,7 @@ async def _scrape_greenhouse(url: str, debug: bool = False) -> list[dict] | tupl
 
 def _is_ashby(url: str) -> bool:
     """Check if URL is an Ashby job board (jobs.ashbyhq.com)."""
-    return "jobs.ashbyhq.com/" in url.lower()
+    return _host_matches(url, "jobs.ashbyhq.com")
 
 
 async def _scrape_ashby(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -1763,7 +1798,7 @@ async def _scrape_google_careers(url: str, browser=None, debug: bool = False) ->
 
 def _is_meta_careers(url: str) -> bool:
     """Check if URL is a Meta Careers job search page."""
-    return "metacareers.com" in url.lower()
+    return _host_matches(url, "metacareers.com")
 
 
 async def _scrape_meta_careers(url: str, browser=None, debug: bool = False) -> list[dict] | tuple:
@@ -1868,8 +1903,9 @@ async def _scrape_meta_careers(url: str, browser=None, debug: bool = False) -> l
 
 def _is_rippling(url: str) -> bool:
     """Check if URL is a Rippling ATS board (ats.rippling.com or rippling.com/careers)."""
-    lower = url.lower()
-    return "ats.rippling.com/" in lower or "rippling.com/careers" in lower
+    if _host_matches(url, "ats.rippling.com"):
+        return True
+    return _host_matches(url, "rippling.com") and _path_contains(url, "/careers")
 
 
 def _parse_rippling_url(url: str) -> tuple[str, dict]:
@@ -1886,7 +1922,7 @@ def _parse_rippling_url(url: str) -> tuple[str, dict]:
     filters = {}
 
     # Extract board slug from ats.rippling.com/{slug}/...
-    if "ats.rippling.com" in parsed.netloc:
+    if _host_matches(url, "ats.rippling.com"):
         parts = [p for p in parsed.path.strip("/").split("/") if p]
         slug = parts[0] if parts else "rippling"
     else:

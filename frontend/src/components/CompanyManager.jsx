@@ -35,23 +35,40 @@ const SCRAPE_TYPE_COLORS = Object.fromEntries([
   ['Generic (Playwright)', ATS_COLOR_MAP.Generic],
 ])
 
+// Hostname-safe URL matching helpers. These avoid the "substring of URL"
+// pitfall where e.g. "evil-metacareers.com" would match "metacareers.com".
+function hostMatches(url, ...domains) {
+  let host
+  try { host = new URL(url).hostname.toLowerCase() } catch { return false }
+  return domains.some(raw => {
+    const d = (raw || '').toLowerCase().replace(/\/$/, '')
+    return d && (host === d || host.endsWith('.' + d))
+  })
+}
+
+function pathContains(url, ...needles) {
+  let path
+  try { path = new URL(url).pathname.toLowerCase() } catch { return false }
+  return needles.some(n => n && path.includes(n.toLowerCase()))
+}
+
 function detectAtsType(url) {
   if (!url) return 'Generic'
-  const u = url.toLowerCase()
-  if (u.startsWith('POST|')) return 'Phenom'
-  if (u.includes('myworkdayjobs.com')) return 'Workday'
-  if (u.includes('oraclecloud.com') && u.includes('/hcmui/')) return 'Oracle HCM'
-  if (u.includes('careers.oracle.com')) return 'Oracle HCM'
-  if (u.includes('jobs.lever.co/') || u.includes('jobs.eu.lever.co/')) return 'Lever'
-  if (u.includes('jobs.ashbyhq.com/')) return 'Ashby'
-  if (u.includes('greenhouse.io/')) return 'Greenhouse'
-  if (u.includes('ats.rippling.com') || (u.includes('rippling.com/careers'))) return 'Rippling'
-  if (u.includes('eightfold.ai/') || u.includes('apply.careers.microsoft.com')) return 'Eightfold'
-  if (u.includes('jobs.apple.com/')) return 'Apple'
-  if (u.includes('metacareers.com/')) return 'Meta'
-  if (u.includes('google.com/about/careers')) return 'Google'
-  if (u.includes('uber.com/careers/')) return 'Uber'
-  if (u.includes('visa.com/') && u.includes('/jobs/')) return 'Visa'
+  // POST|<url>|<payload> prefix is not a URL at all — keep as-is.
+  if (url.toUpperCase().startsWith('POST|')) return 'Phenom'
+  if (hostMatches(url, 'myworkdayjobs.com')) return 'Workday'
+  if (hostMatches(url, 'oraclecloud.com') && pathContains(url, '/hcmui/')) return 'Oracle HCM'
+  if (hostMatches(url, 'careers.oracle.com')) return 'Oracle HCM'
+  if (hostMatches(url, 'jobs.lever.co', 'jobs.eu.lever.co')) return 'Lever'
+  if (hostMatches(url, 'jobs.ashbyhq.com')) return 'Ashby'
+  if (hostMatches(url, 'greenhouse.io')) return 'Greenhouse'
+  if (hostMatches(url, 'ats.rippling.com') || (hostMatches(url, 'rippling.com') && pathContains(url, '/careers'))) return 'Rippling'
+  if (hostMatches(url, 'eightfold.ai', 'apply.careers.microsoft.com')) return 'Eightfold'
+  if (hostMatches(url, 'jobs.apple.com')) return 'Apple'
+  if (hostMatches(url, 'metacareers.com')) return 'Meta'
+  if (hostMatches(url, 'google.com') && pathContains(url, '/about/careers')) return 'Google'
+  if (hostMatches(url, 'uber.com') && pathContains(url, '/careers')) return 'Uber'
+  if (hostMatches(url, 'visa.com') && pathContains(url, '/jobs')) return 'Visa'
   return 'Generic'
 }
 
