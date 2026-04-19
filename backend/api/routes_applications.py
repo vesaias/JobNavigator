@@ -79,7 +79,7 @@ def _extract_clean_content(raw_html: str) -> tuple:
 
 async def _fetch_with_playwright(url: str) -> str:
     """Fetch a page using Playwright for SPA/JS-rendered sites. Returns raw HTML."""
-    from backend.scraper.playwright_scraper import _get_browser, _new_page, _close_page
+    from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
     pw, browser = await _get_browser()
     try:
         page = await _new_page(browser)
@@ -155,7 +155,7 @@ def create_application(
 ):
     """Create application (used by Chrome extension). Also creates job record if needed."""
     # Generate external_id for dedup (use same normalization as scrapers)
-    from backend.scraper.deduplicator import make_external_id
+    from backend.scraper._shared.dedup import make_external_id
     external_id = make_external_id(data.company, data.title, data.url)
 
     # Find or create job

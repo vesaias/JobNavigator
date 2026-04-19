@@ -70,7 +70,7 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     # Reload dedup params cache if changed
     if "dedup_tracking_params" in updated:
         try:
-            from backend.scraper.deduplicator import reload_tracking_params
+            from backend.scraper._shared.dedup import reload_tracking_params
             reload_tracking_params()
         except Exception:
             pass

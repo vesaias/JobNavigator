@@ -90,7 +90,7 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
 
-    from backend.scraper.jobspy_scraper import run_single_search
+    from backend.scraper.orchestrator import _run_search_by_id as run_single_search
     result = await run_single_search(str(search.id), auto_score=auto_score)
     # Project to an explicit whitelist of safe fields — never forward scraper exception
     # strings to the client (CodeQL py/stack-trace-exposure).
@@ -134,10 +134,10 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                 if search.search_mode == "levels_fyi":
                     result = await _test_levelsfyi_search(test_search_obj, test_db)
                 elif search.search_mode == "jobright":
-                    from backend.scraper.jobright_scraper import test_jobright
+                    from backend.scraper.sources.jobright import preview as test_jobright
                     result = await test_jobright(test_search_obj, test_db)
                 else:
-                    from backend.scraper.linkedin_scraper import test_linkedin_personal
+                    from backend.scraper.sources.linkedin_personal import preview as test_linkedin_personal
                     result = await test_linkedin_personal(test_search_obj, test_db)
                 _test_results[run_id] = {"status": "done", "result": result}
             except Exception as e:
@@ -406,9 +406,9 @@ async def _test_levelsfyi_search(search, db):
     """Test a levels.fyi search — scrape via Playwright, return results without saving."""
     import re
     import time
-    from backend.scraper.playwright_scraper import (
-        _scrape_levelsfyi, _get_browser, _apply_company_filters,
-    )
+    from backend.scraper.sources.levelsfyi import _scrape_levelsfyi
+    from backend.scraper._shared.browser import _get_browser
+    from backend.scraper._shared.filters import _apply_company_filters
     if not search.direct_url:
         raise HTTPException(status_code=400, detail="No levels.fyi URL configured")
 

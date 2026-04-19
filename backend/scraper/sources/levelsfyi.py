@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from backend.models.db import SessionLocal, Job, Search, get_existing_external_ids
-from backend.scraper.deduplicator import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
 from backend.scraper._shared.urls import _clean_application_url
 from backend.scraper._shared.filters import _apply_company_filters
@@ -450,7 +450,7 @@ async def run(search: Search) -> dict:
         # Company exclude (global=full match, per-search=full match)
         db_excl = SessionLocal()
         try:
-            from backend.scraper.jobspy_scraper import get_setting_value
+            from backend.scraper.sources.jobspy import get_setting_value
             global_exclude = json.loads(get_setting_value(db_excl, "company_exclude_global", "[]"))
             global_exclude_set = {e.lower() for e in global_exclude}
             search_exclude_set = {e.lower() for e in (search.company_exclude or [])}

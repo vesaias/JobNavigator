@@ -294,7 +294,7 @@ async def trigger_all_scrapes():
     Returns immediately with a run_id. Check progress via /api/monitor/active.
     """
     async def _do():
-        from backend.scraper.jobspy_scraper import run_all_searches
+        from backend.scraper.orchestrator import run_all as run_all_searches
         await run_all_searches(force=True)
         from backend.analyzer.cv_scorer import analyze_unscored_jobs
         await analyze_unscored_jobs()
@@ -447,7 +447,7 @@ async def trigger_backfill_descriptions():
     """Fetch job descriptions for saved/new jobs that have a URL but no description."""
     async def _do():
         from backend.models.db import Job
-        from backend.scraper.playwright_scraper import _fetch_job_description
+        from backend.scraper.ats._descriptions import _fetch_job_description
         from backend.analyzer.salary_extractor import apply_salary_to_job
         db = SessionLocal()
         try:
@@ -566,7 +566,7 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
 
     async def _do():
         from backend.models.db import Company as C
-        from backend.scraper.playwright_scraper import scrape_single_career_page
+        from backend.scraper.sources.company_pages import scrape_single_career_page
         db2 = SessionLocal()
         try:
             c = db2.query(C).filter(C.id == company_id).first()

@@ -20,7 +20,7 @@ from backend.models.db import (
     SessionLocal, Job,
     build_company_lookup, get_existing_external_ids, find_company_by_name,
 )
-from backend.scraper.deduplicator import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.analyzer.salary_extractor import apply_salary_to_job
 from backend.analyzer.h1b_checker import check_job_h1b, determine_h1b_verdict
 

@@ -23,11 +23,16 @@ async def _fire_h1b_async(company_id: str):
 
 def detect_scrape_type(url: str) -> str:
     """Detect the ATS/scraper type from a URL via string matching. No network calls."""
-    from backend.scraper.playwright_scraper import (
-        _is_workday, _is_oracle_hcm, _is_lever, _is_phenom_post,
-        _is_talentbrew_ajax, _is_ashby, _is_greenhouse, _is_rippling,
-        _is_meta_careers, _is_google_careers,
-    )
+    from backend.scraper.ats.workday import is_workday as _is_workday
+    from backend.scraper.ats.oracle_hcm import is_oracle_hcm as _is_oracle_hcm
+    from backend.scraper.ats.lever import is_lever as _is_lever
+    from backend.scraper.ats.phenom import is_phenom as _is_phenom_post
+    from backend.scraper.ats.talentbrew import is_talentbrew as _is_talentbrew_ajax
+    from backend.scraper.ats.ashby import is_ashby as _is_ashby
+    from backend.scraper.ats.greenhouse import is_greenhouse as _is_greenhouse
+    from backend.scraper.ats.rippling import is_rippling as _is_rippling
+    from backend.scraper.ats.meta import is_meta as _is_meta_careers
+    from backend.scraper.ats.google import is_google as _is_google_careers
     if _is_workday(url):
         return "Workday API"
     if _is_oracle_hcm(url):
@@ -260,19 +265,50 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    from backend.scraper.playwright_scraper import (
-        _get_browser, _new_page, _close_page, _extract_all_pages, _wait_for_content,
-        _setup_route_blocks, match_title_expr,
-        _is_talentbrew_ajax, _scrape_talentbrew_ajax,
-        _is_oracle_hcm, _scrape_oracle_hcm,
-        _is_phenom_post, _scrape_phenom,
-        _is_lever, _scrape_lever,
-        _is_workday, _scrape_workday,
-        _is_ashby, _scrape_ashby,
-        _is_greenhouse, _scrape_greenhouse,
-        _is_rippling, _scrape_rippling,
-        _is_meta_careers, _scrape_meta_careers,
-        _is_google_careers, _scrape_google_careers,
+    from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
+    from backend.scraper._shared.filters import match_title_expr
+    from backend.scraper.ats.generic import (
+        _extract_all_pages, _wait_for_content, _setup_route_blocks,
+    )
+    from backend.scraper.ats.talentbrew import (
+        is_talentbrew as _is_talentbrew_ajax,
+        scrape as _scrape_talentbrew_ajax,
+    )
+    from backend.scraper.ats.oracle_hcm import (
+        is_oracle_hcm as _is_oracle_hcm,
+        scrape as _scrape_oracle_hcm,
+    )
+    from backend.scraper.ats.phenom import (
+        is_phenom as _is_phenom_post,
+        scrape as _scrape_phenom,
+    )
+    from backend.scraper.ats.lever import (
+        is_lever as _is_lever,
+        scrape as _scrape_lever,
+    )
+    from backend.scraper.ats.workday import (
+        is_workday as _is_workday,
+        scrape as _scrape_workday,
+    )
+    from backend.scraper.ats.ashby import (
+        is_ashby as _is_ashby,
+        scrape as _scrape_ashby,
+    )
+    from backend.scraper.ats.greenhouse import (
+        is_greenhouse as _is_greenhouse,
+        scrape as _scrape_greenhouse,
+    )
+    from backend.scraper.ats.rippling import (
+        is_rippling as _is_rippling,
+        scrape as _scrape_rippling,
+    )
+    from backend.scraper.ats.meta import (
+        is_meta as _is_meta_careers,
+        scrape as _scrape_meta_careers,
+    )
+    from backend.scraper.ats.google import (
+        is_google as _is_google_careers,
+        scrape as _scrape_google_careers,
     )
 
     urls = company.scrape_urls or []

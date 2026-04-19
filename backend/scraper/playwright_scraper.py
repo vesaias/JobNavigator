@@ -12,7 +12,7 @@ import httpx
 from sqlalchemy.exc import IntegrityError
 
 from backend.models.db import SessionLocal, Company, Job, ScrapeLog, Search, get_existing_external_ids
-from backend.scraper.deduplicator import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash
 
 logger = logging.getLogger("jobnavigator.playwright")
 

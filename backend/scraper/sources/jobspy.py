@@ -6,24 +6,56 @@ via a single multi-board request. Returns a dict with jobs_found, new_jobs, erro
 import asyncio
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from backend.models.db import SessionLocal, Search, Job, get_existing_external_ids
-from backend.scraper.deduplicator import make_external_id, make_content_hash
+from backend.models.db import SessionLocal, Search, Job, Setting, get_existing_external_ids
+from backend.scraper._shared.dedup import make_external_id, make_content_hash
 
 logger = logging.getLogger("jobnavigator.scraper.sources.jobspy")
 
 
+def get_setting_value(db: Session, key: str, default: str = "") -> str:
+    """Read a single Setting row's value by key, returning ``default`` if not set."""
+    row = db.query(Setting).filter(Setting.key == key).first()
+    return row.value if row else default
+
+
+def apply_title_filters(jobs_df, include_keywords: list, exclude_keywords: list):
+    """Filter jobs by title include/exclude keywords (whole-word matching).
+    Returns (kept_df, rejected_df)."""
+    import pandas as pd
+
+    if jobs_df is None or jobs_df.empty:
+        return jobs_df, pd.DataFrame()
+
+    mask = pd.Series(True, index=jobs_df.index)
+
+    if include_keywords:
+        pattern = "|".join(include_keywords)
+        mask &= jobs_df["title"].str.contains(pattern, case=False, na=False)
+
+    if exclude_keywords:
+        pattern = "|".join(r'\b' + re.escape(kw) + r'\b' for kw in exclude_keywords)
+        mask &= ~jobs_df["title"].str.contains(pattern, case=False, na=False, regex=True)
+
+    return jobs_df[mask], jobs_df[~mask]
+
+
+def apply_company_filter(jobs_df, company_filter: list):
+    """Filter to specific companies if filter is non-empty (exact match, case-insensitive)."""
+    if not company_filter or jobs_df is None or jobs_df.empty:
+        return jobs_df
+    cf_set = {cf.lower() for cf in company_filter}
+    return jobs_df[jobs_df["company"].str.lower().isin(cf_set)]
+
+
 def _run_sync(search, proxy_url: str = None) -> dict:
     """Execute a single JobSpy search and return results dict."""
-    # Late import to avoid circular imports with jobspy_scraper shim
-    from backend.scraper.jobspy_scraper import (
-        get_setting_value, apply_title_filters, apply_company_filter,
-    )
-
     start_time = time.time()
 
     try:

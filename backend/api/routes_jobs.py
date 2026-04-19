@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, text, func
 from backend.models.db import get_db, Job, find_company_by_name
-from backend.scraper.deduplicator import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.analyzer.salary_extractor import apply_salary_to_job
 # LinkedIn extension enrichment — see sources/linkedin_extension.py
 from backend.scraper.sources.linkedin_extension import (
@@ -271,7 +271,7 @@ def save_from_extension(body: dict, db: Session = Depends(get_db)):
     if not title or not company or not url:
         raise HTTPException(status_code=400, detail="title, company, and url are required")
 
-    from backend.scraper.deduplicator import make_external_id, make_content_hash
+    from backend.scraper._shared.dedup import make_external_id, make_content_hash
     external_id = make_external_id(company, title, url)
 
     existing = db.query(Job).filter(Job.external_id == external_id).first()
