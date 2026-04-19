@@ -7,6 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Principle of least privilege: workflow only lints and builds local Docker
+# images, never pushes. Read-only contents access is sufficient.
+permissions:
+  contents: read
+
 jobs:
   lint-python:
     name: Lint Python
