@@ -92,11 +92,18 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
 
     from backend.scraper.jobspy_scraper import run_single_search
     result = await run_single_search(str(search.id), auto_score=auto_score)
-    # Sanitize any error detail bubbled up from scrapers to avoid leaking exception strings.
+    # Project to an explicit whitelist of safe fields — never forward scraper exception
+    # strings to the client (CodeQL py/stack-trace-exposure).
     if isinstance(result, dict) and result.get("error"):
         logger.warning("Search %s finished with scrape error: %s", search.id, result.get("error"))
-        result = {**result, "error": "Scrape failed; see server logs for details."}
-    return {"message": "Search completed", "search_id": str(search.id), "result": result}
+    safe_result = {
+        "jobs_found": int(result.get("jobs_found", 0)) if isinstance(result, dict) else 0,
+        "new_jobs": int(result.get("new_jobs", 0)) if isinstance(result, dict) else 0,
+        "duration": result.get("duration") if isinstance(result, dict) else None,
+        "error": "Scrape failed; see server logs for details."
+                 if isinstance(result, dict) and result.get("error") else None,
+    }
+    return {"message": "Search completed", "search_id": str(search.id), "result": safe_result}
 
 
 @router.post("/{search_id}/test")
