@@ -131,18 +131,45 @@ async def _dispatch(provider: str, model: str, api_key: str, base_url: str,
         raise ValueError(f"Unknown LLM provider: {provider}")
 
 
-async def _call_claude_api(prompt: str, system: str, model: str, api_key: str, max_tokens: int) -> str:
-    """Call Claude via Anthropic SDK. Uses api_key from settings, falls back to env var."""
+async def _call_claude_api(prompt: str, system: str, model: str, api_key: str,
+                           max_tokens: int, cached_prefix: str | None = None) -> dict:
+    """Call Claude via Anthropic SDK. Returns {text, usage} dict.
+
+    When cached_prefix is provided, it's sent as a separate message block with
+    cache_control={"type": "ephemeral"} so subsequent calls with the same prefix
+    are served at cache-read price (~10x cheaper). The prefix should be >= 1024
+    tokens (Sonnet/Opus minimum) or it's ignored for caching.
+    """
     import anthropic
     key = api_key or __import__('os').getenv("ANTHROPIC_API_KEY", "")
     client = anthropic.AsyncAnthropic(api_key=key)
+
+    if cached_prefix:
+        content = [
+            {"type": "text", "text": cached_prefix, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": prompt},
+        ]
+    else:
+        content = prompt  # plain string — no cache_control
+
     response = await client.messages.create(
         model=model,
         max_tokens=max_tokens,
         system=system,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": content}],
     )
-    return response.content[0].text.strip()
+
+    # Extract usage — cache_* attributes may be absent on older SDK versions or non-cached calls
+    usage = response.usage
+    return {
+        "text": response.content[0].text.strip(),
+        "usage": {
+            "input_tokens": getattr(usage, "input_tokens", 0),
+            "output_tokens": getattr(usage, "output_tokens", 0),
+            "cache_read_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+            "cache_write_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
+        },
+    }
 
 
 async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: int) -> str:
