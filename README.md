@@ -136,6 +136,14 @@ Open `http://localhost`. On first run, click "Sign In" with a blank API key to p
 | AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI |
 | Extension | Chrome Manifest V3 |
 
+## Contributing
+
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Easy wins: new ATS scrapers, new resume templates, UI polish.
+
+## Security
+
+Found a vulnerability? See [SECURITY.md](SECURITY.md). Please don't open public issues for security bugs.
+
 ## Privacy
 
 **JobNavigator is self-hosted — NOT a hosted service.** Your CV, job data, and credentials stay on your machine. Data is sent only to the AI provider you configure. We do not collect, store, or have access to any of your data.
