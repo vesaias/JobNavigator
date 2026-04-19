@@ -337,9 +337,18 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
 
     # Call LLM
     from backend.analyzer.llm_client import call_cv_tailor_llm
+    from backend.analyzer.llm_logger import track_llm_call
+    # Determine model for logging
+    _m = db.query(Setting).filter(Setting.key == "cv_tailor_llm_model").first()
+    _model = _m.value if _m and _m.value else None
+    if not _model:
+        _m2 = db.query(Setting).filter(Setting.key == "llm_model").first()
+        _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
     try:
-        _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
-        raw = _resp["text"]
+        async with track_llm_call("tailor", _model, job_id=job_id) as _tracker:
+            _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
+            _tracker.usage = _resp.get("usage", _tracker.usage)
+            raw = _resp["text"]
     except Exception as e:
         logger.error(f"CV tailoring LLM failed: {e}")
         raise HTTPException(500, f"LLM tailoring failed: {e}")
@@ -557,8 +566,14 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
 
     try:
         from backend.analyzer.llm_client import call_llm
-        _resp = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
-        raw_response = _resp["text"]
+        from backend.analyzer.llm_logger import track_llm_call
+        # Determine model for logging
+        _m = db.query(Setting).filter(Setting.key == "llm_model").first()
+        _model = _m.value if _m and _m.value else "claude-sonnet-4-6"
+        async with track_llm_call("pdf", _model) as _tracker:
+            _resp = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
+            _tracker.usage = _resp.get("usage", _tracker.usage)
+            raw_response = _resp["text"]
 
         # Strip markdown fences if present
         cleaned = raw_response.strip()

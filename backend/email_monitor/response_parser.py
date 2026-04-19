@@ -122,9 +122,23 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
 
     try:
         from backend.analyzer.llm_client import call_email_llm
+        from backend.analyzer.llm_logger import track_llm_call
+        from backend.models.db import SessionLocal, Setting
         import json
-        _resp = await call_email_llm(prompt, system, max_tokens=150)
-        raw = _resp["text"]
+        # Determine model for logging
+        _db = SessionLocal()
+        try:
+            _m = _db.query(Setting).filter(Setting.key == "email_llm_model").first()
+            _model = _m.value if _m and _m.value else None
+            if not _model:
+                _m2 = _db.query(Setting).filter(Setting.key == "llm_model").first()
+                _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
+        finally:
+            _db.close()
+        async with track_llm_call("email", _model) as _tracker:
+            _resp = await call_email_llm(prompt, system, max_tokens=150)
+            _tracker.usage = _resp.get("usage", _tracker.usage)
+            raw = _resp["text"]
 
         # Extract JSON from response — handles markdown fences and trailing commentary
         import re

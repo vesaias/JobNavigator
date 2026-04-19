@@ -249,7 +249,7 @@ class LlmCallLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     purpose = Column(String, nullable=False)  # score_light, score_full, tailor, email, pdf
-    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
     model = Column(String, nullable=False, default="")
     input_tokens = Column(Integer, default=0, nullable=False)
     output_tokens = Column(Integer, default=0, nullable=False)

@@ -265,6 +265,11 @@ def run_migrations(db):
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_created_at ON llm_call_log(created_at)",
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_purpose ON llm_call_log(purpose)",
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_job_id ON llm_call_log(job_id)",
+        # Fix FK drift: the CREATE TABLE above is a no-op on live DBs where SQLAlchemy's
+        # create_all() already built the table with no ondelete (NO ACTION). Re-align
+        # the live constraint to ON DELETE SET NULL. Safe idempotent SQL.
+        """ALTER TABLE llm_call_log DROP CONSTRAINT IF EXISTS llm_call_log_job_id_fkey""",
+        """ALTER TABLE llm_call_log ADD CONSTRAINT llm_call_log_job_id_fkey FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL""",
     ]
     for sql in migrations:
         try:
