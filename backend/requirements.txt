@@ -16,3 +16,5 @@ beautifulsoup4==4.12.3
 pydantic==2.10.4
 linkedin-api==2.3.1
 Jinja2>=3.1.0
+pytest==8.3.4
+pytest-asyncio==0.25.0
