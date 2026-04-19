@@ -26,21 +26,14 @@ _ORACLE_HCM_HOSTS = {
 def is_oracle_hcm(url: str) -> bool:
     """Check if URL is an Oracle HCM CandidateExperience job board.
 
-    Accepts direct oraclecloud.com CandidateExperience URLs, known custom
-    domains from _ORACLE_HCM_HOSTS, and legacy /sites/.../jobs URLs that
-    resolve via _oracle_hcm_host.
+    Preserves exact semantics of the pre-refactor one-liner:
+      direct oraclecloud.com/hcmUI/CandidateExperience URL,
+      OR (/sites/ path + /jobs path + host maps via _oracle_hcm_host)
     """
-    if "oraclecloud.com/hcmUI/CandidateExperience" in url:
-        return True
-    if _oracle_hcm_host(url) is None:
-        return False
-    # Hostname-mapped custom domain — accept root and job paths
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-    if host in _ORACLE_HCM_HOSTS:
-        return True
-    # Direct oraclecloud.com host (non-standard path) — require /sites/ + /jobs
-    return "/sites/" in url and "/jobs" in url
+    return (
+        "oraclecloud.com/hcmUI/CandidateExperience" in url
+        or ("/sites/" in url and "/jobs" in url and _oracle_hcm_host(url) is not None)
+    )
 
 
 def _oracle_hcm_host(url: str) -> str | None:
