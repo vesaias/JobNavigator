@@ -92,6 +92,10 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
 
     from backend.scraper.jobspy_scraper import run_single_search
     result = await run_single_search(str(search.id), auto_score=auto_score)
+    # Sanitize any error detail bubbled up from scrapers to avoid leaking exception strings.
+    if isinstance(result, dict) and result.get("error"):
+        logger.warning("Search %s finished with scrape error: %s", search.id, result.get("error"))
+        result = {**result, "error": "Scrape failed; see server logs for details."}
     return {"message": "Search completed", "search_id": str(search.id), "result": result}
 
 
@@ -174,10 +178,11 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
     start = time.time()
     try:
         jobs_df = await asyncio.to_thread(scrape_jobs, **kwargs)
-    except Exception as e:
+    except Exception:
+        logger.exception("JobSpy scrape_jobs failed during test for search %s", search.name)
         return {
             "search_name": search.name,
-            "error": str(e),
+            "error": "Scrape failed; see server logs for details.",
             "config": {
                 "sources": sources,
                 "search_term": kwargs["search_term"],

@@ -303,7 +303,11 @@ async def trigger_all_scrapes():
         run_id = launch_background("scrape_all", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/email/check-now", tags=["triggers"], summary="Check Gmail now", status_code=202)
@@ -317,7 +321,11 @@ async def trigger_email_check():
         run_id = launch_background("email_check", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/h1b/refresh", tags=["triggers"], summary="Refresh H-1B data", status_code=202)
@@ -331,7 +339,11 @@ async def trigger_h1b_refresh():
         run_id = launch_background("h1b_refresh", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/analyze/{job_id}", tags=["triggers"], summary="Analyze a single job", status_code=202)
@@ -349,7 +361,11 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
         run_id = launch_background("analyze_job", _do, trigger="manual", scope_key=scope)
         return {"run_id": run_id, "status": "running", "job_id": job_id}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/db/cleanup", tags=["triggers"], summary="Database cleanup", status_code=202)
@@ -380,7 +396,11 @@ async def trigger_job_cleanup():
         run_id = launch_background("job_cleanup", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/auto-reject/run", tags=["triggers"], summary="Run auto-reject now", status_code=202)
@@ -415,7 +435,11 @@ async def trigger_auto_reject():
         run_id = launch_background("auto_reject", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/jobs/backfill-descriptions", tags=["triggers"], summary="Fetch descriptions for jobs missing them", status_code=202)
@@ -457,7 +481,11 @@ async def trigger_backfill_descriptions():
         run_id = launch_background("backfill_descriptions", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/db/backup", tags=["triggers"], summary="Run database backup", status_code=202)
@@ -496,7 +524,11 @@ async def trigger_db_backup():
         run_id = launch_background("db_backup", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/telegram/digest", tags=["triggers"], summary="Send Telegram digest", status_code=202)
@@ -510,7 +542,11 @@ async def trigger_digest():
         run_id = launch_background("daily_digest", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/scrape/company/{company_id}", tags=["triggers"], summary="Scrape a single company", status_code=202)
@@ -547,7 +583,11 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
         run_id = launch_background("company_scrape", _do, trigger="manual", scope_key=company_id, meta={"company": company_name})
         return {"run_id": run_id, "status": "running", "company": company_name}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.post("/api/telegram/webhook", tags=["telegram"], summary="Telegram webhook")
@@ -589,7 +629,11 @@ async def telegram_test():
         run_id = launch_background("telegram_test", _do, trigger="manual")
         return {"run_id": run_id, "status": "running"}
     except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": str(e)})
+        logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running"},
+        )
 
 
 @app.get("/api/scheduler/jobs", tags=["scheduler"], summary="List scheduled jobs")
