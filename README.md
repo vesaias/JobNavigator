@@ -82,7 +82,7 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 | Feature | Description |
 |---------|-------------|
 | **Multi-Source Discovery** | 6 scraping tiers: career pages (Playwright + 10 ATS), JobSpy (4 boards), LinkedIn Personal, Levels.fyi, Jobright.ai, Chrome Extension |
-| **AI CV Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-CV comparison, keyword analysis, requirement mapping, ATS tips |
+| **AI CV Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-CV comparison, keyword analysis, requirement mapping, ATS tips. **Prompt caching** on Anthropic cuts repeat-scoring cost ~50%. |
 | **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens |
 | **Smart Dedup** | Two-layer: URL hash + cross-source content hash. Configurable tracking param stripping |
 | **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations |
