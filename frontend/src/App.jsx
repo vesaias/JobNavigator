@@ -8,6 +8,9 @@ import SearchManager from './components/SearchManager'
 import SettingsPage from './components/Settings'
 import Stats from './components/Stats'
 import ResumeBuilder from './components/ResumeBuilder'
+import LoginModal from './components/LoginModal'
+import WelcomeModal from './components/WelcomeModal'
+import axios from 'axios'
 
 const NAV_ITEMS = [
   { to: '/', icon: Briefcase, label: 'Jobs' },
@@ -25,6 +28,10 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => {
     try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false }
   })
+  const [showLogin, setShowLogin] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try { return sessionStorage.getItem('jn:welcome') === '1' } catch { return false }
+  })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -39,6 +46,33 @@ function App() {
       window.location.href = '/cv/' + encodeURIComponent(cvToken)
     }
   }, [])
+
+  // On startup, sync localStorage API key to backend session cookie.
+  // If 401, the user has an invalid or missing key → show login modal.
+  useEffect(() => {
+    const key = localStorage.getItem('jobnavigator_api_key') || ''
+    axios.post('/api/auth/set-session',
+      { api_key: key },
+      { withCredentials: true }
+    ).catch((err) => {
+      if (err.response?.status === 401) {
+        setShowLogin(true)
+      }
+    })
+  }, [])
+
+  // Global 401 handler — show login modal when any API call is rejected
+  useEffect(() => {
+    const handler = () => setShowLogin(true)
+    window.addEventListener('jn:unauthorized', handler)
+    return () => window.removeEventListener('jn:unauthorized', handler)
+  }, [])
+
+  const handleLoginSuccess = () => {
+    setShowLogin(false)
+    // Reload so all data-fetching components refetch with fresh auth
+    window.location.reload()
+  }
 
   return (
     <BrowserRouter>
@@ -108,6 +142,14 @@ function App() {
             <Route path="/stats" element={<Stats />} />
           </Routes>
         </main>
+
+        {showLogin && <LoginModal onSuccess={handleLoginSuccess} />}
+        {showWelcome && !showLogin && (
+          <WelcomeModal onClose={() => {
+            try { sessionStorage.removeItem('jn:welcome') } catch {}
+            setShowWelcome(false)
+          }} />
+        )}
       </div>
     </BrowserRouter>
   )

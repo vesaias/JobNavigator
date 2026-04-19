@@ -105,7 +105,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Open `http://localhost`. No API key required on first run.
+Open `http://localhost`. On first run, click "Sign In" with a blank API key to proceed. Set a real key from Settings > General once you've accessed the dashboard.
 
 **First steps:**
 1. Settings > AI tab — configure your LLM provider and API key

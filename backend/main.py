@@ -83,10 +83,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow dashboard frontend
+# CORS — allow dashboard frontend (configurable via ALLOWED_ORIGINS env var)
+import os as _os_cors
+_allowed_origins = _os_cors.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost,http://localhost:3000,http://localhost:80"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in _allowed_origins if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -94,44 +100,98 @@ app.add_middleware(
 
 
 # ── API Key auth middleware ──────────────────────────────────────────────────
+import hmac as _hmac_mw
+
+# Paths that NEVER require auth (exact or prefix match)
+_PUBLIC_PREFIXES = ("/health", "/docs", "/openapi.json", "/redoc", "/cv/", "/api/telegram/webhook", "/api/auth/set-session", "/api/auth/verify", "/api/auth/logout")
+
 @app.middleware("http")
 async def api_key_auth(request: Request, call_next):
-    # Skip auth for health check and docs
-    skip_paths = ("/health", "/docs", "/openapi.json", "/redoc")
-    if request.url.path in skip_paths or request.url.path.startswith("/docs"):
+    path = request.url.path
+
+    # Let CORS preflight requests pass through so CORSMiddleware can respond
+    if request.method == "OPTIONS":
         return await call_next(request)
 
-    # Telegram webhook skips auth (called by Telegram servers, not users)
-    if request.url.path.startswith("/api/telegram/webhook"):
+    # Public endpoints
+    if any(path == p or path.startswith(p + "/") or path == p.rstrip("/") for p in _PUBLIC_PREFIXES):
+        return await call_next(request)
+    # docs subpaths
+    if path.startswith("/docs"):
         return await call_next(request)
 
-    # Tracer link redirects are public
-    if request.url.path.startswith("/cv/"):
-        return await call_next(request)
-
-    # Cached page iframes, resume previews/PDFs, and CV downloads load via direct URL (no API key header)
-    if "/cached-page" in request.url.path or "/download" in request.url.path or ("/resumes/" in request.url.path and ("/preview" in request.url.path or "/pdf" in request.url.path)):
-        return await call_next(request)
-
-    # Check API key
-    api_key = request.headers.get("X-API-Key", "")
+    # Accept either X-API-Key header (API clients, extension) OR jn_session cookie (browser)
+    api_key = request.headers.get("X-API-Key", "") or request.cookies.get("jn_session", "")
 
     db = SessionLocal()
     try:
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
         expected = setting.value if setting else INITIAL_API_KEY
-        # If no API key is configured yet, allow access (first-run setup)
+        # First-run: no key configured → allow everything
         if not expected:
             return await call_next(request)
-        # If API key is configured, require it
+        # Key configured → require match (timing-safe compare)
         if not api_key:
             return JSONResponse(status_code=401, content={"detail": "API key required"})
-        if api_key != expected:
+        if not _hmac_mw.compare_digest(api_key, expected):
             return JSONResponse(status_code=401, content={"detail": "Invalid API key"})
     finally:
         db.close()
 
     return await call_next(request)
+
+
+# ── Auth endpoints (cookie session) ──────────────────────────────────────────
+import hmac as _hmac
+from fastapi import Response as _Response
+
+@app.post("/api/auth/verify", tags=["auth"], summary="Verify an API key without setting a session")
+async def verify_api_key(body: dict):
+    """Validate API key. Returns 200 {ok: true} on match, 401 otherwise."""
+    api_key = (body or {}).get("api_key", "")
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+        expected = setting.value if setting else INITIAL_API_KEY
+        if not expected:
+            return {"ok": True, "first_run": True}
+        if not api_key or not _hmac.compare_digest(api_key, expected):
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        return {"ok": True, "first_run": False}
+    finally:
+        db.close()
+
+
+@app.post("/api/auth/set-session", tags=["auth"], summary="Set session cookie from API key")
+async def set_session(body: dict, response: _Response):
+    """Verify API key and set httpOnly jn_session cookie. Cookie is sent on all
+    same-origin requests (including iframe/download URLs)."""
+    api_key = (body or {}).get("api_key", "")
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+        expected = setting.value if setting else INITIAL_API_KEY
+        if expected and (not api_key or not _hmac.compare_digest(api_key, expected)):
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        # First-run (no key configured) is OK - set cookie to empty, middleware will allow
+        cookie_value = api_key or ""
+        response.set_cookie(
+            key="jn_session",
+            value=cookie_value,
+            httponly=True,
+            samesite="strict",
+            max_age=60 * 60 * 24 * 30,  # 30 days
+            secure=False,  # set True when deployed over HTTPS
+        )
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+@app.post("/api/auth/logout", tags=["auth"], summary="Clear session cookie")
+async def logout(response: _Response):
+    response.delete_cookie(key="jn_session", samesite="strict", httponly=True)
+    return {"ok": True}
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────

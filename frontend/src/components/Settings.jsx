@@ -45,6 +45,12 @@ export default function SettingsPage() {
     const key = settings.dashboard_api_key
     localStorage.setItem('jobnavigator_api_key', key)
     await saveSetting('dashboard_api_key', key)
+    // Refresh the httpOnly session cookie so iframe/download requests keep working
+    try {
+      await api.post('/auth/set-session', { api_key: key })
+    } catch (e) {
+      console.warn('Failed to refresh session cookie:', e)
+    }
   }
 
   const uploadCV = async (version) => {
