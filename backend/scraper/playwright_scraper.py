@@ -48,6 +48,13 @@ from backend.scraper.ats.workday import (  # noqa: F401
 _is_workday = is_workday  # back-compat alias
 
 
+# ── Re-exports from ats/greenhouse (Task 8 follow-up fix) ────────────────────
+from backend.scraper.ats.greenhouse import (  # noqa: F401
+    is_greenhouse, scrape as _scrape_greenhouse, _parse_greenhouse_url,
+)
+_is_greenhouse = is_greenhouse  # back-compat alias for internal calls at lines 889, 890, 1110
+
+
 # ── Re-exports from ats/lever (Task 9) ────────────────────────────────────────
 from backend.scraper.ats.lever import (  # noqa: F401
     is_lever, scrape as _scrape_lever,

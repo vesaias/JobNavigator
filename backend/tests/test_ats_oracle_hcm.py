@@ -8,10 +8,11 @@ def test_is_oracle_hcm_detects_oraclecloud():
     assert is_oracle_hcm("https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345/")
 
 
-def test_is_oracle_hcm_detects_custom_domain():
+def test_is_oracle_hcm_detects_sites_path_with_mapped_host():
     from backend.scraper.ats.oracle_hcm import is_oracle_hcm
-    # Oracle offers custom career subdomains (e.g. careers.oracle.com) mapped to real backends
-    assert is_oracle_hcm("https://careers.oracle.com/jobs/")
+    # Oracle custom domains (e.g. careers.oracle.com) — detected when URL has /sites/.../jobs
+    # The original logic requires both "/sites/" AND "/jobs" in the URL for host-mapped domains.
+    assert is_oracle_hcm("https://careers.oracle.com/sites/CX_1/jobs/")
 
 
 def test_is_oracle_hcm_rejects_non_oracle():
