@@ -92,7 +92,7 @@ function LlmCostPanel() {
   if (!data) return null
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mt-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">LLM Costs — last {days} days</h2>
         <select
