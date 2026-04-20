@@ -1,5 +1,4 @@
 """Job listing and management endpoints."""
-import asyncio
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Request
@@ -9,6 +8,7 @@ from sqlalchemy import desc, asc, text, func
 from backend.models.db import get_db, Job, find_company_by_name
 from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.analyzer.salary_extractor import apply_salary_to_job
+from backend.job_monitor import launch_background, JobAlreadyRunningError
 # LinkedIn extension enrichment — see sources/linkedin_extension.py
 from backend.scraper.sources.linkedin_extension import (
     enrich as _scrape_linkedin_ids,  # noqa: F401
@@ -36,12 +36,24 @@ async def linkedin_import(request: Request, db: Session = Depends(get_db)):
     new_count = sum(1 for lid in linkedin_ids if lid not in existing_li_ids)
 
     _linkedin_import_progress.clear()
-    asyncio.create_task(_scrape_linkedin_ids(linkedin_ids))
+
+    async def _do():
+        await _scrape_linkedin_ids(linkedin_ids)
+
+    try:
+        run_id = launch_background("linkedin_import", _do, trigger="manual")
+    except JobAlreadyRunningError as e:
+        logger.info("Duplicate linkedin_import trigger rejected (%s)", e)
+        raise HTTPException(
+            status_code=409,
+            detail=f"{e.job_type} is already running",
+        )
 
     return {
         "accepted": len(linkedin_ids),
         "new": new_count,
         "already_imported": len(linkedin_ids) - new_count,
+        "run_id": run_id,
         "message": f"Processing {new_count} new jobs ({len(linkedin_ids) - new_count} already imported)",
     }
 
