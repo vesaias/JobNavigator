@@ -529,6 +529,17 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Additional scoring requests queue until a slot opens. Prevents DB connection pool exhaustion.</p>
         </div>
         <div className="mt-4">
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+            <input type="checkbox"
+              checked={(settings.prompt_caching_enabled ?? 'true') === 'true'}
+              onChange={e => { const v = e.target.checked ? 'true' : 'false'; setSettings({...settings, prompt_caching_enabled: v}); saveSetting('prompt_caching_enabled', v) }}
+              className="accent-indigo-600"
+            />
+            Prompt Caching (Anthropic)
+          </label>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Send the rubric + CVs + schema as a cached block so subsequent scoring calls reuse it at ~10× cheaper input tokens. Only active when provider is <code>claude_api</code>; no effect with <code>claude_code</code> or local providers. Disable as a rollback lever.</p>
+        </div>
+        <div className="mt-4">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Default Scoring Depth</label>
           <select value={settings.scoring_default_depth || 'full'}
             onChange={e => { setSettings({...settings, scoring_default_depth: e.target.value}); saveSetting('scoring_default_depth', e.target.value) }}

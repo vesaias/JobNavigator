@@ -137,6 +137,61 @@ async def test_score_job_full_depth_uses_score_full_purpose(scorer_db, monkeypat
 
 
 @pytest.mark.asyncio
+async def test_score_job_respects_prompt_caching_disabled(scorer_db, monkeypatch):
+    """When prompt_caching_enabled='false' in settings, cached_prefix is passed as None."""
+    from backend.models.db import Setting
+    s = scorer_db()
+    s.add(Setting(key="prompt_caching_enabled", value="false"))
+    s.commit()
+    s.close()
+
+    captured = {}
+
+    async def fake_call_llm(prompt, system, max_tokens, cached_prefix=None):
+        captured["cached_prefix"] = cached_prefix
+        return {
+            "text": '{"scores":{"PM":75},"best_cv":"PM"}',
+            "usage": {"input_tokens": 100, "output_tokens": 20,
+                      "cache_read_tokens": 0, "cache_write_tokens": 0},
+        }
+
+    monkeypatch.setattr("backend.analyzer.cv_scorer.call_llm", fake_call_llm)
+    monkeypatch.setattr("backend.analyzer.cv_scorer.log_llm_call", lambda **kw: None)
+
+    from backend.analyzer import cv_scorer
+    job = FakeJob()
+    await cv_scorer.score_job_sync(job, {"PM": "CV text"}, db=None, depth="light",
+                                    preloaded_text="JD text")
+
+    assert captured["cached_prefix"] is None
+
+
+@pytest.mark.asyncio
+async def test_score_job_caching_enabled_by_default(scorer_db, monkeypatch):
+    """When prompt_caching_enabled is absent (no row) or 'true', cached_prefix is forwarded."""
+    captured = {}
+
+    async def fake_call_llm(prompt, system, max_tokens, cached_prefix=None):
+        captured["cached_prefix"] = cached_prefix
+        return {
+            "text": '{"scores":{"PM":75},"best_cv":"PM"}',
+            "usage": {"input_tokens": 100, "output_tokens": 20,
+                      "cache_read_tokens": 0, "cache_write_tokens": 0},
+        }
+
+    monkeypatch.setattr("backend.analyzer.cv_scorer.call_llm", fake_call_llm)
+    monkeypatch.setattr("backend.analyzer.cv_scorer.log_llm_call", lambda **kw: None)
+
+    from backend.analyzer import cv_scorer
+    job = FakeJob()
+    await cv_scorer.score_job_sync(job, {"PM": "CV text"}, db=None, depth="light",
+                                    preloaded_text="JD text")
+
+    assert captured["cached_prefix"] is not None
+    assert "RUBRIC TEXT" in captured["cached_prefix"]
+
+
+@pytest.mark.asyncio
 async def test_score_job_logs_failure_when_call_llm_raises(scorer_db, monkeypatch):
     """When call_llm raises, log_llm_call still runs with success=False + error."""
     captured_log = {}

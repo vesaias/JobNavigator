@@ -146,6 +146,8 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         model_for_log = model_row.value if model_row and model_row.value else "claude-sonnet-4-6"
         provider_row = settings_db.query(Setting).filter(Setting.key == "llm_provider").first()
         provider_for_log = provider_row.value if provider_row and provider_row.value else "claude_api"
+        cache_row = settings_db.query(Setting).filter(Setting.key == "prompt_caching_enabled").first()
+        caching_enabled = (cache_row.value if cache_row else "true").strip().lower() == "true"
     finally:
         if not db:
             settings_db.close()
@@ -185,7 +187,10 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
     return_value = None
 
     try:
-        resp = await call_llm(user_prompt, system_msg, max_tokens, cached_prefix=cached_prefix)
+        # Honor the prompt_caching_enabled setting — setting cached_prefix=None disables
+        # the cache_control block on the Anthropic request, so caching is fully off.
+        effective_prefix = cached_prefix if caching_enabled else None
+        resp = await call_llm(user_prompt, system_msg, max_tokens, cached_prefix=effective_prefix)
         text = resp["text"]
         usage = resp.get("usage", usage)
 
