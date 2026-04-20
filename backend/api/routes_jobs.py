@@ -273,8 +273,14 @@ def save_from_extension(body: dict, db: Session = Depends(get_db)):
 
     from backend.scraper._shared.dedup import make_external_id, make_content_hash
     external_id = make_external_id(company, title, url)
+    content_hash = make_content_hash(company, title)
 
-    existing = db.query(Job).filter(Job.external_id == external_id).first()
+    # Two-layer dedup: check external_id (URL-based) first, fall back to content_hash
+    # (company+title) for cross-source catches where the same job was saved via a
+    # different URL shape.
+    existing = db.query(Job).filter(
+        (Job.external_id == external_id) | (Job.content_hash == content_hash)
+    ).first()
     if existing:
         if existing.status == "skip":
             existing.status = "new"
@@ -287,7 +293,7 @@ def save_from_extension(body: dict, db: Session = Depends(get_db)):
 
     job = Job(
         external_id=external_id,
-        content_hash=make_content_hash(company, title),
+        content_hash=content_hash,
         company=company,
         title=title,
         url=url,
