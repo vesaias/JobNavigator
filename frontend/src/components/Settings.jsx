@@ -974,6 +974,12 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="mb-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-900 dark:text-blue-200">
+            <b>Optional.</b> Outbound alerts and the daily digest work without any webhook configured.
+            Only set this up if you want the inline <b>Apply / Skip</b> buttons in Telegram messages
+            to call back into this app. Requires a public HTTPS URL (Tailscale Funnel, Cloudflare Tunnel,
+            ngrok, etc.) — it won't work on a LAN-only install.
+          </div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Webhook Secret <span className="font-normal text-gray-400">(validates every Telegram → backend call)</span>
           </label>
