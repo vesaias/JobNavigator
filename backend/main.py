@@ -129,6 +129,12 @@ async def api_key_auth(request: Request, call_next):
         expected = setting.value if setting else INITIAL_API_KEY
         # First-run: no key configured → allow everything
         if not expected:
+            # WARNING-level so operators see this in logs when they shouldn't (e.g.,
+            # dashboard_api_key setting cleared by a botched DB restore).
+            logger.warning(
+                "api key BYPASS (first-run mode): path=%s — dashboard_api_key setting is empty",
+                request.url.path,
+            )
             return await call_next(request)
         # Key configured → require match (timing-safe compare)
         if not api_key:
