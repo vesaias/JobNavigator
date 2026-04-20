@@ -193,6 +193,14 @@ async def enrich(linkedin_ids: list[str], db=None):
                     )
                 except Exception as e:
                     logger.warning(f"LinkedIn {lid}: analysis error: {e}")
+                    _linkedin_import_progress["errors"] = (
+                        _linkedin_import_progress.get("errors", 0) + 1
+                    )
+                    _linkedin_import_progress.setdefault("error_details", []).append({
+                        "lid": lid,
+                        "stage": "analysis",
+                        "error": str(e)[:200],
+                    })
 
                 # Skip flagged jobs (same as other scrapers)
                 if job.h1b_jd_flag:
@@ -210,6 +218,14 @@ async def enrich(linkedin_ids: list[str], db=None):
                 logger.warning(f"LinkedIn {lid}: failed: {e}")
                 db.rollback()
                 skipped += 1
+                _linkedin_import_progress["errors"] = (
+                    _linkedin_import_progress.get("errors", 0) + 1
+                )
+                _linkedin_import_progress.setdefault("error_details", []).append({
+                    "lid": lid,
+                    "stage": "fetch",
+                    "error": str(e)[:200],
+                })
 
             # Update progress tracker
             _linkedin_import_progress.update({
@@ -231,5 +247,13 @@ async def enrich(linkedin_ids: list[str], db=None):
                 logger.info("LinkedIn import: auto-scoring triggered")
             except Exception as e:
                 logger.warning(f"LinkedIn import: auto-scoring failed: {e}")
+                _linkedin_import_progress["errors"] = (
+                    _linkedin_import_progress.get("errors", 0) + 1
+                )
+                _linkedin_import_progress.setdefault("error_details", []).append({
+                    "lid": None,
+                    "stage": "auto_scoring",
+                    "error": str(e)[:200],
+                })
     finally:
         db.close()
