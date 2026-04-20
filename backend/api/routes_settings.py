@@ -1,8 +1,14 @@
 """GET /settings and PATCH /settings endpoints."""
 import json
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.models.db import get_db, Setting
+from backend.scheduler import configure_scheduler
+from backend.analyzer.cv_scorer import reset_scoring_semaphore
+from backend.scraper._shared.dedup import reload_tracking_params
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -32,6 +38,7 @@ def get_settings(db: Session = Depends(get_db)):
 @router.patch("")
 def update_settings(updates: dict, db: Session = Depends(get_db)):
     """Update one or more settings."""
+    warnings: list[str] = []
     updated = []
     for key, value in updates.items():
         # Skip redacted placeholder values (don't overwrite real secrets with bullets)
@@ -54,25 +61,25 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     }
     if timing_keys & set(updated):
         try:
-            from backend.scheduler import configure_scheduler
             configure_scheduler()
-        except Exception:
-            pass  # Scheduler may not be running in all contexts
+        except Exception as _e:
+            warnings.append(f"configure_scheduler failed: {_e}")
+            logger.exception("configure_scheduler failed after settings update")
 
     # Reset scoring semaphore if concurrency limit changed
     if "scoring_max_concurrent" in updated:
         try:
-            from backend.analyzer.cv_scorer import reset_scoring_semaphore
             reset_scoring_semaphore()
-        except Exception:
-            pass
+        except Exception as _e:
+            warnings.append(f"reset_scoring_semaphore failed: {_e}")
+            logger.exception("reset_scoring_semaphore failed after settings update")
 
     # Reload dedup params cache if changed
     if "dedup_tracking_params" in updated:
         try:
-            from backend.scraper._shared.dedup import reload_tracking_params
             reload_tracking_params()
-        except Exception:
-            pass
+        except Exception as _e:
+            warnings.append(f"reload_tracking_params failed: {_e}")
+            logger.exception("reload_tracking_params failed after settings update")
 
-    return {"updated": updated}
+    return {"updated": updated, "warnings": warnings}
