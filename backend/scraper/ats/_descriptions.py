@@ -28,6 +28,19 @@ async def _fetch_job_description(url: str) -> str | None:
     Uses ATS-specific APIs for Oracle HCM, Workday, Lever, Greenhouse;
     falls back to generic HTML extraction for everything else.
     """
+    from backend.scraper._shared.url_safety import (
+        assert_public_http_url,
+        safe_get,
+        UnsafeURLError,
+    )
+
+    # SSRF gate — URLs end up here from scraped JD content and extension submits.
+    try:
+        assert_public_http_url(url)
+    except UnsafeURLError as e:
+        logger.warning(f"Rejected unsafe JD URL {url!r}: {e}")
+        return None
+
     # Try ATS-specific fetchers first (SPA pages won't work with plain HTTP)
     try:
         desc = await _fetch_description_ats(url)
@@ -39,29 +52,31 @@ async def _fetch_job_description(url: str) -> str | None:
     # Generic HTML fallback
     try:
         from bs4 import BeautifulSoup
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(url, headers={"User-Agent": _USER_AGENT})
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, "html.parser")
-            for tag in soup.find_all(["script", "style", "nav", "footer", "header", "noscript", "svg", "img"]):
-                tag.decompose()
-            text = soup.get_text(separator="\n", strip=True)[:30_000]
-            if len(text) < 100:
-                return None
-            # Detect SPA garbage: JSON config blobs from JS-rendered pages
-            import re
-            # Check first 500 non-title chars for JSON object start
-            body = text[text.index('\n'):] if '\n' in text[:200] else text
-            body_start = body.lstrip()[:500]
-            if body_start.startswith('{') or body_start.startswith('['):
-                logger.debug(f"Rejected JSON blob description from {url}")
-                return None
-            # Also reject if text has too many JSON structural chars
-            json_like = len(re.findall(r'[{}"\[\]]', text))
-            if json_like > len(text) * 0.10:
-                logger.debug(f"Rejected config-heavy description from {url} ({json_like}/{len(text)} JSON chars)")
-                return None
-            return text
+        resp = await safe_get(url, timeout=15, headers={"User-Agent": _USER_AGENT})
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup.find_all(["script", "style", "nav", "footer", "header", "noscript", "svg", "img"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n", strip=True)[:30_000]
+        if len(text) < 100:
+            return None
+        # Detect SPA garbage: JSON config blobs from JS-rendered pages
+        import re
+        # Check first 500 non-title chars for JSON object start
+        body = text[text.index('\n'):] if '\n' in text[:200] else text
+        body_start = body.lstrip()[:500]
+        if body_start.startswith('{') or body_start.startswith('['):
+            logger.debug(f"Rejected JSON blob description from {url}")
+            return None
+        # Also reject if text has too many JSON structural chars
+        json_like = len(re.findall(r'[{}"\[\]]', text))
+        if json_like > len(text) * 0.10:
+            logger.debug(f"Rejected config-heavy description from {url} ({json_like}/{len(text)} JSON chars)")
+            return None
+        return text
+    except UnsafeURLError as e:
+        logger.warning(f"Rejected unsafe JD redirect {url!r}: {e}")
+        return None
     except Exception as e:
         logger.debug(f"Failed to fetch job description from {url}: {e}")
         return None

@@ -80,6 +80,11 @@ def _extract_clean_content(raw_html: str) -> tuple:
 async def _fetch_with_playwright(url: str) -> str:
     """Fetch a page using Playwright for SPA/JS-rendered sites. Returns raw HTML."""
     from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
+    from backend.scraper._shared.url_safety import assert_public_http_url
+    # Revalidate even though callers already gate on the plain-httpx path —
+    # this function is also reachable directly and a single missed caller is
+    # enough to reopen the SSRF hole.
+    assert_public_http_url(url)
     pw, browser = await _get_browser()
     try:
         page = await _new_page(browser)
@@ -96,13 +101,27 @@ async def _fetch_with_playwright(url: str) -> str:
 
 async def _cache_job_page(job_id: str, url: str):
     """Fetch and cache the job page as clean readable HTML."""
-    import httpx
     from datetime import datetime, timezone
+    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
 
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job or not url:
+            return
+
+        # SSRF gate — reject before any fetch. User-submitted job URLs from the
+        # Chrome extension land here; without this check an attacker could cache
+        # http://169.254.169.254/ or http://db:5432/ and read it from the UI.
+        try:
+            assert_public_http_url(url)
+        except UnsafeURLError as e:
+            logger.warning(f"Rejected unsafe job URL for {job_id}: {e}")
+            try:
+                job.cache_error = f"unsafe URL: {e}"[:500]
+                db.commit()
+            except Exception:
+                db.rollback()
             return
 
         # Track the last error so it can be surfaced to the UI via job.cache_error
@@ -112,12 +131,20 @@ async def _cache_job_page(job_id: str, url: str):
             # Try httpx first (fast, works for most sites)
             html = None
             try:
-                async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-                    resp = await client.get(url, headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    })
-                    resp.raise_for_status()
-                    html = resp.text[:1_000_000]
+                resp = await safe_get(url, timeout=20, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                })
+                resp.raise_for_status()
+                html = resp.text[:1_000_000]
+            except UnsafeURLError as e:
+                # Caught mid-redirect — don't fall back to Playwright for unsafe URLs.
+                logger.warning(f"Unsafe redirect target for job {job_id}: {e}")
+                try:
+                    job.cache_error = f"unsafe redirect: {e}"[:500]
+                    db.commit()
+                except Exception:
+                    db.rollback()
+                return
             except Exception as e:
                 logger.info(f"httpx failed for job {job_id}, will try Playwright: {e}")
                 last_error = f"httpx: {e}"
