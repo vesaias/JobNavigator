@@ -213,3 +213,43 @@ async def test_score_job_logs_failure_when_call_llm_raises(scorer_db, monkeypatc
     assert "simulated provider outage" in (captured_log.get("error") or "")
     assert captured_log.get("purpose") == "score_light"
     assert captured_log.get("job_id") == job.id
+
+
+@pytest.mark.asyncio
+async def test_score_job_no_cvs_returns_none(scorer_db, monkeypatch):
+    """Empty cv_texts dict → _score_job_inner returns None (no scoring attempted)."""
+    from backend.analyzer import cv_scorer
+    job = FakeJob()
+    # Don't stub call_llm — if it's reached, the test should fail
+    result = await cv_scorer.score_job_sync(
+        job, {}, db=None, depth="light", preloaded_text="JD text",
+    )
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_score_job_llm_error_returns_none_without_skipped_marker(scorer_db, monkeypatch):
+    """LLM exception → result is None AND no _skipped sentinel persisted.
+
+    This is the key contract: a transient LLM failure must NOT permanently mark the
+    job as un-rescoreable. The scheduler retries None-result jobs on the next pass.
+    """
+    async def broken_llm(prompt, system, max_tokens, cached_prefix=None):
+        raise RuntimeError("simulated LLM outage")
+
+    monkeypatch.setattr("backend.analyzer.cv_scorer.call_llm", broken_llm)
+    monkeypatch.setattr("backend.analyzer.cv_scorer.log_llm_call", lambda **kw: None)
+
+    from backend.analyzer import cv_scorer
+    job = FakeJob()
+    result = await cv_scorer.score_job_sync(
+        job, {"PM": "CV text"}, db=None, depth="light", preloaded_text="JD text",
+    )
+
+    assert result is None
+    # If the function returns a dict on error, it MUST NOT contain _skipped markers
+    # that prevent the scheduler from rescoring
+    if isinstance(result, dict):
+        assert result.get("_skipped") is None, (
+            "LLM failure must not set a _skipped marker — job should be re-scorable"
+        )

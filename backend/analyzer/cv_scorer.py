@@ -124,6 +124,17 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
     Prompt is split into a cacheable prefix (rubric + CVs + schema) and a per-job suffix
     (just the JD). On Claude API this uses Anthropic prompt caching — subsequent calls
     with the same CV set hit the cache for ~10x cheaper input tokens.
+
+    Return contract (important for rescoring):
+    - dict with scores → success
+    - ``None`` → no text / no CVs (intentional skip, caller may pre-check via
+      ``_get_job_text`` / ``cv_texts`` before calling to distinguish) OR transient
+      LLM failure (exception in ``call_llm``, JSON parse error).
+
+    Callers that persist a ``_skipped`` sentinel so the job won't be retried MUST
+    pre-check for empty ``cv_texts`` and missing job text *before* calling this
+    function. A ``None`` return from inside ``call_llm`` MUST be treated as a
+    transient failure so the scheduler can rescore on the next pass.
     """
     job_text = preloaded_text or await _get_job_text(job, db)
     if not job_text:
@@ -331,8 +342,33 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 else:
                     depth = default_depth
 
+                # Pre-check: does the job have any text available (description,
+                # cached page, or live fetch)? If not, mark _skipped now — this is
+                # a permanent condition (no JD to score against) so we persist a
+                # sentinel to avoid re-processing on every pass.
+                #
+                # This pre-check is what distinguishes "intentional skip" from
+                # "transient LLM failure" at the caller. If we skipped this check
+                # and relied only on score_job_sync returning None, we'd also mark
+                # LLM outages as _skipped, permanently preventing rescoring.
+                preloaded_text = await _get_job_text(job, db)
+                if not preloaded_text:
+                    # Mark with sentinel so it won't match the unscored filter again.
+                    # (LLM was not called — this is a true skip, not a transient failure.)
+                    job.cv_scores = {"_skipped": "no_text_available"}
+                    try:
+                        _scores = job.cv_scores or {}
+                        _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
+                        job.best_cv_score = max(_numeric) if _numeric else None
+                    except (ValueError, TypeError):
+                        job.best_cv_score = None
+                    total_scored += 1
+                    db.commit()
+                    continue
+
                 # Pass db so _get_job_text can fetch live page if text is missing
-                result = await score_job_sync(job, cv_texts, db=db, depth=depth)
+                # (preloaded_text short-circuits the refetch inside _score_job_inner).
+                result = await score_job_sync(job, cv_texts, db=db, depth=depth, preloaded_text=preloaded_text)
                 if result:
                     scores = result.get("scores", {})
                     job.cv_scores = scores
@@ -380,15 +416,15 @@ async def analyze_unscored_jobs(status: str = "saved"):
                         except Exception as e:
                             logger.error(f"Failed to send Telegram alert: {e}")
                 else:
-                    # Mark with sentinel so it won't match the unscored filter again
-                    job.cv_scores = {"_skipped": "no_text_available"}
-                    # Precompute max score for fast DB filtering (Task 2)
-                    try:
-                        _scores = job.cv_scores or {}
-                        _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
-                        job.best_cv_score = max(_numeric) if _numeric else None
-                    except (ValueError, TypeError):
-                        job.best_cv_score = None
+                    # Transient LLM failure (exception or JSON parse error).
+                    # Do NOT persist a _skipped sentinel — that would permanently
+                    # mark the job as un-rescoreable. Leave cv_scores as-is so the
+                    # next scheduler pass retries this job.
+                    logger.warning(
+                        f"Job {job.id} ({job.company} - {job.title}): score_job_sync "
+                        "returned None after pre-check passed — transient failure, "
+                        "will retry next pass"
+                    )
 
                 total_scored += 1
                 db.commit()
