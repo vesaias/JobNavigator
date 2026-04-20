@@ -51,6 +51,24 @@ jobs:
             --ignore=backend/tests/verify_caching_live.py \
             --tb=short
 
+  audit-deps:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    # Advisory only — don't block the build on CVEs in third-party deps that
+    # we can't fix immediately. Rely on the GitHub Actions summary to flag them.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Scan backend/requirements.txt for known CVEs
+        run: pip-audit -r backend/requirements.txt --strict
+
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-latest
