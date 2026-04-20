@@ -272,20 +272,31 @@ async def tracer_redirect(token: str, request: Request):
             except Exception:
                 pass
 
-        # Log click
-        event = TracerClickEvent(
-            tracer_link_id=link.id,
-            device_type=device_type,
-            ua_family=ua_family,
-            os_family=os_family,
-            referrer_host=referrer_host,
-            ip_hash=ip_hash,
-            is_likely_bot=is_bot,
-        )
-        db.add(event)
-        db.commit()
-
+        # Capture destination BEFORE the click-log write so we can always redirect,
+        # even if the click-log commit fails (e.g., constraint violation, transient
+        # DB error). Click logging is best-effort.
         destination = link.destination_url
+
+        # Log click — best-effort. Failures here must not break the redirect.
+        try:
+            event = TracerClickEvent(
+                tracer_link_id=link.id,
+                device_type=device_type,
+                ua_family=ua_family,
+                os_family=os_family,
+                referrer_host=referrer_host,
+                ip_hash=ip_hash,
+                is_likely_bot=is_bot,
+            )
+            db.add(event)
+            db.commit()
+        except Exception as e:
+            logger.exception("Tracer click log failed for token=%s: %s", token, e)
+            # Rollback so the session isn't left in an error state.
+            try:
+                db.rollback()
+            except Exception:
+                pass
     finally:
         db.close()
 
