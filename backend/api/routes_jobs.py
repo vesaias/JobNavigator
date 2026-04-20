@@ -309,11 +309,16 @@ def save_from_extension(body: dict, db: Session = Depends(get_db)):
 
 @router.post("/bulk-update")
 def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
-    """Bulk update multiple jobs at once. Allowed fields: status, seen, saved."""
+    """Bulk update multiple jobs at once. Allowed fields: status, seen, saved.
+
+    Returns {"updated": count, "not_found": [<ids>]} so the frontend can
+    reconcile IDs that failed to resolve (e.g. stale client-side selections).
+    """
     job_ids = body.get("job_ids", [])
     updates = body.get("updates", {})
     allowed = {"status", "seen", "saved"}
     count = 0
+    not_found: list[str] = []
     for job_id in job_ids:
         job = db.query(Job).filter(Job.id == job_id).first()
         if job:
@@ -321,8 +326,10 @@ def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
                 if k in allowed:
                     setattr(job, k, v)
             count += 1
+        else:
+            not_found.append(str(job_id))
     db.commit()
-    return {"updated": count}
+    return {"updated": count, "not_found": not_found}
 
 
 @router.get("/{job_id}")
