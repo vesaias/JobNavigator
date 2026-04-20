@@ -531,8 +531,8 @@ export default function SettingsPage() {
         <div className="mt-4">
           <label className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400">
             <input type="checkbox"
-              checked={(settings.prompt_caching_enabled ?? 'true') === 'true'}
-              onChange={e => { const v = e.target.checked ? 'true' : 'false'; setSettings({...settings, prompt_caching_enabled: v}); saveSetting('prompt_caching_enabled', v) }}
+              checked={settings.prompt_caching_enabled === true || settings.prompt_caching_enabled === 'true' || settings.prompt_caching_enabled === undefined}
+              onChange={e => { const v = e.target.checked; setSettings({...settings, prompt_caching_enabled: v}); saveSetting('prompt_caching_enabled', v ? 'true' : 'false') }}
               className="accent-indigo-600"
             />
             Prompt Caching (Anthropic)
