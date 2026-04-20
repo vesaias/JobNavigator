@@ -106,6 +106,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
         max_pages = getattr(company, 'max_pages', 5) or 5
         unique_jobs = []
         seen_urls = set()
+        url_errors = []
 
         for target_url in target_urls:
             try:
@@ -136,10 +137,16 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
                         unique_jobs.append(j)
             except Exception as e:
                 logger.warning(f"Scrape error on {target_url}: {e}")
+                url_errors.append(f"{target_url}: {type(e).__name__}: {e}")
 
         if not unique_jobs:
             duration = time.time() - start_time
-            return {"jobs_found": 0, "new_jobs": 0, "error": None, "duration": duration}
+            return {
+                "jobs_found": 0,
+                "new_jobs": 0,
+                "error": "; ".join(url_errors) if url_errors else None,
+                "duration": duration,
+            }
 
         # Apply per-company + global title filters
         from backend.models.db import get_global_title_exclude
@@ -273,7 +280,12 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
         from backend.activity import log_activity
         log_activity("scrape", f"Playwright {company.name}: {new_jobs} new / {len(unique_jobs)} found in {duration:.1f}s", company=company.name)
 
-        return {"jobs_found": len(unique_jobs), "new_jobs": new_jobs, "error": None, "duration": duration}
+        return {
+            "jobs_found": len(unique_jobs),
+            "new_jobs": new_jobs,
+            "error": "; ".join(url_errors) if url_errors else None,
+            "duration": duration,
+        }
 
     except Exception as e:
         duration = time.time() - start_time
