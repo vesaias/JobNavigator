@@ -19,6 +19,26 @@ from backend.scraper._shared.dedup import make_external_id, make_content_hash
 logger = logging.getLogger("jobnavigator.scraper.sources.jobspy")
 
 
+def _apply_h1b_inline(job, db=None) -> None:
+    """Sync-safe H-1B JD scan.
+
+    Runs the async check_job_h1b inside a fresh event loop so this is safe to call
+    from inside asyncio.to_thread() workers (which are sync contexts that may or may not
+    have an event loop attached depending on Python config).
+    """
+    import asyncio as _asyncio
+    from backend.analyzer.h1b_checker import check_job_h1b
+
+    try:
+        loop = _asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(check_job_h1b(job, db=db))
+        finally:
+            loop.close()
+    except Exception as e:
+        logger.warning(f"_apply_h1b_inline failed for job {getattr(job, 'id', '?')}: {e}")
+
+
 def get_setting_value(db: Session, key: str, default: str = "") -> str:
     """Read a single Setting row's value by key, returning ``default`` if not set."""
     row = db.query(Setting).filter(Setting.key == key).first()
@@ -188,18 +208,17 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                     except (ValueError, TypeError):
                         pass
 
-                # Run H-1B check + language check + salary extraction inline
+                # Run H-1B check + language check + salary extraction inline.
+                # _apply_h1b_inline uses a fresh event loop so it's safe in asyncio.to_thread workers.
+                _apply_h1b_inline(job, db)
                 try:
-                    from backend.analyzer.h1b_checker import check_job_h1b
                     from backend.analyzer.salary_extractor import apply_salary_to_job
-                    import asyncio
-                    asyncio.run(check_job_h1b(job, db))
                     from backend.models.db import find_company_by_name
                     company_obj = find_company_by_name(db, company)
                     h1b_median = company_obj.h1b_median_salary if company_obj else None
                     apply_salary_to_job(job, h1b_median)
                 except Exception as analysis_err:
-                    logger.warning(f"Inline analysis failed for {title}: {analysis_err}")
+                    logger.warning(f"Inline salary analysis failed for {title}: {analysis_err}")
 
                 # Skip jobs whose description contains exclusion phrases
                 if job.h1b_jd_flag:
