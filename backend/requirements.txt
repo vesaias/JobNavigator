@@ -1,9 +1,9 @@
-fastapi==0.115.6
+fastapi==0.125.0
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
-pdfplumber==0.11.4
+pdfplumber==0.11.9
 python-multipart==0.0.26
 apscheduler==3.10.4
 httpx==0.28.1
@@ -14,6 +14,16 @@ python-jobspy==1.1.82
 playwright==1.49.1
 beautifulsoup4==4.12.3
 pydantic==2.10.4
+# Transitive-dep overrides to fix CVEs flagged by pip-audit.
+# pdfplumber 0.11.4 pulled pdfminer.six 20231228 (CVE-2025-64512, 70559) — fixed by bumping pdfplumber to 0.11.9
+# fastapi <0.125 pulled starlette <0.49          (CVE-2025-54121, 62727) — fixed by bumping fastapi + starlette
+pdfminer.six==20251230
+starlette>=0.49.1
+# NOTE: python-jobspy 1.1.82 pins markdownify<0.14, so CVE-2025-46656 in
+# markdownify 0.13.1 remains. The affected code path (HTML → Markdown in
+# jobspy's scraper) isn't reached by any untrusted input we send through it,
+# and there's no newer jobspy release. pip-audit is instructed to skip this
+# CVE in .github/workflows/ci.yml. Revisit if jobspy publishes >1.1.82.
 # Pinned to a commit SHA on our fork (vesaias/linkedin-api branch v2.3.1) —
 # upstream github.com/tomquirk/linkedin-api was removed from GitHub, so we
 # mirror the PyPI 2.3.1 source distribution ourselves. Bumping this line is

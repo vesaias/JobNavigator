@@ -67,7 +67,13 @@ jobs:
       - name: Install pip-audit
         run: pip install pip-audit
       - name: Scan backend/requirements.txt for known CVEs
-        run: pip-audit -r backend/requirements.txt --strict
+        # --ignore-vuln CVE-2025-46656 — markdownify 0.13.1 is pinned by
+        #   python-jobspy 1.1.82 (<0.14). The vulnerable code path is an
+        #   HTML→Markdown converter used inside jobspy on content we never
+        #   route untrusted input through. Re-evaluate when jobspy >1.1.82 ships.
+        run: |
+          pip-audit -r backend/requirements.txt --strict \
+            --ignore-vuln CVE-2025-46656
 
   build-docker:
     name: Build Docker images
