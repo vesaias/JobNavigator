@@ -63,6 +63,68 @@ async def _send_message(chat_id: str, text: str, reply_markup: dict = None, pars
         return False
 
 
+def _get_webhook_secret() -> str:
+    """Read the webhook secret from settings. Returns empty string if missing."""
+    db = SessionLocal()
+    try:
+        row = db.query(Setting).filter(Setting.key == "telegram_webhook_secret").first()
+        return (row.value or "").strip() if row else ""
+    finally:
+        db.close()
+
+
+async def register_webhook(public_url: str) -> dict:
+    """Register the Telegram webhook with Telegram's API, passing `secret_token`.
+
+    `public_url` must be the externally reachable URL that ends at
+    `/api/telegram/webhook` (https only — Telegram refuses http).
+    Returns the Telegram API response dict.
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN not set"}
+    secret = _get_webhook_secret()
+    if not secret:
+        return {"ok": False, "error": "telegram_webhook_secret not configured"}
+    payload = {
+        "url": public_url,
+        "secret_token": secret,
+        "allowed_updates": ["callback_query", "message"],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(f"{BASE_URL}/setWebhook", json=payload)
+            return resp.json()
+    except Exception as e:
+        logger.error(f"setWebhook failed: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def rotate_webhook_secret() -> str:
+    """Regenerate the webhook secret. Returns the new value.
+
+    Callers should re-register the webhook with Telegram after rotation so the
+    next callback carries the new header value.
+    """
+    import secrets as _secrets
+    new_value = _secrets.token_urlsafe(32)
+    db = SessionLocal()
+    try:
+        row = db.query(Setting).filter(Setting.key == "telegram_webhook_secret").first()
+        if row is None:
+            row = Setting(
+                key="telegram_webhook_secret",
+                value=new_value,
+                description="Auto-generated secret token validated on every /api/telegram/webhook call.",
+            )
+            db.add(row)
+        else:
+            row.value = new_value
+        db.commit()
+    finally:
+        db.close()
+    return new_value
+
+
 def _format_salary(salary_min, salary_max):
     """Format salary range for display."""
     if not salary_min and not salary_max:

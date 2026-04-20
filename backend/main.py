@@ -608,12 +608,34 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
 
 
 @app.post("/api/telegram/webhook", tags=["telegram"], summary="Telegram webhook")
-async def telegram_webhook(update: dict):
+async def telegram_webhook(update: dict, request: Request):
     """Handle incoming Telegram bot updates (callback queries from inline buttons).
     This is called by Telegram's webhook system, not manually.
 
     **Payload:** Raw Telegram Update object (see Telegram Bot API docs).
+
+    **Auth:** validates the `X-Telegram-Bot-Api-Secret-Token` header against the
+    `telegram_webhook_secret` setting. Telegram sends this header on every call
+    once the webhook is registered with a `secret_token`. Missing or mismatched
+    header → 401.
     """
+    import hmac as _hmac
+    db = SessionLocal()
+    try:
+        row = db.query(Setting).filter(Setting.key == "telegram_webhook_secret").first()
+        expected = (row.value or "").strip() if row else ""
+    finally:
+        db.close()
+    if not expected:
+        # Misconfigured — never accept anonymous webhook traffic. The seed step
+        # populates this on first run; an empty value means someone cleared it.
+        logger.warning("telegram_webhook rejected: webhook secret not configured")
+        raise HTTPException(status_code=503, detail="Telegram webhook secret not configured")
+    received = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not received or not _hmac.compare_digest(received, expected):
+        logger.warning("telegram_webhook rejected: invalid secret token")
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+
     from backend.notifier.telegram import handle_callback
 
     callback_query = update.get("callback_query")
@@ -633,6 +655,34 @@ async def telegram_webhook(update: dict):
                 )
 
     return {"ok": True}
+
+
+@app.post("/api/telegram/register-webhook", tags=["telegram"], summary="Register Telegram webhook")
+async def telegram_register_webhook(body: dict):
+    """Tell Telegram to POST updates to `{public_url}/api/telegram/webhook`, signed
+    with `telegram_webhook_secret`. `public_url` is the externally reachable base URL
+    (e.g. `https://jobs.example.com`). Must be HTTPS — Telegram rejects plaintext.
+
+    Safe to call multiple times; each call replaces the previous registration.
+    """
+    from backend.notifier.telegram import register_webhook
+    public_url = (body.get("public_url") or "").strip().rstrip("/")
+    if not public_url.startswith("https://"):
+        raise HTTPException(status_code=400, detail="public_url must start with https://")
+    full_url = f"{public_url}/api/telegram/webhook"
+    result = await register_webhook(full_url)
+    return result
+
+
+@app.post("/api/telegram/rotate-webhook-secret", tags=["telegram"], summary="Rotate Telegram webhook secret")
+async def telegram_rotate_webhook_secret():
+    """Regenerate `telegram_webhook_secret` and return the new value. After
+    rotating, call POST /api/telegram/register-webhook to re-register with
+    Telegram so the next callback carries the new header value.
+    """
+    from backend.notifier.telegram import rotate_webhook_secret
+    new_value = rotate_webhook_secret()
+    return {"ok": True, "webhook_secret": new_value}
 
 
 @app.post("/api/telegram/test", tags=["telegram"], summary="Send test message", status_code=202)

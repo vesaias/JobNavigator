@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-_REDACT_SUFFIXES = ("_password", "_api_key", "_session_id")
+_REDACT_SUFFIXES = ("_password", "_api_key", "_session_id", "_secret")
 _REDACT_KEYS = {"dashboard_api_key", "gmail_refresh_token"}
 
 

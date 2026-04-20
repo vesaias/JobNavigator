@@ -1,6 +1,7 @@
 """Seed settings and companies tables with defaults on first run."""
 import logging
 import json
+import secrets
 from backend.models.db import SessionLocal, Setting, Company, Search, CV, Resume
 from sqlalchemy import text
 
@@ -14,6 +15,7 @@ DEFAULT_SETTINGS = {
     "telegram_enabled": ("false", "Toggle all Telegram notifications on/off"),
     "digest_cron": ("0 8 * * *", "Daily digest cron (min hour day month dow). Empty = disabled"),
     "telegram_chat_id": ("", "Your Telegram chat ID"),
+    "telegram_webhook_secret": ("", "Auto-generated secret token validated on every /api/telegram/webhook call. Rotate from the Telegram settings tab."),
     "body_exclusion_phrases": (json.dumps([]), "JD phrases that flag exclusion (H-1B, language, etc.). Add phrases to auto-skip jobs containing them."),
     "h1b_cron": ("0 2 * * 0", "H-1B refresh cron (min hour day month dow). Empty = disabled"),
     "cleanup_cron": ("0 4 * * *", "Job cleanup cron (min hour day month dow). Empty = disabled"),
@@ -194,6 +196,14 @@ def seed_settings(db):
         if key not in existing:
             db.add(Setting(key=key, value=value, description=desc))
     db.commit()
+    # One-shot: ensure the Telegram webhook secret has a cryptographically random
+    # value. We seed an empty string above so operators can see the row exists in
+    # /api/settings; the real value is generated here on first run (or if the
+    # operator manually clears it to force a rotation).
+    row = db.query(Setting).filter(Setting.key == "telegram_webhook_secret").first()
+    if row is not None and not (row.value or "").strip():
+        row.value = secrets.token_urlsafe(32)
+        db.commit()
 
 
 def seed_companies(db):

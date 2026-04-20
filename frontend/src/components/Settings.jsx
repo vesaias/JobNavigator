@@ -973,6 +973,40 @@ export default function SettingsPage() {
               className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
           </div>
         </div>
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Webhook Secret <span className="font-normal text-gray-400">(validates every Telegram → backend call)</span>
+          </label>
+          <div className="flex gap-2 items-start">
+            <input type="text" readOnly
+              value={settings.telegram_webhook_secret === '\u2022\u2022\u2022\u2022\u2022\u2022' ? 'Set (hidden — rotate to view)' : (settings.telegram_webhook_secret || 'Not set')}
+              className="flex-1 border rounded px-2 py-1.5 text-sm font-mono text-xs bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-600" />
+            <button
+              onClick={async () => {
+                if (!confirm('Rotate webhook secret? You must re-register the webhook afterward.')) return;
+                const r = await api.post('/telegram/rotate-webhook-secret');
+                if (r.data?.webhook_secret) {
+                  window.prompt('Copy the new secret now — it will not be shown again:', r.data.webhook_secret);
+                }
+              }}
+              className="px-3 py-1.5 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white rounded">
+              Rotate
+            </button>
+            <button
+              onClick={async () => {
+                const url = prompt('Public base URL (https://...):');
+                if (!url) return;
+                const r = await api.post('/telegram/register-webhook', { public_url: url });
+                alert(r.data?.ok ? 'Webhook registered' : `Failed: ${r.data?.description || r.data?.error || 'unknown error'}`);
+              }}
+              className="px-3 py-1.5 text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white rounded">
+              Register
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+            Telegram sends this as <code className="font-mono text-[10px]">X-Telegram-Bot-Api-Secret-Token</code> on every webhook call; mismatched headers return 401.
+          </p>
+        </div>
       </section>
 
       {/* Jobright.ai */}
