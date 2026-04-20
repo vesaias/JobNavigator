@@ -272,6 +272,16 @@ def run_migrations(db):
         """ALTER TABLE llm_call_log DROP CONSTRAINT IF EXISTS llm_call_log_job_id_fkey""",
         """ALTER TABLE llm_call_log ADD CONSTRAINT llm_call_log_job_id_fkey FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL""",
         "ALTER TABLE llm_call_log ADD COLUMN IF NOT EXISTS provider VARCHAR NOT NULL DEFAULT ''",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS best_cv_score FLOAT",
+        "CREATE INDEX IF NOT EXISTS ix_jobs_best_cv_score ON jobs(best_cv_score)",
+        """UPDATE jobs SET best_cv_score = (
+            SELECT MAX(CAST(value AS FLOAT))
+            FROM jsonb_each_text(cv_scores)
+            WHERE value ~ '^[0-9]+(\\.[0-9]+)?$'
+        ) WHERE cv_scores IS NOT NULL
+          AND jsonb_typeof(cv_scores) = 'object'
+          AND cv_scores != '{}'
+          AND best_cv_score IS NULL""",
     ]
     for sql in migrations:
         try:

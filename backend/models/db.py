@@ -133,6 +133,7 @@ class Job(Base):
     h1b_jd_snippet = Column(String, nullable=True)
     h1b_verdict = Column(String, nullable=True)  # likely | unlikely | unknown
     cv_scores = Column(JSON, default={})     # {"CV Name": score, ...}
+    best_cv_score = Column(Float, nullable=True, index=True)
     best_cv = Column(String, nullable=True)
     scoring_report = Column(JSON, nullable=True)  # Structured report: summary, keywords, requirement mapping
     cached_page_html = Column(Text, nullable=True)

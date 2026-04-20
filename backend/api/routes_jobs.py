@@ -85,15 +85,9 @@ def list_jobs(
         else:
             q = q.filter(Job.company.ilike(f"%{vals[0]}%"))
     if min_score is not None:
-        q = q.filter(text(
-            "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text(CASE WHEN jsonb_typeof(COALESCE(cv_scores, '{}'::jsonb)) = 'object' THEN cv_scores ELSE '{}'::jsonb END) AS t(k, v)"
-            " WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') >= :min_score"
-        ).bindparams(min_score=min_score))
+        q = q.filter(Job.best_cv_score >= float(min_score))
     if max_score is not None:
-        q = q.filter(text(
-            "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text(CASE WHEN jsonb_typeof(COALESCE(cv_scores, '{}'::jsonb)) = 'object' THEN cv_scores ELSE '{}'::jsonb END) AS t(k, v)"
-            " WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') <= :max_score"
-        ).bindparams(max_score=max_score))
+        q = q.filter(Job.best_cv_score <= float(max_score))
     if search_id:
         q = q.filter(Job.search_id == search_id)
     if h1b_verdict:
@@ -117,12 +111,7 @@ def list_jobs(
 
     # Sort
     if sort_by == "score":
-        q = q.order_by(text(
-            "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text("
-            "CASE WHEN jsonb_typeof(COALESCE(cv_scores, '{}'::jsonb)) = 'object' "
-            "THEN cv_scores ELSE '{}'::jsonb END) AS t(k, v) "
-            "WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') DESC"
-        ))
+        q = q.order_by(desc(Job.best_cv_score).nullslast())
     elif sort_by == "salary":
         q = q.order_by(desc(Job.salary_max).nullslast())
     elif sort_by == "company":
@@ -170,10 +159,7 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
         vals = [v.strip() for v in h1b_verdict.split(",") if v.strip()]
         q = q.filter(Job.h1b_verdict.in_(vals)) if len(vals) > 1 else q.filter(Job.h1b_verdict == vals[0])
     if min_score is not None:
-        q = q.filter(text(
-            "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text(CASE WHEN jsonb_typeof(COALESCE(cv_scores, '{}'::jsonb)) = 'object' THEN cv_scores ELSE '{}'::jsonb END) AS t(k, v)"
-            " WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') >= :min_score"
-        ).bindparams(min_score=min_score))
+        q = q.filter(Job.best_cv_score >= float(min_score))
     if saved is not None:
         q = q.filter(Job.saved == saved)
     if title_search:

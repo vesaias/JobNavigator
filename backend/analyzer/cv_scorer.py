@@ -336,6 +336,13 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 if result:
                     scores = result.get("scores", {})
                     job.cv_scores = scores
+                    # Precompute max score for fast DB filtering (Task 2)
+                    try:
+                        _scores = job.cv_scores or {}
+                        _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
+                        job.best_cv_score = max(_numeric) if _numeric else None
+                    except (ValueError, TypeError):
+                        job.best_cv_score = None
                     job.best_cv = result.get("best_cv", "")
 
                     # Store scoring report per CV (nested dict keyed by CV name)
@@ -375,6 +382,13 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 else:
                     # Mark with sentinel so it won't match the unscored filter again
                     job.cv_scores = {"_skipped": "no_text_available"}
+                    # Precompute max score for fast DB filtering (Task 2)
+                    try:
+                        _scores = job.cv_scores or {}
+                        _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
+                        job.best_cv_score = max(_numeric) if _numeric else None
+                    except (ValueError, TypeError):
+                        job.best_cv_score = None
 
                 total_scored += 1
                 db.commit()
@@ -443,6 +457,13 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         merged = dict(job.cv_scores or {})
         merged.update(new_scores)
         job.cv_scores = merged
+        # Precompute max score for fast DB filtering (Task 2)
+        try:
+            _scores = job.cv_scores or {}
+            _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
+            job.best_cv_score = max(_numeric) if _numeric else None
+        except (ValueError, TypeError):
+            job.best_cv_score = None
 
         numeric_merged = {k: v for k, v in merged.items() if isinstance(v, (int, float))}
         if numeric_merged:
