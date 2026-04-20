@@ -197,8 +197,6 @@ async def run_job_cleanup_auto():
                 db.close()
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
-    finally:
-        db.close()
 
 
 async def check_scrape_health():
