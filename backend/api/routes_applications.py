@@ -105,6 +105,9 @@ async def _cache_job_page(job_id: str, url: str):
         if not job or not url:
             return
 
+        # Track the last error so it can be surfaced to the UI via job.cache_error
+        last_error: str | None = None
+
         try:
             # Try httpx first (fast, works for most sites)
             html = None
@@ -117,6 +120,7 @@ async def _cache_job_page(job_id: str, url: str):
                     html = resp.text[:1_000_000]
             except Exception as e:
                 logger.info(f"httpx failed for job {job_id}, will try Playwright: {e}")
+                last_error = f"httpx: {e}"
 
             clean_html, text = _extract_clean_content(html) if html else ("", "")
 
@@ -130,18 +134,31 @@ async def _cache_job_page(job_id: str, url: str):
                         logger.info(f"Playwright got {len(text)} text chars for job {job_id}")
                 except Exception as e:
                     logger.warning(f"Playwright fallback failed for job {job_id}: {e}")
+                    last_error = f"playwright: {e}"
 
             if len(text) > 50:
                 job.cached_page_html = clean_html
                 job.cached_page_text = text
                 job.page_cached_at = datetime.now(timezone.utc)
+                job.cache_error = None  # Clear any previous error on success
                 db.commit()
                 logger.info(f"Cached page for job {job_id}: {len(clean_html)} clean HTML, {len(text)} text chars")
             else:
-                logger.warning(f"No usable content for job {job_id} ({url})")
+                msg = last_error or f"no usable content ({len(text)} chars)"
+                logger.warning(f"No usable content for job {job_id} ({url}): {msg}")
+                try:
+                    job.cache_error = msg[:500]
+                    db.commit()
+                except Exception:
+                    db.rollback()
 
         except Exception as e:
             logger.warning(f"Failed to cache page for job {job_id}: {e}")
+            try:
+                job.cache_error = str(e)[:500]
+                db.commit()
+            except Exception:
+                db.rollback()
 
     finally:
         db.close()

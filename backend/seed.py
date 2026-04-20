@@ -274,6 +274,7 @@ def run_migrations(db):
         "ALTER TABLE llm_call_log ADD COLUMN IF NOT EXISTS provider VARCHAR NOT NULL DEFAULT ''",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS best_cv_score FLOAT",
         "CREATE INDEX IF NOT EXISTS ix_jobs_best_cv_score ON jobs(best_cv_score)",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS cache_error TEXT",
         """UPDATE jobs SET best_cv_score = (
             SELECT MAX(CAST(value AS FLOAT))
             FROM jsonb_each_text(cv_scores)

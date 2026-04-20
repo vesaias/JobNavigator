@@ -139,6 +139,7 @@ class Job(Base):
     cached_page_html = Column(Text, nullable=True)
     cached_page_text = Column(Text, nullable=True)
     page_cached_at = Column(DateTime(timezone=True), nullable=True)
+    cache_error = Column(Text, nullable=True)
     seen = Column(Boolean, default=False)
     saved = Column(Boolean, default=False)
     status = Column(String, default="new")  # new | saved | applied | skip
