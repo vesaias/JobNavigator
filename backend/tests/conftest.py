@@ -52,6 +52,12 @@ def test_db():
 
     Yields a Session. Tests can add/query rows directly. Each test gets a fresh DB.
 
+    Critical: this rebinds the *shared* `backend.models.db.SessionLocal` to the
+    test engine. Modules that did `from backend.models.db import SessionLocal` at
+    import time hold a reference to the same sessionmaker object, so reconfiguring
+    it in place makes every caller (scheduler.py, activity.py, route modules...)
+    see the test DB without needing per-module monkeypatch.
+
     Notes on SQLite compatibility:
     - PostgreSQL UUID columns are automatically mapped to CHAR(32) by SQLAlchemy under SQLite.
     - Job.short_id uses server_default=text("nextval('jobs_short_id_seq')") which SQLite
@@ -61,14 +67,12 @@ def test_db():
       path params as strings (e.g. PATCH /api/applications/{uuid_str}), so we patch the
       bind processor once to accept either a UUID or a string.
     """
-    from sqlalchemy import create_engine, event
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.schema import CreateTable
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+    import backend.models.db as db_mod
     from backend.models.db import Base
 
     # Patch Uuid.bind_processor once so string-shaped UUID binds work under SQLite.
-    # SQLAlchemy's default processor assumes a UUID object; tests need the lenient
-    # behavior that mirrors the PG driver.
     import uuid as _uuid
     from sqlalchemy.sql.sqltypes import Uuid as _SAUuid
     if not getattr(_SAUuid, "_jn_test_patched", False):
@@ -84,7 +88,6 @@ def test_db():
                         return None
                     if isinstance(value, _uuid.UUID):
                         return value.hex
-                    # Accept strings (with or without dashes) by coercing to UUID.
                     return _uuid.UUID(str(value)).hex
                 return process
             return _orig_bind(self, dialect)
@@ -94,8 +97,7 @@ def test_db():
 
     # StaticPool keeps a single shared connection so all sessions see the same
     # in-memory SQLite database.
-    from sqlalchemy.pool import StaticPool
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
@@ -109,52 +111,49 @@ def test_db():
                 stashed.append((col, col.server_default))
                 col.server_default = None
     try:
-        Base.metadata.create_all(engine)
+        Base.metadata.create_all(test_engine)
     finally:
         for col, sd in stashed:
             col.server_default = sd
 
-    TestSession = sessionmaker(bind=engine)
-    session = TestSession()
+    # Rebind the shared SessionLocal (and engine reference) so module-level
+    # `from backend.models.db import SessionLocal` importers hit the test DB.
+    original_engine = db_mod.engine
+    original_bind = db_mod.SessionLocal.kw.get("bind")
+    db_mod.engine = test_engine
+    db_mod.SessionLocal.configure(bind=test_engine)
+
+    session = db_mod.SessionLocal()
     try:
         yield session
     finally:
         session.close()
-        engine.dispose()
+        db_mod.SessionLocal.configure(bind=original_bind)
+        db_mod.engine = original_engine
+        test_engine.dispose()
 
 
 @pytest.fixture
 def api_client(test_db, monkeypatch):
-    """FastAPI TestClient with SessionLocal patched to use test_db's engine.
+    """FastAPI TestClient for endpoint tests.
 
-    Use for any test that hits an HTTP endpoint. The app lifespan (which runs
-    Postgres-specific create_tables/seed/migrations) is bypassed — the fixture
-    provides its own SQLite schema via test_db.
+    `test_db` has already rebound the shared SessionLocal to the test SQLite
+    engine, so every module that imported SessionLocal at top-level now hits
+    the test DB. We only need to stub out the lifespan dependencies and the
+    scheduler here.
     """
     from fastapi.testclient import TestClient
-    from sqlalchemy.orm import sessionmaker
 
-    # Import backend.main and its transitive dependencies FIRST so that any
-    # module-level `from backend.models.db import SessionLocal` binds to the
-    # production Postgres sessionmaker (not the test sessionmaker we install
-    # below). Otherwise any sibling module imported lazily through the app
-    # boot chain would permanently capture the test sessionmaker and break
-    # subsequent tests.
+    # Pre-import backend.main + heavy modules so any lazy imports have captured
+    # bindings before monkeypatches take effect.
     import backend.main  # noqa: F401
     import backend.scraper.sources.linkedin_extension  # noqa: F401
-
-    # Point backend.models.db.SessionLocal at the test engine
-    test_sessionmaker = sessionmaker(bind=test_db.get_bind())
-
-    import backend.models.db as db_mod
-    monkeypatch.setattr(db_mod, "SessionLocal", test_sessionmaker)
 
     # Stub the lifespan dependencies so TestClient startup is a no-op.
     import backend.main as main_mod
     monkeypatch.setattr(main_mod, "create_tables", lambda: None)
     monkeypatch.setattr(main_mod, "run_seeds", lambda: None)
     monkeypatch.setattr(main_mod, "cleanup_stale_runs", lambda: None)
-    monkeypatch.setattr(main_mod, "SessionLocal", test_sessionmaker)
     # Prevent the real scheduler from booting.
     import backend.scheduler as sched_mod
     monkeypatch.setattr(sched_mod, "configure_scheduler", lambda: None)
@@ -163,9 +162,11 @@ def api_client(test_db, monkeypatch):
     fake_scheduler.shutdown = MagicMock()
     monkeypatch.setattr(sched_mod, "scheduler", fake_scheduler)
 
-    # Override the FastAPI get_db generator dependency
+    # Override get_db so route handlers share the test DB session.
+    import backend.models.db as db_mod
+
     def override_get_db():
-        s = test_sessionmaker()
+        s = db_mod.SessionLocal()
         try:
             yield s
         finally:

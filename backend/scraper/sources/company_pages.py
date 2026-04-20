@@ -97,7 +97,11 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
     if not target_urls:
         return {"jobs_found": 0, "new_jobs": 0, "error": "No career page URLs"}
 
-    own_browser = shared_browser is None
+    # Only launch a browser if at least one URL actually needs one. API-only
+    # ATS batches (Lever, Greenhouse, etc.) don't need Chromium — skipping the
+    # launch avoids failures on hosts without Playwright browsers installed (CI).
+    needs_browser = _needs_browser(target_urls)
+    own_browser = shared_browser is None and needs_browser
     pw = None
     browser = shared_browser
     try:

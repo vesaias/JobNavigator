@@ -14,7 +14,7 @@ def test_enrich_is_async():
 
 
 @pytest.mark.asyncio
-async def test_enrich_handles_empty_list():
+async def test_enrich_handles_empty_list(test_db):
     """Passing [] returns without raising and without any API calls."""
     from backend.scraper.sources.linkedin_extension import enrich
     result = await enrich([])
