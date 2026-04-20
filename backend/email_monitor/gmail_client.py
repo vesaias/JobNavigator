@@ -322,6 +322,7 @@ async def check_emails():
         logger.error(f"Email check failed: {e}")
         from backend.activity import log_activity
         log_activity("email", f"Email check failed: {e}")
+        raise  # Let tracked_run / caller mark the JobRun as failed
     finally:
         db.close()
 
