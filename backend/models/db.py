@@ -11,7 +11,12 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 from backend.config import DATABASE_URL
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
+# Pool args are Postgres-specific; SQLite (used in CI tests via DATABASE_URL=sqlite:///:memory:)
+# rejects pool_size/max_overflow.
+_engine_kwargs = {"pool_pre_ping": True}
+if not DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs.update(pool_size=10, max_overflow=20)
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
