@@ -56,11 +56,41 @@ def test_db():
     - PostgreSQL UUID columns are automatically mapped to CHAR(32) by SQLAlchemy under SQLite.
     - Job.short_id uses server_default=text("nextval('jobs_short_id_seq')") which SQLite
       cannot parse; we strip server_defaults for CREATE TABLE via a DDL event listener.
+    - SQLAlchemy's Uuid.bind_processor (character-based path used under SQLite) calls
+      `value.hex` on bind params, which fails for plain strings. Production routes bind
+      path params as strings (e.g. PATCH /api/applications/{uuid_str}), so we patch the
+      bind processor once to accept either a UUID or a string.
     """
     from sqlalchemy import create_engine, event
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.schema import CreateTable
     from backend.models.db import Base
+
+    # Patch Uuid.bind_processor once so string-shaped UUID binds work under SQLite.
+    # SQLAlchemy's default processor assumes a UUID object; tests need the lenient
+    # behavior that mirrors the PG driver.
+    import uuid as _uuid
+    from sqlalchemy.sql.sqltypes import Uuid as _SAUuid
+    if not getattr(_SAUuid, "_jn_test_patched", False):
+        _orig_bind = _SAUuid.bind_processor
+
+        def _lenient_bind(self, dialect):
+            character_based = (
+                not dialect.supports_native_uuid or not self.native_uuid
+            )
+            if character_based and self.as_uuid:
+                def process(value):
+                    if value is None:
+                        return None
+                    if isinstance(value, _uuid.UUID):
+                        return value.hex
+                    # Accept strings (with or without dashes) by coercing to UUID.
+                    return _uuid.UUID(str(value)).hex
+                return process
+            return _orig_bind(self, dialect)
+
+        _SAUuid.bind_processor = _lenient_bind
+        _SAUuid._jn_test_patched = True
 
     # StaticPool keeps a single shared connection so all sessions see the same
     # in-memory SQLite database.
