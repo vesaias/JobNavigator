@@ -30,6 +30,27 @@ jobs:
         # E9 syntax errors, F63 pointless comparisons, F7 syntax, F82 undefined names
         # We skip style rules since this is a personal project
 
+  test-python:
+    name: Run pytest (backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install backend deps
+        # Tests mock Playwright/Anthropic/httpx so no browser install or API keys needed.
+        run: pip install -r backend/requirements.txt
+      - name: Run pytest
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          pytest backend/tests/ \
+            --ignore=backend/tests/verify_caching_live.py \
+            --tb=short
+
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-latest
