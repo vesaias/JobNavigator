@@ -33,11 +33,15 @@ def _is_enabled() -> bool:
         db.close()
 
 
-async def _send_message(chat_id: str, text: str, reply_markup: dict = None, parse_mode: str = "HTML"):
-    """Send a Telegram message."""
+async def _send_message(chat_id: str, text: str, reply_markup: dict = None, parse_mode: str = "HTML") -> bool:
+    """Send a Telegram message.
+
+    Returns True on HTTP 200, False on any failure (missing config, network error,
+    non-200 response). Callers that care about delivery can check the return value.
+    """
     if not TELEGRAM_BOT_TOKEN or not chat_id:
         logger.warning("Telegram not configured (missing token or chat_id)")
-        return
+        return False
 
     payload = {
         "chat_id": chat_id,
@@ -52,8 +56,11 @@ async def _send_message(chat_id: str, text: str, reply_markup: dict = None, pars
             resp = await client.post(f"{BASE_URL}/sendMessage", json=payload)
             if resp.status_code != 200:
                 logger.error(f"Telegram send failed: {resp.text}")
+                return False
+            return True
     except Exception as e:
         logger.error(f"Telegram send error: {e}")
+        return False
 
 
 def _format_salary(salary_min, salary_max):
