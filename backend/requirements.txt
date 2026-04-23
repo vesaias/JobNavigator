@@ -2,7 +2,7 @@ fastapi==0.125.0
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 pdfplumber==0.11.9
 python-multipart==0.0.26
 apscheduler==3.10.4
@@ -19,6 +19,9 @@ pydantic==2.10.4
 # fastapi <0.125 pulled starlette <0.49          (CVE-2025-54121, 62727) — fixed by bumping fastapi + starlette
 pdfminer.six==20251230
 starlette>=0.49.1
+# CVE-2026-41066 (lxml <6.1.0) is addressed by the vendored fork SHA below,
+# which widened lxml's bound to <7. No explicit lxml pin needed here.
+lxml>=6.1.0
 # NOTE: python-jobspy 1.1.82 pins markdownify<0.14, so CVE-2025-46656 in
 # markdownify 0.13.1 remains. The affected code path (HTML → Markdown in
 # jobspy's scraper) isn't reached by any untrusted input we send through it,
@@ -28,7 +31,7 @@ starlette>=0.49.1
 # upstream github.com/tomquirk/linkedin-api was removed from GitHub, so we
 # mirror the PyPI 2.3.1 source distribution ourselves. Bumping this line is
 # the only way the code can change; silent upstream updates are impossible.
-linkedin-api @ git+https://github.com/vesaias/linkedin-api@4eff9d2aa4b01e31bf283b7a3f5ff9da7ec61829
+linkedin-api @ git+https://github.com/vesaias/linkedin-api@988dc61d4b83f1138109cae5e9f82ad995ad2de8
 Jinja2>=3.1.0
 pytest==9.0.3
 pytest-asyncio==1.3.0
