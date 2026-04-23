@@ -307,6 +307,65 @@ def run_migrations(db):
             logger.warning(f"Migration skipped: {e}")
     db.commit()
 
+    _rewrite_retired_status_transitions(db)
+
+
+_RETIRED_STATUS_REMAP = {
+    "screening": "applied",
+    "phone_screen": "interview",
+    "final_round": "interview",
+}
+
+
+def _rewrite_retired_status_transitions(db):
+    """One-shot: rewrite Application.status_transitions JSON to match the
+    2026-04-23 status-ladder simplification. Remaps retired statuses, drops
+    self-transitions that result from the remap, and collapses consecutive
+    duplicates so the Sankey diagram no longer shows ghost `screening` /
+    `phone_screen` / `final_round` nodes.
+
+    Idempotent: scans only rows that still contain a retired label.
+    """
+    from backend.models.db import Application
+    retired = tuple(_RETIRED_STATUS_REMAP)
+    rows = db.query(Application).filter(
+        Application.status_transitions.isnot(None)
+    ).all()
+    changed = 0
+    for app in rows:
+        tx = app.status_transitions or []
+        if not any(
+            (t.get("from") in retired or t.get("to") in retired) for t in tx
+        ):
+            continue
+
+        rewritten: list[dict] = []
+        for t in tx:
+            new_from = _RETIRED_STATUS_REMAP.get(t.get("from"), t.get("from"))
+            new_to = _RETIRED_STATUS_REMAP.get(t.get("to"), t.get("to"))
+            # Drop self-transitions (e.g. applied → applied after remap).
+            if new_from == new_to:
+                continue
+            rewritten.append({**t, "from": new_from, "to": new_to})
+
+        # Collapse consecutive entries where prev.to == curr.to (same target
+        # reached twice in a row, e.g. applied→interview→interview).
+        collapsed: list[dict] = []
+        for t in rewritten:
+            if collapsed and collapsed[-1].get("to") == t.get("to"):
+                continue
+            collapsed.append(t)
+
+        if collapsed != tx:
+            app.status_transitions = collapsed
+            changed += 1
+    if changed:
+        db.commit()
+        logger.info(
+            f"Status-transition cleanup: rewrote {changed} application rows to "
+            f"drop retired screening/phone_screen/final_round entries"
+        )
+
 
 def seed_h1b_slugs(db):
     """Migrate hardcoded H-1B slug overrides into Company records."""
