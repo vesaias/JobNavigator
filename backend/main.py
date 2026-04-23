@@ -1114,9 +1114,9 @@ def get_stats():
             "total_applications": total_apps,
             "application_statuses": status_counts,
             "response_rate": (
-                round((status_counts.get("screening", 0) + status_counts.get("phone_screen", 0) +
-                       status_counts.get("interview", 0) + status_counts.get("final_round", 0) +
-                       status_counts.get("offer", 0) + status_counts.get("rejected", 0)) /
+                round((status_counts.get("interview", 0) +
+                       status_counts.get("offer", 0) +
+                       status_counts.get("rejected", 0)) /
                       total_apps * 100, 1) if total_apps > 0 else 0
             ),
         }

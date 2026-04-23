@@ -136,7 +136,7 @@ def _build_gmail_query(db) -> str:
 
 def _get_active_apps_for_llm(db) -> list:
     """Build numbered list of active applications for LLM prompt."""
-    active_statuses = ["applied", "screening", "phone_screen", "interview", "final_round"]
+    active_statuses = ["applied", "interview"]
     apps = db.query(Application).filter(Application.status.in_(active_statuses)).all()
     result = []
     for i, app in enumerate(apps, 1):
@@ -163,8 +163,11 @@ def _apply_email_to_app(db, matched_app, class_type: str, body: str, subject: st
 
     from backend.models.db import record_transition, utcnow
     if class_type == "positive":
+        # Positive recruiter response on an applied row → interview.
+        # Prior to the 2026-04-23 simplification this transitioned to
+        # screening; the column now collapses into interview.
         if matched_app.status == "applied":
-            record_transition(matched_app, "screening", "email")
+            record_transition(matched_app, "interview", "email")
     elif class_type == "rejection":
         record_transition(matched_app, "rejected", "email")
 
@@ -184,7 +187,7 @@ def _apply_llm_result_to_app(db, matched_app, llm_result: dict, body: str, subje
     new_status = llm_result["status"]
 
     # Only transition forward, never backward
-    status_order = {"applied": 0, "screening": 1, "phone_screen": 2, "interview": 3, "final_round": 4, "offer": 5, "rejected": 99}
+    status_order = {"applied": 0, "interview": 1, "offer": 2, "rejected": 99}
     current_rank = status_order.get(matched_app.status, -1)
     new_rank = status_order.get(new_status, -1)
 
@@ -373,7 +376,7 @@ def _extract_mime(payload: dict, mime_type: str) -> str:
 def _match_email_to_application(db, from_header: str, subject: str, body: str, sender_domain: str):
     """Try to match an email to an existing application."""
     # Get active applications
-    active_statuses = ["applied", "screening", "phone_screen", "interview", "final_round"]
+    active_statuses = ["applied", "interview"]
     apps = db.query(Application).filter(Application.status.in_(active_statuses)).all()
 
     subject_lower = subject.lower()

@@ -270,7 +270,7 @@ async def send_digest():
         ).bindparams(threshold=threshold)).count()
 
         # Active applications
-        active_statuses = ["applied", "screening", "phone_screen", "interview", "final_round"]
+        active_statuses = ["applied", "interview"]
         active_apps = db.query(Application).filter(Application.status.in_(active_statuses)).count()
 
         # Responses (email updates) in last 24h

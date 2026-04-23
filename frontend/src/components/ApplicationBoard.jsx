@@ -10,7 +10,10 @@ const COLUMNS = [
   { id: 'rejected', label: 'Rejected', color: 'bg-red-500' },
 ]
 
-// Map removed statuses into visible columns
+// Legacy-row fallback: the backfill migration in seed.py remaps all existing
+// screening/phone_screen/final_round rows to applied/interview at startup, so
+// in a fresh DB this map is a no-op. Kept for safety in case a row slips
+// through (e.g. a downgrade then re-upgrade).
 const STATUS_REMAP = {
   screening: 'applied',
   phone_screen: 'interview',

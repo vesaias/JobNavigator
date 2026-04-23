@@ -293,6 +293,12 @@ def run_migrations(db):
           AND jsonb_typeof(cv_scores) = 'object'
           AND cv_scores != '{}'
           AND best_cv_score IS NULL""",
+        # 2026-04-23: Retire screening / phone_screen / final_round statuses.
+        # Board collapses to applied / interview / offer / rejected. Existing
+        # row statuses are remapped; status_transitions history is preserved
+        # as-is so the audit trail still shows the original transitions.
+        "UPDATE applications SET status = 'applied' WHERE status = 'screening'",
+        "UPDATE applications SET status = 'interview' WHERE status IN ('phone_screen', 'final_round')",
     ]
     for sql in migrations:
         try:

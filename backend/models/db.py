@@ -178,7 +178,10 @@ class Application(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
     status = Column(String, default="applied")
-    # applied|screening|phone_screen|interview|final_round|offer|rejected
+    # applied|interview|offer|rejected — simplified 2026-04-23. The retired
+    # screening/phone_screen/final_round values are backfilled to applied or
+    # interview in seed.run_migrations; historical status_transitions rows
+    # are preserved unchanged.
     applied_at = Column(DateTime(timezone=True), default=utcnow)
     cv_version_used = Column(String, nullable=True)
     notes = Column(Text, nullable=True)

@@ -34,9 +34,11 @@ function decodeCron(expr) {
 }
 
 const SANKEY_NODE_COLORS = {
-  new: '#94a3b8', applied: '#6366f1', screening: '#818cf8',
-  phone_screen: '#a78bfa', interview: '#f59e0b', final_round: '#f97316',
+  new: '#94a3b8', applied: '#6366f1', interview: '#f59e0b',
   offer: '#22c55e', rejected: '#ef4444',
+  // Retired statuses kept so historical status_transitions entries still render
+  // in the Sankey without breaking the node lookup.
+  screening: '#818cf8', phone_screen: '#a78bfa', final_round: '#f97316',
 }
 
 const SankeyNode = ({ x, y, width, height, index, payload }) => {
@@ -368,8 +370,8 @@ export default function Stats() {
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart layout="vertical" data={[
-                  { stage: 'Applied', count: (stats.application_statuses?.applied || 0) + (stats.application_statuses?.screening || 0) },
-                  { stage: 'Interview', count: (stats.application_statuses?.interview || 0) + (stats.application_statuses?.phone_screen || 0) + (stats.application_statuses?.final_round || 0) },
+                  { stage: 'Applied', count: stats.application_statuses?.applied || 0 },
+                  { stage: 'Interview', count: stats.application_statuses?.interview || 0 },
                   { stage: 'Offer', count: stats.application_statuses?.offer || 0 },
                   { stage: 'Rejected', count: stats.application_statuses?.rejected || 0 },
                 ]} margin={{ top: 5, right: 20, left: 70, bottom: 5 }}>
