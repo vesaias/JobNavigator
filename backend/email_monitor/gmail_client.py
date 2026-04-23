@@ -115,7 +115,12 @@ def _build_gmail_query(db) -> str:
     from_block = " OR ".join(sender_parts)
     subject_block = " OR ".join(subject_parts)
 
-    parts = ["newer_than:3d"]
+    # `in:anywhere` forces Gmail to search all mail — including Trash and Spam.
+    # The list endpoint's includeSpamTrash flag alone is not enough; Gmail still
+    # filters some Trash hits out of the result set unless the query itself
+    # opts into them. Paired with params.includeSpamTrash=True this guarantees
+    # auto-archived rejection emails still get classified.
+    parts = ["in:anywhere", "newer_than:3d"]
     if from_block and subject_block:
         parts.append(f"(({from_block}) OR ({subject_block}))")
     elif from_block:
