@@ -199,7 +199,7 @@ def _apply_llm_result_to_app(db, matched_app, llm_result: dict, body: str, subje
 
     logger.info(
         f"Email LLM: '{new_status}' (confidence {llm_result['confidence']}) "
-        f"for application {matched_app.id} — {llm_result.get('summary', '')}"
+        f"for application {matched_app.id}"
     )
 
 
@@ -311,11 +311,23 @@ async def check_emails():
                         if matched_app:
                             _apply_llm_result_to_app(db, matched_app, llm_result, body, subject)
 
+                        # Status + confidence only — summaries paraphrase the
+                        # recruiter's email body, which we don't want persisted
+                        # in activity_log.
                         from backend.activity import log_activity
-                        log_activity("email", f"LLM classified email: {llm_result['summary']} (confidence: {llm_result['confidence']})", db=db)
+                        log_activity(
+                            "email",
+                            f"LLM classified email → {llm_result.get('status', '?')} "
+                            f"(confidence: {llm_result['confidence']})",
+                            db=db,
+                        )
                     else:
                         from backend.activity import log_activity
-                        log_activity("email", f"LLM low confidence ({llm_result['confidence']}): {llm_result.get('summary', 'no summary')}", db=db)
+                        log_activity(
+                            "email",
+                            f"LLM low confidence ({llm_result['confidence']}): status={llm_result.get('status', '?')}",
+                            db=db,
+                        )
 
                 processed_ids.add(msg_id)
 
