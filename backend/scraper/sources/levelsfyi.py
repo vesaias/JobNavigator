@@ -480,7 +480,7 @@ async def run(search: Search) -> dict:
                     if desc:
                         result = scan_jd_for_h1b_flags(desc, body_phrases)
                         if result["jd_flag"]:
-                            logger.info(f"levels.fyi: body exclusion drop: {j['title']} @ {j.get('company', '?')}")
+                            logger.info(f"levels.fyi: body exclusion drop: {j['title']} @ {j.get('company', '?')} — matched phrase: {result.get('matched_phrase')!r}")
                             continue
                     filtered.append(j)
                 kept_jobs = filtered
@@ -582,7 +582,8 @@ async def run(search: Search) -> dict:
                     logger.warning(f"Inline analysis failed for {j['title']}: {e}")
 
                 if job.h1b_jd_flag:
-                    logger.info(f"Skipping job (body exclusion): {j['title']} — {job.h1b_jd_snippet}")
+                    _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
+                    logger.info(f"Skipping job (body exclusion): {j['title']} @ {j.get('company', '?')} — matched phrase: {_phrase!r}")
                     continue
 
                 try:

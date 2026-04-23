@@ -149,10 +149,14 @@ async def fetch_h1b_for_company_id(company_id: str):
 
 def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:
     """Scan job description for H-1B exclusion phrases.
-    Returns dict with jd_flag, jd_snippet.
+    Returns dict with jd_flag, jd_snippet, matched_phrase.
+
+    `matched_phrase` is the exact user-configured exclusion phrase that hit,
+    safe to log. `jd_snippet` is ~100 chars of surrounding JD text — intended
+    for the UI tooltip, NOT for log lines (leaks recruiter-confidential text).
     """
     if not description:
-        return {"jd_flag": False, "jd_snippet": None}
+        return {"jd_flag": False, "jd_snippet": None, "matched_phrase": None}
 
     desc_lower = description.lower()
 
@@ -163,9 +167,9 @@ def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:
             start = max(0, idx - 50)
             end = min(len(description), idx + len(phrase) + 50)
             snippet = description[start:end].strip()
-            return {"jd_flag": True, "jd_snippet": snippet}
+            return {"jd_flag": True, "jd_snippet": snippet, "matched_phrase": phrase}
 
-    return {"jd_flag": False, "jd_snippet": None}
+    return {"jd_flag": False, "jd_snippet": None, "matched_phrase": None}
 
 
 def determine_h1b_verdict(lca_count: int, jd_flag: bool) -> str:
@@ -218,6 +222,9 @@ async def check_job_h1b(job: Job, db) -> None:
     jd_result = scan_jd_for_h1b_flags(job.description or "", phrases)
     job.h1b_jd_flag = jd_result["jd_flag"]
     job.h1b_jd_snippet = jd_result["jd_snippet"]
+    # Transient attribute (not a column) — lets scrapers log which phrase
+    # triggered the exclusion without spilling the JD excerpt into logs.
+    job._h1b_matched_phrase = jd_result["matched_phrase"]
 
     # Overall verdict
     job.h1b_verdict = determine_h1b_verdict(lca_count, jd_result["jd_flag"])

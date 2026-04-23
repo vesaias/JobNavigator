@@ -872,7 +872,8 @@ async def run(search: Search) -> dict:
                     logger.warning(f"Inline analysis failed for {j['title']}: {e}")
 
                 if job.h1b_jd_flag:
-                    logger.info(f"Skipping job (body exclusion): {j['title']} — {job.h1b_jd_snippet}")
+                    _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
+                    logger.info(f"Skipping job (body exclusion): {j['title']} @ {j.get('company', '?')} — matched phrase: {_phrase!r}")
                     continue
 
                 # Use savepoint so one duplicate doesn't kill the whole batch

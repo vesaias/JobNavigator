@@ -232,7 +232,8 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
 
                 # Skip jobs flagged for body exclusion
                 if job.h1b_jd_flag:
-                    logger.info(f"Skipping job (body exclusion): {j['title']} — {job.h1b_jd_snippet}")
+                    _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
+                    logger.info(f"Skipping job (body exclusion): {j['title']} @ {j.get('company', '?')} — matched phrase: {_phrase!r}")
                     job.status = "ignored"
 
                 try:

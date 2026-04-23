@@ -204,7 +204,8 @@ async def enrich(linkedin_ids: list[str], db=None):
 
                 # Skip flagged jobs (same as other scrapers)
                 if job.h1b_jd_flag:
-                    logger.info(f"LinkedIn {lid}: skipping (H-1B exclusion) — {job.h1b_jd_snippet}")
+                    _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
+                    logger.info(f"LinkedIn {lid} ({job.title!r}): skipping (body exclusion) — matched phrase: {_phrase!r}")
                     skipped += 1
                     continue
 

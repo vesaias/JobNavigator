@@ -222,7 +222,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
 
                 # Skip jobs whose description contains exclusion phrases
                 if job.h1b_jd_flag:
-                    logger.info(f"Skipping job (body exclusion): {title} — {job.h1b_jd_snippet}")
+                    _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
+                    logger.info(f"Skipping job (body exclusion): {title} @ {company} — matched phrase: {_phrase!r}")
                     continue
 
                 try:
