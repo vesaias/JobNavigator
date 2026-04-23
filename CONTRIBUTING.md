@@ -22,17 +22,30 @@ Open http://localhost — sign in with a blank key on first run.
 
 If your favorite company uses an ATS not yet supported, adding it is usually a few hours of work.
 
-1. Find the ATS endpoint. Most have a JSON API — check Network tab on their career page.
-2. Add a detector function in `backend/scraper/playwright_scraper.py` (search for `_is_workday`, `_is_ashby`, etc. for examples):
+Scrapers live under `backend/scraper/` in three layers:
+
+- `ats/` — one file per ATS platform (`lever.py`, `greenhouse.py`, `workday.py`, `ashby.py`, `oracle_hcm.py`, `phenom.py`, `talentbrew.py`, `rippling.py`, `meta.py`, `google.py`, `generic.py`). Each exposes `is_<ats>(url)` and `async def scrape(url, ...)`.
+- `sources/` — higher-level sources that fan out across multiple ATSes (`company_pages.py`, `jobspy.py`, `jobright.py`).
+- `_shared/` — cross-ATS utilities: `url_safety.py` (SSRF gate), `dedup.py`, `urls.py`, `browser.py`, `filters.py`.
+- `orchestrator.py` — `run_all()` entry point used by the scheduler and manual triggers.
+
+Steps:
+
+1. Find the ATS endpoint. Most have a JSON API — check Network tab on their career page. If it's a pure-HTTP ATS, you don't need Playwright.
+2. Create `backend/scraper/ats/yourats.py` modeled on `lever.py` or `greenhouse.py`. Two public symbols:
    ```python
-   def _is_yourats(url: str) -> bool:
+   def is_yourats(url: str) -> bool:
        return "yourats.com" in url.lower()
+
+   async def scrape(url: str, debug: bool = False) -> list[dict]:
+       # Return jobs as dicts with at minimum: {title, company, url, location, description}
+       ...
    ```
-3. Add a scraper function that returns jobs as dicts with at minimum `{title, company, url, location, description}`.
-4. Wire it into `_scrape_url` (search for `_is_workday` to find the dispatch).
+3. Wire it into `backend/scraper/sources/company_pages.py` — add an `is_yourats` / `yourats.scrape` branch inside `_dispatch_ats` and, if it needs a browser, add the detector to `_needs_browser`.
+4. If your ATS has a dedicated job-description endpoint (vs. scraping the posting page), add a handler in `backend/scraper/ats/_descriptions.py` for SSRF-safe, ATS-specific fetching.
 5. Test by adding a company in the dashboard with a URL and clicking "Test scrape".
 
-Existing handlers to crib from (in `playwright_scraper.py`): Workday, Greenhouse, Lever, Ashby, Oracle HCM, Phenom, TalentBrew, Rippling, Meta Careers, Google Careers, Apple.
+Examples to crib from: `lever.py` + `greenhouse.py` (pure HTTP), `workday.py` (JSON POST), `rippling.py` (flat JSON + client-side filter), `meta.py` / `google.py` (Playwright DOM).
 
 ### Add a resume template
 
