@@ -58,6 +58,7 @@ def get_all_running() -> list[dict]:
             "started_at": r.started_at.isoformat(),
             "elapsed_seconds": round((now - r.started_at).total_seconds(), 1),
             "scope_key": r.scope_key,
+            "target_job_id": str(r.target_job_id) if r.target_job_id else None,
         }
         for r in _running.values()
     ]
