@@ -423,17 +423,19 @@ export default function JobFeed() {
       return
     }
 
-    // Tailor — fire in background, close modal immediately
+    // Tailor — background; endpoint returns 202 + run_id immediately.
     const toastId = Date.now()
     setTailorToasts(prev => [...prev, { id: toastId, company, status: 'loading' }])
     setShowCvModal(false)
     setCvSelectedBase('')
 
     api.post('/resumes/tailor', { base_resume_id: cvSelectedBase, job_id: jobId })
-      .then(({ data }) => {
-        setTailorToasts(prev => prev.map(t => t.id === toastId ? { ...t, status: 'success', resumeId: data.id } : t))
-        fetchJobs() // Refresh cards to show Tailored badge
-        setTimeout(() => setTailorToasts(prev => prev.filter(t => t.id !== toastId)), 15000)
+      .then(() => {
+        // No payload to use — the tailored Resume appears once the background
+        // job completes. The card polling loop (Task 9) picks it up.
+        setTailorToasts(prev => prev.map(t => t.id === toastId ? { ...t, status: 'running' } : t))
+        // optimistic refresh after a moment so the spinner badge shows
+        setTimeout(() => fetchJobs(), 500)
       })
       .catch(e => {
         const msg = e.response?.data?.detail || e.message

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow
@@ -313,10 +313,16 @@ def copy_resume_for_job(body: dict, db: Session = Depends(get_db)):
     return _resume_to_dict(copy, include_json_data=True)
 
 
-@router.post("/tailor")
+@router.post("/tailor", status_code=202)
 async def tailor_resume(body: dict, db: Session = Depends(get_db)):
-    """Tailor a base resume for a specific job description using LLM."""
-    import re as _re
+    """Tailor a base resume for a specific job in the background.
+
+    Returns immediately with a run_id. Progress is trackable via
+    GET /api/monitor/in-flight?job_ids=<job_id>. The resulting Resume
+    row appears when the job finishes (fetch via list_resumes).
+    """
+    import uuid as _uuid
+    from backend.job_monitor import launch_background, JobAlreadyRunningError
 
     base_resume_id = body.get("base_resume_id")
     job_id = body.get("job_id")
@@ -327,111 +333,163 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     if not job_id and not job_description:
         raise HTTPException(400, "Either job_id or job_description is required")
 
-    # Load base resume
+    # Fast-fail: base resume must exist
     base = db.query(Resume).filter(Resume.id == base_resume_id).first()
     if not base:
         raise HTTPException(404, "Base resume not found")
-    base_data = base.json_data or {}
 
-    # Load job description
-    jd_text = job_description or ""
-    job_name = ""
+    # Fast-fail: job must exist (if job_id given) and have description
     if job_id:
-    
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             raise HTTPException(404, "Job not found")
-        jd_text = job.description or ""
-        job_name = f"{job.company} \u2014 {job.title}" if job.company else job.title or ""
-        if not jd_text:
+        if not (job.description or "").strip():
             raise HTTPException(400, "Job has no description")
 
-    # Load prompt template from settings
-    prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
-    if not prompt_row or not prompt_row.value:
-        raise HTTPException(500, "cv_tailor_prompt setting is empty")
-    prompt_template = prompt_row.value
+    target_uuid = _uuid.UUID(job_id) if job_id else None
+    scope = f"{base_resume_id}:{job_id or 'freeform'}"
 
-    # Build prompt — send only tailorable sections as JSON
+    try:
+        run_id = launch_background(
+            "tailor_resume",
+            _tailor_impl,
+            trigger="manual",
+            scope_key=scope,
+            target_job_id=target_uuid,
+            func_kwargs={
+                "base_resume_id": base_resume_id,
+                "job_id": job_id,
+                "job_description_override": job_description,
+            },
+        )
+        return {"run_id": run_id, "status": "running"}
+    except JobAlreadyRunningError as e:
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running for this pair"},
+        )
+
+
+async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_override: str | None):
+    """Background worker: does the actual LLM tailoring work.
+
+    Opens its own DB session (no request-scoped session available outside an HTTP
+    handler). Semaphore-guarded so concurrent tailors don't exceed
+    tailoring_max_concurrent.
+    """
+    import re as _re
     import json as _json
-    resume_sections = {
-        "summary": base_data.get("summary", ""),
-        "experience": base_data.get("experience", []),
-        "skills": base_data.get("skills", {}),
-    }
-    prompt = prompt_template.replace("{resume_json}", _json.dumps(resume_sections, indent=2))
-    prompt = prompt.replace("{job_description}", jd_text[:6000])
 
-    system = "You are an expert resume tailor. Rewrite the resume to align with the job description using the JD's exact vocabulary. Do NOT invent experience, skills, or facts not present in the original resume. Only reformulate, reframe, and reorder existing content. If something is missing, map to the closest truthful concept."
+    async with _get_tailoring_semaphore():
+        db = SessionLocal()
+        try:
+            base = db.query(Resume).filter(Resume.id == base_resume_id).first()
+            if not base:
+                logger.error(f"Tailor: base resume {base_resume_id} missing at execution time")
+                return
+            base_data = base.json_data or {}
 
-    # Call LLM
-    from backend.analyzer.llm_client import call_cv_tailor_llm
-    from backend.analyzer.llm_logger import track_llm_call
-    # Determine model for logging
-    _m = db.query(Setting).filter(Setting.key == "cv_tailor_llm_model").first()
-    _model = _m.value if _m and _m.value else None
-    if not _model:
-        _m2 = db.query(Setting).filter(Setting.key == "llm_model").first()
-        _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
-    _p = db.query(Setting).filter(Setting.key == "cv_tailor_llm_provider").first()
-    _provider = _p.value if _p and _p.value else None
-    if not _provider:
-        _p2 = db.query(Setting).filter(Setting.key == "llm_provider").first()
-        _provider = _p2.value if _p2 and _p2.value else "claude_api"
-    try:
-        async with track_llm_call("tailor", _provider, _model, job_id=job_id) as _tracker:
-            _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
-            _tracker.usage = _resp.get("usage", _tracker.usage)
-            raw = _resp["text"]
-    except Exception as e:
-        logger.error(f"CV tailoring LLM failed: {e}")
-        raise HTTPException(500, f"LLM tailoring failed: {e}")
+            jd_text = job_description_override or ""
+            job_name = ""
+            if job_id:
+                job = db.query(Job).filter(Job.id == job_id).first()
+                if not job:
+                    logger.error(f"Tailor: job {job_id} missing at execution time")
+                    return
+                jd_text = job.description or ""
+                job_name = f"{job.company} \u2014 {job.title}" if job.company else (job.title or "")
+                if not jd_text:
+                    logger.error(f"Tailor: job {job_id} has no description")
+                    return
 
-    # Parse JSON response
-    try:
-        text = raw.strip()
-        match = _re.search(r'\{[\s\S]*\}', text)
-        if match:
-            text = match.group(0)
-        llm_result = _json.loads(text)
-    except _json.JSONDecodeError as e:
-        logger.error(f"CV tailoring JSON parse failed: {e}. Raw: {raw[:500]}")
-        raise HTTPException(500, "Failed to parse LLM response as JSON")
+            prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
+            if not prompt_row or not prompt_row.value:
+                logger.error("Tailor: cv_tailor_prompt setting is empty")
+                return
+            prompt_template = prompt_row.value
 
-    # Merge: base sections + LLM-tailored sections
-    tailored_data = _json.loads(_json.dumps(base_data))  # deep copy
-    if "summary" in llm_result:
-        tailored_data["summary"] = llm_result["summary"]
-    if "experience" in llm_result:
-        llm_exp = llm_result["experience"]
-        base_exp = tailored_data.get("experience", [])
-        for i, llm_job in enumerate(llm_exp):
-            if i < len(base_exp):
-                base_exp[i]["bullets"] = llm_job.get("bullets", base_exp[i].get("bullets", []))
-                if llm_job.get("suggested_bullets"):
-                    base_exp[i]["suggested_bullets"] = llm_job["suggested_bullets"]
-                if llm_job.get("description") is not None:
-                    base_exp[i]["description"] = llm_job["description"]
-        tailored_data["experience"] = base_exp
-    if "skills" in llm_result:
-        tailored_data["skills"] = llm_result["skills"]
+            resume_sections = {
+                "summary": base_data.get("summary", ""),
+                "experience": base_data.get("experience", []),
+                "skills": base_data.get("skills", {}),
+            }
+            prompt = prompt_template.replace("{resume_json}", _json.dumps(resume_sections, indent=2))
+            prompt = prompt.replace("{job_description}", jd_text[:6000])
 
-    # Create tailored resume
-    name = f"{base.name} \u2192 {job_name}" if job_name else f"{base.name} (tailored)"
-    tailored = Resume(
-        name=name,
-        is_base=False,
-        parent_id=base.id,
-        job_id=job_id,
-        template=base.template,
-        page_format=base.page_format,
-        json_data=tailored_data,
-    )
-    db.add(tailored)
-    db.commit()
-    db.refresh(tailored)
+            system = (
+                "You are an expert resume tailor. Rewrite the resume to align with the "
+                "job description using the JD's exact vocabulary. Do NOT invent experience, "
+                "skills, or facts not present in the original resume. Only reformulate, "
+                "reframe, and reorder existing content. If something is missing, map to "
+                "the closest truthful concept."
+            )
 
-    return _resume_to_dict(tailored, include_json_data=True)
+            from backend.analyzer.llm_client import call_cv_tailor_llm
+            from backend.analyzer.llm_logger import track_llm_call
+
+            _m = db.query(Setting).filter(Setting.key == "cv_tailor_llm_model").first()
+            _model = _m.value if _m and _m.value else None
+            if not _model:
+                _m2 = db.query(Setting).filter(Setting.key == "llm_model").first()
+                _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
+            _p = db.query(Setting).filter(Setting.key == "cv_tailor_llm_provider").first()
+            _provider = _p.value if _p and _p.value else None
+            if not _provider:
+                _p2 = db.query(Setting).filter(Setting.key == "llm_provider").first()
+                _provider = _p2.value if _p2 and _p2.value else "claude_api"
+
+            try:
+                async with track_llm_call("tailor", _provider, _model, job_id=job_id) as _tracker:
+                    _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
+                    _tracker.usage = _resp.get("usage", _tracker.usage)
+                    raw = _resp["text"]
+            except Exception as e:
+                logger.error(f"Tailor LLM failed for base={base_resume_id} job={job_id}: {e}")
+                return
+
+            try:
+                text = raw.strip()
+                match = _re.search(r'\{[\s\S]*\}', text)
+                if match:
+                    text = match.group(0)
+                llm_result = _json.loads(text)
+            except _json.JSONDecodeError as e:
+                logger.error(f"Tailor JSON parse failed: {e}. Raw: {raw[:500]}")
+                return
+
+            tailored_data = _json.loads(_json.dumps(base_data))
+            if "summary" in llm_result:
+                tailored_data["summary"] = llm_result["summary"]
+            if "experience" in llm_result:
+                llm_exp = llm_result["experience"]
+                base_exp = tailored_data.get("experience", [])
+                for i, llm_job in enumerate(llm_exp):
+                    if i < len(base_exp):
+                        base_exp[i]["bullets"] = llm_job.get("bullets", base_exp[i].get("bullets", []))
+                        if llm_job.get("suggested_bullets"):
+                            base_exp[i]["suggested_bullets"] = llm_job["suggested_bullets"]
+                        if llm_job.get("description") is not None:
+                            base_exp[i]["description"] = llm_job["description"]
+                tailored_data["experience"] = base_exp
+            if "skills" in llm_result:
+                tailored_data["skills"] = llm_result["skills"]
+
+            name = f"{base.name} \u2192 {job_name}" if job_name else f"{base.name} (tailored)"
+            tailored = Resume(
+                name=name,
+                is_base=False,
+                parent_id=base.id,
+                job_id=job_id,
+                template=base.template,
+                page_format=base.page_format,
+                json_data=tailored_data,
+            )
+            db.add(tailored)
+            db.commit()
+            db.refresh(tailored)
+            logger.info(f"Tailor: created resume {tailored.id} for job {job_id}")
+        finally:
+            db.close()
 
 
 @router.get("/{resume_id}")
