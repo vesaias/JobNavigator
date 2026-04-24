@@ -147,3 +147,6 @@ CLAUDE.md
 docs/*
 !docs/jobnavigator.gif
 docker-compose.test.yml
+
+# git worktrees (isolated feature branches)
+.worktrees/
