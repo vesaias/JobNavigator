@@ -123,6 +123,8 @@ export default function ResumeBuilder() {
   // In-flight tailor ops (across the whole app)
   // Shape: [{run_id, base_resume_id, target_job_id, target_title, started_at}]
   const [pendingTailors, setPendingTailors] = useState([])
+  const pendingTailorsRef = useRef([])
+  pendingTailorsRef.current = pendingTailors  // keep ref in sync with state on every render
   const [selectedId, setSelectedId] = useState(null)
   const [editData, setEditData] = useState(null)
   const [template, setTemplate] = useState('')
@@ -184,7 +186,7 @@ export default function ResumeBuilder() {
         }).filter(t => t.base_resume_id)
 
         // Fetch missing job titles
-        const needTitle = rows.filter(t => t.target_job_id && !pendingTailors.find(p => p.run_id === t.run_id)?.target_title)
+        const needTitle = rows.filter(t => t.target_job_id && !pendingTailorsRef.current.find(p => p.run_id === t.run_id)?.target_title)
         await Promise.all(needTitle.map(async t => {
           try {
             const { data: j } = await api.get(`/jobs/${t.target_job_id}`)
@@ -194,15 +196,18 @@ export default function ResumeBuilder() {
         // Carry forward titles already known
         const merged = rows.map(r => ({
           ...r,
-          target_title: r.target_title || pendingTailors.find(p => p.run_id === r.run_id)?.target_title,
+          target_title: r.target_title || pendingTailorsRef.current.find(p => p.run_id === r.run_id)?.target_title,
         }))
 
         if (cancelled) return
-        // Did any previously-pending op just disappear? → it finished; refresh resume list
-        const prevIds = new Set(pendingTailors.map(p => p.run_id))
+        const prevArr = pendingTailorsRef.current
+        const prevIds = new Set(prevArr.map(p => p.run_id))
         const nowIds  = new Set(merged.map(p => p.run_id))
         const finished = [...prevIds].some(id => !nowIds.has(id))
-        setPendingTailors(merged)
+        const sameCount = prevArr.length === merged.length
+        const sameIds = sameCount && merged.every((m, i) => m.run_id === prevArr[i]?.run_id)
+        const sameTitles = sameIds && merged.every((m, i) => m.target_title === prevArr[i]?.target_title)
+        if (!sameTitles) setPendingTailors(merged)
         if (finished) fetchResumes()
       } catch {/* network hiccup — next tick retries */}
     }
