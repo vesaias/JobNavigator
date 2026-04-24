@@ -145,9 +145,24 @@ def list_jobs(
             if jid not in tailored_map:
                 tailored_map[jid] = rid
 
+    # Batch per-job in-flight op lookup (O(N running jobs) once, O(1) per row)
+    import backend.job_monitor as _mon
+    in_flight_map: dict[str, list[str]] = {}
+    for r in _mon._running.values():
+        if r.target_job_id is None:
+            continue
+        in_flight_map.setdefault(str(r.target_job_id), []).append(r.job_type)
+
     return {
         "total": total,
-        "jobs": [_job_to_dict(j, tailored_resume_id=tailored_map.get(j.id)) for j in jobs],
+        "jobs": [
+            _job_to_dict(
+                j,
+                tailored_resume_id=tailored_map.get(j.id),
+                in_flight=in_flight_map.get(str(j.id), []),
+            )
+            for j in jobs
+        ],
     }
 
 
@@ -341,7 +356,9 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
     tailored = db.query(Resume.id).filter(
         Resume.job_id == job.id, Resume.is_base == False
     ).order_by(Resume.updated_at.desc()).first()
-    return _job_to_dict(job, tailored_resume_id=tailored[0] if tailored else None)
+    import backend.job_monitor as _mon
+    in_flight = [r.job_type for r in _mon._running.values() if r.target_job_id == job.id]
+    return _job_to_dict(job, tailored_resume_id=tailored[0] if tailored else None, in_flight=in_flight)
 
 
 @router.patch("/{job_id}")
@@ -473,7 +490,7 @@ def _normalize_report(report, best_cv):
     return report
 
 
-def _job_to_dict(j: Job, tailored_resume_id=None) -> dict:
+def _job_to_dict(j: Job, tailored_resume_id=None, in_flight: list[str] | None = None) -> dict:
     scores = j.cv_scores or {}
     numeric_scores = [v for v in scores.values() if isinstance(v, (int, float))]
     best_score = max(numeric_scores) if numeric_scores else 0
@@ -508,4 +525,5 @@ def _job_to_dict(j: Job, tailored_resume_id=None) -> dict:
         "discovered_at": j.discovered_at.isoformat() if j.discovered_at else None,
         "has_tailored_resume": tailored_resume_id is not None,
         "tailored_resume_id": str(tailored_resume_id) if tailored_resume_id else None,
+        "in_flight": in_flight or [],
     }
