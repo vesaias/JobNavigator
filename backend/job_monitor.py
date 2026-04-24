@@ -22,6 +22,7 @@ class RunningJob:
     started_at: datetime
     task: Optional[asyncio.Task] = None
     scope_key: Optional[str] = None
+    target_job_id: Optional[uuid.UUID] = None
 
 
 # Keyed by dedup key (e.g. "scrape_all" or "company_scrape:<uuid>")
@@ -77,7 +78,13 @@ def _get_running_by_job_type(job_type: str) -> Optional[dict]:
 # ── DB helpers ──────────────────────────────────────────────────────────────
 
 
-def _insert_job_run(run_id: uuid.UUID, job_type: str, trigger: str, meta: Optional[dict]) -> None:
+def _insert_job_run(
+    run_id: uuid.UUID,
+    job_type: str,
+    trigger: str,
+    meta: Optional[dict],
+    target_job_id: Optional[uuid.UUID] = None,
+) -> None:
     db = SessionLocal()
     try:
         run = JobRun(
@@ -86,6 +93,7 @@ def _insert_job_run(run_id: uuid.UUID, job_type: str, trigger: str, meta: Option
             trigger=trigger,
             status="running",
             meta=meta,
+            target_job_id=target_job_id,
         )
         db.add(run)
         db.commit()
@@ -133,7 +141,13 @@ def cleanup_stale_runs() -> int:
 
 
 @asynccontextmanager
-async def tracked_run(job_type: str, trigger: str = "scheduler", scope_key: Optional[str] = None, meta: Optional[dict] = None):
+async def tracked_run(
+    job_type: str,
+    trigger: str = "scheduler",
+    scope_key: Optional[str] = None,
+    meta: Optional[dict] = None,
+    target_job_id: Optional[uuid.UUID] = None,
+):
     """Async context manager: tracks a job run in-memory + DB. Raises JobAlreadyRunningError on duplicate."""
     key = _make_key(job_type, scope_key)
 
@@ -143,7 +157,7 @@ async def tracked_run(job_type: str, trigger: str = "scheduler", scope_key: Opti
         raise JobAlreadyRunningError(job_type, elapsed)
 
     run_id = uuid.uuid4()
-    _insert_job_run(run_id, job_type, trigger, meta)
+    _insert_job_run(run_id, job_type, trigger, meta, target_job_id=target_job_id)
 
     running_job = RunningJob(
         run_id=run_id,
@@ -151,6 +165,7 @@ async def tracked_run(job_type: str, trigger: str = "scheduler", scope_key: Opti
         trigger=trigger,
         started_at=datetime.now(timezone.utc),
         scope_key=scope_key,
+        target_job_id=target_job_id,
     )
     _running[key] = running_job
 
@@ -175,6 +190,7 @@ def launch_background(
     meta: Optional[dict] = None,
     func_args: tuple = (),
     func_kwargs: Optional[dict] = None,
+    target_job_id: Optional[uuid.UUID] = None,
 ) -> str:
     """Launch a coroutine as a background asyncio.Task with tracking. Returns run_id immediately.
     Raises JobAlreadyRunningError if already running."""
@@ -186,7 +202,7 @@ def launch_background(
         raise JobAlreadyRunningError(job_type, elapsed)
 
     run_id = uuid.uuid4()
-    _insert_job_run(run_id, job_type, trigger, meta)
+    _insert_job_run(run_id, job_type, trigger, meta, target_job_id=target_job_id)
 
     started_at = datetime.now(timezone.utc)
 
@@ -209,6 +225,7 @@ def launch_background(
         started_at=started_at,
         task=task,
         scope_key=scope_key,
+        target_job_id=target_job_id,
     )
 
     return str(run_id)
