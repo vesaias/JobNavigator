@@ -121,6 +121,18 @@ export default function JobFeed() {
   const [minSalary, setMinSalary] = useState('')
   const [maxSalary, setMaxSalary] = useState('')
 
+  const renderSlot = (job, type, label, idleContent) => {
+    const isRunning = (job.in_flight || []).includes(type)
+    if (isRunning) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+          <Loader2 className="animate-spin" size={12} />
+          {label}…
+        </span>
+      )
+    }
+    return idleContent
+  }
 
   // #15 Debounce title search input
   useEffect(() => {
@@ -733,12 +745,14 @@ export default function JobFeed() {
                           <div className="flex items-center gap-1.5">
                             <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{job.title}</p>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-1">
-                              {job.tailored_resume_id && (
-                                <a href={`/resumes?resume=${job.tailored_resume_id}`} onClick={e => e.stopPropagation()}
-                                  className="px-1.5 py-0.5 rounded text-purple-500 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/30"
-                                  title="Tailored CV available">
-                                  <ScrollText size={14} />
-                                </a>
+                              {renderSlot(job, 'tailor_resume', 'Tailoring',
+                                job.tailored_resume_id ? (
+                                  <a href={`/resumes?resume=${job.tailored_resume_id}`} onClick={e => e.stopPropagation()}
+                                    className="px-1.5 py-0.5 rounded text-purple-500 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/30"
+                                    title="Tailored CV available">
+                                    <ScrollText size={14} />
+                                  </a>
+                                ) : null
                               )}
                               <button onClick={e => skipAndAdvance(e, job)}
                                 className="px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-200 text-red-500 hover:text-red-700 transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 dark:hover:text-red-300"
@@ -765,31 +779,33 @@ export default function JobFeed() {
                             {job.location && <span className="truncate">{job.location}</span>}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            {job.best_score > 0 && (
-                              <div className="relative"
-                                onMouseEnter={() => {
-                                  const r = job.scoring_report
-                                  const summary = r?.[job.best_cv]?.summary || Object.values(r || {})[0]?.summary
-                                  if (summary) setTooltipJob(job.id)
-                                }}
-                                onMouseLeave={() => setTooltipJob(null)}>
-                                <div className="flex items-center gap-1">
-                                  <div className="w-14 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${job.best_score >= 70 ? 'bg-green-500' : job.best_score >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`}
-                                      style={{ width: `${job.best_score}%` }} />
-                                  </div>
-                                  <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{job.best_score}%</span>
-                                </div>
-                                {tooltipJob === job.id && (() => {
-                                  const r = job.scoring_report
-                                  const summary = r?.[job.best_cv]?.summary || Object.values(r || {})[0]?.summary
-                                  return summary ? (
-                                    <div className="absolute bottom-full left-0 mb-1 z-50 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-3 py-2 w-[450px] max-w-[60vw] shadow-lg pointer-events-none">
-                                      {summary}
+                            {renderSlot(job, 'analyze_job', 'Scoring',
+                              job.best_score > 0 ? (
+                                <div className="relative"
+                                  onMouseEnter={() => {
+                                    const r = job.scoring_report
+                                    const summary = r?.[job.best_cv]?.summary || Object.values(r || {})[0]?.summary
+                                    if (summary) setTooltipJob(job.id)
+                                  }}
+                                  onMouseLeave={() => setTooltipJob(null)}>
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-14 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                      <div className={`h-full rounded-full ${job.best_score >= 70 ? 'bg-green-500' : job.best_score >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`}
+                                        style={{ width: `${job.best_score}%` }} />
                                     </div>
-                                  ) : null
-                                })()}
-                              </div>
+                                    <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{job.best_score}%</span>
+                                  </div>
+                                  {tooltipJob === job.id && (() => {
+                                    const r = job.scoring_report
+                                    const summary = r?.[job.best_cv]?.summary || Object.values(r || {})[0]?.summary
+                                    return summary ? (
+                                      <div className="absolute bottom-full left-0 mb-1 z-50 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-3 py-2 w-[450px] max-w-[60vw] shadow-lg pointer-events-none">
+                                        {summary}
+                                      </div>
+                                    ) : null
+                                  })()}
+                                </div>
+                              ) : null
                             )}
                             {job.best_cv && (
                               job.best_cv === 'Tailored' && job.tailored_resume_id ? (
