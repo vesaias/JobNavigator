@@ -346,6 +346,11 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
         if not (job.description or "").strip():
             raise HTTPException(400, "Job has no description")
 
+    # Fast-fail: the prompt template must exist
+    prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
+    if not prompt_row or not (prompt_row.value or "").strip():
+        raise HTTPException(500, "cv_tailor_prompt setting is empty — configure it in Settings")
+
     target_uuid = _uuid.UUID(job_id) if job_id else None
     scope = f"{base_resume_id}:{job_id or 'freeform'}"
 
@@ -386,7 +391,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             base = db.query(Resume).filter(Resume.id == base_resume_id).first()
             if not base:
                 logger.error(f"Tailor: base resume {base_resume_id} missing at execution time")
-                return
+                raise RuntimeError(f"Tailor: base resume {base_resume_id} missing at execution time")
             base_data = base.json_data or {}
 
             jd_text = job_description_override or ""
@@ -395,17 +400,17 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 job = db.query(Job).filter(Job.id == job_id).first()
                 if not job:
                     logger.error(f"Tailor: job {job_id} missing at execution time")
-                    return
+                    raise RuntimeError(f"Tailor: job {job_id} missing at execution time")
                 jd_text = job.description or ""
                 job_name = f"{job.company} \u2014 {job.title}" if job.company else (job.title or "")
                 if not jd_text:
                     logger.error(f"Tailor: job {job_id} has no description")
-                    return
+                    raise RuntimeError(f"Tailor: job {job_id} has no description")
 
             prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
             if not prompt_row or not prompt_row.value:
                 logger.error("Tailor: cv_tailor_prompt setting is empty")
-                return
+                raise RuntimeError("Tailor: cv_tailor_prompt setting is empty")
             prompt_template = prompt_row.value
 
             resume_sections = {
@@ -445,7 +450,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     raw = _resp["text"]
             except Exception as e:
                 logger.error(f"Tailor LLM failed for base={base_resume_id} job={job_id}: {e}")
-                return
+                raise
 
             try:
                 text = raw.strip()
@@ -455,7 +460,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 llm_result = _json.loads(text)
             except _json.JSONDecodeError as e:
                 logger.error(f"Tailor JSON parse failed: {e}. Raw: {raw[:500]}")
-                return
+                raise
 
             tailored_data = _json.loads(_json.dumps(base_data))
             if "summary" in llm_result:

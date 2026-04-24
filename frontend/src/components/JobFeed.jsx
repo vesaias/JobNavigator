@@ -1019,9 +1019,10 @@ export default function JobFeed() {
         <div className="fixed bottom-16 right-4 flex flex-col gap-2 z-50">
           {tailorToasts.map(t => (
             <div key={t.id} className={`rounded-lg px-4 py-3 flex items-center gap-3 shadow-xl text-white text-sm ${
-              t.status === 'loading' ? 'bg-gray-800' : t.status === 'success' ? 'bg-green-700' : 'bg-red-700'
+              t.status === 'loading' || t.status === 'running' ? 'bg-gray-800' : t.status === 'success' ? 'bg-green-700' : 'bg-red-700'
             }`}>
               {t.status === 'loading' && <><Loader2 size={14} className="animate-spin flex-shrink-0" /> Tailoring CV for {t.company}...</>}
+              {t.status === 'running' && <><Loader2 size={14} className="animate-spin flex-shrink-0" /> Tailoring CV for {t.company} in background...</>}
               {t.status === 'success' && (
                 <>
                   <CheckCircle size={14} className="flex-shrink-0" />
@@ -1035,7 +1036,7 @@ export default function JobFeed() {
                   <span>Tailor failed for {t.company}: {t.error}</span>
                 </>
               )}
-              {t.status !== 'loading' && (
+              {t.status !== 'loading' && t.status !== 'running' && (
                 <button onClick={() => setTailorToasts(prev => prev.filter(x => x.id !== t.id))} className="text-white/60 hover:text-white ml-1">
                   <X size={14} />
                 </button>
