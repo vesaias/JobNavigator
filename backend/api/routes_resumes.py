@@ -9,9 +9,38 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, utcnow
+from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow
 
 logger = logging.getLogger("jobnavigator.resumes")
+
+import asyncio as _asyncio
+
+_tailoring_semaphore: _asyncio.Semaphore | None = None
+
+
+def _get_tailoring_semaphore() -> _asyncio.Semaphore:
+    """Lazy-init tailoring semaphore from DB setting. Created on first use."""
+    global _tailoring_semaphore
+    if _tailoring_semaphore is None:
+        db = SessionLocal()
+        try:
+            row = db.query(Setting).filter(Setting.key == "tailoring_max_concurrent").first()
+            try:
+                limit = max(1, int(row.value)) if row and row.value else 2
+            except (ValueError, TypeError):
+                limit = 2
+        finally:
+            db.close()
+        _tailoring_semaphore = _asyncio.Semaphore(limit)
+        logger.info(f"Tailoring semaphore initialized: max {limit} concurrent jobs")
+    return _tailoring_semaphore
+
+
+def reset_tailoring_semaphore():
+    """Reset semaphore so next call re-reads the limit from DB."""
+    global _tailoring_semaphore
+    _tailoring_semaphore = None
+
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 

@@ -74,6 +74,15 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             warnings.append(f"reset_scoring_semaphore failed: {_e}")
             logger.exception("reset_scoring_semaphore failed after settings update")
 
+    # Reset tailoring semaphore if its limit changed
+    if "tailoring_max_concurrent" in updated:
+        try:
+            from backend.api.routes_resumes import reset_tailoring_semaphore
+            reset_tailoring_semaphore()
+        except Exception as _e:
+            warnings.append(f"reset_tailoring_semaphore failed: {_e}")
+            logger.exception("reset_tailoring_semaphore failed after settings update")
+
     # Reload dedup params cache if changed
     if "dedup_tracking_params" in updated:
         try:
