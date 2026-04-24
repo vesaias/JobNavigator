@@ -40,6 +40,7 @@ async def test_tailor_endpoint_returns_202_with_run_id(api_client, test_db, monk
 
     test_db.add(Setting(key="dashboard_api_key", value=""))
     test_db.add(Setting(key="cv_tailor_prompt", value="prompt {resume_json} {job_description}"))
+    test_db.add(Setting(key="tailor_auto_quick_score", value="false"))
 
     job = Job(external_id="t1", content_hash="t1c", company="Acme", title="PM",
               description="Looking for PM with 3 years exp")
@@ -76,6 +77,7 @@ async def test_tailor_creates_job_run_with_target_job_id(api_client, test_db, mo
 
     test_db.add(Setting(key="dashboard_api_key", value=""))
     test_db.add(Setting(key="cv_tailor_prompt", value="prompt {resume_json} {job_description}"))
+    test_db.add(Setting(key="tailor_auto_quick_score", value="false"))
 
     job = Job(external_id="t2", content_hash="t2c", company="Acme", title="PM", description="jd")
     test_db.add(job)

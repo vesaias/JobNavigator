@@ -2,6 +2,7 @@
 import io
 import json
 import logging
+import uuid as _uuid
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,7 @@ from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow
+from backend.job_monitor import launch_background, JobAlreadyRunningError
 
 logger = logging.getLogger("jobnavigator.resumes")
 
@@ -321,9 +323,6 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     GET /api/monitor/in-flight?job_ids=<job_id>. The resulting Resume
     row appears when the job finishes (fetch via list_resumes).
     """
-    import uuid as _uuid
-    from backend.job_monitor import launch_background, JobAlreadyRunningError
-
     base_resume_id = body.get("base_resume_id")
     job_id = body.get("job_id")
     job_description = body.get("job_description")
@@ -492,6 +491,27 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             db.add(tailored)
             db.commit()
             db.refresh(tailored)
+            # Optional: chain → light score against the newly tailored CV
+            chain_row = db.query(Setting).filter(Setting.key == "tailor_auto_quick_score").first()
+            chain_on = (chain_row.value or "").strip().lower() == "true" if chain_row else True
+            if chain_on and job_id:
+                try:
+                    from backend.analyzer.cv_scorer import score_single_job
+                    launch_background(
+                        "analyze_job",
+                        score_single_job,
+                        trigger="manual",
+                        scope_key=f"{job_id}:tailored:{tailored.id}",
+                        target_job_id=_uuid.UUID(job_id) if isinstance(job_id, str) else job_id,
+                        func_kwargs={
+                            "job_id": job_id,
+                            "cv_ids": [str(tailored.id)],
+                            "depth": "light",
+                        },
+                    )
+                except Exception as _e:
+                    # Non-fatal — tailor succeeded, chain is a nice-to-have
+                    logger.warning(f"Tailor chain score failed to launch: {_e}")
             logger.info(f"Tailor: created resume {tailored.id} for job {job_id}")
         finally:
             db.close()
