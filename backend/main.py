@@ -811,6 +811,33 @@ def get_active_jobs():
     return get_all_running()
 
 
+@app.get("/api/monitor/in-flight", tags=["monitor"], summary="Per-job active operations")
+def get_in_flight(job_ids: str = None):
+    """Return {job_id: [job_types]} for currently-running operations tagged with target_job_id.
+
+    Scheduler-level operations (scrape_all, email_check, etc.) are omitted
+    because they have no target_job_id.
+
+    Optional `job_ids` query param: comma-separated UUIDs to filter by.
+    """
+    import backend.job_monitor as mon
+
+    wanted: set[str] | None = None
+    if job_ids:
+        wanted = {s.strip() for s in job_ids.split(",") if s.strip()}
+
+    result: dict[str, list[str]] = {}
+    for r in mon._running.values():
+        if r.target_job_id is None:
+            continue
+        key = str(r.target_job_id)
+        if wanted is not None and key not in wanted:
+            continue
+        result.setdefault(key, []).append(r.job_type)
+
+    return result
+
+
 @app.get("/api/monitor/history", tags=["monitor"], summary="Run history")
 def get_run_history(limit: int = 30, job_type: str = None, status: str = None):
     """Return recent job run history, newest first."""
