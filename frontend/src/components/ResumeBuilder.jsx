@@ -120,6 +120,9 @@ export default function ResumeBuilder() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [TEMPLATES, setTemplates] = useState([])
   const [resumes, setResumes] = useState([])
+  // In-flight tailor ops (across the whole app)
+  // Shape: [{run_id, base_resume_id, target_job_id, target_title, started_at}]
+  const [pendingTailors, setPendingTailors] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [editData, setEditData] = useState(null)
   const [template, setTemplate] = useState('')
@@ -160,6 +163,53 @@ export default function ResumeBuilder() {
       if (data.length && !template) setTemplate(data[0].id)
     }).catch(() => {})
     fetchResumes()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchPending = async () => {
+      try {
+        const { data: active } = await api.get('/monitor/active')
+        const tailors = (active || []).filter(r => r.job_type === 'tailor_resume')
+        // scope_key = "<base_resume_id>:<job_id_or_freeform>"
+        const rows = tailors.map(r => {
+          const [base_resume_id, maybeJobId] = (r.scope_key || '').split(':')
+          return {
+            run_id: r.run_id,
+            base_resume_id,
+            target_job_id: r.target_job_id || (maybeJobId !== 'freeform' ? maybeJobId : null),
+            started_at: r.started_at,
+          }
+        }).filter(t => t.base_resume_id)
+
+        // Fetch missing job titles
+        const needTitle = rows.filter(t => t.target_job_id && !pendingTailors.find(p => p.run_id === t.run_id)?.target_title)
+        await Promise.all(needTitle.map(async t => {
+          try {
+            const { data: j } = await api.get(`/jobs/${t.target_job_id}`)
+            t.target_title = j.company && j.title ? `${j.company} — ${j.title}` : (j.title || 'Unknown job')
+          } catch { t.target_title = 'Job' }
+        }))
+        // Carry forward titles already known
+        const merged = rows.map(r => ({
+          ...r,
+          target_title: r.target_title || pendingTailors.find(p => p.run_id === r.run_id)?.target_title,
+        }))
+
+        if (cancelled) return
+        // Did any previously-pending op just disappear? → it finished; refresh resume list
+        const prevIds = new Set(pendingTailors.map(p => p.run_id))
+        const nowIds  = new Set(merged.map(p => p.run_id))
+        const finished = [...prevIds].some(id => !nowIds.has(id))
+        setPendingTailors(merged)
+        if (finished) fetchResumes()
+      } catch {/* network hiccup — next tick retries */}
+    }
+
+    fetchPending()
+    const handle = setInterval(fetchPending, 3000)
+    return () => { cancelled = true; clearInterval(handle) }
   }, [])
 
   useEffect(() => {
@@ -598,19 +648,33 @@ export default function ResumeBuilder() {
                 } else {
                   filtered = [...bases, ...recentTailored]
                 }
-                if (filtered.length === 0) {
+                const entries = []
+                if (filtered.length === 0 && pendingTailors.length === 0) {
                   return <div className="px-3 py-2 text-xs text-gray-400">No resumes found</div>
                 }
-                return filtered.map(r => (
-                  <button key={r.id}
-                    onClick={() => { selectResume(r); setResumeSearch(''); setResumeDropdownOpen(false) }}
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
-                      r.id === selectedId ? 'bg-blue-50 dark:bg-blue-900/30' : ''
-                    }`}>
-                    <span className={!r.is_base ? 'pl-3' : ''}>{r.name}</span>
-                    {r.is_base && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">base</span>}
-                  </button>
-                ))
+                for (const r of filtered) {
+                  entries.push(
+                    <button key={r.id}
+                      onClick={() => { selectResume(r); setResumeSearch(''); setResumeDropdownOpen(false) }}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
+                        r.id === selectedId ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                      }`}>
+                      <span className={!r.is_base ? 'pl-3' : ''}>{r.name}</span>
+                      {r.is_base && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">base</span>}
+                    </button>
+                  )
+                  // Append any in-flight tailors belonging to this base
+                  for (const p of pendingTailors.filter(t => t.base_resume_id === r.id)) {
+                    entries.push(
+                      <div key={p.run_id}
+                        className="w-full text-left px-3 py-1.5 text-xs pl-6 flex items-center gap-2 text-blue-700 dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20">
+                        <Loader2 className="animate-spin" size={12} />
+                        Tailoring{p.target_title ? ` for ${p.target_title}` : '…'}
+                      </div>
+                    )
+                  }
+                }
+                return entries
               })()}
             </div>
           )}
@@ -738,6 +802,13 @@ export default function ResumeBuilder() {
         <div className="grid grid-cols-5 gap-4 flex-1 min-h-0">
           {/* Left panel: form editor */}
           <div className="col-span-2 overflow-auto pr-1">
+            {pendingTailors.filter(p => p.base_resume_id === selectedId).map(p => (
+              <div key={p.run_id}
+                className="mb-2 px-3 py-2 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                <Loader2 className="animate-spin" size={14} />
+                Tailoring this base for {p.target_title || 'a job'}… will appear in the list below when ready.
+              </div>
+            ))}
             {/* Actions bar */}
             <div className="flex items-center gap-2 flex-wrap mb-3 text-xs">
               {selectedId && !resumes.find(r => r.id === selectedId)?.is_base && (
