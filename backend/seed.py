@@ -299,6 +299,8 @@ def run_migrations(db):
         # as-is so the audit trail still shows the original transitions.
         "UPDATE applications SET status = 'applied' WHERE status = 'screening'",
         "UPDATE applications SET status = 'interview' WHERE status IN ('phone_screen', 'final_round')",
+        "ALTER TABLE job_runs ADD COLUMN IF NOT EXISTS target_job_id UUID",
+        "CREATE INDEX IF NOT EXISTS ix_job_runs_target_job_id ON job_runs(target_job_id)",
     ]
     for sql in migrations:
         try:

@@ -233,6 +233,7 @@ class JobRun(Base):
     __table_args__ = (
         Index("ix_job_runs_job_type", "job_type"),
         Index("ix_job_runs_started_at", "started_at"),
+        Index("ix_job_runs_target_job_id", "target_job_id"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -245,6 +246,8 @@ class JobRun(Base):
     result_summary = Column(Text, nullable=True)
     error = Column(Text, nullable=True)
     meta = Column(JSON, nullable=True)
+    # Optional: for per-job operations (tailor_resume, analyze_job, backfill_description)
+    target_job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)
 
 
 # ── LLM Call Log (observability for prompt caching / cost tracking) ─────────
