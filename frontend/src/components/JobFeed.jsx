@@ -249,6 +249,52 @@ export default function JobFeed() {
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
+  // Poll /monitor/in-flight while any visible job has an active op.
+  // Bails out immediately when no cards are running, so there's zero
+  // network/CPU cost in the idle state.
+  useEffect(() => {
+    const activeIds = jobs
+      .filter(j => (j.in_flight || []).length > 0)
+      .map(j => j.id)
+    if (activeIds.length === 0) return  // nothing running, no poll
+
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const { data } = await api.get('/monitor/in-flight', {
+          params: { job_ids: activeIds.join(',') },
+        })
+        if (cancelled) return
+
+        // Which jobs finished? (were running, now absent from response)
+        const finished = activeIds.filter(id => !data[id])
+        if (finished.length > 0) {
+          // Re-fetch each finished job so scores/tailored_id land in state
+          await Promise.all(finished.map(async id => {
+            try {
+              const { data: jobData } = await api.get(`/jobs/${id}`)
+              setJobs(prev => prev.map(j => j.id === id ? jobData : j))
+            } catch {/* skip */}
+          }))
+        }
+        // For still-active ones, patch in_flight in place
+        setJobs(prev => prev.map(j => {
+          if (data[j.id]) return { ...j, in_flight: data[j.id] }
+          if (finished.includes(j.id)) return j  // already refreshed above
+          return j
+        }))
+      } catch {/* network hiccup — next tick retries */}
+    }
+
+    const handle = setInterval(tick, 3000)
+    tick()  // fire once immediately
+    return () => {
+      cancelled = true
+      clearInterval(handle)
+    }
+  }, [jobs.map(j => (j.in_flight || []).length > 0 ? j.id : null).filter(Boolean).join(',')])
+  // Re-subscribe only when the set of active IDs actually changes
+
   // Deep-link: ?job=<id> opens that job's detail panel
   useEffect(() => {
     const jobId = searchParams.get('job')
