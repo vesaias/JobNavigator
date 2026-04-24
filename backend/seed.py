@@ -300,6 +300,10 @@ def run_migrations(db):
         "UPDATE applications SET status = 'applied' WHERE status = 'screening'",
         "UPDATE applications SET status = 'interview' WHERE status IN ('phone_screen', 'final_round')",
         "ALTER TABLE job_runs ADD COLUMN IF NOT EXISTS target_job_id UUID",
+        # Add the missing FK constraint for existing DBs where ADD COLUMN didn't emit REFERENCES.
+        # Idempotent via DROP ... IF EXISTS. Mirrors the llm_call_log pattern above.
+        "ALTER TABLE job_runs DROP CONSTRAINT IF EXISTS job_runs_target_job_id_fkey",
+        "ALTER TABLE job_runs ADD CONSTRAINT job_runs_target_job_id_fkey FOREIGN KEY (target_job_id) REFERENCES jobs(id) ON DELETE SET NULL",
         "CREATE INDEX IF NOT EXISTS ix_job_runs_target_job_id ON job_runs(target_job_id)",
     ]
     for sql in migrations:

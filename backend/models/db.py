@@ -247,7 +247,7 @@ class JobRun(Base):
     error = Column(Text, nullable=True)
     meta = Column(JSON, nullable=True)
     # Optional: for per-job operations (tailor_resume, analyze_job, backfill_description)
-    target_job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)
+    target_job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
 
 
 # ── LLM Call Log (observability for prompt caching / cost tracking) ─────────
