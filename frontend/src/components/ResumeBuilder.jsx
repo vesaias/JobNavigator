@@ -150,7 +150,7 @@ export default function ResumeBuilder() {
   const [showDiffModal, setShowDiffModal] = useState(false)
   const [baseData, setBaseData] = useState(null)
   const [diffDecisions, setDiffDecisions] = useState({})
-  const [scoreChecking, setScoreChecking] = useState(null) // null | 'light' | 'full'
+  const [scoreChecking, setScoreChecking] = useState({}) // { [resumeId]: 'light' | 'full' } — scoped per-resume so switching selection doesn't leak the spinner
   const [scoreResult, setScoreResult] = useState(null)
   const [jobUrl, setJobUrl] = useState(null)
   const [jobId, setJobId] = useState(null)
@@ -839,26 +839,28 @@ export default function ResumeBuilder() {
                   {resumes.find(r => r.id === selectedId)?.job_id && (
                     <div className="inline-flex">
                       <button onClick={async () => {
-                        setScoreChecking('light'); setScoreResult(null)
+                        const rid = selectedId  // capture at click time so switching selection mid-scoring doesn't orphan state
+                        setScoreChecking(prev => ({...prev, [rid]: 'light'})); setScoreResult(null)
                         try {
-                          const { data } = await api.post(`/resumes/${selectedId}/score-check`, { depth: 'light' })
+                          const { data } = await api.post(`/resumes/${rid}/score-check`, { depth: 'light' })
                           setScoreResult(data)
                         } catch (e) { alert('Score failed: ' + (e.response?.data?.detail || e.message)) }
-                        setScoreChecking(null)
-                      }} disabled={!!scoreChecking}
+                        setScoreChecking(prev => { const next = {...prev}; delete next[rid]; return next })
+                      }} disabled={!!scoreChecking[selectedId]}
                         className="text-xs px-2 py-1 border border-green-300 text-green-700 rounded-l hover:bg-green-50 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/30 disabled:opacity-50 flex items-center gap-1">
-                        {scoreChecking === 'light' ? <><Loader2 size={12} className="animate-spin" /> Scoring...</> : 'Quick Score'}
+                        {scoreChecking[selectedId] === 'light' ? <><Loader2 size={12} className="animate-spin" /> Scoring...</> : 'Quick Score'}
                       </button>
                       <button onClick={async () => {
-                        setScoreChecking('full'); setScoreResult(null)
+                        const rid = selectedId
+                        setScoreChecking(prev => ({...prev, [rid]: 'full'})); setScoreResult(null)
                         try {
-                          const { data } = await api.post(`/resumes/${selectedId}/score-check`, { depth: 'full' })
+                          const { data } = await api.post(`/resumes/${rid}/score-check`, { depth: 'full' })
                           setScoreResult(data)
                         } catch (e) { alert('Score failed: ' + (e.response?.data?.detail || e.message)) }
-                        setScoreChecking(null)
-                      }} disabled={!!scoreChecking}
+                        setScoreChecking(prev => { const next = {...prev}; delete next[rid]; return next })
+                      }} disabled={!!scoreChecking[selectedId]}
                         className="text-xs px-2 py-1 border border-l-0 border-green-300 text-green-700 rounded-r hover:bg-green-50 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/30 disabled:opacity-50 flex items-center gap-1">
-                        {scoreChecking === 'full' ? <><Loader2 size={12} className="animate-spin" /> Scoring...</> : 'Full Score'}
+                        {scoreChecking[selectedId] === 'full' ? <><Loader2 size={12} className="animate-spin" /> Scoring...</> : 'Full Score'}
                       </button>
                     </div>
                   )}
