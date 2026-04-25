@@ -136,17 +136,8 @@ def delete_cv(version: str, db: Session = Depends(get_db)):
     if not cv:
         raise HTTPException(status_code=404, detail=f"No CV uploaded for version: {version}")
 
-    cv_id_str = str(cv.id)
-
-    # Clean up company selected_cv_ids references
-    from backend.models.db import Company
-    companies = db.query(Company).all()
-    for company in companies:
-        if company.selected_cv_ids and cv_id_str in company.selected_cv_ids:
-            company.selected_cv_ids = [
-                cid for cid in company.selected_cv_ids if cid != cv_id_str
-            ]
-
+    # Note: Company.selected_resume_ids holds Resume UUIDs (not CV IDs) so
+    # deleting a CV no longer requires cleanup of company references.
     db.delete(cv)
     db.commit()
     return {"deleted": True, "version": version}

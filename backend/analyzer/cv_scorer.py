@@ -62,14 +62,28 @@ def _get_default_cv(db) -> dict:
 
 
 def _get_cv_texts_for_company(db, company) -> dict:
-    """Load CVs selected for a specific company. Falls back to default CV if none selected."""
-    if company and company.selected_cv_ids and len(company.selected_cv_ids) > 0:
-        cvs = {}
-        for cv in db.query(CV).order_by(CV.id).all():
-            if str(cv.id) in company.selected_cv_ids and cv.extracted_text:
-                cvs[cv.version] = cv.extracted_text
-        if cvs:
-            return cvs
+    """Load CVs selected for a specific company. Falls back to default CV if none selected.
+
+    Note: Company.selected_cv_ids was renamed to selected_resume_ids (holds Resume UUIDs,
+    not CV IDs). This legacy CV-based lookup falls through to the default CV when called
+    from a Resume-based scoring flow; matches by CV.version against Resume names if the
+    selected_resume_ids reference base Resumes.
+    """
+    selected = getattr(company, "selected_resume_ids", None) or [] if company else []
+    if selected:
+        # selected_resume_ids holds Resume UUIDs. Translate to CV.version by joining
+        # Resume.name → CV.version (CVs are legacy; matched by name).
+        from backend.models.db import Resume
+        resume_names = {
+            r.name for r in db.query(Resume).filter(Resume.id.in_(selected)).all()
+        }
+        if resume_names:
+            cvs = {}
+            for cv in db.query(CV).order_by(CV.id).all():
+                if cv.version in resume_names and cv.extracted_text:
+                    cvs[cv.version] = cv.extracted_text
+            if cvs:
+                return cvs
     # Fallback to default CV from settings
     default = _get_default_cv(db)
     if default:

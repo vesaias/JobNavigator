@@ -307,6 +307,30 @@ def run_migrations(db):
         "ALTER TABLE job_runs DROP CONSTRAINT IF EXISTS job_runs_target_job_id_fkey",
         "ALTER TABLE job_runs ADD CONSTRAINT job_runs_target_job_id_fkey FOREIGN KEY (target_job_id) REFERENCES jobs(id) ON DELETE SET NULL",
         "CREATE INDEX IF NOT EXISTS ix_job_runs_target_job_id ON job_runs(target_job_id)",
+        """ALTER TABLE companies ADD COLUMN IF NOT EXISTS selected_resume_ids JSONB DEFAULT '[]'::jsonb""",
+        # Translate selected_cv_ids → selected_resume_ids by matching CV.version to Resume.name.
+        # Idempotent: only runs while selected_cv_ids still exists and selected_resume_ids is empty.
+        """DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'companies' AND column_name = 'selected_cv_ids')
+  THEN
+    UPDATE companies c
+       SET selected_resume_ids = COALESCE(translated.ids, '[]'::jsonb)
+      FROM (
+        SELECT co.id AS cid,
+               jsonb_agg(r.id::text) AS ids
+          FROM companies co
+          CROSS JOIN LATERAL jsonb_array_elements_text(co.selected_cv_ids) AS cid_str(val)
+          JOIN cvs cv ON cv.id::text = cid_str.val
+          JOIN resumes r ON r.name = cv.version AND r.is_base = TRUE
+         GROUP BY co.id
+      ) AS translated
+     WHERE c.id = translated.cid
+       AND (c.selected_resume_ids IS NULL OR c.selected_resume_ids = '[]'::jsonb);
+  END IF;
+END $$;""",
+        """ALTER TABLE companies DROP COLUMN IF EXISTS selected_cv_ids""",
         """CREATE TABLE IF NOT EXISTS personas (
     id INTEGER PRIMARY KEY,
     contact JSONB DEFAULT '{}'::jsonb,
@@ -589,13 +613,9 @@ def seed_mock_cv(db):
         default_row.value = str(cv.id)
     db.commit()
 
-    # Pre-select this CV for all seeded companies
-    for company in db.query(Company).all():
-        company.selected_cv_ids = [str(cv.id)]
-    db.commit()
-
     # Create matching resume (for resume builder)
-    if db.query(Resume).count() == 0:
+    resume = db.query(Resume).filter(Resume.name == "Sample PM", Resume.is_base == True).first()
+    if resume is None:
         resume = Resume(
             name="Sample PM",
             is_base=True,
@@ -605,6 +625,12 @@ def seed_mock_cv(db):
         )
         db.add(resume)
         db.commit()
+        db.refresh(resume)
+
+    # Pre-select this Resume for all seeded companies
+    for company in db.query(Company).all():
+        company.selected_resume_ids = [str(resume.id)]
+    db.commit()
 
     logger.info("Seeded mock CV + resume 'Sample PM'")
 

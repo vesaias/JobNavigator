@@ -129,12 +129,12 @@ const textToUrls = (text) => text.split('\n').map(s => s.trim()).filter(Boolean)
 
 export default function CompanyManager() {
   const [companies, setCompanies] = useState([])
-  const [cvs, setCvs] = useState([])
+  const [resumes, setResumes] = useState([])
   const [editModal, setEditModal] = useState(null)
   const [editData, setEditData] = useState({})
   const [showAdd, setShowAdd] = useState(false)
   const [newCompany, setNewCompany] = useState({
-    name: '', tier: 2, scrape_urls_editor: [], selected_cv_ids: [],
+    name: '', tier: 2, scrape_urls_editor: [], selected_resume_ids: [],
     scrape_interval_minutes: '', title_include_expr: '',
     title_exclude_keywords: '', wait_for_selector: '', max_pages: 5, notes: ''
   })
@@ -153,14 +153,14 @@ export default function CompanyManager() {
     } catch (e) { console.error(e) }
   }
 
-  const fetchCvs = async () => {
+  const fetchResumes = async () => {
     try {
-      const { data } = await api.get('/cvs')
-      setCvs(data)
+      const { data } = await api.get('/resumes?is_base=true')
+      setResumes(data)
     } catch (e) { console.error(e) }
   }
 
-  useEffect(() => { fetchCompanies(); fetchCvs() }, [])
+  useEffect(() => { fetchCompanies(); fetchResumes() }, [])
   useEffect(() => { try { localStorage.setItem('company_filter_tiers', JSON.stringify(filterTiers)) } catch {} }, [filterTiers])
 
   const saveEdit = async (id) => {
@@ -206,7 +206,7 @@ export default function CompanyManager() {
       await api.post('/companies', payload)
       setShowAdd(false)
       setNewCompany({
-        name: '', tier: 2, scrape_urls_editor: [], selected_cv_ids: [],
+        name: '', tier: 2, scrape_urls_editor: [], selected_resume_ids: [],
         scrape_interval_minutes: '', title_include_expr: '',
         title_exclude_keywords: '', wait_for_selector: '', max_pages: 5, notes: ''
       })
@@ -345,22 +345,22 @@ export default function CompanyManager() {
                 className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
             </div>
           </div>
-          {/* Row 3: CVs + Auto Scoring */}
+          {/* Row 3: Resumes + Auto Scoring */}
           <div className="flex items-center gap-4 mb-3 flex-wrap">
-            {cvs.length > 0 && (
+            {resumes.length > 0 && (
               <>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against CVs:</label>
-                {cvs.map(cv => (
-                  <label key={cv.id} className="flex items-center gap-1 text-xs cursor-pointer">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against Resumes:</label>
+                {resumes.map(r => (
+                  <label key={r.id} className="flex items-center gap-1 text-xs cursor-pointer">
                     <input type="checkbox"
-                      checked={(newCompany.selected_cv_ids || []).includes(cv.id)}
+                      checked={(newCompany.selected_resume_ids || []).includes(r.id)}
                       onChange={() => {
-                        const ids = newCompany.selected_cv_ids || []
-                        setNewCompany({...newCompany, selected_cv_ids:
-                          ids.includes(cv.id) ? ids.filter(id => id !== cv.id) : [...ids, cv.id]
+                        const ids = newCompany.selected_resume_ids || []
+                        setNewCompany({...newCompany, selected_resume_ids:
+                          ids.includes(r.id) ? ids.filter(id => id !== r.id) : [...ids, r.id]
                         })
                       }} />
-                    {cv.version}
+                    {r.name}
                   </label>
                 ))}
                 <span className="text-xs text-gray-400 dark:text-gray-500">(none = all)</span>
@@ -633,23 +633,23 @@ export default function CompanyManager() {
                 </div>
               </div>
 
-              {/* CVs + Auto Scoring */}
+              {/* Resumes + Auto Scoring */}
               <div className="flex items-center gap-4 flex-wrap">
-                {cvs.length > 0 && (
+                {resumes.length > 0 && (
                   <>
-                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against CVs:</label>
-                    {cvs.map(cv => (
-                      <label key={cv.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against Resumes:</label>
+                    {resumes.map(r => (
+                      <label key={r.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
                         <input type="checkbox"
-                          defaultChecked={(editModal.selected_cv_ids || []).includes(cv.id)}
+                          defaultChecked={(editModal.selected_resume_ids || []).includes(r.id)}
                           onChange={e => {
-                            const current = editData.selected_cv_ids || editModal.selected_cv_ids || []
+                            const current = editData.selected_resume_ids || editModal.selected_resume_ids || []
                             const updated = e.target.checked
-                              ? [...current, cv.id]
-                              : current.filter(id => id !== cv.id)
-                            setEditData({...editData, selected_cv_ids: updated})
+                              ? [...current, r.id]
+                              : current.filter(id => id !== r.id)
+                            setEditData({...editData, selected_resume_ids: updated})
                           }} />
-                        {cv.version}
+                        {r.name}
                       </label>
                     ))}
                     <span className="text-xs text-gray-400 dark:text-gray-500">(none = all)</span>
@@ -740,7 +740,7 @@ export default function CompanyManager() {
             <tr>
               <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">Company</th>
               <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">Tier</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">CVs</th>
+              <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">Resumes</th>
               <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">Scrape URLs</th>
               <th className="text-right px-4 py-2 font-medium text-gray-600 dark:text-gray-400">Apps</th>
               <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-400">H-1B</th>
@@ -769,8 +769,8 @@ export default function CompanyManager() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-xs align-middle">
-                      {(c.selected_cv_ids || []).length > 0
-                        ? cvs.filter(cv => c.selected_cv_ids.includes(cv.id)).map(cv => cv.version).join(', ') || 'Selected'
+                      {(c.selected_resume_ids || []).length > 0
+                        ? resumes.filter(r => c.selected_resume_ids.includes(r.id)).map(r => r.name).join(', ') || 'Selected'
                         : <span className="text-gray-400 dark:text-gray-500">All</span>}
                     </td>
                     <td className="px-4 py-2 text-xs overflow-hidden">

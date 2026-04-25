@@ -60,7 +60,7 @@ class CompanyCreate(BaseModel):
     name: str
     tier: Optional[int] = 2
     scrape_urls: List[str] = []
-    selected_cv_ids: List[str] = []
+    selected_resume_ids: List[str] = []
     scrape_interval_minutes: Optional[int] = None
     title_include_expr: Optional[str] = None
     title_exclude_keywords: list = []
@@ -121,7 +121,7 @@ def create_company(data: CompanyCreate, background_tasks: BackgroundTasks, db: S
         name=data.name,
         tier=data.tier,
         scrape_urls=[u for u in data.scrape_urls if u.strip()],
-        selected_cv_ids=data.selected_cv_ids,
+        selected_resume_ids=data.selected_resume_ids,
         scrape_interval_minutes=data.scrape_interval_minutes,
         title_include_expr=data.title_include_expr,
         title_exclude_keywords=data.title_exclude_keywords,
@@ -151,7 +151,7 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
     old_name = company.name
 
     allowed = {
-        "name", "active", "scrape_urls", "tier", "selected_cv_ids",
+        "name", "active", "scrape_urls", "tier", "selected_resume_ids",
         "playwright_enabled", "jobspy_search_term", "scrape_interval_minutes",
         "title_include_expr", "title_exclude_keywords",
         "wait_for_selector", "max_pages", "h1b_slug", "notes", "aliases", "auto_scoring_depth",
@@ -172,8 +172,8 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
 @router.post("/auto-create-from-jobs")
 def auto_create_from_jobs(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Scan all Job.company distinct values and create inactive Company records for unmatched names."""
-    default_cv_row = db.query(Setting).filter(Setting.key == "default_cv_id").first()
-    default_cv_ids = [default_cv_row.value] if default_cv_row and default_cv_row.value else []
+    default_resume_row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
+    default_resume_ids = [default_resume_row.value] if default_resume_row and default_resume_row.value else []
 
     from backend.models.db import get_company_all_names
     existing = set(get_company_all_names(db).keys())
@@ -186,7 +186,7 @@ def auto_create_from_jobs(background_tasks: BackgroundTasks, db: Session = Depen
         name = name.strip()
         company = Company(
             name=name, tier=None, active=False, playwright_enabled=False,
-            selected_cv_ids=default_cv_ids,
+            selected_resume_ids=default_resume_ids,
         )
         db.add(company)
         db.flush()
@@ -484,7 +484,7 @@ def _company_to_dict(c: Company, application_count: int = 0) -> dict:
         "active": c.active,
         "scrape_urls": urls,
         "tier": c.tier,
-        "selected_cv_ids": c.selected_cv_ids or [],
+        "selected_resume_ids": c.selected_resume_ids or [],
         "playwright_enabled": c.playwright_enabled,
         "scrape_interval_minutes": c.scrape_interval_minutes,
         "title_include_expr": c.title_include_expr,

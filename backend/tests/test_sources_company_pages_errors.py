@@ -13,7 +13,7 @@ class FakeCompany:
         self.scrape_interval_minutes = None
         self.title_include_expr = ""
         self.title_exclude_keywords = []
-        self.selected_cv_ids = []
+        self.selected_resume_ids = []
         self.auto_scoring_depth = "off"
 
 

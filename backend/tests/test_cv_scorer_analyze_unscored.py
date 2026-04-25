@@ -24,7 +24,7 @@ def scorer_ready_db(test_db, monkeypatch):
     for k, v in settings:
         test_db.add(Setting(key=k, value=v))
 
-    # Seed a default CV (used when company has no selected_cv_ids)
+    # Seed a default CV (used when company has no selected_resume_ids)
     cv = CV(
         version="Default",
         filename="default.pdf",
@@ -182,14 +182,14 @@ async def test_analyze_unscored_skips_jobs_with_no_text(scorer_ready_db, monkeyp
 
 @pytest.mark.asyncio
 async def test_analyze_unscored_uses_default_cv_when_no_selected(scorer_ready_db, monkeypatch):
-    """A company with empty selected_cv_ids falls back to the default CV from settings."""
+    """A company with empty selected_resume_ids falls back to the default CV from settings."""
     from backend.models.db import Company, Job
 
     db = scorer_ready_db["db"]
 
-    # selected_cv_ids=[] → fallback to default CV
+    # selected_resume_ids=[] → fallback to default CV
     co = Company(name="DefaultCVCo", scrape_urls=[], auto_scoring_depth="light",
-                 selected_cv_ids=[])
+                 selected_resume_ids=[])
     db.add(co)
     db.commit()
 

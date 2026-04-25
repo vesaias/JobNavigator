@@ -93,7 +93,7 @@ class Company(Base):
     active = Column(Boolean, default=True)
     scrape_urls = Column(JSON, default=[])              # list of career/search URLs
     tier = Column(Integer, nullable=True)
-    selected_cv_ids = Column(JSON, default=[])          # list of CV UUIDs (or empty = all)
+    selected_resume_ids = Column(JSON, default=[])      # list of base Resume UUIDs (or empty = all)
     playwright_enabled = Column(Boolean, default=True)
     scrape_interval_minutes = Column(Integer, nullable=True)  # NULL = use global default
     title_include_expr = Column(String, nullable=True)  # e.g. (Product OR Project) AND Manager

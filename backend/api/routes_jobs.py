@@ -431,11 +431,11 @@ def update_job(job_id: str, updates: dict, background_tasks: BackgroundTasks, db
             from backend.models.db import find_company_by_name
             existing_co = find_company_by_name(db, job.company.strip())
             if not existing_co:
-                default_cv_row = db.query(Setting).filter(Setting.key == "default_cv_id").first()
-                default_cv_ids = [default_cv_row.value] if default_cv_row and default_cv_row.value else []
+                default_resume_row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
+                default_resume_ids = [default_resume_row.value] if default_resume_row and default_resume_row.value else []
                 new_co = Company(
                     name=job.company.strip(), tier=None, active=False, playwright_enabled=False,
-                    selected_cv_ids=default_cv_ids,
+                    selected_resume_ids=default_resume_ids,
                 )
                 db.add(new_co)
                 db.commit()

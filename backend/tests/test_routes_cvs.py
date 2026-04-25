@@ -51,8 +51,8 @@ def test_upload_accepts_valid_pdf(api_client, test_db):
     assert resp.status_code in (200, 201, 422), f"Unexpected {resp.status_code}: {resp.text}"
 
 
-def test_delete_cv_cleans_up_selected_cv_ids(api_client, test_db):
-    """Deleting a CV should remove references from Company.selected_cv_ids."""
+def test_delete_cv_does_not_affect_selected_resume_ids(api_client, test_db):
+    """Deleting a CV must not break Company.selected_resume_ids (which holds Resume UUIDs, not CV IDs)."""
     _seed_first_run(test_db)
     from backend.models.db import CV, Company
 
@@ -66,8 +66,9 @@ def test_delete_cv_cleans_up_selected_cv_ids(api_client, test_db):
     test_db.add(cv)
     test_db.commit()
 
-    cv_id_str = str(cv.id)
-    company = Company(name="Acme", selected_cv_ids=[cv_id_str])
+    # Company stores Resume UUIDs in selected_resume_ids — unrelated to CV deletion.
+    resume_uuid = "00000000-0000-0000-0000-000000000abc"
+    company = Company(name="Acme", selected_resume_ids=[resume_uuid])
     test_db.add(company)
     test_db.commit()
 
@@ -75,9 +76,9 @@ def test_delete_cv_cleans_up_selected_cv_ids(api_client, test_db):
     resp = api_client.delete(f"/api/cvs/{cv.version}")
     assert resp.status_code in (200, 204), f"Unexpected {resp.status_code}: {resp.text}"
 
-    # Re-query company to see if selected_cv_ids was cleaned up.
+    # selected_resume_ids should be untouched.
     test_db.expire_all()
     refreshed = test_db.query(Company).filter(Company.name == "Acme").first()
-    assert cv_id_str not in (refreshed.selected_cv_ids or []), (
-        f"Expected selected_cv_ids to not contain deleted CV, got: {refreshed.selected_cv_ids}"
+    assert resume_uuid in (refreshed.selected_resume_ids or []), (
+        f"Expected selected_resume_ids unchanged, got: {refreshed.selected_resume_ids}"
     )
