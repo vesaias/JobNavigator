@@ -130,6 +130,7 @@ const textToUrls = (text) => text.split('\n').map(s => s.trim()).filter(Boolean)
 export default function CompanyManager() {
   const [companies, setCompanies] = useState([])
   const [resumes, setResumes] = useState([])
+  const [personaPopulated, setPersonaPopulated] = useState(false)
   const [editModal, setEditModal] = useState(null)
   const [editData, setEditData] = useState({})
   const [showAdd, setShowAdd] = useState(false)
@@ -160,7 +161,16 @@ export default function CompanyManager() {
     } catch (e) { console.error(e) }
   }
 
-  useEffect(() => { fetchCompanies(); fetchResumes() }, [])
+  const fetchPersona = async () => {
+    try {
+      const { data } = await api.get('/persona')
+      setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)
+    } catch (e) {
+      setPersonaPopulated(false)
+    }
+  }
+
+  useEffect(() => { fetchCompanies(); fetchResumes(); fetchPersona() }, [])
   useEffect(() => { try { localStorage.setItem('company_filter_tiers', JSON.stringify(filterTiers)) } catch {} }, [filterTiers])
 
   const saveEdit = async (id) => {
@@ -347,7 +357,7 @@ export default function CompanyManager() {
           </div>
           {/* Row 3: Resumes + Auto Scoring */}
           <div className="flex items-center gap-4 mb-3 flex-wrap">
-            {resumes.length > 0 && (
+            {(resumes.length > 0 || personaPopulated) && (
               <>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against Resumes:</label>
                 {resumes.map(r => (
@@ -363,6 +373,19 @@ export default function CompanyManager() {
                     {r.name}
                   </label>
                 ))}
+                {personaPopulated && (
+                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                    <input type="checkbox"
+                      checked={(newCompany.selected_resume_ids || []).includes('persona')}
+                      onChange={() => {
+                        const ids = newCompany.selected_resume_ids || []
+                        setNewCompany({...newCompany, selected_resume_ids:
+                          ids.includes('persona') ? ids.filter(id => id !== 'persona') : [...ids, 'persona']
+                        })
+                      }} />
+                    <span className="text-purple-600 dark:text-purple-400">Persona</span>
+                  </label>
+                )}
                 <span className="text-xs text-gray-400 dark:text-gray-500">(none = all)</span>
                 <span className="text-gray-300 dark:text-gray-600">|</span>
               </>
@@ -635,7 +658,7 @@ export default function CompanyManager() {
 
               {/* Resumes + Auto Scoring */}
               <div className="flex items-center gap-4 flex-wrap">
-                {resumes.length > 0 && (
+                {(resumes.length > 0 || personaPopulated) && (
                   <>
                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Score Against Resumes:</label>
                     {resumes.map(r => (
@@ -652,6 +675,20 @@ export default function CompanyManager() {
                         {r.name}
                       </label>
                     ))}
+                    {personaPopulated && (
+                      <label className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox"
+                          defaultChecked={(editModal.selected_resume_ids || []).includes('persona')}
+                          onChange={(e) => {
+                            const current = editData.selected_resume_ids || editModal.selected_resume_ids || []
+                            const updated = e.target.checked
+                              ? [...current, 'persona']
+                              : current.filter(id => id !== 'persona')
+                            setEditData({...editData, selected_resume_ids: updated})
+                          }} />
+                        <span className="text-purple-600 dark:text-purple-400">Persona</span>
+                      </label>
+                    )}
                     <span className="text-xs text-gray-400 dark:text-gray-500">(none = all)</span>
                     <span className="text-gray-300 dark:text-gray-600">|</span>
                   </>
@@ -770,7 +807,10 @@ export default function CompanyManager() {
                     </td>
                     <td className="px-4 py-2 text-xs align-middle">
                       {(c.selected_resume_ids || []).length > 0
-                        ? resumes.filter(r => c.selected_resume_ids.includes(r.id)).map(r => r.name).join(', ') || 'Selected'
+                        ? [
+                            ...resumes.filter(r => c.selected_resume_ids.includes(r.id)).map(r => r.name),
+                            ...(c.selected_resume_ids.includes('persona') ? ['Persona'] : []),
+                          ].join(', ') || 'Selected'
                         : <span className="text-gray-400 dark:text-gray-500">All</span>}
                     </td>
                     <td className="px-4 py-2 text-xs overflow-hidden">

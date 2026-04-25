@@ -5,6 +5,7 @@ import { RefreshCw, Send, Play, Info, Eye, EyeOff } from 'lucide-react'
 export default function SettingsPage() {
   const [settings, setSettings] = useState({})
   const [resumes, setResumes] = useState([])
+  const [personaPopulated, setPersonaPopulated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -28,6 +29,11 @@ export default function SettingsPage() {
     api.get('/resumes?is_base=true')
       .then(({ data }) => setResumes(data || []))
       .catch(() => {})
+    api.get('/persona')
+      .then(({ data }) => {
+        setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)
+      })
+      .catch(() => setPersonaPopulated(false))
   }, [])
 
   const saveSetting = async (key, value) => {
@@ -112,10 +118,11 @@ export default function SettingsPage() {
           onChange={(e) => saveSetting('default_resume_id', e.target.value)}
           className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
         >
-          <option value="">(use all base resumes)</option>
+          <option value="">(use all base resumes + Persona)</option>
           {(resumes || []).filter(r => r.is_base).map(r => (
             <option key={r.id} value={r.id}>{r.name}</option>
           ))}
+          {personaPopulated && <option value="persona">Persona</option>}
         </select>
       </section>
 
