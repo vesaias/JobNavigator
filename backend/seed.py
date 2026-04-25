@@ -609,6 +609,28 @@ def seed_mock_cv(db):
     logger.info("Seeded mock CV + resume 'Sample PM'")
 
 
+def seed_persona(db):
+    """Ensure the singleton Persona (id=1) exists with empty nodes."""
+    from backend.models.db import Persona
+    existing = db.query(Persona).filter(Persona.id == 1).first()
+    if existing:
+        return
+    p = Persona(
+        id=1,
+        contact={},
+        work_auth={},
+        demographics={},
+        compensation={},
+        preferences={},
+        resume_content={},
+        qa_bank=[],
+        writing_samples=[],
+    )
+    db.add(p)
+    db.commit()
+    logger.info("Persona singleton (id=1) seeded with empty nodes")
+
+
 def run_seeds():
     db = SessionLocal()
     try:
@@ -618,6 +640,7 @@ def run_seeds():
         seed_h1b_slugs(db)
         seed_searches(db)
         seed_mock_cv(db)
+        seed_persona(db)
         cleanup_removed_settings(db)
     finally:
         db.close()

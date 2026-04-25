@@ -31,3 +31,23 @@ def test_persona_singleton_id_is_int(test_db):
     back = test_db.query(Persona).filter(Persona.id == 1).first()
     assert back is not None
     assert back.contact == {"name": "Test"}
+
+
+def test_seed_persona_creates_singleton(test_db):
+    """seed_persona creates id=1 with empty nodes if missing."""
+    from backend.seed import seed_persona
+    assert test_db.query(Persona).count() == 0
+    seed_persona(test_db)
+    rows = test_db.query(Persona).all()
+    assert len(rows) == 1
+    assert rows[0].id == 1
+    assert rows[0].contact == {}
+    assert rows[0].qa_bank == []
+
+
+def test_seed_persona_idempotent(test_db):
+    """Calling seed_persona twice doesn't duplicate."""
+    from backend.seed import seed_persona
+    seed_persona(test_db)
+    seed_persona(test_db)
+    assert test_db.query(Persona).count() == 1
