@@ -64,6 +64,28 @@ async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None):
     return await generic.scrape(url, browser=shared_browser, debug=debug)
 
 
+def _ats_labels_for(urls) -> str:
+    """Return a comma-separated list of distinct ATS labels for these URLs.
+
+    Used in activity-log messages so users see e.g. "Acme (Greenhouse): 3 new"
+    instead of the old "Playwright Acme: 3 new" — even pure-API scrapers were
+    getting tagged as "Playwright" before. Strips the "API"/"AJAX"/"(Playwright)"
+    suffix from detect_scrape_type's labels for compactness.
+    """
+    from backend.api.routes_companies import detect_scrape_type
+    labels = set()
+    for u in urls:
+        u = (u or "").strip()
+        if not u:
+            continue
+        # "Workday API" → "Workday"; "Generic (Playwright)" → "Generic"; "TalentBrew AJAX" → "TalentBrew"
+        label = detect_scrape_type(u).split(" ", 1)[0]
+        labels.add(label)
+    if not labels:
+        return "?"
+    return ", ".join(sorted(labels))
+
+
 def _needs_browser(urls):
     """True if any URL requires a real browser (not a pure-API ATS)."""
     for u in urls:
@@ -283,7 +305,8 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
         duration = time.time() - start_time
 
         from backend.activity import log_activity
-        log_activity("scrape", f"Playwright {company.name}: {new_jobs} new / {len(unique_jobs)} found in {duration:.1f}s", company=company.name)
+        ats_label = _ats_labels_for(target_urls)
+        log_activity("scrape", f"{company.name} ({ats_label}): {new_jobs} new / {len(unique_jobs)} found in {duration:.1f}s", company=company.name)
 
         return {
             "jobs_found": len(unique_jobs),
@@ -294,10 +317,11 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
 
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"Playwright scrape failed for {company.name}: {e}")
+        ats_label = _ats_labels_for(target_urls)
+        logger.error(f"{company.name} ({ats_label}) scrape failed: {e}")
 
         from backend.activity import log_activity
-        log_activity("scrape", f"Playwright {company.name} failed: {e}", company=company.name)
+        log_activity("scrape", f"{company.name} ({ats_label}) failed: {e}", company=company.name)
 
         return {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": duration}
     finally:
