@@ -12,8 +12,8 @@ const STEPS = [
   },
   {
     icon: FileText,
-    title: 'Add a resume',
-    desc: 'Upload your CV so jobs can be scored against your profile.',
+    title: 'Build your resume + persona',
+    desc: 'Edit a base resume and fill out your persona (contact, work auth, etc.) so jobs can be scored against your profile.',
     to: '/resumes',
     color: 'text-green-500',
   },
