@@ -365,6 +365,7 @@ async def trigger_h1b_refresh():
 @app.post("/api/analyze/{job_id}", tags=["triggers"], summary="Analyze a single job", status_code=202)
 async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
     """Re-run CV scoring for a specific job. depth: 'light' or 'full' (default)."""
+    import uuid as _uuid
     cv_ids = (body or {}).get("cv_ids")
 
     async def _do():
@@ -374,7 +375,10 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
     # Include cv_ids in scope_key so scoring the same job with different CVs doesn't conflict
     scope = f"{job_id}:{','.join(sorted(cv_ids))}" if cv_ids else job_id
     try:
-        run_id = launch_background("analyze_job", _do, trigger="manual", scope_key=scope)
+        run_id = launch_background(
+            "analyze_job", _do, trigger="manual", scope_key=scope,
+            target_job_id=_uuid.UUID(job_id),
+        )
         return {"run_id": run_id, "status": "running", "job_id": job_id}
     except JobAlreadyRunningError as e:
         logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)
