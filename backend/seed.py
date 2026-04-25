@@ -38,7 +38,7 @@ DEFAULT_SETTINGS = {
         "greenhouse.io", "lever.co", "workday.com", "taleo.net",
         "icims.com", "myworkdayjobs.com"
     ]), "ATS domains"),
-    "default_cv_id": ("", "Default CV ID used for scoring when no company-level CVs are configured"),
+    "default_resume_id": ("", "Default base Resume ID used for scoring when no company-level Resumes are configured"),
     "company_exclude_global": (json.dumps([]), "Global company ignore list — applies to all searches"),
     "title_exclude_global": (json.dumps([]), "Global title exclude keywords — applies to all searches and companies"),
     "linkedin_email": ("", "LinkedIn account email for personal scrape mode"),
@@ -423,7 +423,12 @@ def seed_h1b_slugs(db):
 
 def cleanup_removed_settings(db):
     """Remove settings that have been removed from DEFAULT_SETTINGS."""
-    removed_keys = ["followup_reminder_days", "h1b_exclusion_phrases", "language_exclude_phrases"]
+    removed_keys = [
+        "followup_reminder_days",
+        "h1b_exclusion_phrases",
+        "language_exclude_phrases",
+        "default_cv_id",
+    ]
     for key in removed_keys:
         row = db.query(Setting).filter(Setting.key == key).first()
         if row:
@@ -592,7 +597,7 @@ def seed_searches(db):
 
 
 def seed_mock_cv(db):
-    """Seed a mock CV and resume for demonstration. Sets it as default CV for all companies."""
+    """Seed a mock CV and resume for demonstration. Sets it as default Resume for all companies."""
     if db.query(CV).count() > 0:
         return  # User already has CVs
 
@@ -606,11 +611,6 @@ def seed_mock_cv(db):
     )
     db.add(cv)
     db.flush()
-
-    # Set as default CV
-    default_row = db.query(Setting).filter(Setting.key == "default_cv_id").first()
-    if default_row:
-        default_row.value = str(cv.id)
     db.commit()
 
     # Create matching resume (for resume builder)
@@ -626,6 +626,12 @@ def seed_mock_cv(db):
         db.add(resume)
         db.commit()
         db.refresh(resume)
+
+    # Set as default Resume for scoring
+    default_row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
+    if default_row:
+        default_row.value = str(resume.id)
+    db.commit()
 
     # Pre-select this Resume for all seeded companies
     for company in db.query(Company).all():

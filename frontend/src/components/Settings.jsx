@@ -1,34 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import api from '../api'
-import { Upload, Download, RefreshCw, Send, Play, Trash2, Plus, Info, Eye, EyeOff } from 'lucide-react'
+import { RefreshCw, Send, Play, Info, Eye, EyeOff } from 'lucide-react'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({})
-  const [cvs, setCvs] = useState([])
+  const [resumes, setResumes] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [triggerStatus, setTriggerStatus] = useState({})
-  const [newCvName, setNewCvName] = useState('')
-  const [showAddCv, setShowAddCv] = useState(false)
   const [showPw, setShowPw] = useState({})
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('settings_tab') || 'general')
   const switchTab = (tab) => { setActiveTab(tab); localStorage.setItem('settings_tab', tab) }
   const togglePw = (key) => setShowPw(p => ({...p, [key]: !p[key]}))
-  const fileRef = useRef()
 
   const fetchAll = async () => {
     try {
       const { data: settingsData } = await api.get('/settings')
       setSettings(settingsData)
-
-      const { data: cvData } = await api.get('/cvs')
-      setCvs(cvData)
     } catch (e) { console.error(e) }
     setLoading(false)
   }
 
   useEffect(() => { fetchAll() }, [])
+
+  useEffect(() => {
+    api.get('/resumes?is_base=true')
+      .then(({ data }) => setResumes(data || []))
+      .catch(() => {})
+  }, [])
 
   const saveSetting = async (key, value) => {
     setSaving(true)
@@ -50,55 +50,6 @@ export default function SettingsPage() {
       await api.post('/auth/set-session', { api_key: key })
     } catch (e) {
       console.warn('Failed to refresh session cookie:', e)
-    }
-  }
-
-  const uploadCV = async (version) => {
-    const file = fileRef.current?.files[0]
-    if (!file) return
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      await api.post(`/cvs/${encodeURIComponent(version)}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setMessage(`${version} CV uploaded`)
-      setTimeout(() => setMessage(''), 3000)
-      fetchAll()
-    } catch (e) {
-      setMessage(`Upload failed: ${e.response?.data?.detail || e.message}`)
-    }
-    fileRef.current.value = ''
-  }
-
-  const deleteCV = async (version) => {
-    if (!confirm(`Delete CV "${version}"?`)) return
-    try {
-      await api.delete(`/cvs/${encodeURIComponent(version)}`)
-      setMessage(`${version} CV deleted`)
-      setTimeout(() => setMessage(''), 3000)
-      fetchAll()
-    } catch (e) {
-      setMessage(`Delete failed: ${e.response?.data?.detail || e.message}`)
-    }
-  }
-
-  const handleAddCv = () => {
-    if (!newCvName.trim()) return
-    // Trigger file picker, then upload with the name
-    fileRef.current._pendingVersion = newCvName.trim()
-    fileRef.current.click()
-  }
-
-  const handleFileChange = () => {
-    const version = fileRef.current._pendingVersion
-    if (version) {
-      uploadCV(version)
-      fileRef.current._pendingVersion = null
-      setShowAddCv(false)
-      setNewCvName('')
     }
   }
 
@@ -131,9 +82,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Hidden file input shared across CV operations */}
-      <input type="file" accept=".pdf" ref={fileRef} className="hidden" onChange={handleFileChange} />
-
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 border-b dark:border-gray-700">
         {[
@@ -153,88 +101,22 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === 'general' && (<>
-      {/* CV Upload Section */}
+      {/* Default Resume for Scoring */}
       <section className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-lg dark:text-gray-100">Resume Management</h2>
-            <div className="relative group">
-              <Info size={15} className="text-gray-400 dark:text-gray-500 cursor-help" />
-              <div className="hidden group-hover:block absolute left-6 top-0 z-50 w-72 p-3 text-xs bg-gray-900 text-gray-100 rounded-lg shadow-lg leading-relaxed">
-                <p className="font-semibold mb-1.5">Resume Management (Scoring Only)</p>
-                <p className="mb-1">These resumes are used <b>only for AI scoring</b> — text is extracted from uploaded PDFs and sent to the LLM to rate job fit. Up to 9 resumes.</p>
-                <p className="mb-1">For building and generating actual resume PDFs, use the <b>Resumes</b> page instead.</p>
-                <p>Set a <b>default resume</b> to auto-select it in scoring modals. Companies can override with specific resumes.</p>
-              </div>
-            </div>
-          </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500">{cvs.length}/9 Resumes</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {cvs.map(cv => (
-            <div key={cv.id} className="border dark:border-gray-600 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-sm dark:text-gray-200">{cv.version}</h3>
-                <button onClick={() => deleteCV(cv.version)} className="text-red-400 hover:text-red-600 p-0.5" title="Delete">
-                  <Trash2 size={12} />
-                </button>
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                <p>{cv.filename}</p>
-                <p>{cv.page_count} pages | {cv.uploaded_at ? new Date(cv.uploaded_at).toLocaleDateString() : 'N/A'}</p>
-                <p className="mt-1 text-gray-400 dark:text-gray-500 truncate">{cv.extracted_text_preview?.substring(0, 100)}...</p>
-                <a href={`/api/cvs/${encodeURIComponent(cv.version)}/download`}
-                  className="text-blue-600 hover:underline flex items-center gap-1 mt-1">
-                  <Download size={12} /> Download PDF
-                </a>
-              </div>
-              <button onClick={() => {
-                fileRef.current._pendingVersion = cv.version
-                fileRef.current.click()
-              }}
-                className="flex items-center gap-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">
-                <Upload size={12} /> Replace PDF
-              </button>
-            </div>
+        <h2 className="font-semibold text-lg dark:text-gray-100 mb-3">Default Resume for Scoring</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          Used when a Company has no <code>selected_resume_ids</code> configured.
+        </p>
+        <select
+          value={settings.default_resume_id || ''}
+          onChange={(e) => saveSetting('default_resume_id', e.target.value)}
+          className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+        >
+          <option value="">(use all base resumes)</option>
+          {(resumes || []).filter(r => r.is_base).map(r => (
+            <option key={r.id} value={r.id}>{r.name}</option>
           ))}
-        </div>
-
-        {/* Add new CV */}
-        {cvs.length < 5 && (
-          <div className="mt-4">
-            {showAddCv ? (
-              <div className="flex items-center gap-2">
-                <input type="text" placeholder="CV name (e.g. TPM, Frontend)" value={newCvName}
-                  onChange={e => setNewCvName(e.target.value)} maxLength={50}
-                  className="border rounded px-2 py-1.5 text-sm flex-1 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
-                <button onClick={handleAddCv} disabled={!newCvName.trim()}
-                  className="flex items-center gap-1 text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 disabled:opacity-50">
-                  <Upload size={12} /> Upload PDF
-                </button>
-                <button onClick={() => { setShowAddCv(false); setNewCvName('') }}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1.5">Cancel</button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAddCv(true)}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                <Plus size={12} /> Add CV
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Default CV */}
-        <div className="mt-4">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Default CV (used when company or search has no CVs configured)</label>
-          <select value={settings.default_cv_id || ''}
-            onChange={e => saveSetting('default_cv_id', e.target.value)}
-            className="border rounded px-2 py-1.5 text-sm w-full max-w-xs dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
-            <option value="">None (score against all)</option>
-            {cvs.map(cv => (
-              <option key={cv.id} value={cv.id}>{cv.version}</option>
-            ))}
-          </select>
-        </div>
+        </select>
       </section>
 
       {/* Scheduler Settings */}
