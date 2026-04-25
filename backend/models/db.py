@@ -306,6 +306,32 @@ class Resume(Base):
     job = relationship("Job", backref="resumes")
 
 
+# ── Persona ──────────────────────────────────────────────────────────────────
+# Singleton row (id=1). Each column is a JSON node consumed by a specific feature:
+#   contact          → tailoring, cover letter, autofill
+#   work_auth        → autofill
+#   demographics     → autofill (default to "decline")
+#   compensation     → autofill
+#   preferences      → autofill, future filtering
+#   resume_content   → tailoring, cover letter (rich pool of bullets, skills, etc.)
+#   qa_bank          → cover letter, autofill (reusable Q&A library)
+#   writing_samples  → cover letter (voice anchors)
+class Persona(Base):
+    __tablename__ = "personas"
+
+    id = Column(Integer, primary_key=True)  # singleton: always 1
+    contact = Column(JSON, default=dict)
+    work_auth = Column(JSON, default=dict)
+    demographics = Column(JSON, default=dict)
+    compensation = Column(JSON, default=dict)
+    preferences = Column(JSON, default=dict)
+    resume_content = Column(JSON, default=dict)
+    qa_bank = Column(JSON, default=list)
+    writing_samples = Column(JSON, default=list)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+    updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 # ── Tracer Links ───────────────────────────────────────────────────────────
 class TracerLink(Base):
     __tablename__ = "tracer_links"

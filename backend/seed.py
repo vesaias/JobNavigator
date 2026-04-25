@@ -307,6 +307,19 @@ def run_migrations(db):
         "ALTER TABLE job_runs DROP CONSTRAINT IF EXISTS job_runs_target_job_id_fkey",
         "ALTER TABLE job_runs ADD CONSTRAINT job_runs_target_job_id_fkey FOREIGN KEY (target_job_id) REFERENCES jobs(id) ON DELETE SET NULL",
         "CREATE INDEX IF NOT EXISTS ix_job_runs_target_job_id ON job_runs(target_job_id)",
+        """CREATE TABLE IF NOT EXISTS personas (
+    id INTEGER PRIMARY KEY,
+    contact JSONB DEFAULT '{}'::jsonb,
+    work_auth JSONB DEFAULT '{}'::jsonb,
+    demographics JSONB DEFAULT '{}'::jsonb,
+    compensation JSONB DEFAULT '{}'::jsonb,
+    preferences JSONB DEFAULT '{}'::jsonb,
+    resume_content JSONB DEFAULT '{}'::jsonb,
+    qa_bank JSONB DEFAULT '[]'::jsonb,
+    writing_samples JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)""",
     ]
     for sql in migrations:
         try:
