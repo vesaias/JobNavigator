@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 @pytest.fixture
 def scorer_ready_db(test_db, monkeypatch):
     """In-memory DB with Setting rows scorer needs + SessionLocal patched."""
-    from backend.models.db import Setting, CV
+    from backend.models.db import Setting, CV, Resume
 
     # Core settings required by _score_job_inner
     settings = [
@@ -24,7 +24,7 @@ def scorer_ready_db(test_db, monkeypatch):
     for k, v in settings:
         test_db.add(Setting(key=k, value=v))
 
-    # Seed a default CV (used when company has no selected_resume_ids)
+    # Seed a default CV (kept for legacy compatibility; not used by scoring after Task 7)
     cv = CV(
         version="Default",
         filename="default.pdf",
@@ -34,9 +34,23 @@ def scorer_ready_db(test_db, monkeypatch):
     )
     test_db.add(cv)
     test_db.commit()
-
-    # Point the default_cv_id setting at the seeded CV
     test_db.add(Setting(key="default_cv_id", value=str(cv.id)))
+
+    # Seed a default Resume (the new scoring source — Task 7).
+    # The flattened text must contain the same identifying phrase the assertions check.
+    resume = Resume(
+        name="Default",
+        is_base=True,
+        template="inter",
+        json_data={
+            "summary": "I am a product manager with 5 years experience at scale.",
+            "experience": [],
+            "skills": {},
+        },
+    )
+    test_db.add(resume)
+    test_db.commit()
+    test_db.add(Setting(key="default_resume_id", value=str(resume.id)))
     test_db.commit()
 
     # Patch SessionLocal used inside cv_scorer so the module sees the test DB

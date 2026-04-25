@@ -362,7 +362,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
     """
     db = SessionLocal()
     try:
-        default_cv_texts = _get_default_cv(db) or _get_cv_texts(db)
+        default_cv_texts = _get_default_resume(db) or _get_resume_texts(db)
         if not default_cv_texts:
             logger.warning("No CVs uploaded yet, skipping analysis pipeline")
             return
@@ -417,7 +417,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
             for job in unscored:
                 # Look up company to get per-company CV selection
                 company = _find_company_for_job(db, job)
-                cv_texts = _get_cv_texts_for_company(db, company) if company else default_cv_texts
+                cv_texts = _get_resume_texts_for_company(db, company) if company else default_cv_texts
 
                 # Determine depth based on auto_scoring_depth
                 depth = "light"
@@ -560,7 +560,7 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
                     cv_texts[cv.version] = cv.extracted_text
         else:
             company = _find_company_for_job(db, job)
-            cv_texts = _get_cv_texts_for_company(db, company) if company else (_get_default_cv(db) or _get_cv_texts(db))
+            cv_texts = _get_resume_texts_for_company(db, company) if company else (_get_default_resume(db) or _get_resume_texts(db))
         if not cv_texts:
             logger.warning("No CVs uploaded, cannot score")
             return
