@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Briefcase, LayoutDashboard, Building2, Search, Settings, BarChart3, FileCode2, FileText } from 'lucide-react'
+import { Briefcase, LayoutDashboard, Building2, Search, Settings, BarChart3, FileCode2, FileText, User } from 'lucide-react'
 import JobFeed from './components/JobFeed'
 import ApplicationBoard from './components/ApplicationBoard'
 import CompanyManager from './components/CompanyManager'
@@ -8,6 +8,7 @@ import SearchManager from './components/SearchManager'
 import SettingsPage from './components/Settings'
 import Stats from './components/Stats'
 import ResumeBuilder from './components/ResumeBuilder'
+import Persona from './components/Persona'
 import LoginModal from './components/LoginModal'
 import WelcomeModal from './components/WelcomeModal'
 import axios from 'axios'
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/companies', icon: Building2, label: 'Companies' },
   { to: '/searches', icon: Search, label: 'Searches' },
   { to: '/resumes', icon: FileText, label: 'Resumes' },
+  { to: '/persona', icon: User, label: 'Persona' },
   { to: '/settings', icon: Settings, label: 'Settings' },
   { to: '/stats', icon: BarChart3, label: 'Stats' },
   { to: '/docs', icon: FileCode2, label: 'API Docs', external: true },
@@ -139,6 +141,7 @@ function App() {
             <Route path="/searches" element={<SearchManager />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/resumes" element={<ResumeBuilder />} />
+            <Route path="/persona" element={<Persona />} />
             <Route path="/stats" element={<Stats />} />
           </Routes>
         </main>
