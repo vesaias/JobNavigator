@@ -32,11 +32,16 @@ logger = logging.getLogger("jobnavigator.scraper.sources.company_pages")
 
 # ── ATS dispatcher ───────────────────────────────────────────────────────────
 
-async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None):
+async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None, max_pages: int | None = None):
     """Detect ATS by URL; call the matching scraper; fall back to generic.
 
     Preserves the exact order of the original if/elif chain in
     scrape_single_career_page so behavior is identical.
+
+    `max_pages` is forwarded to scrapers that paginate via Playwright DOM
+    walks (Google, Meta) so the operator's Company.max_pages setting is
+    honoured. HTTP-only scrapers (Lever, Greenhouse, Workday, …) ignore it
+    today; pagination there is API-driven and unbounded.
     """
     # HTTP-based scrapers (no Playwright needed)
     if phenom.is_phenom(url):
@@ -57,9 +62,9 @@ async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None):
         return await rippling.scrape(url, debug=debug)
     # Playwright-based ATS scrapers (need browser)
     if meta.is_meta(url):
-        return await meta.scrape(url, browser=shared_browser, debug=debug)
+        return await meta.scrape(url, browser=shared_browser, max_pages=max_pages, debug=debug)
     if google.is_google(url):
-        return await google.scrape(url, browser=shared_browser, debug=debug)
+        return await google.scrape(url, browser=shared_browser, max_pages=max_pages, debug=debug)
     # No ATS matched — generic fallback
     return await generic.scrape(url, browser=shared_browser, debug=debug)
 
@@ -145,7 +150,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
                         or workday.is_workday(target_url) or ashby.is_ashby(target_url)
                         or greenhouse.is_greenhouse(target_url) or rippling.is_rippling(target_url)
                         or meta.is_meta(target_url) or google.is_google(target_url)):
-                    page_jobs = await _dispatch_ats(target_url, debug=False, shared_browser=browser)
+                    page_jobs = await _dispatch_ats(target_url, debug=False, shared_browser=browser, max_pages=max_pages)
                 else:
                     # Generic fallback with per-company wait_for_selector + max_pages
                     page = await _new_page(browser)

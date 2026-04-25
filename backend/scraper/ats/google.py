@@ -23,13 +23,18 @@ def is_google(url: str) -> bool:
     return "google.com/about/careers" in url.lower()
 
 
-async def scrape(url: str, browser=None, debug: bool = False) -> list[dict] | tuple:
+async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bool = False) -> list[dict] | tuple:
     """Scrape Google Careers using Playwright DOM extraction.
 
     Job cards are <li class="lLd3Je"> with <h3 class="QJPWVe"> for titles
     and <a href="jobs/results/{id}-slug"> for links.
     Pagination via <a aria-label="Go to next page">.
+
+    `max_pages` caps how many result pages to walk. None preserves the
+    historical 50-page safety limit; pass a positive int (typically the
+    Company.max_pages setting) to honour the operator's pagination budget.
     """
+    page_cap = max_pages if (max_pages is not None and max_pages > 0) else 50
     own_browser = browser is None
     pw = None
     if own_browser:
@@ -62,7 +67,7 @@ async def scrape(url: str, browser=None, debug: bool = False) -> list[dict] | tu
         # Paginate through all pages
         seen_ids = set()
         page_num = 0
-        while page_num < 50:  # Safety limit
+        while page_num < page_cap:
             page_num += 1
             links = await page.query_selector_all("a[href*='jobs/results/']")
             page_count = 0
