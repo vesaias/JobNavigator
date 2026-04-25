@@ -91,11 +91,9 @@ def list_jobs(
         vals = [s.strip() for s in status.split(",") if s.strip()]
         q = q.filter(Job.status.in_(vals)) if len(vals) > 1 else q.filter(Job.status == vals[0])
     if company:
+        company = _expand_company_filter(db, company)
         vals = [c.strip() for c in company.split(",") if c.strip()]
-        if len(vals) > 1:
-            q = q.filter(func.lower(Job.company).in_([v.lower() for v in vals]))
-        else:
-            q = q.filter(Job.company.ilike(f"%{vals[0]}%"))
+        q = q.filter(func.lower(Job.company).in_([v.lower() for v in vals]))
     if min_score is not None:
         q = q.filter(Job.best_cv_score >= float(min_score))
     if max_score is not None:
@@ -166,6 +164,27 @@ def list_jobs(
     }
 
 
+def _expand_company_filter(db, company):
+    """Expand a comma-separated list of company names to include all aliases
+    of each. Picking 'Amazon' will match jobs whose Job.company is 'Audible',
+    'AWS', or 'Prime Video & Amazon MGM Studios'. Returns a comma-separated
+    string of names + aliases. Empty input returns None. Orphan names (no
+    matching Company record) pass through unchanged."""
+    if not company:
+        return None
+    vals = [c.strip() for c in company.split(",") if c.strip()]
+    expanded = set()
+    for v in vals:
+        co = find_company_by_name(db, v)
+        if co:
+            expanded.add(co.name)
+            for a in (co.aliases or []):
+                expanded.add(a)
+        else:
+            expanded.add(v)
+    return ",".join(sorted(expanded))
+
+
 def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict=None,
                           min_score=None, saved=None, title_search=None, remote=None,
                           min_salary=None, max_salary=None, search_id=None):
@@ -175,10 +194,8 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
         q = q.filter(Job.status.in_(vals)) if len(vals) > 1 else q.filter(Job.status == vals[0])
     if company:
         vals = [c.strip() for c in company.split(",") if c.strip()]
-        if len(vals) > 1:
-            q = q.filter(func.lower(Job.company).in_([v.lower() for v in vals]))
-        else:
-            q = q.filter(Job.company.ilike(f"%{vals[0]}%"))
+        # Caller is expected to pre-expand aliases via _expand_company_filter
+        q = q.filter(func.lower(Job.company).in_([v.lower() for v in vals]))
     if source:
         vals = [s.strip() for s in source.split(",") if s.strip()]
         q = q.filter(Job.source.in_(vals)) if len(vals) > 1 else q.filter(Job.source == vals[0])
@@ -216,14 +233,22 @@ def list_job_companies(
     search_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """Return distinct company names from jobs matching current filters, sorted."""
+    """Return distinct CANONICAL company names from jobs matching current filters,
+    sorted. Aliases collapse to their parent (e.g. 'Audible' and 'Prime Video &
+    Amazon MGM Studios' both surface as 'Amazon')."""
+    from backend.models.db import build_company_lookup
     q = db.query(Job.company).distinct().filter(Job.company.isnot(None), Job.company != "")
     q = _apply_common_filters(q, status=status, source=source, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
                               remote=remote, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
-    rows = q.order_by(Job.company).all()
-    return [r[0] for r in rows]
+    raw_names = [r[0] for r in q.all()]
+    lookup = build_company_lookup(db)
+    canonical = set()
+    for raw in raw_names:
+        co = lookup.get((raw or "").lower())
+        canonical.add(co.name if co else raw)
+    return sorted(canonical, key=str.lower)
 
 
 @router.get("/sources/list")
@@ -241,6 +266,7 @@ def list_job_sources(
     db: Session = Depends(get_db),
 ):
     """Return distinct source values from jobs matching current filters, sorted."""
+    company = _expand_company_filter(db, company)
     q = db.query(Job.source).distinct().filter(Job.source.isnot(None), Job.source != "")
     q = _apply_common_filters(q, status=status, company=company, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
@@ -265,6 +291,7 @@ def list_job_verdicts(
     db: Session = Depends(get_db),
 ):
     """Return distinct h1b_verdict values from jobs matching current filters."""
+    company = _expand_company_filter(db, company)
     q = db.query(Job.h1b_verdict).distinct().filter(Job.h1b_verdict.isnot(None), Job.h1b_verdict != "")
     q = _apply_common_filters(q, status=status, company=company, source=source,
                               min_score=min_score, saved=saved, title_search=title_search,

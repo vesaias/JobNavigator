@@ -285,9 +285,11 @@ def list_applications(
     total = q.count()
     apps = q.order_by(desc(Application.updated_at)).offset(offset).limit(limit).all()
 
+    from backend.models.db import build_company_lookup
+    lookup = build_company_lookup(db)
     return {
         "total": total,
-        "applications": [_app_to_dict(a) for a in apps],
+        "applications": [_app_to_dict(a, lookup) for a in apps],
     }
 
 
@@ -321,8 +323,14 @@ def delete_application(app_id: str, db: Session = Depends(get_db)):
     return {"deleted": True}
 
 
-def _app_to_dict(a: Application) -> dict:
+def _app_to_dict(a: Application, lookup=None) -> dict:
+    """Serialize an Application. Pass lookup={lowercase: Company} (from
+    build_company_lookup) to populate company_canonical for alias-aware
+    grouping in the UI. When omitted, company_canonical falls back to the
+    raw company name."""
     job = a.job
+    raw = job.company if job else None
+    canonical_co = (lookup or {}).get((raw or "").lower())
     return {
         "id": str(a.id),
         "job_id": str(a.job_id),
@@ -336,7 +344,8 @@ def _app_to_dict(a: Application) -> dict:
         "last_email_snippet": a.last_email_snippet,
         "status_transitions": a.status_transitions or [],
         "updated_at": a.updated_at.isoformat() if a.updated_at else None,
-        "company": job.company if job else None,
+        "company": raw,
+        "company_canonical": canonical_co.name if canonical_co else raw,
         "title": job.title if job else None,
         "url": job.url if job else None,
         "best_cv": job.best_cv if job else None,

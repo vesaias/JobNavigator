@@ -80,14 +80,17 @@ export default function ApplicationBoard() {
     } catch (e) { console.error(e) }
   }
 
-  // Build case-insensitive company map and classify rejected-only companies
+  // Build case-insensitive company map and classify rejected-only companies.
+  // Group by canonical (alias-collapsed) name so e.g. an Audible application
+  // and an Amazon application end up under one "Amazon" chip.
   const { activeCompanies, rejectedOnlyKeys } = React.useMemo(() => {
     const displayMap = {} // lowercase → first-seen display name
     const statusSets = {} // lowercase → Set of mapped statuses
     apps.forEach(a => {
-      if (!a.company) return
-      const key = a.company.toLowerCase()
-      if (!displayMap[key]) displayMap[key] = a.company
+      const rawCompany = a.company_canonical || a.company
+      if (!rawCompany) return
+      const key = rawCompany.toLowerCase()
+      if (!displayMap[key]) displayMap[key] = rawCompany
       if (!statusSets[key]) statusSets[key] = new Set()
       statusSets[key].add(STATUS_REMAP[a.status] || a.status)
     })
@@ -124,7 +127,7 @@ export default function ApplicationBoard() {
 
   const filteredApps = companyFilter.length
     ? apps.filter(a => {
-        const key = (a.company || '').toLowerCase()
+        const key = (a.company_canonical || a.company || '').toLowerCase()
         if (companyFilter.includes(key)) return true
         if (companyFilter.includes('__rejected_only__') && rejectedOnlyKeys.has(key)) return true
         return false
@@ -234,7 +237,7 @@ export default function ApplicationBoard() {
                                 {app.short_id && <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">#{app.short_id}</span>}
                                 <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate" title={app.title || 'Unknown Role'}>{app.title || 'Unknown Role'}</p>
                               </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{app.company || 'Unknown Company'}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{app.company_canonical || app.company || 'Unknown Company'}</p>
                               <div className="flex items-center gap-2 mt-1.5">
                                 {app.cv_version_used && (
                                   <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">{app.cv_version_used}</span>
@@ -259,7 +262,7 @@ export default function ApplicationBoard() {
                                   <div className="flex items-center gap-3 mt-2">
                                     {app.job_id && (
                                       <button
-                                        onClick={() => setCachedPageJob({ job_id: app.job_id, title: app.title, company: app.company })}
+                                        onClick={() => setCachedPageJob({ job_id: app.job_id, title: app.title, company: app.company_canonical || app.company })}
                                         className="text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-medium">
                                         Cached
                                       </button>
