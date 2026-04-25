@@ -72,9 +72,29 @@ def _flatten_resume(json_data: dict) -> str:
     return "\n".join(p for p in parts if p)
 
 
+# Reserved id used in selected_resume_ids / default_resume_id to mean
+# "score against Persona.resume_content as a virtual Resume named 'Persona'".
+_PERSONA_KEY = "persona"
+_PERSONA_DISPLAY = "Persona"
+
+
+def _get_persona_text(db) -> dict:
+    """Return {'Persona': flattened_text} when the singleton persona has non-empty
+    resume_content, else {}. Other persona nodes (contact, qa_bank, etc.) are
+    NOT used for scoring — only resume_content."""
+    from backend.models.db import Persona
+    p = db.query(Persona).filter(Persona.id == 1).first()
+    if not p:
+        return {}
+    text = _flatten_resume(p.resume_content or {})
+    if not text:
+        return {}
+    return {_PERSONA_DISPLAY: text}
+
+
 def _get_resume_texts(db) -> dict:
-    """Return {Resume.name: flattened_text} for every base Resume.
-    Replaces _get_cv_texts. Ordered by Resume.id for stable cache keys.
+    """Return {Resume.name: flattened_text} for every base Resume + Persona (if populated).
+    Persona always appears last. Replaces _get_cv_texts. Ordered by Resume.id for stable cache keys.
     """
     from backend.models.db import Resume
     out = {}
@@ -82,15 +102,19 @@ def _get_resume_texts(db) -> dict:
         text = _flatten_resume(r.json_data or {})
         if text:
             out[r.name] = text
+    out.update(_get_persona_text(db))
     return out
 
 
 def _get_default_resume(db) -> dict:
-    """Return {Resume.name: flat_text} for the default Resume (per setting), or empty."""
+    """Return {Resume.name: flat_text} for the default Resume. Special id 'persona'
+    returns persona text. Empty dict if not set or not found."""
     from backend.models.db import Resume
     row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
     if not row or not row.value:
         return {}
+    if row.value == _PERSONA_KEY:
+        return _get_persona_text(db)
     r = db.query(Resume).filter(Resume.id == row.value, Resume.is_base == True).first()
     if not r:
         return {}
@@ -101,16 +125,21 @@ def _get_default_resume(db) -> dict:
 
 
 def _get_resume_texts_for_company(db, company) -> dict:
-    """Return resume texts for a company. Honors company.selected_resume_ids
-    (list of UUIDs); falls back to default; last resort all base resumes."""
+    """Return resume texts for a company. Honors company.selected_resume_ids,
+    which can mix Resume UUIDs with the special 'persona' key.
+    Falls back to default; last resort all base resumes (+ persona if populated)."""
     from backend.models.db import Resume
     selected = getattr(company, "selected_resume_ids", None) or []
     if selected:
         out = {}
-        for r in db.query(Resume).filter(Resume.is_base == True, Resume.id.in_(selected)).order_by(Resume.id).all():
-            text = _flatten_resume(r.json_data or {})
-            if text:
-                out[r.name] = text
+        resume_ids = [s for s in selected if s != _PERSONA_KEY]
+        if resume_ids:
+            for r in db.query(Resume).filter(Resume.is_base == True, Resume.id.in_(resume_ids)).order_by(Resume.id).all():
+                text = _flatten_resume(r.json_data or {})
+                if text:
+                    out[r.name] = text
+        if _PERSONA_KEY in selected:
+            out.update(_get_persona_text(db))
         if out:
             return out
     default = _get_default_resume(db)
@@ -500,14 +529,17 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
 
         if cv_ids:
             # Task 11: cv_ids now refers to base Resume IDs (the cvs table is gone).
-            # Caller can still target a specific subset of base resumes by passing
-            # their UUIDs.
+            # The reserved value 'persona' is a virtual Resume backed by Persona.resume_content.
             from backend.models.db import Resume
             cv_texts = {}
-            for r in db.query(Resume).filter(Resume.id.in_(cv_ids), Resume.is_base == True).order_by(Resume.id).all():
-                text = _flatten_resume(r.json_data or {})
-                if text:
-                    cv_texts[r.name] = text
+            resume_ids = [c for c in cv_ids if c != _PERSONA_KEY]
+            if resume_ids:
+                for r in db.query(Resume).filter(Resume.id.in_(resume_ids), Resume.is_base == True).order_by(Resume.id).all():
+                    text = _flatten_resume(r.json_data or {})
+                    if text:
+                        cv_texts[r.name] = text
+            if _PERSONA_KEY in cv_ids:
+                cv_texts.update(_get_persona_text(db))
         else:
             company = _find_company_for_job(db, job)
             cv_texts = _get_resume_texts_for_company(db, company) if company else (_get_default_resume(db) or _get_resume_texts(db))
