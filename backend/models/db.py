@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Text, DateTime, Date,
-    LargeBinary, ForeignKey, JSON, Index, create_engine, text
+    ForeignKey, JSON, Index, create_engine, text
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -69,19 +69,6 @@ class Search(Base):
     run_interval_minutes = Column(Integer, default=0)
     last_run_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
-
-
-# ── CVs ──────────────────────────────────────────────────────────────────────
-class CV(Base):
-    __tablename__ = "cvs"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    version = Column(String, nullable=False, unique=True)  # user-defined name, max 5
-    filename = Column(String, nullable=False)
-    pdf_data = Column(LargeBinary, nullable=False)
-    extracted_text = Column(Text, nullable=True)
-    page_count = Column(Integer, default=0)
-    uploaded_at = Column(DateTime(timezone=True), default=utcnow)
 
 
 # ── Companies ────────────────────────────────────────────────────────────────

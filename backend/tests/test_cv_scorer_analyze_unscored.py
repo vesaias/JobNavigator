@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 @pytest.fixture
 def scorer_ready_db(test_db, monkeypatch):
     """In-memory DB with Setting rows scorer needs + SessionLocal patched."""
-    from backend.models.db import Setting, CV, Resume
+    from backend.models.db import Setting, Resume
 
     # Core settings required by _score_job_inner
     settings = [
@@ -23,20 +23,9 @@ def scorer_ready_db(test_db, monkeypatch):
     ]
     for k, v in settings:
         test_db.add(Setting(key=k, value=v))
-
-    # Seed a default CV (kept for legacy compatibility; not used by scoring after Task 7)
-    cv = CV(
-        version="Default",
-        filename="default.pdf",
-        pdf_data=b"x",
-        extracted_text="I am a product manager with 5 years experience at scale.",
-        page_count=1,
-    )
-    test_db.add(cv)
     test_db.commit()
-    test_db.add(Setting(key="default_cv_id", value=str(cv.id)))
 
-    # Seed a default Resume (the new scoring source — Task 7).
+    # Seed a default Resume (the only scoring source — Task 11 dropped the cvs table).
     # The flattened text must contain the same identifying phrase the assertions check.
     resume = Resume(
         name="Default",
@@ -78,7 +67,7 @@ def scorer_ready_db(test_db, monkeypatch):
     import sqlalchemy as _sa
     monkeypatch.setattr(_sa, "text", _safe_text)
 
-    return {"db": test_db, "Session": TestSession, "cv": cv}
+    return {"db": test_db, "Session": TestSession, "resume": resume}
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 """Scoring source migrated from CV table to Resume table (Task 5)."""
 import pytest
-from backend.models.db import Resume, CV, Setting
+from backend.models.db import Resume, Setting
 
 
 def _seed_resume(test_db, name, summary):
@@ -49,19 +49,6 @@ def test_get_resume_texts_skips_tailored_resumes(test_db):
 
     texts = _get_resume_texts(test_db)
     assert list(texts.keys()) == ["PM"]
-
-
-def test_get_resume_texts_does_not_read_cv_table(test_db):
-    """Even if CVs exist, they're ignored by the new source."""
-    from backend.analyzer.cv_scorer import _get_resume_texts
-    test_db.add(CV(version="OldCV", filename="legacy.pdf", pdf_data=b"x", extracted_text="legacy text"))
-    _seed_resume(test_db, "PM", "current resume")
-    test_db.commit()
-
-    texts = _get_resume_texts(test_db)
-    assert "OldCV" not in texts
-    assert "PM" in texts
-    assert "legacy text" not in texts["PM"]
 
 
 def test_get_default_resume_reads_from_setting(test_db):

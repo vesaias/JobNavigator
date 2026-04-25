@@ -2,7 +2,7 @@
 import logging
 import json
 import secrets
-from backend.models.db import SessionLocal, Setting, Company, Search, CV, Resume
+from backend.models.db import SessionLocal, Setting, Company, Search, Resume
 from sqlalchemy import text
 
 logger = logging.getLogger("jobnavigator.seed")
@@ -344,6 +344,9 @@ END $$;""",
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 )""",
+        # Task 11: drop the legacy cvs table — Resume + Persona is the new world.
+        # Idempotent: subsequent restarts no-op once the table is gone.
+        "DROP TABLE IF EXISTS cvs",
     ]
     for sql in migrations:
         try:
@@ -551,42 +554,6 @@ MOCK_RESUME_JSON = {
     ],
 }
 
-MOCK_CV_TEXT = """ALEX JOHNSON
-San Francisco, CA | alex@example.com | linkedin.com/in/alexjohnson
-
-SUMMARY
-Product manager with 8 years of experience building B2B SaaS products. Led cross-functional teams of 5-15 across 3 product lines, driving $12M ARR growth. Strong background in data-driven decision making, user research, and agile delivery.
-
-EXPERIENCE
-
-Senior Product Manager | TechCorp | San Francisco, CA | 2021 - Present
-- Led product strategy for enterprise platform serving 2,000+ customers, increasing NPS from 32 to 58
-- Shipped AI-powered search feature that reduced time-to-resolution by 40% across support workflows
-- Managed $3M annual budget and prioritized roadmap across 3 engineering squads
-- Drove adoption of experimentation framework, running 50+ A/B tests per quarter
-
-Product Manager | StartupXYZ | New York, NY | 2018 - 2021
-- Launched MVP marketplace product from 0 to $2M ARR in 18 months
-- Defined and executed migration from monolith to microservices architecture
-- Conducted 100+ user interviews to inform product-market fit pivots
-- Collaborated with design team to reduce onboarding drop-off by 35%
-
-Business Analyst | BigFinance Inc. | Chicago, IL | 2016 - 2018
-- Built dashboards and reporting tools for trading desk, saving 20 hours/week of manual work
-- Translated business requirements into technical specs for engineering team
-- Led UAT for $5M regulatory compliance project delivered on schedule
-
-SKILLS
-Product: Roadmapping, A/B Testing, User Research, PRDs, OKRs, Agile/Scrum
-Technical: SQL, Python, Jira, Amplitude, Mixpanel, Figma, REST APIs
-Domain: B2B SaaS, Fintech, Marketplace, Enterprise, AI/ML Products
-
-EDUCATION
-B.S. Computer Science, Minor in Business Administration
-University of California, Berkeley
-"""
-
-
 def seed_searches(db):
     """Seed default searches if none exist (except LinkedIn Extension which is always ensured)."""
     existing_modes = {s.search_mode for s in db.query(Search).all()}
@@ -596,24 +563,15 @@ def seed_searches(db):
     db.commit()
 
 
-def seed_mock_cv(db):
-    """Seed a mock CV and resume for demonstration. Sets it as default Resume for all companies."""
-    if db.query(CV).count() > 0:
-        return  # User already has CVs
+def seed_mock_resume(db):
+    """Seed a mock base Resume for demonstration. Sets it as default Resume for all companies.
 
-    # Create CV record (for scoring)
-    cv = CV(
-        version="Sample PM",
-        filename="Sample_PM_Resume.pdf",
-        pdf_data=b"%PDF-1.0 mock",  # Placeholder — real PDF generated from resume builder
-        extracted_text=MOCK_CV_TEXT,
-        page_count=1,
-    )
-    db.add(cv)
-    db.flush()
-    db.commit()
+    Idempotent: bails if any base Resume already exists. (Replaces the legacy
+    seed_mock_cv from before Task 11 dropped the cvs table.)
+    """
+    if db.query(Resume).filter(Resume.is_base == True).count() > 0:
+        return  # User already has a base resume
 
-    # Create matching resume (for resume builder)
     resume = db.query(Resume).filter(Resume.name == "Sample PM", Resume.is_base == True).first()
     if resume is None:
         resume = Resume(
@@ -638,7 +596,7 @@ def seed_mock_cv(db):
         company.selected_resume_ids = [str(resume.id)]
     db.commit()
 
-    logger.info("Seeded mock CV + resume 'Sample PM'")
+    logger.info("Seeded mock resume 'Sample PM'")
 
 
 def seed_persona(db):
@@ -671,7 +629,7 @@ def run_seeds():
         seed_companies(db)
         seed_h1b_slugs(db)
         seed_searches(db)
-        seed_mock_cv(db)
+        seed_mock_resume(db)
         seed_persona(db)
         cleanup_removed_settings(db)
     finally:

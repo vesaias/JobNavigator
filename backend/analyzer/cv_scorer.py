@@ -5,7 +5,7 @@ import logging
 import time
 from backend.analyzer.llm_client import call_llm
 from backend.analyzer.llm_logger import log_llm_call
-from backend.models.db import SessionLocal, Job, CV, Setting
+from backend.models.db import SessionLocal, Job, Setting
 
 logger = logging.getLogger("jobnavigator.cv_scorer")
 
@@ -499,10 +499,15 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         job_company = job.company
 
         if cv_ids:
+            # Task 11: cv_ids now refers to base Resume IDs (the cvs table is gone).
+            # Caller can still target a specific subset of base resumes by passing
+            # their UUIDs.
+            from backend.models.db import Resume
             cv_texts = {}
-            for cv in db.query(CV).all():
-                if str(cv.id) in cv_ids and cv.extracted_text:
-                    cv_texts[cv.version] = cv.extracted_text
+            for r in db.query(Resume).filter(Resume.id.in_(cv_ids), Resume.is_base == True).order_by(Resume.id).all():
+                text = _flatten_resume(r.json_data or {})
+                if text:
+                    cv_texts[r.name] = text
         else:
             company = _find_company_for_job(db, job)
             cv_texts = _get_resume_texts_for_company(db, company) if company else (_get_default_resume(db) or _get_resume_texts(db))
