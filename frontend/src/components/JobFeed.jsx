@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api'
-import { ExternalLink, Bookmark, X, CheckCircle, ChevronDown, ChevronUp, Filter, RefreshCw, Ban, Info, FileText, Loader2, ScrollText } from 'lucide-react'
+import { ExternalLink, Bookmark, X, CheckCircle, ChevronDown, ChevronUp, Filter, Ban, Info, FileText, Loader2, ScrollText } from 'lucide-react'
 
 const STORAGE_KEY = 'jobfeed_filters'
 
@@ -74,11 +74,6 @@ export default function JobFeed() {
   const listRef = useRef(null)
 
   // Rescore modal state
-  const [rescoreJob, setRescoreJob] = useState(null)
-  const [cvList, setCvList] = useState([])
-  const [selectedCvIds, setSelectedCvIds] = useState([])
-  const [rescoring, setRescoring] = useState(false)
-  const [rescoreDepth, setRescoreDepth] = useState('full')
 
   // #13 Debounce filter changes
   const filterTimerRef = useRef(null)
@@ -550,36 +545,6 @@ export default function JobFeed() {
     return fmt(min || max)
   }
 
-  const openRescoreModal = async (e, job) => {
-    e.stopPropagation()
-    setRescoreJob(job)
-    setSelectedCvIds([])
-    setRescoring(false)
-    try {
-      const { data } = await api.get('/cvs')
-      setCvList(data)
-      // Pre-select default CV, fall back to all if no default set
-      const { data: settings } = await api.get('/settings')
-      const defaultId = settings?.default_cv_id
-      if (defaultId && data.some(cv => cv.id === defaultId)) {
-        setSelectedCvIds([defaultId])
-      } else {
-        setSelectedCvIds(data.map(cv => cv.id))
-      }
-    } catch (err) { console.error(err) }
-  }
-
-  const runRescore = async () => {
-    if (!rescoreJob || selectedCvIds.length === 0) return
-    setRescoring(true)
-    try {
-      await api.post(`/analyze/${rescoreJob.id}?depth=${rescoreDepth}`, { cv_ids: selectedCvIds })
-      setRescoreJob(null)
-      fetchJobs()
-    } catch (err) { console.error(err) }
-    setRescoring(false)
-  }
-
   // #17 Bulk operations
   const toggleSelectJob = (e, jobId) => {
     e.stopPropagation()
@@ -906,10 +871,6 @@ export default function JobFeed() {
                           className="p-1 rounded hover:bg-green-100 text-green-500 hover:text-green-700 dark:hover:bg-green-900/30 dark:text-green-400 dark:hover:text-green-300" title="Applied">
                           <CheckCircle size={14} />
                         </button>
-                        <button onClick={e => openRescoreModal(e, job)}
-                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500" title="Rescore CVs">
-                          <RefreshCw size={14} />
-                        </button>
                         {job.url && (
                           <a href={job.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500" title="Open in new tab">
@@ -1012,49 +973,6 @@ export default function JobFeed() {
               No URL available for this job
             </div>
           )}
-        </div>
-      )}
-
-      {/* Rescore CV modal */}
-      {rescoreJob && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setRescoreJob(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-80 p-4" onClick={e => e.stopPropagation()}>
-            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">Rescore CVs</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 truncate">{rescoreJob.title} — {rescoreJob.company}</p>
-            {cvList.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500">No CVs uploaded yet.</p>
-            ) : (
-              <div className="space-y-1.5 mb-3">
-                {cvList.map(cv => (
-                  <label key={cv.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={selectedCvIds.includes(cv.id)}
-                      onChange={() => setSelectedCvIds(prev =>
-                        prev.includes(cv.id) ? prev.filter(id => id !== cv.id) : [...prev, cv.id]
-                      )}
-                      className="rounded border-gray-300 dark:border-gray-600" />
-                    <span className="text-gray-700 dark:text-gray-300">{cv.version}</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{cv.filename}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scoring Depth</label>
-              <select value={rescoreDepth} onChange={e => setRescoreDepth(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
-                <option value="light">Light (score only)</option>
-                <option value="full">Full (score + keywords + report)</option>
-              </select>
-            </div>
-            <div className="flex justify-end gap-2 mt-3">
-              <button onClick={() => setRescoreJob(null)}
-                className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
-              <button onClick={runRescore} disabled={rescoring || selectedCvIds.length === 0}
-                className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
-                {rescoring ? <><RefreshCw size={12} className="animate-spin" /> Scoring...</> : 'Score'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

@@ -11,7 +11,6 @@ from backend.config import INITIAL_API_KEY, TELEGRAM_BOT_TOKEN
 from backend.job_monitor import launch_background, JobAlreadyRunningError, get_all_running, is_running, _get_running_by_job_type, cleanup_stale_runs
 
 from backend.api.routes_settings import router as settings_router
-from backend.api.routes_cvs import router as cvs_router
 from backend.api.routes_jobs import router as jobs_router
 from backend.api.routes_applications import router as applications_router
 from backend.api.routes_companies import router as companies_router
@@ -64,7 +63,6 @@ OPENAPI_TAGS = [
     {"name": "companies", "description": "Company management - scrape URLs, CV selection, H-1B data, filters"},
     {"name": "jobs", "description": "Job listings discovered by scrapers"},
     {"name": "applications", "description": "Job applications tracked by Chrome extension and email monitor"},
-    {"name": "cvs", "description": "CV upload, extraction, and management (max 5)"},
     {"name": "telegram", "description": "Telegram bot webhook and test endpoints"},
     {"name": "monitor", "description": "Job execution monitoring — active runs, run history"},
     {"name": "system", "description": "Health check and system info"},
@@ -203,7 +201,6 @@ async def logout(response: _Response):
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 app.include_router(settings_router, prefix="/api")
-app.include_router(cvs_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(applications_router, prefix="/api")
 app.include_router(companies_router, prefix="/api")

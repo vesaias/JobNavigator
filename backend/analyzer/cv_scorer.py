@@ -37,61 +37,6 @@ def reset_scoring_semaphore():
     _scoring_semaphore = None
 
 
-def _get_cv_texts(db) -> dict:
-    """Load all CV extracted texts from DB. Returns {version_name: text}.
-
-    Ordered by CV.id so the resulting dict has stable insertion order across calls —
-    critical for Anthropic prompt caching in cv_scorer._score_job_inner.
-    """
-    cvs = {}
-    for cv in db.query(CV).order_by(CV.id).all():
-        if cv.extracted_text:
-            cvs[cv.version] = cv.extracted_text
-    return cvs
-
-
-def _get_default_cv(db) -> dict:
-    """Load the default CV from settings. Returns {version_name: text} or empty dict."""
-    row = db.query(Setting).filter(Setting.key == "default_cv_id").first()
-    if not row or not row.value:
-        return {}
-    cv = db.query(CV).filter(CV.id == row.value).first()
-    if cv and cv.extracted_text:
-        return {cv.version: cv.extracted_text}
-    return {}
-
-
-def _get_cv_texts_for_company(db, company) -> dict:
-    """Load CVs selected for a specific company. Falls back to default CV if none selected.
-
-    Note: Company.selected_cv_ids was renamed to selected_resume_ids (holds Resume UUIDs,
-    not CV IDs). This legacy CV-based lookup falls through to the default CV when called
-    from a Resume-based scoring flow; matches by CV.version against Resume names if the
-    selected_resume_ids reference base Resumes.
-    """
-    selected = getattr(company, "selected_resume_ids", None) or [] if company else []
-    if selected:
-        # selected_resume_ids holds Resume UUIDs. Translate to CV.version by joining
-        # Resume.name → CV.version (CVs are legacy; matched by name).
-        from backend.models.db import Resume
-        resume_names = {
-            r.name for r in db.query(Resume).filter(Resume.id.in_(selected)).all()
-        }
-        if resume_names:
-            cvs = {}
-            for cv in db.query(CV).order_by(CV.id).all():
-                if cv.version in resume_names and cv.extracted_text:
-                    cvs[cv.version] = cv.extracted_text
-            if cvs:
-                return cvs
-    # Fallback to default CV from settings
-    default = _get_default_cv(db)
-    if default:
-        return default
-    # Last resort: all CVs
-    return _get_cv_texts(db)
-
-
 def _flatten_resume(json_data: dict) -> str:
     """Render a Resume.json_data dict to plaintext for LLM scoring.
     Mirrors the format CVs were extracted to — summary, experience bullets,
