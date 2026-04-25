@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api'
-import { ExternalLink, Bookmark, X, CheckCircle, ChevronDown, ChevronUp, Filter, Ban, Info, FileText, Loader2, ScrollText } from 'lucide-react'
+import { ExternalLink, Bookmark, X, CheckCircle, ChevronDown, ChevronUp, Filter, Ban, Info, FileText, Loader2, ScrollText, RotateCw } from 'lucide-react'
 
 const STORAGE_KEY = 'jobfeed_filters'
 
@@ -74,6 +74,11 @@ export default function JobFeed() {
   const listRef = useRef(null)
 
   // Rescore modal state
+  const [rescoreJob, setRescoreJob] = useState(null)
+  const [rescoreOptions, setRescoreOptions] = useState([])  // [{id, name}], 'persona' included when available
+  const [selectedRescoreIds, setSelectedRescoreIds] = useState([])
+  const [rescoring, setRescoring] = useState(false)
+  const [rescoreDepth, setRescoreDepth] = useState('full')
 
   // #13 Debounce filter changes
   const filterTimerRef = useRef(null)
@@ -545,6 +550,43 @@ export default function JobFeed() {
     return fmt(min || max)
   }
 
+  const openRescoreModal = async (e, job) => {
+    e.stopPropagation()
+    setRescoreJob(job)
+    setSelectedRescoreIds([])
+    setRescoring(false)
+    setRescoreDepth('full')
+    try {
+      const [resumesRes, personaRes, settingsRes] = await Promise.all([
+        api.get('/resumes?is_base=true'),
+        api.get('/persona').catch(() => ({ data: null })),
+        api.get('/settings'),
+      ])
+      const opts = (resumesRes.data || []).map(r => ({ id: r.id, name: r.name }))
+      const personaContent = personaRes.data?.resume_content || {}
+      const personaPopulated = Object.keys(personaContent).length > 0
+      if (personaPopulated) opts.push({ id: 'persona', name: 'Persona' })
+      setRescoreOptions(opts)
+      const defaultId = settingsRes.data?.default_resume_id
+      if (defaultId && opts.some(o => o.id === defaultId)) {
+        setSelectedRescoreIds([defaultId])
+      } else {
+        setSelectedRescoreIds(opts.map(o => o.id))
+      }
+    } catch (err) { console.error(err) }
+  }
+
+  const runRescore = async () => {
+    if (!rescoreJob || selectedRescoreIds.length === 0) return
+    setRescoring(true)
+    try {
+      await api.post(`/analyze/${rescoreJob.id}?depth=${rescoreDepth}`, { cv_ids: selectedRescoreIds })
+      setRescoreJob(null)
+      fetchJobs()
+    } catch (err) { console.error(err) }
+    setRescoring(false)
+  }
+
   // #17 Bulk operations
   const toggleSelectJob = (e, jobId) => {
     e.stopPropagation()
@@ -833,6 +875,11 @@ export default function JobFeed() {
                                 <FileText size={12} />
                               </button>
                             )}
+                            <button onClick={e => openRescoreModal(e, job)}
+                              className="p-0.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
+                              title="Rescore">
+                              <RotateCw size={12} />
+                            </button>
                           </div>
                           {job.cv_scores && Object.keys(job.cv_scores).filter(k => k !== '_skipped' && k !== job.best_cv).length > 0 && (
                             <div className="flex flex-wrap gap-2">
@@ -973,6 +1020,51 @@ export default function JobFeed() {
               No URL available for this job
             </div>
           )}
+        </div>
+      )}
+
+      {/* Rescore modal */}
+      {rescoreJob && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setRescoreJob(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-80 p-4" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">Rescore</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 truncate">{rescoreJob.title} — {rescoreJob.company}</p>
+            {rescoreOptions.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500">No base resumes or persona content yet.</p>
+            ) : (
+              <div className="space-y-1.5 mb-3 max-h-64 overflow-y-auto">
+                {rescoreOptions.map(opt => (
+                  <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={selectedRescoreIds.includes(opt.id)}
+                      onChange={() => setSelectedRescoreIds(prev =>
+                        prev.includes(opt.id) ? prev.filter(id => id !== opt.id) : [...prev, opt.id]
+                      )}
+                      className="rounded border-gray-300 dark:border-gray-600" />
+                    <span className="text-gray-700 dark:text-gray-300">{opt.name}</span>
+                    {opt.id === 'persona' && (
+                      <span className="text-[10px] text-purple-600 dark:text-purple-400">(virtual)</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scoring Depth</label>
+              <select value={rescoreDepth} onChange={e => setRescoreDepth(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
+                <option value="light">Light (score only)</option>
+                <option value="full">Full (score + keywords + report)</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setRescoreJob(null)}
+                className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
+              <button onClick={runRescore} disabled={rescoring || selectedRescoreIds.length === 0}
+                className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
+                {rescoring ? <><RotateCw size={12} className="animate-spin" /> Scoring...</> : 'Score'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
