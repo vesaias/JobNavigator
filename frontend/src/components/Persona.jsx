@@ -1,26 +1,36 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import api from '../api'
-import { ChevronDown, ChevronRight, User, Briefcase, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote } from 'lucide-react'
+import { ChevronDown, ChevronRight, User, Briefcase, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info } from 'lucide-react'
 
 // One section per persona node. Order = display order.
+// `usedBy` lists features that consume this node — surfaced as a hover tooltip
+// next to each section header so the user knows where the data lands.
 const SECTIONS = [
   { key: 'contact', label: 'Contact', icon: User, kind: 'object',
-    fields: ['name', 'email', 'phone', 'address', 'linkedin', 'github', 'website'] },
+    fields: ['name', 'email', 'phone', 'address', 'linkedin', 'github', 'website'],
+    usedBy: ['Tailoring (header)', 'Cover letter (header)', 'Autofill (form fields)', 'Outreach'] },
   { key: 'work_auth', label: 'Work Authorization', icon: Globe, kind: 'object',
-    fields: ['citizenship', 'sponsorship_needed', 'visa_status', 'earliest_start_date'] },
+    fields: ['citizenship', 'sponsorship_needed', 'visa_status', 'earliest_start_date'],
+    usedBy: ['Autofill (visa / sponsorship questions)'] },
   { key: 'demographics', label: 'Demographics (EEO)', icon: User, kind: 'object',
     fields: ['gender', 'race', 'veteran_status', 'disability_status'],
-    hint: 'All fields default to "decline to answer". Most postings make these optional.' },
+    hint: 'All fields default to "decline to answer". Most postings make these optional.',
+    usedBy: ['Autofill (EEO sections)'] },
   { key: 'compensation', label: 'Compensation', icon: DollarSign, kind: 'object',
-    fields: ['target_min', 'target_max', 'currency', 'notes'] },
+    fields: ['target_min', 'target_max', 'currency', 'notes'],
+    usedBy: ['Autofill (salary expectation fields)', 'Cover letter (when "expected comp" asked)'] },
   { key: 'preferences', label: 'Preferences', icon: SettingsIcon, kind: 'object',
-    fields: ['remote', 'hybrid_ok', 'onsite_ok', 'willing_to_relocate', 'preferred_locations', 'availability_notes'] },
+    fields: ['remote', 'hybrid_ok', 'onsite_ok', 'willing_to_relocate', 'preferred_locations', 'availability_notes'],
+    usedBy: ['Autofill (work model / relocation fields)', 'Future: filter scraped jobs'] },
   { key: 'resume_content', label: 'Resume Content', icon: FileText, kind: 'json',
-    hint: 'Mirrors the Resume Builder JSON shape: summary, experience[], skills, education[], projects[].' },
+    hint: 'Mirrors the Resume Builder JSON shape: summary, experience[], skills, education[], projects[].',
+    usedBy: ['Tailoring (rich pool of bullets)', 'Cover letter (anecdotes, achievements)', 'Scoring (when no per-company Resume picked — fallback)'] },
   { key: 'qa_bank', label: 'Q&A Bank', icon: MessageSquare, kind: 'array',
-    hint: 'Reusable answers to free-text application questions ("Why this company?", "Comp expectations")' },
+    hint: 'Reusable answers to free-text application questions ("Why this company?", "Comp expectations")',
+    usedBy: ['Autofill (free-text screener questions)', 'Cover letter (custom prompts / motivations)'] },
   { key: 'writing_samples', label: 'Writing Samples', icon: Quote, kind: 'array',
-    hint: 'Voice anchors — short paragraphs the cover letter generator uses for tone' },
+    hint: 'Voice anchors — short paragraphs the cover letter generator uses for tone',
+    usedBy: ['Cover letter (voice / tone anchors)'] },
 ]
 
 export default function Persona() {
@@ -65,6 +75,17 @@ export default function Persona() {
               <span className="flex items-center gap-2">
                 <Icon size={14} className="text-gray-400" />
                 {s.label}
+                {s.usedBy && (
+                  <span className="relative group inline-flex" onClick={(e) => e.stopPropagation()}>
+                    <Info size={12} className="text-gray-400 cursor-help" />
+                    <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
+                      <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
+                      {s.usedBy.map((u, i) => (
+                        <span key={i} className="block">• {u}</span>
+                      ))}
+                    </span>
+                  </span>
+                )}
               </span>
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
