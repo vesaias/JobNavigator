@@ -579,10 +579,15 @@ export default function JobFeed() {
   const runRescore = async () => {
     if (!rescoreJob || selectedRescoreIds.length === 0) return
     setRescoring(true)
+    const jobId = rescoreJob.id
     try {
-      await api.post(`/analyze/${rescoreJob.id}?depth=${rescoreDepth}`, { cv_ids: selectedRescoreIds })
+      await api.post(`/analyze/${jobId}?depth=${rescoreDepth}`, { cv_ids: selectedRescoreIds })
       setRescoreJob(null)
-      fetchJobs()
+      // Optimistically mark this job as in-flight so the spinner badge appears
+      // immediately and the /monitor/in-flight polling effect kicks in.
+      setJobs(prev => prev.map(j => j.id === jobId
+        ? { ...j, in_flight: [...new Set([...(j.in_flight || []), 'analyze_job'])] }
+        : j))
     } catch (err) { console.error(err) }
     setRescoring(false)
   }
