@@ -78,6 +78,88 @@ def _get_cv_texts_for_company(db, company) -> dict:
     return _get_cv_texts(db)
 
 
+def _flatten_resume(json_data: dict) -> str:
+    """Render a Resume.json_data dict to plaintext for LLM scoring.
+    Mirrors the format CVs were extracted to — summary, experience bullets,
+    skills lines, education — newline-separated.
+    """
+    if not json_data:
+        return ""
+    parts = []
+    summary = json_data.get("summary")
+    if summary:
+        parts.append(str(summary))
+    for exp in json_data.get("experience", []) or []:
+        title = exp.get("title", "")
+        company = exp.get("company", "")
+        dates = exp.get("dates", "")
+        parts.append(f"{title} at {company} ({dates})".strip())
+        for b in exp.get("bullets", []) or []:
+            parts.append(f"- {b}")
+    skills = json_data.get("skills") or {}
+    if isinstance(skills, dict):
+        for category, items in skills.items():
+            if isinstance(items, list):
+                parts.append(f"{category}: {', '.join(str(i) for i in items)}")
+            else:
+                parts.append(f"{category}: {items}")
+    elif isinstance(skills, list):
+        parts.append(", ".join(str(s) for s in skills))
+    for edu in json_data.get("education", []) or []:
+        degree = edu.get("degree", "")
+        school = edu.get("school", "")
+        year = edu.get("year", "")
+        parts.append(f"{degree} — {school}, {year}".strip(" —,"))
+    return "\n".join(p for p in parts if p)
+
+
+def _get_resume_texts(db) -> dict:
+    """Return {Resume.name: flattened_text} for every base Resume.
+    Replaces _get_cv_texts. Ordered by Resume.id for stable cache keys.
+    """
+    from backend.models.db import Resume
+    out = {}
+    for r in db.query(Resume).filter(Resume.is_base == True).order_by(Resume.id).all():
+        text = _flatten_resume(r.json_data or {})
+        if text:
+            out[r.name] = text
+    return out
+
+
+def _get_default_resume(db) -> dict:
+    """Return {Resume.name: flat_text} for the default Resume (per setting), or empty."""
+    from backend.models.db import Resume
+    row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
+    if not row or not row.value:
+        return {}
+    r = db.query(Resume).filter(Resume.id == row.value, Resume.is_base == True).first()
+    if not r:
+        return {}
+    text = _flatten_resume(r.json_data or {})
+    if not text:
+        return {}
+    return {r.name: text}
+
+
+def _get_resume_texts_for_company(db, company) -> dict:
+    """Return resume texts for a company. Honors company.selected_resume_ids
+    (list of UUIDs); falls back to default; last resort all base resumes."""
+    from backend.models.db import Resume
+    selected = getattr(company, "selected_resume_ids", None) or []
+    if selected:
+        out = {}
+        for r in db.query(Resume).filter(Resume.is_base == True, Resume.id.in_(selected)).order_by(Resume.id).all():
+            text = _flatten_resume(r.json_data or {})
+            if text:
+                out[r.name] = text
+        if out:
+            return out
+    default = _get_default_resume(db)
+    if default:
+        return default
+    return _get_resume_texts(db)
+
+
 async def _get_job_text(job: Job, db=None) -> str | None:
     """Get job text from description, cached page, or live fetch (with caching).
     Returns text string or None if no text available.
