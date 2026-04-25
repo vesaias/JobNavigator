@@ -67,3 +67,32 @@ def test_jobs_filter_expands_aliases(api_client, test_db):
     assert resp.status_code == 200
     titles_by_company = sorted({r["company"] for r in resp.json()["jobs"]})
     assert titles_by_company == ["AWS", "Amazon", "Audible"]
+
+
+def test_update_application_returns_canonical_company(api_client, test_db):
+    """PATCH /api/applications/{id} response should include canonical company name when alias matched."""
+    from backend.models.db import Company, Job, Application, Setting
+    test_db.add(Setting(key="dashboard_api_key", value=""))
+    test_db.add(Company(
+        name="Amazon",
+        tier=1,
+        scrape_urls=[],
+        aliases=["Audible"],
+        active=True,
+        playwright_enabled=True,
+    ))
+    job = Job(external_id="upd1", content_hash="uh1", company="Audible", title="PM", status="applied")
+    test_db.add(job)
+    test_db.flush()
+    app_row = Application(job_id=job.id, status="applied")
+    test_db.add(app_row)
+    test_db.commit()
+
+    resp = api_client.patch(
+        f"/api/applications/{app_row.id}",
+        json={"notes": "checking canonical"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["company"] == "Audible"
+    assert data["company_canonical"] == "Amazon"

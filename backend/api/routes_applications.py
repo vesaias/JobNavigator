@@ -310,7 +310,9 @@ def update_application(app_id: str, updates: dict, db: Session = Depends(get_db)
             setattr(app, key, value)
     app.updated_at = utcnow()
     db.commit()
-    return _app_to_dict(app)
+    from backend.models.db import build_company_lookup
+    lookup = build_company_lookup(db)
+    return _app_to_dict(app, lookup)
 
 
 @router.delete("/{app_id}")
