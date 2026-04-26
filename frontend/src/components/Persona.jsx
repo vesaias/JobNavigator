@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api'
-import { ChevronDown, ChevronRight, User, Briefcase, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info } from 'lucide-react'
+import { ChevronDown, ChevronRight, User, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info } from 'lucide-react'
+import ResumeContentEditor, { EMPTY_RESUME_DATA } from './ResumeContentEditor'
 
-// One section per persona node. Order = display order.
-// `usedBy` lists features that consume this node — surfaced as a hover tooltip
-// next to each section header so the user knows where the data lands.
-const SECTIONS = [
+// Right-column sections — everything except resume_content (which gets the
+// dedicated structured editor in the left column).
+const RIGHT_SECTIONS = [
   { key: 'contact', label: 'Contact', icon: User, kind: 'object',
     fields: ['name', 'email', 'phone', 'address', 'linkedin', 'github', 'website'],
     usedBy: ['Tailoring (header)', 'Cover letter (header)', 'Autofill (form fields)', 'Outreach'] },
@@ -22,9 +22,6 @@ const SECTIONS = [
   { key: 'preferences', label: 'Preferences', icon: SettingsIcon, kind: 'object',
     fields: ['remote', 'hybrid_ok', 'onsite_ok', 'willing_to_relocate', 'preferred_locations', 'availability_notes'],
     usedBy: ['Autofill (work model / relocation fields)', 'Future: filter scraped jobs'] },
-  { key: 'resume_content', label: 'Resume Content', icon: FileText, kind: 'json',
-    hint: 'Mirrors the Resume Builder JSON shape: summary, experience[], skills, education[], projects[].',
-    usedBy: ['Tailoring (rich pool of bullets)', 'Cover letter (anecdotes, achievements)', 'Scoring (when no per-company Resume picked — fallback)'] },
   { key: 'qa_bank', label: 'Q&A Bank', icon: MessageSquare, kind: 'array',
     hint: 'Reusable answers to free-text application questions ("Why this company?", "Comp expectations")',
     usedBy: ['Autofill (free-text screener questions)', 'Cover letter (custom prompts / motivations)'] },
@@ -33,12 +30,20 @@ const SECTIONS = [
     usedBy: ['Cover letter (voice / tone anchors)'] },
 ]
 
+const RESUME_CONTENT_USED_BY = [
+  'Tailoring (rich pool of bullets)',
+  'Cover letter (anecdotes, achievements)',
+  'Scoring (when no per-company Resume picked — fallback)',
+]
+
 export default function Persona() {
   const [persona, setPersona] = useState(null)
   const [open, setOpen] = useState(() => {
     try { return JSON.parse(localStorage.getItem('persona_open_sections') || '["contact"]') }
     catch { return ['contact'] }
   })
+  const [savedFlash, setSavedFlash] = useState('')
+  const debounceTimerRef = useRef(null)
 
   const fetchPersona = useCallback(async () => {
     const { data } = await api.get('/persona')
@@ -50,54 +55,110 @@ export default function Persona() {
 
   const toggle = (k) => setOpen(prev => prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k])
 
+  const flashSaved = () => {
+    setSavedFlash('Saved')
+    setTimeout(() => setSavedFlash(''), 1800)
+  }
+
+  // Immediate save (used for object/array sections via blur).
   const saveNode = async (key, value) => {
     try {
       const { data } = await api.patch('/persona', { [key]: value })
       setPersona(data)
+      flashSaved()
     } catch (e) { alert(`Failed to save ${key}: ${e.response?.data?.detail || e.message}`) }
+  }
+
+  // Debounced save for resume_content (typing-frequent edits) — keeps local state
+  // optimistically updated and PATCHes 500ms after the last change.
+  const saveResumeContentDebounced = (next) => {
+    setPersona(prev => prev ? { ...prev, resume_content: next } : prev)
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const { data } = await api.patch('/persona', { resume_content: next })
+        setPersona(data)
+        flashSaved()
+      } catch (e) { console.error('Failed to save resume_content:', e) }
+    }, 500)
   }
 
   if (!persona) return <div className="p-6 text-sm text-gray-500">Loading persona…</div>
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-2">
-      <h1 className="text-xl font-semibold mb-4 dark:text-gray-100">Persona</h1>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Single source of truth: tailoring + cover letter + autofill all read from here. Changes save on blur.
-      </p>
-      {SECTIONS.map(s => {
-        const Icon = s.icon
-        const isOpen = open.includes(s.key)
-        return (
-          <div key={s.key} className="border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-            <button onClick={() => toggle(s.key)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">
-              <span className="flex items-center gap-2">
-                <Icon size={14} className="text-gray-400" />
-                {s.label}
-                {s.usedBy && (
-                  <span className="relative group inline-flex" onClick={(e) => e.stopPropagation()}>
-                    <Info size={12} className="text-gray-400 cursor-help" />
-                    <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
-                      <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
-                      {s.usedBy.map((u, i) => (
-                        <span key={i} className="block">• {u}</span>
-                      ))}
-                    </span>
-                  </span>
-                )}
+    <div className="p-6 max-w-7xl mx-auto">
+      {savedFlash && (
+        <div className="fixed top-4 right-8 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+          {savedFlash}
+        </div>
+      )}
+      <div className="flex items-baseline gap-3 mb-2">
+        <h1 className="text-xl font-semibold dark:text-gray-100">Persona</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Single source of truth: tailoring + cover letter + autofill all read from here.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-12 gap-6 mt-4">
+        {/* Left column — Resume Content (structured editor) */}
+        <div className="col-span-7">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Resume Content</h2>
+            <span className="relative group inline-flex">
+              <Info size={12} className="text-gray-400 cursor-help" />
+              <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
+                <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
+                {RESUME_CONTENT_USED_BY.map((u, i) => (
+                  <span key={i} className="block">• {u}</span>
+                ))}
               </span>
-              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            {isOpen && (
-              <div className="px-4 pb-4 border-t dark:border-gray-700">
-                {s.hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-3">{s.hint}</p>}
-                <NodeEditor section={s} value={persona[s.key]} onSave={(v) => saveNode(s.key, v)} />
-              </div>
-            )}
+            </span>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves automatically</span>
           </div>
-        )
-      })}
+          <ResumeContentEditor
+            value={persona.resume_content || EMPTY_RESUME_DATA}
+            onChange={saveResumeContentDebounced}
+          />
+        </div>
+
+        {/* Right column — everything else */}
+        <div className="col-span-5 space-y-2">
+          {RIGHT_SECTIONS.map(s => {
+            const Icon = s.icon
+            const isOpen = open.includes(s.key)
+            return (
+              <div key={s.key} className="border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                <button onClick={() => toggle(s.key)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">
+                  <span className="flex items-center gap-2">
+                    <Icon size={14} className="text-gray-400" />
+                    {s.label}
+                    {s.usedBy && (
+                      <span className="relative group inline-flex" onClick={(e) => e.stopPropagation()}>
+                        <Info size={12} className="text-gray-400 cursor-help" />
+                        <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
+                          <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
+                          {s.usedBy.map((u, i) => (
+                            <span key={i} className="block">• {u}</span>
+                          ))}
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-4 border-t dark:border-gray-700">
+                    {s.hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-3">{s.hint}</p>}
+                    <NodeEditor section={s} value={persona[s.key]} onSave={(v) => saveNode(s.key, v)} />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -114,6 +175,7 @@ function NodeEditor({ section, value, onSave }) {
               defaultValue={(value || {})[f] ?? ''}
               onBlur={(e) => {
                 const next = { ...(value || {}), [f]: e.target.value }
+                if (next[f] === ((value || {})[f] ?? '')) return
                 onSave(next)
               }}
               className="mt-1 w-full border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
@@ -123,20 +185,8 @@ function NodeEditor({ section, value, onSave }) {
       </div>
     )
   }
-  if (section.kind === 'json') {
-    return (
-      <textarea
-        defaultValue={JSON.stringify(value || {}, null, 2)}
-        onBlur={(e) => {
-          try { onSave(JSON.parse(e.target.value)) }
-          catch (err) { alert(`Invalid JSON: ${err.message}`) }
-        }}
-        rows={20}
-        className="w-full border rounded px-2 py-2 text-xs font-mono mt-3 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-600"
-      />
-    )
-  }
-  // array
+  // array — kept as JSON textarea (qa_bank, writing_samples are free-form lists
+  // of objects whose shape varies per entry)
   return (
     <textarea
       defaultValue={JSON.stringify(value || [], null, 2)}
