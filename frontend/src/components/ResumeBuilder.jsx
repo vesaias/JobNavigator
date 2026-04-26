@@ -833,23 +833,29 @@ export default function ResumeBuilder() {
                   <button onClick={async () => {
                     const r = resumes.find(r => r.id === selectedId)
                     if (!r?.job_id) return
-                    // parent_id is null for resumes tailored from Persona — fall back
-                    // to the magic 'persona' base id in that case.
-                    const baseId = r.parent_id || 'persona'
-                    setTailoring(true)
-                    try {
-                      // Tailor is now a background job (returns 202 + run_id, no resume body).
-                      // Don't try to select the result — the pendingTailors poll picks up the
-                      // new run, and fetchResumes() will surface the row when it lands.
-                      await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: r.job_id })
-                      await fetchResumes()
-                    } catch (e) {
-                      alert('Re-tailor failed: ' + (e.response?.data?.detail || e.message))
+                    // Pre-fill the tailor modal with the current row's source so the user
+                    // can review/modify (different base, different job, toggle persona) and
+                    // hit Generate. parent_id null = was tailored from Persona.
+                    setTailorMode('tailor')
+                    setTailorFromPersona(r.parent_id === null)
+                    setTailorJobId(r.job_id)
+                    setTailorJdText('')
+                    // If tailored from a real Resume, switch sidebar selection to that base
+                    // so the modal's selectedId-driven base picker is correct.
+                    if (r.parent_id) {
+                      const base = resumes.find(x => x.id === r.parent_id)
+                      if (base) selectResume(base)
                     }
-                    setTailoring(false)
-                  }} disabled={tailoring}
-                    className="text-xs px-2.5 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1">
-                    <Wand2 size={12} /> {tailoring ? 'Tailoring...' : 'Re-tailor'}
+                    // Pre-fill the job search field with "Company — Title" for clarity.
+                    try {
+                      const { data: job } = await api.get(`/jobs/${r.job_id}`)
+                      setJobSearch(`${job.company || ''} — ${job.title || ''}`)
+                    } catch { setJobSearch('') }
+                    loadRecentJobs()
+                    setShowTailorModal(true)
+                  }}
+                    className="text-xs px-2.5 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center gap-1">
+                    <Wand2 size={12} /> Re-tailor
                   </button>
                   {resumes.find(r => r.id === selectedId)?.parent_id && (
                     <button onClick={openDiffModal}
