@@ -1,5 +1,11 @@
-"""_tailor_impl must merge Persona.resume_content into the resume_sections dict
-sent to the LLM, so the model has access to a richer bullet/skill pool."""
+"""Resume-as-base tailoring uses ONLY the base resume's bullets — Persona is NOT
+merged in (that previously caused tailored output to balloon to 1.5-2x the original
+bullet count). Persona-as-base is the explicit way to tap the richer pool, with
+its own constrained prompt.
+
+The helper functions (_merge_persona_experience, _normalize_company, ...) are kept
+since they're still useful primitives for future features (e.g. similarity-based
+bullet dedup elsewhere)."""
 import uuid
 import pytest
 from backend.models.db import Resume, Persona, Setting, Job
@@ -7,8 +13,8 @@ from backend.api import routes_resumes
 
 
 @pytest.mark.asyncio
-async def test_tailor_merges_persona_into_resume_sections(test_db, monkeypatch):
-    """When persona has resume_content, the prompt sent to the LLM includes persona bullets/skills."""
+async def test_tailor_with_resume_base_does_not_include_persona(test_db, monkeypatch):
+    """When tailoring against a base Resume, persona content must NOT appear in the LLM prompt."""
     base_resume = Resume(
         id=uuid.uuid4(), name="PM-base", is_base=True,
         json_data={
@@ -22,12 +28,12 @@ async def test_tailor_merges_persona_into_resume_sections(test_db, monkeypatch):
     )
     job = Job(id=uuid.uuid4(), title="Senior PM", company="Acme",
               description="Looking for a Senior PM with FinTech experience",
-              external_id="ext-tailor-persona")
+              external_id="ext-tailor-no-persona-merge")
     persona = Persona(id=1, resume_content={
         "summary": "Persona summary fragment.",
         "experience": [
             {"title": "Sr. PM", "company": "PersonaCo", "dates": "2020-2022",
-             "bullets": ["Persona bullet — FinTech specific"]},
+             "bullets": ["Persona-only bullet — should NOT leak in"]},
         ],
         "skills": {"languages": ["Python", "TypeScript"], "domains": ["FinTech"]},
     })
@@ -40,22 +46,22 @@ async def test_tailor_merges_persona_into_resume_sections(test_db, monkeypatch):
 
     async def fake_call(prompt, system, max_tokens=3000):
         captured["prompt"] = prompt
-        captured["system"] = system
-        return {"text": '{"summary": "merged", "experience": [], "skills": {}}', "usage": {}}
+        return {"text": '{"summary": "x", "experience": [], "skills": {}}', "usage": {}}
 
     monkeypatch.setattr("backend.analyzer.llm_client.call_cv_tailor_llm", fake_call)
 
     await routes_resumes._tailor_impl(str(base_resume.id), str(job.id), None)
 
     prompt = captured.get("prompt", "")
-    assert "Persona bullet" in prompt, f"Persona experience bullet not in tailor prompt:\n{prompt}"
-    assert "FinTech" in prompt, "Persona FinTech skill not merged into tailor prompt"
-    assert "TypeScript" in prompt, "Persona language skill not merged"
-    assert "Base bullet" in prompt, "Base resume bullet was overwritten"
-    # Persona summary is NOT appended to the base summary anymore — base resume's
-    # summary is its tuned framing; mixing voices confuses the LLM.
-    assert "Persona summary fragment" not in prompt, \
-        "Persona summary should NOT be merged into base summary"
+    # Base content present
+    assert "Base bullet" in prompt
+    assert "Base summary" in prompt
+    # Persona content must NOT have leaked in
+    assert "Persona-only bullet" not in prompt, "Persona experience leaked into resume-as-base prompt"
+    assert "Persona summary fragment" not in prompt, "Persona summary leaked"
+    assert "PersonaCo" not in prompt, "Persona company leaked"
+    assert "TypeScript" not in prompt, "Persona-only skill leaked"
+    assert "domains" not in prompt, "Persona-only skill category leaked"
 
 
 @pytest.mark.asyncio
@@ -83,45 +89,6 @@ async def test_tailor_works_when_persona_empty(test_db, monkeypatch):
     await routes_resumes._tailor_impl(str(base_resume.id), str(job.id), None)
 
 
-@pytest.mark.asyncio
-async def test_tailor_dedupes_overlapping_experience(test_db, monkeypatch):
-    """If persona has an experience entry with same (title, company) as base, no duplicate."""
-    base_resume = Resume(
-        id=uuid.uuid4(), name="PM-base", is_base=True,
-        json_data={
-            "summary": "S",
-            "experience": [{"title": "PM", "company": "Acme", "dates": "2022-2024",
-                            "bullets": ["base"]}],
-            "skills": {},
-        },
-    )
-    job = Job(id=uuid.uuid4(), title="PM", company="X",
-              description="JD", external_id="ext-dedupe-exp")
-    persona = Persona(id=1, resume_content={
-        "summary": "",
-        "experience": [{"title": "PM", "company": "Acme", "dates": "2022-2024",
-                        "bullets": ["persona override"]}],
-        "skills": {},
-    })
-    test_db.add_all([base_resume, job, persona])
-    test_db.add(Setting(key="cv_tailor_prompt",
-                        value="Resume:\n{resume_json}\n\nJD:\n{job_description}"))
-    test_db.commit()
-
-    captured = {}
-
-    async def fake_call(prompt, system, max_tokens=3000):
-        captured["prompt"] = prompt
-        return {"text": '{"summary": "x", "experience": [], "skills": {}}', "usage": {}}
-
-    monkeypatch.setattr("backend.analyzer.llm_client.call_cv_tailor_llm", fake_call)
-
-    await routes_resumes._tailor_impl(str(base_resume.id), str(job.id), None)
-
-    prompt = captured["prompt"]
-    # Base bullet should appear; persona's overlap should NOT add a second PM@Acme entry
-    assert prompt.count('"company": "Acme"') == 1
-    assert "base" in prompt
 
 
 # ── Tests for the new persona-merge helpers ─────────────────────────────────

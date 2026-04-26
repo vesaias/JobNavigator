@@ -587,33 +587,10 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 "skills": dict(base_data.get("skills", {}) or {}),
             }
 
-            # Merge Persona.resume_content as a richer pool the LLM may draw from.
-            # Skipped when persona IS the base (it's already there). Two-stage merge:
-            #   - Experience: match entries by normalized company + title-root, then
-            #     append non-duplicate bullets (Jaccard + numeric-anchor heuristic).
-            #     Persona's summary is intentionally NOT appended — the base resume's
-            #     summary is its tuned framing; mixing in a second voice confuses the LLM.
-            #   - Skills: dedupe items per category.
-            persona = None if persona_as_base else db.query(Persona).filter(Persona.id == 1).first()
-            persona_content = (persona.resume_content if persona else {}) or {}
-            if persona_content:
-                resume_sections["experience"] = _merge_persona_experience(
-                    resume_sections["experience"],
-                    persona_content.get("experience", []) or [],
-                )
-
-                p_skills = persona_content.get("skills") or {}
-                if isinstance(p_skills, dict):
-                    for category, items in p_skills.items():
-                        existing = resume_sections["skills"].get(category)
-                        if isinstance(items, list) and isinstance(existing, list):
-                            merged_items = list(existing)
-                            for item in items:
-                                if item not in merged_items:
-                                    merged_items.append(item)
-                            resume_sections["skills"][category] = merged_items
-                        elif category not in resume_sections["skills"]:
-                            resume_sections["skills"][category] = items
+            # Note: Persona is NOT auto-merged into Resume-as-base tailoring. Two clean
+            # modes — Resume-as-base uses ONLY the base resume's bullets (predictable
+            # output length); Persona-as-base uses persona's full pool with the
+            # constrained persona_tailor_prompt that selects 3-5 best bullets per role.
 
             prompt = prompt_template.replace("{resume_json}", _json.dumps(resume_sections, indent=2))
             prompt = prompt.replace("{job_description}", jd_text[:6000])
