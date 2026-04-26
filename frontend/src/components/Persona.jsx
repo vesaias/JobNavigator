@@ -105,11 +105,10 @@ export default function Persona() {
       )}
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Persona</h1>
 
-      <div className="flex gap-6 mt-4">
-        {/* Left column — Resume Content (structured editor). max-w-[640px] caps each
-            column near the /resumes editor width; trailing space appears at the right
-            and is the first thing eaten when the viewport narrows. */}
-        <div className="flex-1 min-w-0 max-w-[640px]">
+      <div className="grid grid-cols-5 gap-4 mt-4">
+        {/* Left column — Resume Content. col-span-2 of grid-cols-5 with gap-4 mirrors
+            the editor pane on /resumes byte-for-byte (same grid template, same gap). */}
+        <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <FileText size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Resume Content</h2>
@@ -127,9 +126,9 @@ export default function Persona() {
           />
         </div>
 
-        {/* Right column — same width cap as left; trailing space sits at the right
-            of the page and is the first thing the viewport eats when narrowing. */}
-        <div className="flex-1 min-w-0 max-w-[640px]">
+        {/* Right column — same col-span-2 of 5 as left, also matching /resumes editor.
+            The 5th grid column is left implicit and becomes trailing whitespace. */}
+        <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
