@@ -123,15 +123,19 @@ export default function JobFeed() {
 
   const renderSlot = (job, type, label, idleContent) => {
     const isRunning = (job.in_flight || []).includes(type)
-    if (isRunning) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-          <Loader2 className="animate-spin" size={12} />
-          {label}…
-        </span>
-      )
+    const spinner = isRunning ? (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+        <Loader2 className="animate-spin" size={12} />
+        {label}…
+      </span>
+    ) : null
+    // When idleContent is present (e.g. an existing score bar) AND a new run is in-flight,
+    // show both side by side so the user keeps seeing the previous score until the new
+    // one lands. When there's no idleContent (no previous score), the spinner stands alone.
+    if (isRunning && idleContent) {
+      return <>{idleContent}{spinner}</>
     }
-    return idleContent
+    return spinner || idleContent
   }
 
   // #15 Debounce title search input
@@ -880,13 +884,6 @@ export default function JobFeed() {
                                 <FileText size={12} />
                               </button>
                             )}
-                            {job.best_score > 0 && !(job.in_flight || []).includes('analyze_job') && (
-                              <button onClick={e => openRescoreModal(e, job)}
-                                className="p-0.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
-                                title="Rescore">
-                                <RotateCw size={12} />
-                              </button>
-                            )}
                           </div>
                           {job.cv_scores && Object.keys(job.cv_scores).filter(k => k !== '_skipped' && k !== job.best_cv).length > 0 && (
                             <div className="flex flex-wrap gap-2">
@@ -925,12 +922,11 @@ export default function JobFeed() {
                           className="p-1 rounded hover:bg-green-100 text-green-500 hover:text-green-700 dark:hover:bg-green-900/30 dark:text-green-400 dark:hover:text-green-300" title="Applied">
                           <CheckCircle size={14} />
                         </button>
-                        {!(job.best_score > 0) && (
-                          <button onClick={e => openRescoreModal(e, job)}
-                            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500" title="Score">
-                            <RotateCw size={14} />
-                          </button>
-                        )}
+                        <button onClick={e => openRescoreModal(e, job)}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500"
+                          title={job.best_score > 0 ? "Rescore" : "Score"}>
+                          <RotateCw size={14} />
+                        </button>
                         {job.url && (
                           <a href={job.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500" title="Open in new tab">
