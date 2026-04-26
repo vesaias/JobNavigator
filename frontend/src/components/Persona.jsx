@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api'
-import { ChevronDown, ChevronRight, User, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info } from 'lucide-react'
+import { ChevronDown, ChevronRight, User, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info, ClipboardList } from 'lucide-react'
 import ResumeContentEditor, { EMPTY_RESUME_DATA } from './ResumeContentEditor'
 
 // Right-column sections — everything except resume_content (which gets the
@@ -86,7 +86,7 @@ export default function Persona() {
   if (!persona) return <div className="p-6 text-sm text-gray-500">Loading persona…</div>
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6">
       {savedFlash && (
         <div className="fixed top-4 right-8 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
           {savedFlash}
@@ -123,7 +123,13 @@ export default function Persona() {
         </div>
 
         {/* Right column — everything else */}
-        <div className="col-span-5 space-y-2">
+        <div className="col-span-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardList size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves on blur</span>
+          </div>
+          <div className="space-y-2">
           {RIGHT_SECTIONS.map(s => {
             const Icon = s.icon
             const isOpen = open.includes(s.key)
@@ -157,6 +163,7 @@ export default function Persona() {
               </div>
             )
           })}
+          </div>
         </div>
       </div>
     </div>
