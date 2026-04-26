@@ -1234,7 +1234,7 @@ export default function JobFeed() {
                             {req.requirement}
                             {req.severity === 'preferred' && <span className="ml-1 text-[9px] text-gray-400">(preferred)</span>}
                           </td>
-                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400">{req.cv_match || '\u2014'}</td>
+                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400">{req.cv_evidence || req.cv_match || '\u2014'}</td>
                           <td className={`py-1.5 text-center ${req.matched ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{req.matched ? '\u2713' : '\u2717'}</td>
                         </tr>
                       ))}
