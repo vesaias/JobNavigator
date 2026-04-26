@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
 
-from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow
+from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow, Persona
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 
 logger = logging.getLogger("jobnavigator.resumes")
@@ -414,9 +414,46 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
 
             resume_sections = {
                 "summary": base_data.get("summary", ""),
-                "experience": base_data.get("experience", []),
-                "skills": base_data.get("skills", {}),
+                "experience": list(base_data.get("experience", []) or []),
+                "skills": dict(base_data.get("skills", {}) or {}),
             }
+
+            # Merge Persona.resume_content as a richer pool the LLM may draw from.
+            # Persona uses the same JSON shape as a Resume — its summary, experience entries,
+            # and skills augment (not replace) the base Resume so the model has more raw
+            # material to reframe. Tailor system prompt forbids inventing facts, so this
+            # only widens the truthful pool.
+            persona = db.query(Persona).filter(Persona.id == 1).first()
+            persona_content = (persona.resume_content if persona else {}) or {}
+            if persona_content:
+                p_summary = persona_content.get("summary") or ""
+                if p_summary and p_summary != resume_sections["summary"]:
+                    if resume_sections["summary"]:
+                        resume_sections["summary"] = f"{resume_sections['summary']}\n\n{p_summary}"
+                    else:
+                        resume_sections["summary"] = p_summary
+
+                seen_keys = {(e.get("title", ""), e.get("company", ""))
+                             for e in resume_sections["experience"]}
+                for p_exp in persona_content.get("experience", []) or []:
+                    key = (p_exp.get("title", ""), p_exp.get("company", ""))
+                    if key not in seen_keys:
+                        resume_sections["experience"].append(p_exp)
+                        seen_keys.add(key)
+
+                p_skills = persona_content.get("skills") or {}
+                if isinstance(p_skills, dict):
+                    for category, items in p_skills.items():
+                        existing = resume_sections["skills"].get(category)
+                        if isinstance(items, list) and isinstance(existing, list):
+                            merged = list(existing)
+                            for item in items:
+                                if item not in merged:
+                                    merged.append(item)
+                            resume_sections["skills"][category] = merged
+                        elif category not in resume_sections["skills"]:
+                            resume_sections["skills"][category] = items
+
             prompt = prompt_template.replace("{resume_json}", _json.dumps(resume_sections, indent=2))
             prompt = prompt.replace("{job_description}", jd_text[:6000])
 
