@@ -666,10 +666,20 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             db.add(tailored)
             db.commit()
             db.refresh(tailored)
-            # Optional: chain → light score against the newly tailored CV
+            # Optional: chain a score against the newly tailored CV.
+            # Setting `tailor_auto_quick_score` accepts:
+            #   'off' / 'false'           → no chain
+            #   'light' / 'true' / ''     → light chain (default)
+            #   'full'                    → full chain (richer report, slower/costlier)
             chain_row = db.query(Setting).filter(Setting.key == "tailor_auto_quick_score").first()
-            chain_on = (chain_row.value or "").strip().lower() == "true" if chain_row else True
-            if chain_on and job_id:
+            raw_chain = (chain_row.value if chain_row else "light").strip().lower()
+            depth_map = {
+                "off": None, "false": None, "no": None, "0": None,
+                "true": "light", "light": "light", "yes": "light", "1": "light", "": "light",
+                "full": "full",
+            }
+            chain_depth = depth_map.get(raw_chain, "light")
+            if chain_depth and job_id:
                 try:
                     from backend.analyzer.cv_scorer import score_single_job
                     launch_background(
@@ -681,7 +691,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                         func_kwargs={
                             "job_id": job_id,
                             "cv_ids": [str(tailored.id)],
-                            "depth": "light",
+                            "depth": chain_depth,
                         },
                     )
                 except Exception as _e:

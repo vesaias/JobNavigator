@@ -573,6 +573,27 @@ export default function SettingsPage() {
             Used when tailoring from Persona (richer pool — needs constrained selection). Falls back to the Resume prompt if empty. Placeholders: {'{resume_json}'}, {'{job_description}'}
           </p>
         </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Auto-score after tailoring</label>
+          <select
+            value={(() => {
+              const raw = (settings.tailor_auto_quick_score || 'light').toString().toLowerCase()
+              if (raw === 'off' || raw === 'false' || raw === 'no' || raw === '0') return 'off'
+              if (raw === 'full') return 'full'
+              return 'light'
+            })()}
+            onChange={e => saveSetting('tailor_auto_quick_score', e.target.value)}
+            className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+          >
+            <option value="off">Off — don't score the tailored CV</option>
+            <option value="light">Light — quick score (default)</option>
+            <option value="full">Full — score + full report (slower, costlier)</option>
+          </select>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            When a tailor finishes, a "Tailored: N" entry is added to the job's score list. Light is fast and cheap; Full also writes the requirement_mapping/keyword_coverage report.
+          </p>
+        </div>
       </section>
 
       {/* Email Classification */}
