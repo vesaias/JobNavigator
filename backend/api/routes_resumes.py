@@ -432,11 +432,20 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     logger.error(f"Tailor: job {job_id} has no description")
                     raise RuntimeError(f"Tailor: job {job_id} has no description")
 
-            prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
-            if not prompt_row or not prompt_row.value:
-                logger.error("Tailor: cv_tailor_prompt setting is empty")
-                raise RuntimeError("Tailor: cv_tailor_prompt setting is empty")
-            prompt_template = prompt_row.value
+            # Persona-as-base uses a constrained prompt (select 3-5 bullets per role
+            # from the rich pool); falls back to the standard cv_tailor_prompt if the
+            # persona-specific one isn't configured.
+            prompt_template = None
+            if persona_as_base:
+                p_row = db.query(Setting).filter(Setting.key == "persona_tailor_prompt").first()
+                if p_row and (p_row.value or "").strip():
+                    prompt_template = p_row.value
+            if not prompt_template:
+                prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
+                if not prompt_row or not prompt_row.value:
+                    logger.error("Tailor: cv_tailor_prompt setting is empty")
+                    raise RuntimeError("Tailor: cv_tailor_prompt setting is empty")
+                prompt_template = prompt_row.value
 
             resume_sections = {
                 "summary": base_data.get("summary", ""),
