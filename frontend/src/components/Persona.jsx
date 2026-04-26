@@ -1,31 +1,32 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api'
-import { ChevronDown, ChevronRight, User, Globe, DollarSign, Settings as SettingsIcon, FileText, MessageSquare, Quote, Info, ClipboardList } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileText, Info, ClipboardList } from 'lucide-react'
 import ResumeContentEditor, { EMPTY_RESUME_DATA } from './ResumeContentEditor'
 
 // Right-column sections — everything except resume_content (which gets the
-// dedicated structured editor in the left column).
+// dedicated structured editor in the left column). Per-section info is rolled
+// up into the column-level header tooltip.
 const RIGHT_SECTIONS = [
-  { key: 'contact', label: 'Contact', icon: User, kind: 'object',
+  { key: 'contact', label: 'Contact', kind: 'object',
     fields: ['name', 'email', 'phone', 'address', 'linkedin', 'github', 'website'],
     usedBy: ['Tailoring (header)', 'Cover letter (header)', 'Autofill (form fields)', 'Outreach'] },
-  { key: 'work_auth', label: 'Work Authorization', icon: Globe, kind: 'object',
+  { key: 'work_auth', label: 'Work Authorization', kind: 'object',
     fields: ['citizenship', 'sponsorship_needed', 'visa_status', 'earliest_start_date'],
     usedBy: ['Autofill (visa / sponsorship questions)'] },
-  { key: 'demographics', label: 'Demographics (EEO)', icon: User, kind: 'object',
+  { key: 'demographics', label: 'Demographics (EEO)', kind: 'object',
     fields: ['gender', 'race', 'veteran_status', 'disability_status'],
     hint: 'All fields default to "decline to answer". Most postings make these optional.',
     usedBy: ['Autofill (EEO sections)'] },
-  { key: 'compensation', label: 'Compensation', icon: DollarSign, kind: 'object',
+  { key: 'compensation', label: 'Compensation', kind: 'object',
     fields: ['target_min', 'target_max', 'currency', 'notes'],
     usedBy: ['Autofill (salary expectation fields)', 'Cover letter (when "expected comp" asked)'] },
-  { key: 'preferences', label: 'Preferences', icon: SettingsIcon, kind: 'object',
+  { key: 'preferences', label: 'Preferences', kind: 'object',
     fields: ['remote', 'hybrid_ok', 'onsite_ok', 'willing_to_relocate', 'preferred_locations', 'availability_notes'],
     usedBy: ['Autofill (work model / relocation fields)', 'Future: filter scraped jobs'] },
-  { key: 'qa_bank', label: 'Q&A Bank', icon: MessageSquare, kind: 'array',
+  { key: 'qa_bank', label: 'Q&A Bank', kind: 'array',
     hint: 'Reusable answers to free-text application questions ("Why this company?", "Comp expectations")',
     usedBy: ['Autofill (free-text screener questions)', 'Cover letter (custom prompts / motivations)'] },
-  { key: 'writing_samples', label: 'Writing Samples', icon: Quote, kind: 'array',
+  { key: 'writing_samples', label: 'Writing Samples', kind: 'array',
     hint: 'Voice anchors — short paragraphs the cover letter generator uses for tone',
     usedBy: ['Cover letter (voice / tone anchors)'] },
 ]
@@ -145,35 +146,32 @@ export default function Persona() {
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
+            <span className="relative group inline-flex">
+              <Info size={12} className="text-gray-400 cursor-help" />
+              <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-80 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
+                <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
+                {RIGHT_SECTIONS.map(s => (
+                  <span key={s.key} className="block"><strong className="text-gray-200">{s.label}</strong>: {(s.usedBy || []).join(', ')}</span>
+                ))}
+              </span>
+            </span>
             <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves automatically</span>
           </div>
-          <div className="space-y-4">
           {RIGHT_SECTIONS.map(s => {
-            const Icon = s.icon
             const isOpen = open.includes(s.key)
             return (
-              <div key={s.key} className="border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                <button onClick={() => toggle(s.key)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">
+              <div key={s.key} className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg mb-4">
+                <button
+                  onClick={() => toggle(s.key)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
+                >
                   <span className="flex items-center gap-2">
-                    <Icon size={14} className="text-gray-400" />
+                    {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     {s.label}
-                    {s.usedBy && (
-                      <span className="relative group inline-flex" onClick={(e) => e.stopPropagation()}>
-                        <Info size={12} className="text-gray-400 cursor-help" />
-                        <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
-                          <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
-                          {s.usedBy.map((u, i) => (
-                            <span key={i} className="block">• {u}</span>
-                          ))}
-                        </span>
-                      </span>
-                    )}
                   </span>
-                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-4 border-t dark:border-gray-700">
+                  <div className="px-4 pb-4">
                     {s.hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-3">{s.hint}</p>}
                     <NodeEditor section={s} value={persona[s.key]}
                                 onSave={(v) => saveNode(s.key, v)}
@@ -183,7 +181,6 @@ export default function Persona() {
               </div>
             )
           })}
-          </div>
         </div>
       </div>
     </div>
