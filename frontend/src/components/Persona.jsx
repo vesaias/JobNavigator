@@ -44,6 +44,7 @@ export default function Persona() {
   })
   const [savedFlash, setSavedFlash] = useState('')
   const debounceTimerRef = useRef(null)
+  const nodeDebounceRef = useRef({})  // per-key debounce timers for autofill nodes
 
   const fetchPersona = useCallback(async () => {
     const { data } = await api.get('/persona')
@@ -60,13 +61,28 @@ export default function Persona() {
     setTimeout(() => setSavedFlash(''), 1800)
   }
 
-  // Immediate save (used for object/array sections via blur).
+  // Immediate save (used for array editors that validate JSON on blur).
   const saveNode = async (key, value) => {
     try {
       const { data } = await api.patch('/persona', { [key]: value })
       setPersona(data)
       flashSaved()
     } catch (e) { alert(`Failed to save ${key}: ${e.response?.data?.detail || e.message}`) }
+  }
+
+  // Debounced save for object-shaped autofill nodes (contact, work_auth, ...).
+  // Mirrors the keystroke-debounced behavior of the Resume Content editor so both
+  // columns feel identical from the user's POV.
+  const saveNodeDebounced = (key, value) => {
+    setPersona(prev => prev ? { ...prev, [key]: value } : prev)
+    if (nodeDebounceRef.current[key]) clearTimeout(nodeDebounceRef.current[key])
+    nodeDebounceRef.current[key] = setTimeout(async () => {
+      try {
+        const { data } = await api.patch('/persona', { [key]: value })
+        setPersona(data)
+        flashSaved()
+      } catch (e) { console.error(`Failed to save ${key}:`, e) }
+    }, 500)
   }
 
   // Debounced save for resume_content (typing-frequent edits) — keeps local state
@@ -99,9 +115,10 @@ export default function Persona() {
         </p>
       </div>
 
-      <div className="grid grid-cols-12 gap-6 mt-4">
-        {/* Left column — Resume Content (structured editor) */}
-        <div className="col-span-7">
+      <div className="grid grid-cols-5 gap-6 mt-4">
+        {/* Left column — Resume Content (structured editor). col-span-2 of 5 mirrors
+            the editor width on /resumes (the page's left panel) */}
+        <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <FileText size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Resume Content</h2>
@@ -123,13 +140,13 @@ export default function Persona() {
         </div>
 
         {/* Right column — everything else */}
-        <div className="col-span-5">
+        <div className="col-span-3">
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves on blur</span>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves automatically</span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-4">
           {RIGHT_SECTIONS.map(s => {
             const Icon = s.icon
             const isOpen = open.includes(s.key)
@@ -157,7 +174,9 @@ export default function Persona() {
                 {isOpen && (
                   <div className="px-4 pb-4 border-t dark:border-gray-700">
                     {s.hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-3">{s.hint}</p>}
-                    <NodeEditor section={s} value={persona[s.key]} onSave={(v) => saveNode(s.key, v)} />
+                    <NodeEditor section={s} value={persona[s.key]}
+                                onSave={(v) => saveNode(s.key, v)}
+                                onSaveDebounced={(v) => saveNodeDebounced(s.key, v)} />
                   </div>
                 )}
               </div>
@@ -170,7 +189,7 @@ export default function Persona() {
   )
 }
 
-function NodeEditor({ section, value, onSave }) {
+function NodeEditor({ section, value, onSave, onSaveDebounced }) {
   if (section.kind === 'object') {
     return (
       <div className="grid grid-cols-2 gap-3 mt-3">
@@ -180,10 +199,9 @@ function NodeEditor({ section, value, onSave }) {
             <input
               type="text"
               defaultValue={(value || {})[f] ?? ''}
-              onBlur={(e) => {
+              onChange={(e) => {
                 const next = { ...(value || {}), [f]: e.target.value }
-                if (next[f] === ((value || {})[f] ?? '')) return
-                onSave(next)
+                onSaveDebounced(next)
               }}
               className="mt-1 w-full border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
             />
@@ -193,7 +211,9 @@ function NodeEditor({ section, value, onSave }) {
     )
   }
   // array — kept as JSON textarea (qa_bank, writing_samples are free-form lists
-  // of objects whose shape varies per entry)
+  // of objects whose shape varies per entry). Saves on blur so we don't try to
+  // parse mid-typed JSON; the parent treats this the same as the object editor
+  // for the user-facing "Saves automatically" label.
   return (
     <textarea
       defaultValue={JSON.stringify(value || [], null, 2)}
