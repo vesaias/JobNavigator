@@ -113,6 +113,7 @@ export default function JobFeed() {
   const [cvSelectedBase, setCvSelectedBase] = useState('')
   const [cvGenerating, setCvGenerating] = useState(false)
   const [cvMode, setCvMode] = useState('tailor') // 'tailor' or 'copy'
+  const [cvPersonaAvailable, setCvPersonaAvailable] = useState(false)
 
   // Tailor background toasts
   const [tailorToasts, setTailorToasts] = useState([])
@@ -982,14 +983,28 @@ export default function JobFeed() {
                 </div>
               )}
               <button onClick={async () => {
-                    try { const { data } = await api.get('/resumes?is_base=true'); setCvBaseResumes(data) } catch {}
+                    try {
+                      const [resumesRes, personaRes] = await Promise.all([
+                        api.get('/resumes?is_base=true'),
+                        api.get('/persona').catch(() => ({ data: null })),
+                      ])
+                      setCvBaseResumes(resumesRes.data)
+                      setCvPersonaAvailable(Object.keys(personaRes.data?.resume_content || {}).length > 0)
+                    } catch {}
                     setCvMode('tailor'); setShowCvModal(true)
                   }}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:bg-purple-50 rounded dark:text-purple-400 dark:hover:bg-purple-900/30">
                   <FileText size={12} /> Tailor CV
                 </button>
                 <button onClick={async () => {
-                    try { const { data } = await api.get('/resumes?is_base=true'); setCvBaseResumes(data) } catch {}
+                    try {
+                      const [resumesRes, personaRes] = await Promise.all([
+                        api.get('/resumes?is_base=true'),
+                        api.get('/persona').catch(() => ({ data: null })),
+                      ])
+                      setCvBaseResumes(resumesRes.data)
+                      setCvPersonaAvailable(Object.keys(personaRes.data?.resume_content || {}).length > 0)
+                    } catch {}
                     setCvMode('copy'); setShowCvModal(true)
                   }}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:bg-purple-50 rounded dark:text-purple-400 dark:hover:bg-purple-900/30">
@@ -1267,6 +1282,9 @@ export default function JobFeed() {
                 {cvBaseResumes.map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
+                {cvPersonaAvailable && cvMode === 'tailor' && (
+                  <option value="persona">Persona</option>
+                )}
               </select>
             </div>
             <div className="flex justify-end gap-2">
