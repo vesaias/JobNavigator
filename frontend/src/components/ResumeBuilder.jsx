@@ -146,8 +146,10 @@ export default function ResumeBuilder() {
   const [resumeSearch, setResumeSearch] = useState('')
   const [resumeDropdownOpen, setResumeDropdownOpen] = useState(false)
   const [jobSearch, setJobSearch] = useState('')
-  const [tailorMode, setTailorMode] = useState('tailor') // 'tailor' or 'copy'
+  const [tailorMode, setTailorMode] = useState('tailor') // 'tailor' | 'copy' | 'retailor'
   const [tailorFromPersona, setTailorFromPersona] = useState(false)
+  const [retailorBaseId, setRetailorBaseId] = useState('') // for retailor mode: '<uuid>' | 'persona'
+  const [retailorOrigin, setRetailorOrigin] = useState(null) // {sourceLabel, jobLabel} — display only
   const [personaPopulated, setPersonaPopulated] = useState(false)
   const [showDiffModal, setShowDiffModal] = useState(false)
   const [baseData, setBaseData] = useState(null)
@@ -395,7 +397,12 @@ export default function ResumeBuilder() {
   }
 
   const tailorForJob = async () => {
-    const baseId = tailorFromPersona ? 'persona' : selectedId
+    // In retailor mode the base comes from the per-modal picker. In tailor mode
+    // it comes from the currently-selected sidebar row, with a checkbox override
+    // to use Persona instead.
+    const baseId = tailorMode === 'retailor'
+      ? retailorBaseId
+      : (tailorFromPersona ? 'persona' : selectedId)
     if (!baseId) return
     if (!tailorJobId && !tailorJdText.trim()) return
     setTailoring(true)
@@ -406,9 +413,9 @@ export default function ResumeBuilder() {
         await fetchResumes()
         selectResume(resp.data)
       } else {
-        // Tailor is a background job (202 + run_id, no resume body). Don't try to
-        // select the result — the pendingTailors poll picks up the run and the
-        // new row appears in the sidebar when it completes.
+        // Tailor / re-tailor are background jobs (202 + run_id, no resume body).
+        // Don't try to select the result — the pendingTailors poll picks up the run
+        // and the new row appears in the sidebar when it completes.
         const payload = { base_resume_id: baseId }
         if (tailorJobId) payload.job_id = tailorJobId
         else payload.job_description = tailorJdText.trim()
@@ -419,6 +426,8 @@ export default function ResumeBuilder() {
       setTailorJobId('')
       setTailorJdText('')
       setTailorFromPersona(false)
+      setRetailorBaseId('')
+      setRetailorOrigin(null)
     } catch (e) {
       console.error(e)
       alert((tailorMode === 'copy' ? 'Copy' : 'Tailoring') + ' failed: ' + (e.response?.data?.detail || e.message))
@@ -833,24 +842,24 @@ export default function ResumeBuilder() {
                   <button onClick={async () => {
                     const r = resumes.find(r => r.id === selectedId)
                     if (!r?.job_id) return
-                    // Pre-fill the tailor modal with the current row's source so the user
-                    // can review/modify (different base, different job, toggle persona) and
-                    // hit Generate. parent_id null = was tailored from Persona.
-                    setTailorMode('tailor')
-                    setTailorFromPersona(r.parent_id === null)
+                    // Open the modal in 'retailor' mode — its own header + a base picker
+                    // so the user can change source/persona without leaving.
+                    setTailorMode('retailor')
+                    setRetailorBaseId(r.parent_id || 'persona')
                     setTailorJobId(r.job_id)
                     setTailorJdText('')
-                    // If tailored from a real Resume, switch sidebar selection to that base
-                    // so the modal's selectedId-driven base picker is correct.
-                    if (r.parent_id) {
-                      const base = resumes.find(x => x.id === r.parent_id)
-                      if (base) selectResume(base)
-                    }
-                    // Pre-fill the job search field with "Company — Title" for clarity.
+
+                    // Compute display labels for context line in the modal
+                    const baseLabel = r.parent_id
+                      ? (resumes.find(x => x.id === r.parent_id)?.name || 'Unknown base')
+                      : 'Persona'
+                    let jobLabel = ''
                     try {
                       const { data: job } = await api.get(`/jobs/${r.job_id}`)
-                      setJobSearch(`${job.company || ''} — ${job.title || ''}`)
+                      jobLabel = `${job.company || ''} — ${job.title || ''}`
+                      setJobSearch(jobLabel)
                     } catch { setJobSearch('') }
+                    setRetailorOrigin({ sourceLabel: baseLabel, jobLabel })
                     loadRecentJobs()
                     setShowTailorModal(true)
                   }}
@@ -1234,8 +1243,32 @@ export default function ResumeBuilder() {
       {showTailorModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{tailorMode === 'copy' ? 'Copy Resume for Job' : 'Tailor Resume for Job'}</h3>
-            {tailorMode !== 'copy' && personaPopulated && (
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              {tailorMode === 'copy' ? 'Copy Resume for Job'
+                : tailorMode === 'retailor' ? 'Re-tailor'
+                : 'Tailor Resume for Job'}
+            </h3>
+            {tailorMode === 'retailor' && retailorOrigin && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Currently tailored from <span className="font-medium text-purple-600 dark:text-purple-400">{retailorOrigin.sourceLabel}</span>
+                {retailorOrigin.jobLabel && <> for <span className="font-medium">{retailorOrigin.jobLabel}</span></>}.
+                Adjust below and Generate to overwrite.
+              </p>
+            )}
+            {tailorMode === 'retailor' && (
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Base</label>
+                <select value={retailorBaseId}
+                  onChange={e => setRetailorBaseId(e.target.value)}
+                  className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
+                  {resumes.filter(r => r.is_base).map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                  {personaPopulated && <option value="persona">Persona</option>}
+                </select>
+              </div>
+            )}
+            {tailorMode === 'tailor' && personaPopulated && (
               <div className="mb-3">
                 <label className="flex items-center gap-2 text-xs cursor-pointer text-gray-700 dark:text-gray-300">
                   <input type="checkbox" checked={tailorFromPersona}
@@ -1282,11 +1315,15 @@ export default function ResumeBuilder() {
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowTailorModal(false)}
+              <button onClick={() => { setShowTailorModal(false); setRetailorBaseId(''); setRetailorOrigin(null) }}
                 className="px-4 py-1.5 text-sm border rounded dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={tailorForJob} disabled={tailoring || (tailorMode === 'copy' ? !tailorJobId : (!tailorJobId && !tailorJdText.trim()))}
                 className="px-4 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2">
-                {tailoring ? <><Loader2 size={14} className="animate-spin" /> {tailorMode === 'copy' ? 'Copying...' : 'Tailoring...'}</> : tailorMode === 'copy' ? 'Copy with Tracer Links' : 'Generate Tailored CV'}
+                {tailoring
+                  ? <><Loader2 size={14} className="animate-spin" /> {tailorMode === 'copy' ? 'Copying...' : tailorMode === 'retailor' ? 'Re-tailoring...' : 'Tailoring...'}</>
+                  : tailorMode === 'copy' ? 'Copy with Tracer Links'
+                  : tailorMode === 'retailor' ? 'Re-tailor'
+                  : 'Generate Tailored CV'}
               </button>
             </div>
           </div>
