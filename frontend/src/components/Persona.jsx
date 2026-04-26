@@ -31,12 +31,6 @@ const RIGHT_SECTIONS = [
     usedBy: ['Cover letter (voice / tone anchors)'] },
 ]
 
-const RESUME_CONTENT_USED_BY = [
-  'Tailoring (rich pool of bullets)',
-  'Cover letter (anecdotes, achievements)',
-  'Scoring (when no per-company Resume picked — fallback)',
-]
-
 export default function Persona() {
   const [persona, setPersona] = useState(null)
   const [open, setOpen] = useState(() => {
@@ -109,27 +103,20 @@ export default function Persona() {
           {savedFlash}
         </div>
       )}
-      <div className="flex items-baseline gap-3 mb-2">
-        <h1 className="text-xl font-semibold dark:text-gray-100">Persona</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Single source of truth: tailoring + cover letter + autofill all read from here.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Persona</h1>
 
-      <div className="grid grid-cols-5 gap-6 mt-4">
-        {/* Left column — Resume Content (structured editor). col-span-2 of 5 mirrors
-            the editor width on /resumes (the page's left panel) */}
-        <div className="col-span-2">
+      <div className="flex gap-6 mt-4">
+        {/* Left column — Resume Content (structured editor). max-w-[640px] caps each
+            column near the /resumes editor width; trailing space appears at the right
+            and is the first thing eaten when the viewport narrows. */}
+        <div className="flex-1 min-w-0 max-w-[640px]">
           <div className="flex items-center gap-2 mb-3">
             <FileText size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Resume Content</h2>
             <span className="relative group inline-flex">
               <Info size={12} className="text-gray-400 cursor-help" />
-              <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-64 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
-                <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
-                {RESUME_CONTENT_USED_BY.map((u, i) => (
-                  <span key={i} className="block">• {u}</span>
-                ))}
+              <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-80 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
+                Your full work history, summary, skills, and achievements. The AI uses this as the source pool for tailored resumes (so it has lots of bullets to pick from), as raw material for cover letter anecdotes, and as the candidate profile when scoring jobs.
               </span>
             </span>
             <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves automatically</span>
@@ -140,19 +127,16 @@ export default function Persona() {
           />
         </div>
 
-        {/* Right column — same width as left so both columns match the
-            /resumes editor width (col-span-2 of 5, ~40% each, 20% trailing) */}
-        <div className="col-span-2">
+        {/* Right column — same width cap as left; trailing space sits at the right
+            of the page and is the first thing the viewport eats when narrowing. */}
+        <div className="flex-1 min-w-0 max-w-[640px]">
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
             <span className="relative group inline-flex">
               <Info size={12} className="text-gray-400 cursor-help" />
               <span className="invisible group-hover:visible absolute left-5 top-1/2 -translate-y-1/2 z-10 w-80 px-3 py-2 rounded bg-gray-900 dark:bg-gray-700 text-gray-100 text-[11px] font-normal shadow-lg leading-relaxed">
-                <span className="block text-gray-300 dark:text-gray-400 mb-1">Used by:</span>
-                {RIGHT_SECTIONS.map(s => (
-                  <span key={s.key} className="block"><strong className="text-gray-200">{s.label}</strong>: {(s.usedBy || []).join(', ')}</span>
-                ))}
+                Personal info used to auto-fill job application forms — contact details, work authorization, EEO answers, salary expectations, work-model preferences, and reusable answers to screener questions. Not used by the AI for resume generation or scoring.
               </span>
             </span>
             <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">Saves automatically</span>
