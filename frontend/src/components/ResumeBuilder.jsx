@@ -400,19 +400,21 @@ export default function ResumeBuilder() {
     if (!tailorJobId && !tailorJdText.trim()) return
     setTailoring(true)
     try {
-      let data
       if (tailorMode === 'copy') {
+        // Copy returns the new Resume body synchronously — safe to select.
         const resp = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: tailorJobId })
-        data = resp.data
+        await fetchResumes()
+        selectResume(resp.data)
       } else {
+        // Tailor is a background job (202 + run_id, no resume body). Don't try to
+        // select the result — the pendingTailors poll picks up the run and the
+        // new row appears in the sidebar when it completes.
         const payload = { base_resume_id: baseId }
         if (tailorJobId) payload.job_id = tailorJobId
         else payload.job_description = tailorJdText.trim()
-        const resp = await api.post('/resumes/tailor', payload)
-        data = resp.data
+        await api.post('/resumes/tailor', payload)
+        await fetchResumes()
       }
-      await fetchResumes()
-      selectResume(data)
       setShowTailorModal(false)
       setTailorJobId('')
       setTailorJdText('')
@@ -828,14 +830,23 @@ export default function ResumeBuilder() {
             <div className="flex items-center gap-2 flex-wrap mb-3 text-xs">
               {selectedId && !resumes.find(r => r.id === selectedId)?.is_base && (
                 <>
-                  <button onClick={() => {
+                  <button onClick={async () => {
                     const r = resumes.find(r => r.id === selectedId)
-                    if (r?.parent_id && r?.job_id) {
-                      setTailoring(true)
-                      api.post('/resumes/tailor', { base_resume_id: r.parent_id, job_id: r.job_id })
-                        .then(async ({ data }) => { await fetchResumes(); selectResume(data); setTailoring(false) })
-                        .catch(e => { alert('Re-tailor failed: ' + e.message); setTailoring(false) })
+                    if (!r?.job_id) return
+                    // parent_id is null for resumes tailored from Persona — fall back
+                    // to the magic 'persona' base id in that case.
+                    const baseId = r.parent_id || 'persona'
+                    setTailoring(true)
+                    try {
+                      // Tailor is now a background job (returns 202 + run_id, no resume body).
+                      // Don't try to select the result — the pendingTailors poll picks up the
+                      // new run, and fetchResumes() will surface the row when it lands.
+                      await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: r.job_id })
+                      await fetchResumes()
+                    } catch (e) {
+                      alert('Re-tailor failed: ' + (e.response?.data?.detail || e.message))
                     }
+                    setTailoring(false)
                   }} disabled={tailoring}
                     className="text-xs px-2.5 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1">
                     <Wand2 size={12} /> {tailoring ? 'Tailoring...' : 'Re-tailor'}
