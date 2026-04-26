@@ -1221,9 +1221,9 @@ export default function JobFeed() {
                   <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Requirement Mapping</h3>
                   <table className="w-full text-xs table-fixed">
                     <colgroup>
-                      <col style={{width: '47%'}} />
-                      <col style={{width: '47%'}} />
-                      <col style={{width: '6%'}} />
+                      <col style={{width: '48%'}} />
+                      <col style={{width: '48%'}} />
+                      <col style={{width: '4%'}} />
                     </colgroup>
                     <thead>
                       <tr className="border-b dark:border-gray-700">
