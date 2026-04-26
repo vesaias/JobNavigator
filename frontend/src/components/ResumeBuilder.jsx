@@ -147,6 +147,8 @@ export default function ResumeBuilder() {
   const [resumeDropdownOpen, setResumeDropdownOpen] = useState(false)
   const [jobSearch, setJobSearch] = useState('')
   const [tailorMode, setTailorMode] = useState('tailor') // 'tailor' or 'copy'
+  const [tailorFromPersona, setTailorFromPersona] = useState(false)
+  const [personaPopulated, setPersonaPopulated] = useState(false)
   const [showDiffModal, setShowDiffModal] = useState(false)
   const [baseData, setBaseData] = useState(null)
   const [diffDecisions, setDiffDecisions] = useState({})
@@ -215,6 +217,12 @@ export default function ResumeBuilder() {
     fetchPending()
     const handle = setInterval(fetchPending, 3000)
     return () => { cancelled = true; clearInterval(handle) }
+  }, [])
+
+  useEffect(() => {
+    api.get('/persona')
+      .then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0))
+      .catch(() => setPersonaPopulated(false))
   }, [])
 
   useEffect(() => {
@@ -387,16 +395,17 @@ export default function ResumeBuilder() {
   }
 
   const tailorForJob = async () => {
-    if (!selectedId) return
+    const baseId = tailorFromPersona ? 'persona' : selectedId
+    if (!baseId) return
     if (!tailorJobId && !tailorJdText.trim()) return
     setTailoring(true)
     try {
       let data
       if (tailorMode === 'copy') {
-        const resp = await api.post('/resumes/copy', { base_resume_id: selectedId, job_id: tailorJobId })
+        const resp = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: tailorJobId })
         data = resp.data
       } else {
-        const payload = { base_resume_id: selectedId }
+        const payload = { base_resume_id: baseId }
         if (tailorJobId) payload.job_id = tailorJobId
         else payload.job_description = tailorJdText.trim()
         const resp = await api.post('/resumes/tailor', payload)
@@ -407,6 +416,7 @@ export default function ResumeBuilder() {
       setShowTailorModal(false)
       setTailorJobId('')
       setTailorJdText('')
+      setTailorFromPersona(false)
     } catch (e) {
       console.error(e)
       alert((tailorMode === 'copy' ? 'Copy' : 'Tailoring') + ' failed: ' + (e.response?.data?.detail || e.message))
@@ -1208,6 +1218,16 @@ export default function ResumeBuilder() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{tailorMode === 'copy' ? 'Copy Resume for Job' : 'Tailor Resume for Job'}</h3>
+            {tailorMode !== 'copy' && personaPopulated && (
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-xs cursor-pointer text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" checked={tailorFromPersona}
+                    onChange={e => setTailorFromPersona(e.target.checked)}
+                    className="rounded border-gray-300 dark:border-gray-600" />
+                  Tailor from <span className="text-purple-600 dark:text-purple-400 font-medium">Persona</span> instead of the selected resume
+                </label>
+              </div>
+            )}
             <div className="mb-4">
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Select Job</label>
               <input

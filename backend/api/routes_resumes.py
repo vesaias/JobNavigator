@@ -332,10 +332,16 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     if not job_id and not job_description:
         raise HTTPException(400, "Either job_id or job_description is required")
 
-    # Fast-fail: base resume must exist
-    base = db.query(Resume).filter(Resume.id == base_resume_id).first()
-    if not base:
-        raise HTTPException(404, "Base resume not found")
+    # Fast-fail: base resume must exist. Reserved id 'persona' resolves to the
+    # singleton Persona's resume_content — must be non-empty.
+    if base_resume_id == "persona":
+        persona = db.query(Persona).filter(Persona.id == 1).first()
+        if not persona or not (persona.resume_content or {}):
+            raise HTTPException(400, "Persona has no resume_content — fill it in /persona first")
+    else:
+        base = db.query(Resume).filter(Resume.id == base_resume_id).first()
+        if not base:
+            raise HTTPException(404, "Base resume not found")
 
     # Fast-fail: job must exist (if job_id given) and have description
     if job_id:
@@ -387,11 +393,31 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
     async with _get_tailoring_semaphore():
         db = SessionLocal()
         try:
-            base = db.query(Resume).filter(Resume.id == base_resume_id).first()
-            if not base:
-                logger.error(f"Tailor: base resume {base_resume_id} missing at execution time")
-                raise RuntimeError(f"Tailor: base resume {base_resume_id} missing at execution time")
-            base_data = base.json_data or {}
+            # Reserved id 'persona' uses the singleton Persona's resume_content as
+            # the base. The output Resume has parent_id=None since Persona isn't a
+            # Resume row.
+            persona_as_base = (base_resume_id == "persona")
+            if persona_as_base:
+                persona_row = db.query(Persona).filter(Persona.id == 1).first()
+                if not persona_row or not (persona_row.resume_content or {}):
+                    logger.error("Tailor: persona has no resume_content at execution time")
+                    raise RuntimeError("Tailor: persona has no resume_content at execution time")
+                base = None
+                base_data = persona_row.resume_content or {}
+                base_name = "Persona"
+                base_template = None
+                base_page_format = None
+                base_id_for_parent = None
+            else:
+                base = db.query(Resume).filter(Resume.id == base_resume_id).first()
+                if not base:
+                    logger.error(f"Tailor: base resume {base_resume_id} missing at execution time")
+                    raise RuntimeError(f"Tailor: base resume {base_resume_id} missing at execution time")
+                base_data = base.json_data or {}
+                base_name = base.name
+                base_template = base.template
+                base_page_format = base.page_format
+                base_id_for_parent = base.id
 
             jd_text = job_description_override or ""
             job_name = ""
@@ -422,8 +448,8 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             # Persona uses the same JSON shape as a Resume — its summary, experience entries,
             # and skills augment (not replace) the base Resume so the model has more raw
             # material to reframe. Tailor system prompt forbids inventing facts, so this
-            # only widens the truthful pool.
-            persona = db.query(Persona).filter(Persona.id == 1).first()
+            # only widens the truthful pool. Skip when persona IS the base (already in).
+            persona = None if persona_as_base else db.query(Persona).filter(Persona.id == 1).first()
             persona_content = (persona.resume_content if persona else {}) or {}
             if persona_content:
                 p_summary = persona_content.get("summary") or ""
@@ -515,14 +541,14 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             if "skills" in llm_result:
                 tailored_data["skills"] = llm_result["skills"]
 
-            name = f"{base.name} \u2192 {job_name}" if job_name else f"{base.name} (tailored)"
+            name = f"{base_name} \u2192 {job_name}" if job_name else f"{base_name} (tailored)"
             tailored = Resume(
                 name=name,
                 is_base=False,
-                parent_id=base.id,
+                parent_id=base_id_for_parent,
                 job_id=job_id,
-                template=base.template,
-                page_format=base.page_format,
+                template=base_template,
+                page_format=base_page_format,
                 json_data=tailored_data,
             )
             db.add(tailored)
