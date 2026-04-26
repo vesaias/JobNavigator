@@ -547,7 +547,7 @@ export default function SettingsPage() {
         )}
 
         <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tailoring Prompt</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Resume Tailoring Prompt</label>
           <textarea
             className="w-full border rounded px-3 py-2 text-sm font-mono dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
             rows={10}
@@ -555,7 +555,23 @@ export default function SettingsPage() {
             onBlur={e => saveSetting('cv_tailor_prompt', e.target.value)}
             placeholder="CV tailoring prompt template..."
           />
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Placeholders: {'{resume_json}'}, {'{job_description}'}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Used when tailoring from a base Resume. Placeholders: {'{resume_json}'}, {'{job_description}'}
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Persona Tailoring Prompt</label>
+          <textarea
+            className="w-full border rounded px-3 py-2 text-sm font-mono dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            rows={10}
+            defaultValue={settings.persona_tailor_prompt || ''}
+            onBlur={e => saveSetting('persona_tailor_prompt', e.target.value)}
+            placeholder="Persona tailoring prompt template (selects 3-5 best bullets per role from rich pool)..."
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Used when tailoring from Persona (richer pool — needs constrained selection). Falls back to the Resume prompt if empty. Placeholders: {'{resume_json}'}, {'{job_description}'}
+          </p>
         </div>
       </section>
 

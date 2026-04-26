@@ -2,6 +2,7 @@
 import io
 import json
 import logging
+import re
 import uuid as _uuid
 from pathlib import Path
 from typing import Optional
@@ -12,6 +13,139 @@ from sqlalchemy.orm import Session
 
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow, Persona
 from backend.job_monitor import launch_background, JobAlreadyRunningError
+
+
+# ── Persona experience merge helpers ─────────────────────────────────────────
+# Used by _tailor_impl when merging Persona.resume_content's experience entries
+# into a base Resume's experience. Two-stage:
+#   1. Match entries by normalized company name (case-insensitive, suffix-stripped) +
+#      coarse title-root (Project|Product|Program Manager → "manager")
+#   2. For matched entries, merge bullets — drop persona bullets that duplicate base
+#      bullets via combined Jaccard + numeric-anchor heuristic.
+# Thresholds tuned against real-world data (see analyze_bullet_dupes.py): J >= 0.40
+# with shared numeric anchor catches all 27 true dups in the corpus zero false
+# positives; J >= 0.50 lexical-only catches the rare paraphrase pair.
+
+_COMPANY_SUFFIX_RE = re.compile(r'\b(inc|corp|corporation|ltd|llc|gmbh|ag|sa|plc|co)\.?$', re.IGNORECASE)
+_NUMERIC_RE = re.compile(r'\$?\d+(?:[.,]\d+)?[KMB%+]*')
+_WORD_RE = re.compile(r'[a-zA-Z]+')
+
+_BULLET_STOPWORDS = {
+    "a", "an", "the", "and", "or", "of", "to", "in", "on", "at",
+    "by", "for", "with", "from", "as", "is", "was", "were", "be",
+    "been", "being", "have", "has", "had", "do", "does", "did",
+    "this", "that", "these", "those", "it", "its", "i", "we", "our",
+    "you", "your", "into", "via", "across", "per",
+}
+
+_TITLE_ROOTS = (
+    "manager", "engineer", "analyst", "developer", "designer",
+    "lead", "director", "vp", "chief", "intern", "consultant",
+    "scientist", "researcher", "specialist", "architect", "owner",
+)
+
+
+def _normalize_company(s: str) -> str:
+    """Lowercase + strip common suffixes (Inc., Corp., LLC, GmbH, AG, ...)."""
+    if not s:
+        return ""
+    s = s.strip().lower().rstrip(",.")
+    return _COMPANY_SUFFIX_RE.sub("", s).strip().rstrip(",.")
+
+
+def _normalize_title_root(s: str) -> str:
+    """Collapse role variants to a single root, e.g.
+       'Senior Project Manager' / 'Senior Product Manager' / 'Senior Program Manager' → 'manager'.
+       Falls back to the lowercased title if no known root matches."""
+    s = (s or "").strip().lower()
+    if not s:
+        return ""
+    for root in _TITLE_ROOTS:
+        if root in s:
+            return root
+    return s
+
+
+def _bullet_stem(w: str) -> str:
+    for suf in ("ings", "ing", "edly", "ed", "ly", "es", "s"):
+        if len(w) > len(suf) + 2 and w.endswith(suf):
+            return w[: -len(suf)]
+    return w
+
+
+def _bullet_tokens(s: str) -> set:
+    return {_bullet_stem(w.lower()) for w in _WORD_RE.findall(s or "") if w.lower() not in _BULLET_STOPWORDS}
+
+
+def _bullet_jaccard(a: str, b: str) -> float:
+    ta, tb = _bullet_tokens(a), _bullet_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def _numeric_anchors(s: str) -> set:
+    return set(_NUMERIC_RE.findall(s or ""))
+
+
+def _is_duplicate_bullet(a: str, b: str) -> bool:
+    """Two bullets are duplicates if:
+       - they share a numeric anchor AND have Jaccard ≥ 0.40, OR
+       - they have Jaccard ≥ 0.50 (no shared numeric anchor required)."""
+    if _numeric_anchors(a) & _numeric_anchors(b):
+        return _bullet_jaccard(a, b) >= 0.40
+    return _bullet_jaccard(a, b) >= 0.50
+
+
+def _merge_persona_experience(base_exp: list, persona_exp: list) -> list:
+    """Merge persona experience entries into base experience, returning a new list.
+
+    For each persona entry: find the base entry with the same normalized company AND
+    matching title-root; if found, append persona bullets that don't duplicate any
+    base bullet (via Jaccard + numeric-anchor). If no entry matches, append the
+    persona entry wholesale (it's a role the base resume doesn't list)."""
+    if not persona_exp:
+        return [dict(e) for e in (base_exp or [])]
+    if not base_exp:
+        return [dict(e) for e in persona_exp]
+
+    # Deep-clone base entries so we don't mutate the caller's data
+    merged = [{**e, "bullets": list(e.get("bullets", []) or [])} for e in base_exp]
+
+    # Index merged entries by normalized company → list of indices
+    by_company = {}
+    for i, e in enumerate(merged):
+        cn = _normalize_company(e.get("company", ""))
+        if cn:
+            by_company.setdefault(cn, []).append(i)
+
+    for p_exp in persona_exp:
+        p_company = _normalize_company(p_exp.get("company", ""))
+        candidates = by_company.get(p_company, [])
+        chosen = None
+        if candidates:
+            p_root = _normalize_title_root(p_exp.get("title", ""))
+            for i in candidates:
+                if _normalize_title_root(merged[i].get("title", "")) == p_root:
+                    chosen = i
+                    break
+            if chosen is None:
+                chosen = candidates[0]  # fallback — same company, different role flavor
+
+        if chosen is not None:
+            existing = merged[chosen]["bullets"]
+            for p_bullet in (p_exp.get("bullets") or []):
+                if not any(_is_duplicate_bullet(p_bullet, eb) for eb in existing):
+                    existing.append(p_bullet)
+        else:
+            new_entry = {**p_exp, "bullets": list(p_exp.get("bullets", []) or [])}
+            merged.append(new_entry)
+            cn = _normalize_company(p_exp.get("company", ""))
+            if cn:
+                by_company.setdefault(cn, []).append(len(merged) - 1)
+
+    return merged
+# ─────────────────────────────────────────────────────────────────────────────
 
 logger = logging.getLogger("jobnavigator.resumes")
 
@@ -454,38 +588,30 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             }
 
             # Merge Persona.resume_content as a richer pool the LLM may draw from.
-            # Persona uses the same JSON shape as a Resume — its summary, experience entries,
-            # and skills augment (not replace) the base Resume so the model has more raw
-            # material to reframe. Tailor system prompt forbids inventing facts, so this
-            # only widens the truthful pool. Skip when persona IS the base (already in).
+            # Skipped when persona IS the base (it's already there). Two-stage merge:
+            #   - Experience: match entries by normalized company + title-root, then
+            #     append non-duplicate bullets (Jaccard + numeric-anchor heuristic).
+            #     Persona's summary is intentionally NOT appended — the base resume's
+            #     summary is its tuned framing; mixing in a second voice confuses the LLM.
+            #   - Skills: dedupe items per category.
             persona = None if persona_as_base else db.query(Persona).filter(Persona.id == 1).first()
             persona_content = (persona.resume_content if persona else {}) or {}
             if persona_content:
-                p_summary = persona_content.get("summary") or ""
-                if p_summary and p_summary != resume_sections["summary"]:
-                    if resume_sections["summary"]:
-                        resume_sections["summary"] = f"{resume_sections['summary']}\n\n{p_summary}"
-                    else:
-                        resume_sections["summary"] = p_summary
-
-                seen_keys = {(e.get("title", ""), e.get("company", ""))
-                             for e in resume_sections["experience"]}
-                for p_exp in persona_content.get("experience", []) or []:
-                    key = (p_exp.get("title", ""), p_exp.get("company", ""))
-                    if key not in seen_keys:
-                        resume_sections["experience"].append(p_exp)
-                        seen_keys.add(key)
+                resume_sections["experience"] = _merge_persona_experience(
+                    resume_sections["experience"],
+                    persona_content.get("experience", []) or [],
+                )
 
                 p_skills = persona_content.get("skills") or {}
                 if isinstance(p_skills, dict):
                     for category, items in p_skills.items():
                         existing = resume_sections["skills"].get(category)
                         if isinstance(items, list) and isinstance(existing, list):
-                            merged = list(existing)
+                            merged_items = list(existing)
                             for item in items:
-                                if item not in merged:
-                                    merged.append(item)
-                            resume_sections["skills"][category] = merged
+                                if item not in merged_items:
+                                    merged_items.append(item)
+                            resume_sections["skills"][category] = merged_items
                         elif category not in resume_sections["skills"]:
                             resume_sections["skills"][category] = items
 
