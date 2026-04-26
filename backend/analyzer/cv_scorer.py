@@ -38,37 +38,88 @@ def reset_scoring_semaphore():
 
 
 def _flatten_resume(json_data: dict) -> str:
-    """Render a Resume.json_data dict to plaintext for LLM scoring.
-    Mirrors the format CVs were extracted to — summary, experience bullets,
-    skills lines, education — newline-separated.
+    """Render a Resume.json_data dict (or Persona.resume_content — same shape) to plaintext
+    for LLM scoring. Uses '## Section' headers so the LLM sees clear structure, and
+    includes all six standard sections (header, summary, experience, skills, education,
+    projects, publications) when present. Empty sections are omitted entirely.
     """
     if not json_data:
         return ""
     parts = []
+
+    header = json_data.get("header") or {}
+    if isinstance(header, dict):
+        if header.get("name"):
+            parts.append(str(header["name"]))
+        contact_bits = []
+        for key in ("email", "phone", "linkedin", "github", "website", "location"):
+            if header.get(key):
+                contact_bits.append(str(header[key]))
+        if contact_bits:
+            parts.append(" | ".join(contact_bits))
+
     summary = json_data.get("summary")
     if summary:
+        parts.append("## Summary")
         parts.append(str(summary))
-    for exp in json_data.get("experience", []) or []:
-        title = exp.get("title", "")
-        company = exp.get("company", "")
-        dates = exp.get("dates", "")
-        parts.append(f"{title} at {company} ({dates})".strip())
-        for b in exp.get("bullets", []) or []:
-            parts.append(f"- {b}")
+
+    experience = json_data.get("experience") or []
+    if experience:
+        parts.append("## Experience")
+        for exp in experience:
+            title = exp.get("title", "")
+            company = exp.get("company", "")
+            dates = exp.get("dates", "")
+            line = f"{title} at {company} ({dates})".strip(" ()")
+            if line:
+                parts.append(line)
+            for b in exp.get("bullets", []) or []:
+                parts.append(f"- {b}")
+
     skills = json_data.get("skills") or {}
-    if isinstance(skills, dict):
-        for category, items in skills.items():
-            if isinstance(items, list):
-                parts.append(f"{category}: {', '.join(str(i) for i in items)}")
-            else:
-                parts.append(f"{category}: {items}")
-    elif isinstance(skills, list):
-        parts.append(", ".join(str(s) for s in skills))
-    for edu in json_data.get("education", []) or []:
-        degree = edu.get("degree", "")
-        school = edu.get("school", "")
-        year = edu.get("year", "")
-        parts.append(f"{degree} — {school}, {year}".strip(" —,"))
+    if skills:
+        parts.append("## Skills")
+        if isinstance(skills, dict):
+            for category, items in skills.items():
+                if isinstance(items, list):
+                    parts.append(f"{category}: {', '.join(str(i) for i in items)}")
+                else:
+                    parts.append(f"{category}: {items}")
+        elif isinstance(skills, list):
+            parts.append(", ".join(str(s) for s in skills))
+
+    education = json_data.get("education") or []
+    if education:
+        parts.append("## Education")
+        for edu in education:
+            degree = edu.get("degree", "")
+            school = edu.get("school", "")
+            year = edu.get("year", "")
+            parts.append(f"{degree} — {school}, {year}".strip(" —,"))
+
+    projects = json_data.get("projects") or []
+    if projects:
+        parts.append("## Projects")
+        for proj in projects:
+            name = proj.get("name", "")
+            desc = proj.get("description", "")
+            line = f"{name}: {desc}".strip(": ")
+            if line:
+                parts.append(line)
+            for b in proj.get("bullets", []) or []:
+                parts.append(f"- {b}")
+
+    publications = json_data.get("publications") or []
+    if publications:
+        parts.append("## Publications")
+        for pub in publications:
+            title = pub.get("title", "")
+            venue = pub.get("venue", "")
+            year = pub.get("year", "")
+            line = f"{title} — {venue}, {year}".strip(" —,")
+            if line:
+                parts.append(line)
+
     return "\n".join(p for p in parts if p)
 
 
@@ -237,7 +288,7 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
     cv_sections = []
     cv_names = list(cv_texts.keys())
     for i, (name, text) in enumerate(cv_texts.items(), 1):
-        cv_sections.append(f"CV VERSION {i} — {name}:\n{text}")
+        cv_sections.append(f"Resume Version {i} — {name}:\n{text}")
 
     # Replace CV_NAMES_HERE placeholder in output schema
     score_fields = ", ".join(f'"{name}": 0-100' for name in cv_names)
