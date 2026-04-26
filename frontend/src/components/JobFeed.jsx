@@ -1151,7 +1151,7 @@ export default function JobFeed() {
         const score = reportJob.cv_scores?.[activeCv]
         return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setReportJob(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[700px] max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[1050px] max-w-[95vw] max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b dark:border-gray-700">
               <div className="min-w-0">
@@ -1234,7 +1234,7 @@ export default function JobFeed() {
                             {req.requirement}
                             {req.severity === 'preferred' && <span className="ml-1 text-[9px] text-gray-400">(preferred)</span>}
                           </td>
-                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400">{req.cv_evidence || req.cv_match || '\u2014'}</td>
+                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400">{req.cv_evidence || req.cv_match || '-'}</td>
                           <td className={`py-1.5 text-center ${req.matched ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{req.matched ? '\u2713' : '\u2717'}</td>
                         </tr>
                       ))}

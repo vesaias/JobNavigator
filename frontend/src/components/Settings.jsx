@@ -437,7 +437,7 @@ export default function SettingsPage() {
             <option value="full">Full (score + keyword analysis + report)</option>
           </select>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Ultimate fallback for the auto-scorer. Used when neither the source Company nor the Search has its own depth override. Saved jobs always get Full regardless.
+            Ultimate fallback for the auto-scorer. Used when neither the source Company nor the Search has its own depth override.
           </p>
         </div>
         <div className="mt-4">
