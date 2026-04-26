@@ -1219,22 +1219,27 @@ export default function JobFeed() {
               {rpt.requirement_mapping?.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Requirement Mapping</h3>
-                  <table className="w-full text-xs">
+                  <table className="w-full text-xs table-fixed">
+                    <colgroup>
+                      <col style={{width: '47%'}} />
+                      <col style={{width: '47%'}} />
+                      <col style={{width: '6%'}} />
+                    </colgroup>
                     <thead>
                       <tr className="border-b dark:border-gray-700">
                         <th className="text-left py-1.5 text-gray-500 dark:text-gray-400 font-medium">Requirement</th>
                         <th className="text-left py-1.5 text-gray-500 dark:text-gray-400 font-medium">Resume Match</th>
-                        <th className="text-center py-1.5 w-16 text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                        <th className="text-center py-1.5 text-gray-500 dark:text-gray-400 font-medium">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rpt.requirement_mapping.map((req, i) => (
                         <tr key={i} className="border-b dark:border-gray-700">
-                          <td className="py-1.5 pr-2 text-gray-700 dark:text-gray-300">
+                          <td className="py-1.5 pr-2 text-gray-700 dark:text-gray-300 align-top break-words">
                             {req.requirement}
                             {req.severity === 'preferred' && <span className="ml-1 text-[9px] text-gray-400">(preferred)</span>}
                           </td>
-                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400">{req.matched ? (req.cv_evidence || req.cv_match || '-') : '-'}</td>
+                          <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-400 align-top break-words">{req.matched ? (req.cv_evidence || req.cv_match || '-') : '-'}</td>
                           <td className={`py-1.5 text-center ${req.matched ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{req.matched ? '\u2713' : '\u2717'}</td>
                         </tr>
                       ))}
