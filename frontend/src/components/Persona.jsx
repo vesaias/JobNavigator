@@ -139,8 +139,9 @@ export default function Persona() {
           />
         </div>
 
-        {/* Right column — everything else */}
-        <div className="col-span-3">
+        {/* Right column — same width as left so both columns match the
+            /resumes editor width (col-span-2 of 5, ~40% each, 20% trailing) */}
+        <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Autofill Content</h2>
