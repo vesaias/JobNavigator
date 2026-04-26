@@ -595,7 +595,10 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
             company = _find_company_for_job(db, job)
             cv_texts = _get_resume_texts_for_company(db, company) if company else (_get_default_resume(db) or _get_resume_texts(db))
         if not cv_texts:
-            logger.warning("No CVs uploaded, cannot score")
+            logger.warning(
+                "score_single_job: empty cv_texts (job=%s, cv_ids=%r) — nothing to score against",
+                job_id, cv_ids,
+            )
             return
 
         # Pre-fetch job text (may do live page fetch + cache, needs DB)
