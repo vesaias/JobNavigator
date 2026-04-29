@@ -20,7 +20,7 @@ from backend.models.db import (
 )
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
 from backend.scraper._shared.filters import _apply_company_filters
-from backend.scraper._shared.dedup import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash, _normalize_url
 from backend.scraper.ats import (
     workday, greenhouse, lever, ashby, oracle_hcm,
     phenom, talentbrew, rippling, meta, google, generic,
@@ -238,7 +238,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
                     content_hash=content_hash,
                     company=company.name,
                     title=j["title"],
-                    url=j["url"],
+                    url=_normalize_url(j["url"]) or j["url"],
                     source="direct",
                     status="new",
                     seen=False,
@@ -285,7 +285,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None) -> di
                     content_hash=make_content_hash(company.name, j["title"]),
                     company=company.name,
                     title=j["title"],
-                    url=j["url"],
+                    url=_normalize_url(j["url"]) or j["url"],
                     source="direct",
                     status="ignored",
                     seen=False,
@@ -489,7 +489,7 @@ async def scrape_url_mode(search: Search) -> dict:
                     content_hash=content_hash,
                     company="",
                     title=j["title"],
-                    url=j["url"],
+                    url=_normalize_url(j["url"]) or j["url"],
                     source="playwright_direct",
                     search_id=search.id,
                     status="new",

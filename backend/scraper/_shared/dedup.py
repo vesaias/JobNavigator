@@ -29,6 +29,8 @@ _DEFAULT_TRACKING_PARAMS = {
     "partnerid", "siteid", "bid", "customredirect",
     "chnlid", "v", "ccd", "frd", "r", "a",
     "jk",
+    # Search-context noise (career page filters that leak into job hrefs):
+    "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
 }
 
 # Module-level cache — loaded from DB on first use or reload

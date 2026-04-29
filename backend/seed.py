@@ -160,6 +160,8 @@ DEFAULT_SETTINGS = {
         "partnerid", "siteid", "bid", "customredirect",
         "chnlid", "v", "ccd", "frd", "r", "a",
         "jk",
+        # Search-context noise (career page filters that leak into job hrefs):
+        "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
     ]), "URL query params stripped before dedup hashing — tracking/referral noise"),
 }
 
