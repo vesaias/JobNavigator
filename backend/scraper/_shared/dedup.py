@@ -68,13 +68,21 @@ def reload_tracking_params():
 
 
 def _normalize_url(url: str) -> str:
-    """Strip tracking/referral query params from a URL for dedup purposes."""
+    """Strip tracking/referral query params from a URL for dedup purposes.
+
+    Hostname and path are lowercased — Ashby, Greenhouse, etc. accept slugs in
+    arbitrary case (Distyl/distyl resolve to the same posting), so leaving case
+    intact lets the same job slip past external_id dedup.
+    """
     if not url:
         return ""
     try:
         params = _get_tracking_params()
         parsed = urlparse(url)
-        path = parsed.path
+        # Lowercase hostname + path. Query values left as-is (some carry
+        # case-sensitive tokens), tracking-param key match is already case-insensitive.
+        netloc = (parsed.netloc or "").lower()
+        path = (parsed.path or "").lower()
         # Strip ATS application/apply suffixes (Ashby, Lever, etc.)
         for suffix in ("/application", "/apply", "/thanks"):
             if path.endswith(suffix):
@@ -86,7 +94,7 @@ def _normalize_url(url: str) -> str:
         # Sort params for stable hashing
         new_query = urlencode(cleaned, doseq=True)
         # Remove fragment (anchors are display-only)
-        return urlunparse(parsed._replace(path=path, query=new_query, fragment=""))
+        return urlunparse(parsed._replace(netloc=netloc, path=path, query=new_query, fragment=""))
     except Exception:
         return url
 
