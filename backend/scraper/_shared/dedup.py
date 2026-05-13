@@ -68,24 +68,23 @@ def reload_tracking_params():
 
 
 def _normalize_url(url: str) -> str:
-    """Strip tracking/referral query params from a URL for dedup purposes.
+    """Strip tracking/referral query params, apply/thanks suffixes, and fragment.
 
-    Hostname and path are lowercased — Ashby, Greenhouse, etc. accept slugs in
-    arbitrary case (Distyl/distyl resolve to the same posting), so leaving case
-    intact lets the same job slip past external_id dedup.
+    Case is PRESERVED — Oracle HCM, Salesforce Workday and others use case-sensitive
+    path segments (`/hcmUI/CandidateExperience/`, `/External_Career_Site/`) whose
+    WAFs return 403 on lowercased paths. Callers that store this value get the
+    original casing; case-insensitive dedup happens in make_external_id below.
     """
     if not url:
         return ""
     try:
         params = _get_tracking_params()
         parsed = urlparse(url)
-        # Lowercase hostname + path. Query values left as-is (some carry
-        # case-sensitive tokens), tracking-param key match is already case-insensitive.
-        netloc = (parsed.netloc or "").lower()
-        path = (parsed.path or "").lower()
-        # Strip ATS application/apply suffixes (Ashby, Lever, etc.)
+        path = parsed.path
+        # Strip ATS application/apply suffixes (Ashby, Lever, etc.) — case-insensitive
+        # match so we don't miss /Apply or /APPLY variants, but preserve the rest.
         for suffix in ("/application", "/apply", "/thanks"):
-            if path.endswith(suffix):
+            if path.lower().endswith(suffix):
                 path = path[:-len(suffix)]
         qs = parse_qs(parsed.query, keep_blank_values=False)
         # Remove tracking params (case-insensitive key match) + all utm_* params
@@ -94,18 +93,39 @@ def _normalize_url(url: str) -> str:
         # Sort params for stable hashing
         new_query = urlencode(cleaned, doseq=True)
         # Remove fragment (anchors are display-only)
-        return urlunparse(parsed._replace(netloc=netloc, path=path, query=new_query, fragment=""))
+        return urlunparse(parsed._replace(path=path, query=new_query, fragment=""))
     except Exception:
         return url
 
 
+def _canonical_for_hash(url: str) -> str:
+    """Hash-only canonical form: stripped URL with host+path lowercased.
+
+    Splitting this from _normalize_url means the stored URL keeps its original case
+    (so click-through still works for Oracle/Workday WAFs) while dedup hashes
+    converge across case-divergent slugs (Distyl/distyl, JR338690/jr338690, etc.).
+    Query values are NOT lowercased — some carry case-sensitive tokens.
+    """
+    if not url:
+        return ""
+    stripped = _normalize_url(url)
+    try:
+        parsed = urlparse(stripped)
+        return urlunparse(parsed._replace(
+            netloc=(parsed.netloc or "").lower(),
+            path=(parsed.path or "").lower(),
+        ))
+    except Exception:
+        return stripped
+
+
 def make_external_id(company: str, title: str, url: str) -> str:
-    """Generate SHA256 hash for deduplication. Uses normalized URL only — title/company
-    changes on the same posting (e.g. 'PM - X' vs 'PM, X') won't bypass dedup.
+    """Generate SHA256 hash for deduplication. Uses canonical (lowercased) URL —
+    case-divergent slugs on the same posting hash identically.
     Falls back to company+title if URL is empty."""
-    clean_url = _normalize_url(url)
-    if clean_url:
-        return hashlib.sha256(clean_url.encode()).hexdigest()
+    canonical = _canonical_for_hash(url)
+    if canonical:
+        return hashlib.sha256(canonical.encode()).hexdigest()
     # Fallback for jobs without URLs
     raw = f"{company or ''}{title or ''}"
     return hashlib.sha256(raw.encode()).hexdigest()
