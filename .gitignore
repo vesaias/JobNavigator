@@ -136,8 +136,9 @@ backend/gmail_token.json
 backend/gmail_credentials.json
 backend/.linkedin_api/
 
-# Template bug
+# Personal Garamond templates (licensed Monotype fonts — kept local only)
 backend/resume_templates/garamond/
+backend/cover_letter_templates/garamond/
 *.TTF
 *.ttf
 
@@ -150,3 +151,4 @@ docker-compose.test.yml
 
 # git worktrees (isolated feature branches)
 .worktrees/
+resumes-example/
