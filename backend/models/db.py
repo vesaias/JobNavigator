@@ -297,16 +297,42 @@ class Resume(Base):
     job = relationship("Job", backref="resumes")
 
 
+# ── Cover Letter ──────────────────────────────────────────────────────────────
+# Job-specific (no is_base — every cover letter is generated for a job). Mirrors
+# Resume's storage so the PDF render + tracer-rewrite helpers are reused as-is.
+#   json_data shape:
+#     header{name, contact_items[{text,url}]}, recipient{company, manager, address},
+#     date, greeting, body_paragraphs[], closing, signature
+#   resume_id → the resume this letter pairs with (its evidence source)
+#   parent_id → previous version when regenerated
+class CoverLetter(Base):
+    __tablename__ = "cover_letters"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
+    resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True)
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="SET NULL"), nullable=True)
+    template = Column(String, default="garamond")
+    page_format = Column(String, default="letter")
+    json_data = Column(JSON, default={})
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+    updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    parent = relationship("CoverLetter", remote_side=[id], backref="revisions")
+    job = relationship("Job", backref="cover_letters")
+    resume = relationship("Resume", backref="cover_letters")
+
+
 # ── Persona ──────────────────────────────────────────────────────────────────
 # Singleton row (id=1). Each column is a JSON node consumed by a specific feature:
 #   contact          → tailoring, cover letter, autofill
 #   work_auth        → autofill
 #   demographics     → autofill (default to "decline")
 #   compensation     → autofill
-#   preferences      → autofill, future filtering
-#   resume_content   → tailoring, cover letter (rich pool of bullets, skills, etc.)
-#   qa_bank          → cover letter, autofill (reusable Q&A library)
-#   writing_samples  → cover letter (voice anchors)
+#   preferences      → autofill, cover letter (the "why this role/company" beat)
+#   resume_content   → tailoring (rich pool of bullets, skills, etc.)
+#   qa_bank          → autofill (reusable Q&A library for application questions)
 class Persona(Base):
     __tablename__ = "personas"
 
@@ -318,7 +344,6 @@ class Persona(Base):
     preferences = Column(JSON, default=dict)
     resume_content = Column(JSON, default=dict)
     qa_bank = Column(JSON, default=list)
-    writing_samples = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

@@ -120,6 +120,35 @@ async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -
     return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens)
 
 
+async def call_cover_letter_llm(prompt: str, system: str, max_tokens: int = 1500,
+                                cached_prefix: str | None = None) -> dict:
+    """Route to cover-letter-specific LLM provider. Returns {text, usage}.
+
+    Supports prompt caching (Claude API): the resume + persona-preferences prefix
+    is stable per resume, so regenerating in a different voice/length only pays
+    for the JD suffix.
+    """
+    db = SessionLocal()
+    try:
+        provider = _get_setting(db, "cover_letter_llm_provider", "")
+        model = _get_setting(db, "cover_letter_llm_model", "")
+        api_key = _get_setting(db, "cover_letter_llm_api_key", "")
+        if not provider:
+            provider = _get_setting(db, "llm_provider", "claude_api")
+        if not model:
+            model = _get_setting(db, "llm_model", "claude-sonnet-4-6")
+        if not api_key:
+            api_key = _get_setting(db, "llm_api_key", "")
+        base_url = _get_setting(db, "llm_base_url", "")
+    finally:
+        db.close()
+
+    logger.info(f"Cover-letter LLM call: provider={provider}, model={model}, max_tokens={max_tokens}, "
+                f"caching={'on' if cached_prefix and provider == 'claude_api' else 'off'}")
+    return await _dispatch(provider, model, api_key, base_url, prompt, system, max_tokens,
+                           cached_prefix=cached_prefix)
+
+
 async def _dispatch(provider: str, model: str, api_key: str, base_url: str,
                     prompt: str, system: str, max_tokens: int,
                     cached_prefix: str | None = None) -> dict:

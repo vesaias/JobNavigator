@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ header.name }} — Cover Letter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@page { size: {{ 'letter' if page_format == 'letter' else 'A4' }}; margin: 0; }
+html, body {
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10.5pt; line-height: 1.5; color: #1a1a1a; background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+.page { width: {{ '8.5in' if page_format == 'letter' else '210mm' }}; padding: 0.75in 0.85in; margin: 0 auto; }
+.header { margin-bottom: 22pt; }
+.header h1 { font-size: 20pt; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 4pt; }
+.header .contact { font-size: 9.5pt; color: #555; }
+.header .contact a { color: #555; text-decoration: none; }
+.header .contact .sep { margin: 0 6pt; color: #bbb; }
+.meta { margin-bottom: 16pt; color: #333; }
+.meta .date { margin-bottom: 12pt; }
+.meta .recipient { line-height: 1.4; }
+.greeting { margin-bottom: 12pt; font-weight: 600; }
+.body p { margin-bottom: 11pt; }
+.closing { margin-top: 16pt; }
+.signature { margin-top: 4pt; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+  {% if header %}
+  <div class="header">
+    <h1>{{ header.name }}</h1>
+    <div class="contact">
+      {% set parts = [] %}
+      {% for item in (header.contact_items or []) %}
+        {% if item.url %}
+          {% set href = item.url if (item.url.startswith('http') or item.url.startswith('mailto')) else 'https://' ~ item.url %}
+          {% set _ = parts.append('<a href="' ~ href ~ '">' ~ item.text ~ '</a>') %}
+        {% else %}
+          {% set _ = parts.append(item.text) %}
+        {% endif %}
+      {% endfor %}
+      {{ parts | join('<span class="sep">/</span>') }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="meta">
+    {% if date %}<div class="date">{{ date }}</div>{% endif %}
+    {% if recipient and (recipient.manager or recipient.company or recipient.address) %}
+    <div class="recipient">
+      {% if recipient.manager %}{{ recipient.manager }}<br>{% endif %}
+      {% if recipient.company %}{{ recipient.company }}<br>{% endif %}
+      {% if recipient.address %}{{ recipient.address }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if greeting %}<div class="greeting">{{ greeting }}</div>{% endif %}
+
+  <div class="body">
+    {% for para in (body_paragraphs or []) %}
+    <p>{{ para | bold }}</p>
+    {% endfor %}
+  </div>
+
+  {% if closing %}<div class="closing">{{ closing }}</div>{% endif %}
+  {% if signature %}<div class="signature">{{ signature }}</div>{% endif %}
+</div>
+</body>
+</html>

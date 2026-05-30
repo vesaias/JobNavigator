@@ -16,7 +16,6 @@ def test_persona_columns_present():
         "preferences",
         "resume_content",
         "qa_bank",
-        "writing_samples",
     }
     cols = {c.name for c in Persona.__table__.columns}
     missing = expected - cols

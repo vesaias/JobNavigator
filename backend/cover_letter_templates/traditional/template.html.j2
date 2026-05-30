@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ header.name }} — Cover Letter</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@page { size: {{ 'letter' if page_format == 'letter' else 'A4' }}; margin: 0; }
+html, body {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt; line-height: 1.5; color: #000; background: #fff;
+}
+.page { width: {{ '8.5in' if page_format == 'letter' else '210mm' }}; padding: 1in; margin: 0 auto; }
+.header { margin-bottom: 24pt; }
+.header h1 { font-size: 14pt; font-weight: 700; margin-bottom: 2pt; }
+.header .contact { font-size: 11pt; }
+.header .contact a { color: #000; text-decoration: none; }
+.header .contact .sep { margin: 0 4pt; }
+.meta { margin-bottom: 18pt; }
+.meta .date { margin-bottom: 14pt; }
+.meta .recipient { line-height: 1.4; }
+.greeting { margin-bottom: 14pt; }
+.body p { margin-bottom: 12pt; }
+.closing { margin-top: 18pt; }
+.signature { margin-top: 6pt; }
+</style>
+</head>
+<body>
+<div class="page">
+  {% if header %}
+  <div class="header">
+    <h1>{{ header.name }}</h1>
+    <div class="contact">
+      {% set parts = [] %}
+      {% for item in (header.contact_items or []) %}
+        {% if item.url %}
+          {% set href = item.url if (item.url.startswith('http') or item.url.startswith('mailto')) else 'https://' ~ item.url %}
+          {% set _ = parts.append('<a href="' ~ href ~ '">' ~ item.text ~ '</a>') %}
+        {% else %}
+          {% set _ = parts.append(item.text) %}
+        {% endif %}
+      {% endfor %}
+      {{ parts | join('<span class="sep">|</span>') }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="meta">
+    {% if date %}<div class="date">{{ date }}</div>{% endif %}
+    {% if recipient and (recipient.manager or recipient.company or recipient.address) %}
+    <div class="recipient">
+      {% if recipient.manager %}{{ recipient.manager }}<br>{% endif %}
+      {% if recipient.company %}{{ recipient.company }}<br>{% endif %}
+      {% if recipient.address %}{{ recipient.address }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if greeting %}<div class="greeting">{{ greeting }}</div>{% endif %}
+
+  <div class="body">
+    {% for para in (body_paragraphs or []) %}
+    <p>{{ para | bold }}</p>
+    {% endfor %}
+  </div>
+
+  {% if closing %}<div class="closing">{{ closing }}</div>{% endif %}
+  {% if signature %}<div class="signature">{{ signature }}</div>{% endif %}
+</div>
+</body>
+</html>

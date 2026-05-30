@@ -17,7 +17,7 @@ def test_persona_get_returns_singleton(api_client, test_db):
     assert resp.status_code == 200
     data = resp.json()
     for k in ("contact", "work_auth", "demographics", "compensation",
-              "preferences", "resume_content", "qa_bank", "writing_samples"):
+              "preferences", "resume_content", "qa_bank"):
         assert k in data, f"missing node: {k}"
 
 
