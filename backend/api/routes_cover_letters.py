@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
 
-from backend.models.db import get_db, CoverLetter, Resume, Job, Setting, Persona, TracerLink, SessionLocal
+from backend.models.db import get_db, CoverLetter, Resume, Job, Setting, Persona, TracerLink, TracerClickEvent, SessionLocal
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 from backend.api.routes_resumes import _get_browser, _rewrite_urls_with_tracers  # shared with resumes
 
@@ -156,6 +156,32 @@ def update_cover_letter(cl_id: str, body: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(cl)
     return _to_dict(cl, include_json_data=True)
+
+
+@router.get("/{cl_id}/tracer-stats")
+def get_tracer_stats(cl_id: str, db: Session = Depends(get_db)):
+    """Click stats per tracer link for a cover letter (mirrors the resume endpoint)."""
+    from sqlalchemy import func
+    links = db.query(TracerLink).filter(TracerLink.cover_letter_id == cl_id).all()
+    result = []
+    for link in links:
+        total = db.query(func.count(TracerClickEvent.id)).filter(
+            TracerClickEvent.tracer_link_id == link.id,
+            TracerClickEvent.is_likely_bot == False,
+        ).scalar()
+        last = db.query(func.max(TracerClickEvent.clicked_at)).filter(
+            TracerClickEvent.tracer_link_id == link.id,
+            TracerClickEvent.is_likely_bot == False,
+        ).scalar()
+        result.append({
+            "token": link.token,
+            "source_label": link.source_label,
+            "destination_url": link.destination_url,
+            "clicks": total or 0,
+            "last_clicked": last.isoformat() if last else None,
+            "is_active": link.is_active,
+        })
+    return result
 
 
 @router.delete("/{cl_id}")

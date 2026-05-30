@@ -297,10 +297,15 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
         return TracerLink(**kwargs)
 
     def _repoint(link, dest_url, label):
+        # Reassign this token to the current owner, clearing the other owner so a
+        # link never ends up owned by both (a resume + a cover letter for the same
+        # job derive the same {short_id}{stub} token and would otherwise collide).
         if owner_is_cl:
             link.cover_letter_id = cover_letter_id
+            link.resume_id = None
         else:
             link.resume_id = resume_id
+            link.cover_letter_id = None
         link.destination_url = dest_url
         link.source_label = label
 

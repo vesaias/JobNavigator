@@ -313,7 +313,9 @@ class CoverLetter(Base):
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
     resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="SET NULL"), nullable=True)
-    template = Column(String, default="garamond")
+    # garamond_alt (not garamond) — the garamond template dir is gitignored
+    # (licensed fonts), so it may be absent on a fresh clone.
+    template = Column(String, default="garamond_alt")
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), default=utcnow)

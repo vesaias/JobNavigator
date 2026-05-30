@@ -155,3 +155,64 @@ def test_generate_409_on_duplicate(api_client, test_db, monkeypatch):
     resp = api_client.post("/api/cover-letters/generate",
                            json={"resume_id": str(resume.id), "job_id": str(job.id)})
     assert resp.status_code == 409
+
+
+def test_generate_persona_base_validates_content(api_client, test_db, monkeypatch):
+    """resume_id='persona' fails fast when Persona has no resume_content, succeeds when it does."""
+    from backend.models.db import Persona
+    _seed_first_run(test_db)
+    job = _make_job(test_db)
+    test_db.add(Persona(id=1, resume_content={}))
+    test_db.commit()
+
+    # empty persona → 400
+    resp = api_client.post("/api/cover-letters/generate",
+                           json={"resume_id": "persona", "job_id": str(job.id)})
+    assert resp.status_code == 400
+
+    # fill persona, stub launch_background → 202
+    p = test_db.query(Persona).filter(Persona.id == 1).first()
+    p.resume_content = {"header": {"name": "Viktor"}, "summary": "PM."}
+    test_db.commit()
+    import backend.api.routes_cover_letters as rcl
+    monkeypatch.setattr(rcl, "launch_background", lambda *a, **kw: "run-1")
+    resp = api_client.post("/api/cover-letters/generate",
+                           json={"resume_id": "persona", "job_id": str(job.id)})
+    assert resp.status_code == 202
+
+
+# ── Tracer cross-owner isolation (guards the repoint bug) ────────────────────
+
+def test_tracer_repoint_clears_other_owner(test_db):
+    """A resume and a cover letter for the same job derive the same {short_id}{stub}
+    token. After rewriting both, the shared link must be owned by exactly one —
+    never both — so click attribution stays correct."""
+    import uuid
+    from backend.models.db import Setting, Resume, Job, CoverLetter, TracerLink
+    from backend.api.routes_resumes import _rewrite_urls_with_tracers
+
+    test_db.add(Setting(key="tracer_links_enabled", value="true"))
+    test_db.add(Setting(key="tracer_links_base_url", value="https://t.example.com"))
+    test_db.add(Setting(key="tracer_links_url_style", value="path_jobid"))
+    job = Job(id=uuid.uuid4(), external_id=uuid.uuid4().hex, company="Acme", title="PM",
+              url="https://acme.com/1", status="saved", short_id=7777)
+    test_db.add(job)
+    resume = Resume(id=uuid.uuid4(), name="PM", is_base=False, job_id=job.id,
+                    json_data={"header": {"name": "V", "contact_items": [{"text": "LinkedIn", "url": "linkedin.com/in/v", "stub": "l"}]}})
+    cl = CoverLetter(id=uuid.uuid4(), name="PM CL", job_id=job.id,
+                     json_data={"header": {"name": "V", "contact_items": [{"text": "LinkedIn", "url": "linkedin.com/in/v", "stub": "l"}]}})
+    test_db.add(resume)
+    test_db.add(cl)
+    test_db.commit()
+
+    # Rewrite resume → creates link owned by resume, token "7777l"
+    _rewrite_urls_with_tracers(resume.json_data, str(resume.id), test_db)
+    # Rewrite CL → same token; must repoint to CL and clear resume_id
+    _rewrite_urls_with_tracers(cl.json_data, None, test_db, cover_letter_id=str(cl.id), job_id=cl.job_id)
+
+    link = test_db.query(TracerLink).filter(TracerLink.token == "7777l").first()
+    assert link is not None
+    # Exactly one owner set
+    assert (link.resume_id is None) != (link.cover_letter_id is None)
+    assert str(link.cover_letter_id) == str(cl.id)
+    assert link.resume_id is None
