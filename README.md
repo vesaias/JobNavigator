@@ -86,9 +86,9 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 | **Multi-Source Discovery** | 6 scraping tiers: career pages (Playwright + 11 ATS), JobSpy (4 boards), LinkedIn Personal, Levels.fyi, Jobright.ai, Chrome Extension |
 | **AI CV Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-CV comparison, keyword analysis, requirement mapping, ATS tips. **Prompt caching** on Anthropic cuts repeat-scoring cost ~50%. |
 | **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens |
-| **Cover Letters** | AI-generated per job, grounded in the paired resume + persona; editable voice presets, 3 templates, PDF export, prompt-cached generation |
+| **Cover Letters** | AI-generated per job, grounded in the paired resume + persona; editable voice presets, 8 templates, PDF export, prompt-cached generation |
 | **Smart Dedup** | Two-layer: URL hash + cross-source content hash. Configurable tracking param stripping |
-| **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations |
+| **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations, in-app job preview |
 | **Application Board** | Kanban pipeline with drag-and-drop, status transition history |
 | **Chrome Extension** | Passive LinkedIn capture + save any job from any page |
 | **Gmail Monitor** | OAuth2 polling, auto-classifies responses, updates application status |
@@ -96,6 +96,8 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 | **H-1B Data** | Company LCA lookups from MyVisaJobs, JD exclusion scanning |
 | **Scheduling** | Cron-based: scraping, email checks, backups, cleanup, auto-reject |
 | **Dark Mode** | Full Tailwind dark mode across all pages |
+
+> **Note on the Job Feed preview pane:** the detail panel renders the live job posting in an `iframe`. Many career sites block being framed (via `X-Frame-Options` / CSP `frame-ancestors`, or cross-origin scripts that fail when embedded), so the in-app preview works best with a browser extension that strips frame-blocking headers (e.g. an "ignore X-Frame-Options" extension). Without one, some postings show blank — use the "Open" button to view them in a new tab. Applied jobs fall back to a cached snapshot that always renders.
 
 ## Quick Start
 
