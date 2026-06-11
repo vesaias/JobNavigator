@@ -4,7 +4,7 @@ sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 python-dotenv==1.2.2
 pdfplumber==0.11.9
-python-multipart==0.0.27
+python-multipart==0.0.27  # >=0.0.27 required: PYSEC DoS fix (Dependabot alert 6)
 apscheduler==3.10.4
 httpx==0.28.1
 anthropic==0.42.0
