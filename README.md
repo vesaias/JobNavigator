@@ -31,7 +31,7 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                PROCESSING                                   │
 │                                                                             │
-│   Dedup ────── URL hash + cross-source content hash                         │
+│   Dedup ────── URL-hash dedup, tracking params stripped                     │
 │   Filters ──── Title / company include & exclude, body exclusion phrases    │
 │   H-1B ─────── Company LCA data from MyVisaJobs (cached)                    │
 │   Salary ───── Extracted from posting, H-1B data, description               │
@@ -61,7 +61,7 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          RESUME + COVER LETTER                              │
 │                                                                             │
-│   Templates ── 8 resume + 3 cover-letter, auto-discovered (add your own)    │
+│   Templates ── 8 resume + 8 cover-letter, auto-discovered (add your own)    │
 │   AI Tailor ── Rewrites resume bullets/keywords from the scoring report     │
 │   AI Letter ── Job-specific cover letters from resume + JD, voice presets   │
 │   Export ───── PDF via Playwright, page count indicator                     │
@@ -72,7 +72,7 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                  TRACK                                      │
 │                                                                             │
-│   Tracer ───── Unique links per resume, tracks who opened your CV           │
+│   Tracer ───── Unique links per resume/letter, tracks who opened them       │
 │   Gmail ────── Auto-detects responses, updates application status           │
 │   Telegram ─── Job alerts, daily digest, scrape health notifications        │
 │                                                                             │
@@ -85,9 +85,9 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 |---------|-------------|
 | **Multi-Source Discovery** | 6 scraping tiers: career pages (Playwright + 11 ATS), JobSpy (4 boards), LinkedIn Personal, Levels.fyi, Jobright.ai, Chrome Extension |
 | **AI CV Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-CV comparison, keyword analysis, requirement mapping, ATS tips. **Prompt caching** on Anthropic cuts repeat-scoring cost ~50%. |
-| **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens |
+| **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens (cover letters too) |
 | **Cover Letters** | AI-generated per job, grounded in the paired resume + persona; editable voice presets, 8 templates, PDF export, prompt-cached generation |
-| **Smart Dedup** | Two-layer: URL hash + cross-source content hash. Configurable tracking param stripping |
+| **Smart Dedup** | URL-hash dedup with configurable tracking-param stripping; content hash stored per job for cross-source matching |
 | **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations, in-app job preview |
 | **Application Board** | Kanban pipeline with drag-and-drop, status transition history |
 | **Chrome Extension** | Passive LinkedIn capture + save any job from any page |
@@ -116,7 +116,7 @@ Open `http://localhost`. On first run, click "Sign In" with a blank API key to p
 1. Settings > AI tab — configure your LLM provider and API key
 2. Companies — activate a few seed companies or add your own
 3. Searches — configure a keyword search or activate LinkedIn Personal
-4. Upload your CV in Settings for AI scoring
+4. Resumes — create your resume (or import an existing PDF); it powers AI scoring
 
 ## Chrome Extension ("The Navigator")
 
