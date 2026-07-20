@@ -95,6 +95,7 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 | **Telegram Alerts** | New job alerts, daily digest, scrape health, inline action buttons |
 | **H-1B Data** | Company LCA lookups from MyVisaJobs, JD exclusion scanning |
 | **Scheduling** | Cron-based: scraping, email checks, backups, cleanup, auto-reject |
+| **Realtime 2027 Job Feed Packets** | Checks selected GitHub aggregate lists every 5 minutes, filters US SWE/AI/Data roles, and builds one mapped Persona resume packet per job |
 | **Dark Mode** | Full Tailwind dark mode across all pages |
 
 > **Note on the Job Feed preview pane:** the detail panel renders the live job posting in an `iframe`. Many career sites block being framed (via `X-Frame-Options` / CSP `frame-ancestors`, or cross-origin scripts that fail when embedded), so the in-app preview works best with a browser extension that strips frame-blocking headers (e.g. an "ignore X-Frame-Options" extension). Without one, some postings show blank — use the "Open" button to view them in a new tab. Applied jobs fall back to a cached snapshot that always renders.
@@ -129,6 +130,62 @@ Open `http://localhost`. On first run, click "Sign In" with a blank API key to p
 **Telegram** — Create bot via @BotFather, set token in `.env`, enter chat ID in Settings.
 
 **Gmail** — Run `python backend/gmail_oauth_setup.py`, set OAuth credentials in `.env`.
+
+## Realtime 2027 Job Feed Packets
+
+JobNavigator can continuously watch these public aggregate lists:
+
+- [speedyapply/2027-SWE-College-Jobs](https://github.com/speedyapply/2027-SWE-College-Jobs): USA internships and new-grad roles.
+- [vanshb03/Summer2027-Internships](https://github.com/vanshb03/Summer2027-Internships): internships.
+- [vanshb03/New-Grad-2027](https://github.com/vanshb03/New-Grad-2027): new-grad roles.
+
+The default workflow checks repository commit feeds every 5 minutes, downloads a list only after that repository changes, backfills the first 7 days, and prioritizes newly published jobs over the backlog. It keeps US SWE, AI/ML, and Data roles, rejects explicit citizenship/clearance/no-sponsorship restrictions, and flags ambiguous work-authorization language for review. Provider job IDs and canonical application URLs deduplicate the same posting across repositories.
+
+For every eligible job, the one-minute packet worker fetches the employer JD and creates a fact-constrained, one-page resume from **Persona**. Feed tailoring deliberately disables ATS scoring and speculative bullets: the model may select and reword existing evidence, but packet validation sends unsupported facts, new numeric claims, newly invented skills, or multi-page output to `needs_review`.
+
+### Setup
+
+1. Populate **Persona**, including contact email and the complete resume evidence pool.
+2. Configure a working LLM under **Settings > AI**.
+3. Re-authorize Gmail so the refresh token includes the new `gmail.send` scope:
+
+   ```bash
+   python backend/gmail_oauth_setup.py
+   ```
+
+   Copy the refreshed credentials into `.env`, then restart the backend. Without Gmail authorization, jobs and packets continue processing and unsent notifications remain pending for retry.
+4. Start the always-on services:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+5. Open **Settings > General > Realtime 2027 Job Feeds**. Confirm the sources, role families, notification email, 5-minute poll interval, 1-minute worker interval, and **Automatically tailor resumes**. Use **Run now** for a forced first poll.
+
+The monitor sends one Gmail alert when a candidate job is detected and another when its packet is `ready`, `needs_review`, `ineligible`, or permanently `failed` after three attempts. Emails contain the direct application URL and local packet path; PDFs are not attached.
+
+### Packet mapping and health
+
+Generated files persist on the host under:
+
+```text
+application-packets/
+  index.csv
+  YYYY-MM-DD/<stable-id>_<company>_<role>/
+    resume.pdf
+    resume.json
+    job.md
+    metadata.json
+```
+
+`application-packets/index.csv` is rebuilt atomically and maps the queue item, canonical Job, tailored Resume, direct application URL, source feeds, and packet directory. The directory is mounted by Docker Compose and ignored by Git.
+
+Operational endpoints:
+
+- `GET /api/job-feeds/status` — source checkpoints, upstream commit state, errors, and queue counts.
+- `POST /api/job-feeds/run` — force an immediate poll; this does not submit an application.
+
+Detection latency is bounded by the aggregate repository's own update delay plus the configured polling interval. The backend container must remain running. Authentication, employer questions, attestations, CAPTCHAs, and the final Submit action remain manual.
 
 ## Tech Stack
 

@@ -550,7 +550,15 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
         )
 
 
-async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_override: str | None):
+async def _tailor_impl(
+    base_resume_id: str,
+    job_id: str | None,
+    job_description_override: str | None,
+    *,
+    score_depth_override: str | None = None,
+    prompt_template_override: str | None = None,
+    allow_suggested_bullets: bool = True,
+):
     """Background worker: does the actual LLM tailoring work.
 
     Opens its own DB session (no request-scoped session available outside an HTTP
@@ -605,11 +613,12 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             # Persona-as-base uses a constrained prompt (select 3-5 bullets per role
             # from the rich pool); falls back to the standard cv_tailor_prompt if the
             # persona-specific one isn't configured.
-            prompt_template = None
+            prompt_template = prompt_template_override
             if persona_as_base:
-                p_row = db.query(Setting).filter(Setting.key == "persona_tailor_prompt").first()
-                if p_row and (p_row.value or "").strip():
-                    prompt_template = p_row.value
+                if not prompt_template:
+                    p_row = db.query(Setting).filter(Setting.key == "persona_tailor_prompt").first()
+                    if p_row and (p_row.value or "").strip():
+                        prompt_template = p_row.value
             if not prompt_template:
                 prompt_row = db.query(Setting).filter(Setting.key == "cv_tailor_prompt").first()
                 if not prompt_row or not prompt_row.value:
@@ -638,6 +647,8 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 "reframe, and reorder existing content. If something is missing, map to "
                 "the closest truthful concept."
             )
+            if not allow_suggested_bullets:
+                system += " Do not generate speculative or suggested bullets."
 
             from backend.analyzer.llm_client import call_cv_tailor_llm
             from backend.analyzer.llm_logger import track_llm_call
@@ -681,8 +692,10 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 for i, llm_job in enumerate(llm_exp):
                     if i < len(base_exp):
                         base_exp[i]["bullets"] = llm_job.get("bullets", base_exp[i].get("bullets", []))
-                        if llm_job.get("suggested_bullets"):
+                        if allow_suggested_bullets and llm_job.get("suggested_bullets"):
                             base_exp[i]["suggested_bullets"] = llm_job["suggested_bullets"]
+                        elif not allow_suggested_bullets:
+                            base_exp[i].pop("suggested_bullets", None)
                         if llm_job.get("description") is not None:
                             base_exp[i]["description"] = llm_job["description"]
                 tailored_data["experience"] = base_exp
@@ -708,7 +721,11 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             #   'light' / 'true' / ''     → light chain (default)
             #   'full'                    → full chain (richer report, slower/costlier)
             chain_row = db.query(Setting).filter(Setting.key == "tailor_auto_quick_score").first()
-            raw_chain = (chain_row.value if chain_row else "light").strip().lower()
+            raw_chain = (
+                score_depth_override
+                if score_depth_override is not None
+                else (chain_row.value if chain_row else "light")
+            ).strip().lower()
             depth_map = {
                 "off": None, "false": None, "no": None, "0": None,
                 "true": "light", "light": "light", "yes": "light", "1": "light", "": "light",
@@ -734,6 +751,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     # Non-fatal — tailor succeeded, chain is a nice-to-have
                     logger.warning(f"Tailor chain score failed to launch: {_e}")
             logger.info(f"Tailor: created resume {tailored.id} for job {job_id}")
+            return str(tailored.id)
         finally:
             db.close()
 
@@ -803,13 +821,8 @@ def preview_resume(resume_id: str, db: Session = Depends(get_db)):
     return HTMLResponse(content=html)
 
 
-@router.get("/{resume_id}/pdf")
-async def export_pdf(resume_id: str, db: Session = Depends(get_db)):
-    """Render resume as PDF via Playwright and return the bytes."""
-    resume = db.query(Resume).filter(Resume.id == resume_id).first()
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-
+async def render_resume_pdf_bytes(resume: Resume, db: Session) -> tuple[bytes, int, str]:
+    """Render a Resume for both the HTTP endpoint and application packets."""
     json_data = resume.json_data or {}
     # Rewrite URLs with tracer links if enabled
     pdf_data = _rewrite_urls_with_tracers(json_data, str(resume.id), db)
@@ -835,7 +848,7 @@ async def export_pdf(resume_id: str, db: Session = Depends(get_db)):
         await page.close()
     except Exception as e:
         logger.error(f"PDF generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise RuntimeError(f"PDF generation failed: {str(e)}") from e
 
     # Build filename: {Name}_{Type}_Resume_{number}.pdf
     # Name = candidate header name; Type = base resume name (PM/PjM/\u2026);
@@ -849,6 +862,20 @@ async def export_pdf(resume_id: str, db: Session = Depends(get_db)):
         if job_for_name and job_for_name.short_id:
             number = f"_{job_for_name.short_id}"
     filename = f"{header_name}_{base_name}_Resume{number}".encode("ascii", "replace").decode()
+
+    return pdf_bytes, page_count, filename
+
+
+@router.get("/{resume_id}/pdf")
+async def export_pdf(resume_id: str, db: Session = Depends(get_db)):
+    """Render resume as PDF via Playwright and return the bytes."""
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    try:
+        pdf_bytes, page_count, filename = await render_resume_pdf_bytes(resume, db)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}.pdf"',

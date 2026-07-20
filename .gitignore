@@ -131,6 +131,7 @@ frontend/node_modules/
 
 # Project-specific
 backups/
+application-packets/
 *.sql
 backend/gmail_token.json
 backend/gmail_credentials.json

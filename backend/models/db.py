@@ -307,6 +307,81 @@ class Resume(Base):
     job = relationship("Job", backref="resumes")
 
 
+# --- Aggregate job feed state ------------------------------------------------
+class JobFeedCheckpoint(Base):
+    """Durable cursor and health state for one upstream GitHub repository."""
+    __tablename__ = "job_feed_checkpoints"
+
+    repository_id = Column(String, primary_key=True)
+    last_commit_sha = Column(String, nullable=True)
+    content_hash = Column(String, nullable=True)
+    last_checked_at = Column(DateTime(timezone=True), nullable=True)
+    last_changed_at = Column(DateTime(timezone=True), nullable=True)
+    last_success_at = Column(DateTime(timezone=True), nullable=True)
+    upstream_updated_at = Column(DateTime(timezone=True), nullable=True)
+    consecutive_errors = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, nullable=True)
+
+
+class JobFeedPosting(Base):
+    """One source occurrence of a Job, preserving cross-feed provenance."""
+    __tablename__ = "job_feed_postings"
+    __table_args__ = (
+        Index("uq_job_feed_posting_source_key", "source_id", "source_key", unique=True),
+        Index("ix_job_feed_posting_job_id", "job_id"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(String, nullable=False)
+    repository_id = Column(String, nullable=False)
+    source_key = Column(String, nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
+    source_url = Column(String, nullable=True)
+    source_posted_at = Column(DateTime(timezone=True), nullable=True)
+    flags = Column(JSON, default=dict)
+    first_seen_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    job = relationship("Job", backref="feed_postings")
+
+
+# --- Ready-to-apply preparation queue ---------------------------------------
+class ApplicationQueueItem(Base):
+    """Durable state for one automatically prepared application.
+
+    This is intentionally separate from Application: an Application row means
+    the user actually submitted a form, while this row means JobNavigator has
+    prepared a resume and is waiting for the user to apply.
+    """
+    __tablename__ = "application_queue_items"
+    __table_args__ = (
+        Index("ix_application_queue_status", "status"),
+        Index("ix_application_queue_created_at", "created_at"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, unique=True)
+    resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True)
+    base_resume_key = Column(String, nullable=True)  # Resume UUID string or reserved value "persona"
+    source_feed = Column(String, nullable=True)
+    application_url = Column(String, nullable=True)  # Original direct form URL before Job URL cleanup.
+    status = Column(String, nullable=False, default="pending_description")
+    source_posted_at = Column(DateTime(timezone=True), nullable=True)
+    priority = Column(Integer, nullable=False, default=10)
+    attempts = Column(Integer, nullable=False, default=0)
+    error = Column(Text, nullable=True)
+    eligibility_warnings = Column(JSON, default=list)
+    artifact_dir = Column(String, nullable=True)
+    detected_notified_at = Column(DateTime(timezone=True), nullable=True)
+    terminal_notified_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+    job = relationship("Job", backref=backref("application_queue_item", uselist=False, cascade="all, delete-orphan"))
+    resume = relationship("Resume", backref="application_queue_items")
+
+
 # ── Cover Letter ──────────────────────────────────────────────────────────────
 # Job-specific (no is_base — every cover letter is generated for a job). Mirrors
 # Resume's storage so the PDF render + tracer-rewrite helpers are reused as-is.

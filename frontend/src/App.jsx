@@ -12,6 +12,7 @@ import CoverLetterBuilder from './components/CoverLetterBuilder'
 import Persona from './components/Persona'
 import LoginModal from './components/LoginModal'
 import WelcomeModal from './components/WelcomeModal'
+import ApplyQueueModal from './components/ApplyQueueModal'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -156,6 +157,7 @@ function App() {
             setShowWelcome(false)
           }} />
         )}
+        {!showLogin && !showWelcome && <ApplyQueueModal />}
       </div>
     </BrowserRouter>
   )

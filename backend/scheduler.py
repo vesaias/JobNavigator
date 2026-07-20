@@ -1,6 +1,7 @@
 """APScheduler — reads all timing config from settings DB table. No hardcoded schedules."""
 import logging
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
@@ -33,19 +34,46 @@ def configure_scheduler():
         h1b_cron = get_setting(db, "h1b_cron", "").strip()
         cleanup_cron = get_setting(db, "cleanup_cron", "").strip()
         reject_cron = get_setting(db, "reject_cron", "").strip()
+        speedyapply_enabled = str(get_setting(db, "speedyapply_enabled", "false")).strip().lower() in {
+            "1", "true", "yes", "on"
+        }
+        speedyapply_cron = get_setting(db, "speedyapply_cron", "").strip()
+        speedyapply_secondary_cron = get_setting(db, "speedyapply_secondary_cron", "30 20 * * *").strip()
+        speedyapply_timezone = get_setting(db, "speedyapply_timezone", "Asia/Shanghai").strip()
+        job_feeds_enabled = str(get_setting(db, "job_feeds_enabled", "false")).strip().lower() in {
+            "1", "true", "yes", "on"
+        }
+        try:
+            job_feeds_interval = max(1, int(get_setting(db, "job_feeds_interval_minutes", "5")))
+        except (TypeError, ValueError):
+            job_feeds_interval = 5
+        try:
+            job_feeds_worker_interval = max(1, int(get_setting(db, "job_feeds_worker_interval_minutes", "1")))
+        except (TypeError, ValueError):
+            job_feeds_worker_interval = 1
     finally:
         db.close()
 
-    def _add_cron_job(func, job_id, cron_expr):
+    def _add_cron_job(func, job_id, cron_expr, timezone_name=None):
         """Parse a 5-field cron expression and add to scheduler. Empty = skip."""
         if not cron_expr:
             return
         try:
             parts = cron_expr.split()
             if len(parts) == 5:
+                trigger_kwargs = {}
+                if timezone_name:
+                    try:
+                        trigger_kwargs["timezone"] = ZoneInfo(timezone_name)
+                    except ZoneInfoNotFoundError:
+                        logger.warning(f"Invalid timezone for {job_id}: '{timezone_name}'")
+                        return
                 scheduler.add_job(
                     func,
-                    CronTrigger(minute=parts[0], hour=parts[1], day=parts[2], month=parts[3], day_of_week=parts[4]),
+                    CronTrigger(
+                        minute=parts[0], hour=parts[1], day=parts[2], month=parts[3],
+                        day_of_week=parts[4], **trigger_kwargs,
+                    ),
                     id=job_id,
                     replace_existing=True,
                 )
@@ -74,12 +102,47 @@ def configure_scheduler():
             replace_existing=True,
         )
 
+    if job_feeds_enabled:
+        scheduler.add_job(
+            run_job_feed_poll,
+            IntervalTrigger(minutes=job_feeds_interval),
+            id="job_feed_poll",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+        scheduler.add_job(
+            run_job_feed_worker,
+            IntervalTrigger(minutes=job_feeds_worker_interval),
+            id="job_feed_worker",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
     # Cron-based jobs (empty = disabled)
     _add_cron_job(run_db_backup, "db_backup", backup_cron)
     _add_cron_job(send_daily_digest, "daily_digest", digest_cron)
     _add_cron_job(refresh_h1b_data, "h1b_refresh", h1b_cron)
     _add_cron_job(run_job_cleanup_auto, "job_cleanup", cleanup_cron)
     _add_cron_job(run_auto_reject, "auto_reject", reject_cron)
+    # Keep the explicit morning/evening SpeedyApply handoff independent from
+    # the higher-frequency aggregate feed poller. Both ingestion paths are
+    # durable and deduplicated, while these crons guarantee the user-requested
+    # 09:00 and 20:30 preparation runs.
+    if speedyapply_enabled:
+        _add_cron_job(
+            run_speedyapply_daily,
+            "speedyapply_daily",
+            speedyapply_cron,
+            timezone_name=speedyapply_timezone,
+        )
+        _add_cron_job(
+            run_speedyapply_daily,
+            "speedyapply_daily_secondary",
+            speedyapply_secondary_cron,
+            timezone_name=speedyapply_timezone,
+        )
 
     logger.info(
         f"Scheduler configured: scrape every {scrape_interval}m, "
@@ -114,6 +177,40 @@ async def run_email_check():
             await check_emails()
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
+
+
+async def run_speedyapply_daily():
+    """Import newly posted SpeedyApply jobs and prepare tailored resumes."""
+    from backend.job_monitor import tracked_run, JobAlreadyRunningError
+    try:
+        async with tracked_run("speedyapply_daily", "scheduler"):
+            logger.info("Running SpeedyApply daily application workflow...")
+            from backend.automation.speedyapply_pipeline import run_speedyapply_pipeline
+            await run_speedyapply_pipeline(trigger="scheduler")
+    except JobAlreadyRunningError as e:
+        logger.warning(f"Scheduler skipped: {e}")
+
+
+async def run_job_feed_poll():
+    """Poll changed aggregate feeds without waiting for resume generation."""
+    from backend.job_monitor import tracked_run, JobAlreadyRunningError
+    try:
+        async with tracked_run("job_feed_poll", "scheduler"):
+            from backend.automation.speedyapply_pipeline import run_job_feed_poll as run_poll
+            await run_poll(trigger="scheduler")
+    except JobAlreadyRunningError as e:
+        logger.warning(f"Job feed poll skipped: {e}")
+
+
+async def run_job_feed_worker():
+    """Prepare pending application packets independently of feed polling."""
+    from backend.job_monitor import tracked_run, JobAlreadyRunningError
+    try:
+        async with tracked_run("job_feed_worker", "scheduler"):
+            from backend.automation.speedyapply_pipeline import run_job_feed_worker as run_worker
+            await run_worker(trigger="scheduler")
+    except JobAlreadyRunningError as e:
+        logger.warning(f"Job feed worker skipped: {e}")
 
 
 async def send_daily_digest():

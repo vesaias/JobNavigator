@@ -33,6 +33,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./backups:/app/backups
+      - ./application-packets:/app/application-packets
       - ./backend/.linkedin_api:/root/.linkedin_api
 
   frontend:

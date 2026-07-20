@@ -58,6 +58,8 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     timing_keys = {
         "scrape_interval_minutes", "email_check_interval_minutes",
         "backup_cron", "digest_cron", "h1b_cron", "cleanup_cron", "reject_cron",
+        "speedyapply_enabled", "speedyapply_cron", "speedyapply_secondary_cron", "speedyapply_timezone",
+        "job_feeds_enabled", "job_feeds_interval_minutes", "job_feeds_worker_interval_minutes",
     }
     if timing_keys & set(updated):
         try:

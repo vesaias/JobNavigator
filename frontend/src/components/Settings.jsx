@@ -76,6 +76,15 @@ export default function SettingsPage() {
     } catch (e) { console.error(e) }
   }
 
+  const toggleListSetting = (key, value) => {
+    const current = Array.isArray(settings[key]) ? settings[key] : []
+    const updated = current.includes(value)
+      ? current.filter(item => item !== value)
+      : [...current, value]
+    setSettings(prev => ({ ...prev, [key]: updated }))
+    saveSetting(key, updated)
+  }
+
   if (loading) return <div className="p-6 text-center text-gray-500 dark:text-gray-400">Loading settings...</div>
 
   return (
@@ -214,6 +223,144 @@ export default function SettingsPage() {
               placeholder="0 4 * * *"
               className="border rounded px-2 py-1.5 text-sm w-full font-mono dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
           </div>
+        </div>
+      </section>
+
+      {/* Realtime aggregate job feed workflow */}
+      <section className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-lg dark:text-gray-100">Realtime 2027 Job Feeds</h2>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Human submit</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+              Watches public 2027 internship and new-grad aggregate lists every few minutes, filters for US SWE/AI/Data roles, fetches the employer JD, and builds a Persona-based application packet.
+            </p>
+          </div>
+          <button onClick={() => triggerAction('/job-feeds/run')}
+            disabled={triggerStatus['/job-feeds/run'] === 'running'}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 shrink-0">
+            {triggerStatus['/job-feeds/run'] === 'running'
+              ? <><RefreshCw size={14} className="animate-spin" /> Starting...</>
+              : triggerStatus['/job-feeds/run'] === 'done'
+                ? 'Started'
+                : <><Play size={14} /> Run now</>}
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-5">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Realtime monitoring enabled</label>
+                <p className="text-[11px] text-gray-400">The backend container must stay running. GitHub is checked only when a feed commit changes.</p>
+              </div>
+              <input type="checkbox" checked={settings.job_feeds_enabled === true || settings.job_feeds_enabled === 'true'}
+                onChange={e => { const value = e.target.checked; setSettings(prev => ({...prev, job_feeds_enabled: value})); saveSetting('job_feeds_enabled', value) }}
+                className="h-4 w-4 accent-blue-600" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Feed poll interval (min)</label>
+                <input type="number" min="1" max="60" value={settings.job_feeds_interval_minutes ?? 5}
+                  onChange={e => setSettings({...settings, job_feeds_interval_minutes: e.target.value})}
+                  onBlur={e => saveSetting('job_feeds_interval_minutes', Math.max(1, parseInt(e.target.value) || 5))}
+                  className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Packet worker interval (min)</label>
+                <input type="number" min="1" max="60" value={settings.job_feeds_worker_interval_minutes ?? 1}
+                  onChange={e => setSettings({...settings, job_feeds_worker_interval_minutes: e.target.value})}
+                  onBlur={e => saveSetting('job_feeds_worker_interval_minutes', Math.max(1, parseInt(e.target.value) || 1))}
+                  className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/20 px-3 py-2 text-xs text-blue-800 dark:text-blue-300">
+              Resume source: <b>Persona</b>. Each packet is one page, fact-constrained, and generated with ATS scoring disabled.
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notification email</label>
+              <input type="email" value={settings.job_feeds_notification_email ?? ''}
+                onChange={e => setSettings({...settings, job_feeds_notification_email: e.target.value})}
+                onBlur={e => saveSetting('job_feeds_notification_email', e.target.value.trim())}
+                placeholder="Uses Persona email when blank"
+                className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Aggregate feeds</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ['speedyapply_intern_usa', 'SpeedyApply Intern'],
+                  ['speedyapply_new_grad_usa', 'SpeedyApply New Grad'],
+                  ['vansh_summer_2027', 'Vansh Intern'],
+                  ['vansh_new_grad_2027', 'Vansh New Grad'],
+                ].map(([id, label]) => (
+                  <label key={id} className="flex items-center gap-2 px-2.5 py-2 rounded border dark:border-gray-600 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" checked={(settings.job_feeds_sources || []).includes(id)} onChange={() => toggleListSetting('job_feeds_sources', id)} className="accent-blue-600" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Role families</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[["swe", "Software"], ["ai", "AI / ML"], ["data", "Data"]].map(([id, label]) => (
+                  <label key={id} className="flex items-center gap-2 px-2.5 py-2 rounded border dark:border-gray-600 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" checked={(settings.job_feeds_role_families || []).includes(id)} onChange={() => toggleListSetting('job_feeds_role_families', id)} className="accent-blue-600" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Initial backfill (days)</label>
+                <input type="number" min="0" max="30" value={settings.job_feeds_backfill_days ?? 7}
+                  onChange={e => setSettings({...settings, job_feeds_backfill_days: e.target.value})}
+                  onBlur={e => saveSetting('job_feeds_backfill_days', Math.max(0, parseInt(e.target.value) || 0))}
+                  className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Maximum jobs per run</label>
+                <input type="number" min="1" max="100" value={settings.job_feeds_max_jobs_per_poll ?? 25}
+                  onChange={e => setSettings({...settings, job_feeds_max_jobs_per_poll: e.target.value})}
+                  onBlur={e => saveSetting('job_feeds_max_jobs_per_poll', Math.max(1, parseInt(e.target.value) || 25))}
+                  className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              </div>
+            </div>
+
+            <label className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <input type="checkbox" checked={settings.job_feeds_auto_tailor === true || settings.job_feeds_auto_tailor === 'true'}
+                onChange={e => { const value = e.target.checked; setSettings(prev => ({...prev, job_feeds_auto_tailor: value})); saveSetting('job_feeds_auto_tailor', value) }}
+                className="mt-0.5 accent-blue-600" />
+              <span><b>Automatically tailor resumes.</b> Disable this to import jobs without spending LLM tokens.</span>
+            </label>
+
+            <label className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <input type="checkbox" checked={settings.job_feeds_email_enabled === true || settings.job_feeds_email_enabled === 'true'}
+                onChange={e => { const value = e.target.checked; setSettings(prev => ({...prev, job_feeds_email_enabled: value})); saveSetting('job_feeds_email_enabled', value) }}
+                className="mt-0.5 accent-blue-600" />
+              <span><b>Send Gmail alerts.</b> One alert at detection and one after the application packet is ready or needs review.</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+          Packets are saved under <code>{settings.job_feeds_artifact_dir || 'application-packets'}</code>, with a durable <code>index.csv</code> mapping each job to its resume and application URL.
+        </div>
+
+        <div className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+          JobNavigator prepares materials only. It never bypasses logins or CAPTCHAs and never clicks the employer's final Submit button.
         </div>
       </section>
       </>)}

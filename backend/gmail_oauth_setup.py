@@ -29,7 +29,7 @@ if not CLIENT_ID or not CLIENT_SECRET:
 
 REDIRECT_PORT = 8090
 REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}"
-SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+SCOPE = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 AUTH_URL = (
     "https://accounts.google.com/o/oauth2/v2/auth?"

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 logger = logging.getLogger("jobnavigator.dedup")
@@ -117,6 +118,60 @@ def _canonical_for_hash(url: str) -> str:
         ))
     except Exception:
         return stripped
+
+
+def canonical_application_url(url: str) -> str:
+    """Public canonical form used by aggregate-feed cross-source identity."""
+    return _canonical_for_hash(url)
+
+
+def application_identity(url: str) -> str:
+    """Return a provider-aware identity for a direct employer posting URL.
+
+    Community feeds sometimes link the same Greenhouse job through the normal
+    board URL and the embedded application URL.  URL-only hashing treats those
+    as different jobs, so extract stable ATS requisition identifiers first.
+    """
+    canonical = _canonical_for_hash(url)
+    if not canonical:
+        return ""
+    try:
+        parsed = urlparse(canonical)
+        host = (parsed.hostname or "").lower()
+        query = parse_qs(parsed.query, keep_blank_values=False)
+        path_parts = [part for part in parsed.path.split("/") if part]
+
+        if "greenhouse.io" in host or "greenhouse.com" in host:
+            for key in ("gh_jid", "token"):
+                value = (query.get(key) or [""])[0]
+                if re.fullmatch(r"\d{5,}", value):
+                    return f"greenhouse:{value}"
+            numeric = next((part for part in reversed(path_parts) if re.fullmatch(r"\d{5,}", part)), "")
+            if numeric:
+                return f"greenhouse:{numeric}"
+
+        if host == "jobs.ashbyhq.com" and path_parts:
+            candidate = path_parts[-1]
+            if re.fullmatch(r"[0-9a-f-]{32,36}", candidate, re.IGNORECASE):
+                return f"ashby:{candidate.lower()}"
+
+        if host == "jobs.lever.co" and path_parts:
+            candidate = path_parts[-1]
+            if re.fullmatch(r"[0-9a-f-]{32,36}", candidate, re.IGNORECASE):
+                return f"lever:{candidate.lower()}"
+
+        if "myworkdayjobs.com" in host and path_parts:
+            candidate = path_parts[-1]
+            if re.search(r"[A-Za-z]*\d{4,}", candidate):
+                return f"workday:{host}:{candidate.lower()}"
+    except Exception:
+        pass
+    return f"url:{canonical}"
+
+
+def make_application_external_id(url: str) -> str:
+    identity = application_identity(url)
+    return hashlib.sha256(identity.encode()).hexdigest() if identity else ""
 
 
 def make_external_id(company: str, title: str, url: str) -> str:

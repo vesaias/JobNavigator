@@ -3,6 +3,8 @@ import asyncio
 import base64
 import json
 import logging
+from email.message import EmailMessage
+from email.utils import parseaddr
 from datetime import datetime, timezone
 
 import httpx
@@ -36,6 +38,44 @@ async def _get_access_token() -> str:
             return ""
 
         return resp.json().get("access_token", "")
+
+
+async def send_gmail_message(to_address: str, subject: str, text_body: str, html_body: str = "") -> bool:
+    """Send one notification through the connected Gmail account.
+
+    The OAuth refresh token must include ``gmail.send``.  Failure is returned as
+    False so the caller can leave its notification timestamp unset and retry.
+    """
+    _, parsed_to = parseaddr(to_address or "")
+    if not parsed_to or "@" not in parsed_to or any(char in parsed_to for char in "\r\n"):
+        logger.warning("Gmail notification recipient is missing or invalid")
+        return False
+    token = await _get_access_token()
+    if not token:
+        return False
+
+    message = EmailMessage()
+    message["To"] = parsed_to
+    message["Subject"] = (subject or "JobNavigator notification").replace("\r", " ").replace("\n", " ")
+    message.set_content(text_body or "")
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii").rstrip("=")
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                f"{GMAIL_API_BASE}/users/me/messages/send",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"raw": raw},
+            )
+        if response.status_code not in (200, 201):
+            logger.error("Gmail send failed (%s): %s", response.status_code, response.text[:500])
+            return False
+        return True
+    except Exception as exc:
+        logger.error("Gmail send error: %s", exc)
+        return False
 
 
 
