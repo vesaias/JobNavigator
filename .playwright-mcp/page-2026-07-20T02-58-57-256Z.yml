@@ -1,0 +1,843 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 💼
+      - generic [ref=e7]: JobNavigator
+    - navigation [ref=e8]:
+      - link "Jobs" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e10]
+        - text: Jobs
+      - link "Applications" [ref=e13] [cursor=pointer]:
+        - /url: /applications
+        - img [ref=e14]
+        - text: Applications
+      - link "Companies" [ref=e19] [cursor=pointer]:
+        - /url: /companies
+        - img [ref=e20]
+        - text: Companies
+      - link "Searches" [ref=e24] [cursor=pointer]:
+        - /url: /searches
+        - img [ref=e25]
+        - text: Searches
+      - link "Resumes" [ref=e28] [cursor=pointer]:
+        - /url: /resumes
+        - img [ref=e29]
+        - text: Resumes
+      - link "Cover Letters" [ref=e32] [cursor=pointer]:
+        - /url: /cover-letters
+        - img [ref=e33]
+        - text: Cover Letters
+      - link "Persona" [ref=e36] [cursor=pointer]:
+        - /url: /persona
+        - img [ref=e37]
+        - text: Persona
+      - link "Settings" [ref=e40] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e41]
+        - text: Settings
+      - link "Stats" [ref=e44] [cursor=pointer]:
+        - /url: /stats
+        - img [ref=e45]
+        - text: Stats
+      - link "API Docs" [ref=e47] [cursor=pointer]:
+        - /url: /docs
+        - img [ref=e48]
+        - text: API Docs
+    - button "🌙Dark Mode" [ref=e53] [cursor=pointer]
+    - button "Collapse" [ref=e54] [cursor=pointer]
+  - main [ref=e55]:
+    - generic [ref=e57]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Job Feed" [level=1] [ref=e62]
+            - button "Keyboard shortcuts" [ref=e64] [cursor=pointer]:
+              - img [ref=e65]
+          - paragraph [ref=e67]: 96 jobs found
+        - generic [ref=e68]:
+          - button "Reset" [ref=e69] [cursor=pointer]
+          - button [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - img [ref=e73]
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - generic [ref=e130]:
+            - checkbox [ref=e131]
+            - generic [ref=e132]: Select all
+          - generic [ref=e134] [cursor=pointer]:
+            - checkbox [ref=e136]
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - generic [ref=e139]:
+                  - paragraph [ref=e140]: Mainframe Software Engineering Apprentice 2
+                  - button "Skip" [ref=e142]:
+                    - img [ref=e143]
+                - generic [ref=e147]: New
+                - generic [ref=e148]:
+                  - generic [ref=e149]: U.S. Bank
+                  - generic [ref=e150]: Hopkins, MN
+              - generic [ref=e151]: 13h ago
+            - generic [ref=e152]:
+              - button "Save" [ref=e153]:
+                - img [ref=e154]
+              - button "Applied" [ref=e156]:
+                - img [ref=e157]
+              - button "Score" [ref=e160]:
+                - img [ref=e161]
+              - link "Open in new tab" [ref=e164]:
+                - /url: https://usbank.wd1.myworkdayjobs.com/en-US/us_bank_careers/job/Hopkins-MN/Mainframe-Software-Engineering-Apprentice-2_2026-0020641
+                - img [ref=e165]
+              - button "Ignore company globally" [ref=e169]:
+                - img [ref=e170]
+          - generic [ref=e174] [cursor=pointer]:
+            - checkbox [ref=e176]
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - generic [ref=e179]:
+                  - paragraph [ref=e180]: Junior Full Stack Developer
+                  - button "Skip" [ref=e182]:
+                    - img [ref=e183]
+                - generic [ref=e187]: New
+                - generic [ref=e188]:
+                  - generic [ref=e189]: The Cadmus Group
+                  - generic [ref=e190]: USA
+              - generic [ref=e191]: 14h ago
+            - generic [ref=e192]:
+              - button "Save" [ref=e193]:
+                - img [ref=e194]
+              - button "Applied" [ref=e196]:
+                - img [ref=e197]
+              - button "Score" [ref=e200]:
+                - img [ref=e201]
+              - link "Open in new tab" [ref=e204]:
+                - /url: https://careers-cadmusgroup.icims.com/jobs/3199/junior-full-stack-developer/job
+                - img [ref=e205]
+              - button "Ignore company globally" [ref=e209]:
+                - img [ref=e210]
+          - generic [ref=e214] [cursor=pointer]:
+            - checkbox [ref=e216]
+            - generic [ref=e217]:
+              - generic [ref=e218]:
+                - generic [ref=e219]:
+                  - paragraph [ref=e220]: Associate Cloud Infrastructure Engineer
+                  - button "Skip" [ref=e222]:
+                    - img [ref=e223]
+                - generic [ref=e227]: New
+                - generic [ref=e228]:
+                  - generic [ref=e229]: REPAY - Realtime Electronic Payments
+                  - generic [ref=e230]: Remote - Atlanta, GA +2
+              - generic [ref=e231]: 14h ago
+            - generic [ref=e232]:
+              - button "Save" [ref=e233]:
+                - img [ref=e234]
+              - button "Applied" [ref=e236]:
+                - img [ref=e237]
+              - button "Score" [ref=e240]:
+                - img [ref=e241]
+              - link "Open in new tab" [ref=e244]:
+                - /url: https://repay.wd1.myworkdayjobs.com/en-US/repaycareers/job/Atlanta-Headquarters/Associate-Cloud-Infrastructure-Engineer_JR634
+                - img [ref=e245]
+              - button "Ignore company globally" [ref=e249]:
+                - img [ref=e250]
+          - generic [ref=e254] [cursor=pointer]:
+            - checkbox [ref=e256]
+            - generic [ref=e257]:
+              - generic [ref=e258]:
+                - generic [ref=e259]:
+                  - paragraph [ref=e260]: CPU Software Architecture Engineer
+                  - button "Skip" [ref=e262]:
+                    - img [ref=e263]
+                - generic [ref=e267]: New
+                - generic [ref=e268]:
+                  - generic [ref=e269]: Qualcomm Technologies, Inc.
+                  - generic [ref=e270]: San Diego, CA
+              - generic [ref=e271]: 14h ago
+            - generic [ref=e272]:
+              - button "Save" [ref=e273]:
+                - img [ref=e274]
+              - button "Applied" [ref=e276]:
+                - img [ref=e277]
+              - button "Score" [ref=e280]:
+                - img [ref=e281]
+              - link "Open in new tab" [ref=e284]:
+                - /url: https://careers.qualcomm.com/careers/job/446706753287?utm_source=vansh
+                - img [ref=e285]
+              - button "Ignore company globally" [ref=e289]:
+                - img [ref=e290]
+          - generic [ref=e294] [cursor=pointer]:
+            - checkbox [ref=e296]
+            - generic [ref=e297]:
+              - generic [ref=e298]:
+                - generic [ref=e299]:
+                  - paragraph [ref=e300]: "New Grad 2026: Junior Software Engineer"
+                  - button "Skip" [ref=e302]:
+                    - img [ref=e303]
+                - generic [ref=e307]: New
+                - generic [ref=e308]:
+                  - generic [ref=e309]: Old Mission
+                  - generic [ref=e310]: Chicago, IL
+              - generic [ref=e311]: 14h ago
+            - generic [ref=e312]:
+              - button "Save" [ref=e313]:
+                - img [ref=e314]
+              - button "Applied" [ref=e316]:
+                - img [ref=e317]
+              - button "Score" [ref=e320]:
+                - img [ref=e321]
+              - link "Open in new tab" [ref=e324]:
+                - /url: https://www.oldmissioncapital.com/careers/?gh_jid=6602927003&utm_source=vansh&ref=vansh
+                - img [ref=e325]
+              - button "Ignore company globally" [ref=e329]:
+                - img [ref=e330]
+          - generic [ref=e334] [cursor=pointer]:
+            - checkbox [ref=e336]
+            - generic [ref=e337]:
+              - generic [ref=e338]:
+                - generic [ref=e339]:
+                  - paragraph [ref=e340]: System Software Engineer - Dynamo-Triton Inference Server - New College Grad 2026
+                  - button "Skip" [ref=e342]:
+                    - img [ref=e343]
+                - generic [ref=e346]:
+                  - generic [ref=e347]: New
+                  - generic [ref=e348]: $124K - $196K
+                - generic [ref=e349]:
+                  - generic [ref=e350]: NVIDIA
+                  - generic [ref=e351]: Remote - Santa Clara, CA
+              - generic [ref=e352]: 14h ago
+            - generic [ref=e353]:
+              - button "Save" [ref=e354]:
+                - img [ref=e355]
+              - button "Applied" [ref=e357]:
+                - img [ref=e358]
+              - button "Score" [ref=e361]:
+                - img [ref=e362]
+              - link "Open in new tab" [ref=e365]:
+                - /url: https://nvidia.wd5.myworkdayjobs.com/en-US/nvidiaexternalcareersite/job/US-CA-Santa-Clara/System-Software-Engineer--Dynamo-Triton-Inference-Server---New-College-Grad-2026_JR2020767
+                - img [ref=e366]
+              - button "Ignore company globally" [ref=e370]:
+                - img [ref=e371]
+          - generic [ref=e375] [cursor=pointer]:
+            - checkbox [ref=e377]
+            - generic [ref=e378]:
+              - generic [ref=e379]:
+                - generic [ref=e380]:
+                  - paragraph [ref=e381]: Backend Compiler Engineer - New College Grad 2026
+                  - button "Skip" [ref=e383]:
+                    - img [ref=e384]
+                - generic [ref=e387]:
+                  - generic [ref=e388]: New
+                  - generic [ref=e389]: $108K - $178K
+                - generic [ref=e390]:
+                  - generic [ref=e391]: NVIDIA
+                  - generic [ref=e392]: Santa Clara, CA
+              - generic [ref=e393]: 14h ago
+            - generic [ref=e394]:
+              - button "Save" [ref=e395]:
+                - img [ref=e396]
+              - button "Applied" [ref=e398]:
+                - img [ref=e399]
+              - button "Score" [ref=e402]:
+                - img [ref=e403]
+              - link "Open in new tab" [ref=e406]:
+                - /url: https://nvidia.wd5.myworkdayjobs.com/en-US/nvidiaexternalcareersite/job/US-CA-Santa-Clara/Backend-Compiler-Engineer---New-College-Grad-2026_JR2021242
+                - img [ref=e407]
+              - button "Ignore company globally" [ref=e411]:
+                - img [ref=e412]
+          - generic [ref=e416] [cursor=pointer]:
+            - checkbox [ref=e418]
+            - generic [ref=e419]:
+              - generic [ref=e420]:
+                - generic [ref=e421]:
+                  - paragraph [ref=e422]: "New Grad: Software Engineer, Routing"
+                  - button "Skip" [ref=e424]:
+                    - img [ref=e425]
+                - generic [ref=e429]: New
+                - generic [ref=e430]:
+                  - generic [ref=e431]: Nuro
+                  - generic [ref=e432]: Mountain View, CA
+              - generic [ref=e433]: 14h ago
+            - generic [ref=e434]:
+              - button "Save" [ref=e435]:
+                - img [ref=e436]
+              - button "Applied" [ref=e438]:
+                - img [ref=e439]
+              - button "Score" [ref=e442]:
+                - img [ref=e443]
+              - link "Open in new tab" [ref=e446]:
+                - /url: https://www.nuro.ai/careersitem?gh_jid=7066706&utm_source=vansh&ref=vansh
+                - img [ref=e447]
+              - button "Ignore company globally" [ref=e451]:
+                - img [ref=e452]
+          - generic [ref=e456] [cursor=pointer]:
+            - checkbox [ref=e458]
+            - generic [ref=e459]:
+              - generic [ref=e460]:
+                - generic [ref=e461]:
+                  - paragraph [ref=e462]: Engineer I - Software
+                  - button "Skip" [ref=e464]:
+                    - img [ref=e465]
+                - generic [ref=e468]:
+                  - generic [ref=e469]: New
+                  - generic [ref=e470]: $70K - $143K
+                - generic [ref=e471]:
+                  - generic [ref=e472]: Microchip
+                  - generic [ref=e473]: Santa Rosa, CA
+              - generic [ref=e474]: 14h ago
+            - generic [ref=e475]:
+              - button "Save" [ref=e476]:
+                - img [ref=e477]
+              - button "Applied" [ref=e479]:
+                - img [ref=e480]
+              - button "Score" [ref=e483]:
+                - img [ref=e484]
+              - link "Open in new tab" [ref=e487]:
+                - /url: https://microchiphr.wd5.myworkdayjobs.com/en-US/external/job/CA---Santa-Rosa---Westwind/Engineer-I---Software_R2844-26
+                - img [ref=e488]
+              - button "Ignore company globally" [ref=e492]:
+                - img [ref=e493]
+          - generic [ref=e497] [cursor=pointer]:
+            - checkbox [ref=e499]
+            - generic [ref=e500]:
+              - generic [ref=e501]:
+                - generic [ref=e502]:
+                  - paragraph [ref=e503]: "New Grad: Software Engineer"
+                  - button "Skip" [ref=e505]:
+                    - img [ref=e506]
+                - generic [ref=e510]: New
+                - generic [ref=e511]:
+                  - generic [ref=e512]: Candid Health
+                  - generic [ref=e513]: San Francisco, CA Denver, CO New York, NY
+              - generic [ref=e514]: 14h ago
+            - generic [ref=e515]:
+              - button "Save" [ref=e516]:
+                - img [ref=e517]
+              - button "Applied" [ref=e519]:
+                - img [ref=e520]
+              - button "Score" [ref=e523]:
+                - img [ref=e524]
+              - link "Open in new tab" [ref=e527]:
+                - /url: https://jobs.ashbyhq.com/candidhealth/f0e529c1-b8d8-4add-aaef-23b174053b8b?utm_source=Simplify&ref=Simplify&utm_source=vansh&ref=vansh
+                - img [ref=e528]
+              - button "Ignore company globally" [ref=e532]:
+                - img [ref=e533]
+          - generic [ref=e537] [cursor=pointer]:
+            - checkbox [ref=e539]
+            - generic [ref=e540]:
+              - generic [ref=e541]:
+                - generic [ref=e542]:
+                  - paragraph [ref=e543]: "New Grad: Forward Deployed Software Engineer"
+                  - button "Skip" [ref=e545]:
+                    - img [ref=e546]
+                - generic [ref=e550]: New
+                - generic [ref=e551]:
+                  - generic [ref=e552]: Candid Health
+                  - generic [ref=e553]: San Francisco, CA Denver, CO New York, NY
+              - generic [ref=e554]: 14h ago
+            - generic [ref=e555]:
+              - button "Save" [ref=e556]:
+                - img [ref=e557]
+              - button "Applied" [ref=e559]:
+                - img [ref=e560]
+              - button "Score" [ref=e563]:
+                - img [ref=e564]
+              - link "Open in new tab" [ref=e567]:
+                - /url: https://jobs.ashbyhq.com/candidhealth/8d1922f8-e89d-433e-a21f-b724eabc003b?utm_source=Simplify&ref=Simplify&utm_source=vansh&ref=vansh
+                - img [ref=e568]
+              - button "Ignore company globally" [ref=e572]:
+                - img [ref=e573]
+          - generic [ref=e577] [cursor=pointer]:
+            - checkbox [ref=e579]
+            - generic [ref=e580]:
+              - generic [ref=e581]:
+                - generic [ref=e582]:
+                  - paragraph [ref=e583]: Entry-Level Software Engineer-Developer
+                  - button "Skip" [ref=e585]:
+                    - img [ref=e586]
+                - generic [ref=e589]:
+                  - generic [ref=e590]: New
+                  - generic [ref=e591]: $83K - $113K
+                - generic [ref=e592]:
+                  - generic [ref=e593]: Boeing
+                  - generic [ref=e594]: Richardson, TX
+              - generic [ref=e595]: 14h ago
+            - generic [ref=e596]:
+              - button "Save" [ref=e597]:
+                - img [ref=e598]
+              - button "Applied" [ref=e600]:
+                - img [ref=e601]
+              - button "Score" [ref=e604]:
+                - img [ref=e605]
+              - link "Open in new tab" [ref=e608]:
+                - /url: https://boeing.wd1.myworkdayjobs.com/en-US/external_careers/job/USA---Richardson-TX/Entry-Level-Software-Engineer-Developer_JR2026512717-2
+                - img [ref=e609]
+              - button "Ignore company globally" [ref=e613]:
+                - img [ref=e614]
+          - generic [ref=e618] [cursor=pointer]:
+            - checkbox [ref=e620]
+            - generic [ref=e621]:
+              - generic [ref=e622]:
+                - generic [ref=e623]:
+                  - paragraph [ref=e624]: Software Engineer I - Data Eng infra
+                  - button "Skip" [ref=e626]:
+                    - img [ref=e627]
+                - generic [ref=e631]: New
+                - generic [ref=e632]:
+                  - generic [ref=e633]: Aurora
+                  - generic [ref=e634]: Mountain View, CA
+              - generic [ref=e635]: 14h ago
+            - generic [ref=e636]:
+              - button "Save" [ref=e637]:
+                - img [ref=e638]
+              - button "Applied" [ref=e640]:
+                - img [ref=e641]
+              - button "Score" [ref=e644]:
+                - img [ref=e645]
+              - link "Open in new tab" [ref=e648]:
+                - /url: https://aurora.tech/jobs/8628066002?gh_jid=8628066002
+                - img [ref=e649]
+              - button "Ignore company globally" [ref=e653]:
+                - img [ref=e654]
+          - generic [ref=e658] [cursor=pointer]:
+            - checkbox [ref=e660]
+            - generic [ref=e661]:
+              - generic [ref=e662]:
+                - generic [ref=e663]:
+                  - paragraph [ref=e664]: Software Engineer 1
+                  - button "Skip" [ref=e666]:
+                    - img [ref=e667]
+                - generic [ref=e671]: New
+                - generic [ref=e672]:
+                  - generic [ref=e673]: Wyetech
+                  - generic [ref=e674]: Maryland, USA
+              - generic [ref=e675]: 14h ago
+            - generic [ref=e676]:
+              - button "Save" [ref=e677]:
+                - img [ref=e678]
+              - button "Applied" [ref=e680]:
+                - img [ref=e681]
+              - button "Score" [ref=e684]:
+                - img [ref=e685]
+              - link "Open in new tab" [ref=e688]:
+                - /url: https://jobs.lever.co/wyetechllc/bafed41c-803d-416d-bb6d-402e52b6ca18
+                - img [ref=e689]
+              - button "Ignore company globally" [ref=e693]:
+                - img [ref=e694]
+          - generic [ref=e698] [cursor=pointer]:
+            - checkbox [ref=e700]
+            - generic [ref=e701]:
+              - generic [ref=e702]:
+                - generic [ref=e703]:
+                  - paragraph [ref=e704]: Software Developer I - COBOL
+                  - button "Skip" [ref=e706]:
+                    - img [ref=e707]
+                - generic [ref=e711]: New
+                - generic [ref=e712]:
+                  - generic [ref=e713]: Western & Southern Financial Group
+                  - generic [ref=e714]: Cincinnati, OH
+              - generic [ref=e715]: 14h ago
+            - generic [ref=e716]:
+              - button "Save" [ref=e717]:
+                - img [ref=e718]
+              - button "Applied" [ref=e720]:
+                - img [ref=e721]
+              - button "Score" [ref=e724]:
+                - img [ref=e725]
+              - link "Open in new tab" [ref=e728]:
+                - /url: https://careers-westernsouthern.icims.com/jobs/24925/software-developer-i-%28cobol%29/job
+                - img [ref=e729]
+              - button "Ignore company globally" [ref=e733]:
+                - img [ref=e734]
+          - generic [ref=e738] [cursor=pointer]:
+            - checkbox [ref=e740]
+            - generic [ref=e741]:
+              - generic [ref=e742]:
+                - generic [ref=e743]:
+                  - paragraph [ref=e744]: Software Engineer I - Mission Software
+                  - button "Skip" [ref=e746]:
+                    - img [ref=e747]
+                - generic [ref=e750]:
+                  - generic [ref=e751]: New
+                  - generic [ref=e752]: $111K - $157K
+                - generic [ref=e753]:
+                  - generic [ref=e754]: Vast
+                  - generic [ref=e755]: Long Beach, CA
+              - generic [ref=e756]: 14h ago
+            - generic [ref=e757]:
+              - button "Save" [ref=e758]:
+                - img [ref=e759]
+              - button "Applied" [ref=e761]:
+                - img [ref=e762]
+              - button "Score" [ref=e765]:
+                - img [ref=e766]
+              - link "Open in new tab" [ref=e769]:
+                - /url: https://boards.greenhouse.io/vast/jobs/4696685006?gh_jid=4696685006
+                - img [ref=e770]
+              - button "Ignore company globally" [ref=e774]:
+                - img [ref=e775]
+          - generic [ref=e779] [cursor=pointer]:
+            - checkbox [ref=e781]
+            - generic [ref=e782]:
+              - generic [ref=e783]:
+                - generic [ref=e784]:
+                  - paragraph [ref=e785]: Software Engineer I - Device Drivers
+                  - button "Skip" [ref=e787]:
+                    - img [ref=e788]
+                - generic [ref=e791]:
+                  - generic [ref=e792]: New
+                  - generic [ref=e793]: $161K - $193K
+                - generic [ref=e794]:
+                  - generic [ref=e795]: Torc Robotics
+                  - generic [ref=e796]: Ann Arbor, MI
+              - generic [ref=e797]: 14h ago
+            - generic [ref=e798]:
+              - button "Save" [ref=e799]:
+                - img [ref=e800]
+              - button "Applied" [ref=e802]:
+                - img [ref=e803]
+              - button "Score" [ref=e806]:
+                - img [ref=e807]
+              - link "Open in new tab" [ref=e810]:
+                - /url: https://job-boards.greenhouse.io/torcrobotics/jobs/8534177002
+                - img [ref=e811]
+              - button "Ignore company globally" [ref=e815]:
+                - img [ref=e816]
+          - generic [ref=e820] [cursor=pointer]:
+            - checkbox [ref=e822]
+            - generic [ref=e823]:
+              - generic [ref=e824]:
+                - generic [ref=e825]:
+                  - paragraph [ref=e826]: Software Engineer I w/Top Secret Clearance
+                  - button "Skip" [ref=e828]:
+                    - img [ref=e829]
+                - generic [ref=e833]: New
+                - generic [ref=e834]:
+                  - generic [ref=e835]: TekSynap
+                  - generic [ref=e836]: Washington, DC
+              - generic [ref=e837]: 14h ago
+            - generic [ref=e838]:
+              - button "Save" [ref=e839]:
+                - img [ref=e840]
+              - button "Applied" [ref=e842]:
+                - img [ref=e843]
+              - button "Score" [ref=e846]:
+                - img [ref=e847]
+              - link "Open in new tab" [ref=e850]:
+                - /url: https://careers-teksynap.icims.com/jobs/9159/software-engineer-i-w-top-secret-clearance/job
+                - img [ref=e851]
+              - button "Ignore company globally" [ref=e855]:
+                - img [ref=e856]
+          - generic [ref=e860] [cursor=pointer]:
+            - checkbox [ref=e862]
+            - generic [ref=e863]:
+              - generic [ref=e864]:
+                - generic [ref=e865]:
+                  - paragraph [ref=e866]: Software Engineer Intern
+                  - button "Skip" [ref=e868]:
+                    - img [ref=e869]
+                - generic [ref=e872]:
+                  - generic [ref=e873]: New
+                  - generic [ref=e874]: $11K
+                - generic [ref=e875]:
+                  - generic [ref=e876]: Serval
+                  - generic [ref=e877]: San Francisco, CA
+              - generic [ref=e878]: 14h ago
+            - generic [ref=e879]:
+              - button "Save" [ref=e880]:
+                - img [ref=e881]
+              - button "Applied" [ref=e883]:
+                - img [ref=e884]
+              - button "Score" [ref=e887]:
+                - img [ref=e888]
+              - link "Open in new tab" [ref=e891]:
+                - /url: https://jobs.ashbyhq.com/serval/d7fb089c-db8a-4877-a5f3-73a09e67f54b
+                - img [ref=e892]
+              - button "Ignore company globally" [ref=e896]:
+                - img [ref=e897]
+          - generic [ref=e901] [cursor=pointer]:
+            - checkbox [ref=e903]
+            - generic [ref=e904]:
+              - generic [ref=e905]:
+                - generic [ref=e906]:
+                  - paragraph [ref=e907]: Associate Software Engineer
+                  - button "Skip" [ref=e909]:
+                    - img [ref=e910]
+                - generic [ref=e913]:
+                  - generic [ref=e914]: New
+                  - generic [ref=e915]: $84K - $112K
+                - generic [ref=e916]:
+                  - generic [ref=e917]: SEL
+                  - generic [ref=e918]: Boise, ID
+              - generic [ref=e919]: 14h ago
+            - generic [ref=e920]:
+              - button "Save" [ref=e921]:
+                - img [ref=e922]
+              - button "Applied" [ref=e924]:
+                - img [ref=e925]
+              - button "Score" [ref=e928]:
+                - img [ref=e929]
+              - link "Open in new tab" [ref=e932]:
+                - /url: https://selinc.wd1.myworkdayjobs.com/en-US/sel/job/Idaho---Boise/Associate-Software-Engineer_2026-21552
+                - img [ref=e933]
+              - button "Ignore company globally" [ref=e937]:
+                - img [ref=e938]
+          - generic [ref=e942] [cursor=pointer]:
+            - checkbox [ref=e944]
+            - generic [ref=e945]:
+              - generic [ref=e946]:
+                - generic [ref=e947]:
+                  - paragraph [ref=e948]: Flight Software Engineering Intern - Fall 2026 Internship
+                  - button "Skip" [ref=e950]:
+                    - img [ref=e951]
+                - generic [ref=e954]:
+                  - generic [ref=e955]: New
+                  - generic [ref=e956]: $120K
+                - generic [ref=e957]:
+                  - generic [ref=e958]: Reliable Robotics Corporation
+                  - generic [ref=e959]: Mountain View, CA
+              - generic [ref=e960]: 14h ago
+            - generic [ref=e961]:
+              - button "Save" [ref=e962]:
+                - img [ref=e963]
+              - button "Applied" [ref=e965]:
+                - img [ref=e966]
+              - button "Score" [ref=e969]:
+                - img [ref=e970]
+              - link "Open in new tab" [ref=e973]:
+                - /url: https://jobs.ashbyhq.com/reliable-robotics/c4968e8a-a901-4ec1-9a9d-bb5cd96efc4f
+                - img [ref=e974]
+              - button "Ignore company globally" [ref=e978]:
+                - img [ref=e979]
+          - generic [ref=e983] [cursor=pointer]:
+            - checkbox [ref=e985]
+            - generic [ref=e986]:
+              - generic [ref=e987]:
+                - generic [ref=e988]:
+                  - paragraph [ref=e989]: Teleoperation Software Engineering Internship
+                  - button "Skip" [ref=e991]:
+                    - img [ref=e992]
+                - generic [ref=e996]: New
+                - generic [ref=e997]:
+                  - generic [ref=e998]: Persona AI
+                  - generic [ref=e999]: Pensacola, FL +1
+              - generic [ref=e1000]: 14h ago
+            - generic [ref=e1001]:
+              - button "Save" [ref=e1002]:
+                - img [ref=e1003]
+              - button "Applied" [ref=e1005]:
+                - img [ref=e1006]
+              - button "Score" [ref=e1009]:
+                - img [ref=e1010]
+              - link "Open in new tab" [ref=e1013]:
+                - /url: https://jobs.ashbyhq.com/persona.ai/6078fafd-ba34-4c89-b260-7eb15be3cb9c
+                - img [ref=e1014]
+              - button "Ignore company globally" [ref=e1018]:
+                - img [ref=e1019]
+          - generic [ref=e1023] [cursor=pointer]:
+            - checkbox [ref=e1025]
+            - generic [ref=e1026]:
+              - generic [ref=e1027]:
+                - generic [ref=e1028]:
+                  - paragraph [ref=e1029]: Junior Front-End Developer
+                  - button "Skip" [ref=e1031]:
+                    - img [ref=e1032]
+                - generic [ref=e1035]:
+                  - generic [ref=e1036]: New
+                  - generic [ref=e1037]: $88K - $155K
+                - generic [ref=e1038]:
+                  - generic [ref=e1039]: Parsons
+                  - generic [ref=e1040]: Westminster, CO
+              - generic [ref=e1041]: 14h ago
+            - generic [ref=e1042]:
+              - button "Save" [ref=e1043]:
+                - img [ref=e1044]
+              - button "Applied" [ref=e1046]:
+                - img [ref=e1047]
+              - button "Score" [ref=e1050]:
+                - img [ref=e1051]
+              - link "Open in new tab" [ref=e1054]:
+                - /url: https://parsons.wd5.myworkdayjobs.com/en-US/search/job/US---CO-Westminster/Junior-Front-End-Developer_R183194
+                - img [ref=e1055]
+              - button "Ignore company globally" [ref=e1059]:
+                - img [ref=e1060]
+          - generic [ref=e1064] [cursor=pointer]:
+            - checkbox [ref=e1066]
+            - generic [ref=e1067]:
+              - generic [ref=e1068]:
+                - generic [ref=e1069]:
+                  - paragraph [ref=e1070]: Software Engineer - 2027 Graduate Program - August Start
+                  - button "Skip" [ref=e1072]:
+                    - img [ref=e1073]
+                - generic [ref=e1077]: New
+                - generic [ref=e1078]:
+                  - generic [ref=e1079]: Old Mission Capital
+                  - generic [ref=e1080]: Chicago, IL
+              - generic [ref=e1081]: 14h ago
+            - generic [ref=e1082]:
+              - button "Save" [ref=e1083]:
+                - img [ref=e1084]
+              - button "Applied" [ref=e1086]:
+                - img [ref=e1087]
+              - button "Score" [ref=e1090]:
+                - img [ref=e1091]
+              - link "Open in new tab" [ref=e1094]:
+                - /url: https://www.oldmissioncapital.com/careers/?gh_jid=7796048003
+                - img [ref=e1095]
+              - button "Ignore company globally" [ref=e1099]:
+                - img [ref=e1100]
+          - generic [ref=e1104] [cursor=pointer]:
+            - checkbox [ref=e1106]
+            - generic [ref=e1107]:
+              - generic [ref=e1108]:
+                - generic [ref=e1109]:
+                  - paragraph [ref=e1110]: Software Engineer - General - new grad / early career
+                  - button "Skip" [ref=e1112]:
+                    - img [ref=e1113]
+                - generic [ref=e1116]:
+                  - generic [ref=e1117]: New
+                  - generic [ref=e1118]: $120K - $140K
+                - generic [ref=e1119]:
+                  - generic [ref=e1120]: northwoodspace
+                  - generic [ref=e1121]: Torrance, CA
+              - generic [ref=e1122]: 14h ago
+            - generic [ref=e1123]:
+              - button "Save" [ref=e1124]:
+                - img [ref=e1125]
+              - button "Applied" [ref=e1127]:
+                - img [ref=e1128]
+              - button "Score" [ref=e1131]:
+                - img [ref=e1132]
+              - link "Open in new tab" [ref=e1135]:
+                - /url: https://jobs.ashbyhq.com/northwoodspace/b960b661-e1cc-40d0-bde3-290cd1b58ede
+                - img [ref=e1136]
+              - button "Ignore company globally" [ref=e1140]:
+                - img [ref=e1141]
+          - generic [ref=e1145] [cursor=pointer]:
+            - checkbox [ref=e1147]
+            - generic [ref=e1148]:
+              - generic [ref=e1149]:
+                - generic [ref=e1150]:
+                  - paragraph [ref=e1151]: Forward Deployed Software Engineer - New Grad
+                  - button "Skip" [ref=e1153]:
+                    - img [ref=e1154]
+                - generic [ref=e1158]: New
+                - generic [ref=e1159]:
+                  - generic [ref=e1160]: Northslope
+                  - generic [ref=e1161]: New York City, NY
+              - generic [ref=e1162]: 14h ago
+            - generic [ref=e1163]:
+              - button "Save" [ref=e1164]:
+                - img [ref=e1165]
+              - button "Applied" [ref=e1167]:
+                - img [ref=e1168]
+              - button "Score" [ref=e1171]:
+                - img [ref=e1172]
+              - link "Open in new tab" [ref=e1175]:
+                - /url: https://jobs.ashbyhq.com/northslope-technologies/80b82167-7101-4f78-9006-7755dd2ca01e
+                - img [ref=e1176]
+              - button "Ignore company globally" [ref=e1180]:
+                - img [ref=e1181]
+          - generic [ref=e1185] [cursor=pointer]:
+            - checkbox [ref=e1187]
+            - generic [ref=e1188]:
+              - generic [ref=e1189]:
+                - generic [ref=e1190]:
+                  - paragraph [ref=e1191]: 2026 Associate Software Integration and Test Engineer - Redondo Beach - CA
+                  - button "Skip" [ref=e1193]:
+                    - img [ref=e1194]
+                - generic [ref=e1198]: New
+                - generic [ref=e1199]:
+                  - generic [ref=e1200]: Northrop Grumman
+                  - generic [ref=e1201]: Redondo Beach, CA
+              - generic [ref=e1202]: 14h ago
+            - generic [ref=e1203]:
+              - button "Save" [ref=e1204]:
+                - img [ref=e1205]
+              - button "Applied" [ref=e1207]:
+                - img [ref=e1208]
+              - button "Score" [ref=e1211]:
+                - img [ref=e1212]
+              - link "Open in new tab" [ref=e1215]:
+                - /url: https://ngc.wd1.myworkdayjobs.com/en-US/northrop_grumman_external_site/job/United-States-California-Redondo-Beach/XMLNAME-2026-Associate-Software-Integration-and-Test-Engineer---Redondo-Beach--CA-_R10240277
+                - img [ref=e1216]
+              - button "Ignore company globally" [ref=e1220]:
+                - img [ref=e1221]
+          - generic [ref=e1225] [cursor=pointer]:
+            - checkbox [ref=e1227]
+            - generic [ref=e1228]:
+              - generic [ref=e1229]:
+                - generic [ref=e1230]:
+                  - paragraph [ref=e1231]: Associate Software QA Engineer
+                  - button "Skip" [ref=e1233]:
+                    - img [ref=e1234]
+                - generic [ref=e1238]: New
+                - generic [ref=e1239]:
+                  - generic [ref=e1240]: Light & Wonder
+                  - generic [ref=e1241]: Las Vegas, NV
+              - generic [ref=e1242]: 14h ago
+            - generic [ref=e1243]:
+              - button "Save" [ref=e1244]:
+                - img [ref=e1245]
+              - button "Applied" [ref=e1247]:
+                - img [ref=e1248]
+              - button "Score" [ref=e1251]:
+                - img [ref=e1252]
+              - link "Open in new tab" [ref=e1255]:
+                - /url: https://lnw.wd5.myworkdayjobs.com/en-US/lightwonderexternalcareers/job/Las-Vegas-NV/Associate-Software-QA-Engineer_R322338
+                - img [ref=e1256]
+              - button "Ignore company globally" [ref=e1260]:
+                - img [ref=e1261]
+          - generic [ref=e1265] [cursor=pointer]:
+            - checkbox [ref=e1267]
+            - generic [ref=e1268]:
+              - generic [ref=e1269]:
+                - generic [ref=e1270]:
+                  - paragraph [ref=e1271]: Software Engineer Intern - Air Taxi
+                  - button "Skip" [ref=e1273]:
+                    - img [ref=e1274]
+                - generic [ref=e1278]: New
+                - generic [ref=e1279]:
+                  - generic [ref=e1280]: Joby Aviation
+                  - generic [ref=e1281]: San Carlos, CA
+              - generic [ref=e1282]: 14h ago
+            - generic [ref=e1283]:
+              - button "Save" [ref=e1284]:
+                - img [ref=e1285]
+              - button "Applied" [ref=e1287]:
+                - img [ref=e1288]
+              - button "Score" [ref=e1291]:
+                - img [ref=e1292]
+              - link "Open in new tab" [ref=e1295]:
+                - /url: https://careers-jobyaviation.icims.com/jobs/5168/software-engineer-intern----air-taxi/job
+                - img [ref=e1296]
+              - button "Ignore company globally" [ref=e1300]:
+                - img [ref=e1301]
+          - generic [ref=e1305] [cursor=pointer]:
+            - checkbox [ref=e1307]
+            - generic [ref=e1308]:
+              - generic [ref=e1309]:
+                - generic [ref=e1310]:
+                  - paragraph [ref=e1311]: Entry Level Software Engineer
+                  - button "Skip" [ref=e1313]:
+                    - img [ref=e1314]
+                - generic [ref=e1318]: New
+                - generic [ref=e1319]:
+                  - generic [ref=e1320]: i3 Corps
+                  - generic [ref=e1321]: Huntsville, AL
+              - generic [ref=e1322]: 14h ago
+            - generic [ref=e1323]:
+              - button "Save" [ref=e1324]:
+                - img [ref=e1325]
+              - button "Applied" [ref=e1327]:
+                - img [ref=e1328]
+              - button "Score" [ref=e1331]:
+                - img [ref=e1332]
+              - link "Open in new tab" [ref=e1335]:
+                - /url: https://careers-i3-corps.icims.com/jobs/5175/entry-level-software-engineer/job
+                - img [ref=e1336]
+              - button "Ignore company globally" [ref=e1340]:
+                - img [ref=e1341]
+        - generic [ref=e1344]:
+          - button "Prev" [disabled] [ref=e1345]
+          - generic [ref=e1346]: 1–30 of 96
+          - button "Next" [ref=e1347] [cursor=pointer]

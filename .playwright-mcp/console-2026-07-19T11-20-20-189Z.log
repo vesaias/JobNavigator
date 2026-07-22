@@ -1,0 +1,3 @@
+[    1193ms] [LOG] 校招岗位类型加载成功: 6个分类 @ https://hr.4399om.com/campus/:523
+[    1251ms] [ERROR] 获取用户信息失败: {code: 4001, msg: 登录失效，请刷新页面重试} @ :52
+[    3255ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://hr.4399om.com/campus-assets/pic/re/cms/job/portal/202402/images/white1.png:0

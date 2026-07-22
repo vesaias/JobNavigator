@@ -1,0 +1,254 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+      - list [ref=e23]:
+        - link "首页" [ref=e24] [cursor=pointer]:
+          - /url: "#/"
+          - listitem [ref=e25]:
+            - link "首页" [ref=e26]:
+              - /url: "#/"
+        - link "社会招聘" [ref=e27] [cursor=pointer]:
+          - /url: "#/society"
+          - listitem [ref=e28]:
+            - link "社会招聘" [ref=e29]:
+              - /url: "#/society"
+        - link "校园招聘" [ref=e30] [cursor=pointer]:
+          - /url: "#/campus"
+          - listitem [ref=e31]:
+            - link "校园招聘" [ref=e32]:
+              - /url: "#/campus"
+        - link "了解新凯来" [ref=e33] [cursor=pointer]:
+          - /url: "#/learnAbout"
+          - listitem [ref=e34]:
+            - link "了解新凯来" [ref=e35]:
+              - /url: "#/learnAbout"
+      - text: "|"
+      - link "登录" [ref=e38] [cursor=pointer]:
+        - /url: "#/login"
+        - listitem [ref=e39]:
+          - link "登录" [ref=e40]:
+            - /url: "#/login"
+  - main [ref=e41]:
+    - generic [ref=e226]:
+      - generic [ref=e227]:
+        - generic [ref=e228]: 全新职业机会
+        - generic [ref=e229]: 等你来挑战！
+      - generic [ref=e231]:
+        - textbox "输入关键词搜索职位" [ref=e232]
+        - img [ref=e235] [cursor=pointer]
+      - generic [ref=e237]:
+        - generic [ref=e238]:
+          - generic [ref=e239]:
+            - generic [ref=e240]: 筛选
+            - generic [ref=e241] [cursor=pointer]: 清空
+          - generic [ref=e243]:
+            - heading "类型" [level=2] [ref=e245] [cursor=pointer]
+            - list [ref=e249]:
+              - listitem [ref=e250]:
+                - radio "国内本硕" [checked] [ref=e251] [cursor=pointer]
+                - generic [ref=e252] [cursor=pointer]: 国内本硕
+              - listitem [ref=e253]:
+                - radio "国内博士" [ref=e254] [cursor=pointer]
+                - generic [ref=e255] [cursor=pointer]: 国内博士
+              - listitem [ref=e256]:
+                - radio "留学生本硕" [ref=e257] [cursor=pointer]
+                - generic [ref=e258] [cursor=pointer]: 留学生本硕
+              - listitem [ref=e259]:
+                - radio "留学生博士" [ref=e260] [cursor=pointer]
+                - generic [ref=e261] [cursor=pointer]: 留学生博士
+          - generic [ref=e263]:
+            - heading "职位" [level=2] [ref=e265] [cursor=pointer]
+            - generic [ref=e268]:
+              - list [ref=e269]:
+                - listitem [ref=e270]:
+                  - radio "研发类" [checked] [ref=e271] [cursor=pointer]
+                  - generic [ref=e272] [cursor=pointer]: 研发类
+                - listitem [ref=e273]:
+                  - radio "销售类" [ref=e274] [cursor=pointer]
+                  - generic [ref=e275] [cursor=pointer]: 销售类
+                - listitem [ref=e276]:
+                  - radio "服务类" [ref=e277] [cursor=pointer]
+                  - generic [ref=e278] [cursor=pointer]: 服务类
+                - listitem [ref=e279]:
+                  - radio "供应链类" [ref=e280] [cursor=pointer]
+                  - generic [ref=e281] [cursor=pointer]: 供应链类
+                - listitem [ref=e282]:
+                  - radio "制造类" [ref=e283] [cursor=pointer]
+                  - generic [ref=e284] [cursor=pointer]: 制造类
+                - listitem [ref=e285]:
+                  - radio "采购类" [ref=e286] [cursor=pointer]
+                  - generic [ref=e287] [cursor=pointer]: 采购类
+              - generic [ref=e291]:
+                - combobox [ref=e293]
+                - generic [ref=e294]: 更多
+          - generic [ref=e296]:
+            - heading "城市" [level=2] [ref=e298] [cursor=pointer]
+            - generic [ref=e301]:
+              - list [ref=e302]:
+                - listitem [ref=e303]:
+                  - checkbox "深圳" [ref=e304] [cursor=pointer]
+                  - generic [ref=e305] [cursor=pointer]: 深圳
+                - listitem [ref=e306]:
+                  - checkbox "北京" [ref=e307] [cursor=pointer]
+                  - generic [ref=e308] [cursor=pointer]: 北京
+                - listitem [ref=e309]:
+                  - checkbox "东莞" [ref=e310] [cursor=pointer]
+                  - generic [ref=e311] [cursor=pointer]: 东莞
+                - listitem [ref=e312]:
+                  - checkbox "武汉" [ref=e313] [cursor=pointer]
+                  - generic [ref=e314] [cursor=pointer]: 武汉
+                - listitem [ref=e315]:
+                  - checkbox "长春" [ref=e316] [cursor=pointer]
+                  - generic [ref=e317] [cursor=pointer]: 长春
+                - listitem [ref=e318]:
+                  - checkbox "西安" [ref=e319] [cursor=pointer]
+                  - generic [ref=e320] [cursor=pointer]: 西安
+              - generic [ref=e324]:
+                - combobox [ref=e326]
+                - generic [ref=e327]: 更多
+        - generic [ref=e328]:
+          - heading "职位列表 共33个职位" [level=1] [ref=e329]:
+            - generic [ref=e330]: 职位列表
+            - generic [ref=e331]: 共33个职位
+          - list [ref=e332]:
+            - listitem [ref=e333] [cursor=pointer]:
+              - link "ASIC设计工程师 国内本硕 | 深圳,杭州 2026-07-10" [ref=e334]:
+                - /url: "#/jobs/detail?code=154&type=0"
+                - heading "ASIC设计工程师" [level=3] [ref=e335]
+                - generic [ref=e336]:
+                  - text: 国内本硕 | 深圳,杭州
+                  - generic [ref=e337]: 2026-07-10
+            - listitem [ref=e338] [cursor=pointer]:
+              - link "ASIC设计工程师 国内本硕 | 深圳,杭州 2026-07-10" [ref=e339]:
+                - /url: "#/jobs/detail?code=152&type=0"
+                - heading "ASIC设计工程师" [level=3] [ref=e340]
+                - generic [ref=e341]:
+                  - text: 国内本硕 | 深圳,杭州
+                  - generic [ref=e342]: 2026-07-10
+            - listitem [ref=e343] [cursor=pointer]:
+              - link "应用工程师 国内本硕 | 深圳,上海,武汉 2026-06-26" [ref=e344]:
+                - /url: "#/jobs/detail?code=312&type=0"
+                - heading "应用工程师" [level=3] [ref=e345]
+                - generic [ref=e346]:
+                  - text: 国内本硕 | 深圳,上海,武汉
+                  - generic [ref=e347]: 2026-06-26
+            - listitem [ref=e348] [cursor=pointer]:
+              - link "系统集成工程师 国内本硕 | 深圳,上海,北京,武汉,长春 2026-06-25" [ref=e349]:
+                - /url: "#/jobs/detail?code=212&type=0"
+                - heading "系统集成工程师" [level=3] [ref=e350]
+                - generic [ref=e351]:
+                  - text: 国内本硕 | 深圳,上海,北京,武汉,长春
+                  - generic [ref=e352]: 2026-06-25
+            - listitem [ref=e353] [cursor=pointer]:
+              - link "AI Agent开发工程师 国内本硕 | 深圳,上海 2026-06-25" [ref=e354]:
+                - /url: "#/jobs/detail?code=151&type=0"
+                - heading "AI Agent开发工程师" [level=3] [ref=e355]
+                - generic [ref=e356]:
+                  - text: 国内本硕 | 深圳,上海
+                  - generic [ref=e357]: 2026-06-25
+            - listitem [ref=e358] [cursor=pointer]:
+              - link "半导体工艺工程师 国内本硕 | 深圳,上海,长春 2026-06-24" [ref=e359]:
+                - /url: "#/jobs/detail?code=252&type=0"
+                - heading "半导体工艺工程师" [level=3] [ref=e360]
+                - generic [ref=e361]:
+                  - text: 国内本硕 | 深圳,上海,长春
+                  - generic [ref=e362]: 2026-06-24
+            - listitem [ref=e363] [cursor=pointer]:
+              - link "电气工程师 国内本硕 | 深圳,上海,武汉 2026-06-24" [ref=e364]:
+                - /url: "#/jobs/detail?code=256&type=0"
+                - heading "电气工程师" [level=3] [ref=e365]
+                - generic [ref=e366]:
+                  - text: 国内本硕 | 深圳,上海,武汉
+                  - generic [ref=e367]: 2026-06-24
+            - listitem [ref=e368] [cursor=pointer]:
+              - link "嵌入式开发工程师 国内本硕 | 北京,上海,深圳,武汉,西安 2026-06-24" [ref=e369]:
+                - /url: "#/jobs/detail?code=308&type=0"
+                - heading "嵌入式开发工程师" [level=3] [ref=e370]
+                - generic [ref=e371]:
+                  - text: 国内本硕 | 北京,上海,深圳,武汉,西安
+                  - generic [ref=e372]: 2026-06-24
+            - listitem [ref=e373] [cursor=pointer]:
+              - link "AI应用开发工程师 国内本硕 | 深圳,武汉 2026-06-24" [ref=e374]:
+                - /url: "#/jobs/detail?code=304&type=0"
+                - heading "AI应用开发工程师" [level=3] [ref=e375]
+                - generic [ref=e376]:
+                  - text: 国内本硕 | 深圳,武汉
+                  - generic [ref=e377]: 2026-06-24
+            - listitem [ref=e378] [cursor=pointer]:
+              - link "光学技术工程师 国内本硕 | 北京,上海,深圳,武汉,杭州,长春 2026-06-24" [ref=e379]:
+                - /url: "#/jobs/detail?code=300&type=0"
+                - heading "光学技术工程师" [level=3] [ref=e380]
+                - generic [ref=e381]:
+                  - text: 国内本硕 | 北京,上海,深圳,武汉,杭州,长春
+                  - generic [ref=e382]: 2026-06-24
+          - generic [ref=e383]:
+            - button "上一页" [disabled] [ref=e384]:
+              - generic:
+                - img
+            - list [ref=e385]:
+              - listitem "第 1 页" [ref=e386]: "1"
+              - listitem "第 2 页" [ref=e387] [cursor=pointer]: "2"
+              - listitem "第 3 页" [ref=e388] [cursor=pointer]: "3"
+              - listitem "第 4 页" [ref=e389] [cursor=pointer]: "4"
+            - button "下一页" [ref=e390] [cursor=pointer]:
+              - generic:
+                - img
+            - generic [ref=e391]:
+              - generic [ref=e392]: 前往
+              - spinbutton "页" [ref=e395]: "1"
+              - generic [ref=e396]: 页
+  - contentinfo [ref=e65]:
+    - generic [ref=e67]:
+      - generic [ref=e68]:
+        - img [ref=e70]
+        - paragraph [ref=e84]: © 2012-2030 深圳新凯来技术有限公司 版权所有：粤ICP备2022068529号
+      - generic [ref=e85]:
+        - generic [ref=e86]: 社会招聘
+        - link "应聘流程" [ref=e87] [cursor=pointer]:
+          - /url: "#/society?pos=1"
+          - paragraph [ref=e88]: 应聘流程
+        - link "开放职位" [ref=e89] [cursor=pointer]:
+          - /url: "#/society?pos=2"
+          - paragraph [ref=e90]: 开放职位
+        - link "常见问题" [ref=e91] [cursor=pointer]:
+          - /url: "#/society?pos=3"
+          - paragraph [ref=e92]: 常见问题
+      - generic [ref=e93]:
+        - generic [ref=e94]: 校园招聘
+        - link "应聘流程" [ref=e95] [cursor=pointer]:
+          - /url: "#/campus?pos=1"
+          - paragraph [ref=e96]: 应聘流程
+        - link "开放职位" [ref=e97] [cursor=pointer]:
+          - /url: "#/campus?pos=2"
+          - paragraph [ref=e98]: 开放职位
+        - link "常见问题" [ref=e99] [cursor=pointer]:
+          - /url: "#/campus?pos=3"
+          - paragraph [ref=e100]: 常见问题
+      - generic [ref=e101]:
+        - generic [ref=e102]: 了解新凯来
+        - link "公司简介" [ref=e103] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=company"
+          - paragraph [ref=e104]: 公司简介
+        - link "薪资福利" [ref=e105] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=salary"
+          - paragraph [ref=e106]: 薪资福利
+        - link "成长发展" [ref=e107] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=growth"
+          - paragraph [ref=e108]: 成长发展
+        - link "新凯来生活" [ref=e109] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=life"
+          - paragraph [ref=e110]: 新凯来生活
+      - generic [ref=e111]:
+        - generic [ref=e112]: 企业官网
+        - link "新凯来" [ref=e113] [cursor=pointer]:
+          - /url: https://www.sicarrier.com/
+  - list [ref=e115]:
+    - listitem [ref=e116] [cursor=pointer]:
+      - generic [ref=e117]: 邮箱
+      - link "hr@sicarrier.com" [ref=e119]:
+        - /url: mailto:hr@sicarrier.com
+    - listitem [ref=e120] [cursor=pointer]:
+      - generic [ref=e121]: 微信

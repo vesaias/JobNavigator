@@ -1,0 +1,585 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: loading
+    - generic [ref=e6]: 100%
+  - generic [ref=e7]:
+    - generic [ref=e10]:
+      - link "首页" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+      - link "社会招聘" [ref=e12] [cursor=pointer]:
+        - /url: https://lilithgames.jobs.feishu.cn/career
+      - link "校园招聘" [ref=e13] [cursor=pointer]:
+        - /url: https://lilithgames.jobs.feishu.cn/campus
+      - link "实习招聘" [ref=e14] [cursor=pointer]:
+        - /url: https://lilithgames.jobs.feishu.cn/intern
+      - link "登录" [ref=e15] [cursor=pointer]:
+        - /url: https://lilithgames.jobs.feishu.cn/career/login
+    - generic [ref=e16]:
+      - generic:
+        - generic [ref=e21]:
+          - generic [ref=e22]: 为
+          - generic [ref=e23]: 全
+          - generic [ref=e24]: 世
+          - generic [ref=e25]: 界
+          - generic [ref=e26]: 玩
+          - generic [ref=e27]: 家
+          - generic [ref=e28]: 提
+          - generic [ref=e29]: 供
+          - generic [ref=e30]: 超
+          - generic [ref=e31]: 越
+          - generic [ref=e32]: 预
+          - generic [ref=e33]: 期
+          - generic [ref=e34]: 的
+          - generic [ref=e35]: 游
+          - generic [ref=e36]: 戏
+          - generic [ref=e37]: 体
+          - generic [ref=e38]: 验
+        - link "立即投递" [ref=e39] [cursor=pointer]:
+          - /url: https://lilithgames.jobs.feishu.cn/career
+    - generic [ref=e43]:
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: 招
+          - generic [ref=e52]: 聘
+          - generic [ref=e53]: 类
+          - generic [ref=e54]: 型
+        - generic [ref=e55]:
+          - generic [ref=e56]: R
+          - generic [ref=e57]: e
+          - generic [ref=e58]: c
+          - generic [ref=e59]: r
+          - generic [ref=e60]: u
+          - generic [ref=e61]: i
+          - generic [ref=e62]: t
+          - generic [ref=e63]: m
+          - generic [ref=e64]: e
+          - generic [ref=e65]: "n"
+          - generic [ref=e66]: t
+          - generic [ref=e67]: T
+          - generic [ref=e68]: "y"
+          - generic [ref=e69]: p
+          - generic [ref=e70]: e
+      - list [ref=e72]:
+        - listitem [ref=e73]:
+          - img "招聘流程" [ref=e74]
+        - listitem [ref=e75]:
+          - img "社会招聘" [ref=e76]
+          - generic [ref=e77]:
+            - generic [ref=e78]: 社会招聘
+            - generic [ref=e79]:
+              - text: 立即投递
+              - emphasis [ref=e80]
+          - link [ref=e81] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career
+        - listitem [ref=e83]:
+          - img "校园招聘" [ref=e84]
+          - generic [ref=e85]:
+            - generic [ref=e86]: 校园招聘
+            - generic [ref=e87]:
+              - text: 立即投递
+              - emphasis [ref=e88]
+          - link [ref=e89] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/campus
+        - listitem [ref=e91]:
+          - img "实习招聘" [ref=e92]
+          - generic [ref=e93]:
+            - generic [ref=e94]: 实习招聘
+            - generic [ref=e95]:
+              - text: 立即投递
+              - emphasis [ref=e96]
+          - link [ref=e97] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/intern
+    - generic [ref=e99]:
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: 招
+          - generic [ref=e105]: 聘
+          - generic [ref=e106]: 流
+          - generic [ref=e107]: 程
+        - generic [ref=e108]:
+          - generic [ref=e109]: H
+          - generic [ref=e110]: i
+          - generic [ref=e111]: r
+          - generic [ref=e112]: i
+          - generic [ref=e113]: "n"
+          - generic [ref=e114]: g
+          - generic [ref=e115]: P
+          - generic [ref=e116]: r
+          - generic [ref=e117]: o
+          - generic [ref=e118]: c
+          - generic [ref=e119]: e
+          - generic [ref=e120]: s
+          - generic [ref=e121]: s
+      - generic [ref=e163]:
+        - text: 点击上方「招聘类型」内相应卡片，可查阅莉莉丝最新在招岗位。
+        - text: 可以根据您的职业规划与过往工作经历投递心仪职位。
+      - list:
+        - listitem [ref=e166]:
+          - link "选择岗位 STEP1" [ref=e167] [cursor=pointer]:
+            - /url: javascript:;
+            - generic [ref=e169]:
+              - generic [ref=e170]: 选择岗位
+              - generic [ref=e171]: STEP1
+        - listitem [ref=e172]:
+          - link "投递简历 STEP2" [ref=e173] [cursor=pointer]:
+            - /url: javascript:;
+            - generic [ref=e175]:
+              - generic [ref=e176]: 投递简历
+              - generic [ref=e177]: STEP2
+        - listitem [ref=e178]:
+          - link "笔试 STEP3" [ref=e179] [cursor=pointer]:
+            - /url: javascript:;
+            - generic [ref=e181]:
+              - generic [ref=e182]: 笔试
+              - generic [ref=e183]: STEP3
+        - listitem [ref=e184]:
+          - link "面试 STEP4" [ref=e185] [cursor=pointer]:
+            - /url: javascript:;
+            - generic [ref=e187]:
+              - generic [ref=e188]: 面试
+              - generic [ref=e189]: STEP4
+        - listitem [ref=e190]:
+          - link "获得Offer STEP5" [ref=e191] [cursor=pointer]:
+            - /url: javascript:;
+            - generic [ref=e193]:
+              - generic [ref=e194]: 获得Offer
+              - generic [ref=e195]: STEP5
+    - generic [ref=e196]:
+      - generic [ref=e199]:
+        - generic [ref=e200]:
+          - generic [ref=e201]: 关
+          - generic [ref=e202]: 于
+          - generic [ref=e203]: 莉
+          - generic [ref=e204]: 莉
+          - generic [ref=e205]: 丝
+        - generic [ref=e206]:
+          - generic [ref=e207]: A
+          - generic [ref=e208]: b
+          - generic [ref=e209]: o
+          - generic [ref=e210]: u
+          - generic [ref=e211]: t
+          - generic [ref=e212]: L
+          - generic [ref=e213]: i
+          - generic [ref=e214]: l
+          - generic [ref=e215]: i
+          - generic [ref=e216]: t
+          - generic [ref=e217]: h
+      - generic [ref=e219]:
+        - generic [ref=e221]:
+          - generic [ref=e222]: 简
+          - generic [ref=e223]: 单
+          - generic [ref=e224]: 真
+          - generic [ref=e225]: 诚
+          - generic [ref=e226]: ，
+        - generic [ref=e228]:
+          - generic [ref=e229]: 是
+          - generic [ref=e230]: 莉
+          - generic [ref=e231]: 莉
+          - generic [ref=e232]: 丝
+          - generic [ref=e233]: 遵
+          - generic [ref=e234]: 从
+          - generic [ref=e235]: 的
+        - generic [ref=e237]:
+          - generic [ref=e238]: 价
+          - generic [ref=e239]: 值
+          - generic [ref=e240]: 观
+          - generic [ref=e241]: 。
+      - generic [ref=e242]:
+        - paragraph [ref=e243]: 莉莉丝游戏于2013年创立于上海，是集游戏研发与全球发行于一体的游戏公司。
+        - paragraph [ref=e244]: 陆续推出《小冰冰传奇》《剑与远征》《万国觉醒》《剑与远征：启程》等爆款游戏，在全球市场积累了广泛的用户基础和良好口碑，是中国游戏公司出海代表之一。
+        - paragraph [ref=e245]: 莉莉丝秉持“简单真诚”的价值观，以“深度本地化”为核心战略，凭借深厚的出海经验和服务化经验，重视玩家声音，致力于为全世界玩家提供超越预期的游戏体验。目前在全球拥有超过2300名员工，于新加坡、韩国、美国等地设有分支机构。
+        - paragraph [ref=e246]: 莉莉丝将持续投入研发创新，不断探索多元化的艺术风格，通过优质内容连接全球玩家，努力实现“成为世界一流的游戏公司”的愿景。
+      - generic [ref=e251]: 莉莉丝游戏致力为全世界玩家提供超越预期的游戏体验，更多不可能，等你一起创造！
+    - generic [ref=e252]:
+      - generic [ref=e255]:
+        - generic [ref=e256]:
+          - generic [ref=e257]: 工
+          - generic [ref=e258]: 作
+          - generic [ref=e259]: 地
+          - generic [ref=e260]: 点
+        - generic [ref=e261]:
+          - generic [ref=e262]: L
+          - generic [ref=e263]: o
+          - generic [ref=e264]: c
+          - generic [ref=e265]: a
+          - generic [ref=e266]: t
+          - generic [ref=e267]: i
+          - generic [ref=e268]: o
+          - generic [ref=e269]: "n"
+          - generic [ref=e270]: s
+      - list [ref=e273]:
+        - listitem [ref=e274]:
+          - link "上海 上海 查看岗位 SHANGHAI" [ref=e275] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=&category=&location=CT_125&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "上海" [ref=e276]
+            - generic [ref=e277]:
+              - generic [ref=e278]:
+                - generic [ref=e279]: 上海
+                - generic [ref=e280]:
+                  - text: 查看岗位
+                  - emphasis [ref=e281]
+              - generic [ref=e282]: SHANGHAI
+        - listitem [ref=e283]:
+          - link "北京 北京 查看岗位 BEIJING" [ref=e284] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=&category=&location=CT_11&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "北京" [ref=e285]
+            - generic [ref=e286]:
+              - generic [ref=e287]:
+                - generic [ref=e288]: 北京
+                - generic [ref=e289]:
+                  - text: 查看岗位
+                  - emphasis [ref=e290]
+              - generic [ref=e291]: BEIJING
+        - listitem [ref=e292]:
+          - link "成都 成都 查看岗位 CHENGDU" [ref=e293] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=&category=&location=CT_22&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "成都" [ref=e294]
+            - generic [ref=e295]:
+              - generic [ref=e296]:
+                - generic [ref=e297]: 成都
+                - generic [ref=e298]:
+                  - text: 查看岗位
+                  - emphasis [ref=e299]
+              - generic [ref=e300]: CHENGDU
+        - listitem [ref=e301]:
+          - link "中国台北 中国台北 查看岗位 TAIPEI，CHINA" [ref=e302] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=%E4%B8%AD%E5%9B%BD%E5%8F%B0%E5%8C%97&category=&location=&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "中国台北" [ref=e303]
+            - generic [ref=e304]:
+              - generic [ref=e305]:
+                - generic [ref=e306]: 中国台北
+                - generic [ref=e307]:
+                  - text: 查看岗位
+                  - emphasis [ref=e308]
+              - generic [ref=e309]: TAIPEI，CHINA
+      - list:
+        - listitem [ref=e310]:
+          - link "新加坡 新加坡 查看岗位 SINGAPORE" [ref=e311] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=%E6%96%B0%E5%8A%A0%E5%9D%A1&category=&location=&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "新加坡" [ref=e312]
+            - generic [ref=e313]:
+              - generic [ref=e314]:
+                - generic [ref=e315]: 新加坡
+                - generic [ref=e316]:
+                  - text: 查看岗位
+                  - emphasis [ref=e317]
+              - generic [ref=e318]: SINGAPORE
+        - listitem [ref=e319]:
+          - link "韩国首尔 韩国首尔 查看岗位 SEOUL, SOUTH KOREA" [ref=e320] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=%E9%A6%96%E5%B0%94&category=&location=&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=
+            - img "韩国首尔" [ref=e321]
+            - generic [ref=e322]:
+              - generic [ref=e323]:
+                - generic [ref=e324]: 韩国首尔
+                - generic [ref=e325]:
+                  - text: 查看岗位
+                  - emphasis [ref=e326]
+              - generic [ref=e327]: SEOUL, SOUTH KOREA
+        - listitem [ref=e328]:
+          - link "美国旧金山 美国旧金山 查看岗位 SAN FRANCISCO, USA" [ref=e329] [cursor=pointer]:
+            - /url: https://lilithgames.jobs.feishu.cn/career/?keywords=&category=&location=CT_75&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=&tag=
+            - img "美国旧金山" [ref=e330]
+            - generic [ref=e331]:
+              - generic [ref=e332]:
+                - generic [ref=e333]: 美国旧金山
+                - generic [ref=e334]:
+                  - text: 查看岗位
+                  - emphasis [ref=e335]
+              - generic [ref=e336]: SAN FRANCISCO, USA
+    - generic [ref=e337]:
+      - generic [ref=e341]:
+        - generic [ref=e342]: 为
+        - generic [ref=e343]: 全
+        - generic [ref=e344]: 世
+        - generic [ref=e345]: 界
+        - generic [ref=e346]: 玩
+        - generic [ref=e347]: 家
+        - generic [ref=e348]: 提
+        - generic [ref=e349]: 供
+        - generic [ref=e350]: 超
+        - generic [ref=e351]: 越
+        - generic [ref=e352]: 预
+        - generic [ref=e353]: 期
+        - generic [ref=e354]: 的
+        - generic [ref=e355]: 游
+        - generic [ref=e356]: 戏
+        - generic [ref=e357]: 体
+        - generic [ref=e358]: 验
+      - generic [ref=e360]:
+        - generic:
+          - list:
+            - listitem [ref=e361] [cursor=pointer]:
+              - generic [ref=e362]:
+                - link [ref=e366]:
+                  - /url: https://cc.farlightgames.com/
+                - generic [ref=e367]:
+                  - emphasis [ref=e368]
+                  - paragraph [ref=e369]: 塔塔冒险队
+                  - paragraph [ref=e370]: 你的电子养宠乐园
+            - listitem [ref=e371] [cursor=pointer]:
+              - generic [ref=e372]:
+                - link [ref=e376]:
+                  - /url: https://afkjourney.lilith.com/
+                - generic [ref=e377]:
+                  - emphasis [ref=e378]
+                  - paragraph [ref=e379]: 剑与远征：启程
+                  - paragraph [ref=e380]: 大魔法师的旷野冒险 RPG
+            - listitem [ref=e381] [cursor=pointer]:
+              - generic [ref=e382]:
+                - link [ref=e386]:
+                  - /url: https://callofdragons.lilith.com/
+                - generic [ref=e387]:
+                  - emphasis [ref=e388]
+                  - paragraph [ref=e389]: 万龙觉醒
+                  - paragraph [ref=e390]: 魔兽战场 万人争霸
+            - listitem [ref=e391] [cursor=pointer]:
+              - generic [ref=e392]:
+                - link [ref=e396]:
+                  - /url: https://zspd.lilith.com/
+                - generic [ref=e397]:
+                  - emphasis [ref=e398]
+                  - paragraph [ref=e399]: 众神派对
+                  - paragraph [ref=e400]:
+                    - text: 多元审美
+                    - text: 打破乏味
+                    - paragraph
+            - listitem [ref=e401] [cursor=pointer]:
+              - generic [ref=e406]:
+                - emphasis [ref=e407]
+                - paragraph [ref=e408]: 古镜记
+                - paragraph [ref=e409]:
+                  - text: 破传奇悬案
+                  - text: 游烟雨江南
+            - listitem [ref=e410] [cursor=pointer]:
+              - generic [ref=e411]:
+                - link [ref=e415]:
+                  - /url: https://84.lilith.com
+                - generic [ref=e416]:
+                  - emphasis [ref=e417]
+                  - paragraph [ref=e418]: 远光84
+                  - paragraph [ref=e419]:
+                    - text: 未来战场
+                    - text: 英雄射击
+            - listitem [ref=e420] [cursor=pointer]:
+              - generic [ref=e421]:
+                - link [ref=e425]:
+                  - /url: https://zhxz.lilith.com
+                - generic [ref=e426]:
+                  - emphasis [ref=e427]
+                  - paragraph [ref=e428]: 战火勋章
+                  - paragraph [ref=e429]:
+                    - text: 战场 谋略
+                    - text: 制胜
+            - listitem [ref=e430] [cursor=pointer]:
+              - generic [ref=e431]:
+                - link [ref=e435]:
+                  - /url: https://rok-cn.lilith.com
+                - generic [ref=e436]:
+                  - emphasis [ref=e437]
+                  - paragraph [ref=e438]: 万国觉醒
+                  - paragraph [ref=e439]:
+                    - text: 千军万马
+                    - text: 即时开打
+            - listitem [ref=e440] [cursor=pointer]:
+              - generic [ref=e441]:
+                - link [ref=e445]:
+                  - /url: https://afk.lilith.com
+                - generic [ref=e446]:
+                  - emphasis [ref=e447]
+                  - paragraph [ref=e448]: 剑与远征
+                  - paragraph [ref=e449]:
+                    - text: 轻松养成
+                    - text: 放置升级
+            - listitem [ref=e450] [cursor=pointer]:
+              - generic [ref=e451]:
+                - link [ref=e455]:
+                  - /url: https://aoc.lilith.com
+                - generic [ref=e456]:
+                  - emphasis [ref=e457]
+                  - paragraph [ref=e458]: 剑与家园
+                  - paragraph [ref=e459]:
+                    - text: 向全世界展示
+                    - text: 中国玩家的实力
+            - listitem [ref=e460] [cursor=pointer]:
+              - generic [ref=e461]:
+                - link [ref=e465]:
+                  - /url: https://d.lilith.com
+                - generic [ref=e466]:
+                  - emphasis [ref=e467]
+                  - paragraph [ref=e468]: 小冰冰传奇
+                  - paragraph [ref=e469]:
+                    - text: 首款
+                    - text: 国民动作卡牌手游
+            - listitem [ref=e470] [cursor=pointer]:
+              - generic [ref=e475]:
+                - emphasis [ref=e476]
+                - paragraph [ref=e477]: 艾比
+                - paragraph [ref=e478]:
+                  - text: 幻想解谜
+                  - text: 独立游戏
+            - listitem [ref=e479] [cursor=pointer]:
+              - generic [ref=e484]:
+                - emphasis [ref=e485]
+                - paragraph [ref=e486]: 迷失岛2
+                - paragraph [ref=e487]:
+                  - text: 给热爱
+                  - text: 解谜的你
+            - listitem [ref=e488] [cursor=pointer]:
+              - generic [ref=e493]:
+                - emphasis [ref=e494]
+                - paragraph [ref=e495]: 南瓜先生2
+                - paragraph [ref=e496]:
+                  - text: 九龙城寨的
+                  - text: 日与夜
+    - generic [ref=e497]:
+      - generic [ref=e503]:
+        - generic [ref=e504]:
+          - generic [ref=e505]: 工
+          - generic [ref=e506]: 作
+          - generic [ref=e507]: 在
+          - generic [ref=e508]: 莉
+          - generic [ref=e509]: 莉
+          - generic [ref=e510]: 丝
+        - generic [ref=e511]:
+          - generic [ref=e512]: W
+          - generic [ref=e513]: o
+          - generic [ref=e514]: r
+          - generic [ref=e515]: k
+          - generic [ref=e516]: i
+          - generic [ref=e517]: "n"
+          - generic [ref=e518]: g
+          - generic [ref=e519]: a
+          - generic [ref=e520]: t
+          - generic [ref=e521]: L
+          - generic [ref=e522]: i
+          - generic [ref=e523]: l
+          - generic [ref=e524]: i
+          - generic [ref=e525]: t
+          - generic [ref=e526]: h
+      - list [ref=e533]:
+        - listitem [ref=e534]
+        - listitem [ref=e535]
+        - listitem [ref=e536]
+        - listitem [ref=e537]
+      - list [ref=e543]:
+        - listitem [ref=e544]:
+          - img "健康设施" [ref=e545]
+          - generic [ref=e546]:
+            - generic [ref=e547]: 健康设施
+            - generic [ref=e548]: 健康设施
+            - generic [ref=e549]: 在莉莉丝，你会拥有一整栋的休闲娱乐楼！除了一流的健身设备，还有电竞房、乐队排练厅、猫猫房、影音室等多样空间，期待你在这里探索、放松，保持最佳的生活状态。
+        - listitem [ref=e550]:
+          - img "小莉社团" [ref=e551]
+          - generic [ref=e552]:
+            - generic [ref=e553]: 小莉社团
+            - generic [ref=e554]: 小莉社团
+            - generic [ref=e555]: 莉莉丝有丰富的社团活动资源，在这里，兴趣从不孤单。公司有7个官方社团，期待你在这里找到志同道合的伙伴，一起把热爱变成生活里的光。
+        - listitem [ref=e556]:
+          - img "小莉加油站" [ref=e557]
+          - generic [ref=e558]:
+            - generic [ref=e559]: 小莉加油站
+            - generic [ref=e560]: 小莉加油站
+            - generic [ref=e561]: 莉莉丝携手专业机构推出的一项员工身心关爱福利，旨在为大家提供保密、专业的心理健康服务，帮助大家释放压力、改善情绪。
+        - listitem [ref=e562]:
+          - img "生日福利" [ref=e563]
+          - generic [ref=e564]:
+            - generic [ref=e565]: 生日福利
+            - generic [ref=e566]: 生日福利
+            - generic [ref=e567]: 莉莉丝提供生日专属礼物的福利，员工可以选择自己喜欢的500元内的生日礼物，由公司送出。
+        - listitem [ref=e568]:
+          - img "员工体检" [ref=e569]
+          - generic [ref=e570]:
+            - generic [ref=e571]: 员工体检
+            - generic [ref=e572]: 员工体检
+            - generic [ref=e573]: 公司每年春末夏初启动全面体检，旨在及时干预可能存在的健康风险，帮助大家维持理想的生活与工作状态。
+        - listitem [ref=e574]:
+          - img "节日礼包" [ref=e575]
+          - generic [ref=e576]:
+            - generic [ref=e577]: 节日礼包
+            - generic [ref=e578]: 节日礼包
+            - generic [ref=e579]: 每逢大小节日，小莉定制礼包都会如约而至。无论是走亲访友的暖心伴手礼，还是个人收藏的专属纪念品，都承载着公司对每一位员工的真诚关怀与节日问候。
+        - listitem [ref=e580]:
+          - img "商业保险" [ref=e581]
+          - generic [ref=e582]:
+            - generic [ref=e583]: 商业保险
+            - generic [ref=e584]: 商业保险
+            - generic [ref=e585]: 每一位员工都享有全面的商业保险，覆盖生活与工作的方方面面。愿这份保障成为你坚实的后盾，让你在前行的路上安心生活，无忧工作。
+        - listitem [ref=e586]:
+          - img "带薪假期" [ref=e587]
+          - generic [ref=e588]:
+            - generic [ref=e589]: 带薪假期
+            - generic [ref=e590]: 带薪假期
+            - generic [ref=e591]: 莉莉丝为员工准备了丰富的假期类型，无论是陪伴家人、照顾自己，还是追寻热爱，年休假、30天全薪病假、事假、产假、陪产假、婚假等一应俱全，愿你在重要时刻无需顾虑，安心享受属于你的时光。
+        - listitem [ref=e592]:
+          - img "有竞争力的薪酬水平" [ref=e593]
+          - generic [ref=e594]:
+            - generic [ref=e595]: 有竞争力的薪酬水平
+            - generic [ref=e596]: 有竞争力的薪酬水平
+            - generic [ref=e597]: 一年两次薪酬回顾窗口及公开透明的晋升机制。简单真诚，有价值有回报！
+        - listitem [ref=e598]:
+          - img "小莉私教计划" [ref=e599]
+          - generic [ref=e600]:
+            - generic [ref=e601]: 小莉私教计划
+            - generic [ref=e602]: 小莉私教计划
+            - generic [ref=e603]: 为了鼓励大家在闲暇之余自我学习与提升，可以报名学习与工作高相关的课程，课程结束后在公司内分享，公司将承担课程相关的费用。
+        - listitem [ref=e604]:
+          - img "月桂小酒馆" [ref=e605]
+          - generic [ref=e606]:
+            - generic [ref=e607]: 月桂小酒馆
+            - generic [ref=e608]: 月桂小酒馆
+            - generic [ref=e609]: 每双周五在上海绿洲工区举办，每场活动将推出一款特调酒，同时提供各类瓶装酒、软饮及休闲零食。这里是莉莉丝人的“精神绿洲”。
+    - generic [ref=e612]:
+      - generic [ref=e615]:
+        - generic [ref=e616]:
+          - generic [ref=e617]: 关
+          - generic [ref=e618]: 注
+          - generic [ref=e619]: 我
+          - generic [ref=e620]: 们
+        - generic [ref=e621]:
+          - generic [ref=e622]: F
+          - generic [ref=e623]: o
+          - generic [ref=e624]: l
+          - generic [ref=e625]: l
+          - generic [ref=e626]: o
+          - generic [ref=e627]: w
+          - generic [ref=e628]: U
+          - generic [ref=e629]: s
+      - list [ref=e631]:
+        - listitem [ref=e632]:
+          - generic [ref=e633]: 微信公众号
+        - listitem [ref=e634]:
+          - generic [ref=e635]: bilibili
+        - listitem [ref=e636]:
+          - generic [ref=e637]: 领英
+        - listitem [ref=e638]:
+          - generic [ref=e639]: 小红书
+    - generic [ref=e641]:
+      - img "lilithgames" [ref=e642]
+      - generic [ref=e643]:
+        - link "隐私协议 |" [ref=e644] [cursor=pointer]:
+          - /url: https://www.lilith.com/privacy
+        - link "服务条款 |" [ref=e645] [cursor=pointer]:
+          - /url: https://www.lilith.com/termofservice
+        - link "廉正合规 |" [ref=e646] [cursor=pointer]:
+          - /url: https://www.lilith.com/integrity
+        - link "儿童信息保护指引 |" [ref=e647] [cursor=pointer]:
+          - /url: https://www.lilith.com/childsafety
+        - link "成长守护平台" [ref=e648] [cursor=pointer]:
+          - /url: https://www.lilith.com/growth
+      - generic [ref=e649] [cursor=pointer]: 上海莉莉丝网络科技有限公司 上海市嘉定区银翔路655号1幢11层1116室
+      - link "police.png沪公网安备 31011202005078号" [ref=e650] [cursor=pointer]:
+        - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011202005078
+        - img "police.png" [ref=e651]
+        - text: 沪公网安备 31011202005078号
+      - link "沪ICP备15032795号" [ref=e652] [cursor=pointer]:
+        - /url: https://beian.miit.gov.cn/
+      - generic [ref=e653]: 增值电信业务经营许可证：沪B2-20160037
+      - generic [ref=e654]: 违规信息举报电话/客服电话：028-65231887
+      - generic [ref=e655]: 未成年人保护专项服务邮箱：childsafety@lilith.com
+      - generic [ref=e656]:
+        - link "jubao_b.png" [ref=e657] [cursor=pointer]:
+          - /url: http://www.shjbzx.cn/
+          - img "jubao_b.png" [ref=e658]
+        - link "jubao.png" [ref=e659] [cursor=pointer]:
+          - /url: https://www.12377.cn/
+          - img "jubao.png" [ref=e660]

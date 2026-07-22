@@ -1,0 +1,170 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+      - list [ref=e23]:
+        - link "首页" [ref=e24] [cursor=pointer]:
+          - /url: "#/"
+          - listitem [ref=e25]:
+            - link "首页" [ref=e26]:
+              - /url: "#/"
+        - link "社会招聘" [ref=e27] [cursor=pointer]:
+          - /url: "#/society"
+          - listitem [ref=e28]:
+            - link "社会招聘" [ref=e29]:
+              - /url: "#/society"
+        - link "校园招聘" [ref=e30] [cursor=pointer]:
+          - /url: "#/campus"
+          - listitem [ref=e31]:
+            - link "校园招聘" [ref=e32]:
+              - /url: "#/campus"
+        - link "了解新凯来" [ref=e33] [cursor=pointer]:
+          - /url: "#/learnAbout"
+          - listitem [ref=e34]:
+            - link "了解新凯来" [ref=e35]:
+              - /url: "#/learnAbout"
+      - text: "|"
+      - link "登录" [ref=e38] [cursor=pointer]:
+        - /url: "#/login"
+        - listitem [ref=e39]:
+          - link "登录" [ref=e40]:
+            - /url: "#/login"
+  - main [ref=e41]:
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic [ref=e124]: 校园招聘
+        - generic [ref=e125]: 逐梦少年，热血前行，用热爱照亮前行之路
+        - generic [ref=e126]: 加入我们，携手共创无限可能
+        - link "立即投递" [ref=e127] [cursor=pointer]:
+          - /url: "#/campusJobs"
+          - generic [ref=e128]: 立即投递
+      - generic [ref=e130]:
+        - list [ref=e131]:
+          - listitem [ref=e132] [cursor=pointer]: 校园招聘
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - link "首页" [ref=e135] [cursor=pointer]:
+              - /url: "#/"
+            - text: /
+          - generic [ref=e136]: 校园招聘
+      - generic [ref=e137]:
+        - generic [ref=e140]:
+          - generic [ref=e141]: 应聘流程
+          - list [ref=e142]:
+            - listitem [ref=e143]
+            - listitem [ref=e145]
+            - listitem [ref=e147]
+            - listitem [ref=e149]
+          - list [ref=e151]:
+            - listitem [ref=e152]:
+              - generic [ref=e154]: 网申
+            - listitem [ref=e155]:
+              - generic [ref=e157]: 笔试/测评
+            - listitem [ref=e158]:
+              - generic [ref=e160]: 面试
+            - listitem [ref=e161]:
+              - generic [ref=e163]: offer发放
+        - generic [ref=e166]:
+          - generic [ref=e167]: 开放职位
+          - generic [ref=e168]:
+            - generic [ref=e169] [cursor=pointer]: 研发类
+            - generic [ref=e170] [cursor=pointer]: 销售类
+            - generic [ref=e171] [cursor=pointer]: 服务类
+            - generic [ref=e172] [cursor=pointer]: 供应链类
+            - generic [ref=e173] [cursor=pointer]: 制造类
+            - generic [ref=e174] [cursor=pointer]: 采购类
+            - generic [ref=e175] [cursor=pointer]: 财经类
+            - generic [ref=e176] [cursor=pointer]: 质量与流程IT类
+            - generic [ref=e177] [cursor=pointer]: 法务类
+            - generic [ref=e178] [cursor=pointer]: 人力资源类
+            - generic [ref=e179] [cursor=pointer]: 业务支撑类
+            - generic [ref=e180] [cursor=pointer]: 企业发展类
+        - generic [ref=e183]:
+          - generic [ref=e184]: 常见问题
+          - generic [ref=e186]:
+            - generic [ref=e187] [cursor=pointer]: 简历
+            - generic [ref=e188] [cursor=pointer]: 笔试
+            - generic [ref=e189] [cursor=pointer]: 面试
+          - generic [ref=e191]:
+            - generic [ref=e192]:
+              - img [ref=e194]
+              - generic [ref=e195]:
+                - generic [ref=e196]: 2027届应届生招聘面向哪些人群？
+                - generic [ref=e197]:
+                  - paragraph [ref=e198]: 2027年1月1日 - 2027年12月31日毕业的国内高校本科生与硕士研究生；
+                  - paragraph
+                  - paragraph [ref=e199]: 2026年1月1日 - 2027年12月31日毕业的国内高校博士生与海外高校本硕博学生。
+            - generic [ref=e200]:
+              - img [ref=e202]
+              - generic [ref=e203]:
+                - generic [ref=e204]: 简历注册时是否应该勾选“同意岗位调剂”？
+                - paragraph [ref=e206]: 建议您勾选“同意岗位调剂”。公司将优先根据您所投递的岗位进行简历评估和面试安排。如面试不通过或投递岗位满额，公司将根据您的专业背景做合适岗位推荐。
+            - generic [ref=e207]:
+              - img [ref=e209]
+              - generic [ref=e210]:
+                - generic [ref=e211]: 填写简历时有哪些注意事项？
+                - generic [ref=e212]:
+                  - paragraph [ref=e213]: 1、请务必仔细填写并核对您的个人基本信息：姓名、证件号码、联系方式、邮箱地址等。一经注册将无法变更，如信息错误，将会直接影响您应聘结果有效性。
+                  - paragraph [ref=e214]: 2、注册证件：中国大陆候选人请使用身份证注册；中国港澳台候选人请使用往来内地通行证/往来大陆通行证进行注册；非中国籍候选人请使用护照进行注册。
+                  - paragraph [ref=e215]: 3、教育经历：请按照由近及远、由高到低的顺序完善教育经历。
+                  - paragraph
+                  - paragraph [ref=e216]: 4、在校经历：建议充分完善您的在校经历，以加深面试官的第一印象。
+            - generic [ref=e217]:
+              - img [ref=e219]
+              - generic [ref=e220]:
+                - generic [ref=e221]: 是否一定要填写推荐码？
+                - paragraph [ref=e223]: 推荐码为选填项，若您在投递岗位时填写了推荐码，则简历优先推送给对应的业务团队评估；如您未填写推荐码，则由公司招聘团队推荐给适合的业务团队。推荐码填写与否不影响您的应聘。
+  - contentinfo [ref=e65]:
+    - generic [ref=e67]:
+      - generic [ref=e68]:
+        - img [ref=e70]
+        - paragraph [ref=e84]: © 2012-2030 深圳新凯来技术有限公司 版权所有：粤ICP备2022068529号
+      - generic [ref=e85]:
+        - generic [ref=e86]: 社会招聘
+        - link "应聘流程" [ref=e87] [cursor=pointer]:
+          - /url: "#/society?pos=1"
+          - paragraph [ref=e88]: 应聘流程
+        - link "开放职位" [ref=e89] [cursor=pointer]:
+          - /url: "#/society?pos=2"
+          - paragraph [ref=e90]: 开放职位
+        - link "常见问题" [ref=e91] [cursor=pointer]:
+          - /url: "#/society?pos=3"
+          - paragraph [ref=e92]: 常见问题
+      - generic [ref=e93]:
+        - generic [ref=e94]: 校园招聘
+        - link "应聘流程" [ref=e95] [cursor=pointer]:
+          - /url: "#/campus?pos=1"
+          - paragraph [ref=e96]: 应聘流程
+        - link "开放职位" [active] [ref=e97] [cursor=pointer]:
+          - /url: "#/campus?pos=2"
+          - paragraph [ref=e98]: 开放职位
+        - link "常见问题" [ref=e99] [cursor=pointer]:
+          - /url: "#/campus?pos=3"
+          - paragraph [ref=e100]: 常见问题
+      - generic [ref=e101]:
+        - generic [ref=e102]: 了解新凯来
+        - link "公司简介" [ref=e103] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=company"
+          - paragraph [ref=e104]: 公司简介
+        - link "薪资福利" [ref=e105] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=salary"
+          - paragraph [ref=e106]: 薪资福利
+        - link "成长发展" [ref=e107] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=growth"
+          - paragraph [ref=e108]: 成长发展
+        - link "新凯来生活" [ref=e109] [cursor=pointer]:
+          - /url: "#/learnAbout?tab=life"
+          - paragraph [ref=e110]: 新凯来生活
+      - generic [ref=e111]:
+        - generic [ref=e112]: 企业官网
+        - link "新凯来" [ref=e113] [cursor=pointer]:
+          - /url: https://www.sicarrier.com/
+  - list [ref=e115]:
+    - listitem [ref=e116] [cursor=pointer]:
+      - generic [ref=e117]: 邮箱
+      - link "hr@sicarrier.com" [ref=e119]:
+        - /url: mailto:hr@sicarrier.com
+    - listitem [ref=e120] [cursor=pointer]:
+      - generic [ref=e121]: 微信

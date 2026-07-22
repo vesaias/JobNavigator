@@ -1,0 +1,291 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic:
+        - img
+    - generic [ref=e8]:
+      - generic [ref=e10]:
+        - link "职位" [ref=e11] [cursor=pointer]:
+          - /url: /campus/
+        - link "校招官网" [ref=e12] [cursor=pointer]:
+          - /url: https://campus.nio.com/#/
+        - link "社招官网" [ref=e13] [cursor=pointer]:
+          - /url: https://www.nio.cn/careers/jobs
+        - link "关于蔚来" [ref=e14] [cursor=pointer]:
+          - /url: https://www.nio.cn/
+      - link "登录" [ref=e17] [cursor=pointer]:
+        - /url: /campus/login
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e37]:
+        - 'generic "图标: search" [ref=e39]':
+          - img [ref=e40]
+        - textbox "搜索职位" [active] [ref=e42]: 后端
+        - button "搜索" [ref=e44] [cursor=pointer]:
+          - generic: 搜索
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - text: 筛选
+            - generic [ref=e48]: 清除
+          - generic [ref=e73]:
+            - generic [ref=e74]: 招聘项目
+            - tree [ref=e76]:
+              - 'treeitem "图标: caret-down 2027届校园招聘" [ref=e77]':
+                - 'generic "图标: caret-down" [ref=e79] [cursor=pointer]':
+                  - img [ref=e80]
+                - generic [ref=e85] [cursor=pointer]: 2027届校园招聘
+                - group [ref=e86]:
+                  - treeitem "2027届校园招聘-技术提前批" [ref=e87]:
+                    - generic [ref=e95] [cursor=pointer]: 2027届校园招聘-技术提前批
+              - 'treeitem "图标: caret-down 人才专项招聘计划" [ref=e96]':
+                - 'generic "图标: caret-down" [ref=e98] [cursor=pointer]':
+                  - img [ref=e99]
+                - generic [ref=e104] [cursor=pointer]: 人才专项招聘计划
+                - group [ref=e105]:
+                  - treeitem "蔚来AGI超星计划" [ref=e106]:
+                    - generic [ref=e114] [cursor=pointer]: 蔚来AGI超星计划
+                  - treeitem "Super Sparks 招聘计划" [ref=e115]:
+                    - generic [ref=e123] [cursor=pointer]: Super Sparks 招聘计划
+              - 'treeitem "图标: caret-down 2027届储备实习生招募" [ref=e124]':
+                - 'generic "图标: caret-down" [ref=e126] [cursor=pointer]':
+                  - img [ref=e127]
+                - generic [ref=e132] [cursor=pointer]: 2027届储备实习生招募
+                - group [ref=e133]:
+                  - treeitem "蔚来2027届实习生招募" [ref=e134]:
+                    - generic [ref=e142] [cursor=pointer]: 蔚来2027届实习生招募
+              - 'treeitem "图标: caret-down 营销Sparks人才专项" [ref=e143]':
+                - 'generic "图标: caret-down" [ref=e145] [cursor=pointer]':
+                  - img [ref=e146]
+                - generic [ref=e151] [cursor=pointer]: 营销Sparks人才专项
+                - group [ref=e152]:
+                  - treeitem "\"未来星\"营销管训班" [ref=e153]:
+                    - generic [ref=e161] [cursor=pointer]: "\"未来星\"营销管训班"
+                  - treeitem "营销暑期实习生招募" [ref=e162]:
+                    - generic [ref=e170] [cursor=pointer]: 营销暑期实习生招募
+              - treeitem "Shine校园招聘计划" [ref=e171]:
+                - generic [ref=e176] [cursor=pointer]: Shine校园招聘计划
+          - generic [ref=e177]:
+            - generic [ref=e178]: 城市
+            - generic [ref=e179]:
+              - tree [ref=e180]:
+                - treeitem "上海" [ref=e181]:
+                  - generic [ref=e188] [cursor=pointer]: 上海
+                - treeitem "合肥" [ref=e189]:
+                  - generic [ref=e196] [cursor=pointer]: 合肥
+                - treeitem "北京" [ref=e197]:
+                  - generic [ref=e204] [cursor=pointer]: 北京
+                - treeitem "武汉" [ref=e205]:
+                  - generic [ref=e212] [cursor=pointer]: 武汉
+                - treeitem "深圳" [ref=e213]:
+                  - generic [ref=e220] [cursor=pointer]: 深圳
+                - treeitem "重庆" [ref=e221]:
+                  - generic [ref=e228] [cursor=pointer]: 重庆
+                - treeitem "南京" [ref=e229]:
+                  - generic [ref=e236] [cursor=pointer]: 南京
+              - generic [ref=e237] [cursor=pointer]:
+                - generic:
+                  - img
+                - generic: 更多
+                - combobox [ref=e239]
+          - generic [ref=e242]:
+            - generic [ref=e243]: 职能分类
+            - tree [ref=e245]:
+              - 'treeitem "图标: caret-down 产品" [ref=e246]':
+                - 'generic "图标: caret-down" [ref=e248] [cursor=pointer]':
+                  - img [ref=e249]
+                - generic [ref=e254] [cursor=pointer]: 产品
+              - 'treeitem "图标: caret-down 项目管理" [ref=e255]':
+                - 'generic "图标: caret-down" [ref=e257] [cursor=pointer]':
+                  - img [ref=e258]
+                - generic [ref=e263] [cursor=pointer]: 项目管理
+              - 'treeitem "图标: caret-down 设计" [ref=e264]':
+                - 'generic "图标: caret-down" [ref=e266] [cursor=pointer]':
+                  - img [ref=e267]
+                - generic [ref=e272] [cursor=pointer]: 设计
+              - 'treeitem "图标: caret-down 工程技术" [ref=e273]':
+                - 'generic "图标: caret-down" [ref=e275] [cursor=pointer]':
+                  - img [ref=e276]
+                - generic [ref=e281] [cursor=pointer]: 工程技术
+              - 'treeitem "图标: caret-down 动力电池" [ref=e282]':
+                - 'generic "图标: caret-down" [ref=e284] [cursor=pointer]':
+                  - img [ref=e285]
+                - generic [ref=e290] [cursor=pointer]: 动力电池
+              - 'treeitem "图标: caret-down 数字技术" [ref=e291]':
+                - 'generic "图标: caret-down" [ref=e293] [cursor=pointer]':
+                  - img [ref=e294]
+                - generic [ref=e299] [cursor=pointer]: 数字技术
+              - 'treeitem "图标: caret-down 智能制造" [ref=e300]':
+                - 'generic "图标: caret-down" [ref=e302] [cursor=pointer]':
+                  - img [ref=e303]
+                - generic [ref=e308] [cursor=pointer]: 智能制造
+              - 'treeitem "图标: caret-down 技师技工" [ref=e309]':
+                - 'generic "图标: caret-down" [ref=e311] [cursor=pointer]':
+                  - img [ref=e312]
+                - generic [ref=e317] [cursor=pointer]: 技师技工
+              - 'treeitem "图标: caret-down 用户与服务" [ref=e318]':
+                - 'generic "图标: caret-down" [ref=e320] [cursor=pointer]':
+                  - img [ref=e321]
+                - generic [ref=e326] [cursor=pointer]: 用户与服务
+              - 'treeitem "图标: caret-down 职能与支持" [ref=e327]':
+                - 'generic "图标: caret-down" [ref=e329] [cursor=pointer]':
+                  - img [ref=e330]
+                - generic [ref=e335] [cursor=pointer]: 职能与支持
+          - generic [ref=e336]:
+            - generic [ref=e337]: 职位标签
+            - tree [ref=e339]:
+              - treeitem "蔚来智能座舱岗位热招" [ref=e340]:
+                - generic [ref=e347] [cursor=pointer]: 蔚来智能座舱岗位热招
+              - treeitem "蔚来自动驾驶研发团队" [ref=e348]:
+                - generic [ref=e355] [cursor=pointer]: 蔚来自动驾驶研发团队
+              - treeitem "推荐投递" [ref=e356]:
+                - generic [ref=e363] [cursor=pointer]: 推荐投递
+              - treeitem "ONVO乐道区域公司" [ref=e364]:
+                - generic [ref=e371] [cursor=pointer]: ONVO乐道区域公司
+              - treeitem "NIO蔚来区域公司" [ref=e372]:
+                - generic [ref=e379] [cursor=pointer]: NIO蔚来区域公司
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: 开启新的工作（24）
+            - generic [ref=e660]:
+              - link "提前批-数字后端开发工程师 合肥 校招 正式 数字技术 - 芯片研发 硕士及以上 2027届校园招聘-技术提前批 职位 ID：A158361 1. 负责模块级别后端设计； 2. 配合IP设计做前期综合后端评估，确保PPA可实现； 3. 配合顶层提供辅助设计； 4. 模块级别后端signoff收敛。" [ref=e661] [cursor=pointer]:
+                - /url: /campus/position/7661853532127643940/detail
+                - generic [ref=e662]:
+                  - generic [ref=e665]: 提前批-数字后端开发工程师
+                  - generic [ref=e666]:
+                    - text: 合肥
+                    - generic [ref=e669]: 校招
+                    - generic [ref=e671]: 正式
+                    - generic [ref=e674]: 数字技术 - 芯片研发
+                    - generic [ref=e676]: 硕士及以上
+                    - generic [ref=e679]: 2027届校园招聘-技术提前批
+                    - generic [ref=e681]: 职位 ID：A158361
+                  - generic [ref=e682]: 1. 负责模块级别后端设计； 2. 配合IP设计做前期综合后端评估，确保PPA可实现； 3. 配合顶层提供辅助设计； 4. 模块级别后端signoff收敛。
+              - link "提前批-后端AI工程师 上海 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A138987 岗位职责： 负责能源云产品核心业务逻辑的Java后端开发与维护。 深度参与 AI 驱动的研发流程，利用 Cursor/Copilot/TRAE 等 AI 辅助编程工具提升开发效能、优化单元测试与重构代码。 在导师指导下，参与 AI Agent 在各业务场景的探索与系统落地。 参与微服务架构优化，学习并实践高并发、高可用系统的治理方案，保障线上服务的稳定性。 撰写高质量的技术文档，参与团队技术分享，共同构建 AI 时代的工程范式。" [ref=e683] [cursor=pointer]:
+                - /url: /campus/position/7663359829524089142/detail
+                - generic [ref=e684]:
+                  - generic [ref=e687]: 提前批-后端AI工程师
+                  - generic [ref=e688]:
+                    - text: 上海
+                    - generic [ref=e691]: 校招
+                    - generic [ref=e693]: 正式
+                    - generic [ref=e696]: 数字技术 - 软件研发
+                    - generic [ref=e698]: 本科及以上
+                    - generic [ref=e701]: 2027届校园招聘-技术提前批
+                    - generic [ref=e703]: 职位 ID：A138987
+                  - generic [ref=e704]: 岗位职责： 负责能源云产品核心业务逻辑的Java后端开发与维护。 深度参与 AI 驱动的研发流程，利用 Cursor/Copilot/TRAE 等 AI 辅助编程工具提升开发效能、优化单元测试与重构代码。 在导师指导下，参与 AI Agent 在各业务场景的探索与系统落地。 参与微服务架构优化，学习并实践高并发、高可用系统的治理方案，保障线上服务的稳定性。 撰写高质量的技术文档，参与团队技术分享，共同构建 AI 时代的工程范式。
+              - link "提前批-后端AI工程师 上海 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A166068 岗位职责： 负责能源云产品核心业务逻辑的Java后端开发与维护。 深度参与 AI 驱动的研发流程，利用 Cursor/Copilot/TRAE 等 AI 辅助编程工具提升开发效能、优化单元测试与重构代码。 在导师指导下，参与 AI Agent 在各业务场景的探索与系统落地。 参与微服务架构优化，学习并实践高并发、高可用系统的治理方案，保障线上服务的稳定性。 撰写高质量的技术文档，参与团队技术分享，共同构建 AI 时代的工程范式。" [ref=e705] [cursor=pointer]:
+                - /url: /campus/position/7663354365714254106/detail
+                - generic [ref=e706]:
+                  - generic [ref=e709]: 提前批-后端AI工程师
+                  - generic [ref=e710]:
+                    - text: 上海
+                    - generic [ref=e713]: 校招
+                    - generic [ref=e715]: 正式
+                    - generic [ref=e718]: 数字技术 - 软件研发
+                    - generic [ref=e720]: 本科及以上
+                    - generic [ref=e723]: 2027届校园招聘-技术提前批
+                    - generic [ref=e725]: 职位 ID：A166068
+                  - generic [ref=e726]: 岗位职责： 负责能源云产品核心业务逻辑的Java后端开发与维护。 深度参与 AI 驱动的研发流程，利用 Cursor/Copilot/TRAE 等 AI 辅助编程工具提升开发效能、优化单元测试与重构代码。 在导师指导下，参与 AI Agent 在各业务场景的探索与系统落地。 参与微服务架构优化，学习并实践高并发、高可用系统的治理方案，保障线上服务的稳定性。 撰写高质量的技术文档，参与团队技术分享，共同构建 AI 时代的工程范式。
+              - link "实习-AI应用开发/后端研发实习生 合肥、上海 校招 实习 数字技术 - 软件研发 本科及以上 蔚来2027届实习生招募 职位 ID：A173976 1.参与构建基于大语言模型的 AI Agent，参与整车研发相关软件平台/内部管理系统等及工具的设计与开发，支撑公司产研效能数字化相关业务。 2.深度参与业务需求评审、技术方案设计与代码审查，编写高复用性核心代码，确保任务的高质量交付与敏捷迭代。 3.协同团队持续重构优化系统核心链路，保障系统稳定性与可扩展能力。 4.追踪Agent推理、多智能体协作等前沿技术，并推动在研发提效场景的工程化落地。" [ref=e727] [cursor=pointer]:
+                - /url: /campus/position/7633341626643122475/detail
+                - generic [ref=e728]:
+                  - generic [ref=e731]: 实习-AI应用开发/后端研发实习生
+                  - generic [ref=e732]:
+                    - text: 合肥、上海
+                    - generic [ref=e735]: 校招
+                    - generic [ref=e737]: 实习
+                    - generic [ref=e740]: 数字技术 - 软件研发
+                    - generic [ref=e742]: 本科及以上
+                    - generic [ref=e745]: 蔚来2027届实习生招募
+                    - generic [ref=e747]: 职位 ID：A173976
+                  - generic [ref=e748]: 1.参与构建基于大语言模型的 AI Agent，参与整车研发相关软件平台/内部管理系统等及工具的设计与开发，支撑公司产研效能数字化相关业务。 2.深度参与业务需求评审、技术方案设计与代码审查，编写高复用性核心代码，确保任务的高质量交付与敏捷迭代。 3.协同团队持续重构优化系统核心链路，保障系统稳定性与可扩展能力。 4.追踪Agent推理、多智能体协作等前沿技术，并推动在研发提效场景的工程化落地。
+              - link "提前批-AI平台研发工程师 上海、合肥 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A09422 你会做什么 你将参与 Skyworks AI 平台的核心研发工作，和团队一起构建企业级 Agent 平台、知识平台、数据语义层和能力市场。 你可能参与的项目包括： 开发 Agent 编排与执行引擎 支持 Agent 的任务拆解、工具调用、知识检索、多步骤执行、结果聚合和运行日志记录。 开发 Agent 搭建平台后端能力 为前端配置界面提供 API，支持用户创建 Agent、选择知识源、绑定工具、配置执行流程。 开发知识与语义层能力 参与 Ontology 建模、知识图谱查询、数据表语义映射等能力建设，让 Agent 能够理解企业业务对象和数据关系。 开发跨数据源查询能力 支持 Agent 查询结构化数据、知识图谱、向量库和文档知识，实现多源信息融合。 建设企业能力市场 参与 SkillHub / AgentsMarket 开发，让企业内部工具、API、Agent 能力可以被发布、搜索、复用和治理。 参与平台工程化建设 包括权限、日志、监控、任务调度、运行追踪、可观测性等企业级平台能力。 你会接触的技术 后端开发：Python / Java / Go Web 框架：FastAPI / Django / Spring Boot 数据库：PostgreSQL / MySQL / Redis 图数据库：Neo4j / JanusGraph 向量数据库：Milvus / Qdrant / Weaviate Agent 框架：LangChain / LangGraph / LlamaIndex 消息队列：Kafka / RabbitMQ 容器化：Docker / Kubernetes 可观测性：Prometheus / Grafana / Langfuse 不要求你全部掌握，但希望你有扎实的编程基础和快速学习能力。" [ref=e749] [cursor=pointer]:
+                - /url: /campus/position/7661853874509187347/detail
+                - generic [ref=e750]:
+                  - generic [ref=e753]: 提前批-AI平台研发工程师
+                  - generic [ref=e754]:
+                    - text: 上海、合肥
+                    - generic [ref=e757]: 校招
+                    - generic [ref=e759]: 正式
+                    - generic [ref=e762]: 数字技术 - 软件研发
+                    - generic [ref=e764]: 本科及以上
+                    - generic [ref=e767]: 2027届校园招聘-技术提前批
+                    - generic [ref=e769]: 职位 ID：A09422
+                  - generic [ref=e770]: 你会做什么 你将参与 Skyworks AI 平台的核心研发工作，和团队一起构建企业级 Agent 平台、知识平台、数据语义层和能力市场。 你可能参与的项目包括： 开发 Agent 编排与执行引擎 支持 Agent 的任务拆解、工具调用、知识检索、多步骤执行、结果聚合和运行日志记录。 开发 Agent 搭建平台后端能力 为前端配置界面提供 API，支持用户创建 Agent、选择知识源、绑定工具、配置执行流程。 开发知识与语义层能力 参与 Ontology 建模、知识图谱查询、数据表语义映射等能力建设，让 Agent 能够理解企业业务对象和数据关系。 开发跨数据源查询能力 支持 Agent 查询结构化数据、知识图谱、向量库和文档知识，实现多源信息融合。 建设企业能力市场 参与 SkillHub / AgentsMarket 开发，让企业内部工具、API、Agent 能力可以被发布、搜索、复用和治理。 参与平台工程化建设 包括权限、日志、监控、任务调度、运行追踪、可观测性等企业级平台能力。 你会接触的技术 后端开发：Python / Java / Go Web 框架：FastAPI / Django / Spring Boot 数据库：PostgreSQL / MySQL / Redis 图数据库：Neo4j / JanusGraph 向量数据库：Milvus / Qdrant / Weaviate Agent 框架：LangChain / LangGraph / LlamaIndex 消息队列：Kafka / RabbitMQ 容器化：Docker / Kubernetes 可观测性：Prometheus / Grafana / Langfuse 不要求你全部掌握，但希望你有扎实的编程基础和快速学习能力。
+              - link "提前批-Agent应用开发工程师（社区） 武汉、合肥、上海等 4 个城市 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A235713 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。" [ref=e771] [cursor=pointer]:
+                - /url: /campus/position/7661853821362489619/detail
+                - generic [ref=e772]:
+                  - generic [ref=e775]: 提前批-Agent应用开发工程师（社区）
+                  - generic [ref=e776]:
+                    - generic [ref=e777]: 武汉、合肥、上海等 4 个城市
+                    - generic [ref=e780]: 校招
+                    - generic [ref=e782]: 正式
+                    - generic [ref=e785]: 数字技术 - 软件研发
+                    - generic [ref=e787]: 本科及以上
+                    - generic [ref=e790]: 2027届校园招聘-技术提前批
+                    - generic [ref=e792]: 职位 ID：A235713
+                  - generic [ref=e793]: 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。
+              - link "提前批-Agent应用开发工程师（销售运营） 武汉、合肥、上海等 4 个城市 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A216697 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。" [ref=e794] [cursor=pointer]:
+                - /url: /campus/position/7661853821362178323/detail
+                - generic [ref=e795]:
+                  - generic [ref=e798]: 提前批-Agent应用开发工程师（销售运营）
+                  - generic [ref=e799]:
+                    - generic [ref=e800]: 武汉、合肥、上海等 4 个城市
+                    - generic [ref=e803]: 校招
+                    - generic [ref=e805]: 正式
+                    - generic [ref=e808]: 数字技术 - 软件研发
+                    - generic [ref=e810]: 本科及以上
+                    - generic [ref=e813]: 2027届校园招聘-技术提前批
+                    - generic [ref=e815]: 职位 ID：A216697
+                  - generic [ref=e816]: 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。
+              - link "提前批-Agent应用开发工程师（用户移动） 武汉、合肥、上海等 4 个城市 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A05614 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。" [ref=e817] [cursor=pointer]:
+                - /url: /campus/position/7661853806658275647/detail
+                - generic [ref=e818]:
+                  - generic [ref=e821]: 提前批-Agent应用开发工程师（用户移动）
+                  - generic [ref=e822]:
+                    - generic [ref=e823]: 武汉、合肥、上海等 4 个城市
+                    - generic [ref=e826]: 校招
+                    - generic [ref=e828]: 正式
+                    - generic [ref=e831]: 数字技术 - 软件研发
+                    - generic [ref=e833]: 本科及以上
+                    - generic [ref=e836]: 2027届校园招聘-技术提前批
+                    - generic [ref=e838]: 职位 ID：A05614
+                  - generic [ref=e839]: 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。
+              - link "提前批-Agent应用开发工程师（资源服务） 武汉、合肥、上海等 4 个城市 校招 正式 数字技术 - 软件研发 本科及以上 2027届校园招聘-技术提前批 职位 ID：A104412 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。" [ref=e840] [cursor=pointer]:
+                - /url: /campus/position/7661853821362800915/detail
+                - generic [ref=e841]:
+                  - generic [ref=e844]: 提前批-Agent应用开发工程师（资源服务）
+                  - generic [ref=e845]:
+                    - generic [ref=e846]: 武汉、合肥、上海等 4 个城市
+                    - generic [ref=e849]: 校招
+                    - generic [ref=e851]: 正式
+                    - generic [ref=e854]: 数字技术 - 软件研发
+                    - generic [ref=e856]: 本科及以上
+                    - generic [ref=e859]: 2027届校园招聘-技术提前批
+                    - generic [ref=e861]: 职位 ID：A104412
+                  - generic [ref=e862]: 参与 AI 应用系统的设计与开发，包括智能问答、业务助手、数据分析 Agent、流程自动化 Agent 等场景。 参与大模型应用工程建设，包括 Prompt 设计、工具调用、RAG 检索增强、上下文管理、多轮对话、任务编排等能力开发。 参与 AI 应用产品的端到端开发，包括用户交互界面、业务流程编排、后端服务接口、数据处理、工具/系统集成、效果验证与上线支持，保障 AI 应用在真实业务场景中的可用性和稳定性。 参与 AI 应用效果优化，包括 Badcase 分析、问题归因、Prompt 调优、检索优化、工具调用优化、评测数据集建设与效果回归验证。 参与 AI 工程化能力建设，包括日志追踪、可观测性、异常处理、限流降级、稳定性保障等。 跟进大模型、Agent、RAG、多模态等方向的新技术，并结合业务场景进行探索和落地。
+              - link "实习-智能辅助驾驶应用开发工程师 合肥 校招 实习 数字技术 - 软件研发 硕士及以上 蔚来2027届实习生招募 职位 ID：A188747 辅助驾驶现场调试，车控开发和场景开发维护和运营" [ref=e863] [cursor=pointer]:
+                - /url: /campus/position/7637025600054790454/detail
+                - generic [ref=e864]:
+                  - generic [ref=e867]: 实习-智能辅助驾驶应用开发工程师
+                  - generic [ref=e868]:
+                    - text: 合肥
+                    - generic [ref=e871]: 校招
+                    - generic [ref=e873]: 实习
+                    - generic [ref=e876]: 数字技术 - 软件研发
+                    - generic [ref=e878]: 硕士及以上
+                    - generic [ref=e881]: 蔚来2027届实习生招募
+                    - generic [ref=e883]: 职位 ID：A188747
+                  - generic [ref=e884]: 辅助驾驶现场调试，车控开发和场景开发维护和运营
+          - list [ref=e633]:
+            - listitem "上一页" [ref=e634]:
+              - img [ref=e637]
+            - listitem "1" [ref=e639]:
+              - generic [ref=e640]: "1"
+            - listitem "2" [ref=e641] [cursor=pointer]:
+              - generic [ref=e642]: "2"
+            - listitem "3" [ref=e643] [cursor=pointer]:
+              - generic [ref=e644]: "3"
+            - listitem "下一页" [ref=e655] [cursor=pointer]:
+              - img [ref=e658]

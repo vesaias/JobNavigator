@@ -1,0 +1,153 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 💼
+      - generic [ref=e7]: JobNavigator
+    - navigation [ref=e8]:
+      - link "Jobs" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e10]
+        - text: Jobs
+      - link "Applications" [ref=e13] [cursor=pointer]:
+        - /url: /applications
+        - img [ref=e14]
+        - text: Applications
+      - link "Companies" [ref=e19] [cursor=pointer]:
+        - /url: /companies
+        - img [ref=e20]
+        - text: Companies
+      - link "Searches" [ref=e24] [cursor=pointer]:
+        - /url: /searches
+        - img [ref=e25]
+        - text: Searches
+      - link "Resumes" [ref=e28] [cursor=pointer]:
+        - /url: /resumes
+        - img [ref=e29]
+        - text: Resumes
+      - link "Cover Letters" [ref=e32] [cursor=pointer]:
+        - /url: /cover-letters
+        - img [ref=e33]
+        - text: Cover Letters
+      - link "Persona" [ref=e36] [cursor=pointer]:
+        - /url: /persona
+        - img [ref=e37]
+        - text: Persona
+      - link "Settings" [ref=e40] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e41]
+        - text: Settings
+      - link "Stats" [ref=e44] [cursor=pointer]:
+        - /url: /stats
+        - img [ref=e45]
+        - text: Stats
+      - link "API Docs" [ref=e47] [cursor=pointer]:
+        - /url: /docs
+        - img [ref=e48]
+        - text: API Docs
+    - button "🌙Dark Mode" [ref=e53] [cursor=pointer]
+    - button "Collapse" [ref=e54] [cursor=pointer]
+  - main [ref=e55]:
+    - generic [ref=e57]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Job Feed" [level=1] [ref=e62]
+            - button "Keyboard shortcuts" [ref=e64] [cursor=pointer]:
+              - img [ref=e65]
+          - paragraph [ref=e67]: 0 jobs found
+        - generic [ref=e68]:
+          - button "Reset" [ref=e69] [cursor=pointer]
+          - button [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - img [ref=e73]
+      - generic [ref=e76]: Loading jobs...
+  - dialog "3 application packets are ready" [ref=e77]:
+    - generic [ref=e78]:
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - img [ref=e82]
+          - generic [ref=e86]:
+            - heading "3 application packets are ready" [level=2] [ref=e87]
+            - paragraph [ref=e88]: JobNavigator fetched each JD and prepared a tailored resume. Open the form, fill it in, and submit it yourself.
+        - button "Close" [ref=e89] [cursor=pointer]:
+          - img [ref=e90]
+      - generic [ref=e93]:
+        - article [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - generic [ref=e97]:
+                - generic [ref=e98]: "#1"
+                - generic [ref=e99]: SpeedyApply Internship
+              - heading "Software Engineering- Internship - Fall 2026/Summer 2027" [level=3] [ref=e100]
+              - paragraph [ref=e101]: Deepgram · Remote - USA
+              - paragraph [ref=e102]: "Resume: Yang Yu - Generic Software Engineer"
+              - paragraph [ref=e103]: "Packet: application-packets/2026-07-20/generic_resume"
+            - generic [ref=e104]:
+              - link "Application form" [ref=e105] [cursor=pointer]:
+                - /url: https://jobs.ashbyhq.com/deepgram/dc8693b5-72ce-4ca3-ab15-9c8434d35da1
+                - img [ref=e106]
+                - text: Application form
+              - link "Resume PDF" [ref=e110] [cursor=pointer]:
+                - /url: /api/resumes/a08a0196-591f-4ac7-9f62-4401a20bc519/pdf
+                - img [ref=e111]
+                - text: Resume PDF
+              - link "Review resume" [ref=e114] [cursor=pointer]:
+                - /url: /resumes?resume=a08a0196-591f-4ac7-9f62-4401a20bc519
+                - img [ref=e115]
+                - text: Review resume
+        - article [ref=e118]:
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e122]: "#2"
+                - generic [ref=e123]: SpeedyApply New Grad
+                - generic [ref=e124]:
+                  - img [ref=e125]
+                  - text: Review required
+              - heading "Software Engineer I - Front-End Engineer for ArcGIS Enterprise" [level=3] [ref=e127]
+              - paragraph [ref=e128]: Esri · Redlands, CA
+              - paragraph [ref=e129]: "Resume: Yang Yu - Generic Software Engineer"
+              - paragraph [ref=e130]: "Packet: application-packets/2026-07-20/generic_resume"
+            - generic [ref=e131]:
+              - link "Application form" [ref=e132] [cursor=pointer]:
+                - /url: https://www.esri.com/careers/5190253007?gh_jid=5190253007
+                - img [ref=e133]
+                - text: Application form
+              - link "Resume PDF" [ref=e137] [cursor=pointer]:
+                - /url: /api/resumes/a08a0196-591f-4ac7-9f62-4401a20bc519/pdf
+                - img [ref=e138]
+                - text: Resume PDF
+              - link "Review resume" [ref=e141] [cursor=pointer]:
+                - /url: /resumes?resume=a08a0196-591f-4ac7-9f62-4401a20bc519
+                - img [ref=e142]
+                - text: Review resume
+        - article [ref=e145]:
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - generic [ref=e149]: "#3"
+                - generic [ref=e150]: SpeedyApply New Grad
+                - generic [ref=e151]:
+                  - img [ref=e152]
+                  - text: Review required
+              - heading "Junior Software Engineer" [level=3] [ref=e154]
+              - paragraph [ref=e155]: WonderBotz · Princeton, NJ
+              - paragraph [ref=e156]: "Resume: Yang Yu - Generic Software Engineer"
+              - paragraph [ref=e157]: "Packet: application-packets/2026-07-20/generic_resume"
+              - paragraph [ref=e158]: job description mentions sponsorship; verify the exact policy
+            - generic [ref=e159]:
+              - link "Application form" [ref=e160] [cursor=pointer]:
+                - /url: http://wonderbotz.applytojob.com/apply/RrI9QanYDY/Junior-Software-Engineer
+                - img [ref=e161]
+                - text: Application form
+              - link "Resume PDF" [ref=e165] [cursor=pointer]:
+                - /url: /api/resumes/a08a0196-591f-4ac7-9f62-4401a20bc519/pdf
+                - img [ref=e166]
+                - text: Resume PDF
+              - link "Review resume" [ref=e169] [cursor=pointer]:
+                - /url: /resumes?resume=a08a0196-591f-4ac7-9f62-4401a20bc519
+                - img [ref=e170]
+                - text: Review resume
+      - generic [ref=e173]:
+        - paragraph [ref=e174]: No form is submitted automatically. Employer questions, CAPTCHAs, attestations, and the final Submit click stay under your control.
+        - button "Got it" [ref=e175] [cursor=pointer]

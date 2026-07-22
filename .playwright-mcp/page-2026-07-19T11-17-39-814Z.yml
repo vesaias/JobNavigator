@@ -1,0 +1,88 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - menubar [ref=e5]:
+      - img [ref=e8] [cursor=pointer]
+      - menuitem "首页" [ref=e10] [cursor=pointer]
+      - menuitem "社会招聘" [ref=e11] [cursor=pointer]
+      - menuitem "校园招聘" [ref=e12] [cursor=pointer]
+      - menuitem "人在 OPPO" [ref=e13] [cursor=pointer]
+      - menuitem "工作地点" [ref=e14] [cursor=pointer]
+      - menuitem "员工故事" [ref=e15] [cursor=pointer]
+      - menuitem "个人中心" [ref=e16]:
+        - generic [ref=e17] [cursor=pointer]:
+          - text: 个人中心
+          - img [ref=e19]
+    - main [ref=e21]:
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: 筛选
+            - button "清空选项" [disabled] [ref=e28]:
+              - generic [ref=e29]: 清空选项
+          - generic [ref=e30]:
+            - generic [ref=e31]: 招聘类型
+            - group "checkbox-group"
+            - generic [ref=e32]: 面向全体在校生申请入口
+            - generic [ref=e33]: 日常实习生点击查看
+          - generic [ref=e34]:
+            - generic [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: 职位类别
+              - img [ref=e38]
+            - generic:
+              - group "checkbox-group"
+          - generic [ref=e40]:
+            - generic [ref=e41]: 城市
+            - generic [ref=e43]:
+              - img [ref=e46]
+              - textbox "按城市搜索" [ref=e48]
+            - generic [ref=e50]:
+              - img [ref=e52]
+              - paragraph [ref=e54]: 暂无数据
+        - generic [ref=e55]:
+          - generic [ref=e59]:
+            - img [ref=e62]
+            - textbox "按职位或者关键词搜索" [ref=e64]
+          - generic [ref=e65]: 在招职位(0)
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - img [ref=e69]
+              - paragraph [ref=e71]: 暂无相关岗位，请尝试其他关键字
+            - img [ref=e74]
+    - contentinfo [ref=e76]:
+      - generic [ref=e77]:
+        - list [ref=e78]:
+          - listitem [ref=e79]:
+            - img [ref=e82] [cursor=pointer]
+          - listitem [ref=e84]:
+            - link "关于 OPPO" [ref=e85] [cursor=pointer]:
+              - /url: https://www.oppo.com/cn/about/
+          - listitem [ref=e86]:
+            - link "新闻中心" [ref=e87] [cursor=pointer]:
+              - /url: https://www.oppo.com/cn/newsroom/
+          - listitem [ref=e88]:
+            - link "ColorOS 官方网站" [ref=e89] [cursor=pointer]:
+              - /url: https://www.coloros.com/
+          - listitem [ref=e90]:
+            - link "猎头/PRO 门户" [ref=e91] [cursor=pointer]:
+              - /url: https://lie.oppoit.com/
+          - listitem [ref=e92]:
+            - link "隐私政策" [ref=e93] [cursor=pointer]:
+              - /url: /university/oppo/privacy
+        - list [ref=e94]:
+          - listitem [ref=e95]: 关注我们
+          - listitem [ref=e96]:
+            - img [ref=e98] [cursor=pointer]
+          - listitem [ref=e100]:
+            - img "1" [ref=e101] [cursor=pointer]
+      - list [ref=e102]:
+        - listitem [ref=e103]: 粤公网安备 44190002001935号 © 2004 - 2026 OPPO 版权所有 粤ICP备08130115号-1
+    - generic [ref=e104]:
+      - generic [ref=e105]:
+        - text: 我们会使用 Cookie 和类似相关技术来使本网站正常操作运行，并分析流量及优化您的浏览体验
+        - link "详情" [ref=e106] [cursor=pointer]:
+          - /url: javascript:void(0)
+      - button "同意" [ref=e107] [cursor=pointer]:
+        - generic [ref=e108]: 同意
+  - img
+  - generic:
+    - img

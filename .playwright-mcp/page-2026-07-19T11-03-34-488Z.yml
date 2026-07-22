@@ -1,0 +1,136 @@
+- main [ref=e7]:
+  - generic [ref=e17]:
+    - generic [ref=e19]:
+      - navigation [ref=e21]:
+        - img [ref=e23] [cursor=pointer]
+        - generic [ref=e24]:
+          - list [ref=e25]:
+            - listitem [ref=e26]:
+              - link "主页" [ref=e27] [cursor=pointer]:
+                - /url: /home
+            - listitem [ref=e28]:
+              - link "最新动态" [ref=e29] [cursor=pointer]:
+                - /url: /news
+            - listitem [ref=e30]:
+              - link "研究成果" [ref=e31] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=e32]:
+              - link "社会招聘" [ref=e33] [cursor=pointer]:
+                - /url: /off-campus-home
+            - listitem [ref=e34]:
+              - link "校园招聘" [ref=e35] [cursor=pointer]:
+                - /url: /campus
+            - listitem [ref=e36]:
+              - link "蚂蚁星" [ref=e37] [cursor=pointer]:
+                - /url: /ant-star
+          - list [ref=e38]:
+            - generic [ref=e40] [cursor=pointer]:
+              - generic [ref=e41]: 中国
+              - img "caret-down" [ref=e42]:
+                - img [ref=e43]
+            - listitem [ref=e45]:
+              - generic [ref=e46] [cursor=pointer]: 登录
+      - generic [ref=e48]:
+        - generic [ref=e50]:
+          - button [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+          - button [ref=e72] [cursor=pointer]:
+            - img [ref=e73]
+        - generic [ref=e74]:
+          - generic [ref=e79]:
+            - textbox "输入职位关键词" [active] [ref=e80]: 软件研发
+            - button "搜 索" [ref=e82] [cursor=pointer]:
+              - generic [ref=e83]: 搜 索
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - heading "筛选" [level=2] [ref=e87]
+                - button "清除" [ref=e88] [cursor=pointer]:
+                  - generic [ref=e89]: 清除
+              - generic [ref=e91]:
+                - button "plus 工作地点" [ref=e93] [cursor=pointer]:
+                  - img "plus" [ref=e94]:
+                    - img [ref=e95]
+                  - generic [ref=e98]: 工作地点
+                - separator [ref=e99]
+                - button "plus 职位类别" [ref=e101] [cursor=pointer]:
+                  - img "plus" [ref=e102]:
+                    - img [ref=e103]
+                  - generic [ref=e106]: 职位类别
+                - separator [ref=e107]
+                - button "plus 部门" [ref=e109] [cursor=pointer]:
+                  - img "plus" [ref=e110]:
+                    - img [ref=e111]
+                  - generic [ref=e114]: 部门
+                - separator [ref=e115]
+                - button "plus 招聘类型" [ref=e117] [cursor=pointer]:
+                  - img "plus" [ref=e118]:
+                    - img [ref=e119]
+                  - generic [ref=e122]: 招聘类型
+            - generic [ref=e123]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: 职位
+                - generic [ref=e128]: "0"
+              - generic [ref=e645]: 未找到相关职位
+              - list [ref=e160]:
+                - listitem "上一页" [ref=e161]:
+                  - button "left" [disabled] [ref=e162]:
+                    - img "left" [ref=e163]:
+                      - img [ref=e164]
+                - listitem "1" [ref=e646] [cursor=pointer]:
+                  - generic [ref=e647]: "1"
+                - listitem "下一页" [ref=e168]:
+                  - button "right" [disabled] [ref=e169]:
+                    - img "right" [ref=e170]:
+                      - img [ref=e171]
+        - generic [ref=e173] [cursor=pointer]:
+          - img "file-done" [ref=e174]:
+            - img [ref=e175]
+          - generic [ref=e177]: 意向单
+      - generic [ref=e179]:
+        - generic "gradflow animated gradient background" [ref=e181]
+        - img [ref=e185]
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - generic [ref=e192]: Copyright © 2026 蚂蚁科技集团股份有限公司
+            - generic [ref=e194]: 经营许可证编号：合字B2-20190048
+            - generic [ref=e196]: ICP备案：浙B2-20100257-3
+          - generic [ref=e198]: 如需咨询招聘相关事宜，请拨打电话：0571-28280505
+    - img [ref=e200] [cursor=pointer]
+    - generic [ref=e203]:
+      - generic [ref=e204] [cursor=pointer]:
+        - text: 退出
+        - img [ref=e205]
+      - generic [ref=e207]:
+        - generic [ref=e208]:
+          - generic [ref=e215]:
+            - text: 你好呀！我是蚂蚁集团的招聘助理小招，很高兴认识你～
+            - text: 我可以帮你：
+            - text: • 了解蚂蚁集团的各类岗位机会
+            - text: • 根据你的背景和意向推荐合适的职位
+            - text: • 查询你的应聘进度状态
+            - text: • 解答招聘相关的常见问题
+            - text: 你最近是在看新的工作机会吗？可以和我聊聊你的职业方向或者感兴趣的业务领域～
+          - generic [ref=e216]:
+            - generic [ref=e217]:
+              - generic [ref=e219]:
+                - button "🔥 热招职位" [ref=e220] [cursor=pointer]
+                - button "🔎 查询进度" [ref=e221] [cursor=pointer]
+              - generic [ref=e223]:
+                - textbox "告诉我你的目标岗位，工作经验，以及期望的工作地点，越详细越好哦～" [ref=e224]
+                - generic [ref=e225]:
+                  - button "swap 社招" [ref=e227] [cursor=pointer]:
+                    - img "swap" [ref=e228]:
+                      - img [ref=e229]
+                    - text: 社招
+                  - generic [ref=e231]:
+                    - button "paper-clip" [ref=e236]:
+                      - img "paper-clip" [ref=e239]:
+                        - img [ref=e240]
+                    - img [ref=e243]
+            - generic [ref=e244]: "- 小招的回答由 AI 生成 -"
+        - generic [ref=e246]:
+          - button "close" [ref=e247] [cursor=pointer]:
+            - img "close" [ref=e248]:
+              - img [ref=e249]
+          - heading [level=3]

@@ -1,0 +1,27 @@
+[     547ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://hr.4399om.com/campus-assets/pic/job/2015xz2/images/cur_title.png:0
+[     548ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://hr.4399om.com/campus-assets/pic/job/2015xz2/images/btn1.png:0
+[     708ms] [LOG] 当前地址无需重定向 @ https://hr.4399om.com/campus-assets/urlRedirect.js:47
+[     890ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://hr.4399om.com/campus-assets/pic/job/2015xz2/images/white1.png:0
+[     909ms] [ERROR] 获取用户信息失败: {code: 4001, msg: 登录失效，请刷新页面重试} @ :52
+[     904ms] TypeError: Cannot read properties of undefined (reading 'split')
+    at Object.success (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11745)
+    at window.<computed> (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11123)
+    at https://web.4399.com/util/get_login.php?&jsoncallback=jsonp_022627461161112616:1:1
+[     904ms] TypeError: Cannot read properties of undefined (reading 'split')
+    at Object.success (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11745)
+    at window.<computed> (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11123)
+    at https://web.4399.com/util/get_login.php?&jsoncallback=jsonp_009397481082271808:1:1
+[     934ms] TypeError: Cannot read properties of undefined (reading 'split')
+    at Object.success (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11745)
+    at window.<computed> (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11123)
+    at https://web.4399.com/util/get_login.php?&jsoncallback=jsonp_019743646600074127:1:1
+[     977ms] TypeError: Cannot read properties of undefined (reading 'split')
+    at Object.success (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11745)
+    at window.<computed> (https://hr.4399om.com/campus/internship/js/effectTj_v-201806.js:2:11123)
+    at https://web.4399.com/util/get_login.php?&jsoncallback=jsonp_09893728608770549:1:1
+[    1790ms] Uncaught TypeError: Cannot read properties of undefined (reading 'split')
+    at success (https://pic.my4399.com/re/cms/feUtil/gdcLogin/1.0/login.js:4:17589)
+    at o (https://web.4399.com/webpic/js/lib/jquery.js?v1.7.2:1:14732)
+    at fireWith (https://web.4399.com/webpic/js/lib/jquery.js?v1.7.2:1:15501)
+    at w (https://web.4399.com/webpic/js/lib/jquery.js?v1.7.2:3:12471)
+    at d.onload.d.onreadystatechange (https://web.4399.com/webpic/js/lib/jquery.js?v1.7.2:3:17062)

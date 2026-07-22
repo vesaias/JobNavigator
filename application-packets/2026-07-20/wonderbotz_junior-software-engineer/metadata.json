@@ -1,0 +1,19 @@
+{
+  "company": "WonderBotz",
+  "title": "Junior Software Engineer",
+  "location": "Princeton, NJ",
+  "application_url": "http://wonderbotz.applytojob.com/apply/RrI9QanYDY/Junior-Software-Engineer",
+  "source": "speedyapply/2027-SWE-College-Jobs",
+  "source_age": "1d",
+  "retrieved_at": "2026-07-20",
+  "status": "needs_review",
+  "priority": 2,
+  "resume_file": "resume.pdf",
+  "validation": {
+    "pages": 1,
+    "latex_warnings": 0,
+    "text_extractable": true
+  },
+  "review_reason": "Candidate must confirm on-site Princeton availability, immediate start date, U.S. location, and sponsorship response"
+}
+

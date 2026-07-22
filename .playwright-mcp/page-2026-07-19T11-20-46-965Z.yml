@@ -1,0 +1,109 @@
+- generic [ref=e2]:
+  - generic:
+    - generic [ref=e6]:
+      - link "登录" [ref=e7] [cursor=pointer]:
+        - /url: /main/?r=UserCenter/addValidate&jobID=XXXX
+      - link "手游平台" [ref=e8] [cursor=pointer]:
+        - /url: http://4399sy.com/
+      - link "页游平台" [ref=e9] [cursor=pointer]:
+        - /url: http://web.4399.com/
+    - generic [ref=e11]:
+      - link "4399校招频道" [ref=e12] [cursor=pointer]:
+        - /url: /campus/
+      - generic [ref=e13]:
+        - link [ref=e14] [cursor=pointer]:
+          - /url: /social-job/
+        - generic [ref=e17] [cursor=pointer]: 未登录
+      - list [ref=e18]:
+        - listitem [ref=e19]:
+          - link "首页" [ref=e20] [cursor=pointer]:
+            - /url: /campus/
+        - listitem [ref=e21]:
+          - link "岗位投递" [ref=e22] [cursor=pointer]:
+            - /url: javascript:;
+        - listitem [ref=e23]:
+          - link "关于4399" [ref=e24] [cursor=pointer]:
+            - /url: javascript:;
+        - listitem [ref=e25]:
+          - link "4399校园" [ref=e26] [cursor=pointer]:
+            - /url: /campus/xiaoyuan/
+        - listitem [ref=e27]:
+          - link "常见问题" [ref=e28] [cursor=pointer]:
+            - /url: /campus/faq/
+  - generic [ref=e29]:
+    - generic [ref=e30]: 实习生招聘 GRROLRTES RECRUITMENT
+    - generic [ref=e31]:
+      - list [ref=e33]:
+        - listitem [ref=e34]:
+          - link "产品类" [ref=e35] [cursor=pointer]:
+            - /url: javascript:void(0);
+        - listitem [ref=e36]:
+          - link "技术类" [ref=e37] [cursor=pointer]:
+            - /url: javascript:void(0);
+        - listitem [ref=e38]:
+          - link "运营市场类" [ref=e39] [cursor=pointer]:
+            - /url: javascript:void(0);
+        - listitem [ref=e40]:
+          - link "职能类" [ref=e41] [cursor=pointer]:
+            - /url: javascript:void(0);
+        - listitem [ref=e42]:
+          - link "美术类" [ref=e43] [cursor=pointer]:
+            - /url: javascript:void(0);
+      - generic [ref=e44]:
+        - link "【2027实习】游戏产品运营" [ref=e46] [cursor=pointer]:
+          - /url: "#JO20260522007"
+        - generic [ref=e47]:
+          - heading "[岗位描述]" [level=1] [ref=e48]
+          - paragraph
+          - paragraph [ref=e49]: 1、活动规划与执行：根据游戏阶段目标，制定活动排期和资源投放规划，把控整体活动节奏，确保收入目标达成，包含但不限于付费活动、活跃活动、渠道活动等；
+          - paragraph [ref=e50]: 2、活动设计与执行：深度挖掘用户诉求，拓展游戏内商业化空间，能够结合营收情况和活动计划，撰写活动策划方案与相关功能玩法设计方案，并推进开发；
+          - paragraph [ref=e51]: 3、活动效果复盘与迭代：有良好的逻辑思维与数据分析能力，及时跟踪分析活动各项数据指标，能够输出有效结论和调优策略，有针对性的进行迭代调优；
+          - paragraph [ref=e52]: 4、活动内容设计：负责设计游戏内外的付费相关内容，包括但不限于：奖励投放、礼包规划等；
+          - paragraph [ref=e53]: 5、竞品调研与分享：外部产品相关活动调研，形成规范化调研文档，用于自身产品活动的优化。
+          - paragraph [ref=e54]: 6、根据业务发展及项目安排，有机会参与海外版本相关运营工作。
+          - paragraph
+          - heading "[岗位要求]" [level=1] [ref=e55]
+          - paragraph
+          - paragraph [ref=e56]: 1、对于数值敏感，善于挖掘产品付费点改善数据，可根据数据分析和用户反馈快速调整活动提升效果，并有较好的分析总结能力；
+          - paragraph [ref=e57]: 2、具有良好的逻辑思维能力、乐于尝试与创新，愿意接受新挑战；
+          - paragraph [ref=e58]: 3、具有极强的责任心和主动性，善于学习，对于营收抗压能力强；
+          - paragraph [ref=e59]: 4、可实习时间3个月以上、每周4天以上者优先考虑。
+          - paragraph
+          - heading "[工作地点]" [level=1] [ref=e60]
+          - paragraph [ref=e61]: 广州
+          - link "岗位申请" [ref=e62] [cursor=pointer]:
+            - /url: https://hr.4399om.com/main/?r=UserCenter/addValidate&jobID=JO20260522007
+  - generic [ref=e63]:
+    - link "关于本站" [ref=e64] [cursor=pointer]:
+      - /url: http://web.4399.com/local/200808/23-124.html
+    - text: "|"
+    - link "免责声明" [ref=e65] [cursor=pointer]:
+      - /url: http://web.4399.com/local/200808/23-125.html
+    - text: "|"
+    - link "客服中心" [ref=e66] [cursor=pointer]:
+      - /url: http://web.4399.com/kefu/
+    - text: "|"
+    - link "联系我们" [ref=e67] [cursor=pointer]:
+      - /url: http://my.4399.com/joinus/contact.html
+    - text: "|"
+    - link "网页游戏" [ref=e68] [cursor=pointer]:
+      - /url: http://web.4399.com/
+    - text: "|"
+    - link "商务合作" [ref=e69] [cursor=pointer]:
+      - /url: http://web.4399.com/local/200905/15-3961.html
+    - text: "|"
+    - link "诚聘英才" [ref=e70] [cursor=pointer]:
+      - /url: /social-job/
+    - paragraph [ref=e71]:
+      - text: Copyright © 2006-2026 web.4399.com
+      - link "ICP证：闽B2-20040099" [ref=e72] [cursor=pointer]:
+        - /url: https://beian.miit.gov.cn
+      - link "闽网文[2018]9590-427号" [ref=e73] [cursor=pointer]:
+        - /url: http://sq.ccm.gov.cn/ccnt/sczr/service/business/emark/toDetail/9F5113E34F5E4443A68F11E8A6E2685C
+        - img [ref=e74]
+        - text: 闽网文[2018]9590-427号
+      - link "新出网证(闽)字06号" [ref=e75] [cursor=pointer]:
+        - /url: http://www.4399.com/zs/chuban.html
+  - link [ref=e78] [cursor=pointer]:
+    - /url: javascript:void(0);
+  - paragraph

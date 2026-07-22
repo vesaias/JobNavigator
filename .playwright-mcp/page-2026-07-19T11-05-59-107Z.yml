@@ -1,0 +1,172 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - img [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /602892/
+        - link "热招职位" [ref=e14] [cursor=pointer]:
+          - /url: /602892/position/list
+        - link "FAQ" [ref=e15] [cursor=pointer]:
+          - /url: /602892/page-Q0h5T4
+        - link "关于正浩" [ref=e16] [cursor=pointer]:
+          - /url: https://www.ecoflow.com/cn
+        - link "隐私政策" [ref=e17] [cursor=pointer]:
+          - /url: /602892/page-fWk327
+        - link "校招小助手" [ref=e18] [cursor=pointer]:
+          - /url: https://zhaopin.liexing-ai.com/pcchat/#/chat?chatId=535
+      - link "登录" [ref=e21] [cursor=pointer]:
+        - /url: /602892/login
+  - main [ref=e23]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e36]:
+          - text: /
+          - img [ref=e53]
+        - generic [ref=e58]:
+          - generic [ref=e65]: 「招聘项目」
+          - generic [ref=e72]: Campus Recruitment Program
+        - generic [ref=e76]:
+          - img [ref=e81]
+          - img [ref=e86]
+          - img [ref=e91]
+          - generic [ref=e94]:
+            - generic [ref=e98]: 【面向人群】
+            - generic [ref=e102]: 2027届海内外本硕博应届毕业生
+            - generic [ref=e106]: 国内：2026年09月-2027年06月
+            - generic [ref=e110]: 海外：2026年09月-2027年12月
+          - generic [ref=e113]:
+            - generic [ref=e117]: 【面向人群】
+            - generic [ref=e121]: 2027届海内外本硕博应届毕业生
+            - generic [ref=e125]: 国内：2026年9月-2027年8月
+            - generic [ref=e129]: 海外：2026年7月-2027年12月
+            - generic [ref=e133]: 【项目特点】
+            - generic [ref=e137]: 灵活入职，转正通道
+          - generic [ref=e140]:
+            - generic [ref=e144]: 【面向人群】
+            - generic [ref=e148]: 海内外本硕博在校生
+            - generic [ref=e152]: 【项目特点】
+            - generic [ref=e156]: 全年招聘，灵活实践
+          - button "投递 Apply" [ref=e159] [cursor=pointer]
+          - button "投递 Apply" [ref=e162] [cursor=pointer]
+          - button "投递 Apply" [ref=e165] [cursor=pointer]
+        - generic [ref=e169]:
+          - generic [ref=e176]: 「探索职位」
+          - generic [ref=e183]: Explore Jobs
+        - generic [ref=e190]:
+          - generic [ref=e197]: 「我们在最前方，要飞往更前方」
+          - generic [ref=e204]: About EcoFlow
+        - generic [ref=e208]:
+          - generic [ref=e211]:
+            - generic [ref=e215]: 正浩EcoFlow 创立于2017年，专注于清洁与智慧储能领域，致力于为全球用户解决全场景能源需求
+            - generic [ref=e219]: 正浩EcoFlow目前全球员工数量近2500，国内总部位于深圳，另外设立西安、苏州两个研发中心，海外在美国、德国、日本等多个国家设有当地办公室。
+            - generic [ref=e223]: 作为移动储能全球第一品牌，正浩EcoFlow全场景覆盖能源解决方案，解决户外用电、行车用电、3C设备充电、行业作业用电、家庭独立能源等全场景下的能源需求，并已成为全球140+个国家和地区超600万用户的可靠能源伙伴。
+          - img [ref=e228]
+          - img [ref=e233]
+          - img [ref=e238]
+          - img [ref=e243]
+        - generic [ref=e247]:
+          - img [ref=e252]
+          - generic [ref=e255]:
+            - generic [ref=e259]: 发布EcoFlow OASIS 智慧能源管理系统
+            - generic [ref=e262]:
+              - generic [ref=e263]: 向全球用户展示了
+              - generic [ref=e264]: 革命性的Al驱动智慧能源解决方案
+          - generic [ref=e270]: "2025"
+          - generic [ref=e273]:
+            - generic [ref=e277]: 发布全球首款智能混合动力家庭能源系统解决方案
+            - generic [ref=e281]: —— 德 DELTA Pro Ultra
+            - generic [ref=e285]: 发布行业首个覆盖"安全、性能、智能"的储能技术平台
+            - generic [ref=e289]: —— X-Core技术平台3.0
+            - generic [ref=e293]: 发布德 DELTA Pro 3、德 DELTA3 系列、睿 RIVER 3系列
+            - generic [ref=e297]: 翎 RAPID 磁吸充电宝，全面更新储能体验
+          - generic [ref=e303]: "2024"
+          - generic [ref=e309]:
+            - generic [ref=e310]: 实现家庭储能领域突破，发布阳台太阳能系统 PowerStream 和家庭储能系统 PowerOcean，达到
+            - generic [ref=e311]: 市占率35%
+            - generic [ref=e312]: ，持续扩大全球移动储能行业市场份额
+          - generic [ref=e318]: "2023"
+          - generic [ref=e321]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: 入选2022谷歌x凯度 BrandZ
+              - generic [ref=e326]: 中国全球化品牌50强
+            - generic [ref=e329]:
+              - generic [ref=e330]: 成为全球移动储能行业市场份额第一
+              - generic [ref=e331]: ，市占率30%
+          - generic [ref=e337]: "2022"
+          - generic [ref=e340]:
+            - generic [ref=e344]: 发布旗舰产品德 DELTA Pro 移动电站及其生态产品
+            - generic [ref=e347]:
+              - generic [ref=e348]: 跻身全球知名众筹平台KickStarter科技类项目
+              - generic [ref=e349]: TOP 1
+          - generic [ref=e355]: "2021"
+          - generic [ref=e358]:
+            - generic [ref=e362]: 睿 RIVER 系列发布
+            - generic [ref=e366]: 正式进入中国市场，半年跻身中国户外电源TOP品
+          - generic [ref=e372]: "2020"
+          - generic [ref=e375]:
+            - generic [ref=e379]: 发布全球第一款1.6小时快充户外电源德DELTA
+            - generic [ref=e383]: 刷新日本众筹网站Makuake历史销量记录
+          - generic [ref=e389]: "2019"
+          - generic [ref=e392]:
+            - generic [ref=e396]: 携移动储能方案
+            - generic [ref=e400]: 获得创新中国Demo China 全国总冠军
+          - generic [ref=e406]: "2018"
+          - generic [ref=e409]:
+            - generic [ref=e413]: 正浩EcoFlow成立
+            - generic [ref=e417]: 亮相美国CES发布第一款产品RIVER
+          - generic [ref=e423]: "2017"
+        - generic [ref=e430]:
+          - generic [ref=e433]: 有人成就导向，死磕难题，困局变坦途；有人好奇创新，面对难题秒变灵感捕手；有人协作担当，肩扛重任支撑团队；
+          - generic [ref=e436]: 有人韧性适应，在变化中蛰伏蜕变；有人以乐观、自信、影响力感染并凝聚团队，让所有人拧成一股绳
+          - generic [ref=e440]: 这是正浩人的Style ，也是我们要找的「优秀伙伴模样」
+        - generic [ref=e447]:
+          - generic [ref=e449]:
+            - generic [ref=e451]:
+              - img [ref=e454]
+              - generic [ref=e457]: 从“注力全球家庭实现能源自主”的使命和“成为全球家庭智慧能源方案的领导者”的愿景出发，EcoFlow自诞生以来，即便面临波动不安的全球环境，依旧敢于制定优于过往、优于竞争对手、优于行业的卓越目标，始终以坚韧不拔的态度为达成目标而极致努カ。
+            - generic [ref=e459]:
+              - img [ref=e462]
+              - generic [ref=e465]: 在EcoFlow的人才评价体系中，成就需要（Need for Achievement）被定义为一种驱动个体不断追求卓越、达成目标的内在动力。它包含两个核心维度：一是"高目标导向"，即拥有超越平凡、挑战高标准的强烈愿望，总是设定高标准、高目标,不断突破自身边界；二是"结果导向"，即具备为实现目标而自我驱动的坚定意志和卓越的执行交付能力，能够锲而不舍地将愿景转化为实实在在的成果。
+            - generic [ref=e467]:
+              - img [ref=e470]
+              - generic [ref=e473]: "\"好奇心\"是学习与成长的动力，是主动探索并适应未知领域的源泉，是产品与技术创新的根基。面对一个VUCA的时代，EcoFlow 立志成为全球家庭智慧能源方案的领导者，其核心竞争力在于技术驱动的产品创新。这意味着EcoFlow员工要持续探索洞察用户需 求，创造性提出问题解决方案，坚持永无止境的创新和突破，这背后都离不开\"好奇心\"的驱动。在这里，我们强调的是聚焦业务目标和价值创造的\"好奇心\"，而非泛化的、无方向的好奇心。"
+            - generic [ref=e475]:
+              - img [ref=e478]
+              - generic [ref=e481]: "\"协作\"是团队成员为了实现共同的目标而共同努力的一种深度合作关系，是相互信任、相互支持的全体全力以赴。团队成员在明确 的目标指导下,通过合理分工、建立有效的沟通机制，让复杂的任务解码为多个子任务，在这过程中，汇聚不同的观点和专业知识，充分发挥各自的优势，从而提高整体工作效率，最终达成目标。"
+            - generic [ref=e483]:
+              - img [ref=e486]
+              - generic [ref=e489]: 责任担当（POWER）是个体通过担当更大的职责，从而获得得更高的影响力。"责任担当"是从内心自发驱动的，为寻求关注和更大的责任，不断提升责任层级、专业能力，逐步获得组织和团队认可。"责任担当"的背后意味着影响力的升级、更极致的努力，因此，在EcoFlow担当越大责任的个人，越能影响、帮助和协办同上下游同事，以更精湛的专业水平解决上下游诉求。
+            - generic [ref=e491]:
+              - img [ref=e494]
+              - generic [ref=e497]: 韧性（Resilience）=坚持+调整，意味着它不仅包含坚持、坚初的精神，还强调适应变化、灵活调整、持续进化的能力。在充满变化、竞争激烈、挑战与机遇并存的新能源市场，韧性（Resilience）是EcoFlow在全球市场持续获得成功的关键，也是我们的生存之道，与我们持续进化的卓越追求相吻合；它代表着EcoFlow企业文化对人才的需求，是EcoFlow员工身上最理想的个人特质。
+            - generic [ref=e499]:
+              - img [ref=e502]
+              - generic [ref=e505]: "\"适应力\"是面对环境和变化的能力，即勇于进入不一样的环境或变局，了解环境，分析环境，并做出自己的解决方案，从这个解决方案开始迭代优化。在正浩面向全球进行商业拓展的高速过程中，我们需要时刻面对两个环境：一是进入新的市场、新的细分行业，这意味着全新的外部环境，可能是新的商业环境，也可能是新的行业规则；二是快速变化的、待完善的内部环境，即可能会面对由于需求暴涨导致的突发短缺、创新产 品的不完美等。这些加速变化的内外部环境是一家高速发展的科技企业必然面对的事 情，所以我们倾向选择\"适应力\"更好的同学。"
+            - generic [ref=e507]:
+              - img [ref=e510]
+              - generic [ref=e513]: 在面对不确定性和挑战时，始终保持积极正面的心态，对未来充满信心，能够从逆境中看到希望和机遇，以建设性态度影响团队，并主动采取行动推动积极改变。
+            - generic [ref=e515]:
+              - img [ref=e518]
+              - generic [ref=e521]: 自信=自觉+信念。这是自我肯定与信念坚定的内在和外在、静态和动态的统一。"自觉"是个体对自身能力、自我觉知和自我价值的内在确信，这不仅仅能对自身优势和外部局势做出客观理性的认知，并能基于此形成行动的决心。"信念"是对目标及目的积极确信与坚定信念，指的是个人能基于"我能采取什么积极行动去达成目标"的积极心理状态和行动导向，并能坚信"我能通过成功经验和失败经验的积累，在动态实践性中解决问题"的信念。
+            - generic [ref=e523]:
+              - img [ref=e526]
+              - generic [ref=e529]: 影响力=连接+共鸣，意味着不仅要"说服"，更要让对方"愿意被影响"。在EcoFlow，我们不讲排场、不讲层级，而是看你有没有本事让人信任你、愿意跟你合作、甚至愿意为你多做一点点。真正有影响力的人，是那种你不管在群里说句话、开个会、拉个项目，大家都会认真听、愿意动的人。
+          - generic [ref=e530]:
+            - button "Previous slide" [disabled]:
+              - img
+            - button "Next slide" [ref=e531] [cursor=pointer]:
+              - img [ref=e532]
+        - generic [ref=e538]:
+          - generic [ref=e545]: Copyright@2024 正浩创新科技股份有限公司
+          - generic [ref=e552]: 关注正浩EcoFlow，Power a New World
+          - generic [ref=e554]:
+            - img [ref=e558] [cursor=pointer]
+            - img [ref=e562] [cursor=pointer]
+            - img [ref=e566] [cursor=pointer]
+            - img [ref=e570] [cursor=pointer]
+          - img [ref=e574] [cursor=pointer]
+      - generic [ref=e579]:
+        - img [ref=e580]
+        - generic [ref=e581]: 京公网安备 11010802029085 号
+        - generic [ref=e583]: 京ICP备16045432号 - 4

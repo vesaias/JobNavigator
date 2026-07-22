@@ -1,0 +1,218 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - img
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - img [ref=e7] [cursor=pointer]
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e12] [cursor=pointer]: 首页
+          - generic [ref=e15] [cursor=pointer]: 社会招聘
+          - generic [ref=e18] [cursor=pointer]: 校园招聘
+          - generic [ref=e21] [cursor=pointer]: 领航者计划
+          - generic [ref=e24] [cursor=pointer]: 公司官网
+        - generic [ref=e27] [cursor=pointer]: 登录/注册
+    - generic [ref=e29]:
+      - generic [ref=e32]:
+        - img [ref=e34] [cursor=pointer]
+        - img [ref=e36] [cursor=pointer]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e45]:
+            - heading "筛选" [level=5] [ref=e46]
+            - generic [ref=e48]: 清空
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51] [cursor=pointer]:
+                - img [ref=e52]
+                - generic [ref=e57]: 职位类型
+              - generic [ref=e61]:
+                - generic [ref=e62]:
+                  - img [ref=e64]
+                  - textbox "搜索" [ref=e66]
+                - generic [ref=e68]:
+                  - generic [ref=e70] [cursor=pointer]:
+                    - checkbox [ref=e72]
+                    - generic [ref=e76]: 算法类
+                  - generic [ref=e78] [cursor=pointer]:
+                    - checkbox [ref=e80]
+                    - generic [ref=e84]: 软件类
+                  - generic [ref=e86] [cursor=pointer]:
+                    - checkbox [ref=e88]
+                    - generic [ref=e92]: 机械电气类
+                  - generic [ref=e94] [cursor=pointer]:
+                    - checkbox [ref=e96]
+                    - generic [ref=e100]: 嵌入式类
+                  - generic [ref=e102] [cursor=pointer]:
+                    - checkbox [ref=e104]
+                    - generic [ref=e108]: 测试类
+                  - generic [ref=e110] [cursor=pointer]:
+                    - checkbox [ref=e112]
+                    - generic [ref=e116]: 安全类
+                  - generic [ref=e118] [cursor=pointer]:
+                    - checkbox [ref=e120]
+                    - generic [ref=e124]: 运维类
+                  - generic [ref=e126] [cursor=pointer]:
+                    - checkbox [ref=e128]
+                    - generic [ref=e132]: 系统工程类
+                  - generic [ref=e134] [cursor=pointer]:
+                    - checkbox [ref=e136]
+                    - generic [ref=e140]: 非研发类
+                  - generic [ref=e142] [cursor=pointer]:
+                    - checkbox [ref=e144]
+                    - generic [ref=e148]: 生产类
+            - generic [ref=e149]:
+              - generic [ref=e150] [cursor=pointer]:
+                - img [ref=e151]
+                - generic [ref=e156]: 工作地点
+              - generic [ref=e161]:
+                - generic [ref=e163] [cursor=pointer]:
+                  - checkbox [ref=e165]
+                  - generic [ref=e167]: 全国
+                - generic [ref=e169] [cursor=pointer]:
+                  - checkbox [ref=e171]
+                  - generic [ref=e173]: 上海市
+                - generic [ref=e175] [cursor=pointer]:
+                  - checkbox [ref=e177]
+                  - generic [ref=e179]: 北京市
+                - generic [ref=e181] [cursor=pointer]:
+                  - checkbox [ref=e183]
+                  - generic [ref=e185]: 深圳市
+        - generic [ref=e186]:
+          - generic [ref=e190]:
+            - generic [ref=e191]:
+              - generic [ref=e192]: 
+              - textbox "搜索职位关键词" [ref=e193]: 后端
+            - button "搜索职位" [ref=e194] [cursor=pointer]
+          - generic [ref=e196]:
+            - generic [ref=e198]: 全部职位（共 6 个）
+            - generic [ref=e199] [cursor=pointer]:
+              - generic [ref=e201]: 
+              - generic [ref=e202]: 分享列表全部
+          - generic [ref=e203]:
+            - generic [ref=e947] [cursor=pointer]:
+              - generic [ref=e948]:
+                - generic [ref=e951]: 
+                - generic [ref=e954]: 
+                - generic [ref=e956]: 后端开发工程师（数据闭环方向）
+              - generic [ref=e957]:
+                - generic [ref=e958]:
+                  - generic [ref=e960]: 校园招聘
+                  - generic [ref=e962]: 全职
+                  - generic [ref=e963]:
+                    - generic [ref=e965]: 
+                    - generic [ref=e966]: 广东省·深圳市
+                  - generic [ref=e968]: 软件类
+                - generic [ref=e969]: 2026-07-14 发布
+            - generic [ref=e971] [cursor=pointer]:
+              - generic [ref=e972]:
+                - generic [ref=e975]: 
+                - generic [ref=e978]: 
+                - generic [ref=e980]: 后端开发工程师
+              - generic [ref=e981]:
+                - generic [ref=e982]:
+                  - generic [ref=e984]: 校园招聘
+                  - generic [ref=e986]: 全职
+                  - generic [ref=e987]:
+                    - generic [ref=e989]: 
+                    - generic [ref=e990]: 广东省·深圳市
+                  - generic [ref=e992]: 软件类
+                - generic [ref=e993]: 2026-07-14 发布
+            - generic [ref=e995] [cursor=pointer]:
+              - generic [ref=e996]:
+                - generic [ref=e999]: 
+                - generic [ref=e1002]: 
+                - generic [ref=e1004]: 后端开发工程师（智能辅助驾驶静态数据）
+              - generic [ref=e1005]:
+                - generic [ref=e1006]:
+                  - generic [ref=e1008]: 校园招聘
+                  - generic [ref=e1010]: 全职
+                  - generic [ref=e1011]:
+                    - generic [ref=e1013]: 
+                    - generic [ref=e1014]: 广东省·深圳市
+                  - generic [ref=e1016]: 软件类
+                - generic [ref=e1017]: 2026-07-14 发布
+            - generic [ref=e1018]:
+              - generic [ref=e1019] [cursor=pointer]:
+                - generic [ref=e1020]:
+                  - generic [ref=e1023]: 
+                  - generic [ref=e1026]: 
+                  - generic [ref=e1028]: 后端开发工程师（AI）
+                - generic [ref=e1029]:
+                  - generic [ref=e1030]:
+                    - generic [ref=e1032]: 校园招聘
+                    - generic [ref=e1034]: 全职
+                    - generic [ref=e1035]:
+                      - generic [ref=e1037]: 
+                      - generic [ref=e1038]: 广东省·深圳市
+                    - generic [ref=e1040]: 软件类
+                  - generic [ref=e1041]: 2026-07-14 发布
+              - generic [ref=e1089]:
+                - generic [ref=e1090]: 工作职责
+                - generic [ref=e1091]: 1. 负责公司公共服务（如AI中台、认证授权中心、研效平台、微服务治理等）与中间件的设计开发和维护工作； 2. 负责企业内部业务系统设计开发和维护工作； 3. 负责开发和维护智能体的后端服务，确保系统的稳定性和可扩展性； 4. 推动AI Agent在架构和性能上的持续优化，提升Agent对用户理解能力和响应的准确性； 5. AI 技术在企业IT系统的应用落地。
+                - generic [ref=e1092]: 任职资格
+                - generic [ref=e1093]: 1. 本科及以上学历，计算机、软件工程或相关专业； 2. 熟悉LLM应用开发架构与生态，掌握主流技术栈者优先，如LangChain、LlamaIndex、Dify、VectorDB（Milvus、Pinecone、Qdrant等）、Embedding模型及RAG工程实践； 3. 熟悉Java/Python/Golang中至少一门语言，熟练掌握SpringBoot/SpringCloud、FastAPI、Gin等主流开发框架； 4. 了解常见微服务治理相关技术与组件，能够独立排查与解决相关组件的常见问题； 5. 熟悉常用数据库与中间件，具备良好的数据库设计能力； 6. 熟悉Prompt工程、FunctionCalling、Agent设计模式者优先，有大模型私有化部署、模型微调或推理优化经验者加分； 7. 关注AI最近进展，具备较强的责任感、团队合作精神、逻辑思维能力和表达能力，具备良好的学习能力与技术热情。
+                - generic [ref=e1094]:
+                  - generic [ref=e1095]:
+                    - generic [ref=e1110] [cursor=pointer]: 立即投递
+                    - generic [ref=e1098] [cursor=pointer]:
+                      - generic [ref=e1100]: 
+                      - generic [ref=e1101]: 收藏
+                  - generic [ref=e1102] [cursor=pointer]:
+                    - generic [ref=e1103]: 查看详情
+                    - generic [ref=e1105]: 
+              - generic [ref=e1108] [cursor=pointer]: 
+            - generic [ref=e1043] [cursor=pointer]:
+              - generic [ref=e1044]:
+                - generic [ref=e1047]: 
+                - generic [ref=e1050]: 
+                - generic [ref=e1051]: 模型量化算法工程师
+              - generic [ref=e1052]:
+                - generic [ref=e1053]:
+                  - generic [ref=e1055]: 校园招聘
+                  - generic [ref=e1057]: 全职
+                  - generic [ref=e1058]:
+                    - generic [ref=e1060]: 
+                    - generic [ref=e1061]: 广东省·深圳市,上海市,北京市
+                  - generic [ref=e1063]: 算法类
+                - generic [ref=e1064]: 2026-07-14 发布
+            - generic [ref=e1066] [cursor=pointer]:
+              - generic [ref=e1067]:
+                - generic [ref=e1070]: 
+                - generic [ref=e1073]: 
+                - generic [ref=e1074]: 大模型推理优化算法工程师
+              - generic [ref=e1075]:
+                - generic [ref=e1076]:
+                  - generic [ref=e1078]: 校园招聘
+                  - generic [ref=e1080]: 全职
+                  - generic [ref=e1081]:
+                    - generic [ref=e1083]: 
+                    - generic [ref=e1084]: 广东省·深圳市,上海市,北京市
+                  - generic [ref=e1086]: 算法类
+                - generic [ref=e1087]: 2026-07-14 发布
+            - generic [ref=e1088]: 没有更多了~
+    - generic [ref=e667]:
+      - generic [ref=e671]:
+        - generic [ref=e672]: 了解更多
+        - link "卓驭科技" [ref=e676] [cursor=pointer]:
+          - /url: https://www.zyt.com/zh
+      - generic [ref=e677]:
+        - generic [ref=e678]:
+          - img [ref=e840]
+          - img [ref=e841]
+          - img [ref=e842]
+          - img [ref=e843]
+        - link [ref=e845] [cursor=pointer]:
+          - /url: /
+      - generic [ref=e688]:
+        - generic [ref=e689]: ©2026 深圳市卓驭科技有限公司
+        - link "粤ICP备2024174443号-1" [ref=e691] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn/#/Integrated/index
+        - img [ref=e693]
+        - generic:
+          - link:
+            - /url: https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010802020454
+        - text: "|"
+        - link "隐私政策" [ref=e695] [cursor=pointer]:
+          - /url: /privacy
+        - text: Powered by Beisen

@@ -1,0 +1,150 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - link "4399校招频道" [ref=e6] [cursor=pointer]:
+      - /url: /campus/
+    - generic [ref=e7]:
+      - link [ref=e8] [cursor=pointer]:
+        - /url: /social-job/
+      - generic [ref=e11] [cursor=pointer]: 未登录
+    - list [ref=e12]:
+      - listitem [ref=e13]:
+        - link "首页" [ref=e14] [cursor=pointer]:
+          - /url: /campus/
+      - listitem [ref=e15]:
+        - link "岗位投递" [ref=e16] [cursor=pointer]:
+          - /url: javascript:;
+      - listitem [ref=e17]:
+        - link "关于4399" [ref=e18] [cursor=pointer]:
+          - /url: javascript:;
+      - listitem [ref=e19]:
+        - link "4399校园" [ref=e20] [cursor=pointer]:
+          - /url: /campus/xiaoyuan/
+      - listitem [ref=e21]:
+        - link "常见问题" [ref=e22] [cursor=pointer]:
+          - /url: /campus/faq/
+  - generic [ref=e23]:
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - link "立即投递" [ref=e31] [cursor=pointer]:
+          - /url: /campus/graduate/chanpinlei/
+          - img "立即投递" [ref=e32]
+        - link "立即投递" [ref=e36] [cursor=pointer]:
+          - /url: /campus/graduate/chanpinlei/
+          - img "立即投递" [ref=e37]
+        - generic [ref=e40]:
+          - img "2026春招运营中心" [ref=e41]
+          - img "趁春色正好，奔赴游戏梦想" [ref=e42]
+          - link "立即投递" [ref=e43] [cursor=pointer]:
+            - /url: /campus/graduate/yunyingshichanglei/guoneilei/
+            - img "立即投递" [ref=e44]
+      - img [ref=e45] [cursor=pointer]
+      - img [ref=e46] [cursor=pointer]
+    - generic [ref=e51]:
+      - link "社会招聘 面向人群：已有工作经验的应聘者 或者未正式参加工作的往届同学 一键投递" [ref=e52] [cursor=pointer]:
+        - /url: /social-job/
+        - generic [ref=e53]:
+          - generic [ref=e54]: 社会招聘
+          - generic [ref=e55]:
+            - text: 面向人群：已有工作经验的应聘者
+            - text: 或者未正式参加工作的往届同学
+          - generic [ref=e56]: 一键投递
+      - generic [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: 应届生招聘
+        - generic [ref=e59]: 2026届校园招聘
+        - generic [ref=e60]:
+          - text: 面向人群：2026届海内外毕业生
+          - text: 毕业时间为2025年9月至2026年8月
+        - generic [ref=e61]: 一键投递
+      - link "实习生招聘 面向人群：2026/2027届海内外毕业生 一键投递" [ref=e62] [cursor=pointer]:
+        - /url: /campus/internship/
+        - generic [ref=e63]:
+          - generic [ref=e64]: 实习生招聘
+          - generic [ref=e65]: 面向人群：2026/2027届海内外毕业生
+          - generic [ref=e66]: 一键投递
+    - generic [ref=e72]:
+      - generic [ref=e73] [cursor=pointer]:
+        - text: 产品类 查看岗位>>
+        - link [ref=e74]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_chanpinlei
+      - generic [ref=e75] [cursor=pointer]:
+        - text: 技术类 查看岗位>>
+        - link [ref=e76]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_kaifalei
+      - generic [ref=e77] [cursor=pointer]:
+        - text: 运营市场类 查看岗位>>
+        - link [ref=e78]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_guoneilei
+      - generic [ref=e79] [cursor=pointer]:
+        - text: 职能类 查看岗位>>
+        - link [ref=e80]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_zhinenglei
+      - generic [ref=e81] [cursor=pointer]:
+        - text: 研发美术类 查看岗位>>
+        - link [ref=e82]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_yanfameishulei
+      - generic [ref=e83] [cursor=pointer]:
+        - text: 运营美术类 查看岗位>>
+        - link [ref=e84]:
+          - /url: https://hr.4399om.com/campus/graduate/?jobType=campus_yunyingmeishulei
+    - list [ref=e90]:
+      - listitem [ref=e91] [cursor=pointer]:
+        - generic [ref=e94]: 查看详情
+      - listitem [ref=e96] [cursor=pointer]:
+        - generic [ref=e99]: 查看详情
+      - listitem [ref=e101] [cursor=pointer]:
+        - generic [ref=e104]: 查看详情
+      - listitem [ref=e106] [cursor=pointer]:
+        - generic [ref=e109]: 查看详情
+      - listitem [ref=e111] [cursor=pointer]:
+        - generic [ref=e114]: 查看详情
+      - listitem [ref=e116] [cursor=pointer]:
+        - generic [ref=e119]: 查看详情
+    - generic [ref=e125]:
+      - generic [ref=e128]:
+        - generic [ref=e129]: 训练营
+        - generic [ref=e130]: 针对校招新人，特别设立“雏鹰训练营”计划，帮助新人明确职业规划，夯实专业知识和技能。
+      - generic [ref=e133]:
+        - generic [ref=e134]: 嘉年华活动
+        - generic [ref=e135]: 精心举办属于4399er们的专属年会/家庭日/女生节/父亲节等各类嘉年华活动。
+      - generic [ref=e138]:
+        - generic [ref=e139]: 俱乐部活动
+        - generic [ref=e140]: 公司设有羽毛球/瑜伽/游泳等各种兴趣爱好俱乐部，定期举行各类文体活动。
+      - generic [ref=e143]:
+        - generic [ref=e144]: 美食合集
+        - generic [ref=e145]: 员工餐厅提供高标准三餐，当季新鲜水果，各式零食以及丰富的下午茶。
+      - generic [ref=e148]:
+        - generic [ref=e149]: 健身房
+        - generic [ref=e150]: 免费的健身房，各式各样健身器材以及桌球台/乒乓球台等设施，助力打造健康身心。
+      - generic [ref=e153]:
+        - generic [ref=e154]: 共享空间
+        - generic [ref=e155]: 各部门图书书架/图书角/休闲区，享受图书共享空间与游戏共享空间。
+      - generic [ref=e158]:
+        - generic [ref=e159]: 公司大堂
+        - generic [ref=e160]: 尊享独栋办公楼，宽敞明亮的办公环境。
+      - generic [ref=e163]:
+        - generic [ref=e164]: 节日礼包
+        - generic [ref=e165]: 公司每年为员工精心准备惊喜生日礼品与其他多样化各类节假日礼包。
+    - generic [ref=e171]:
+      - img [ref=e172] [cursor=pointer]
+      - list [ref=e175]:
+        - listitem [ref=e176]:
+          - generic [ref=e179]:
+            - paragraph [ref=e180]: 做游戏就像玩游戏：像钻研攻略一样去拆解规则，像构筑Build一样去设计系统，像养成心爱角色一样去打磨细节。期待你来造一个让自己热血沸腾、也让玩家沉浸其中的世界。
+            - paragraph [ref=e181]: 阿翔-23届-中山大学-游戏策划
+          - generic [ref=e184]:
+            - paragraph [ref=e185]: 把脑海中的角色创造出来是件很有意思的事，看到自己画的角色被制作出来，出现在游戏中，感觉很奇妙，好像它突然活了过来，在另一个世界有了自己的生活。
+            - paragraph [ref=e186]: 阿婷-19届-吉林动画学院-角色原画
+          - generic [ref=e189]:
+            - paragraph [ref=e190]: 从事海外发行，像开始了一场环球旅行，可以不断开阔全球化视野，感受多元文化的差异，洞察各国玩家的思维习惯。通过钻研玩家的本质需求，实现有意义的想法，为全世界玩家带来持久耐玩的好游戏！
+            - paragraph [ref=e191]: Andy-20届-中山大学-海外运营
+        - listitem [ref=e192]:
+          - generic [ref=e195]:
+            - paragraph [ref=e196]: 引擎之下，万物有序。入职至今，我所做的是在像素与逻辑之间，寻找那个恰到好处的平衡点。技术如川，奔流不息，所幸此间不乏同行者。若你亦是心中有火、眼里有光之人，这里值得你落笔。
+            - paragraph [ref=e197]: 阿杰-25届-华南理工大学-游戏开发
+          - generic [ref=e200]:
+            - paragraph [ref=e201]: 一直被鼓励着珍视自己的心流体验、大胆发出自己的声音，能够心无旁骛地投入到事情本身，伴随着认知边界的逐渐拓宽，看到一步一脚印的成长。成为一名HR，也许不是那么“好玩”，但一定收获满满！
+            - paragraph [ref=e202]: 东东-25届-厦门大学-HR
+          - generic [ref=e205]:
+            - paragraph [ref=e206]: 我们总说"未来已来"，在游戏行业，我每天感受到的未来，就是AI与创意并肩工作：它让灵感更快落地，让想象更敢被实现。如果你也是会做梦、且能把梦做成作品的人，加入我们，一起携手AI，把未来做出来。
+            - paragraph [ref=e207]: 茶马-22届-中山大学-广告创意
+      - img [ref=e208] [cursor=pointer]

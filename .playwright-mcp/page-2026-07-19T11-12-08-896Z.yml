@@ -1,0 +1,78 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e5]:
+      - link "网易内部认证系统" [ref=e6] [cursor=pointer]:
+        - /url: "#"
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "动态密码管理" [ref=e9] [cursor=pointer]:
+            - /url: "#"
+            - text: 动态密码管理
+        - listitem [ref=e11]:
+          - link "个人管理" [ref=e12] [cursor=pointer]:
+            - /url: "#"
+            - text: 个人管理
+        - listitem [ref=e14]:
+          - link "开发文档" [ref=e15] [cursor=pointer]:
+            - /url: /download/oidc_docs/index.html
+        - listitem [ref=e16]:
+          - link "邮件模板" [ref=e17] [cursor=pointer]:
+            - /url: /download/templates/index.html
+        - listitem [ref=e18]:
+          - link "帮助" [ref=e19] [cursor=pointer]:
+            - /url: /download/help.html
+        - listitem [ref=e20]:
+          - link "联系值班" [ref=e21] [cursor=pointer]:
+            - /url: http://popo.netease.com/static/html/open_popo.html?ssid=grp.openid@corp.netease.com&sstp=0
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - text: 您即将登录
+      - link "效能平台部权限平台 | https://auth-platform.apps-hp.danlu.netease.com" [ref=e25] [cursor=pointer]:
+        - /url: https://auth-platform.apps-hp.danlu.netease.com
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - textbox "帐号" [ref=e29]
+        - link "CORP邮箱及手机验证码登录" [ref=e30] [cursor=pointer]:
+          - /url: javascript:void(0)
+          - text: CORP邮箱及手机验证码登录
+        - paragraph [ref=e33]: 请输入您的corp邮箱前缀
+      - generic [ref=e34]:
+        - textbox "密码" [ref=e35]
+        - paragraph [ref=e37]: 请输入与您的帐号相匹配的密码
+      - generic [ref=e38]: 记住本次登录
+      - generic [ref=e40]:
+        - text: 我已阅读并同意
+        - link "《网易员工隐私政策》" [ref=e42] [cursor=pointer]:
+          - /url: javascript:void(0);
+      - button "登录" [ref=e43] [cursor=pointer]
+  - generic [ref=e44]:
+    - list [ref=e45]:
+      - listitem [ref=e46]:
+        - link "公司简介" [ref=e47] [cursor=pointer]:
+          - /url: http://gb.corp.163.com/gb/about/overview.html
+      - listitem [ref=e48]:
+        - link "客户服务" [ref=e49] [cursor=pointer]:
+          - /url: http://help.163.com/
+      - listitem [ref=e50]:
+        - link "网易游戏" [ref=e51] [cursor=pointer]:
+          - /url: http://nie.163.com/about/about.html
+      - listitem [ref=e52]:
+        - link "联系我们" [ref=e53] [cursor=pointer]:
+          - /url: http://nie.163.com/about/contactus.html
+      - listitem [ref=e54]:
+        - link "商务合作" [ref=e55] [cursor=pointer]:
+          - /url: http://nie.163.com/bs/business.html
+      - listitem [ref=e56]:
+        - link "加入我们" [ref=e57] [cursor=pointer]:
+          - /url: http://nie.163.com/job/
+    - paragraph [ref=e58]:
+      - text: Copyright © 1997-2026
+      - link "网易公司版权所有" [ref=e59] [cursor=pointer]:
+        - /url: http://corp.netease.com/
+      - link "ICP备案：粤B2-20090191-2" [ref=e60] [cursor=pointer]:
+        - /url: http://www.beian.miit.gov.cn/publish/query/indexFirst.action
+    - combobox [ref=e62] [cursor=pointer]:
+      - option "语言" [selected]
+      - option "中文简体"
+      - option "英语"
+    - paragraph

@@ -1,0 +1,14 @@
+{
+  "candidate": "Yang Yu",
+  "title": "Generic Software Engineer Resume",
+  "retrieved_at": "2026-07-20",
+  "status": "ready",
+  "resume_file": "resume.pdf",
+  "validation": {
+    "pages": 1,
+    "latex_warnings": 0,
+    "text_extractable": true,
+    "playwright_preview": "pending"
+  }
+}
+

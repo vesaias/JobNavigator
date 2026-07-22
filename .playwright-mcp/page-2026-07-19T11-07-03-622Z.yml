@@ -1,0 +1,52 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - img [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - link "职位" [ref=e13] [cursor=pointer]:
+          - /url: /campus/
+        - link "首页" [ref=e14] [cursor=pointer]:
+          - /url: https://jobs.lilith.com/
+        - link "社会招聘" [ref=e15] [cursor=pointer]:
+          - /url: https://lilithgames.jobs.feishu.cn/career/
+        - link "校园招聘" [ref=e16] [cursor=pointer]:
+          - /url: https://lilithgames.jobs.feishu.cn/campus/
+        - link "实习招聘" [ref=e17] [cursor=pointer]:
+          - /url: https://lilithgames.jobs.feishu.cn/intern/
+      - link "登录" [ref=e20] [cursor=pointer]:
+        - /url: /campus/login
+  - generic [ref=e21]:
+    - button "animation" [ref=e24]:
+      - img [ref=e25]
+    - main [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e40]:
+          - 'generic "图标: search" [ref=e42]':
+            - img [ref=e43]
+          - textbox "搜索职位" [ref=e45]
+          - button "搜索" [ref=e47] [cursor=pointer]:
+            - generic: 搜索
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - text: 筛选
+              - generic [ref=e51]: 清除
+            - generic [ref=e53]:
+              - heading [level=3] [ref=e54]
+              - list [ref=e55]:
+                - listitem [ref=e56]
+                - listitem [ref=e57]
+                - listitem [ref=e58]
+                - listitem [ref=e59]
+                - listitem [ref=e60]
+                - listitem [ref=e61]
+          - generic [ref=e64]:
+            - generic [ref=e65]: 开启新的工作（0）
+            - generic [ref=e67]:
+              - heading [level=3] [ref=e68]
+              - list [ref=e69]:
+                - listitem [ref=e70]
+                - listitem [ref=e71]
+                - listitem [ref=e72]
+                - listitem [ref=e73]
+                - listitem [ref=e74]

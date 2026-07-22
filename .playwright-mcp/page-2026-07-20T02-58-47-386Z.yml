@@ -1,0 +1,107 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 💼
+      - generic [ref=e7]: JobNavigator
+    - navigation [ref=e8]:
+      - link "Jobs" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e10]
+        - text: Jobs
+      - link "Applications" [ref=e13] [cursor=pointer]:
+        - /url: /applications
+        - img [ref=e14]
+        - text: Applications
+      - link "Companies" [ref=e19] [cursor=pointer]:
+        - /url: /companies
+        - img [ref=e20]
+        - text: Companies
+      - link "Searches" [ref=e24] [cursor=pointer]:
+        - /url: /searches
+        - img [ref=e25]
+        - text: Searches
+      - link "Resumes" [ref=e28] [cursor=pointer]:
+        - /url: /resumes
+        - img [ref=e29]
+        - text: Resumes
+      - link "Cover Letters" [ref=e32] [cursor=pointer]:
+        - /url: /cover-letters
+        - img [ref=e33]
+        - text: Cover Letters
+      - link "Persona" [ref=e36] [cursor=pointer]:
+        - /url: /persona
+        - img [ref=e37]
+        - text: Persona
+      - link "Settings" [ref=e40] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e41]
+        - text: Settings
+      - link "Stats" [ref=e44] [cursor=pointer]:
+        - /url: /stats
+        - img [ref=e45]
+        - text: Stats
+      - link "API Docs" [ref=e47] [cursor=pointer]:
+        - /url: /docs
+        - img [ref=e48]
+        - text: API Docs
+    - button "🌙Dark Mode" [ref=e53] [cursor=pointer]
+    - button "Collapse" [ref=e54] [cursor=pointer]
+  - main [ref=e55]:
+    - generic [ref=e57]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Job Feed" [level=1] [ref=e62]
+            - button "Keyboard shortcuts" [ref=e64] [cursor=pointer]:
+              - img [ref=e65]
+          - paragraph [ref=e67]: 0 jobs found
+        - generic [ref=e68]:
+          - button "Reset" [ref=e69] [cursor=pointer]
+          - button [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - img [ref=e73]
+      - generic [ref=e76]: Loading jobs...
+  - generic [ref=e78]:
+    - button "Close" [ref=e79] [cursor=pointer]:
+      - img [ref=e80]
+    - generic [ref=e83]:
+      - heading "Welcome to JobNavigator" [level=2] [ref=e84]
+      - paragraph [ref=e85]: Four quick steps to get your job search automated.
+    - list [ref=e86]:
+      - listitem [ref=e87]:
+        - link "1 Set up AI scoring Add your LLM provider and API key (Claude, OpenAI, or Ollama)." [ref=e88] [cursor=pointer]:
+          - /url: /settings
+          - generic [ref=e89]: "1"
+          - generic [ref=e90]:
+            - generic [ref=e91]:
+              - img [ref=e92]
+              - generic [ref=e95]: Set up AI scoring
+            - paragraph [ref=e96]: Add your LLM provider and API key (Claude, OpenAI, or Ollama).
+      - listitem [ref=e97]:
+        - link "2 Build your resume + persona Edit a base resume and fill out your persona (contact, work auth, etc.) so jobs can be scored against your profile." [ref=e98] [cursor=pointer]:
+          - /url: /resumes
+          - generic [ref=e99]: "2"
+          - generic [ref=e100]:
+            - generic [ref=e101]:
+              - img [ref=e102]
+              - generic [ref=e105]: Build your resume + persona
+            - paragraph [ref=e106]: Edit a base resume and fill out your persona (contact, work auth, etc.) so jobs can be scored against your profile.
+      - listitem [ref=e107]:
+        - link "3 Activate a company Enable one of the seeded companies or add your own to start scraping." [ref=e108] [cursor=pointer]:
+          - /url: /companies
+          - generic [ref=e109]: "3"
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - img [ref=e112]
+              - generic [ref=e116]: Activate a company
+            - paragraph [ref=e117]: Enable one of the seeded companies or add your own to start scraping.
+      - listitem [ref=e118]:
+        - link "4 Configure a search Enable a keyword search or LinkedIn Personal to discover jobs from boards." [ref=e119] [cursor=pointer]:
+          - /url: /searches
+          - generic [ref=e120]: "4"
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - img [ref=e123]
+              - generic [ref=e126]: Configure a search
+            - paragraph [ref=e127]: Enable a keyword search or LinkedIn Personal to discover jobs from boards.
+    - button "Skip for now" [ref=e129] [cursor=pointer]

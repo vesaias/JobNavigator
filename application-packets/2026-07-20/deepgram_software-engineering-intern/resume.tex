@@ -1,0 +1,55 @@
+\documentclass[letterpaper,10pt]{article}
+\input{../common-preamble.tex}
+\begin{document}
+
+\begin{center}
+  \textbf{\Large Yang Yu} \\
+  \textit{Software Engineer | AI Applications \& Distributed Systems} \\[1pt]
+  \small Davis, CA ~|~ \href{mailto:devilsrocbuddhasgildedimage@gmail.com}{devilsrocbuddhasgildedimage@gmail.com} ~|~ +1-530-304-3656 \\
+  \small \href{https://linkedin.com/in/yy030305}{linkedin.com/in/yy030305} ~|~ \href{https://github.com/eyesofish}{github.com/eyesofish}
+\end{center}
+
+\section{Education}
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+  \textbf{University of California, Davis} & Davis, CA \\
+  \textit{M.S. in Computer Science (Expected May 2027)} & \textit{Sep 2025 -- May 2027} \\
+  \textbf{Dalian University of Technology} & Dalian, China \\
+  \textit{B.Eng. in Software Engineering} & \textit{Aug 2021 -- Aug 2025} \\
+\end{tabular*}
+
+\section{Technical Skills}
+\resumeItemListStart
+  \item \textbf{Languages:} Python, C++, Java, SQL, JavaScript
+  \item \textbf{AI \& Retrieval:} LangChain, LangGraph, agentic workflows, RAG, embeddings, vector retrieval, reranking, PyTorch, Qwen API
+  \item \textbf{Systems \& APIs:} FastAPI, REST APIs, async API design, Docker, MySQL, Protobuf/RPC, Raft consensus, distributed systems
+  \item \textbf{Engineering:} Git, unit testing, CI/test triage, debugging, monorepo build/test workflows, iOS simulator workflows
+\resumeItemListEnd
+
+\section{Experience}
+\resumeSubHeadingListStart
+\resumeSubheading{Microsoft}{Suzhou, Jiangsu, China}{Software Engineering Intern}{Jun 2026 -- Present}
+\resumeItemListStart
+  \item Integrated the Microsoft Copilot mobile codebase, using sparse checkout and prebuilt dependencies to establish local builds and unit tests for a large monorepo; validated authentication and a demo in an iPhone simulator.
+  \item Traced a macOS Keychain authorization loop, rebuilt the login keychain, cleared conflicting authentication processes, and installed team-pinned Apple IDE components to restore source access and resolve build-version mismatches.
+  \item Triaged about 30 reliability-pipeline builds, identifying six test targets as deterministic failures rather than flaky tests; supported isolation instead of deletion to reduce automation noise while preserving technical-debt tracking.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Projects \& Open Source}
+\resumeSubHeadingListStart
+\resumeSubheading{LLM + RAG Software Engineering Resource Recommender}{Jan 2026 -- Present}{LangChain, LangGraph, deepagents, Qwen API}{}
+\resumeItemListStart
+  \item Built an agentic RAG workflow that decomposes technical queries into retrieval, filtering, reasoning, and result-organization stages, returning source-grounded recommendations for datasets, benchmarks, projects, and tools.
+\resumeItemListEnd
+\resumeSubheading{ZhihuRec 1M Recommendation System Prototype}{Apr 2026 -- May 2026}{FastAPI, MySQL, Python, JavaScript, Docker}{}
+\resumeItemListStart
+  \item Built feed, search, event, profile, and debug REST APIs with multi-source retrieval, topic reranking, hot/fresh fallback, cold-start profile blending, and click-driven profile updates.
+  \item Validated search-to-feed feedback across 121 replay events, raising Post-Search Topic Carryover@10 from 0.9000 to 1.0000 (Gain@10 = +0.1000).
+\resumeItemListEnd
+\resumeSubheading{Apache Incubator ResilientDB -- Raft Implementation}{Sep 2025 -- Nov 2025}{C++, Bazel, Protobuf/RPC, Distributed Systems}{}
+\resumeItemListStart
+  \item Implemented a Raft path in a personal ResilientDB branch, covering leader election, heartbeat, log replication, commit flow, state-machine application, persistence, snapshots, and crash recovery.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\end{document}

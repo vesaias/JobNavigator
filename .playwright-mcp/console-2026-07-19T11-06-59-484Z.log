@@ -1,0 +1,8 @@
+[    2816ms] [WARNING] react-intl-universal locales data "null" not exists. @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/3158.498b97d9.js:1
+[    2878ms] [LOG] 1.0.0.924 @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/5615.66680d7f.js:1
+[    3024ms] [LOG] version:0.1.7 @ https://verify.snssdk.com/static/pc_slide.js:0
+[    3090ms] [WARNING] react-intl-universal key "职位" not defined in zh-CN @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/3158.498b97d9.js:1
+[    3128ms] [WARNING] react-intl-universal key "职位" not defined in zh-CN @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/3158.498b97d9.js:1
+[    3185ms] [WARNING] react-intl-universal key "职位" not defined in zh-CN @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/3158.498b97d9.js:1
+[    3997ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://lilithgames.jobs.feishu.cn/api/v1/search/job/posts?keyword=&limit=10&offset=0&job_category_id_list=&tag_id_list=&location_code_list=&subject_id_list=&recruitment_id_list=&portal_type=6&job_function_id_list=&storefront_id_list=&portal_entrance=1&_signature=gdl8dAAAAABis1IWfufZyYHZfGAAOuT:0
+[    5152ms] [WARNING] react-intl-universal key "职位" not defined in zh-CN @ https://lf-package-cn.feishucdn.com/obj/atsx-throne/hire-fe-prod/portal/saas-career/static/js/3158.498b97d9.js:1

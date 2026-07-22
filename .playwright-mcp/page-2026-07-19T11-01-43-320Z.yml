@@ -1,0 +1,52 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic:
+        - img
+    - generic [ref=e8]:
+      - generic [ref=e10]:
+        - link "职位" [ref=e11] [cursor=pointer]:
+          - /url: /campus/
+        - link "校招官网" [ref=e12] [cursor=pointer]:
+          - /url: https://campus.nio.com/#/
+        - link "社招官网" [ref=e13] [cursor=pointer]:
+          - /url: https://www.nio.cn/careers/jobs
+        - link "关于蔚来" [ref=e14] [cursor=pointer]:
+          - /url: https://www.nio.cn/
+      - link "登录" [ref=e17] [cursor=pointer]:
+        - /url: /campus/login
+  - generic [ref=e18]:
+    - button "animation" [ref=e21]:
+      - img [ref=e22]
+    - main [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e37]:
+          - 'generic "图标: search" [ref=e39]':
+            - img [ref=e40]
+          - textbox "搜索职位" [ref=e42]
+          - button "搜索" [ref=e44] [cursor=pointer]:
+            - generic: 搜索
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - text: 筛选
+              - generic [ref=e48]: 清除
+            - generic [ref=e50]:
+              - heading [level=3] [ref=e51]
+              - list [ref=e52]:
+                - listitem [ref=e53]
+                - listitem [ref=e54]
+                - listitem [ref=e55]
+                - listitem [ref=e56]
+                - listitem [ref=e57]
+                - listitem [ref=e58]
+          - generic [ref=e61]:
+            - generic [ref=e62]: 开启新的工作（0）
+            - generic [ref=e64]:
+              - heading [level=3] [ref=e65]
+              - list [ref=e66]:
+                - listitem [ref=e67]
+                - listitem [ref=e68]
+                - listitem [ref=e69]
+                - listitem [ref=e70]
+                - listitem [ref=e71]

@@ -1,0 +1,26 @@
+[     671ms] [WARNING] single-spa minified message #41: See https://single-spa.js.org/error/?code=41 @ https://gw.alipayobjects.com/render/p/yuyan/180020010000012660/main-34e4e700.js:22
+[     818ms] [WARNING] The PerformanceObserver does not support buffered flag with the entryTypes argument. @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[     818ms] [WARNING] The PerformanceObserver does not support buffered flag with the entryTypes argument. @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[     830ms] [INFO] [ei-hooks] injectHooksContext m @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[     987ms] [INFO] [masterapp-ei] initialStateFromHooks {} @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1003ms] [INFO] [masterapp-ei] mergedConfig {title: 蚂蚁集团, logo: https://mdn.alipayobjects.com/huamei_i5nvdl/afts/img/A*5kwlT4yuMVMAAAAAAAAAAAAADreFAQ/original, favicon: https://mdn.alipayobjects.com/huamei_i5nvdl/afts/img/A*sv48RpFAbKoAAAAAAAAAAAAADreFAQ/original, showUser: true, headerHiddenPattern: Array(1)} @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1062ms] [LOG] %c 环境 %c PROD  padding: 1px; border-radius: 3px 0 0 3px; color: #fff; background: #606060; padding: 1px; border-radius: 0 3px 3px 0; color: #fff; background: #42c02e;; @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1062ms] [LOG] %c 站点 %c (hrcareersweb-front-site)  padding: 1px; border-radius: 3px 0 0 3px; color: #fff; background: #606060; padding: 1px; border-radius: 0 3px 3px 0; color: #fff; background: #1475b2; @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1063ms] [LOG] %c 主应用 %c tern-masterapp-ei@S090011544826 2026/3/23 19:35:51  padding: 1px; border-radius: 3px 0 0 3px; color: #fff; background: #606060; padding: 1px; border-radius: 0 3px 3px 0; color: #fff; background: #1475b2; @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1063ms] [INFO] [masterapp-ei] config {headerHiddenPattern: Array(1), footerHiddenPattern: Array(1), siderHiddenPattern: Array(1), apps: Array(2), routes: Array(3)} @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    1245ms] [WARNING] [bailingual-sdk-glue] no defaultLocale specified, use first locale code 'en-US' instead. @ https://gw.alipayobjects.com/render/p/yuyan/180020010001257966/umi.af4b1105.js:0
+[    1413ms] [LOG] Sun Jul 19 2026 19:02:25 GMT+0800 (中国标准时间) @ https://g.alicdn.com/AWSC/et/1.83.41/et_f.js:1
+[    1549ms] [INFO] [APSecuritySdk] 1775011280535 @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/alipay-prod-captcha-v2.js:1
+[    1683ms] [INFO] [CaptchaCore-Core] loading captcha core @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    1684ms] [INFO] [APCaptcha] onAPCaptchaLoaded @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/alipay-prod-captcha-v2.js:1
+[    4109ms] [INFO] Error @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    4175ms] [LOG] %c 性能会话 30ba5414-2f73-426e-949f-ed5ba378cd52 color:blue;background:yellow; @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0
+[    4413ms] [LOG] [t] : 2707 @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    4574ms] [INFO] [APSecuritySdk] init start 7f8bb4f3e4fe78eb72e66181c9eb92d8 {captcha: true} @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/alipay-prod-captcha-v2.js:1
+[    4577ms] [INFO] [APSecuritySdk] set host 7f8bb4f3e4fe78eb72e66181c9eb92d8 https://captcha.alipay.com @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    4578ms] [LOG] [initCaptcha] @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    4578ms] [INFO] [APDID] TIME: {"scriptStart":1784458946219,"initStart":1784458949245,"captchaCdn":0,"captchaCdnFromScript":136,"captchaInstance":2,"captchaCoreStart":0,"captchaCoreLoad":0} @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/alipay-prod-captcha-v2.js:1
+[    4594ms] [LOG] [t] : 16 @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    4594ms] [LOG] [t-init]:17 @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/prod/alipay/20400001/captcha.js:1
+[    6567ms] [WARNING] fetch failed, no host @ https://gw.alipayobjects.com/os/netflowsecmng/jshield/alipay-prod-captcha-v2.js:1
+[   10794ms] [WARNING] [Tern]: 当前燕鸥站点 authType 为 custom，但 10s 内未设置过 userId，可能导致灰度发布无法生效！ @ https://gw.alipayobjects.com/render/p/yuyan/180020010001208714/umi.4e715173.js:0

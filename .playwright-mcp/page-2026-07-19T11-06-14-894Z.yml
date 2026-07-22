@@ -1,0 +1,54 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - img [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /602892/
+        - link "热招职位" [ref=e14] [cursor=pointer]:
+          - /url: /602892/position/list
+        - link "FAQ" [ref=e15] [cursor=pointer]:
+          - /url: /602892/page-Q0h5T4
+        - link "关于正浩" [ref=e16] [cursor=pointer]:
+          - /url: https://www.ecoflow.com/cn
+        - link "隐私政策" [ref=e17] [cursor=pointer]:
+          - /url: /602892/page-fWk327
+        - link "校招小助手" [ref=e18] [cursor=pointer]:
+          - /url: https://zhaopin.liexing-ai.com/pcchat/#/chat?chatId=535
+      - link "登录" [ref=e21] [cursor=pointer]:
+        - /url: /602892/login
+  - generic [ref=e22]:
+    - button "animation" [ref=e25]:
+      - img [ref=e26]
+    - main [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e41]:
+          - 'generic "图标: search" [ref=e43]':
+            - img [ref=e44]
+          - textbox "搜索职位" [ref=e46]
+          - button "搜索" [ref=e48] [cursor=pointer]:
+            - generic: 搜索
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - text: 筛选
+              - generic [ref=e52]: 清除
+            - generic [ref=e54]:
+              - heading [level=3] [ref=e55]
+              - list [ref=e56]:
+                - listitem [ref=e57]
+                - listitem [ref=e58]
+                - listitem [ref=e59]
+                - listitem [ref=e60]
+                - listitem [ref=e61]
+                - listitem [ref=e62]
+          - generic [ref=e65]:
+            - generic [ref=e66]: 开启新的工作（0）
+            - generic [ref=e68]:
+              - heading [level=3] [ref=e69]
+              - list [ref=e70]:
+                - listitem [ref=e71]
+                - listitem [ref=e72]
+                - listitem [ref=e73]
+                - listitem [ref=e74]
+                - listitem [ref=e75]

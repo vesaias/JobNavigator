@@ -1,0 +1,56 @@
+\documentclass[letterpaper,10pt]{article}
+\input{../common-preamble.tex}
+\begin{document}
+
+\begin{center}
+  \textbf{\Large Yang Yu} \\
+  \textit{Software Engineer | Python, Automation \& AI Systems} \\[1pt]
+  \small Davis, CA ~|~ \href{mailto:devilsrocbuddhasgildedimage@gmail.com}{devilsrocbuddhasgildedimage@gmail.com} ~|~ +1-530-304-3656 \\
+  \small \href{https://linkedin.com/in/yy030305}{linkedin.com/in/yy030305} ~|~ \href{https://github.com/eyesofish}{github.com/eyesofish}
+\end{center}
+
+\section{Technical Skills}
+\resumeItemListStart
+  \item \textbf{Languages:} Python, SQL, Java, JavaScript, C++
+  \item \textbf{Automation, APIs \& Data:} FastAPI, REST APIs, async API design, MySQL, Redis, Docker, Kubernetes, Git
+  \item \textbf{AI \& Machine Learning:} LangChain, LangGraph, agentic workflows, RAG, embeddings, vector retrieval, reranking, PyTorch
+  \item \textbf{Engineering:} troubleshooting, unit testing, CI/test triage, deployment workflows, monorepo build/test workflows
+\resumeItemListEnd
+
+\section{Experience}
+\resumeSubHeadingListStart
+\resumeSubheading{Microsoft}{Suzhou, Jiangsu, China}{Software Engineering Intern}{Jun 2026 -- Present}
+\resumeItemListStart
+  \item Integrated the Microsoft Copilot mobile codebase, using sparse checkout and prebuilt dependencies to establish a repeatable local build and unit-test workflow for a large monorepo.
+  \item Diagnosed a macOS Keychain authorization loop and Apple IDE version mismatch, restoring source access and build execution by rebuilding credentials, clearing conflicting processes, and installing team-pinned tooling.
+  \item Triaged about 30 reliability-pipeline builds, identifying six test targets as deterministic failures rather than flaky tests and supporting isolation to reduce automation noise.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Projects \& Open Source}
+\resumeSubHeadingListStart
+\resumeSubheading{LLM + RAG Software Engineering Resource Recommender}{Jan 2026 -- Present}{Python, LangChain, LangGraph, deepagents, Qwen API}{}
+\resumeItemListStart
+  \item Built an agentic automation workflow that decomposes technical requests into retrieval, filtering, reasoning, and structured result-organization stages.
+  \item Aggregated datasets, benchmarks, open-source projects, and tools to return source-grounded recommendations for technical decision-making.
+\resumeItemListEnd
+\resumeSubheading{ZhihuRec 1M Recommendation System Prototype}{Apr 2026 -- May 2026}{FastAPI, MySQL, Python, JavaScript, Docker}{}
+\resumeItemListStart
+  \item Developed feed, search, event, profile, and debug REST APIs with multi-source retrieval, reranking, cold-start profile blending, and click-driven profile updates.
+  \item Tested the search-to-feed feedback loop across 121 replay events, raising Post-Search Topic Carryover@10 from 0.9000 to 1.0000 (Gain@10 = +0.1000).
+\resumeItemListEnd
+\resumeSubheading{Apache Incubator ResilientDB -- Raft Implementation}{Sep 2025 -- Nov 2025}{C++, Bazel, Protobuf/RPC, Distributed Systems}{}
+\resumeItemListStart
+  \item Implemented leader election, log replication, persistence, snapshots, and crash recovery in a personal ResilientDB branch, troubleshooting integration across protocol, RPC, and state-machine components.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Education}
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+  \textbf{University of California, Davis} & Davis, CA \\
+  \textit{M.S. in Computer Science (Expected May 2027)} & \textit{Sep 2025 -- May 2027} \\
+  \textbf{Dalian University of Technology} & Dalian, China \\
+  \textit{B.Eng. in Software Engineering} & \textit{Aug 2021 -- Aug 2025} \\
+\end{tabular*}
+
+\end{document}

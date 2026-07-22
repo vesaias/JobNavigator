@@ -1,0 +1,29 @@
+- generic [ref=e2]:
+  - banner:
+    - generic [ref=e3]:
+      - link "2027校园招聘 | 提前批":
+        - /url: /
+        - generic [ref=e4] [cursor=pointer]:
+          - img [ref=e5]
+          - paragraph [ref=e6]: 2027校园招聘
+          - paragraph [ref=e7]: "|"
+          - paragraph [ref=e8]: 提前批
+      - generic [ref=e9]:
+        - generic [ref=e11]: 登录/注册
+        - link "TP-LINK官网" [ref=e12] [cursor=pointer]:
+          - /url: https://www.tp-link.com.cn/
+  - main [ref=e13]:
+    - img [ref=e17]
+  - contentinfo [ref=e18]:
+    - generic [ref=e20]:
+      - img [ref=e21]
+      - link "社会招聘" [ref=e22] [cursor=pointer]:
+        - /url: https://hr.tp-link.com.cn/socialJobList
+      - link "校园招聘" [ref=e23] [cursor=pointer]:
+        - /url: https://hr.tp-link.com.cn
+      - link "官方网站" [ref=e24] [cursor=pointer]:
+        - /url: https://www.tp-link.com.cn
+      - paragraph [ref=e26]:
+        - text: 普联技术有限公司 版权所有 Copyright © 2023-2026 TP-LINK.All rights reserved.
+        - link "浙ICP备2026048153号-1" [ref=e27] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn

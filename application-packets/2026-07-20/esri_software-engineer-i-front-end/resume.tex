@@ -1,0 +1,56 @@
+\documentclass[letterpaper,10pt]{article}
+\input{../common-preamble.tex}
+\begin{document}
+
+\begin{center}
+  \textbf{\Large Yang Yu} \\
+  \textit{Software Engineer | Web APIs, User-Facing Systems \& AI Applications} \\[1pt]
+  \small Davis, CA ~|~ \href{mailto:devilsrocbuddhasgildedimage@gmail.com}{devilsrocbuddhasgildedimage@gmail.com} ~|~ +1-530-304-3656 \\
+  \small \href{https://linkedin.com/in/yy030305}{linkedin.com/in/yy030305} ~|~ \href{https://github.com/eyesofish}{github.com/eyesofish}
+\end{center}
+
+\section{Technical Skills}
+\resumeItemListStart
+  \item \textbf{Languages:} JavaScript, Python, Java, SQL, C++
+  \item \textbf{Web, APIs \& Data:} FastAPI, REST APIs, async API design, MySQL, Redis, Docker, recommendation systems
+  \item \textbf{AI Applications:} LangChain, LangGraph, RAG, embeddings, vector retrieval, reranking, PyTorch, Qwen API
+  \item \textbf{Engineering:} Git, unit testing, CI/test triage, debugging, monorepo build/test workflows, technical documentation
+\resumeItemListEnd
+
+\section{Experience}
+\resumeSubHeadingListStart
+\resumeSubheading{Microsoft}{Suzhou, Jiangsu, China}{Software Engineering Intern}{Jun 2026 -- Present}
+\resumeItemListStart
+  \item Integrated the Microsoft Copilot mobile codebase, using sparse checkout and prebuilt dependencies to establish local builds and unit tests for a large monorepo; validated authentication and a demo in an iPhone simulator.
+  \item Diagnosed a macOS Keychain authorization loop and Apple IDE version mismatch, restoring source access and the local build workflow through evidence-driven debugging and team-pinned tooling.
+  \item Triaged about 30 reliability-pipeline builds, identifying six test targets as deterministic failures rather than flaky tests and supporting isolation to improve signal quality.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Projects \& Open Source}
+\resumeSubHeadingListStart
+\resumeSubheading{ZhihuRec 1M Recommendation System Prototype}{Apr 2026 -- May 2026}{FastAPI, MySQL, Python, JavaScript, Docker}{}
+\resumeItemListStart
+  \item Built a user-facing search and recommendation prototype with feed, search, event, profile, and debug REST APIs, connecting JavaScript clients to FastAPI back-end services.
+  \item Implemented multi-source retrieval, topic reranking, hot/fresh fallback, cold-start profile blending, and click-driven profile updates across the product workflow.
+  \item Validated search-to-feed behavior across 121 replay events, raising Post-Search Topic Carryover@10 from 0.9000 to 1.0000 (Gain@10 = +0.1000).
+\resumeItemListEnd
+\resumeSubheading{LLM + RAG Software Engineering Resource Recommender}{Jan 2026 -- Present}{LangChain, LangGraph, deepagents, Qwen API}{}
+\resumeItemListStart
+  \item Built an agentic RAG workflow that uses embeddings, vector retrieval, filtering, and reasoning to organize source-grounded technology recommendations.
+\resumeItemListEnd
+\resumeSubheading{Apache Incubator ResilientDB -- Raft Implementation}{Sep 2025 -- Nov 2025}{C++, Bazel, Protobuf/RPC, Distributed Systems}{}
+\resumeItemListStart
+  \item Implemented leader election, log replication, persistence, snapshots, and crash recovery in a personal ResilientDB branch, integrating protocol and RPC changes into an existing codebase.
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Education}
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+  \textbf{University of California, Davis} & Davis, CA \\
+  \textit{M.S. in Computer Science (Expected May 2027)} & \textit{Sep 2025 -- May 2027} \\
+  \textbf{Dalian University of Technology} & Dalian, China \\
+  \textit{B.Eng. in Software Engineering} & \textit{Aug 2021 -- Aug 2025} \\
+\end{tabular*}
+
+\end{document}

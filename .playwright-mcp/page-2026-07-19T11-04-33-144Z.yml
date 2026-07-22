@@ -1,0 +1,311 @@
+- main [ref=e7]:
+  - generic [ref=e12]:
+    - generic [ref=e14]:
+      - navigation [ref=e16]:
+        - img [ref=e18] [cursor=pointer]
+        - generic [ref=e19]:
+          - list [ref=e20]:
+            - listitem [ref=e21]:
+              - link "主页" [ref=e22] [cursor=pointer]:
+                - /url: /home
+            - listitem [ref=e23]:
+              - link "最新动态" [ref=e24] [cursor=pointer]:
+                - /url: /news
+            - listitem [ref=e25]:
+              - link "研究成果" [ref=e26] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=e27]:
+              - link "社会招聘" [ref=e28] [cursor=pointer]:
+                - /url: /off-campus-home
+            - listitem [ref=e29]:
+              - link "校园招聘" [ref=e30] [cursor=pointer]:
+                - /url: /campus
+            - listitem [ref=e31]:
+              - link "蚂蚁星" [ref=e32] [cursor=pointer]:
+                - /url: /ant-star
+          - list [ref=e33]:
+            - generic [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: 中国
+              - img "caret-down" [ref=e37]:
+                - img [ref=e38]
+            - listitem [ref=e40]:
+              - generic [ref=e41] [cursor=pointer]: 登录
+      - generic [ref=e43]:
+        - generic [ref=e45]:
+          - button [ref=e65] [cursor=pointer]:
+            - img [ref=e66]
+          - button [ref=e67] [cursor=pointer]:
+            - img [ref=e68]
+        - generic [ref=e69]:
+          - generic [ref=e74]:
+            - textbox "输入职位关键词" [ref=e75]
+            - button "搜 索" [ref=e77] [cursor=pointer]:
+              - generic [ref=e78]: 搜 索
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - heading "筛选" [level=2] [ref=e82]
+                - button "清除" [ref=e83] [cursor=pointer]:
+                  - generic [ref=e84]: 清除
+              - generic [ref=e86]:
+                - button "plus 工作地点" [ref=e88] [cursor=pointer]:
+                  - img "plus" [ref=e89]:
+                    - img [ref=e90]
+                  - generic [ref=e93]: 工作地点
+                - separator [ref=e94]
+                - button "plus 职位类别" [ref=e96] [cursor=pointer]:
+                  - img "plus" [ref=e97]:
+                    - img [ref=e98]
+                  - generic [ref=e101]: 职位类别
+                - separator [ref=e102]
+                - button "plus 部门" [ref=e104] [cursor=pointer]:
+                  - img "plus" [ref=e105]:
+                    - img [ref=e106]
+                  - generic [ref=e109]: 部门
+                - separator [ref=e110]
+                - button "plus 招聘类型" [ref=e112] [cursor=pointer]:
+                  - img "plus" [ref=e113]:
+                    - img [ref=e114]
+                  - generic [ref=e117]: 招聘类型
+            - generic [ref=e118]:
+              - generic [ref=e120]:
+                - generic [ref=e121]: 职位
+                - generic [ref=e123]: "334"
+              - list [ref=e126]:
+                - listitem [ref=e248] [cursor=pointer]:
+                  - generic [ref=e249]:
+                    - generic [ref=e250]:
+                      - generic [ref=e252]:
+                        - generic [ref=e254]: 【Plan A】具身智能算法工程师-灵波（实习）
+                        - generic [ref=e256]:
+                          - generic [ref=e258]: "职位类别:"
+                          - generic [ref=e260]: 技术类
+                      - generic [ref=e262]:
+                        - generic [ref=e264]: "毕业时间要求:"
+                        - generic [ref=e266]: 2026-09-01 ~ 2030-10-31
+                    - button "北京/上海/杭州" [disabled] [ref=e269]:
+                      - generic [ref=e273]:
+                        - img [ref=e275]:
+                          - img "location" [ref=e276]
+                        - generic [ref=e284]: 北京/上海/杭州
+                - listitem [ref=e285] [cursor=pointer]:
+                  - generic [ref=e286]:
+                    - generic [ref=e287]:
+                      - generic [ref=e289]:
+                        - generic [ref=e291]: CTO-系统工程师 / 大模型基础设施方向
+                        - generic [ref=e293]:
+                          - generic [ref=e295]: "职位类别:"
+                          - generic [ref=e297]: 技术类
+                      - generic [ref=e299]:
+                        - generic [ref=e301]: "毕业时间要求:"
+                        - generic [ref=e303]: 2027-11-01 ~ 2030-10-31
+                    - button "北京/上海/杭州" [disabled] [ref=e306]:
+                      - generic [ref=e310]:
+                        - img [ref=e312]:
+                          - img "location" [ref=e313]
+                        - generic [ref=e321]: 北京/上海/杭州
+                - listitem [ref=e322] [cursor=pointer]:
+                  - generic [ref=e323]:
+                    - generic [ref=e324]:
+                      - generic [ref=e326]:
+                        - generic [ref=e328]: 【蚂蚁星】算法工程师-语音算法-灵光（实习）
+                        - generic [ref=e330]:
+                          - generic [ref=e332]: "职位类别:"
+                          - generic [ref=e334]: 技术类
+                      - generic [ref=e336]:
+                        - generic [ref=e338]: "毕业时间要求:"
+                        - generic [ref=e340]: 2026-11-01 ~ 2031-10-31
+                    - button "杭州" [disabled] [ref=e343]:
+                      - generic [ref=e347]:
+                        - img [ref=e349]:
+                          - img "location" [ref=e350]
+                        - generic [ref=e358]: 杭州
+                - listitem [ref=e359] [cursor=pointer]:
+                  - generic [ref=e360]:
+                    - generic [ref=e361]:
+                      - generic [ref=e363]:
+                        - generic [ref=e365]: 【蚂蚁星】算法工程师-语音算法-灵光
+                        - generic [ref=e367]:
+                          - generic [ref=e369]: "职位类别:"
+                          - generic [ref=e371]: 技术类
+                      - generic [ref=e373]:
+                        - generic [ref=e375]: "毕业时间要求:"
+                        - generic [ref=e377]: 2026-11-01 ~ 2027-10-31
+                    - button "杭州" [disabled] [ref=e380]:
+                      - generic [ref=e384]:
+                        - img [ref=e386]:
+                          - img "location" [ref=e387]
+                        - generic [ref=e395]: 杭州
+                - listitem [ref=e396] [cursor=pointer]:
+                  - generic [ref=e397]:
+                    - generic [ref=e398]:
+                      - generic [ref=e400]:
+                        - generic [ref=e402]: 蚂蚁健康-大模型算法实习生
+                        - generic [ref=e404]:
+                          - generic [ref=e406]: "职位类别:"
+                          - generic [ref=e408]: 技术类
+                      - generic [ref=e410]:
+                        - generic [ref=e412]: "毕业时间要求:"
+                        - generic [ref=e414]: 2026-01-01 ~ 2030-12-31
+                    - button "北京/上海/杭州" [disabled] [ref=e417]:
+                      - generic [ref=e421]:
+                        - img [ref=e423]:
+                          - img "location" [ref=e424]
+                        - generic [ref=e432]: 北京/上海/杭州
+                - listitem [ref=e433] [cursor=pointer]:
+                  - generic [ref=e434]:
+                    - generic [ref=e435]:
+                      - generic [ref=e437]:
+                        - generic [ref=e439]: 蚂蚁健康-国际医疗业务实习生（用户研究与渠道拓展）
+                        - generic [ref=e441]:
+                          - generic [ref=e443]: "职位类别:"
+                          - generic [ref=e445]: 运营类
+                      - generic [ref=e447]:
+                        - generic [ref=e449]: "毕业时间要求:"
+                        - generic [ref=e451]: 2027-11-01 ~ 2030-10-31
+                    - button "上海/广州" [disabled] [ref=e454]:
+                      - generic [ref=e458]:
+                        - img [ref=e460]:
+                          - img "location" [ref=e461]
+                        - generic [ref=e469]: 上海/广州
+                - listitem [ref=e470] [cursor=pointer]:
+                  - generic [ref=e471]:
+                    - generic [ref=e472]:
+                      - generic [ref=e474]:
+                        - generic [ref=e476]: 蚂蚁健康-医疗AI训练师
+                        - generic [ref=e478]:
+                          - generic [ref=e480]: "职位类别:"
+                          - generic [ref=e482]: 技术类
+                      - generic [ref=e484]:
+                        - generic [ref=e486]: "毕业时间要求:"
+                        - generic [ref=e488]: 2026-11-01 ~ 2027-12-31
+                    - button "北京/上海/杭州" [disabled] [ref=e491]:
+                      - generic [ref=e495]:
+                        - img [ref=e497]:
+                          - img "location" [ref=e498]
+                        - generic [ref=e506]: 北京/上海/杭州
+                - listitem [ref=e507] [cursor=pointer]:
+                  - generic [ref=e508]:
+                    - generic [ref=e509]:
+                      - generic [ref=e511]:
+                        - generic [ref=e513]: 蚂蚁健康-PSG数据采集与标注实习生
+                        - generic [ref=e515]:
+                          - generic [ref=e517]: "职位类别:"
+                          - generic [ref=e519]: 技术类
+                      - generic [ref=e521]:
+                        - generic [ref=e523]: "毕业时间要求:"
+                        - generic [ref=e525]: 2026-11-01 ~ 2029-10-31
+                    - button "杭州" [disabled] [ref=e528]:
+                      - generic [ref=e532]:
+                        - img [ref=e534]:
+                          - img "location" [ref=e535]
+                        - generic [ref=e543]: 杭州
+                - listitem [ref=e544] [cursor=pointer]:
+                  - generic [ref=e545]:
+                    - generic [ref=e546]:
+                      - generic [ref=e548]:
+                        - generic [ref=e550]: CTO-百灵长期实习生
+                        - generic [ref=e552]:
+                          - generic [ref=e554]: "职位类别:"
+                          - generic [ref=e556]: 运营类
+                      - generic [ref=e558]:
+                        - generic [ref=e560]: "毕业时间要求:"
+                        - generic [ref=e562]: 2027-11-01 ~ 2030-10-31
+                    - button "杭州" [disabled] [ref=e565]:
+                      - generic [ref=e569]:
+                        - img [ref=e571]:
+                          - img "location" [ref=e572]
+                        - generic [ref=e580]: 杭州
+                - listitem [ref=e581] [cursor=pointer]:
+                  - generic [ref=e582]:
+                    - generic [ref=e583]:
+                      - generic [ref=e585]:
+                        - generic [ref=e587]: 【蚂蚁星】算法工程师-Agent安全-大安全-27届
+                        - generic [ref=e589]:
+                          - generic [ref=e591]: "职位类别:"
+                          - generic [ref=e593]: 技术类
+                      - generic [ref=e595]:
+                        - generic [ref=e597]: "毕业时间要求:"
+                        - generic [ref=e599]: 2026-11-01 ~ 2027-10-31
+                    - button "北京" [disabled] [ref=e602]:
+                      - generic [ref=e606]:
+                        - img [ref=e608]:
+                          - img "location" [ref=e609]
+                        - generic [ref=e617]: 北京
+              - list [ref=e155]:
+                - listitem "上一页" [ref=e156]:
+                  - button "left" [disabled] [ref=e157]:
+                    - img "left" [ref=e158]:
+                      - img [ref=e159]
+                - listitem "1" [ref=e618] [cursor=pointer]:
+                  - generic [ref=e619]: "1"
+                - listitem "2" [ref=e620] [cursor=pointer]:
+                  - generic [ref=e621]: "2"
+                - listitem "3" [ref=e622] [cursor=pointer]:
+                  - generic [ref=e623]: "3"
+                - listitem "4" [ref=e624] [cursor=pointer]:
+                  - generic [ref=e625]: "4"
+                - listitem "5" [ref=e626] [cursor=pointer]:
+                  - generic [ref=e627]: "5"
+                - listitem "向后 5 页" [ref=e628] [cursor=pointer]:
+                  - generic [ref=e630]:
+                    - img "double-right" [ref=e631]:
+                      - img [ref=e632]
+                    - generic [ref=e634]: •••
+                - listitem "34" [ref=e635] [cursor=pointer]:
+                  - generic [ref=e636]: "34"
+                - listitem "下一页" [ref=e163] [cursor=pointer]:
+                  - button "right" [ref=e164]:
+                    - img "right" [ref=e165]:
+                      - img [ref=e166]
+        - generic [ref=e168] [cursor=pointer]:
+          - img "file-done" [ref=e169]:
+            - img [ref=e170]
+          - generic [ref=e172]: 意向单
+      - generic [ref=e174]:
+        - generic "gradflow animated gradient background" [ref=e176]
+        - img [ref=e180]
+        - generic [ref=e184]:
+          - generic [ref=e185]:
+            - generic [ref=e187]: Copyright © 2026 蚂蚁科技集团股份有限公司
+            - generic [ref=e189]: 经营许可证编号：合字B2-20190048
+            - generic [ref=e191]: ICP备案：浙B2-20100257-3
+          - generic [ref=e193]: 如需咨询招聘相关事宜，请拨打电话：0571-28280505
+    - img [ref=e195] [cursor=pointer]
+    - generic [ref=e198]:
+      - generic [ref=e199] [cursor=pointer]:
+        - text: 退出
+        - img [ref=e200]
+      - generic [ref=e202]:
+        - generic [ref=e203]:
+          - generic [ref=e210]:
+            - text: 你好呀！我是蚂蚁集团的招聘助理小招，很高兴认识你～
+            - text: 我可以帮你：
+            - text: • 了解蚂蚁集团的各类岗位机会
+            - text: • 根据你的背景和意向推荐合适的职位
+            - text: • 查询你的应聘进度状态
+            - text: • 解答招聘相关的常见问题
+            - text: 你最近是在看新的工作机会吗？可以和我聊聊你的职业方向或者感兴趣的业务领域～
+          - generic [ref=e211]:
+            - generic [ref=e212]:
+              - generic [ref=e214]:
+                - button "🔥 热招职位" [ref=e215] [cursor=pointer]
+                - button "🔎 查询进度" [ref=e216] [cursor=pointer]
+              - generic [ref=e218]:
+                - textbox "告诉我你的目标岗位，工作经验，以及期望的工作地点，越详细越好哦～" [ref=e219]
+                - generic [ref=e220]:
+                  - button "swap 社招" [ref=e222] [cursor=pointer]:
+                    - img "swap" [ref=e223]:
+                      - img [ref=e224]
+                    - text: 社招
+                  - generic [ref=e226]:
+                    - button "paper-clip" [ref=e231]:
+                      - img "paper-clip" [ref=e234]:
+                        - img [ref=e235]
+                    - img [ref=e238]
+            - generic [ref=e239]: "- 小招的回答由 AI 生成 -"
+        - generic [ref=e241]:
+          - button "close" [ref=e242] [cursor=pointer]:
+            - img "close" [ref=e243]:
+              - img [ref=e244]
+          - heading [level=3]

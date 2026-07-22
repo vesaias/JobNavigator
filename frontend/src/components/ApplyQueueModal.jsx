@@ -61,7 +61,7 @@ export default function ApplyQueueModal() {
                 {items.length} application {items.length === 1 ? 'packet is' : 'packets are'} ready
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                JobNavigator fetched each JD and prepared a tailored resume. Open the form, fill it in, and submit it yourself.
+                JobNavigator fetched each JD and prepared the shared generic resume. Open the form, fill it in, and submit it yourself.
               </p>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function ApplyQueueModal() {
                     className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700">
                     <ExternalLink size={15} /> Application form
                   </a>
-                  <a href={item.resume_pdf_url} target="_blank" rel="noopener noreferrer"
+                  <a href={item.packet_pdf_url || item.resume_pdf_url} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Download size={15} /> Resume PDF
                   </a>

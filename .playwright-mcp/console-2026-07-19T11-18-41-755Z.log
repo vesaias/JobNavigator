@@ -1,0 +1,5 @@
+[     949ms] [WARNING] 【@beisen/helper】:请检查BSGlobal.domain是否存在或者是否为string类型! @ https://acdn.bstatics.com/ux/ux-recruitment-portal-2022/release/dist/beisen-101afe22469a34f6a8df.chk.js:1
+[     955ms] [WARNING] 【@beisen/helper】:请检查BSGlobal.domain是否存在或者是否为string类型! @ https://acdn.bstatics.com/ux/ux-recruitment-portal-2022/release/dist/beisen-101afe22469a34f6a8df.chk.js:1
+[    1811ms] [LOG] collect change nodes： [] undefined @ https://acdn.bstatics.com/ux/beisen-common/@beisen/analysis-pms/udcpc-79fc557c-2.0.15.min.js:0
+[    1947ms] [WARNING] 【@beisen/helper】:请检查BSGlobal.domain是否存在或者是否为string类型! @ https://acdn.bstatics.com/ux/ux-recruitment-portal-2022/release/dist/beisen-101afe22469a34f6a8df.chk.js:1
+[    7019ms] [LOG] collect change nodes： [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object] 3696.8999999910593 @ https://acdn.bstatics.com/ux/beisen-common/@beisen/analysis-pms/udcpc-79fc557c-2.0.15.min.js:0

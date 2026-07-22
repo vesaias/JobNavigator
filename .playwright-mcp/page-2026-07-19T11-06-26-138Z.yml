@@ -1,0 +1,190 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - img [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /602892/
+        - link "热招职位" [ref=e14] [cursor=pointer]:
+          - /url: /602892/position/list
+        - link "FAQ" [ref=e15] [cursor=pointer]:
+          - /url: /602892/page-Q0h5T4
+        - link "关于正浩" [ref=e16] [cursor=pointer]:
+          - /url: https://www.ecoflow.com/cn
+        - link "隐私政策" [ref=e17] [cursor=pointer]:
+          - /url: /602892/page-fWk327
+        - link "校招小助手" [ref=e18] [cursor=pointer]:
+          - /url: https://zhaopin.liexing-ai.com/pcchat/#/chat?chatId=535
+      - link "登录" [ref=e21] [cursor=pointer]:
+        - /url: /602892/login
+  - main [ref=e35]:
+    - generic [ref=e36]:
+      - generic [ref=e41]:
+        - 'generic "图标: search" [ref=e43]':
+          - img [ref=e44]
+        - textbox "搜索职位" [ref=e46]
+        - button "搜索" [ref=e48] [cursor=pointer]:
+          - generic: 搜索
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - text: 筛选
+            - generic [ref=e52]: 清除
+          - generic [ref=e77]:
+            - generic [ref=e78]: 招聘项目
+            - tree [ref=e80]:
+              - treeitem "2027届研发提前批" [ref=e81]:
+                - generic [ref=e88] [cursor=pointer]: 2027届研发提前批
+              - treeitem "日常实习" [ref=e89]:
+                - generic [ref=e96] [cursor=pointer]: 日常实习
+              - treeitem "2027届校招实习" [ref=e97]:
+                - generic [ref=e104] [cursor=pointer]: 2027届校招实习
+          - generic [ref=e105]:
+            - generic [ref=e106]: 城市
+            - tree [ref=e108]:
+              - treeitem "深圳" [ref=e109]:
+                - generic [ref=e116] [cursor=pointer]: 深圳
+              - treeitem "西安" [ref=e117]:
+                - generic [ref=e124] [cursor=pointer]: 西安
+              - treeitem "苏州" [ref=e125]:
+                - generic [ref=e132] [cursor=pointer]: 苏州
+              - treeitem "西雅图" [ref=e133]:
+                - generic [ref=e140] [cursor=pointer]: 西雅图
+              - treeitem "伯明翰" [ref=e141]:
+                - generic [ref=e148] [cursor=pointer]: 伯明翰
+          - generic [ref=e150]:
+            - generic [ref=e151]: 职能分类
+            - tree [ref=e153]:
+              - 'treeitem "图标: caret-down 产品" [ref=e154]':
+                - 'generic "图标: caret-down" [ref=e156] [cursor=pointer]':
+                  - img [ref=e157]
+                - generic [ref=e162] [cursor=pointer]: 产品
+              - 'treeitem "图标: caret-down 研发" [ref=e163]':
+                - 'generic "图标: caret-down" [ref=e165] [cursor=pointer]':
+                  - img [ref=e166]
+                - generic [ref=e171] [cursor=pointer]: 研发
+              - treeitem "营销服" [ref=e172]:
+                - generic [ref=e177] [cursor=pointer]: 营销服
+              - treeitem "采购管理" [ref=e178]:
+                - generic [ref=e183] [cursor=pointer]: 采购管理
+              - treeitem "供应链管理" [ref=e184]:
+                - generic [ref=e189] [cursor=pointer]: 供应链管理
+              - 'treeitem "图标: caret-down 专业职能" [ref=e190]':
+                - 'generic "图标: caret-down" [ref=e192] [cursor=pointer]':
+                  - img [ref=e193]
+                - generic [ref=e198] [cursor=pointer]: 专业职能
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: 开启新的工作（30）
+            - generic [ref=e368]:
+              - link "【日常实习】家储亚太营销实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 营销服 1、营销阵地建立：协助东南亚linkedin、网页等平台注册及基础装修，参与内容框架规划； 2、阵地内容更新：负责日常内容排版发布，跟踪数据表现，参与选题策划； 3、本地媒体投放与KOL/KOC：筛选建联、合作执行与复盘，收集竞品案例； 4、渠道营销支持：协助渠道物料管理分发，支持促销活动落地与信息更新； 5、品牌方线下活动：参与线下活动筹备执行，负责物料对接、现场拍摄及资料归档； 6、客户营销活动支持：协助客户定制活动的方案执行、物料配送及效果数据整理。" [ref=e369] [cursor=pointer]:
+                - /url: /602892/position/7659987935496735039/detail
+                - generic [ref=e370]:
+                  - generic [ref=e373]: 【日常实习】家储亚太营销实习生
+                  - generic [ref=e374]:
+                    - text: 深圳
+                    - generic [ref=e376]: 实习
+                    - generic [ref=e379]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e382]: 营销服
+                  - generic [ref=e383]: 1、营销阵地建立：协助东南亚linkedin、网页等平台注册及基础装修，参与内容框架规划； 2、阵地内容更新：负责日常内容排版发布，跟踪数据表现，参与选题策划； 3、本地媒体投放与KOL/KOC：筛选建联、合作执行与复盘，收集竞品案例； 4、渠道营销支持：协助渠道物料管理分发，支持促销活动落地与信息更新； 5、品牌方线下活动：参与线下活动筹备执行，负责物料对接、现场拍摄及资料归档； 6、客户营销活动支持：协助客户定制活动的方案执行、物料配送及效果数据整理。
+              - link "【校招实习】企业文化实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 专业职能 - 人力资源 1. 文化传播：协助撰写公司内部推文、文化案例、人物故事等； 2. 文化活动策划与执行：协助公司内部重要文化活动的策划与落地； 3. 公司内部社群运营：协助进行公司内部社区平台的运营维护； 4. 文化培训：支持全球办公室的文化培训开展； 5. 实习表现优秀有转正机会。" [ref=e384] [cursor=pointer]:
+                - /url: /602892/position/7657851026976704774/detail
+                - generic [ref=e385]:
+                  - generic [ref=e388]: 【校招实习】企业文化实习生
+                  - generic [ref=e389]:
+                    - text: 深圳
+                    - generic [ref=e391]: 实习
+                    - generic [ref=e394]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e397]: 专业职能 - 人力资源
+                  - generic [ref=e398]: 1. 文化传播：协助撰写公司内部推文、文化案例、人物故事等； 2. 文化活动策划与执行：协助公司内部重要文化活动的策划与落地； 3. 公司内部社群运营：协助进行公司内部社区平台的运营维护； 4. 文化培训：支持全球办公室的文化培训开展； 5. 实习表现优秀有转正机会。
+              - link "【日常实习】服务运营实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 营销服 1、服务数据运营工作：负责售后、客服相关运营数据的整理、核对与监控，排查数据异常问题；协助维护数据看板，完成日常数据复盘、业务会议统筹、纪要整理及待办跟进等运营工作； 2、日常运营支持：配合团队完成各类运营辅助工作，认真落地各项任务，做好工作复盘与资料沉淀； 3、招聘运营工作：协助完成简历筛选、面试邀约与安排、招聘进度跟进。" [ref=e399] [cursor=pointer]:
+                - /url: /602892/position/7657807099423361331/detail
+                - generic [ref=e400]:
+                  - generic [ref=e403]: 【日常实习】服务运营实习生
+                  - generic [ref=e404]:
+                    - text: 深圳
+                    - generic [ref=e406]: 实习
+                    - generic [ref=e409]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e412]: 营销服
+                  - generic [ref=e413]: 1、服务数据运营工作：负责售后、客服相关运营数据的整理、核对与监控，排查数据异常问题；协助维护数据看板，完成日常数据复盘、业务会议统筹、纪要整理及待办跟进等运营工作； 2、日常运营支持：配合团队完成各类运营辅助工作，认真落地各项任务，做好工作复盘与资料沉淀； 3、招聘运营工作：协助完成简历筛选、面试邀约与安排、招聘进度跟进。
+              - link "【校招实习】电力电子硬件工程师 深圳 实习 智能制造 / 工业互联网 / 工业自动化 研发 1、负责单板原理图设计、系统功率回路设计； 2、负责硬件器件选型以及功率和控制电路、单板和系统的调式、测试； 3、负责逆变器、充电器等电源产品的方案设计以及技术开发； 4、负责电路原理图设计，协助layout工程师进行PCB设计； 5、负责硬件电路调试及测试，独立解决项目开发过程中出现的疑难问题，输出技术文档； 6、负责产品生产导入、生产及市场相关技术问题支持。" [ref=e414] [cursor=pointer]:
+                - /url: /602892/position/7652263855389493546/detail
+                - generic [ref=e415]:
+                  - generic [ref=e418]: 【校招实习】电力电子硬件工程师
+                  - generic [ref=e419]:
+                    - text: 深圳
+                    - generic [ref=e421]: 实习
+                    - generic [ref=e424]: 智能制造 / 工业互联网 / 工业自动化
+                    - generic [ref=e427]: 研发
+                  - generic [ref=e428]: 1、负责单板原理图设计、系统功率回路设计； 2、负责硬件器件选型以及功率和控制电路、单板和系统的调式、测试； 3、负责逆变器、充电器等电源产品的方案设计以及技术开发； 4、负责电路原理图设计，协助layout工程师进行PCB设计； 5、负责硬件电路调试及测试，独立解决项目开发过程中出现的疑难问题，输出技术文档； 6、负责产品生产导入、生产及市场相关技术问题支持。
+              - link "【校招实习】计划实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 供应链管理 1、生产计划：根据需求计划制定生产主计划； 2、物料管理：根据MPS进行齐套、欠料及风险料跟进，战备数据测算，替代料管理； 3、变更管理：ECN变更管理与跟踪，物料消耗闭环； 4、进料管理：供应商按时按量交料，进料控制； 5、库存管理：制定库存目标周转天数，对原材料和半成品ITO负责； 6、其他数据处理分析工作。" [ref=e429] [cursor=pointer]:
+                - /url: /602892/position/7652187530402236699/detail
+                - generic [ref=e430]:
+                  - generic [ref=e433]: 【校招实习】计划实习生
+                  - generic [ref=e434]:
+                    - text: 深圳
+                    - generic [ref=e436]: 实习
+                    - generic [ref=e439]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e442]: 供应链管理
+                  - generic [ref=e443]: 1、生产计划：根据需求计划制定生产主计划； 2、物料管理：根据MPS进行齐套、欠料及风险料跟进，战备数据测算，替代料管理； 3、变更管理：ECN变更管理与跟踪，物料消耗闭环； 4、进料管理：供应商按时按量交料，进料控制； 5、库存管理：制定库存目标周转天数，对原材料和半成品ITO负责； 6、其他数据处理分析工作。
+              - link "【校招实习】前端开发工程师 深圳 实习 智能制造 / 工业互联网 / 工业自动化 研发 1、参与内部系统的web端功能开发和维护工作； 2、参与移动端日常需求迭代开发； 3、与开发人员协同配合确保代码运行的稳定性和可行性。" [ref=e444] [cursor=pointer]:
+                - /url: /602892/position/7650432227856255286/detail
+                - generic [ref=e445]:
+                  - generic [ref=e448]: 【校招实习】前端开发工程师
+                  - generic [ref=e449]:
+                    - text: 深圳
+                    - generic [ref=e451]: 实习
+                    - generic [ref=e454]: 智能制造 / 工业互联网 / 工业自动化
+                    - generic [ref=e457]: 研发
+                  - generic [ref=e458]: 1、参与内部系统的web端功能开发和维护工作； 2、参与移动端日常需求迭代开发； 3、与开发人员协同配合确保代码运行的稳定性和可行性。
+              - link "【校招实习】法务实习生（涉外） 深圳 正式 咨询 / 法律 / 教育 / 科研 - 律师 / 法务 / 合规 专业职能 - 法务合规 1、合同审阅：协助起草、审核和管理公司的合同及法律文书，优化及更新合同模板； 2、法律调研及检索：协助检索欧洲、北美、澳洲区域的相关法律法规及案例，主要涉及广告合规、消费者保护及投诉、知识产权维权等领域； 3、法律咨询及风险评估：协助对接海外业务部门，了解业务需求并对法律风险予以评估； 4、上级领导交办的其他工作。" [ref=e459] [cursor=pointer]:
+                - /url: /602892/position/7649704062618929427/detail
+                - generic [ref=e460]:
+                  - generic [ref=e463]: 【校招实习】法务实习生（涉外）
+                  - generic [ref=e464]:
+                    - text: 深圳
+                    - generic [ref=e466]: 正式
+                    - generic [ref=e469]: 咨询 / 法律 / 教育 / 科研 - 律师 / 法务 / 合规
+                    - generic [ref=e472]: 专业职能 - 法务合规
+                  - generic [ref=e473]: 1、合同审阅：协助起草、审核和管理公司的合同及法律文书，优化及更新合同模板； 2、法律调研及检索：协助检索欧洲、北美、澳洲区域的相关法律法规及案例，主要涉及广告合规、消费者保护及投诉、知识产权维权等领域； 3、法律咨询及风险评估：协助对接海外业务部门，了解业务需求并对法律风险予以评估； 4、上级领导交办的其他工作。
+              - link "【校招实习】后端开发工程师 深圳 正式 智能制造 / 工业互联网 / 工业自动化 研发 1、负责相关业务服务器端的研发工作，包括需求沟通、功能设计与开发等； 2、负责相关业务服务器相关的高并发架构设计、线上维护、性能调优等； 3、和产品/测试/运营进行密切沟通，能够根据需求提出合理技术方案。" [ref=e474] [cursor=pointer]:
+                - /url: /602892/position/7649700926970579250/detail
+                - generic [ref=e475]:
+                  - generic [ref=e478]: 【校招实习】后端开发工程师
+                  - generic [ref=e479]:
+                    - text: 深圳
+                    - generic [ref=e481]: 正式
+                    - generic [ref=e484]: 智能制造 / 工业互联网 / 工业自动化
+                    - generic [ref=e487]: 研发
+                  - generic [ref=e488]: 1、负责相关业务服务器端的研发工作，包括需求沟通、功能设计与开发等； 2、负责相关业务服务器相关的高并发架构设计、线上维护、性能调优等； 3、和产品/测试/运营进行密切沟通，能够根据需求提出合理技术方案。
+              - link "【日常实习】AI算法实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 研发 - 软件研发 1、负责智能硬件多场景下的前沿算法设计与研发，探索AI与硬件深度融合的创新应用，推动产品智能化跨越与突破； 2、紧密结合业务需求，主导或深度参与从业务洞察、特征挖掘、模型构建到算法实现与部署的全流程，持续推动算法效果的迭代与升级； 3、对现有算法与服务进行性能优化与架构改进，拓展算法在多元硬件环境中的应用边界，提升系统效能与稳定性； 4、鼓励将学术研究成果与工业实际场景相结合，支持高水平学术论文发表或专利申请，推动产学研深度融合与创新转化。" [ref=e489] [cursor=pointer]:
+                - /url: /602892/position/7649601841869195526/detail
+                - generic [ref=e490]:
+                  - generic [ref=e493]: 【日常实习】AI算法实习生
+                  - generic [ref=e494]:
+                    - text: 深圳
+                    - generic [ref=e496]: 实习
+                    - generic [ref=e499]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e502]: 研发 - 软件研发
+                  - generic [ref=e503]: 1、负责智能硬件多场景下的前沿算法设计与研发，探索AI与硬件深度融合的创新应用，推动产品智能化跨越与突破； 2、紧密结合业务需求，主导或深度参与从业务洞察、特征挖掘、模型构建到算法实现与部署的全流程，持续推动算法效果的迭代与升级； 3、对现有算法与服务进行性能优化与架构改进，拓展算法在多元硬件环境中的应用边界，提升系统效能与稳定性； 4、鼓励将学术研究成果与工业实际场景相结合，支持高水平学术论文发表或专利申请，推动产学研深度融合与创新转化。
+              - link "【日常实习】人力资源实习生 深圳 实习 能源 / 矿产 / 环保 / 农林牧渔 专业职能 - 人力资源 1、组织体系支持：协助梳理组织绩效、部门职责整理、校对、归档各类组织管理文档，助力体系规范化落地； 2、人才项目执行：参与人才发展项目，负责物料筹备、流程对接、数据统计、现场执行及复盘落地等工作； 3、调研数据整理：协助开展组织绩效项目整理调研数据，输出基础分析内容，支撑组织绩效决策； 4、日常事务支持：负责部门资料归档、台账更新、会议纪要撰写，完成上级交办的各类OD相关辅助工作。" [ref=e504] [cursor=pointer]:
+                - /url: /602892/position/7644528397095913791/detail
+                - generic [ref=e505]:
+                  - generic [ref=e508]: 【日常实习】人力资源实习生
+                  - generic [ref=e509]:
+                    - text: 深圳
+                    - generic [ref=e511]: 实习
+                    - generic [ref=e514]: 能源 / 矿产 / 环保 / 农林牧渔
+                    - generic [ref=e517]: 专业职能 - 人力资源
+                  - generic [ref=e518]: 1、组织体系支持：协助梳理组织绩效、部门职责整理、校对、归档各类组织管理文档，助力体系规范化落地； 2、人才项目执行：参与人才发展项目，负责物料筹备、流程对接、数据统计、现场执行及复盘落地等工作； 3、调研数据整理：协助开展组织绩效项目整理调研数据，输出基础分析内容，支撑组织绩效决策； 4、日常事务支持：负责部门资料归档、台账更新、会议纪要撰写，完成上级交办的各类OD相关辅助工作。
+          - list [ref=e351]:
+            - listitem "上一页" [ref=e352] [cursor=pointer]:
+              - img [ref=e355]
+            - listitem "1" [ref=e357] [cursor=pointer]:
+              - generic [ref=e358]: "1"
+            - listitem "2" [active] [ref=e359]:
+              - generic [ref=e360]: "2"
+            - listitem "3" [ref=e361] [cursor=pointer]:
+              - generic [ref=e362]: "3"
+            - listitem "下一页" [ref=e363] [cursor=pointer]:
+              - img [ref=e366]

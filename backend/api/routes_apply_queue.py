@@ -1,9 +1,10 @@
 """Ready-to-apply queue and SpeedyApply workflow controls."""
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.job_monitor import JobAlreadyRunningError, launch_background
@@ -35,6 +36,7 @@ def _serialize(item: ApplicationQueueItem, job: Job, resume: Resume) -> dict:
         "resume_id": resume_id,
         "resume_name": resume.name,
         "resume_pdf_url": f"/api/resumes/{resume_id}/pdf",
+        "packet_pdf_url": f"/api/apply-queue/{item.id}/packet-pdf" if item.artifact_dir else None,
         "resume_editor_url": f"/resumes?resume={resume_id}",
     }
 
@@ -50,6 +52,36 @@ def list_ready(unseen_only: bool = True, db: Session = Depends(get_db)):
         query = query.filter(ApplicationQueueItem.acknowledged_at.is_(None))
     rows = query.order_by(ApplicationQueueItem.created_at.asc()).all()
     return {"total": len(rows), "items": [_serialize(item, job, resume) for item, job, resume in rows]}
+
+
+@router.get("/{item_id}/packet-pdf")
+def packet_pdf(item_id: str, db: Session = Depends(get_db)):
+    """Serve the exact locally prepared PDF packet shown in the apply modal."""
+    try:
+        item_uuid = uuid.UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid queue item ID")
+
+    item = db.query(ApplicationQueueItem).filter(ApplicationQueueItem.id == item_uuid).first()
+    if not item or not item.artifact_dir:
+        raise HTTPException(status_code=404, detail="Application packet not found")
+
+    project_root = Path(__file__).resolve().parents[2]
+    packet_dir = Path(item.artifact_dir)
+    if not packet_dir.is_absolute():
+        packet_dir = project_root / packet_dir
+    packet_dir = packet_dir.resolve()
+    if project_root.resolve() not in packet_dir.parents:
+        raise HTTPException(status_code=400, detail="Unsafe application packet path")
+
+    pdf_path = packet_dir / "resume.pdf"
+    if not pdf_path.is_file():
+        raise HTTPException(status_code=404, detail="Application packet PDF not found")
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename="Yang_Yu_Generic_Software_Engineer_Resume.pdf",
+    )
 
 
 @router.post("/{item_id}/acknowledge")

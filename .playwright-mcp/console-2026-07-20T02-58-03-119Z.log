@@ -1,0 +1,12 @@
+[     135ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost/vite.svg:0
+[     156ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/jobs?limit=30&offset=0&status=new:0
+[     157ms] [ERROR] Failed to load jobs: AxiosError: Request failed with status code 401
+    at rR (http://localhost/assets/index-B7-II8MY.js:308:10786)
+    at XMLHttpRequest._ (http://localhost/assets/index-B7-II8MY.js:308:17299) @ http://localhost/assets/index-B7-II8MY.js:313
+[     167ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost/:0
+[     167ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/apply-queue/ready?unseen_only=true:0
+[     169ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/auth/set-session:0
+[     442ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/jobs/companies/list?status=new:0
+[     444ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/jobs/sources/list?status=new:0
+[     444ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/jobs/verdicts/list?status=new:0
+[   13040ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost/api/auth/set-session:0

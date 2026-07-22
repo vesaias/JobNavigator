@@ -1,0 +1,103 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - img "CVTE 校园招聘" [ref=e5] [cursor=pointer]
+      - generic [ref=e6]:
+        - link "首页" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "社招门户" [ref=e8] [cursor=pointer]:
+          - /url: https://hr.cvte.com
+        - link "个人中心" [ref=e9] [cursor=pointer]:
+          - /url: https://careers.cvte.com
+    - generic [ref=e11]:
+      - region "岗位列表 Banner" [ref=e12]
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - textbox "输入城市或岗位进行搜索" [ref=e19]
+            - button "搜索" [ref=e20] [cursor=pointer]
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - button "招聘项目" [expanded] [ref=e23] [cursor=pointer]:
+                - generic [ref=e24]: 招聘项目
+              - button "CVTE2027届实习生招聘" [ref=e27] [cursor=pointer]:
+                - generic [ref=e29]: CVTE2027届实习生招聘
+            - button "岗位类别" [expanded] [ref=e31] [cursor=pointer]:
+              - generic [ref=e32]: 岗位类别
+            - button "工作城市" [expanded] [ref=e34] [cursor=pointer]:
+              - generic [ref=e35]: 工作城市
+        - generic [ref=e37]:
+          - heading "查询中…" [level=2] [ref=e38]
+          - generic [ref=e42]:
+            - heading [level=3] [ref=e43]
+            - list [ref=e44]:
+              - listitem [ref=e45]
+              - listitem [ref=e46]
+              - listitem [ref=e47]
+    - contentinfo [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - img "CVTE 视源股份" [ref=e52]
+            - generic [ref=e53]:
+              - link "校园招聘" [ref=e54] [cursor=pointer]:
+                - /url: /
+              - generic [ref=e55]: ｜
+              - link "社会招聘" [ref=e56] [cursor=pointer]:
+                - /url: https://hr.cvte.com
+          - generic [ref=e57]:
+            - generic [ref=e58]: 关注我们
+            - generic [ref=e59]:
+              - button "校招公众号二维码" [ref=e60] [cursor=pointer]:
+                - img "校招公众号" [ref=e61]
+              - button "CVTE视频号二维码" [ref=e62] [cursor=pointer]:
+                - img "CVTE视频号" [ref=e63]
+              - button "CVTE小红书二维码" [ref=e64] [cursor=pointer]:
+                - img "CVTE小红书" [ref=e65]
+              - button "CVTE抖音二维码" [ref=e66] [cursor=pointer]:
+                - img "CVTE抖音" [ref=e67]
+              - button "CVTE微博二维码" [ref=e68] [cursor=pointer]:
+                - img "CVTE微博" [ref=e69]
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]: 友情链接
+              - generic [ref=e75]:
+                - link "CVTE 视源股份" [ref=e76] [cursor=pointer]:
+                  - /url: https://www.cvte.com
+                  - img "CVTE 视源股份" [ref=e77]
+                - link "seewo 希沃" [ref=e78] [cursor=pointer]:
+                  - /url: https://www.seewo.com/
+                  - img "seewo 希沃" [ref=e79]
+                - link "MAXHUB" [ref=e80] [cursor=pointer]:
+                  - /url: https://www.maxhub.com/cn
+                  - img "MAXHUB" [ref=e81]
+            - generic [ref=e82]:
+              - link "联系我们" [ref=e83] [cursor=pointer]:
+                - /url: /contact
+              - link "法律声明" [ref=e84] [cursor=pointer]:
+                - /url: /legal
+          - paragraph [ref=e85]:
+            - text: Copyright © 2005-2026 CVTE, All rights reserved.
+            - link "粤ICP备13007261号" [ref=e86] [cursor=pointer]:
+              - /url: https://beian.miit.gov.cn/
+            - text: "| 广州视源电子科技股份有限公司"
+    - generic [ref=e87]:
+      - button "联系我们" [ref=e88] [cursor=pointer]:
+        - img "联系我们" [ref=e89]
+      - button "回到顶部" [ref=e90] [cursor=pointer]:
+        - img "回到顶部" [ref=e91]
+    - dialog "Cookie 同意" [ref=e93]:
+      - button "关闭" [ref=e94] [cursor=pointer]
+      - generic [ref=e95]:
+        - heading "我们重视您的隐私" [level=3] [ref=e96]
+        - paragraph [ref=e97]:
+          - text: 欢迎来到campus.cvte.com！
+          - text: 我们希望使用分析型Cookies及同类技术(“Cookies”)来改善我们的网站，提升您的浏览体验，Cookies收集的信息不会识别您个人。有关我们使用的Cookies类型以及您的偏好选项（包括如何更改您的偏好设置）的更多信息，请查看此处的
+          - link "Cookies政策" [ref=e98] [cursor=pointer]:
+            - /url: /cookies
+          - text: 。
+      - generic [ref=e99]:
+        - button "拒绝所有分析型Cookies" [ref=e100] [cursor=pointer]
+        - button "接受所有分析型Cookies" [ref=e101] [cursor=pointer]
+  - alert [ref=e102]: CVTE校招门户-欢迎投递

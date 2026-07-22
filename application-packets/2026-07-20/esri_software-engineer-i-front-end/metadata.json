@@ -1,0 +1,19 @@
+{
+  "company": "Esri",
+  "title": "Software Engineer I - Front-End Engineer for ArcGIS Enterprise",
+  "location": "Redlands, CA",
+  "application_url": "https://www.esri.com/careers/5190253007?gh_jid=5190253007",
+  "source": "speedyapply/2027-SWE-College-Jobs",
+  "source_age": "1d",
+  "retrieved_at": "2026-07-20",
+  "status": "needs_review",
+  "priority": 3,
+  "resume_file": "resume.pdf",
+  "validation": {
+    "pages": 1,
+    "latex_warnings": 0,
+    "text_extractable": true
+  },
+  "review_reason": "Material gaps in named front-end frameworks, HTML/CSS, accessibility, and GIS evidence"
+}
+

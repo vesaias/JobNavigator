@@ -1,0 +1,103 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - img "logo" [ref=e9]
+      - generic [ref=e10]: 校园招聘
+      - list [ref=e11]:
+        - listitem [ref=e12] [cursor=pointer]:
+          - generic [ref=e14]: 首页
+        - listitem [ref=e15] [cursor=pointer]:
+          - generic [ref=e17]: 云弧计划
+        - listitem [ref=e18] [cursor=pointer]:
+          - generic [ref=e20]: 应届生招聘
+        - listitem [ref=e21] [cursor=pointer]:
+          - generic [ref=e23]: 实习生招聘
+        - listitem [ref=e24] [cursor=pointer]:
+          - generic [ref=e26]: 校招公告
+        - listitem [ref=e27] [cursor=pointer]:
+          - generic [ref=e29]: 关于我们
+      - generic [ref=e31] [cursor=pointer]: 登录/注册
+    - generic [ref=e36]:
+      - generic:
+        - generic:
+          - generic:
+            - img
+      - img "web-应届生-2027届校招提前批" [ref=e40]
+      - generic:
+        - generic:
+          - generic:
+            - img
+      - generic:
+        - generic:
+          - generic:
+            - img
+      - generic:
+        - generic:
+          - generic:
+            - img
+    - generic [ref=e42]:
+      - generic [ref=e44]:
+        - generic [ref=e45] [cursor=pointer]: 应届生招聘
+        - generic [ref=e46] [cursor=pointer]: 常见问题
+      - generic [ref=e48]:
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - img "search" [ref=e54]
+              - textbox "搜索职位名称" [ref=e55]
+            - button "搜索" [ref=e56]
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]: 筛选
+              - button "清除" [ref=e60] [cursor=pointer]
+            - generic [ref=e61]:
+              - generic [ref=e62]: 2026届常规批次
+              - generic [ref=e64]:
+                - generic [ref=e65]:
+                  - generic [ref=e67] [cursor=pointer]:
+                    - checkbox "技术专场" [ref=e69]
+                    - text: 技术专场
+                  - generic [ref=e72] [cursor=pointer]:
+                    - checkbox "管培生" [ref=e74]
+                    - text: 管培生
+                  - generic [ref=e77] [cursor=pointer]:
+                    - checkbox "区域业务管培生" [ref=e79]
+                    - text: 区域业务管培生
+                  - generic [ref=e82] [cursor=pointer]:
+                    - checkbox "其他项目" [ref=e84]
+                    - text: 其他项目
+                - generic [ref=e86]: 人才专项
+                - generic [ref=e89] [cursor=pointer]:
+                  - checkbox "云弧计划" [ref=e91]
+                  - text: 云弧计划
+            - generic [ref=e94]: 职位类别
+            - generic [ref=e96]:
+              - generic [ref=e97]: 职位标签
+              - generic [ref=e100]:
+                - generic [ref=e102] [cursor=pointer]:
+                  - checkbox "紧缺" [ref=e104]
+                  - text: 紧缺
+                - generic [ref=e107] [cursor=pointer]:
+                  - checkbox "人才专项" [ref=e109]
+                  - text: 人才专项
+        - list [ref=e122]:
+          - listitem "1" [ref=e123] [cursor=pointer]:
+            - generic [ref=e124]: "1"
+    - generic [ref=e127]:
+      - generic [ref=e128]:
+        - link "拼多多集团 - PDD 校园招聘" [ref=e130] [cursor=pointer]:
+          - /url: /campus
+        - generic [ref=e132]: 关注我们
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]: Copyright © 2026 pddglobalhr.com 版权所有
+          - text: "|"
+          - link "沪ICP备2024094620号-2" [ref=e136] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - text: "|"
+          - link "沪公网安备31010602008646号" [ref=e137] [cursor=pointer]:
+            - /url: https://beian.mps.gov.cn/#/query/webSearch?code=31010602008646
+        - link "如需咨询招聘相关事宜，请联系HR" [ref=e139] [cursor=pointer]:
+          - /url: mailto://pddcampus@pddglobalhr.com
+    - img [ref=e141]
+  - alert [ref=e142]

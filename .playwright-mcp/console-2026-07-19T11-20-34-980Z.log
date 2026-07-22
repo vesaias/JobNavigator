@@ -1,0 +1,2 @@
+[     341ms] [LOG] 校招岗位类型加载成功: 6个分类 @ https://hr.4399om.com/campus/zhaopin:523
+[     451ms] [ERROR] 获取用户信息失败: {code: 4001, msg: 登录失效，请刷新页面重试} @ :52

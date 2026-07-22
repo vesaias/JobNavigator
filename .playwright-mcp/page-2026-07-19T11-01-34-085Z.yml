@@ -1,0 +1,211 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - link [ref=e6] [cursor=pointer]:
+        - /url: /
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "主页" [ref=e9] [cursor=pointer]:
+            - /url: "#/"
+        - listitem [ref=e10]:
+          - link "职位投递" [ref=e11] [cursor=pointer]:
+            - /url: https://nio.jobs.feishu.cn/campus
+        - listitem [ref=e12]:
+          - link "招聘动态" [ref=e13] [cursor=pointer]:
+            - /url: "#/trends"
+        - listitem [ref=e14]:
+          - link "蔚来校园" [ref=e15] [cursor=pointer]:
+            - /url: "#/nioSchool"
+        - listitem [ref=e16]:
+          - link "蔚来已来" [ref=e17] [cursor=pointer]:
+            - /url: "#/learnNio"
+      - generic [ref=e18]:
+        - link "关于蔚来" [ref=e19] [cursor=pointer]:
+          - /url: https://www.nio.cn/
+          - generic [ref=e20]: 关于蔚来
+        - link "社招官网" [ref=e22] [cursor=pointer]:
+          - /url: https://www.nio.cn/careers-list
+          - generic [ref=e23]: 社招官网
+    - generic [ref=e25]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: 蔚来校园招聘
+        - generic [ref=e30]: 2027届秋季校园招聘
+        - link "立即投递" [ref=e31] [cursor=pointer]:
+          - /url: https://nio.jobs.feishu.cn/campus/?keywords=&category=&location=&project=&type=&job_hot_flag=&current=1&limit=10&functionCategory=&tag=&storefront_id_list=
+      - generic [ref=e34]:
+        - generic [ref=e35]: 校园招聘项目
+        - generic [ref=e37]:
+          - generic [ref=e38] [cursor=pointer]:
+            - generic [ref=e39]: 2027届秋季校园招聘
+            - generic [ref=e40]:
+              - paragraph [ref=e42]: 一同见证并参与推动智能电动汽车最前沿的技术和商业模式
+              - generic [ref=e43]: 了解详情
+            - generic [ref=e44]: 立即投递
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: 蔚来日常实习生
+            - paragraph [ref=e49]: 在真实的研发、生产、用户服务情境中学习与实践
+            - generic [ref=e50]: 立即投递
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: 蔚来区域公司 2027届校园招聘
+            - generic [ref=e53]:
+              - paragraph [ref=e55]: 蔚来用户触点第一线 成为技术与体验领先的用户企业
+              - generic [ref=e56]: 了解详情
+            - generic [ref=e57]: 立即投递
+          - generic [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]: 乐道区域公司 2027届校园招聘
+            - generic [ref=e60]:
+              - paragraph [ref=e62]: 加入乐道，大有可为 走向上的职业之路
+              - generic [ref=e63]: 了解详情
+            - generic [ref=e64]: 立即投递
+      - generic [ref=e66]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]: 走进蔚来十一周年
+            - generic [ref=e72]: 蔚来是一家全球化的智能电动汽车公司，于2014年11月25日正式成立，覆盖全球超300个城市的用户。英文品牌NIO取意A NEW DAY（新的一天）。
+          - generic [ref=e73] [cursor=pointer]: 观看视频
+        - text: 
+      - generic [ref=e74]:
+        - generic [ref=e75]: 探索你感兴趣的岗位
+        - textbox "没有找到想要的职位？搜索关键字试试～" [ref=e78]
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - generic [ref=e83] [cursor=pointer]:
+              - img [ref=e84]
+              - paragraph [ref=e85]: 数字技术类
+            - generic [ref=e86] [cursor=pointer]:
+              - img [ref=e87]
+              - paragraph [ref=e88]: 智能制造类
+            - generic [ref=e89] [cursor=pointer]:
+              - img [ref=e90]
+              - paragraph [ref=e91]: 工程技术类
+            - generic [ref=e92] [cursor=pointer]:
+              - img [ref=e93]
+              - paragraph [ref=e94]: 动力电池类
+            - generic [ref=e95] [cursor=pointer]:
+              - img [ref=e96]
+              - paragraph [ref=e97]: 用户与服务类
+          - generic [ref=e98]:
+            - generic [ref=e99] [cursor=pointer]:
+              - img [ref=e100]
+              - paragraph [ref=e101]: 用户与服务类
+            - generic [ref=e102] [cursor=pointer]:
+              - img [ref=e103]
+              - paragraph [ref=e104]: 职能与支持类
+            - generic [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+              - paragraph [ref=e107]: 产品类
+            - generic [ref=e108] [cursor=pointer]:
+              - img [ref=e109]
+              - paragraph [ref=e110]: 项目管理类
+            - generic [ref=e111] [cursor=pointer]:
+              - img [ref=e112]
+              - paragraph [ref=e113]: 设计类
+      - generic [ref=e118]:
+        - paragraph [ref=e120]: Hello NIOer
+        - generic [ref=e121]:
+          - generic [ref=e123] [cursor=pointer]: 
+          - generic [ref=e125]:
+            - generic [ref=e127] [cursor=pointer]:
+              - img [ref=e128]
+              - generic [ref=e129]:
+                - paragraph [ref=e130]: 追求极致的与众不同
+                - paragraph [ref=e131]: 从把单体壳带进赛事的拓荒者到见证辅助驾驶诞生的工程师
+            - generic [ref=e134] [cursor=pointer]:
+              - img [ref=e135]
+              - generic [ref=e136]:
+                - paragraph [ref=e137]: 我选择向上的道路
+                - paragraph [ref=e138]: 完成跨界小白到从店总的职场飞跃后，下一步我选择加入乐道继续挑战
+            - generic [ref=e141]:
+              - img [ref=e142]
+              - generic [ref=e143]:
+                - paragraph [ref=e144]: 希望你永远保持好奇心和同理心
+                - paragraph [ref=e145]: 首届蔚来校招Sparks，与公司共同成长
+            - generic [ref=e148]:
+              - img [ref=e149]
+              - generic [ref=e150]:
+                - paragraph [ref=e151]: 加入蔚来拓宽认知边界
+                - paragraph [ref=e152]: Linux内核华人Top100贡献者
+            - generic [ref=e155]:
+              - img [ref=e156]
+              - generic [ref=e157]:
+                - paragraph [ref=e158]: 在蔚来，感觉回到了赛场
+                - paragraph [ref=e159]:
+                  - text: 从超高执行力的队长学姐到把交付视
+                  - text: 作比赛的项目经理。
+            - generic [ref=e162]:
+              - img [ref=e163]
+              - generic [ref=e164]:
+                - paragraph [ref=e165]: 在热爱的领域持续发光
+                - paragraph [ref=e166]:
+                  - text: 我一直坚持自己热爱的空气动力学，所
+                  - text: 以我来到了蔚来。
+            - generic [ref=e169]:
+              - img [ref=e170]
+              - generic [ref=e171]:
+                - paragraph [ref=e172]: 做用户最信任的朋友
+                - paragraph [ref=e173]:
+                  - text: 从车队研发到蔚来顾问，在与用户成
+                  - text: 为朋友的过程中找到自身价值。
+            - generic [ref=e176]:
+              - img [ref=e177]
+              - generic [ref=e178]:
+                - paragraph [ref=e179]: 用专注和热爱，诠释用户企业的真谛
+                - paragraph [ref=e180]: 从一线销售到团队领航者：一位2017届Sparks的蔚来之旅
+            - generic [ref=e183]:
+              - img [ref=e184]
+              - generic [ref=e185]:
+                - paragraph [ref=e186]: 我打破边界，把热爱变成事业
+                - paragraph [ref=e187]: 完成跨界探索到品牌主创的蜕变后，我选择在firefly萤火虫继续发光
+            - generic [ref=e190] [cursor=pointer]:
+              - img [ref=e191]
+              - generic [ref=e192]:
+                - paragraph [ref=e193]: 在蔚来，我看到了中国智能制造的无限可能
+                - paragraph [ref=e194]: 在智能制造与前沿技术的交汇点，找到自己的主场
+          - generic [ref=e197] [cursor=pointer]: 
+    - generic [ref=e198]:
+      - generic [ref=e199]:
+        - generic [ref=e201]:
+          - heading "扫码注册App，即可抽取惊喜盲盒" [level=2] [ref=e202]
+          - paragraph [ref=e203]: 欢迎体验用户社区，聆听用户的故事，了解我们的最新资讯。
+        - generic [ref=e204]:
+          - generic [ref=e205]:
+            - img "NIO蔚来" [ref=e206]
+            - paragraph [ref=e207]: NIO蔚来
+          - generic [ref=e208]:
+            - img "ONVO乐道" [ref=e209]
+            - paragraph [ref=e210]: ONVO乐道
+          - generic [ref=e211]:
+            - img "firefly萤火虫" [ref=e212]
+            - paragraph [ref=e213]: firefly萤火虫
+      - generic [ref=e214]:
+        - link [ref=e216] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e217]:
+          - heading "相关网站" [level=3] [ref=e218]
+          - list [ref=e219]:
+            - listitem [ref=e220]:
+              - link "蔚来官网" [ref=e221] [cursor=pointer]:
+                - /url: https://www.nio.cn/
+            - listitem [ref=e222]:
+              - link "蔚来社招官网" [ref=e223] [cursor=pointer]:
+                - /url: https://www.nio.cn/careers-list
+        - generic [ref=e224]:
+          - heading "关注我们" [level=3] [ref=e225]
+          - list [ref=e226]:
+            - listitem [ref=e227] [cursor=pointer]
+            - listitem [ref=e228] [cursor=pointer]
+            - listitem [ref=e229] [cursor=pointer]
+            - listitem [ref=e230] [cursor=pointer]
+      - generic [ref=e231]:
+        - link "沪ICP备15044878号-5" [ref=e232] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - img "copyright" [ref=e233]
+        - link "沪公网安备31011402003368号" [ref=e234] [cursor=pointer]:
+          - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402003368
+  - generic:
+    - img [ref=e236] [cursor=pointer]
+    - generic [ref=e238]:
+      - generic [ref=e239]:
+        - generic [ref=e240]: HR 助手
+        - generic [ref=e241]: 未登录，点击登录
+      - img [ref=e243] [cursor=pointer]

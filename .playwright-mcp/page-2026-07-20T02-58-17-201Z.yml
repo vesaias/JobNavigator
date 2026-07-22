@@ -1,0 +1,74 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 💼
+      - generic [ref=e7]: JobNavigator
+    - navigation [ref=e8]:
+      - link "Jobs" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e10]
+        - text: Jobs
+      - link "Applications" [ref=e13] [cursor=pointer]:
+        - /url: /applications
+        - img [ref=e14]
+        - text: Applications
+      - link "Companies" [ref=e19] [cursor=pointer]:
+        - /url: /companies
+        - img [ref=e20]
+        - text: Companies
+      - link "Searches" [ref=e24] [cursor=pointer]:
+        - /url: /searches
+        - img [ref=e25]
+        - text: Searches
+      - link "Resumes" [ref=e28] [cursor=pointer]:
+        - /url: /resumes
+        - img [ref=e29]
+        - text: Resumes
+      - link "Cover Letters" [ref=e32] [cursor=pointer]:
+        - /url: /cover-letters
+        - img [ref=e33]
+        - text: Cover Letters
+      - link "Persona" [ref=e36] [cursor=pointer]:
+        - /url: /persona
+        - img [ref=e37]
+        - text: Persona
+      - link "Settings" [ref=e40] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e41]
+        - text: Settings
+      - link "Stats" [ref=e44] [cursor=pointer]:
+        - /url: /stats
+        - img [ref=e45]
+        - text: Stats
+      - link "API Docs" [ref=e47] [cursor=pointer]:
+        - /url: /docs
+        - img [ref=e48]
+        - text: API Docs
+    - button "🌙Dark Mode" [ref=e53] [cursor=pointer]
+    - button "Collapse" [ref=e54] [cursor=pointer]
+  - main [ref=e55]:
+    - generic [ref=e57]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Job Feed" [level=1] [ref=e62]
+            - button "Keyboard shortcuts" [ref=e64] [cursor=pointer]:
+              - img [ref=e65]
+          - paragraph [ref=e67]: 0 jobs found
+        - generic [ref=e68]:
+          - button "Reset" [ref=e69] [cursor=pointer]
+          - button [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - img [ref=e73]
+      - generic [ref=e76]: No jobs found.
+  - generic [ref=e78]:
+    - heading "Sign In" [level=2] [ref=e79]
+    - paragraph [ref=e80]: Enter your dashboard API key. You can change or view it in Settings after signing in.
+    - generic [ref=e81]: API Key
+    - generic [ref=e82]:
+      - textbox [ref=e83]
+      - button "Show API key" [ref=e84] [cursor=pointer]:
+        - img [ref=e85]
+    - generic [ref=e90]: Invalid API key
+    - button "Sign In" [ref=e88] [cursor=pointer]
+    - paragraph [ref=e89]: If this is your first time running JobNavigator and no API key is configured, leave this blank and click Sign In.

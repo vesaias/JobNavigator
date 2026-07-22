@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - link [ref=e6] [cursor=pointer]:
+        - /url: javascript:void(0)
+      - generic [ref=e8] [cursor=pointer]: 登录
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "社会招聘" [ref=e11] [cursor=pointer]:
+            - /url: javascript:void(0)
+        - listitem [ref=e12]:
+          - link "校园招聘" [ref=e13] [cursor=pointer]:
+            - /url: javascript:void(0)
+        - listitem [ref=e14]:
+          - link "生活在腾讯" [ref=e15] [cursor=pointer]:
+            - /url: javascript:void(0)
+        - listitem [ref=e16]:
+          - link "产品和服务" [ref=e17] [cursor=pointer]:
+            - /url: javascript:void(0)
+        - listitem [ref=e18]:
+          - link "工作地点" [ref=e19] [cursor=pointer]:
+            - /url: javascript:void(0)
+    - generic [ref=e20]:
+      - textbox "搜索工作岗位" [ref=e23]
+      - generic [ref=e24] [cursor=pointer]: 查看工作岗位
+  - generic [ref=e25]:
+    - generic [ref=e38]:
+      - generic [ref=e39]: 腾讯2026实习生招聘
+      - generic "加入腾讯，让世界看到你的影响力！" [ref=e40]
+      - link "点击查看" [ref=e41] [cursor=pointer]:
+        - /url: javascript:;
+    - list [ref=e47]:
+      - listitem [ref=e48] [cursor=pointer]:
+        - link "中国地区" [ref=e49]:
+          - /url: javascript:;
+      - listitem [ref=e50] [cursor=pointer]:
+        - link "海外地区" [ref=e51]:
+          - /url: javascript:;
+    - list [ref=e54]:
+      - listitem [ref=e55]:
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e58]:
+            - heading "2026校园招聘" [level=4] [ref=e59]
+            - paragraph [ref=e60]: 面向人群：2026应届毕业生 【中国大陆（内地）以毕业证为准，中国港澳台及海外地区以学位证为准】
+          - link "了解更多" [ref=e61]:
+            - /url: javascript:void(0)
+          - link [ref=e62]:
+            - /url: javascript:void(0)
+      - listitem [ref=e63]:
+        - generic [ref=e64] [cursor=pointer]:
+          - generic [ref=e66]:
+            - heading "实习生招聘" [level=4] [ref=e67]
+            - paragraph [ref=e68]: 面向全部在校学生开放的不少于两个月的实习项目
+            - paragraph
+          - link "了解更多" [ref=e69]:
+            - /url: javascript:void(0)
+          - link [ref=e70]:
+            - /url: javascript:void(0)
+    - generic [ref=e71]:
+      - generic [ref=e74]: 关注腾讯招聘，获取最新动态
+      - list [ref=e76]:
+        - listitem [ref=e77] [cursor=pointer]:
+          - generic [ref=e78]: 公众号
+        - listitem [ref=e81] [cursor=pointer]:
+          - generic [ref=e82]: 领英
+          - generic [ref=e85]:
+            - generic [ref=e87]: 复制链接
+            - generic [ref=e89]: 点击跳转
+        - listitem [ref=e90] [cursor=pointer]:
+          - generic [ref=e91]: Instagram
+  - generic [ref=e95]:
+    - generic [ref=e96]:
+      - generic [ref=e97]:
+        - generic [ref=e98]: 关注腾讯招聘
+        - generic [ref=e105] [cursor=pointer]:
+          - generic [ref=e107]: 复制链接
+          - generic [ref=e109]: 点击跳转
+      - generic [ref=e112]:
+        - list [ref=e113]:
+          - listitem [ref=e114]: 公司
+          - listitem [ref=e115]:
+            - link "关于腾讯" [ref=e116] [cursor=pointer]:
+              - /url: https://www.tencent.com/zh-cn/index.html
+          - listitem [ref=e117]:
+            - link "腾讯公益" [ref=e118] [cursor=pointer]:
+              - /url: https://gongyi.qq.com/
+          - listitem [ref=e119]:
+            - link "客服中心" [ref=e120] [cursor=pointer]:
+              - /url: http://kf.qq.com/
+        - list [ref=e121]:
+          - listitem [ref=e122]: 法律信息
+          - listitem [ref=e123]:
+            - link "服务协议" [ref=e124] [cursor=pointer]:
+              - /url: termsservice.html
+          - listitem [ref=e125]:
+            - link "隐私政策" [ref=e126] [cursor=pointer]:
+              - /url: policy.html
+          - listitem [ref=e127]:
+            - link "知识产权" [ref=e128] [cursor=pointer]:
+              - /url: http://www.tencent.com/legal/html/zh-cn/index.html
+        - generic [ref=e131]:
+          - generic [ref=e132] [cursor=pointer]: 中文简体
+          - list:
+            - listitem:
+              - link "中文(简体)":
+                - /url: javascript:;
+            - listitem:
+              - link "English":
+                - /url: javascript:;
+      - generic [ref=e134]: Copyright © 1998 - 2026 Tencent. All Rights Reserved.
+    - generic [ref=e135]:
+      - generic [ref=e138]: 官方客服-腾小T
+      - generic [ref=e140]:
+        - generic [ref=e142] [cursor=pointer]: 如何查询面试流程？
+        - generic [ref=e144] [cursor=pointer]: 我可以投递几个岗位呢？我可以修改岗位吗？
+        - generic [ref=e146] [cursor=pointer]: 校招简历填写的意向部门能改吗？
+      - generic [ref=e147] [cursor=pointer]: 更多疑问，在线咨询
