@@ -179,6 +179,19 @@ def reset_tailoring_semaphore():
     _tailoring_semaphore = None
 
 
+def _get_tailor_job_text(job: Job) -> str:
+    """Resolve job text for tailoring from stored description or cached page."""
+    if (job.description or "").strip():
+        return job.description
+    if (job.cached_page_text or "").strip():
+        return job.cached_page_text
+    if (job.cached_page_html or "").strip():
+        from backend.api.routes_applications import _extract_clean_content
+        _, text = _extract_clean_content(job.cached_page_html)
+        return text
+    return ""
+
+
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "resume_templates"
@@ -344,18 +357,9 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
         label = item.get("text", f"Link {i+1}")
         dest_url = url if url.startswith("http") else f"https://{url}"
         # Suffix for per-link distinction in job_id modes (user stub or first 3 chars)
-        stub = item.get("stub")
-        label_suffix = stub or label.lower()[:3]
+        label_suffix = item.get("stub") or label.lower()[:3]
 
-        jobid_style = url_style in ("path_jobid", "param_jobid")
-        if job_short_id:
-            token = f"{job_short_id}{label_suffix}"
-        elif jobid_style and stub:
-            # Base resume (no job → no short_id) with an explicit stub: reserve "0"
-            # as the no-job prefix so the token is 0{stub} instead of random.
-            token = f"0{stub}"
-        else:
-            token = None
+        token = f"{job_short_id}{label_suffix}" if job_short_id else None
 
         # Find or create tracer link for this owner + destination
         existing = db.query(TracerLink).filter(
@@ -522,12 +526,12 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
         if not base:
             raise HTTPException(404, "Base resume not found")
 
-    # Fast-fail: job must exist (if job_id given) and have description
+    # Fast-fail: job must exist (if job_id given) and have usable text
     if job_id:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             raise HTTPException(404, "Job not found")
-        if not (job.description or "").strip():
+        if not _get_tailor_job_text(job).strip():
             raise HTTPException(400, "Job has no description")
 
     # Fast-fail: the prompt template must exist
@@ -605,7 +609,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 if not job:
                     logger.error(f"Tailor: job {job_id} missing at execution time")
                     raise RuntimeError(f"Tailor: job {job_id} missing at execution time")
-                jd_text = job.description or ""
+                jd_text = _get_tailor_job_text(job)
                 job_name = f"{job.company} \u2014 {job.title}" if job.company else (job.title or "")
                 if not jd_text:
                     logger.error(f"Tailor: job {job_id} has no description")
