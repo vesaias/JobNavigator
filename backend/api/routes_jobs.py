@@ -219,6 +219,21 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
     return q
 
 
+@router.get("/feed-stats")
+def feed_stats(db: Session = Depends(get_db)):
+    """Global counts for the v2 feed header — arrived today + not-yet-scored.
+    (The paged /jobs response only sees the current page.)"""
+    from datetime import datetime, timezone
+    from sqlalchemy import func, text
+    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    arrived_today = db.query(func.count(Job.id)).filter(Job.discovered_at >= start).scalar() or 0
+    unscored = db.execute(text(
+        "select count(*) from jobs where status in ('new','saved') "
+        "and (cv_scores is null or cv_scores::text = '{}')"
+    )).scalar() or 0
+    return {"arrived_today": int(arrived_today), "unscored": int(unscored)}
+
+
 @router.get("/companies/list")
 def list_job_companies(
     status: Optional[str] = None,

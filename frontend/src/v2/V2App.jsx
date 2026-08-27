@@ -56,14 +56,14 @@ export default function V2App() {
                 const inner = (
                   <>
                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{open ? it.label : it.label.slice(0, 2)}</span>
-                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? '#a8a396' : '#66604f' }}>{count}</span>}
+                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? '#8dbb9f' : '#66604f' }}>{count}</span>}
                     {open && !it.ready && !it.external && <span style={{ flex: '0 0 auto', fontSize: 9, color: '#66604f', marginLeft: 6 }}>soon</span>}
                   </>
                 )
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" className="v2-navdark" style={{ ...base, color: '#a8a396' }}>{inner}</a>
                 if (!it.ready) return <div key={it.to} title="Coming in the redesign" style={{ ...base, color: '#66604f', cursor: 'default' }}>{inner}</div>
                 return (
-                  <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? '#f6f3ea' : '#a8a396', background: active ? 'rgba(63,107,82,.14)' : 'transparent' }}>{inner}</NavLink>
+                  <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? '#f6f3ea' : 'var(--rail-text)', background: active ? 'rgba(255,255,255,.045)' : 'transparent' }}>{inner}</NavLink>
                 )
               })}
             </div>

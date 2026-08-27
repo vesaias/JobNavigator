@@ -25,7 +25,7 @@ const fmtSalary = (min, max) => {
 }
 const H1B = {
   likely: { label: 'H-1B Likely', c: 'var(--good)' },
-  possible: { label: 'H-1B Possible', c: 'var(--warn)' },
+  possible: { label: 'H-1B Possible', c: 'var(--muted)' },
   unlikely: { label: 'H-1B Unlikely', c: 'var(--warn)' },
   unknown: { label: 'H-1B Unknown', c: 'var(--muted)' },
 }
@@ -101,6 +101,7 @@ export default function V2JobFeed() {
   const [sourceList, setSourceList] = useState([])
   const [verdictList, setVerdictList] = useState([])
   const [resumes, setResumes] = useState([])
+  const [stats, setStats] = useState({ arrived_today: 0, unscored: 0 })
   const [picker, setPicker] = useState(null)      // {mode, jobs:[...]}
   const [rowMenu, setRowMenu] = useState(null)
   const [headMenu, setHeadMenu] = useState(false)
@@ -117,6 +118,7 @@ export default function V2JobFeed() {
     api.get('/jobs/sources/list').then(({ data }) => setSourceList(data || [])).catch(() => {})
     api.get('/jobs/verdicts/list').then(({ data }) => setVerdictList(data || [])).catch(() => {})
     api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => {})
+    api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {})
   }, [])
 
   const fetchJobs = useCallback(async () => {
@@ -234,6 +236,8 @@ export default function V2JobFeed() {
 
   const d = detail
   const arrivedToday = jobs.filter((j) => isToday(j.discovered_at)).length
+  const visaText = d ? `${(H1B[d.h1b_verdict] || H1B.unknown).label}${d.h1b_company_lca_count ? ` · ${d.h1b_company_lca_count} LCAs` : ' · no LCA records'}` : ''
+  const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
 
   // ── detail report derivation ──
   const reports = d ? scoreEntries(d).map(([name, score]) => ({ name, score, tailored: isTailoredName(name), rpt: (d.scoring_report || {})[name] })).sort((a, b) => b.score - a.score) : []
@@ -253,11 +257,11 @@ export default function V2JobFeed() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>The Feed</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{total} open roles{arrivedToday ? ` · ${arrivedToday} arrived today` : ''}{unscored.length ? ` · ${unscored.length} not yet scored` : ''}</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{total} open roles · {stats.arrived_today} arrived today · {stats.unscored} not yet scored</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 200, height: 36, padding: '0 4px', border: 'none', borderBottom: '1px solid var(--line)', fontSize: 13.5, fontFamily: 'var(--sans)', outline: 'none', background: 'transparent' }} />
-          {unscored.length > 0 && <div onClick={() => unscored.slice(0, 50).forEach(scoreJob)} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Score {unscored.length} unscored jobs</div>}
+          {stats.unscored > 0 && <div onClick={() => unscored.slice(0, 50).forEach(scoreJob)} title={unscored.length ? `Scores the ${unscored.length} unscored roles in view` : 'No unscored roles in the current view'} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Score {stats.unscored} unscored jobs</div>}
         </div>
       </header>
 
@@ -429,9 +433,9 @@ export default function V2JobFeed() {
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span style={{ maxWidth: 270, color: d.location ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location || 'Location not specified'}</span>
                         <span style={{ color: 'var(--line)' }}>|</span>
-                        <span style={{ color: (H1B[d.h1b_verdict] || H1B.unknown).c }}>{(H1B[d.h1b_verdict] || H1B.unknown).label}</span>
+                        <span style={{ color: visaCol }}>{visaText}</span>
                       </div>
-                    ) : <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location || 'Location not specified', (H1B[d.h1b_verdict] || H1B.unknown).label, srcLabel(d.source), timeAgo(d.discovered_at)].join(' · ')}</span>}
+                    ) : <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location || 'Location not specified', visaText, srcLabel(d.source), timeAgo(d.discovered_at)].join(' · ')}</span>}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
