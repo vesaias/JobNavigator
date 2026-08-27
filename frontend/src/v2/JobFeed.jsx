@@ -185,7 +185,21 @@ export default function V2JobFeed() {
   const saveJob = (j) => patchRemote(j, { saved: !j.saved, status: j.saved ? 'new' : 'saved' })
   const skipJob = (j) => patchRemote(j, { status: 'skip' })
   const applyJob = (j) => patchRemote(j, { status: 'applied' })
-  const ignoreCompany = (j) => patchRemote(j, { status: 'ignored' })
+  // "Ignore {company} everywhere" — add to the global company-exclude setting
+  // (matches classic ignoreCompany) and drop every job from that company now.
+  const ignoreCompany = useCallback(async (job) => {
+    const name = (job.company || '').trim()
+    setJobs((prev) => prev.filter((x) => (x.company || '').toLowerCase() !== name.toLowerCase()))
+    setDetail((dd) => (dd && (dd.company || '').toLowerCase() === name.toLowerCase() ? null : dd))
+    if (!name) return
+    try {
+      const { data: settings } = await api.get('/settings')
+      const cur = Array.isArray(settings.company_exclude_global) ? settings.company_exclude_global : []
+      if (!cur.some((c) => c.toLowerCase() === name.toLowerCase())) {
+        await api.patch('/settings', { company_exclude_global: [...cur, name] })
+      }
+    } catch (e) { console.error(e); fetchJobs() }
+  }, [fetchJobs])
   const scoreJob = useCallback((job) => {
     api.post(`/analyze/${job.id}?depth=full`, {}).then(() => setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))).catch(console.error)
   }, [])
