@@ -435,6 +435,69 @@ def list_resumes(is_base: Optional[bool] = None, db: Session = Depends(get_db)):
     return [_resume_to_dict(r) for r in resumes]
 
 
+@router.get("/shelf")
+def resume_shelf(db: Session = Depends(get_db)):
+    """Assembled résumé shelf for the v2 UI: base résumés with their tailored
+    copies grouped underneath, each copy carrying its job's company/role and fit
+    score, plus a per-base average fit. One pass over resumes + a single jobs
+    query — avoids the client fetching every copy's job (N+1)."""
+    resumes = db.query(Resume).order_by(Resume.updated_at.desc()).all()
+    bases = [r for r in resumes if r.is_base]
+    copies = [r for r in resumes if not r.is_base]
+
+    job_ids = {c.job_id for c in copies if c.job_id}
+    jobs = {}
+    if job_ids:
+        for j in db.query(Job).filter(Job.id.in_(job_ids)).all():
+            jobs[j.id] = j
+
+    def _copy_score(job, name):
+        # Score lives on the copy's job cv_scores, keyed by the copy name or the
+        # generic "Tailored" label; fall back to the best numeric score present.
+        if not job:
+            return None
+        cs = job.cv_scores or {}
+        for key in (name, "Tailored"):
+            v = cs.get(key)
+            if isinstance(v, (int, float)):
+                return int(round(v))
+        nums = [v for v in cs.values() if isinstance(v, (int, float))]
+        return int(round(max(nums))) if nums else None
+
+    by_parent = {}
+    for c in copies:
+        by_parent.setdefault(c.parent_id, []).append(c)
+
+    out = []
+    for b in bases:
+        clist = sorted(by_parent.get(b.id, []),
+                       key=lambda c: c.updated_at or b.updated_at, reverse=True)
+        copies_out, scores = [], []
+        for c in clist:
+            job = jobs.get(c.job_id)
+            sc = _copy_score(job, c.name)
+            if sc is not None:
+                scores.append(sc)
+            copies_out.append({
+                "id": str(c.id),
+                "name": c.name,
+                "job_id": str(c.job_id) if c.job_id else None,
+                "company": (job.company if job else None),
+                "role": (job.title if job else None),
+                "score": sc,
+                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            })
+        out.append({
+            "id": str(b.id),
+            "name": b.name,
+            "updated_at": b.updated_at.isoformat() if b.updated_at else None,
+            "copy_count": len(clist),
+            "avg_fit": int(round(sum(scores) / len(scores))) if scores else None,
+            "copies": copies_out,
+        })
+    return {"bases": out, "total_copies": len(copies)}
+
+
 @router.post("", status_code=201)
 def create_resume(body: dict, db: Session = Depends(get_db)):
     """Create a new resume.
