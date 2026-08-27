@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import api from '../api'
+
+const FILTERS_KEY = 'v2_feed_filters'
+const SORT_KEY = 'v2_feed_sort'
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const ROW_C = 2 * Math.PI * 17.5   // row ring (viewBox 44, r17.5)
@@ -45,10 +48,18 @@ const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'],
 const SORT_OPTS = [['score', 'Top score'], ['date', 'Newest first'], ['salary', 'Salary, high to low'], ['company', 'Company A–Z']]
 const DEFAULTS = { status: ['new', 'saved', 'applied'], company: [], source: [], h1b_verdict: [], min_score: '', min_salary: '', max_salary: '' }
 
-// small dropdown shell (trigger pill + panel + backdrop)
+// small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
+// when the panel would overflow the viewport's right edge.
 function Drop({ label, active, open, onToggle, children, align = 'left', width = 216, trigger }) {
+  const ref = useRef(null)
+  const [side, setSide] = useState(align)
+  useLayoutEffect(() => {
+    if (!open || !ref.current) { return }
+    const r = ref.current.getBoundingClientRect()
+    setSide(r.left + width > window.innerWidth - 14 ? 'right' : align)
+  }, [open, width, align])
   return (
-    <div style={{ position: 'relative', flex: '0 0 auto' }}>
+    <div ref={ref} style={{ position: 'relative', flex: '0 0 auto' }}>
       {trigger ? trigger(onToggle) : (
         <div onClick={onToggle} style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer',
           border: `1px solid ${active ? 'var(--accent)' : 'var(--line)'}`, background: active ? 'var(--accent-soft)' : 'var(--surface)', color: active ? 'var(--accent)' : 'var(--text-2)' }}>
@@ -58,7 +69,7 @@ function Drop({ label, active, open, onToggle, children, align = 'left', width =
       {open && (
         <>
           <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 34 }} />
-          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', [align]: 0, zIndex: 35, marginTop: 5, width, maxHeight: 340, overflow: 'auto',
+          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', [side]: 0, zIndex: 35, marginTop: 5, width, maxHeight: 340, overflow: 'auto',
             background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 8 }}>
             {children}
           </div>
@@ -81,8 +92,13 @@ export default function V2JobFeed() {
   const [jobs, setJobs] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState(DEFAULTS)
-  const [sortBy, setSortBy] = useState('score')
+  const [filters, setFilters] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem(FILTERS_KEY)); if (s) return { ...DEFAULTS, ...s } } catch {}
+    return DEFAULTS
+  })
+  const [sortBy, setSortBy] = useState(() => { try { return localStorage.getItem(SORT_KEY) || 'score' } catch { return 'score' } })
+  useEffect(() => { try { localStorage.setItem(FILTERS_KEY, JSON.stringify(filters)) } catch {} }, [filters])
+  useEffect(() => { try { localStorage.setItem(SORT_KEY, sortBy) } catch {} }, [sortBy])
   const [search, setSearch] = useState('')
   const [dSearch, setDSearch] = useState('')
   const [menu, setMenu] = useState(null)
@@ -373,17 +389,17 @@ export default function V2JobFeed() {
                         {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 99, background: 'var(--accent)', border: '2px solid var(--surface)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
                       </div>
                       {/* text */}
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                          <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: j.status === 'skip' ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
+                          <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: j.status === 'skip' ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-2)', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, color: 'var(--text-2)', minWidth: 0 }}>
                           <span title={j.company} style={{ flex: '0 1 auto', minWidth: 40, maxWidth: 170, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company}</span>
                           <span style={{ flex: '0 0 auto', color: 'var(--line)' }}>|</span>
                           <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, color: j.location ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location || 'Location not specified'}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, minWidth: 0 }}>
                           <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 160, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
@@ -394,11 +410,16 @@ export default function V2JobFeed() {
                     <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)', opacity: i === sel ? 1 : 0.55 }} onClick={(e) => e.stopPropagation()}>
                       <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: j.saved ? 'var(--accent)' : 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
                       <div className="v2-rail-skip v2-rail-cell" title="Skip (x)" onClick={() => skipJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line-soft)' }}>✕</div>
-                      <div className="v2-rail-copy v2-rail-cell" title="More" onClick={() => setRowMenu(rowMenu === j.id ? null : j.id)} style={{ flex: 1, fontSize: 12, color: rowMenu === j.id ? 'var(--text)' : 'var(--muted)', background: rowMenu === j.id ? 'var(--surface-2)' : 'transparent' }}>⋯</div>
-                      {rowMenu === j.id && (
+                      <div className="v2-rail-copy v2-rail-cell" title="More" onClick={(ev) => {
+                        if (rowMenu?.id === j.id) { setRowMenu(null); return }
+                        const r = ev.currentTarget.getBoundingClientRect()
+                        const up = r.bottom + 236 > window.innerHeight
+                        setRowMenu({ id: j.id, left: Math.max(8, r.right - 228), top: up ? undefined : r.bottom + 3, bottom: up ? window.innerHeight - r.top + 3 : undefined })
+                      }} style={{ flex: 1, fontSize: 12, color: rowMenu?.id === j.id ? 'var(--text)' : 'var(--muted)', background: rowMenu?.id === j.id ? 'var(--surface-2)' : 'transparent' }}>⋯</div>
+                      {rowMenu?.id === j.id && (
                         <>
-                          <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
-                          <div style={{ position: 'absolute', top: i < 3 ? 0 : 'auto', bottom: i < 3 ? 'auto' : 0, right: 2, zIndex: 40, margin: '3px 0', width: 228, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
+                          <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 59 }} />
+                          <div style={{ position: 'fixed', left: rowMenu.left, top: rowMenu.top, bottom: rowMenu.bottom, zIndex: 60, width: 228, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
                             {[['Mark applied', 'a', () => applyJob(j)], ['Tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [j] })], ['Rescore', 'r', () => scoreJob(j)], ['Open posting ↗', 'e', () => j.url && window.open(j.url, '_blank', 'noopener,noreferrer')]].map(([label, kb, act]) => (
                               <div key={label} className="v2-menuitem" onClick={() => { setRowMenu(null); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer', fontWeight: label === 'Tailor résumé' ? 600 : 400 }}>{label}<span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span></div>
                             ))}
@@ -442,13 +463,19 @@ export default function V2JobFeed() {
                     {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--line)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-2)' }}><span style={{ fontSize: 9, color: 'var(--muted)' }}>●</span>Open ↗</a>}
                     <div onClick={() => openTailored(d)} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Open tailored ↗</div>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
-                      <div onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--line)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
+                      <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--line)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
                       {headMenu && (
                         <>
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
                           <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
-                            {[['Mark applied', () => applyJob(d)], ['Rescore', () => scoreJob(d)], ['Cover letter ↗', () => { window.location.href = `/cover-letters?job=${d.id}` }], ['Copy résumé with tracers', () => setPicker({ mode: 'copy', jobs: [d] })]].map(([label, act]) => (
-                              <div key={label} className="v2-menuitem" onClick={() => { setHeadMenu(false); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>{label}</div>
+                            {[
+                              ['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true],
+                              ['Mark applied', 'a', () => applyJob(d)],
+                              ['Rescore', 'r', () => scoreJob(d)],
+                              ['Cover letter ↗', 'c', () => { window.location.href = `/cover-letters?job=${d.id}` }],
+                              ['Copy résumé with tracers', '', () => setPicker({ mode: 'copy', jobs: [d] })],
+                            ].map(([label, kb, act, bold]) => (
+                              <div key={label} className="v2-menuitem" onClick={() => { setHeadMenu(false); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, cursor: 'pointer' }}>{label}{kb && <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span>}</div>
                             ))}
                             <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
                             <div className="v2-hover-bad" onClick={() => { setHeadMenu(false); ignoreCompany(d) }} style={{ padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {d.company} everywhere</div>
