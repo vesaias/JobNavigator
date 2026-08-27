@@ -1,69 +1,61 @@
-/* v2 redesign — "Warm Ink" base skin.
-   Everything is scoped under .jn-v2 so it never touches the classic UI.
-   Palette + fonts are CSS variables → Skin B (Swiss Ink) / Skin C (Warm Plum)
-   become a variable swap on this same block, no markup changes. */
+/* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
+   Scoped to .jn-v2 so it never touches the classic UI. Light + dark; the root
+   gets data-theme="dark" from V2App (mirrors the global jobnavigator_dark_mode). */
 .jn-v2 {
-  --bg: #faf8f3;
-  --surface: #ffffff;
-  --panel: #f3f0e8;
-  --ink: #1b1a16;
-  --muted: #8f8a7d;
-  --faint: #c9c3b4;
-  --border: #e2ddd0;
-  --border-lt: #eeeae0;
-  --accent: #3f6b52;
-  --accent-bg: #eaf1eb;
-  --stone: #57534a;
-  --warn: #9a5b28;
-  --warn-bg: #f6eee4;
-  --danger: #9c3b30;
-  --danger-bg: #f6eae7;
-  --serif: 'Newsreader', Georgia, serif;
-  --sans: 'Public Sans', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --bg:#faf8f3; --surface:#ffffff; --surface-2:#f3f0e8; --line:#e2ddd0; --line-soft:#eeeae0;
+  --text:#1b1a16; --text-2:#57534a; --muted:#8f8a7d; --accent:#3f6b52; --accent-soft:#eaf1eb;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
+  --rail:#22211c; --rail-text:#a8a396; --paper:#ffffff;
 
-  font-family: var(--sans);
-  color: var(--ink);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-  font-size: 14px;
+  --serif:'Newsreader',Georgia,serif;
+  --sans:'Public Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+
+  /* back-compat aliases for the shell + shelf (written before the token rename) */
+  --panel:var(--surface-2); --border:var(--line); --border-lt:var(--line-soft);
+  --ink:var(--text); --stone:var(--text-2); --faint:var(--muted);
+  --accent-bg:var(--accent-soft); --danger:var(--bad); --danger-bg:var(--bad-soft); --warn-bg:var(--warn-soft);
+
+  font-family:var(--sans); color:var(--text); background:var(--bg);
+  -webkit-font-smoothing:antialiased; font-size:14px;
 }
-.jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing: border-box; }
+.jn-v2[data-theme="dark"] {
+  --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
+  --text:#efeade; --text-2:#b8b2a3; --muted:#807b6e; --accent:#8dbb9f; --accent-soft:#1f2a23;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
+  --rail:#100f0b; --rail-text:#948f82; --paper:#f7f4ec;
+}
+.jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
+.jn-v2 a { color:var(--accent); text-decoration:none; }
+.jn-v2 a:hover { color:var(--text); }
 
-/* --- interactive elements (inline styles can't do :hover) --- */
-.v2-row { cursor: pointer; }
-.v2-row:hover { background: var(--panel) !important; }
-
-.v2-rail-cell { display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer; }
-.v2-rail-copy { color: var(--muted); }
-.v2-rail-copy:hover { background: var(--accent-bg); color: var(--accent); }
-.v2-rail-save { color: var(--stone); }
-.v2-rail-save:hover { background: var(--accent-bg); color: var(--accent); }
-.v2-rail-skip { color: var(--muted); }
-.v2-rail-skip:hover { background: var(--warn-bg); color: var(--warn); }
-
-.v2-act { cursor:pointer; transition: border-color .12s; }
-.v2-act:hover { border-color: var(--accent) !important; }
-
-.v2-x { cursor:pointer; }
-.v2-x:hover { background: var(--border); color: var(--ink); }
-
-.v2-pill { cursor:pointer; transition: background .12s, border-color .12s, color .12s; }
-
-.v2-navlink { cursor:pointer; text-decoration:none; transition: background .12s, color .12s; }
-.v2-navlink:hover { background: var(--panel); color: var(--ink); }
-
-/* dark grouped sidebar (canonical v2 shell) */
-.v2-navdark { text-decoration:none; cursor:pointer; transition: color .12s, border-color .12s, background .12s; }
+/* interactive (inline styles can't do :hover) */
+.v2-row:hover { background:var(--surface-2) !important; }
+.v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.v2-rail-copy:hover { background:var(--surface-2); color:var(--text); }
+.v2-rail-save:hover { background:var(--surface-2); color:var(--accent); }
+.v2-rail-skip:hover { background:var(--warn-soft); color:var(--warn); }
+.v2-hover-accent:hover { background:var(--surface-2); }
+.v2-hover-bad:hover { background:var(--bad-soft) !important; }
+.v2-act:hover { border-color:var(--accent) !important; }
+.v2-x:hover { background:var(--line); color:var(--text); }
+.v2-pill { cursor:pointer; }
+.v2-navlink { cursor:pointer; text-decoration:none; transition:background .12s,color .12s; }
+.v2-navlink:hover { background:var(--surface-2); color:var(--text); }
+.v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
 .v2-navdark:hover { color:#f6f3ea; }
-.v2-card { transition: border-color .12s, box-shadow .12s; }
-.v2-card:hover { border-color: var(--faint); }
-.v2-chip { transition: border-color .12s, background .12s; }
-.v2-chip:hover { border-color: var(--accent); background: var(--accent-bg); }
+.v2-card { transition:border-color .12s; }
+.v2-card:hover { border-color:var(--muted); }
+.v2-chip { transition:border-color .12s,background .12s; }
+.v2-chip:hover { border-color:var(--accent); background:var(--accent-soft); }
+.v2-menuitem:hover { background:var(--surface-2); }
+.v2-tab { transition:color .12s; }
 
-.v2-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
-.v2-scroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 99px; border: 2px solid var(--bg); }
-.v2-scroll::-webkit-scrollbar-track { background: transparent; }
+.v2-scroll::-webkit-scrollbar { width:9px; height:9px; }
+.v2-scroll::-webkit-scrollbar-thumb { background:var(--muted); border-radius:99px; border:2px solid var(--bg); }
+.v2-scroll::-webkit-scrollbar-track { background:transparent; }
 
-@keyframes v2-spin { to { transform: rotate(360deg); } }
-.v2-spin { animation: v2-spin .8s linear infinite; }
+@keyframes v2-spin { to { transform:rotate(360deg); } }
+.v2-spin { animation:v2-spin .9s linear infinite; }
+.jn-v2 input::placeholder { color:var(--muted); }
+.jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }

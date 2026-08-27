@@ -29,6 +29,8 @@ export default function V2App() {
   const loc = useLocation()
   const [open, setOpen] = useState(true)
   const [counts, setCounts] = useState({})
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })
+  const toggleTheme = () => setDark((v) => { const n = !v; try { localStorage.setItem('jobnavigator_dark_mode', String(n)) } catch {} return n })
 
   useEffect(() => {
     api.get('/jobs', { params: { status: 'new', limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, jobs: data.total }))).catch(() => {})
@@ -38,8 +40,8 @@ export default function V2App() {
 
   const W = open ? 206 : 60
   return (
-    <div className="jn-v2" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-      <aside style={{ width: W, flex: `0 0 ${W}px`, background: '#22211c', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .18s', overflow: 'hidden' }}>
+    <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+      <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .18s', overflow: 'hidden' }}>
         <div style={{ height: 64, flex: '0 0 auto', display: 'flex', alignItems: 'center', padding: '0 22px', color: '#f6f3ea', whiteSpace: 'nowrap' }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em' }}>{open ? 'JobNavigator' : 'JN'}</span>
         </div>
@@ -67,12 +69,14 @@ export default function V2App() {
             </div>
           ))}
         </nav>
-        <a href="/" className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 20px', fontSize: 12, color: '#66604f', whiteSpace: 'nowrap' }}>
+        <a href="/" className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, padding: '0 20px', fontSize: 12, color: '#66604f', whiteSpace: 'nowrap' }}>
           {open ? '← Classic UI' : '←'}
         </a>
-        <button onClick={() => setOpen((o) => !o)} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, padding: '0 20px', fontSize: 12, color: '#66604f', background: 'transparent', border: 'none', textAlign: 'left', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-          {open ? '‹ Collapse' : '›'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42, padding: '0 14px', borderTop: '1px solid #2e2c24' }}>
+          <div onClick={toggleTheme} className="v2-navdark" title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-text)', fontSize: 14, cursor: 'pointer' }}>◐</div>
+          {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: '#66604f', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: '#8dbb9f' }} />healthy</div>}
+          <div onClick={() => setOpen((o) => !o)} className="v2-navdark" title="Collapse sidebar" style={{ marginLeft: 'auto', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#66604f', fontSize: 14, cursor: 'pointer' }}>{open ? '‹' : '›'}</div>
+        </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Outlet />
