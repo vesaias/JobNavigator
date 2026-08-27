@@ -1,0 +1,61 @@
+/* v2 redesign — "Warm Ink" base skin.
+   Everything is scoped under .jn-v2 so it never touches the classic UI.
+   Palette + fonts are CSS variables → Skin B (Swiss Ink) / Skin C (Warm Plum)
+   become a variable swap on this same block, no markup changes. */
+.jn-v2 {
+  --bg: #faf8f3;
+  --surface: #ffffff;
+  --panel: #f3f0e8;
+  --ink: #1b1a16;
+  --muted: #8f8a7d;
+  --faint: #c9c3b4;
+  --border: #e2ddd0;
+  --border-lt: #eeeae0;
+  --accent: #3f6b52;
+  --accent-bg: #eaf1eb;
+  --stone: #57534a;
+  --warn: #9a5b28;
+  --warn-bg: #f6eee4;
+  --danger: #9c3b30;
+  --danger-bg: #f6eae7;
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Public Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+.jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing: border-box; }
+
+/* --- interactive elements (inline styles can't do :hover) --- */
+.v2-row { cursor: pointer; }
+.v2-row:hover { background: var(--panel) !important; }
+
+.v2-rail-cell { display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer; }
+.v2-rail-copy { color: var(--muted); }
+.v2-rail-copy:hover { background: var(--accent-bg); color: var(--accent); }
+.v2-rail-save { color: var(--stone); }
+.v2-rail-save:hover { background: var(--accent-bg); color: var(--accent); }
+.v2-rail-skip { color: var(--muted); }
+.v2-rail-skip:hover { background: var(--warn-bg); color: var(--warn); }
+
+.v2-act { cursor:pointer; transition: border-color .12s; }
+.v2-act:hover { border-color: var(--accent) !important; }
+
+.v2-x { cursor:pointer; }
+.v2-x:hover { background: var(--border); color: var(--ink); }
+
+.v2-pill { cursor:pointer; transition: background .12s, border-color .12s, color .12s; }
+
+.v2-navlink { cursor:pointer; text-decoration:none; transition: background .12s, color .12s; }
+.v2-navlink:hover { background: var(--panel); color: var(--ink); }
+
+.v2-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.v2-scroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 99px; border: 2px solid var(--bg); }
+.v2-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes v2-spin { to { transform: rotate(360deg); } }
+.v2-spin { animation: v2-spin .8s linear infinite; }
