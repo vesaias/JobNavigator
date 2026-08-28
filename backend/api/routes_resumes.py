@@ -944,19 +944,22 @@ def preview_resume(resume_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{resume_id}/pdf")
-async def export_pdf(resume_id: str, db: Session = Depends(get_db)):
-    """Render resume as PDF via Playwright and return the bytes."""
+async def export_pdf(resume_id: str, template: Optional[str] = None, format: Optional[str] = None, db: Session = Depends(get_db)):
+    """Render resume as PDF via Playwright and return the bytes. `template`/`format`
+    query params override the stored values (used by the live editor preview so a
+    rapid template switch doesn't race the debounced PATCH)."""
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
+    tpl = template or resume.template
+    fmt = (format or resume.page_format or "letter")
     json_data = resume.json_data or {}
     # Rewrite URLs with tracer links if enabled
     pdf_data = _rewrite_urls_with_tracers(json_data, str(resume.id), db)
-    html = _render_html(pdf_data, resume.template, resume.page_format)
+    html = _render_html(pdf_data, tpl, fmt)
 
     # Determine paper format
-    fmt = resume.page_format or "letter"
     paper_format = "A4" if fmt.lower() == "a4" else "Letter"
 
     try:

@@ -69,10 +69,15 @@ def _flatten_resume(json_data: dict) -> str:
         for exp in experience:
             title = exp.get("title", "")
             company = exp.get("company", "")
-            dates = exp.get("dates", "")
+            # schema field is "date"; keep "dates" as back-compat
+            dates = exp.get("date") or exp.get("dates") or ""
+            location = exp.get("location", "")
             line = f"{title} at {company} ({dates})".strip(" ()")
             if line:
-                parts.append(line)
+                parts.append(f"{line} — {location}".strip(" —") if location else line)
+            desc = exp.get("description", "")
+            if desc:
+                parts.append(desc)
             for b in exp.get("bullets", []) or []:
                 parts.append(f"- {b}")
 
@@ -94,8 +99,9 @@ def _flatten_resume(json_data: dict) -> str:
         for edu in education:
             degree = edu.get("degree", "")
             school = edu.get("school", "")
-            year = edu.get("year", "")
-            parts.append(f"{degree} — {school}, {year}".strip(" —,"))
+            # schema has location (no year); keep year as back-compat
+            tail = edu.get("location") or edu.get("year") or ""
+            parts.append(f"{degree} — {school}, {tail}".strip(" —,"))
 
     projects = json_data.get("projects") or []
     if projects:
@@ -114,9 +120,9 @@ def _flatten_resume(json_data: dict) -> str:
         parts.append("## Publications")
         for pub in publications:
             title = pub.get("title", "")
-            venue = pub.get("venue", "")
-            year = pub.get("year", "")
-            line = f"{title} — {venue}, {year}".strip(" —,")
+            # schema is {title, description}; keep venue/year as back-compat
+            detail = pub.get("description") or " ".join(x for x in (pub.get("venue"), pub.get("year")) if x)
+            line = f"{title} — {detail}".strip(" —,")
             if line:
                 parts.append(line)
 
