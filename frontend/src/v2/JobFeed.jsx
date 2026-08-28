@@ -145,7 +145,9 @@ export default function V2JobFeed() {
   const [verdictList, setVerdictList] = useState([])
   const [resumes, setResumes] = useState([])
   const [stats, setStats] = useState({ arrived_today: 0, unscored: 0 })
-  const [picker, setPicker] = useState(null)      // {mode, jobs:[...]}
+  const [picker, setPicker] = useState(null)      // {mode, jobs:[...]} — opens the Create-copy modal
+  const [cvMode, setCvMode] = useState('tailor')  // 'tailor' | 'copy' method toggle
+  const [cvBase, setCvBase] = useState(null)      // selected base résumé id (or 'persona')
   const [rowMenu, setRowMenu] = useState(null)
   const [headMenu, setHeadMenu] = useState(false)
   const [checked, setChecked] = useState(() => new Set())
@@ -363,6 +365,23 @@ export default function V2JobFeed() {
     try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { window.location.href = `/resumes?resume=${copy.id}`; return } } catch {}
     setPicker({ mode: 'tailor', jobs: [job] })
   }, [])
+
+  // Create-copy modal: seed method + default base when it opens
+  useEffect(() => {
+    if (!picker) return
+    setCvMode(picker.mode || 'tailor')
+    setCvBase(resumes[0]?.id ?? null)
+  }, [picker, resumes])
+  // 'Copy with tracers' can't use the Persona base — fall back to a real base
+  const pickMethod = useCallback((m) => {
+    setCvMode(m)
+    if (m === 'copy') setCvBase((b) => (b === 'persona' ? (resumes[0]?.id ?? null) : b))
+  }, [resumes])
+  const cvBases = useMemo(() => {
+    const list = resumes.map((r) => ({ id: r.id, name: r.name }))
+    if (cvMode === 'tailor' && personaAvailable) list.push({ id: 'persona', name: 'Persona' })
+    return list
+  }, [resumes, cvMode, personaAvailable])
 
   const unscored = useMemo(() => jobs.filter((j) => scoredCount(j) === 0 && ['new', 'saved'].includes(j.status)), [jobs])
   const openRescoreBulk = useCallback(async () => {
@@ -938,21 +957,68 @@ export default function V2JobFeed() {
         </section>
       </div>
 
-      {/* cv modal */}
-      {picker && (
-        <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(27,26,22,.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 380, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--edge)', boxShadow: '0 20px 50px rgba(0,0,0,.28)', padding: 18 }}>
-            <div style={{ fontFamily: 'var(--serif)', fontSize: 17, marginBottom: 4 }}>{picker.mode === 'tailor' ? '✦ Tailor a résumé' : '⧉ Copy a résumé'}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{picker.jobs.length === 1 ? `for ${picker.jobs[0].title}` : `for ${picker.jobs.length} selected roles`} · pick a base</div>
-            <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflow: 'auto' }}>
-              {resumes.length === 0 ? <span style={{ fontSize: 12, color: 'var(--muted)' }}>No base résumés found.</span>
-                : resumes.map((r) => <div key={r.id} className="v2-menuitem" onClick={() => runResume(picker.mode, picker.jobs, r.id)} style={{ padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)', fontSize: 13, cursor: 'pointer' }}>{r.name}</div>)}
-              {picker.mode === 'tailor' && personaAvailable && <div className="v2-menuitem" onClick={() => runResume('tailor', picker.jobs, 'persona')} style={{ padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>Persona<span style={{ fontSize: 10, color: 'var(--muted)' }}>from /persona</span></div>}
+      {/* create résumé copy modal — method (tailor / copy) + base pick */}
+      {picker && (() => {
+        const single = picker.jobs.length === 1 ? picker.jobs[0] : null
+        const existing = single?.tailored_resume_id
+        return (
+          <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* header */}
+              <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
+                <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Create résumé copy</span>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: 1.25 }}>{single ? single.title : `${picker.jobs.length} selected roles`}</span>
+                {single?.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{single.company}</span>}
+              </div>
+              {/* existing-copy banner */}
+              {existing && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: 'var(--accent-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, color: 'var(--text-2)' }}>
+                  <span style={{ flex: '0 0 auto', color: 'var(--accent)' }}>✦</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>A tailored copy already exists for this job.</span>
+                  <span onClick={() => { setPicker(null); openTailored(single) }} style={{ flex: '0 0 auto', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}>Open it ↗</span>
+                </div>
+              )}
+              {/* body */}
+              <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Method</span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run'], ['copy', '⧉ Copy with tracers', 'Exact duplicate with tracking links · instant']].map(([m, label, help]) => {
+                      const on = cvMode === m
+                      return (
+                        <div key={m} onClick={() => pickMethod(m)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
+                          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{help}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Base résumé</span>
+                  {cvBases.length === 0 ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>No base résumés found.</span>
+                    : cvBases.map((r) => {
+                      const on = cvBase === r.id
+                      return (
+                        <div key={r.id} className="v2-act" onClick={() => setCvBase(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
+                          <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
+                          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                          {r.id === 'persona' && <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>from /persona</span>}
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+              {/* footer */}
+              <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cvMode === 'tailor' ? 'Runs an LLM pass, then opens in the builder' : 'Instant · no LLM cost · lands in Résumés'}</span>
+                <div onClick={() => setPicker(null)} className="v2-act" style={{ marginLeft: 'auto', height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                <div onClick={() => cvBase != null && runResume(cvMode, picker.jobs, cvBase)} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: cvBase != null ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: cvBase != null ? 'pointer' : 'default' }}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</div>
+              </div>
             </div>
-            <div onClick={() => setPicker(null)} style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* rescore modal — pick résumés + depth */}
       {rescoreJob && (
