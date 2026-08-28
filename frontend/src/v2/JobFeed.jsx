@@ -431,7 +431,13 @@ export default function V2JobFeed() {
   // cached page fetch when toggled on
   useEffect(() => {
     if (!detail || !viewCached || cachedHtml) return
-    api.get(`/jobs/${detail.id}/cached-page`).then(({ data }) => setCachedHtml(data.cached_page_html || (data.cached_page_text ? `<pre style="white-space:pre-wrap;font-family:sans-serif;padding:16px">${data.cached_page_text}</pre>` : '<p style="padding:16px">No cached snapshot.</p>'))).catch(() => setCachedHtml('<p style="padding:16px">No cached snapshot.</p>'))
+    // The endpoint returns a complete reader HTML document (text/html), not JSON —
+    // mirror v1's iframe, but fetch via axios so the X-API-Key header is sent, then
+    // render the document string through srcDoc.
+    const id = detail.id
+    api.get(`/jobs/${id}/cached-page`, { responseType: 'text', transformResponse: (r) => r })
+      .then(({ data }) => setCachedHtml(typeof data === 'string' && data.trim() ? data : '<p style="padding:16px;font-family:sans-serif">No cached snapshot.</p>'))
+      .catch(() => setCachedHtml('<p style="padding:16px;font-family:sans-serif">No cached snapshot.</p>'))
   }, [detail, viewCached, cachedHtml])
 
   // persona availability (adds a "Persona" option to score/tailor)
