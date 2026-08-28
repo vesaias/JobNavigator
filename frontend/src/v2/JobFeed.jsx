@@ -536,12 +536,16 @@ export default function V2JobFeed() {
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Jobs without a listed salary stay visible</div>
         </Drop>
         <Drop align="left" width={170} active open={menu === 'status'} onToggle={() => setMenu(menu === 'status' ? null : 'status')}
-          trigger={(t) => (
-            <div onClick={t} style={{ height: 30, padding: '0 13px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
-              Status · {filters.status.map((s) => STATUS_OPTS.find((o) => o[0] === s)?.[1]).join(', ') || 'Any'}
-              <span onClick={(e) => { e.stopPropagation(); setF({ status: [] }) }} style={{ opacity: 0.55 }}>✕</span>
-            </div>
-          )}>
+          trigger={(t) => {
+            const statusActive = !(filters.status.length === DEFAULTS.status.length && DEFAULTS.status.every((s) => filters.status.includes(s)))
+            return (
+              <div onClick={t} style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                border: `1px solid ${statusActive ? 'var(--accent)' : 'var(--line)'}`, background: statusActive ? 'var(--accent-soft)' : 'var(--surface)', color: statusActive ? 'var(--accent)' : 'var(--text-2)' }}>
+                Status · {filters.status.map((s) => STATUS_OPTS.find((o) => o[0] === s)?.[1]).join(', ') || 'Any'}
+                {statusActive ? <span onClick={(e) => { e.stopPropagation(); setF({ status: DEFAULTS.status }) }} style={{ opacity: 0.6 }}>✕</span> : <span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>}
+              </div>
+            )
+          }}>
           {STATUS_OPTS.map(([v, label]) => <Check key={v} on={filters.status.includes(v)} label={label} onClick={() => togF('status', v)} />)}
         </Drop>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto' }}>
@@ -593,7 +597,7 @@ export default function V2JobFeed() {
             </div>
           )}
 
-          <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column' }}>
+          <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column', userSelect: 'none', WebkitUserSelect: 'none' }}>
             {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
               : jobs.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No jobs match.</div>
               : jobs.map((j, i) => {
@@ -648,7 +652,7 @@ export default function V2JobFeed() {
                       </div>
                     </div>
                     {/* action column */}
-                    <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)', opacity: i === sel ? 1 : 0.55 }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
                       <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: j.saved ? 'var(--accent)' : 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
                       <div className="v2-rail-skip v2-rail-cell" title="Skip (x)" onClick={() => skipJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line-soft)' }}>✕</div>
                       <div className="v2-rail-copy v2-rail-cell" title="More" onClick={(ev) => {
