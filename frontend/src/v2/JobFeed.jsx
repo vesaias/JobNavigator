@@ -520,13 +520,16 @@ export default function V2JobFeed() {
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{total} open roles · {stats.arrived_today} arrived today · {stats.unscored} not yet scored</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 200, height: 36, padding: '0 4px', border: 'none', borderBottom: '1px solid var(--line)', fontSize: 13.5, fontFamily: 'var(--sans)', outline: 'none', background: 'transparent' }} />
           {stats.unscored > 0 && <div onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Score {stats.unscored} unscored jobs</div>}
         </div>
       </header>
 
       {/* filter bar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
+        <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 184, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+        </div>
         <Drop label="Source" active={filters.source.length > 0} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
