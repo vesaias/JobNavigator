@@ -260,12 +260,28 @@ def list_job_companies(
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     search_id: Optional[str] = None,
+    counts: Optional[bool] = None,
     db: Session = Depends(get_db),
 ):
     """Return distinct CANONICAL company names from jobs matching current filters,
     sorted. Aliases collapse to their parent (e.g. 'Audible' and 'Prime Video &
-    Amazon MGM Studios' both surface as 'Amazon')."""
+    Amazon MGM Studios' both surface as 'Amazon'). With ?counts=1, returns
+    [{name, count}] sorted by open-role count (for the v2 Company filter)."""
     from backend.models.db import build_company_lookup
+    if counts:
+        from sqlalchemy import func
+        cq = db.query(Job.company, func.count(Job.id)).filter(Job.company.isnot(None), Job.company != "")
+        cq = _apply_common_filters(cq, status=status, source=source, h1b_verdict=h1b_verdict,
+                                   min_score=min_score, saved=saved, title_search=title_search,
+                                   remote=remote, min_salary=min_salary, max_salary=max_salary,
+                                   search_id=search_id).group_by(Job.company)
+        lookup = build_company_lookup(db)
+        agg = {}
+        for name, cnt in cq.all():
+            co = lookup.get((name or "").lower())
+            cname = co.name if co else name
+            agg[cname] = agg.get(cname, 0) + cnt
+        return [{"name": n, "count": c} for n, c in sorted(agg.items(), key=lambda x: (-x[1], x[0].lower()))]
     q = db.query(Job.company).distinct().filter(Job.company.isnot(None), Job.company != "")
     q = _apply_common_filters(q, status=status, source=source, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,

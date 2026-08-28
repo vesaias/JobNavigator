@@ -185,7 +185,7 @@ export default function V2JobFeed() {
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   useEffect(() => {
-    api.get('/jobs/companies/list').then(({ data }) => setCompanyList(data || [])).catch(() => {})
+    api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => {})
     api.get('/jobs/sources/list').then(({ data }) => setSourceList(data || [])).catch(() => {})
     api.get('/jobs/verdicts/list').then(({ data }) => setVerdictList(data || [])).catch(() => {})
     api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => {})
@@ -428,7 +428,7 @@ export default function V2JobFeed() {
 
   // drop selected filter values that fall out of the dynamic lists
   useEffect(() => { if (sourceList.length && filters.source.length) { const v = filters.source.filter((s) => sourceList.includes(s)); if (v.length !== filters.source.length) setFilters((f) => ({ ...f, source: v })) } }, [sourceList]) // eslint-disable-line
-  useEffect(() => { if (companyList.length && filters.company.length) { const v = filters.company.filter((c) => companyList.includes(c)); if (v.length !== filters.company.length) setFilters((f) => ({ ...f, company: v })) } }, [companyList]) // eslint-disable-line
+  useEffect(() => { if (companyList.length && filters.company.length) { const v = filters.company.filter((c) => companyList.some((x) => x.name === c)); if (v.length !== filters.company.length) setFilters((f) => ({ ...f, company: v })) } }, [companyList]) // eslint-disable-line
   useEffect(() => { if (verdictList.length && filters.h1b_verdict.length) { const v = filters.h1b_verdict.filter((x) => verdictList.includes(x)); if (v.length !== filters.h1b_verdict.length) setFilters((f) => ({ ...f, h1b_verdict: v })) } }, [verdictList]) // eslint-disable-line
 
   // score-watch: save-triggered scoring runs untracked, so poll /jobs/{id} until it lands
@@ -538,9 +538,21 @@ export default function V2JobFeed() {
             style={{ width: '100%', height: 30, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, fontSize: 12.5, background: 'var(--surface-2)', color: 'var(--text)', outline: 'none', marginBottom: 6, fontFamily: 'var(--sans)' }} />
           {(() => {
             const q = companyQuery.trim().toLowerCase()
-            const list = companyList.filter((c) => filters.company.includes(c) || c.toLowerCase().includes(q)).slice(0, 80)
-            return list.length ? list.map((c) => <Check key={c} on={filters.company.includes(c)} label={c} onClick={() => togF('company', c)} />)
-              : <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)' }}>No matches</div>
+            const list = companyList.filter((c) => filters.company.includes(c.name) || c.name.toLowerCase().includes(q))
+            // picked companies pin to the top, keeping the backend's count-desc order within each group
+            const sorted = [...list].sort((a, b) => (filters.company.includes(b.name) ? 1 : 0) - (filters.company.includes(a.name) ? 1 : 0)).slice(0, 80)
+            return sorted.length ? (
+              <>
+                {sorted.map((c) => (
+                  <div key={c.name} className="v2-menuitem" onClick={() => togF('company', c.name)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer' }}>
+                    <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 4, border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>
+                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-2)' }}>{c.name}</span>
+                    <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{c.count}</span>
+                  </div>
+                ))}
+                <div style={{ padding: '6px 8px 2px', fontSize: 10.5, color: 'var(--muted)', lineHeight: 1.4 }}>Top by open roles · picked companies pin to the top</div>
+              </>
+            ) : <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)' }}>No matches</div>
           })()}
         </Drop>
         <Drop label="H-1B" active={filters.h1b_verdict.length > 0} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
@@ -665,7 +677,7 @@ export default function V2JobFeed() {
                       </div>
                       {/* text */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, minHeight: 20 }}>
                           <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
                           {j.tailored_resume_id && <a href={`/resumes?resume=${j.tailored_resume_id}`} onClick={(e) => e.stopPropagation()} title="Open tailored résumé" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>✦</a>}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
@@ -735,8 +747,8 @@ export default function V2JobFeed() {
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-2)' }}><span style={{ fontSize: 9, color: 'var(--muted)' }}>●</span>Open ↗</a>}
-                    <div onClick={() => openTailored(d)} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Open tailored ↗</div>
+                    {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
+                    <div onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</div>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
                       <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
                       {headMenu && (
@@ -744,7 +756,7 @@ export default function V2JobFeed() {
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
                           <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 236, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
                             {[
-                              ['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true],
+                              ...(d.tailored_resume_id ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
                               ['Cover letter ↗', 'c', () => { window.location.href = `/cover-letters?job=${d.id}` }],
@@ -900,10 +912,10 @@ export default function V2JobFeed() {
                       </div>
                     </div>
                   )}
-                  {/* live / cached posting */}
-                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '16px 30px 0' }}>
+                  {/* live / cached posting — full-bleed iframe */}
+                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     {dCached && (
-                      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12, padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface-2)' }}>
+                      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                         <span style={{ fontSize: 12, color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>{viewCached ? 'Cached snapshot · captured when you applied' : 'Live posting'}</span>
                         <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 99, padding: 2, gap: 2 }}>
                           <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
@@ -912,9 +924,9 @@ export default function V2JobFeed() {
                       </div>
                     )}
                     {viewCached && dCached ? (
-                      <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: '1px solid var(--line)', borderRadius: 10, background: '#fff', marginBottom: 20 }} />
+                      <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
                     ) : d.url ? (
-                      <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: '1px solid var(--line)', borderRadius: 10, background: '#fff', marginBottom: 20 }} />
+                      <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
                     ) : (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>No posting URL captured for this job.</div>
                     )}
