@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import './theme.css'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -12,132 +13,197 @@ const timeAgo = (s) => {
   if (days < 21) return `${days}d ago`
   return `${Math.floor(days / 7)}w ago`
 }
-const scoreColor = (s) => (s >= 80 ? 'var(--accent)' : s >= 65 ? 'var(--stone)' : 'var(--warn)')
+const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
-// company / role for a copy — from the shelf payload, else parse "Base → Company — Role"
-const copyMeta = (copy) => {
-  if (copy.company || copy.role) return { company: copy.company || '', role: copy.role || '' }
-  const after = (copy.name || '').split('→').slice(1).join('→').trim()
-  const [company, ...rest] = after.split('—')
-  return { company: (company || '').trim(), role: rest.join('—').trim() }
+// company / role label for a copy — from the shelf payload, else parse "Base → Company — Role"
+const copyLabel = (c) => {
+  let company = c.company, role = c.role
+  if (!company && !role) {
+    const after = (c.name || '').split('→').slice(1).join('→').trim()
+    const [co, ...rest] = after.split('—')
+    company = (co || '').trim(); role = rest.join('—').trim()
+  }
+  return [company, role].filter(Boolean).join(' · ') || c.name
 }
-
-const PREVIEW_CHIPS = 4
 
 export default function V2Resumes() {
   const navigate = useNavigate()
   const [bases, setBases] = useState([])
+  const [archived, setArchived] = useState([])
   const [totalCopies, setTotalCopies] = useState(0)
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [expanded, setExpanded] = useState(() => new Set())
+  const [addOpen, setAddOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   const load = useCallback(async () => {
-    setLoading(true)
     try {
       const { data } = await api.get('/resumes/shelf')
       setBases(data.bases || [])
+      setArchived(data.archived || [])
       setTotalCopies(data.total_copies || 0)
     } catch (e) { console.error('shelf load failed', e) }
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
 
-  const filtered = useMemo(() => {
-    const t = q.trim().toLowerCase()
-    if (!t) return bases.map((b) => ({ ...b, _forceExpand: false }))
-    return bases
-      .map((b) => {
-        if (b.name.toLowerCase().includes(t)) return { ...b, _forceExpand: false }
-        const mc = (b.copies || []).filter((c) => {
-          const { company, role } = copyMeta(c)
-          return `${company} ${role} ${c.name}`.toLowerCase().includes(t)
-        })
-        return mc.length ? { ...b, copies: mc, _forceExpand: true } : null
-      })
-      .filter(Boolean)
-  }, [bases, q])
+  const openResume = (id) => navigate(`/resumes?resume=${id}`)   // v2 editor lands in P2
+  const searching = q.trim().length > 0
 
-  const openResume = (id) => navigate(`/resumes?resume=${id}`)
+  // unified search across bases, live copies, and archived copies
+  const results = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    if (!t) return []
+    const out = []
+    bases.forEach((b) => {
+      if (b.name.toLowerCase().includes(t)) out.push({ id: b.id, kind: 'base', name: b.name, note: `${b.copy_count} cop${b.copy_count === 1 ? 'y' : 'ies'}`, score: b.avg_fit })
+      ;(b.copies || []).forEach((c) => {
+        if (`${copyLabel(c)} ${c.name}`.toLowerCase().includes(t)) out.push({ id: c.id, kind: 'tailored', name: copyLabel(c), score: c.score })
+      })
+    })
+    archived.forEach((c) => {
+      if (`${copyLabel(c)} ${c.name}`.toLowerCase().includes(t)) out.push({ id: c.id, kind: 'archived', name: copyLabel(c), note: c.why, muted: true })
+    })
+    return out
+  }, [q, bases, archived])
+
+  const BADGE = {
+    base: { bg: 'var(--surface-2)', fg: 'var(--muted)' },
+    tailored: { bg: 'var(--accent-soft)', fg: 'var(--accent)' },
+    archived: { bg: 'var(--surface-2)', fg: 'var(--faint)' },
+  }
 
   return (
-    <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', background: 'var(--bg)', color: 'var(--ink)' }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '30px 40px 60px' }}>
-        {/* header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 22 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 500, letterSpacing: '-.02em' }}>Résumés</h1>
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
-              {bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs
-            </div>
-          </div>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search bases, copies…"
-            style={{ width: 320, height: 38, padding: '0 14px', borderRadius: 99, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 13, fontFamily: 'var(--sans)', color: 'var(--ink)', outline: 'none' }} />
-          <button onClick={() => navigate('/resumes')} className="v2-pill"
-            style={{ height: 38, padding: '0 16px', borderRadius: 99, border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New résumé</button>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* header */}
+      <div style={{ flex: '0 0 auto', padding: '22px 30px 14px', display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Résumés</h1>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
         </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <input value={q} onChange={(e) => { setQ(e.target.value); setShowArchived(false) }} placeholder="Search bases, copies, archived…"
+            style={{ height: 36, width: 300, padding: '0 2px', border: 'none', borderBottom: '1px solid var(--line)', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', outline: 'none' }} />
+          <div onClick={() => setAddOpen(true)} style={{ height: 36, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ New résumé</div>
+        </div>
+      </div>
 
-        {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{q ? 'No résumés match.' : 'No base résumés yet. Create one to start.'}</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {filtered.map((b) => {
-              const copies = b.copies || []
-              const isExp = b._forceExpand || expanded.has(b.id)
-              const shown = isExp ? copies : copies.slice(0, PREVIEW_CHIPS)
-              const moreN = copies.length - shown.length
-              return (
-                <div key={b.id} className="v2-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px' }}>
-                  {/* base header */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                    <span onClick={() => openResume(b.id)} title="Open résumé"
-                      style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 500, letterSpacing: '-.01em', cursor: 'pointer' }}>{b.name}</span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                      {b.copy_count} cop{b.copy_count === 1 ? 'y' : 'ies'} · edited {timeAgo(b.updated_at)}
-                    </span>
-                    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                      {b.avg_fit != null ? (
-                        <>
-                          <span style={{ fontFamily: 'var(--serif)', fontSize: 22, letterSpacing: '-.02em', color: scoreColor(b.avg_fit) }}>{b.avg_fit}</span>
-                          <span style={{ fontSize: 10, color: 'var(--muted)' }}>avg fit</span>
-                        </>
-                      ) : <span style={{ fontSize: 11, color: 'var(--faint)' }}>no scored copies</span>}
-                    </span>
+      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '6px 30px 26px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: searching || showArchived ? 4 : 12 }}>
+        {loading ? <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+          : searching ? (
+            <>
+              <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px' }}>{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</span>
+              {results.length === 0 ? <div style={{ padding: '20px 14px', border: '1px dashed var(--line)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</div>
+                : results.map((r, i) => (
+                  <div key={`${r.kind}-${r.id}-${i}`} className="v2-act" onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer' }}>
+                    <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
+                    {r.note && <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{r.note}</span>}
+                    {r.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(r.score) }}>{r.score}</span>}
                   </div>
-
-                  {/* copies */}
-                  {copies.length > 0 && (
-                    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 2 }}>Recent copies</span>
-                      {shown.map((c) => {
-                        const { company, role } = copyMeta(c)
-                        return (
-                          <div key={c.id} className="v2-chip" onClick={() => openResume(c.id)} title={c.name}
-                            style={{ display: 'flex', alignItems: 'center', gap: 7, maxWidth: 300, height: 27, padding: '0 10px', borderRadius: 99, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 11.5 }}>
-                            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--stone)' }}>
-                              {company ? <b style={{ fontWeight: 600 }}>{company}</b> : null}{company && role ? ' · ' : ''}{role}
-                            </span>
-                            {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(c.score) }}>{c.score}</span>}
-                          </div>
-                        )
-                      })}
-                      {moreN > 0 && (
-                        <span onClick={() => setExpanded((prev) => { const n = new Set(prev); n.add(b.id); return n })}
-                          style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ {moreN} more ›</span>
-                      )}
-                      {isExp && !b._forceExpand && copies.length > PREVIEW_CHIPS && (
-                        <span onClick={() => setExpanded((prev) => { const n = new Set(prev); n.delete(b.id); return n })}
-                          style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>show less</span>
-                      )}
-                    </div>
-                  )}
+                ))}
+            </>
+          ) : showArchived ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
+                <span onClick={() => setShowArchived(false)} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
+                <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Archived · {archived.length} from rejected or stale applications</span>
+              </div>
+              {archived.map((c) => (
+                <div key={c.id} className="v2-act" onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer' }}>
+                  <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{copyLabel(c)}</span>
+                  <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{c.why}</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              ))}
+            </>
+          ) : bases.length === 0 ? (
+            <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No base résumés yet. Create one to start.</div>
+          ) : (
+            <>
+              {bases.map((b) => {
+                const copies = b.copies || []
+                return (
+                  <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                      <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{b.copy_count} cop{b.copy_count === 1 ? 'y' : 'ies'} · edited {timeAgo(b.updated_at)}</span>
+                      <span title="Average fit across this base's scored copies" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: b.avg_fit == null ? 'var(--faint)' : scoreColor(b.avg_fit) }}>
+                        {b.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no scored copies</span> : <>{b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
+                      </span>
+                    </div>
+                    {copies.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }}>Recent copies</span>
+                        {copies.slice(0, 6).map((c) => (
+                          <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={c.name} className="v2-chip"
+                            style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
+                            <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
+                            {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
+                          </div>
+                        ))}
+                        {copies.length > 6 && <span onClick={(e) => { e.stopPropagation(); setQ(b.name.split(' ')[0]) }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ {copies.length - 6} more ›</span>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {archived.length > 0 && (
+                <div onClick={() => setShowArchived(true)} className="v2-act" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Archived · {archived.length} cop{archived.length === 1 ? 'y' : 'ies'} from rejected or stale applications</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)' }}>browse ›</span>
+                </div>
+              )}
+            </>
+          )}
+      </div>
+
+      {addOpen && <AddModal onClose={() => setAddOpen(false)} onCreated={(id) => { setAddOpen(false); if (id) openResume(id); else load() }} />}
+    </div>
+  )
+}
+
+function AddModal({ onClose, onCreated }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const fileRef = useRef(null)
+
+  const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
+
+  const createScratch = async () => {
+    if (!name.trim() || busy) return
+    setBusy(true); setErr('')
+    try { const { data } = await api.post('/resumes', { name: name.trim(), is_base: true, json_data: EMPTY }); onCreated(data.id) }
+    catch (e) { setErr(e.response?.data?.detail || 'Create failed'); setBusy(false) }
+  }
+  const importPdf = async (file) => {
+    if (!file || busy) return
+    setBusy(true); setErr('')
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const { data: parsed } = await api.post('/resumes/import-pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { data } = await api.post('/resumes', { name: name.trim() || file.name.replace(/\.pdf$/i, ''), is_base: true, json_data: parsed.json_data || parsed })
+      onCreated(data.id)
+    } catch (e) { setErr(e.response?.data?.detail || 'Import failed — is it a text PDF?'); setBusy(false) }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', padding: 22 }}>
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', marginBottom: 4 }}>New base résumé</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Résumé name (e.g. Backend — Platform v4)"
+          onKeyDown={(e) => e.key === 'Enter' && createScratch()}
+          style={{ width: '100%', height: 38, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface-2)', fontSize: 13, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)', marginBottom: 14 }} />
+        {err && <div style={{ fontSize: 12, color: 'var(--bad)', marginBottom: 10 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 9 }}>
+          <div onClick={createScratch} style={{ flex: 1, height: 40, borderRadius: 99, background: name.trim() ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, cursor: name.trim() ? 'pointer' : 'default' }}>{busy ? 'Creating…' : 'Create from scratch'}</div>
+          <div onClick={() => fileRef.current?.click()} className="v2-act" style={{ flex: 1, height: 40, borderRadius: 99, border: '1px solid var(--edge)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer' }}>Import PDF ↑</div>
+          <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => importPdf(e.target.files?.[0])} />
+        </div>
+        <div onClick={onClose} style={{ marginTop: 14, textAlign: 'center', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
       </div>
     </div>
   )

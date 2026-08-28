@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
 
-from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, SessionLocal, utcnow, Persona
+from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, Application, SessionLocal, utcnow, Persona
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 
 
@@ -447,9 +447,34 @@ def resume_shelf(db: Session = Depends(get_db)):
 
     job_ids = {c.job_id for c in copies if c.job_id}
     jobs = {}
+    app_status = {}
     if job_ids:
         for j in db.query(Job).filter(Job.id.in_(job_ids)).all():
             jobs[j.id] = j
+        # application status per job (rejected → archived); most-recent wins
+        for a in db.query(Application).filter(Application.job_id.in_(job_ids)).order_by(Application.updated_at.asc()).all():
+            app_status[a.job_id] = a.status
+
+    STALE_DAYS = 45
+    now = utcnow()
+
+    def _fresh(c):
+        # unreviewed tailoring changes ≈ LLM suggested_bullets still pending accept/decline
+        try:
+            return any((e or {}).get("suggested_bullets") for e in (c.json_data or {}).get("experience", []))
+        except Exception:
+            return False
+
+    def _archive_reason(c):
+        if app_status.get(c.job_id) == "rejected":
+            return "rejected"
+        ts = c.updated_at
+        if ts is not None:
+            ref = ts if ts.tzinfo else ts.replace(tzinfo=now.tzinfo)
+            days = (now - ref).days
+            if days > STALE_DAYS:
+                return f"stale {days}d"
+        return None
 
     def _copy_score(job, name):
         # Score lives on the copy's job cv_scores, keyed by the copy name or the
@@ -468,6 +493,7 @@ def resume_shelf(db: Session = Depends(get_db)):
     for c in copies:
         by_parent.setdefault(c.parent_id, []).append(c)
 
+    archived = []
     out = []
     for b in bases:
         clist = sorted(by_parent.get(b.id, []),
@@ -476,6 +502,18 @@ def resume_shelf(db: Session = Depends(get_db)):
         for c in clist:
             job = jobs.get(c.job_id)
             sc = _copy_score(job, c.name)
+            reason = _archive_reason(c)
+            if reason:
+                archived.append({
+                    "id": str(c.id),
+                    "name": c.name,
+                    "base_id": str(b.id),
+                    "job_id": str(c.job_id) if c.job_id else None,
+                    "company": (job.company if job else None),
+                    "role": (job.title if job else None),
+                    "why": reason,
+                })
+                continue
             if sc is not None:
                 scores.append(sc)
             copies_out.append({
@@ -485,17 +523,22 @@ def resume_shelf(db: Session = Depends(get_db)):
                 "company": (job.company if job else None),
                 "role": (job.title if job else None),
                 "score": sc,
+                "status": app_status.get(c.job_id) or (job.status if job else None),
+                "fresh": _fresh(c),
                 "updated_at": c.updated_at.isoformat() if c.updated_at else None,
             })
         out.append({
             "id": str(b.id),
             "name": b.name,
             "updated_at": b.updated_at.isoformat() if b.updated_at else None,
-            "copy_count": len(clist),
+            "copy_count": len(copies_out),
             "avg_fit": int(round(sum(scores) / len(scores))) if scores else None,
             "copies": copies_out,
         })
-    return {"bases": out, "total_copies": len(copies)}
+    # newest archived first
+    archived.sort(key=lambda a: a["why"] != "rejected")
+    return {"bases": out, "total_copies": len(copies) - len(archived),
+            "archived": archived, "archived_count": len(archived)}
 
 
 @router.post("", status_code=201)
