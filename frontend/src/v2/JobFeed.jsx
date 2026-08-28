@@ -652,9 +652,9 @@ export default function V2JobFeed() {
               <span style={{ fontSize: 12, color: '#f6f3ea', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
               <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,.18)', margin: '0 3px' }} />
               <div onClick={() => bulkStatus('saved')} style={{ height: 27, padding: '0 12px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Save</div>
-              <div onClick={() => bulkStatus('skip')} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.25)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Skip</div>
-              <div onClick={bulkScore} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.25)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Score</div>
-              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.25)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
+              <div onClick={() => bulkStatus('skip')} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Skip</div>
+              <div onClick={bulkScore} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Score</div>
+              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
               <div onClick={() => setChecked(new Set())} style={{ width: 27, height: 27, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'rgba(255,255,255,.55)', cursor: 'pointer' }}>✕</div>
             </div>
           )}
@@ -963,7 +963,7 @@ export default function V2JobFeed() {
         const existing = single?.tailored_resume_id
         return (
           <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* header */}
               <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
                 <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Create résumé copy</span>
@@ -1011,9 +1011,9 @@ export default function V2JobFeed() {
               </div>
               {/* footer */}
               <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cvMode === 'tailor' ? 'Runs an LLM pass, then opens in the builder' : 'Instant · no LLM cost · lands in Résumés'}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · lands in Résumés'}</span>
                 <div onClick={() => setPicker(null)} className="v2-act" style={{ marginLeft: 'auto', height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                <div onClick={() => cvBase != null && runResume(cvMode, picker.jobs, cvBase)} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: cvBase != null ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: cvBase != null ? 'pointer' : 'default' }}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</div>
+                <div onClick={() => cvBase != null && runResume(cvMode, picker.jobs, cvBase)} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: cvBase != null ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: cvBase != null ? 'pointer' : 'default', whiteSpace: 'nowrap', flex: '0 0 auto' }}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</div>
               </div>
             </div>
           </div>
@@ -1023,7 +1023,7 @@ export default function V2JobFeed() {
       {/* rescore modal — pick résumés + depth */}
       {rescoreJob && (
         <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* header */}
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
               <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>{rescoreJob.verb} against résumés</span>
@@ -1069,7 +1069,7 @@ export default function V2JobFeed() {
             <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
               <div onClick={() => setRescoreJob(null)} className="v2-act" style={{ marginLeft: 'auto', height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-              <div onClick={runRescore} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default' }}>Run scoring</div>
+              <div onClick={runRescore} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Run scoring</div>
             </div>
           </div>
         </div>
