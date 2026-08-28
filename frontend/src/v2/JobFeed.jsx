@@ -372,8 +372,8 @@ export default function V2JobFeed() {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const list = jobsRef.current, idx = selRef.current, job = list[idx]
       switch (e.key) {
-        case 'j': case 'ArrowDown': e.preventDefault(); focusAt(Math.min(idx + 1, list.length - 1)); break
-        case 'k': case 'ArrowUp': e.preventDefault(); focusAt(Math.max(idx - 1, 0)); break
+        case 'f': case 'j': case 'ArrowDown': e.preventDefault(); focusAt(Math.min(idx + 1, list.length - 1)); break
+        case 'g': case 'k': case 'ArrowUp': e.preventDefault(); focusAt(Math.max(idx - 1, 0)); break
         case 's': if (job) { saveJob(job); focusAt(Math.min(idx + 1, list.length - 1)) } break
         case 'x': if (job) { skipJob(job); focusAt(Math.min(idx, list.length - 2)) } break
         case 'a': if (job) applyJob(job); break
