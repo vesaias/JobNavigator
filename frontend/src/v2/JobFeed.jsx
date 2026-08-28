@@ -346,6 +346,7 @@ export default function V2JobFeed() {
     setChecked(new Set())
   }, [pushToast])
   const openTailored = useCallback(async (job) => {
+    if (job.tailored_resume_id) { window.location.href = `/resumes?resume=${job.tailored_resume_id}`; return }
     try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { window.location.href = `/resumes?resume=${copy.id}`; return } } catch {}
     setPicker({ mode: 'tailor', jobs: [job] })
   }, [])
@@ -441,13 +442,25 @@ export default function V2JobFeed() {
         const present = new Set(ids.filter((id) => (data[id] || []).length))
         present.forEach((id) => seenActiveRef.current.add(id))
         const finished = ids.filter((id) => seenActiveRef.current.has(id) && !present.has(id))
-        for (const id of finished) {
-          seenActiveRef.current.delete(id)
-          try { const { data: jd } = await api.get(`/jobs/${id}`); setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
-          const meta = pendingRef.current[id]
-          if (meta) { pushToast({ phase: 'ok', msg: `Done — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` }); delete pendingRef.current[id] }
+        if (finished.length) {
+          // resolve OK vs failed from the run's actual status, not just "it left in-flight"
+          let statusMap = {}
+          try {
+            const { data: fin } = await api.get('/monitor/finished', { params: { job_ids: finished.join(','), since: Math.floor(Date.now() - 20000) } })
+            ;(fin || []).forEach((r) => { if (!(r.target_job_id in statusMap)) statusMap[r.target_job_id] = r.status })
+          } catch { /* status unknown — assume ok */ }
+          for (const id of finished) {
+            seenActiveRef.current.delete(id)
+            try { const { data: jd } = await api.get(`/jobs/${id}`); setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
+            const meta = pendingRef.current[id]
+            if (meta) {
+              const ok = statusMap[id] !== 'failed'
+              pushToast({ phase: ok ? 'ok' : 'nok', msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` })
+              delete pendingRef.current[id]
+            }
+          }
+          setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
         }
-        if (finished.length) setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
         setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: data[j.id] } : j)))
       } catch { /* retry next tick */ }
     }
@@ -546,6 +559,7 @@ export default function V2JobFeed() {
         {/* list */}
         <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ position: 'relative', padding: '12px 22px 8px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
+            <div onClick={() => setChecked(checked.size === jobs.length && jobs.length ? new Set() : new Set(jobs.map((j) => j.id)))} title="Select all shown" style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`, background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent', color: '#fff', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{checked.size === jobs.length && jobs.length ? '✓' : ''}</div>
             <span>{jobs.length} shown · {total} matching</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em' }}>⇧ range · ⌘ pick · s save · x skip</span>
@@ -618,6 +632,7 @@ export default function V2JobFeed() {
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
                           <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: j.status === 'skip' ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
+                          {j.tailored_resume_id && <a href={`/resumes?resume=${j.tailored_resume_id}`} onClick={(e) => e.stopPropagation()} title="Open tailored résumé" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>✦</a>}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, color: 'var(--text-2)', minWidth: 0 }}>
