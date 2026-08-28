@@ -819,7 +819,7 @@ export default function V2JobFeed() {
                         <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
                         <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(best?.score || 0)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(BAND_C * (best?.score || 0) / 100).toFixed(1)} 220`} transform="rotate(-90 39 39)" />
                       </svg>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0) }}>{best?.score}</div>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0), transform: 'translateY(1px)' }}>{best?.score}</div>
                     </div>
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
                     {coverage != null && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{coverage}% keywords</span></>}
