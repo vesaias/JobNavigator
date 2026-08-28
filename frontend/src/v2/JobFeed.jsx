@@ -6,7 +6,7 @@ const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
 
 // ── helpers ──────────────────────────────────────────────────────────────
-const ROW_C = 2 * Math.PI * 17.5   // row ring (viewBox 44, r17.5)
+const ROW_C = 2 * Math.PI * 35     // row ring (viewBox 88 @2x → 44px, r35)
 const BAND_C = 2 * Math.PI * 35     // band ring (viewBox 78, r35)
 const timeAgo = (s) => {
   if (!s) return ''
@@ -683,9 +683,9 @@ export default function V2JobFeed() {
                       <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>
                         {nsc > 0 ? (
                           <>
-                            <svg viewBox="0 0 44 44" style={{ width: 44, height: 44, transform: 'rotate(-90deg)' }}>
-                              <circle cx="22" cy="22" r="17.5" fill="none" stroke="var(--track)" strokeWidth="3" />
-                              <circle cx="22" cy="22" r="17.5" fill="none" stroke={scoreColor(score)} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} />
+                            <svg viewBox="0 0 88 88" style={{ width: 44, height: 44, transform: 'rotate(-90deg)' }}>
+                              <circle cx="44" cy="44" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
+                              <circle cx="44" cy="44" r="35" fill="none" stroke={scoreColor(score)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} />
                             </svg>
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
                             {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
