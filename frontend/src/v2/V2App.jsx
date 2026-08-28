@@ -56,7 +56,7 @@ export default function V2App() {
                 const inner = (
                   <>
                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{open ? it.label : it.label.slice(0, 2)}</span>
-                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? '#8dbb9f' : 'var(--rail-dim)' }}>{count}</span>}
+                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? 'var(--rail-accent)' : 'var(--rail-dim)' }}>{count}</span>}
                     {open && !it.ready && !it.external && <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--rail-dim)', marginLeft: 6 }}>soon</span>}
                   </>
                 )
@@ -74,7 +74,7 @@ export default function V2App() {
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42, padding: '0 14px', borderTop: '1px solid #2e2c24' }}>
           <div onClick={toggleTheme} className="v2-navdark" title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-text)', fontSize: 14, cursor: 'pointer' }}>◐</div>
-          {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: 'var(--rail-dim)', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: '#8dbb9f' }} />healthy</div>}
+          {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: 'var(--rail-dim)', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--rail-accent)' }} />healthy</div>}
           <div onClick={() => setOpen((o) => !o)} className="v2-navdark" title="Collapse sidebar" style={{ marginLeft: 'auto', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-dim)', fontSize: 14, cursor: 'pointer' }}>{open ? '‹' : '›'}</div>
         </div>
       </aside>
