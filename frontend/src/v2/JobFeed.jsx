@@ -73,7 +73,7 @@ function Drop({ label, active, open, onToggle, children, align = 'left', width =
       {open && pos && (
         <>
           <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-          <div className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflow: 'auto',
+          <div className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box',
             background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 8 }}>
             {children}
           </div>
@@ -318,14 +318,14 @@ export default function V2JobFeed() {
     setRescoreDepth('full')
     try {
       const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
-      const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name }))
-      if (personaAvailable) opts.push({ id: 'persona', name: 'Persona' })
+      const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name, note: 'base' }))
+      if (personaAvailable) opts.push({ id: 'persona', name: 'Persona', note: 'from /persona' })
       setRescoreOpts(opts)
       const def = st.data?.default_resume_id
       setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
     } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]) }
   }, [personaAvailable])
-  const openRescore = useCallback((job) => { setRescoreJob({ label: job.title, jobs: [job] }); loadRescoreOpts() }, [loadRescoreOpts])
+  const openRescore = useCallback((job) => { setRescoreJob({ verb: scoredCount(job) > 0 ? 'Rescore' : 'Score', title: job.title, company: job.company, jobs: [job] }); loadRescoreOpts() }, [loadRescoreOpts])
   const runRescore = useCallback(async () => {
     const target = rescoreJob
     if (!target || !rescoreSel.length) return
@@ -371,7 +371,7 @@ export default function V2JobFeed() {
       const { data } = await api.get('/jobs/unscored-ids')
       const ids = data.ids || []
       if (!ids.length) return
-      setRescoreJob({ label: `${ids.length} unscored job${ids.length === 1 ? '' : 's'}`, jobs: ids.map((id) => ({ id })) })
+      setRescoreJob({ verb: 'Score', title: `${ids.length} unscored job${ids.length === 1 ? '' : 's'}`, company: '', jobs: ids.map((id) => ({ id })) })
     } catch (e) { console.error(e) }
   }, [loadRescoreOpts])
 
@@ -552,7 +552,7 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
-            <input type="number" value={filters.min_score} onChange={(e) => setF({ min_score: e.target.value })} style={{ flex: 1, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)' }} />
+            <input type="number" value={filters.min_score} onChange={(e) => setF({ min_score: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Unscored jobs stay visible — this only hides low scores</div>
         </Drop>
@@ -562,7 +562,7 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
-            <input type="number" placeholder="$K" value={filters.min_salary} onChange={(e) => setF({ min_salary: e.target.value })} style={{ flex: 1, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)' }} />
+            <input type="number" placeholder="$K" value={filters.min_salary} onChange={(e) => setF({ min_salary: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Jobs without a listed salary stay visible</div>
         </Drop>
@@ -676,7 +676,7 @@ export default function V2JobFeed() {
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, fontWeight: 450, minWidth: 0, marginTop: 2 }}>
-                          <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontVariantNumeric: 'tabular-nums', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
+                          <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
                         </div>
@@ -726,7 +726,7 @@ export default function V2JobFeed() {
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
-                        <span style={{ maxWidth: 230, fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
+                        <span style={{ maxWidth: 230, fontFamily: 'var(--mono)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
                         {d.location && <><span style={{ color: 'var(--line)' }}>|</span><span style={{ maxWidth: 270, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location}</span></>}
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span style={{ color: visaCol }}>{visaText}</span>
@@ -944,24 +944,54 @@ export default function V2JobFeed() {
 
       {/* rescore modal — pick résumés + depth */}
       {rescoreJob && (
-        <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(27,26,22,.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 380, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--edge)', boxShadow: '0 20px 50px rgba(0,0,0,.28)', padding: 18 }}>
-            <div style={{ fontFamily: 'var(--serif)', fontSize: 17, marginBottom: 4 }}>Score against…</div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{rescoreJob.label}</div>
-            <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflow: 'auto', marginBottom: 12 }}>
-              {rescoreOpts.length === 0 ? <span style={{ fontSize: 12, color: 'var(--muted)' }}>No résumés available.</span>
-                : rescoreOpts.map((o) => <Check key={o.id} on={rescoreSel.includes(o.id)} label={o.name} onClick={() => setRescoreSel((prev) => prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id])} />)}
+        <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* header */}
+            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
+              <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>{rescoreJob.verb} against résumés</span>
+              <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: 1.25 }}>{rescoreJob.title}</span>
+              {rescoreJob.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{rescoreJob.company}</span>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Depth</span>
-              <div style={{ display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
-                {[['quick', 'Quick'], ['full', 'Full']].map(([v, label]) => <div key={v} onClick={() => setRescoreDepth(v)} style={{ height: 26, padding: '0 13px', display: 'flex', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: rescoreDepth === v ? 'var(--accent)' : 'transparent', color: rescoreDepth === v ? 'var(--accent-ink)' : 'var(--text-2)' }}>{label}</div>)}
+            {/* body */}
+            <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Résumés</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{rescoreSel.length} selected</span>
+                </div>
+                {rescoreOpts.length === 0 ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>No résumés available.</span>
+                  : rescoreOpts.map((o) => {
+                    const on = rescoreSel.includes(o.id)
+                    return (
+                      <div key={o.id} className="v2-act" onClick={() => setRescoreSel((prev) => prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id])}
+                        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
+                        <span style={{ flex: '0 0 auto', width: 17, height: 17, borderRadius: 5, border: on ? 'none' : '1px solid var(--edge)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{on ? '✓' : ''}</span>
+                        <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
+                        <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>{o.note}</span>
+                      </div>
+                    )
+                  })}
               </div>
-              <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)' }}>{rescoreDepth === 'full' ? 'full report' : 'score only'}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Depth</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['light', 'Light', 'Scores only'], ['full', 'Full', 'Report + keywords']].map(([v, label, help]) => {
+                    const on = rescoreDepth === v
+                    return (
+                      <div key={v} onClick={() => setRescoreDepth(v)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{help}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div onClick={runRescore} style={{ flex: 1, height: 36, borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--line)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default' }}>Score {rescoreSel.length || ''}</div>
-              <div onClick={() => setRescoreJob(null)} className="v2-pill" style={{ height: 36, padding: '0 16px', borderRadius: 99, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
+            {/* footer */}
+            <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
+              <div onClick={() => setRescoreJob(null)} className="v2-act" style={{ marginLeft: 'auto', height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+              <div onClick={runRescore} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default' }}>Run scoring</div>
             </div>
           </div>
         </div>
