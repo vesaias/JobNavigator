@@ -843,6 +843,7 @@ export default function V2JobFeed() {
                                 {[['all', `All ${reqRows.length}`], ['gaps', `Gaps ${reqRows.length - reqMet}`]].map(([id, label]) => <div key={id} onClick={() => setReqFilter(id)} style={{ height: 24, padding: '0 11px', display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', background: reqFilter === id ? 'var(--accent)' : 'transparent', color: reqFilter === id ? '#fff' : 'var(--text-2)' }}>{label}</div>)}
                               </div>
                             </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', gap: 14, padding: '0 0 6px', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                               <span style={{ flex: 1.05 }}>Requirement</span><span style={{ flex: 1.1 }}>Résumé match</span><span style={{ flex: '0 0 34px', textAlign: 'center' }}>Status</span>
                             </div>
@@ -853,6 +854,7 @@ export default function V2JobFeed() {
                                 <span style={{ flex: '0 0 34px', textAlign: 'center', color: r.matched ? 'var(--good)' : 'var(--bad)' }}>{r.matched ? '✓' : '✕'}</span>
                               </div>
                             ))}
+                            </div>
                           </div>
                         )}
 
