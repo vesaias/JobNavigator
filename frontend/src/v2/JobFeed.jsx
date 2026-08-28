@@ -17,7 +17,7 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 const isToday = (s) => s && (Date.now() - new Date(s).getTime()) < 86400000
-const scoreColor = (s) => (s >= 80 ? 'var(--good)' : s >= 65 ? 'var(--text-2)' : 'var(--warn)')
+const scoreColor = (s) => (s >= 80 ? 'var(--good)' : s >= 65 ? 'var(--warn)' : 'var(--bad)')
 const scoreEntries = (j) => Object.entries(j.cv_scores || {}).filter(([, v]) => typeof v === 'number')
 const bestScore = (j) => { const e = scoreEntries(j); return e.length ? Math.max(...e.map(([, v]) => v)) : 0 }
 const scoredCount = (j) => scoreEntries(j).length
