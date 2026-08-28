@@ -4,6 +4,41 @@ import api from '../api'
 import './theme.css'
 
 const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
+
+// contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
+function wordDiff(a = '', b = '') {
+  a = a || ''; b = b || ''
+  if (a === b) return null
+  const aw = a.split(' '), bw = b.split(' ')
+  let p = 0
+  while (p < aw.length && p < bw.length && aw[p] === bw[p]) p++
+  let sa = aw.length, sb = bw.length
+  while (sa > p && sb > p && aw[sa - 1] === bw[sb - 1]) { sa--; sb-- }
+  const before = aw.slice(0, p).join(' ')
+  return {
+    before: before ? before + ' ' : '',
+    removed: aw.slice(p, sa).join(' '),
+    added: bw.slice(p, sb).join(' '),
+    after: sa < aw.length ? ' ' + aw.slice(sa).join(' ') : '',
+  }
+}
+// changes a tailored copy carries vs its base: modified summary/bullets + added (suggested) bullets
+function computeChanges(base, copy) {
+  if (!base || !copy) return []
+  const out = []
+  const sd = wordDiff(base.summary, copy.summary)
+  if (sd) out.push({ key: 'summary', where: 'Summary', kind: 'modified', path: 'summary', baseText: base.summary || '', ...sd })
+  ;(copy.experience || []).forEach((ce, i) => {
+    const be = (base.experience || [])[i] || {}
+    const bb = be.bullets || [], cb = ce.bullets || []
+    cb.forEach((txt, j) => {
+      if (j < bb.length) { const d = wordDiff(bb[j], txt); if (d) out.push({ key: `exp${i}b${j}`, where: `Experience · ${ce.company || 'role'} · bullet ${j + 1}`, kind: 'modified', path: `experience.${i}.bullets.${j}`, baseText: bb[j], ...d }) }
+      else out.push({ key: `exp${i}nb${j}`, where: `Experience · ${ce.company || 'role'} · new bullet`, kind: 'added', before: '', removed: '', added: txt, after: '', text: txt })
+    })
+    ;(ce.suggested_bullets || []).forEach((sb, k) => out.push({ key: `exp${i}sb${k}`, where: `Experience · ${ce.company || 'role'} · suggested bullet`, kind: 'suggested', expIdx: i, sbIdx: k, before: '', removed: '', added: sb, after: '', text: sb }))
+  })
+  return out
+}
 const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
 const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
 const timeAgo = (s) => {
@@ -62,6 +97,8 @@ export default function ResumeEditor() {
   const [tplOpen, setTplOpen] = useState(false)
   const [fmtOpen, setFmtOpen] = useState(false)
   const [tailorOpen, setTailorOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [baseData, setBaseData] = useState(null)   // parent json_data (for diff + inline marks)
   const [toasts, setToasts] = useState([])
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
@@ -116,6 +153,16 @@ export default function ResumeEditor() {
     return () => { alive = false }
   }, [id, navigate])
 
+  // parent base data for the diff/marks (tailored copies only)
+  useEffect(() => {
+    if (!doc || doc.is_base || !doc.parent_id) { setBaseData(null); return }
+    let alive = true
+    api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) setBaseData(p.json_data || null) }).catch(() => {})
+    return () => { alive = false }
+  }, [doc])
+
+  const changes = useMemo(() => (isCopy && baseData && data ? computeChanges(baseData, data) : []), [isCopy, baseData, data])
+
   // debounced persist
   const persist = useCallback((patch) => {
     setSaving(true)
@@ -146,6 +193,29 @@ export default function ResumeEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, template, format, doc, id])
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl) }, [pdfUrl])
+
+  // apply the decline-based review: declined modified/added → revert to base; kept
+  // suggested bullets → append; then clear all suggested_bullets. One save.
+  const applyReview = useCallback((declined) => {
+    const d = JSON.parse(JSON.stringify(data || EMPTY))
+    changes.forEach((c) => {
+      const off = !!declined[c.key]
+      if (c.kind === 'modified' && off) {
+        const keys = c.path.split('.'); let o = d
+        for (let i = 0; i < keys.length - 1; i++) o = o?.[keys[i]]
+        if (o) o[keys[keys.length - 1]] = c.baseText
+      } else if (c.kind === 'added' && off) {
+        // remove the added copy bullet (match by text within its experience)
+        d.experience?.forEach((e) => { if (e.bullets) e.bullets = e.bullets.filter((b) => b !== c.text) })
+      } else if (c.kind === 'suggested' && !off) {
+        const e = d.experience?.[c.expIdx]; if (e) { e.bullets = e.bullets || []; e.bullets.push(c.text) }
+      }
+    })
+    ;(d.experience || []).forEach((e) => { delete e.suggested_bullets })
+    onData(d)
+    setReviewOpen(false)
+    pushToast({ msg: 'Review applied — declined changes restored to base.' })
+  }, [changes, data, onData, pushToast])
 
   // ── json_data mutation (mirrors v1 ResumeContentEditor) ────────────────────
   const mutate = (fn) => { const d = JSON.parse(JSON.stringify(data || EMPTY)); fn(d); onData(d) }
@@ -182,7 +252,10 @@ export default function ResumeEditor() {
           <span>Tailored copy{doc.job_id ? <> · <span onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)} style={{ color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">open job ↗</span></> : ''}</span>
           <span style={{ color: 'var(--line)' }}>·</span>
           <span style={{ color: 'var(--muted)' }}>editing here changes only this copy</span>
-          <div onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto', height: 30, padding: '0 15px', borderRadius: 99, border: '1px solid var(--edge)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer' }} className="v2-act">✦ Re-tailor…</div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }}>
+            {changes.length > 0 && <div onClick={() => setReviewOpen(true)} style={{ height: 30, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Review {changes.length} change{changes.length === 1 ? '' : 's'}</div>}
+            <div onClick={() => setTailorOpen(true)} style={{ height: 30, padding: '0 15px', borderRadius: 99, border: '1px solid var(--edge)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer' }} className="v2-act">✦ Re-tailor…</div>
+          </div>
         </div>
       ) : (
         <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
@@ -208,7 +281,7 @@ export default function ResumeEditor() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
                     {name === 'Header' && <HeaderEditor data={data} setField={setField} mutate={mutate} />}
                     {name === 'Summary' && <Field multiline rows={4} value={data.summary} onChange={(v) => setField('summary', v)} placeholder="Professional summary…" />}
-                    {name === 'Experience' && <ExperienceEditor data={data} setField={setField} mutate={mutate} />}
+                    {name === 'Experience' && <ExperienceEditor data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />}
                     {name === 'Skills' && <SkillsEditor data={data} setField={setField} mutate={mutate} />}
                     {name === 'Education' && <EducationEditor data={data} setField={setField} mutate={mutate} />}
                     {name === 'Projects' && <ProjectsEditor data={data} setField={setField} mutate={mutate} />}
@@ -260,6 +333,7 @@ export default function ResumeEditor() {
       </div>
 
       {tailorOpen && <TailorModal doc={doc} onClose={() => setTailorOpen(false)} onRun={runTailor} />}
+      {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
 
       {/* toasts */}
       <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
@@ -355,6 +429,52 @@ function TailorModal({ doc, onClose, onRun }) {
   )
 }
 
+// ── review modal (decline-based) ─────────────────────────────────────────────
+function ReviewModal({ changes, onClose, onApply }) {
+  const [declined, setDeclined] = useState({})
+  const n = Object.values(declined).filter(Boolean).length
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 620, maxHeight: 580, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailoring changes — already applied</span>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>These landed automatically. Decline any you don't want; the base text comes back.</span>
+          </div>
+          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+        </div>
+        <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 11, minHeight: 0 }}>
+          {changes.length === 0 && <div style={{ padding: 20, fontSize: 12.5, color: 'var(--muted)' }}>No tailoring changes to review.</div>}
+          {changes.map((c) => {
+            const off = !!declined[c.key]
+            const added = c.kind === 'modified' ? (off ? c.removed : c.added) : c.added
+            const removed = c.kind === 'modified' ? (off ? c.added : c.removed) : ''
+            return (
+              <div key={c.key} style={{ border: `1px solid ${off ? 'var(--line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: off ? 'var(--bg)' : 'var(--change-bg)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
+                  <span style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: off ? 'var(--surface-2)' : 'var(--accent-soft)', color: off ? 'var(--muted)' : 'var(--accent)' }}>{off ? 'declined' : 'applied'}</span>
+                  <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{off ? 'Restore change' : 'Decline ↩'}</div>
+                </div>
+                <span style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                  {c.before}
+                  {removed && <span style={{ background: 'var(--bad-soft)', textDecoration: 'line-through', opacity: 0.75, borderRadius: 3, padding: '0 3px' }}>{removed}</span>}
+                  {added && <span style={{ background: off ? 'var(--surface-2)' : 'var(--change-soft)', borderRadius: 3, padding: '0 3px' }}>{added || '(base text restored)'}</span>}
+                  {c.after}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</span>
+          <div onClick={() => onApply(declined)} style={{ marginLeft: 'auto', height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Done reviewing</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── section editors (v2-styled, same handlers as v1) ─────────────────────────
 function HeaderEditor({ data, setField, mutate }) {
   const items = data.header?.contact_items || []
@@ -381,9 +501,17 @@ function HeaderEditor({ data, setField, mutate }) {
     </div>
   )
 }
-function ExperienceEditor({ data, setField, mutate }) {
+function ExperienceEditor({ data, setField, mutate, baseExp }) {
   const exp = data.experience || []
   const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
+  // tailoring mark for a bullet vs the base copy: 'changed' | 'added' | null
+  const bulletMark = (i, bi, txt) => {
+    if (!baseExp) return null
+    const bb = baseExp[i]?.bullets || []
+    if (bi >= bb.length) return { kind: 'added', label: 'Added by tailoring' }
+    if (bb[bi] !== txt) return { kind: 'changed', label: 'Changed by tailoring', base: bb[bi] }
+    return null
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
       {exp.map((e, i) => (
@@ -396,13 +524,17 @@ function ExperienceEditor({ data, setField, mutate }) {
           </div>
           <Field label="Description" value={e.description} onChange={(v) => setField(`experience.${i}.description`, v)} placeholder="Optional role description" />
           <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>Bullets</span>
-          {(e.bullets || []).map((b, bi) => (
-            <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-              <span style={{ color: 'var(--muted)', fontSize: 11, paddingTop: 7 }}>·</span>
-              <Field value={b} onChange={(v) => setBullet(i, bi, v)} flex={1} multiline rows={1} />
-              <IconBtn danger onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove">✕</IconBtn>
-            </div>
-          ))}
+          {(e.bullets || []).map((b, bi) => {
+            const m = bulletMark(i, bi, b)
+            return (
+              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, ...(m ? { padding: '2px 6px 2px 2px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 } : {}) }}>
+                <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, paddingTop: 7 }}>{m ? '✦' : '·'}</span>
+                <Field value={b} onChange={(v) => setBullet(i, bi, v)} flex={1} multiline rows={1} />
+                {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline — restore the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, paddingTop: 6 }}>↩</span>}
+                <IconBtn danger onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove">✕</IconBtn>
+              </div>
+            )
+          })}
           {(e.suggested_bullets || []).length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '7px 9px', border: '1px solid var(--accent)', background: 'var(--accent-soft)', borderRadius: 6 }}>
               <span style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>✦ Suggested by tailoring · review to keep</span>
