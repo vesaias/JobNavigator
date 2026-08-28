@@ -1010,14 +1010,17 @@ export default function V2JobFeed() {
                       /* optimistic: always try the live frame; only a confirmed block swaps it out */
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
                     ) : d.url ? (
-                      /* extension off and the site blocks framing — same empty-state style as "Not scored yet" */
-                      <div style={{ flex: '0 0 auto', margin: '18px 30px 4px', display: 'flex', alignItems: 'center', gap: 20, padding: '16px 18px', border: '1px dashed var(--edge)', borderRadius: 10 }}>
-                        <div style={{ width: 74, height: 74, flex: '0 0 74px', border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.3 }}>No<br />frame</div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>This site blocks inline preview</span>
-                          <span style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: '54ch' }}>It sends <code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code> to prevent embedding. The Navigator extension strips those headers so the live posting loads here — it doesn’t look active in this browser. <span onClick={() => setForceFrame(true)} style={{ color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">Try preview anyway</span></span>
+                      /* frame-blocked — canonical design panel */
+                      <div style={{ flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 30px', minHeight: 0 }}>
+                        <div style={{ maxWidth: '44ch', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 11, textAlign: 'center' }}>
+                          <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
+                          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>This posting refuses to be framed</span>
+                          <span style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>{d.company} sends X-Frame-Options, so the live page cannot render here. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 34, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open in new tab ↗</a>
+                            {dCached && <div onClick={() => setViewCached(true)} className="v2-act" style={{ height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>View cached snapshot</div>}
+                          </div>
                         </div>
-                        <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
                       </div>
                     ) : (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>No posting URL captured for this job.</div>
