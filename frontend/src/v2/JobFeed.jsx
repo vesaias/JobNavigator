@@ -641,17 +641,17 @@ export default function V2JobFeed() {
                 return (
                   <div key={j.id} data-row={i} className="v2-row" onClick={(e) => rowClick(e, i, j)}
                     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: 12, opacity: isIgnored ? 0.55 : 1 }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '9px 12px', opacity: isIgnored ? 0.55 : 1 }}>
                       {/* ring */}
-                      <div style={{ position: 'relative', width: 40, height: 40, flex: '0 0 40px' }}>
+                      <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>
                         {nsc > 0 ? (
                           <>
-                            <svg viewBox="0 0 44 44" style={{ width: 40, height: 40, transform: 'rotate(-90deg)' }}>
+                            <svg viewBox="0 0 44 44" style={{ width: 44, height: 44, transform: 'rotate(-90deg)' }}>
                               <circle cx="22" cy="22" r="17.5" fill="none" stroke="var(--line)" strokeWidth="2" />
                               <circle cx="22" cy="22" r="17.5" fill="none" stroke={scoreColor(score)} strokeWidth="2" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} />
                             </svg>
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
-                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 15, height: 15, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-2)' }}>{nsc}</div>}
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 17, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
+                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
                           </>
                         ) : run ? (
                           <>
@@ -675,7 +675,7 @@ export default function V2JobFeed() {
                           {j.location && <span style={{ flex: '0 0 auto', color: 'var(--line)' }}>|</span>}
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, minWidth: 0, marginTop: 4 }}>
                           <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 160, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
