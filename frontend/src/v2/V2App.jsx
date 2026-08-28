@@ -48,7 +48,7 @@ export default function V2App() {
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 18, padding: '6px 0', overflow: 'auto' }}>
           {GROUPS.map((g) => (
             <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
-              {open && <div style={{ fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: '#66604f', padding: '0 22px 8px' }}>{g.label}</div>}
+              {open && <div style={{ fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', padding: '0 22px 8px' }}>{g.label}</div>}
               {g.items.map((it) => {
                 const active = loc.pathname === it.to || loc.pathname.startsWith(it.to + '/')
                 const count = it.countKey != null ? counts[it.countKey] : undefined
@@ -56,12 +56,12 @@ export default function V2App() {
                 const inner = (
                   <>
                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{open ? it.label : it.label.slice(0, 2)}</span>
-                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? '#8dbb9f' : '#66604f' }}>{count}</span>}
-                    {open && !it.ready && !it.external && <span style={{ flex: '0 0 auto', fontSize: 9, color: '#66604f', marginLeft: 6 }}>soon</span>}
+                    {open && count != null && <span style={{ flex: '0 0 auto', fontSize: 11, fontFamily: 'var(--mono)', color: active ? '#8dbb9f' : 'var(--rail-dim)' }}>{count}</span>}
+                    {open && !it.ready && !it.external && <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--rail-dim)', marginLeft: 6 }}>soon</span>}
                   </>
                 )
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" className="v2-navdark" style={{ ...base, color: '#a8a396' }}>{inner}</a>
-                if (!it.ready) return <div key={it.to} title="Coming in the redesign" style={{ ...base, color: '#66604f', cursor: 'default' }}>{inner}</div>
+                if (!it.ready) return <div key={it.to} title="Coming in the redesign" style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
                 return (
                   <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? '#f6f3ea' : 'var(--rail-text)', background: active ? 'rgba(255,255,255,.045)' : 'transparent' }}>{inner}</NavLink>
                 )
@@ -69,13 +69,13 @@ export default function V2App() {
             </div>
           ))}
         </nav>
-        <a href="/" className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, padding: '0 20px', fontSize: 12, color: '#66604f', whiteSpace: 'nowrap' }}>
+        <a href="/" className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, padding: '0 20px', fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap' }}>
           {open ? '← Classic UI' : '←'}
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42, padding: '0 14px', borderTop: '1px solid #2e2c24' }}>
           <div onClick={toggleTheme} className="v2-navdark" title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-text)', fontSize: 14, cursor: 'pointer' }}>◐</div>
-          {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: '#66604f', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: '#8dbb9f' }} />healthy</div>}
-          <div onClick={() => setOpen((o) => !o)} className="v2-navdark" title="Collapse sidebar" style={{ marginLeft: 'auto', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#66604f', fontSize: 14, cursor: 'pointer' }}>{open ? '‹' : '›'}</div>
+          {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: 'var(--rail-dim)', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: '#8dbb9f' }} />healthy</div>}
+          <div onClick={() => setOpen((o) => !o)} className="v2-navdark" title="Collapse sidebar" style={{ marginLeft: 'auto', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-dim)', fontSize: 14, cursor: 'pointer' }}>{open ? '‹' : '›'}</div>
         </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

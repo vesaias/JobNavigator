@@ -3,9 +3,9 @@
    gets data-theme="dark" from V2App (mirrors the global jobnavigator_dark_mode). */
 .jn-v2 {
   --bg:#faf8f3; --surface:#ffffff; --surface-2:#f3f0e8; --line:#e2ddd0; --line-soft:#eeeae0;
-  --text:#1b1a16; --text-2:#57534a; --muted:#8f8a7d; --accent:#3f6b52; --accent-soft:#eaf1eb;
+  --text:#1b1a16; --text-2:#57534a; --muted:#6d6862; --accent:#3f6b52; --accent-soft:#eaf1eb;
   --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
-  --rail:#22211c; --rail-text:#a8a396; --paper:#ffffff;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
   --sans:'Public Sans',system-ui,sans-serif;
@@ -21,9 +21,9 @@
 }
 .jn-v2[data-theme="dark"] {
   --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
-  --text:#efeade; --text-2:#b8b2a3; --muted:#807b6e; --accent:#8dbb9f; --accent-soft:#1f2a23;
+  --text:#efeade; --text-2:#b8b2a3; --muted:#928d7f; --accent:#8dbb9f; --accent-soft:#1f2a23;
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
-  --rail:#100f0b; --rail-text:#948f82; --paper:#f7f4ec;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --paper:#f7f4ec;
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
 .jn-v2 a { color:var(--accent); text-decoration:none; }
