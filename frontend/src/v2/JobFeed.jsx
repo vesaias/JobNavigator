@@ -1006,22 +1006,18 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                    ) : d.url && (extActive || forceFrame || frameOk === true) ? (
+                    ) : d.url && (extActive || forceFrame || frameOk !== false) ? (
+                      /* optimistic: always try the live frame; only a confirmed block swaps it out */
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                    ) : d.url && frameOk === null ? (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading posting…</div>
                     ) : d.url ? (
-                      /* extension off and the site blocks framing — explain instead of "refused to connect" */
-                      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 30px' }}>
-                        <div style={{ maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
-                          <div style={{ width: 46, height: 46, borderRadius: 99, border: '1px dashed var(--edge)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧩</div>
-                          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.015em' }}>This site blocks inline preview</span>
-                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>It sends <code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code> to prevent embedding. The Navigator extension strips those headers so the live posting loads right here — it doesn’t look active in this browser.</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
-                            <div onClick={() => setForceFrame(true)} className="v2-act" style={{ height: 36, padding: '0 16px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Try preview anyway</div>
-                          </div>
+                      /* extension off and the site blocks framing — same empty-state style as "Not scored yet" */
+                      <div style={{ flex: '0 0 auto', margin: '18px 30px 4px', display: 'flex', alignItems: 'center', gap: 20, padding: '16px 18px', border: '1px dashed var(--edge)', borderRadius: 10 }}>
+                        <div style={{ width: 74, height: 74, flex: '0 0 74px', border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.3 }}>No<br />frame</div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>This site blocks inline preview</span>
+                          <span style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: '54ch' }}>It sends <code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code> to prevent embedding. The Navigator extension strips those headers so the live posting loads here — it doesn’t look active in this browser. <span onClick={() => setForceFrame(true)} style={{ color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">Try preview anyway</span></span>
                         </div>
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
                       </div>
                     ) : (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>No posting URL captured for this job.</div>
