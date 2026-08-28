@@ -1024,7 +1024,7 @@ export default function V2JobFeed() {
                         <iframe title="posting-static" srcDoc={readerHtml} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
                       </>
                     ) : d.url && !readerErr ? (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading reader view…</div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading posting…</div>
                     ) : d.url ? (
                       /* reader capture failed too — explain and offer the direct frame / open */
                       <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 30px' }}>
