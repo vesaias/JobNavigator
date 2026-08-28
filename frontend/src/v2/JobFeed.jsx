@@ -41,8 +41,8 @@ const BADGE = {
 }
 const SOURCE_LABELS = {
   direct: 'Direct', extension: 'Extension', jobspy_linkedin: 'LinkedIn', jobspy_indeed: 'Indeed',
-  jobspy_zip_recruiter: 'ZipRecruiter', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LinkedIn',
-  linkedin_extension: 'LinkedIn', jobright: 'Jobright', freehire: 'FreeHire', playwright_url: 'Company careers', playwright_direct: 'Company careers',
+  jobspy_zip_recruiter: 'ZipRecruiter', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LinkedIn Personal',
+  linkedin_extension: 'LinkedIn Extension', jobright: 'Jobright', freehire: 'FreeHire', playwright_url: 'Company careers', playwright_direct: 'Career page',
 }
 const srcLabel = (s) => SOURCE_LABELS[s] || s || ''
 const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'], ['skip', 'Skip'], ['ignored', 'Ignored']]
@@ -53,12 +53,15 @@ const DEFAULTS = { status: ['new', 'saved', 'applied'], company: [], source: [],
 // when the panel would overflow the viewport's right edge.
 function Drop({ label, active, open, onToggle, children, align = 'left', width = 216, trigger }) {
   const ref = useRef(null)
-  const [side, setSide] = useState(align)
+  const [pos, setPos] = useState(null)
   useLayoutEffect(() => {
-    if (!open || !ref.current) { return }
+    if (!open || !ref.current) { setPos(null); return }
     const r = ref.current.getBoundingClientRect()
-    setSide(r.left + width > window.innerWidth - 14 ? 'right' : align)
-  }, [open, width, align])
+    // fixed positioning escapes the list/detail clip; flip left when it would
+    // overflow the right edge, and keep it on-screen
+    const left = (r.left + width > window.innerWidth - 12) ? Math.max(8, r.right - width) : r.left
+    setPos({ left, top: r.bottom + 5 })
+  }, [open, width])
   return (
     <div ref={ref} style={{ position: 'relative', flex: '0 0 auto' }}>
       {trigger ? trigger(onToggle) : (
@@ -67,10 +70,10 @@ function Drop({ label, active, open, onToggle, children, align = 'left', width =
           {label}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
         </div>
       )}
-      {open && (
+      {open && pos && (
         <>
-          <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 34 }} />
-          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', [side]: 0, zIndex: 35, marginTop: 5, width, maxHeight: 340, overflow: 'auto',
+          <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
+          <div className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflow: 'auto',
             background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 8 }}>
             {children}
           </div>
@@ -125,6 +128,7 @@ export default function V2JobFeed() {
   const [search, setSearch] = useState('')
   const [dSearch, setDSearch] = useState('')
   const [menu, setMenu] = useState(null)
+  const [companyQuery, setCompanyQuery] = useState('')
 
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
@@ -512,8 +516,14 @@ export default function V2JobFeed() {
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
         <Drop label="Company" active={filters.company.length > 0} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
-          <div style={{ height: 30, padding: '0 10px', border: '1px solid var(--line)', borderRadius: 7, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--muted)', background: 'var(--surface-2)', marginBottom: 6 }}>Type to search {companyList.length} companies…</div>
-          {companyList.slice(0, 60).map((c) => <Check key={c} on={filters.company.includes(c)} label={c} onClick={() => togF('company', c)} />)}
+          <input autoFocus value={companyQuery} onChange={(e) => setCompanyQuery(e.target.value)} placeholder={`Type to search ${companyList.length} companies…`}
+            style={{ width: '100%', height: 30, padding: '0 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, background: 'var(--surface-2)', color: 'var(--text)', outline: 'none', marginBottom: 6, fontFamily: 'var(--sans)' }} />
+          {(() => {
+            const q = companyQuery.trim().toLowerCase()
+            const list = companyList.filter((c) => filters.company.includes(c) || c.toLowerCase().includes(q)).slice(0, 80)
+            return list.length ? list.map((c) => <Check key={c} on={filters.company.includes(c)} label={c} onClick={() => togF('company', c)} />)
+              : <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)' }}>No matches</div>
+          })()}
         </Drop>
         <Drop label="H-1B" active={filters.h1b_verdict.length > 0} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
           {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} onClick={() => togF('h1b_verdict', v)} />)}
