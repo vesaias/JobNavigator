@@ -60,7 +60,7 @@ export default function V2App() {
                     {open && !it.ready && !it.external && <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--rail-dim)', marginLeft: 6 }}>soon</span>}
                   </>
                 )
-                if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" className="v2-navdark" style={{ ...base, color: '#a8a396' }}>{inner}</a>
+                if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
                 if (!it.ready) return <div key={it.to} title="Coming in the redesign" style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
                 return (
                   <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? '#f6f3ea' : 'var(--rail-text)', background: active ? 'rgba(255,255,255,.045)' : 'transparent' }}>{inner}</NavLink>
@@ -72,7 +72,7 @@ export default function V2App() {
         <a href="/" className="v2-navdark" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, padding: '0 20px', fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap' }}>
           {open ? '← Classic UI' : '←'}
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42, padding: '0 14px', borderTop: '1px solid #2e2c24' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42, padding: '0 14px', borderTop: '1px solid var(--rail-line)' }}>
           <div onClick={toggleTheme} className="v2-navdark" title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-text)', fontSize: 14, cursor: 'pointer' }}>◐</div>
           {open && <div title="Scraper healthy" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 9px', borderRadius: 8, color: 'var(--rail-dim)', fontSize: 11.5 }}><span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--rail-accent)' }} />healthy</div>}
           <div onClick={() => setOpen((o) => !o)} className="v2-navdark" title="Collapse sidebar" style={{ marginLeft: 'auto', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--rail-dim)', fontSize: 14, cursor: 'pointer' }}>{open ? '‹' : '›'}</div>
