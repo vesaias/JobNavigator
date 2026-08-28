@@ -17,7 +17,7 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 const isToday = (s) => s && (Date.now() - new Date(s).getTime()) < 86400000
-const scoreColor = (s) => (s >= 80 ? 'var(--good)' : s >= 65 ? 'var(--warn)' : 'var(--bad)')
+const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 const scoreEntries = (j) => Object.entries(j.cv_scores || {}).filter(([, v]) => typeof v === 'number')
 const bestScore = (j) => { const e = scoreEntries(j); return e.length ? Math.max(...e.map(([, v]) => v)) : 0 }
 const scoredCount = (j) => scoreEntries(j).length
@@ -807,9 +807,9 @@ export default function V2JobFeed() {
                     <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px', marginLeft: -4 }}>
                       <svg viewBox="0 0 78 78" style={{ width: 34, height: 34, transform: 'rotate(-90deg)' }}>
                         <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
-                        <circle cx="39" cy="39" r="35" fill="none" stroke="var(--accent)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(BAND_C * (best?.score || 0) / 100).toFixed(1)} 220`} />
+                        <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(best?.score || 0)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(BAND_C * (best?.score || 0) / 100).toFixed(1)} 220`} />
                       </svg>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em' }}>{best?.score}</div>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0) }}>{best?.score}</div>
                     </div>
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
                     {coverage != null && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{coverage}% keywords</span></>}
