@@ -137,6 +137,7 @@ export default function V2JobFeed() {
   const [reportTab, setReportTab] = useState(0)
   const [reqFilter, setReqFilter] = useState('all')
   const [showMatched, setShowMatched] = useState(false)
+  const [breakdownOpen, setBreakdownOpen] = useState(false)
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
 
@@ -840,19 +841,28 @@ export default function V2JobFeed() {
                         {(d.fit_strengths || []).length > 0 && !rpt?.summary && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_strengths || []).map((s, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--good)' }}>✓</span><span>{s}</span></div>)}</div>}
 
                         {rpt?.breakdown && Object.keys(rpt.breakdown).length > 0 && (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 30px' }}>
-                            {Object.entries(rpt.breakdown).filter(([, v]) => typeof v === 'number').map(([label, val]) => {
-                              const pct = Math.max(0, Math.min(100, Math.round((val / 20) * 100)))
-                              return (
-                                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: 12.5, color: 'var(--text-2)', textTransform: 'capitalize' }}>{label}</span>
-                                    <span style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{val}<span style={{ fontSize: 11, color: 'var(--muted)' }}>/20</span></span>
-                                  </div>
-                                  <div style={{ height: 1, background: 'var(--line)' }}><div style={{ height: 1, background: 'var(--accent)', width: `${pct}%` }} /></div>
-                                </div>
-                              )
-                            })}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: breakdownOpen ? 11 : 0 }}>
+                            <div onClick={() => setBreakdownOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
+                              <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Score breakdown</span>
+                              <span style={{ flex: 1, minWidth: 0, height: 1, background: 'var(--line-soft)' }} />
+                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{breakdownOpen ? '⌄' : '›'}</span>
+                            </div>
+                            {breakdownOpen && (
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 30px' }}>
+                                {Object.entries(rpt.breakdown).filter(([, v]) => typeof v === 'number').map(([label, val]) => {
+                                  const pct = Math.max(0, Math.min(100, Math.round((val / 20) * 100)))
+                                  return (
+                                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: 12.5, color: 'var(--text-2)', textTransform: 'capitalize' }}>{label}</span>
+                                        <span style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{val}<span style={{ fontSize: 11, color: 'var(--muted)' }}>/20</span></span>
+                                      </div>
+                                      <div style={{ height: 1, background: 'var(--line)' }}><div style={{ height: 1, background: 'var(--accent)', width: `${pct}%` }} /></div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
 
