@@ -629,10 +629,10 @@ export default function V2JobFeed() {
                         {nsc > 0 ? (
                           <>
                             <svg viewBox="0 0 44 44" style={{ width: 40, height: 40, transform: 'rotate(-90deg)' }}>
-                              <circle cx="22" cy="22" r="17.5" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-                              <circle cx="22" cy="22" r="17.5" fill="none" stroke={scoreColor(score)} strokeWidth="1.5" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} />
+                              <circle cx="22" cy="22" r="17.5" fill="none" stroke="var(--line)" strokeWidth="2" />
+                              <circle cx="22" cy="22" r="17.5" fill="none" stroke={scoreColor(score)} strokeWidth="2" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} />
                             </svg>
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 15, color: scoreColor(score) }}>{score}</div>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
                             {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 15, height: 15, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-2)' }}>{nsc}</div>}
                           </>
                         ) : run ? (
