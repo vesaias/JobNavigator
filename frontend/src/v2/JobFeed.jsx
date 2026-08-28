@@ -600,14 +600,13 @@ export default function V2JobFeed() {
                 const score = bestScore(j), nsc = scoredCount(j)
                 const badge = BADGE[j.status]
                 const run = (j.in_flight || []).length > 0
-                const dim = j.status === 'ignored' || j.status === 'skip'
-                const hatched = j.status === 'ignored'
+                const isIgnored = j.status === 'ignored'
                 const on = checked.has(j.id)
                 const visa = H1B[j.h1b_verdict]
                 return (
                   <div key={j.id} data-row={i} className="v2-row" onClick={(e) => rowClick(e, i, j)}
-                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, backgroundColor: i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: hatched ? 'repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px), repeating-linear-gradient(-45deg, transparent 0 5px, var(--line) 5px 6px)' : 'none', overflow: 'hidden' }}>
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: 12, opacity: dim ? 0.5 : 1 }}>
+                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: 12, opacity: isIgnored ? 0.55 : 1 }}>
                       {/* ring */}
                       <div style={{ position: 'relative', width: 40, height: 40, flex: '0 0 40px' }}>
                         {nsc > 0 ? (
@@ -632,7 +631,7 @@ export default function V2JobFeed() {
                       {/* text */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                          <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: j.status === 'skip' ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
+                          <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
                           {j.tailored_resume_id && <a href={`/resumes?resume=${j.tailored_resume_id}`} onClick={(e) => e.stopPropagation()} title="Open tailored résumé" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>✦</a>}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
