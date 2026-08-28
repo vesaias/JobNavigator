@@ -601,11 +601,12 @@ export default function V2JobFeed() {
                 const badge = BADGE[j.status]
                 const run = (j.in_flight || []).length > 0
                 const dim = j.status === 'ignored' || j.status === 'skip'
+                const hatched = j.status === 'ignored'
                 const on = checked.has(j.id)
                 const visa = H1B[j.h1b_verdict]
                 return (
                   <div key={j.id} data-row={i} className="v2-row" onClick={(e) => rowClick(e, i, j)}
-                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, background: i === sel ? 'var(--surface-2)' : 'transparent', overflow: 'hidden' }}>
+                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, backgroundColor: i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: hatched ? 'repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px), repeating-linear-gradient(-45deg, transparent 0 5px, var(--line) 5px 6px)' : 'none', overflow: 'hidden' }}>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: 12, opacity: dim ? 0.5 : 1 }}>
                       {/* ring */}
                       <div style={{ position: 'relative', width: 40, height: 40, flex: '0 0 40px' }}>
