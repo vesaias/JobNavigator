@@ -234,6 +234,20 @@ def feed_stats(db: Session = Depends(get_db)):
     return {"arrived_today": int(arrived_today), "unscored": int(unscored)}
 
 
+@router.get("/unscored-ids")
+def unscored_ids(limit: int = 500, db: Session = Depends(get_db)):
+    """IDs of not-yet-scored new/saved jobs — the header 'Score N unscored'
+    action scores exactly these (they sort to the bottom by score, so the feed
+    page won't contain them)."""
+    from sqlalchemy import text
+    rows = db.execute(text(
+        "select id from jobs where status in ('new','saved') "
+        "and (cv_scores is null or cv_scores::text = '{}') "
+        "order by discovered_at desc limit :lim"
+    ), {"lim": limit}).fetchall()
+    return {"ids": [str(r[0]) for r in rows]}
+
+
 @router.get("/companies/list")
 def list_job_companies(
     status: Optional[str] = None,

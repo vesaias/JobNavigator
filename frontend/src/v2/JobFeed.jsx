@@ -313,8 +313,9 @@ export default function V2JobFeed() {
     }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
   }, [pushToast])
 
-  const openRescore = useCallback(async (job) => {
-    setRescoreJob(job); setRescoreDepth('full')
+  // rescoreJob holds { label, jobs:[...] } — one job or a bulk set
+  const loadRescoreOpts = useCallback(async () => {
+    setRescoreDepth('full')
     try {
       const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
       const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name }))
@@ -324,16 +325,21 @@ export default function V2JobFeed() {
       setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
     } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]) }
   }, [personaAvailable])
+  const openRescore = useCallback((job) => { setRescoreJob({ label: job.title, jobs: [job] }); loadRescoreOpts() }, [loadRescoreOpts])
   const runRescore = useCallback(async () => {
-    if (!rescoreJob || !rescoreSel.length) return
-    const job = rescoreJob; setRescoreJob(null)
-    pendingRef.current[job.id] = { title: job.title, company: job.company }
-    pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` })
-    try {
-      await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
-      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
-      setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
-    } catch (e) { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `Scoring failed for "${job.title}"` }); console.error(e) }
+    const target = rescoreJob
+    if (!target || !rescoreSel.length) return
+    const list = target.jobs || []
+    setRescoreJob(null)
+    if (list.length > 1) pushToast({ phase: 'start', msg: `Scoring ${list.length} jobs…` })
+    for (const job of list) {
+      if (list.length === 1) { pendingRef.current[job.id] = { title: job.title, company: job.company }; pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` }) }
+      try {
+        await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
+        setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
+        setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+      } catch (e) { delete pendingRef.current[job.id]; console.error(e) }
+    }
   }, [rescoreJob, rescoreSel, rescoreDepth, pushToast])
 
   const runResume = useCallback(async (mode, list, baseId) => {
@@ -359,6 +365,15 @@ export default function V2JobFeed() {
   }, [])
 
   const unscored = useMemo(() => jobs.filter((j) => scoredCount(j) === 0 && ['new', 'saved'].includes(j.status)), [jobs])
+  const openRescoreBulk = useCallback(async () => {
+    loadRescoreOpts()
+    try {
+      const { data } = await api.get('/jobs/unscored-ids')
+      const ids = data.ids || []
+      if (!ids.length) return
+      setRescoreJob({ label: `${ids.length} unscored job${ids.length === 1 ? '' : 's'}`, jobs: ids.map((id) => ({ id })) })
+    } catch (e) { console.error(e) }
+  }, [loadRescoreOpts])
 
   // selection
   const rowClick = (e, i, job) => {
@@ -506,7 +521,7 @@ export default function V2JobFeed() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 200, height: 36, padding: '0 4px', border: 'none', borderBottom: '1px solid var(--line)', fontSize: 13.5, fontFamily: 'var(--sans)', outline: 'none', background: 'transparent' }} />
-          {stats.unscored > 0 && <div onClick={() => unscored.slice(0, 50).forEach(scoreJob)} title={unscored.length ? `Scores the ${unscored.length} unscored roles in view` : 'No unscored roles in the current view'} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Score {stats.unscored} unscored jobs</div>}
+          {stats.unscored > 0 && <div onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Score {stats.unscored} unscored jobs</div>}
         </div>
       </header>
 
@@ -927,7 +942,7 @@ export default function V2JobFeed() {
         <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(27,26,22,.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: 380, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line)', boxShadow: '0 20px 50px rgba(0,0,0,.28)', padding: 18 }}>
             <div style={{ fontFamily: 'var(--serif)', fontSize: 17, marginBottom: 4 }}>Score against…</div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{rescoreJob.title}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{rescoreJob.label}</div>
             <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflow: 'auto', marginBottom: 12 }}>
               {rescoreOpts.length === 0 ? <span style={{ fontSize: 12, color: 'var(--muted)' }}>No résumés available.</span>
                 : rescoreOpts.map((o) => <Check key={o.id} on={rescoreSel.includes(o.id)} label={o.name} onClick={() => setRescoreSel((prev) => prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id])} />)}
