@@ -661,7 +661,7 @@ export default function V2JobFeed() {
                         {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 99, background: 'var(--accent)', border: '2px solid var(--surface)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
                       </div>
                       {/* text */}
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
                           <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
                           {j.tailored_resume_id && <a href={`/resumes?resume=${j.tailored_resume_id}`} onClick={(e) => e.stopPropagation()} title="Open tailored résumé" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>✦</a>}
@@ -672,7 +672,7 @@ export default function V2JobFeed() {
                           {j.location && <span style={{ flex: '0 0 auto', color: 'var(--line)' }}>|</span>}
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, minWidth: 0, marginTop: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: 1.2, minWidth: 0 }}>
                           <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 160, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
