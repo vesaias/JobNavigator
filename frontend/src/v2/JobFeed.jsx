@@ -411,6 +411,7 @@ export default function V2JobFeed() {
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return  // let browser shortcuts (Ctrl+Shift+R etc.) through
       const list = jobsRef.current, idx = selRef.current, job = list[idx]
       switch (e.key) {
         case 'f': case 'j': case 'ArrowDown': e.preventDefault(); focusAt(Math.min(idx + 1, list.length - 1)); break
@@ -708,7 +709,7 @@ export default function V2JobFeed() {
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, fontWeight: 450, color: 'var(--text-2)', minWidth: 0, marginTop: -2 }}>
-                          <span title={j.company} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company}</span>
+                          <span title={j.company} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230, fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company}</span>
                           {j.location && <span style={{ flex: '0 0 auto', color: 'var(--line)' }}>|</span>}
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
@@ -721,7 +722,7 @@ export default function V2JobFeed() {
                     </div>
                     {/* action column */}
                     <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
-                      <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: j.saved ? 'var(--accent)' : 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
+                      <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
                       <div className="v2-rail-skip v2-rail-cell" title="Skip (x)" onClick={() => skipJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line-soft)' }}>✕</div>
                       <div className="v2-rail-copy v2-rail-cell" title="More" onClick={(ev) => {
                         if (rowMenu?.id === j.id) { setRowMenu(null); return }
