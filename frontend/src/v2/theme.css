@@ -21,7 +21,7 @@
 }
 .jn-v2[data-theme="dark"] {
   --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#3e3b32; --line-soft:#2c2a20; --edge:#7f7a66; --track:#8c8672;
-  --text:#dcd7cb; --text-2:#cdc8be; --muted:#aaa59b; --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#243029;
+  --text:#d9d7d0; --text-2:#cbc7bf; --muted:#a8a49d; --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#243029;
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
 }
