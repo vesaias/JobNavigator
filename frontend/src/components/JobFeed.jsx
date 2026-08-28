@@ -531,6 +531,7 @@ export default function JobFeed() {
     const handler = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       if (e.target.closest('iframe')) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return  // let browser shortcuts (Ctrl+A, Ctrl+R, etc.) through
       const currentJobs = jobsRef.current
       const idx = selectedIndexRef.current
       switch (e.key) {
