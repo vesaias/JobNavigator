@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import api from '../api'
 
 const FILTERS_KEY = 'v2_feed_filters'
@@ -87,6 +88,25 @@ function Check({ on, label, onClick }) {
   )
 }
 
+const SHORTCUTS = [['j / ↓', 'Next job'], ['k / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], ['⌘-click', 'Select'], ['⇧-click', 'Select range']]
+
+// toast (progress + undo). phase: '' | 'start' | 'ok' | 'nok'
+function Toast({ t, onClose }) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => { const r = requestAnimationFrame(() => setShown(true)); return () => cancelAnimationFrame(r) }, [])
+  const vis = shown && !t.leaving
+  const bg = t.phase === 'ok' ? 'var(--good)' : t.phase === 'nok' ? 'var(--bad)' : 'var(--rail)'
+  const icon = t.phase === 'start' ? '⋯' : t.phase === 'ok' ? '✓' : t.phase === 'nok' ? '✕' : '●'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 13px', borderRadius: 10, background: bg, color: '#f6f3ea', fontSize: 12.5, boxShadow: '0 10px 30px rgba(0,0,0,.28)', maxWidth: 360, transform: vis ? 'translateY(0)' : 'translateY(8px)', opacity: vis ? 1 : 0, transition: 'opacity .28s, transform .28s' }}>
+      <span style={{ flex: '0 0 auto', color: t.phase === 'start' ? '#8dbb9f' : 'inherit' }}>{icon}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>{t.msg}</span>
+      {t.actionLabel && <span onClick={t.onAction} style={{ flex: '0 0 auto', color: '#8dbb9f', cursor: 'pointer', fontWeight: 600 }}>{t.actionLabel}</span>}
+      <span onClick={onClose} style={{ flex: '0 0 auto', opacity: 0.6, cursor: 'pointer' }}>✕</span>
+    </div>
+  )
+}
+
 // ── component ────────────────────────────────────────────────────────────
 export default function V2JobFeed() {
   const [jobs, setJobs] = useState([])
@@ -124,6 +144,33 @@ export default function V2JobFeed() {
   const [checked, setChecked] = useState(() => new Set())
   const lastIdx = useRef(null)
 
+  const [personaAvailable, setPersonaAvailable] = useState(false)
+  const [toasts, setToasts] = useState([])
+  const [watchExtra, setWatchExtra] = useState([])   // ids of jobs pruned from view but still processing
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [rescoreJob, setRescoreJob] = useState(null)
+  const [rescoreOpts, setRescoreOpts] = useState([])
+  const [rescoreSel, setRescoreSel] = useState([])
+  const [rescoreDepth, setRescoreDepth] = useState('full')
+  const scoreWatchRef = useRef([])
+  const pendingRef = useRef({})   // {jobId:{title,company}} → completion toast
+  const seenActiveRef = useRef(new Set())   // jobs confirmed in-flight (avoids first-tick false completion)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const PAGE = 40
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)))
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 300)
+  }, [])
+  const pushToast = useCallback((toast) => {
+    const id = `${toast.phase || 'x'}-${Object.keys(pendingRef.current).length}-${Math.random().toString(36).slice(2, 7)}`
+    setToasts((prev) => [...prev, { ...toast, id }])
+    setTimeout(() => dismissToast(id), toast.ttl ?? 2600)
+    return id
+  }, [dismissToast])
+
   const listRef = useRef(null)
   const jobsRef = useRef(jobs); useEffect(() => { jobsRef.current = jobs }, [jobs])
   const selRef = useRef(sel); useEffect(() => { selRef.current = sel }, [sel])
@@ -137,26 +184,56 @@ export default function V2JobFeed() {
     api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {})
   }, [])
 
+  const buildParams = useCallback((off) => {
+    const p = { limit: PAGE, offset: off }
+    if (filters.status.length) p.status = filters.status.join(',')
+    if (filters.company.length) p.company = filters.company.join(',')
+    if (filters.source.length) p.source = filters.source.join(',')
+    if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
+    if (filters.min_score !== '') p.min_score = filters.min_score
+    if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
+    if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
+    if (dSearch) p.title_search = dSearch
+    if (sortBy !== 'date') p.sort_by = sortBy
+    return p
+  }, [filters, sortBy, dSearch])
+
   const fetchJobs = useCallback(async () => {
     setLoading(true)
     try {
-      const p = { limit: 80, offset: 0 }
-      if (filters.status.length) p.status = filters.status.join(',')
-      if (filters.company.length) p.company = filters.company.join(',')
-      if (filters.source.length) p.source = filters.source.join(',')
-      if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
-      if (filters.min_score !== '') p.min_score = filters.min_score
-      if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
-      if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
-      if (dSearch) p.title_search = dSearch
-      if (sortBy !== 'date') p.sort_by = sortBy
-      const { data } = await api.get('/jobs', { params: p })
+      const { data } = await api.get('/jobs', { params: buildParams(0) })
+      const n = (data.jobs || []).length
       setJobs(data.jobs || [])
       setTotal(data.total || 0)
+      setOffset(n)
+      setHasMore(n < (data.total || 0))
     } catch (e) { console.error('v2 feed load failed', e) }
     setLoading(false)
-  }, [filters, sortBy, dSearch])
+  }, [buildParams])
   useEffect(() => { fetchJobs() }, [fetchJobs])
+
+  // append next page (infinite scroll + refill after triage drains the list)
+  const loadingMoreRef = useRef(false)
+  const offsetRef = useRef(offset); useEffect(() => { offsetRef.current = offset }, [offset])
+  const hasMoreRef = useRef(hasMore); useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMoreRef.current) return
+    loadingMoreRef.current = true
+    try {
+      const off = offsetRef.current
+      const { data } = await api.get('/jobs', { params: buildParams(off) })
+      const fetched = data.jobs || []
+      setJobs((prev) => { const seen = new Set(prev.map((j) => j.id)); const fresh = fetched.filter((j) => !seen.has(j.id)); return fresh.length ? [...prev, ...fresh] : prev })
+      setTotal(data.total || 0)
+      setOffset(off + fetched.length)
+      setHasMore(off + fetched.length < (data.total || 0) && fetched.length > 0)
+    } catch (e) { console.error('load more failed', e) }
+    loadingMoreRef.current = false
+  }, [buildParams])
+  const onListScroll = useCallback((e) => {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 320) loadMore()
+  }, [loadMore])
 
   const focusAt = useCallback((idx) => {
     const list = jobsRef.current
@@ -175,16 +252,30 @@ export default function V2JobFeed() {
 
   const patchLocal = useCallback((id, changes) => {
     const leaves = filters.status.length && changes.status && !filters.status.includes(changes.status)
-    setJobs((prev) => leaves ? (setTotal((t) => Math.max(0, t - 1)), prev.filter((j) => j.id !== id)) : prev.map((j) => (j.id === id ? { ...j, ...changes } : j)))
+    setJobs((prev) => {
+      if (leaves) {
+        const next = prev.filter((j) => j.id !== id)
+        setTotal((t) => Math.max(0, t - 1))
+        if (next.length < 12) loadMore()
+        return next
+      }
+      return prev.map((j) => (j.id === id ? { ...j, ...changes } : j))
+    })
     setDetail((d) => (d && d.id === id ? { ...d, ...changes } : d))
-  }, [filters.status])
+  }, [filters.status, loadMore])
   const patchRemote = useCallback(async (job, changes) => {
     patchLocal(job.id, changes)
     try { await api.patch(`/jobs/${job.id}`, changes) } catch (e) { console.error(e); fetchJobs() }
   }, [patchLocal, fetchJobs])
-  const saveJob = (j) => patchRemote(j, { saved: !j.saved, status: j.saved ? 'new' : 'saved' })
-  const skipJob = (j) => patchRemote(j, { status: 'skip' })
-  const applyJob = (j) => patchRemote(j, { status: 'applied' })
+  const watchForScore = useCallback((id) => {
+    if (id && !scoreWatchRef.current.some((w) => w.id === id)) scoreWatchRef.current = [...scoreWatchRef.current, { id, until: Date.now() + 90000 }]
+  }, [])
+  const showUndo = useCallback((job, prevStatus, prevSaved, msg) => {
+    pushToast({ msg, actionLabel: 'Undo', ttl: 5000, onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs() } catch (e) { console.error(e) } } })
+  }, [pushToast, fetchJobs])
+  const saveJob = (j) => { const willSave = !j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' }) }
+  const skipJob = (j) => { showUndo(j, j.status, j.saved, `Skipped "${j.title}"`); patchRemote(j, { status: 'skip' }) }
+  const applyJob = (j) => { showUndo(j, j.status, j.saved, `Applied to "${j.title}"`); patchRemote(j, { status: 'applied' }) }
   // "Ignore {company} everywhere" — add to the global company-exclude setting
   // (matches classic ignoreCompany) and drop every job from that company now.
   const ignoreCompany = useCallback(async (job) => {
@@ -201,19 +292,53 @@ export default function V2JobFeed() {
     } catch (e) { console.error(e); fetchJobs() }
   }, [fetchJobs])
   const scoreJob = useCallback((job) => {
-    api.post(`/analyze/${job.id}?depth=full`, {}).then(() => setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))).catch(console.error)
-  }, [])
+    pendingRef.current[job.id] = { title: job.title, company: job.company }
+    pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` })
+    api.post(`/analyze/${job.id}?depth=full`, {}).then(() => {
+      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
+      setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+    }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
+  }, [pushToast])
+
+  const openRescore = useCallback(async (job) => {
+    setRescoreJob(job); setRescoreDepth('full')
+    try {
+      const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
+      const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name }))
+      if (personaAvailable) opts.push({ id: 'persona', name: 'Persona' })
+      setRescoreOpts(opts)
+      const def = st.data?.default_resume_id
+      setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
+    } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]) }
+  }, [personaAvailable])
+  const runRescore = useCallback(async () => {
+    if (!rescoreJob || !rescoreSel.length) return
+    const job = rescoreJob; setRescoreJob(null)
+    pendingRef.current[job.id] = { title: job.title, company: job.company }
+    pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` })
+    try {
+      await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
+      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
+      setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+    } catch (e) { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `Scoring failed for "${job.title}"` }); console.error(e) }
+  }, [rescoreJob, rescoreSel, rescoreDepth, pushToast])
 
   const runResume = useCallback(async (mode, list, baseId) => {
     setPicker(null)
     for (const job of list) {
       try {
         if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) window.location.href = `/resumes?resume=${data.id}` }
-        else { await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id }); setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x)) }
-      } catch (e) { console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
+        else {
+          pendingRef.current[job.id] = { title: job.title, company: job.company }
+          pushToast({ phase: 'start', msg: `Tailoring for "${job.title}"…` })
+          await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id })
+          setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x))
+          setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+        }
+      } catch (e) { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `${mode === 'copy' ? 'Copy' : 'Tailor'} failed for "${job.title}"` }); console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
     }
     setChecked(new Set())
-  }, [])
+  }, [pushToast])
   const openTailored = useCallback(async (job) => {
     try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { window.location.href = `/resumes?resume=${copy.id}`; return } } catch {}
     setPicker({ mode: 'tailor', jobs: [job] })
@@ -246,7 +371,7 @@ export default function V2JobFeed() {
         case 'x': if (job) { skipJob(job); focusAt(Math.min(idx, list.length - 2)) } break
         case 'a': if (job) applyJob(job); break
         case 'e': if (job?.url) window.open(job.url, '_blank', 'noopener,noreferrer'); break
-        case 'r': if (job) scoreJob(job); break
+        case 'r': if (job) openRescore(job); break
         default: break
       }
     }
@@ -260,6 +385,70 @@ export default function V2JobFeed() {
     if (!detail || !viewCached || cachedHtml) return
     api.get(`/jobs/${detail.id}/cached-page`).then(({ data }) => setCachedHtml(data.cached_page_html || (data.cached_page_text ? `<pre style="white-space:pre-wrap;font-family:sans-serif;padding:16px">${data.cached_page_text}</pre>` : '<p style="padding:16px">No cached snapshot.</p>'))).catch(() => setCachedHtml('<p style="padding:16px">No cached snapshot.</p>'))
   }, [detail, viewCached, cachedHtml])
+
+  // persona availability (adds a "Persona" option to score/tailor)
+  useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {}) }, [])
+
+  // deep-link ?job=<id> → open that job's detail
+  useEffect(() => {
+    const jid = searchParams.get('job')
+    if (!jid) return
+    api.get(`/jobs/${jid}`).then(({ data }) => { setDetail(data); setSearchParams({}, { replace: true }) }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // drop selected filter values that fall out of the dynamic lists
+  useEffect(() => { if (sourceList.length && filters.source.length) { const v = filters.source.filter((s) => sourceList.includes(s)); if (v.length !== filters.source.length) setFilters((f) => ({ ...f, source: v })) } }, [sourceList]) // eslint-disable-line
+  useEffect(() => { if (companyList.length && filters.company.length) { const v = filters.company.filter((c) => companyList.includes(c)); if (v.length !== filters.company.length) setFilters((f) => ({ ...f, company: v })) } }, [companyList]) // eslint-disable-line
+  useEffect(() => { if (verdictList.length && filters.h1b_verdict.length) { const v = filters.h1b_verdict.filter((x) => verdictList.includes(x)); if (v.length !== filters.h1b_verdict.length) setFilters((f) => ({ ...f, h1b_verdict: v })) } }, [verdictList]) // eslint-disable-line
+
+  // score-watch: save-triggered scoring runs untracked, so poll /jobs/{id} until it lands
+  useEffect(() => {
+    const tick = async () => {
+      const w = scoreWatchRef.current
+      if (!w.length) return
+      const now = Date.now(); const keep = []
+      for (const it of w) {
+        if (now > it.until) continue
+        try {
+          const { data } = await api.get(`/jobs/${it.id}`)
+          if (data.cv_scores && Object.keys(data.cv_scores).length) { setJobs((prev) => prev.map((j) => j.id === it.id ? data : j)); setDetail((d) => (d && d.id === it.id ? data : d)) }
+          else keep.push(it)
+        } catch { keep.push(it) }
+      }
+      scoreWatchRef.current = keep
+    }
+    const h = setInterval(tick, 3000)
+    return () => clearInterval(h)
+  }, [])
+
+  // in-flight poll: tracked tailor/analyze ops → refetch + completion toast when they finish
+  useEffect(() => {
+    const activeIds = jobs.filter((j) => (j.in_flight || []).length).map((j) => j.id)
+    const ids = [...new Set([...activeIds, ...watchExtra])]
+    if (!ids.length) return
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const { data } = await api.get('/monitor/in-flight', { params: { job_ids: ids.join(',') } })
+        if (cancelled) return
+        const present = new Set(ids.filter((id) => (data[id] || []).length))
+        present.forEach((id) => seenActiveRef.current.add(id))
+        const finished = ids.filter((id) => seenActiveRef.current.has(id) && !present.has(id))
+        for (const id of finished) {
+          seenActiveRef.current.delete(id)
+          try { const { data: jd } = await api.get(`/jobs/${id}`); setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
+          const meta = pendingRef.current[id]
+          if (meta) { pushToast({ phase: 'ok', msg: `Done — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` }); delete pendingRef.current[id] }
+        }
+        if (finished.length) setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
+        setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: data[j.id] } : j)))
+      } catch { /* retry next tick */ }
+    }
+    const h = setInterval(tick, 3000); tick()
+    return () => { cancelled = true; clearInterval(h) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs.map((j) => ((j.in_flight || []).length ? j.id : null)).filter(Boolean).join(','), watchExtra.join(',')])
 
   const setF = (patch) => { setFilters((f) => ({ ...f, ...patch })); setSel(0) }
   const togF = (key, val) => setF({ [key]: filters[key].includes(val) ? filters[key].filter((x) => x !== val) : [...filters[key], val] })
@@ -350,9 +539,26 @@ export default function V2JobFeed() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
         <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ padding: '12px 22px 8px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
+          <div style={{ position: 'relative', padding: '12px 22px 8px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
             <span>{jobs.length} shown · {total} matching</span>
-            <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em' }}>⇧ range · ⌘ pick · s save · x skip</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em' }}>⇧ range · ⌘ pick · s save · x skip</span>
+              <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 99, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
+            </div>
+            {shortcutsOpen && (
+              <>
+                <div onClick={() => setShortcutsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 34 }} />
+                <div style={{ position: 'absolute', top: '100%', right: 14, zIndex: 35, marginTop: 4, width: 214, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 10 }}>
+                  <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Keyboard</div>
+                  {SHORTCUTS.map(([k, desc]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{k}</span>
+                      <span style={{ color: 'var(--muted)' }}>{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {checked.size > 0 && (
@@ -367,7 +573,7 @@ export default function V2JobFeed() {
             </div>
           )}
 
-          <div ref={listRef} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column' }}>
+          <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column' }}>
             {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
               : jobs.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No jobs match.</div>
               : jobs.map((j, i) => {
@@ -434,7 +640,7 @@ export default function V2JobFeed() {
                         <>
                           <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 59 }} />
                           <div style={{ position: 'fixed', left: rowMenu.left, top: rowMenu.top, bottom: rowMenu.bottom, zIndex: 60, width: 228, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
-                            {[['Mark applied', 'a', () => applyJob(j)], ['Tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [j] })], ['Rescore', 'r', () => scoreJob(j)], ['Open posting ↗', 'e', () => j.url && window.open(j.url, '_blank', 'noopener,noreferrer')]].map(([label, kb, act]) => (
+                            {[['Mark applied', 'a', () => applyJob(j)], ['Tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [j] })], ['Rescore', 'r', () => openRescore(j)], ['Open posting ↗', 'e', () => j.url && window.open(j.url, '_blank', 'noopener,noreferrer')]].map(([label, kb, act]) => (
                               <div key={label} className="v2-menuitem" onClick={() => { setRowMenu(null); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer', fontWeight: label === 'Tailor résumé' ? 600 : 400 }}>{label}<span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span></div>
                             ))}
                             <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
@@ -485,7 +691,7 @@ export default function V2JobFeed() {
                             {[
                               ['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true],
                               ['Mark applied', 'a', () => applyJob(d)],
-                              ['Rescore', 'r', () => scoreJob(d)],
+                              ['Rescore', 'r', () => openRescore(d)],
                               ['Cover letter ↗', 'c', () => { window.location.href = `/cover-letters?job=${d.id}` }],
                               ['Copy résumé with tracers', '', () => setPicker({ mode: 'copy', jobs: [d] })],
                             ].map(([label, kb, act, bold]) => (
@@ -533,7 +739,7 @@ export default function V2JobFeed() {
                             </div>
                           )
                         })}
-                        <div onClick={() => scoreJob(d)} className="v2-navlink" style={{ marginLeft: 'auto', padding: '7px 0', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>+ Rescore</div>
+                        <div onClick={() => openRescore(d)} className="v2-navlink" style={{ marginLeft: 'auto', padding: '7px 0', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>+ Rescore</div>
                       </div>
                       {/* body */}
                       <div className="v2-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '14px 30px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -608,7 +814,7 @@ export default function V2JobFeed() {
                         <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>Not scored yet</span>
                         <span style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: '54ch' }}>Score this role against your résumés to see the fit breakdown, requirement mapping and missing keywords.</span>
                       </div>
-                      <div onClick={() => scoreJob(d)} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Score this role</div>
+                      <div onClick={() => openRescore(d)} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Score this role</div>
                     </div>
                   )}
                   {running && (
@@ -655,11 +861,42 @@ export default function V2JobFeed() {
             <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflow: 'auto' }}>
               {resumes.length === 0 ? <span style={{ fontSize: 12, color: 'var(--muted)' }}>No base résumés found.</span>
                 : resumes.map((r) => <div key={r.id} className="v2-menuitem" onClick={() => runResume(picker.mode, picker.jobs, r.id)} style={{ padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)', fontSize: 13, cursor: 'pointer' }}>{r.name}</div>)}
+              {picker.mode === 'tailor' && personaAvailable && <div className="v2-menuitem" onClick={() => runResume('tailor', picker.jobs, 'persona')} style={{ padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>Persona<span style={{ fontSize: 10, color: 'var(--muted)' }}>from /persona</span></div>}
             </div>
             <div onClick={() => setPicker(null)} style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
           </div>
         </div>
       )}
+
+      {/* rescore modal — pick résumés + depth */}
+      {rescoreJob && (
+        <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(27,26,22,.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 380, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line)', boxShadow: '0 20px 50px rgba(0,0,0,.28)', padding: 18 }}>
+            <div style={{ fontFamily: 'var(--serif)', fontSize: 17, marginBottom: 4 }}>Score against…</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{rescoreJob.title}</div>
+            <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflow: 'auto', marginBottom: 12 }}>
+              {rescoreOpts.length === 0 ? <span style={{ fontSize: 12, color: 'var(--muted)' }}>No résumés available.</span>
+                : rescoreOpts.map((o) => <Check key={o.id} on={rescoreSel.includes(o.id)} label={o.name} onClick={() => setRescoreSel((prev) => prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id])} />)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Depth</span>
+              <div style={{ display: 'flex', border: '1px solid var(--line)', borderRadius: 99, overflow: 'hidden' }}>
+                {[['quick', 'Quick'], ['full', 'Full']].map(([v, label]) => <div key={v} onClick={() => setRescoreDepth(v)} style={{ height: 26, padding: '0 13px', display: 'flex', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: rescoreDepth === v ? 'var(--accent)' : 'transparent', color: rescoreDepth === v ? '#fff' : 'var(--text-2)' }}>{label}</div>)}
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)' }}>{rescoreDepth === 'full' ? 'full report' : 'score only'}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div onClick={runRescore} style={{ flex: 1, height: 36, borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--line)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default' }}>Score {rescoreSel.length || ''}</div>
+              <div onClick={() => setRescoreJob(null)} className="v2-pill" style={{ height: 36, padding: '0 16px', borderRadius: 99, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* toasts (progress + undo) */}
+      <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+        {toasts.map((t) => <Toast key={t.id} t={t} onClose={() => dismissToast(t.id)} />)}
+      </div>
     </div>
   )
 }
