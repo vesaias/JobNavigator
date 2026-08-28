@@ -358,7 +358,7 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
             pass  # fall through with return_value = None (transient failure)
         elif depth == "full":
             report = {}
-            for key in ["summary", "requirement_mapping", "keyword_coverage_pct",
+            for key in ["summary", "breakdown", "requirement_mapping", "keyword_coverage_pct",
                          "matched_keywords", "missing_keywords", "hard_blockers", "ats_tip"]:
                 if key in result:
                     report[key] = result[key]

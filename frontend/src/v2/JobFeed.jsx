@@ -174,6 +174,7 @@ export default function V2JobFeed() {
   const listRef = useRef(null)
   const jobsRef = useRef(jobs); useEffect(() => { jobsRef.current = jobs }, [jobs])
   const selRef = useRef(sel); useEffect(() => { selRef.current = sel }, [sel])
+  const detailRef = useRef(detail); useEffect(() => { detailRef.current = detail }, [detail])
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   useEffect(() => {
@@ -246,7 +247,12 @@ export default function V2JobFeed() {
   useEffect(() => {
     if (loading) return
     if (jobs.length === 0) { setDetail(null); return }
-    focusAt(Math.min(sel, jobs.length - 1))
+    // keep the current/deep-linked detail if it's still in the list (align focus);
+    // otherwise focus the top of the (re)loaded list
+    const curId = detailRef.current?.id
+    const idx = curId ? jobs.findIndex((j) => j.id === curId) : -1
+    if (idx >= 0) setSel(idx)
+    else focusAt(Math.min(sel, jobs.length - 1))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, loading])
 
@@ -746,6 +752,23 @@ export default function V2JobFeed() {
                         {rpt?.summary && <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{rpt.summary}</span>}
                         {(d.fit_strengths || []).length > 0 && !rpt?.summary && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_strengths || []).map((s, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--good)' }}>✓</span><span>{s}</span></div>)}</div>}
 
+                        {rpt?.breakdown && Object.keys(rpt.breakdown).length > 0 && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 30px' }}>
+                            {Object.entries(rpt.breakdown).filter(([, v]) => typeof v === 'number').map(([label, val]) => {
+                              const pct = Math.max(0, Math.min(100, Math.round((val / 20) * 100)))
+                              return (
+                                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: 12.5, color: 'var(--text-2)', textTransform: 'capitalize' }}>{label}</span>
+                                    <span style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{val}<span style={{ fontSize: 11, color: 'var(--muted)' }}>/20</span></span>
+                                  </div>
+                                  <div style={{ height: 1, background: 'var(--line)' }}><div style={{ height: 1, background: 'var(--accent)', width: `${pct}%` }} /></div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
                         {coverage != null && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -777,7 +800,7 @@ export default function V2JobFeed() {
                             {reqRows.filter((r) => reqFilter === 'all' || !r.matched).map((r, k) => (
                               <div key={k} style={{ display: 'flex', gap: 14, padding: '8px 0', borderBottom: '1px solid var(--line-soft)', fontSize: 12, lineHeight: 1.45 }}>
                                 <span style={{ flex: 1.05, minWidth: 0 }}>{r.requirement}</span>
-                                <span style={{ flex: 1.1, minWidth: 0, color: 'var(--muted)' }}>{r.cv_evidence || '—'}</span>
+                                <span style={{ flex: 1.1, minWidth: 0, color: 'var(--muted)' }}>{r.cv_evidence || r.cv_match || '—'}</span>
                                 <span style={{ flex: '0 0 34px', textAlign: 'center', color: r.matched ? 'var(--good)' : 'var(--bad)' }}>{r.matched ? '✓' : '✕'}</span>
                               </div>
                             ))}
