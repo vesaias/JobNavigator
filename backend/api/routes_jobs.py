@@ -619,17 +619,10 @@ def cache_applied_jobs(background_tasks: BackgroundTasks, db: Session = Depends(
     return {"queued": len(jobs)}
 
 
-@router.get("/{job_id}/cached-page")
-def get_cached_page(job_id: str, db: Session = Depends(get_db)):
-    """Return the cached page as clean, readable HTML."""
-    job = db.query(Job).filter(Job.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    if not job.cached_page_html:
-        raise HTTPException(status_code=404, detail="No cached page available")
-
-    cached_at = job.page_cached_at.strftime("%b %d, %Y") if job.page_cached_at else "Unknown"
-    reader_html = f"""<!DOCTYPE html>
+def _reader_html(body_html: str, meta: str) -> str:
+    """Wrap cleaned posting HTML in the shared reader shell (used by the cached-page
+    and live-page endpoints)."""
+    return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -651,13 +644,63 @@ def get_cached_page(job_id: str, db: Session = Depends(get_db)):
   hr {{ border: none; border-top: 1px solid #e5e7eb; margin: 1.5em 0; }}
   .cache-meta {{ color: #9ca3af; font-size: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 16px; }}
 </style></head><body>
-<div class="cache-meta">Cached on {cached_at}</div>
-{job.cached_page_html}
+<div class="cache-meta">{meta}</div>
+{body_html}
 </body></html>"""
-    return HTMLResponse(
-        content=reader_html,
-        headers={"Content-Security-Policy": "sandbox; default-src 'unsafe-inline'; style-src 'unsafe-inline'"},
-    )
+
+
+_READER_CSP = {"Content-Security-Policy": "sandbox; default-src 'unsafe-inline'; style-src 'unsafe-inline'"}
+
+
+@router.get("/{job_id}/cached-page")
+def get_cached_page(job_id: str, db: Session = Depends(get_db)):
+    """Return the cached page as clean, readable HTML."""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if not job.cached_page_html:
+        raise HTTPException(status_code=404, detail="No cached page available")
+    cached_at = job.page_cached_at.strftime("%b %d, %Y") if job.page_cached_at else "Unknown"
+    return HTMLResponse(content=_reader_html(job.cached_page_html, f"Cached on {cached_at}"), headers=_READER_CSP)
+
+
+@router.get("/{job_id}/live-page")
+async def get_live_page(job_id: str, db: Session = Depends(get_db)):
+    """Server-side reader capture of the posting. Fetches the URL from the backend
+    (SSRF-guarded) so the feed can show the content even when the browser extension
+    isn't stripping X-Frame-Options. Reuses/warms the cached_page_* columns."""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.cached_page_html:
+        cached_at = job.page_cached_at.strftime("%b %d, %Y") if job.page_cached_at else "earlier"
+        return HTMLResponse(content=_reader_html(job.cached_page_html, f"Reader view · cached {cached_at}"), headers=_READER_CSP)
+    if not job.url:
+        raise HTTPException(status_code=404, detail="No posting URL captured for this job")
+
+    from backend.scraper._shared.url_safety import safe_get, UnsafeURLError
+    from backend.api.routes_applications import _extract_clean_content
+    try:
+        resp = await safe_get(job.url, timeout=20, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        resp.raise_for_status()
+        clean_html, text = _extract_clean_content(resp.text[:1_000_000])
+    except UnsafeURLError:
+        raise HTTPException(status_code=400, detail="URL not allowed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not fetch posting: {e}")
+    if not (clean_html or "").strip():
+        raise HTTPException(status_code=502, detail="Posting returned no readable content")
+    try:
+        job.cached_page_html = clean_html
+        job.cached_page_text = text
+        db.commit()
+    except Exception:
+        db.rollback()
+    return HTMLResponse(content=_reader_html(clean_html, "Reader view · fetched server-side"), headers=_READER_CSP)
 
 
 def _normalize_report(report, best_cv):
