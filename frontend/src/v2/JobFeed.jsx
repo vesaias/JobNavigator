@@ -4,6 +4,8 @@ import api from '../api'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
+const UI_KEY = 'v2_feed_ui'   // persisted panel open/collapse prefs
+const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const ROW_C = 2 * Math.PI * 35     // row ring (viewBox 88 @2x → 44px, r35)
@@ -51,7 +53,7 @@ const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], min_sco
 
 // small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
 // when the panel would overflow the viewport's right edge.
-function Drop({ label, active, open, onToggle, children, align = 'left', width = 216, trigger }) {
+function Drop({ label, active, open, onToggle, children, align = 'left', width = 216, trigger, onClear }) {
   const ref = useRef(null)
   const [pos, setPos] = useState(null)
   useLayoutEffect(() => {
@@ -67,7 +69,10 @@ function Drop({ label, active, open, onToggle, children, align = 'left', width =
       {trigger ? trigger(onToggle) : (
         <div onClick={onToggle} style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer',
           border: `1px solid ${active ? 'var(--accent)' : 'var(--edge)'}`, background: active ? 'var(--accent-soft)' : 'var(--surface)', color: active ? 'var(--accent)' : 'var(--text-2)' }}>
-          {label}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
+          {label}
+          {active && onClear
+            ? <span onClick={(e) => { e.stopPropagation(); onClear() }} title="Clear" style={{ fontSize: 11, opacity: 0.7 }}>✕</span>
+            : <span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>}
         </div>
       )}
       {open && pos && (
@@ -132,14 +137,15 @@ export default function V2JobFeed() {
 
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
-  const [headOpen, setHeadOpen] = useState(true)
-  const [reportOpen, setReportOpen] = useState(false)
+  const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? true)
+  const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
   const [reportTab, setReportTab] = useState(0)
   const [reqFilter, setReqFilter] = useState('all')
   const [showMatched, setShowMatched] = useState(false)
-  const [breakdownOpen, setBreakdownOpen] = useState(false)
-  const [keywordOpen, setKeywordOpen] = useState(false)
-  const [reqOpen, setReqOpen] = useState(false)
+  const [breakdownOpen, setBreakdownOpen] = useState(() => loadUI().breakdownOpen ?? false)
+  const [keywordOpen, setKeywordOpen] = useState(() => loadUI().keywordOpen ?? false)
+  const [reqOpen, setReqOpen] = useState(() => loadUI().reqOpen ?? false)
+  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
 
@@ -253,7 +259,7 @@ export default function V2JobFeed() {
     if (idx < 0 || idx >= list.length) return
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
-    setDetail(j); setReportOpen(false); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
   }, [])
   useEffect(() => {
@@ -559,10 +565,10 @@ export default function V2JobFeed() {
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 184, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
         </div>
-        <Drop label="Source" active={filters.source.length > 0} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
+        <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
-        <Drop label="Company" active={filters.company.length > 0} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
+        <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
           <input autoFocus value={companyQuery} onChange={(e) => setCompanyQuery(e.target.value)} placeholder={`Type to search ${companyList.length} companies…`}
             style={{ width: '100%', height: 30, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, fontSize: 12.5, background: 'var(--surface-2)', color: 'var(--text)', outline: 'none', marginBottom: 6, fontFamily: 'var(--sans)' }} />
           {(() => {
@@ -584,10 +590,10 @@ export default function V2JobFeed() {
             ) : <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)' }}>No matches</div>
           })()}
         </Drop>
-        <Drop label="H-1B" active={filters.h1b_verdict.length > 0} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
+        <Drop label={`H-1B${filters.h1b_verdict.length ? ` · ${filters.h1b_verdict.length}` : ''}`} active={filters.h1b_verdict.length > 0} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
           {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} onClick={() => togF('h1b_verdict', v)} />)}
         </Drop>
-        <Drop label="Score ≥" active={filters.min_score !== ''} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={212}>
+        <Drop label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={212}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[70, 80, 90].map((n) => <div key={n} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_score === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_score === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_score === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>{n}</div>)}
           </div>
@@ -597,7 +603,7 @@ export default function V2JobFeed() {
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Unscored jobs stay visible — this only hides low scores</div>
         </Drop>
-        <Drop label="Salary" active={!!(filters.min_salary || filters.max_salary)} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
+        <Drop label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[150, 180, 220].map((n) => <div key={n} onClick={() => setF({ min_salary: String(n) })} style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_salary === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_salary === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_salary === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>${n}K</div>)}
           </div>
