@@ -79,6 +79,14 @@ const AddLink = ({ onClick, children }) => (
 const RemoveLink = ({ onClick, children = 'Remove' }) => (
   <span onClick={onClick} style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
 )
+const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
+const MenuItem = ({ icon, label, hint, onClick }) => (
+  <div onClick={onClick} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
+    <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{icon}</span>
+    <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
+    {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--faint)' }}>{hint}</span>}
+  </div>
+)
 
 export default function ResumeEditor() {
   const { id } = useParams()
@@ -99,6 +107,11 @@ export default function ResumeEditor() {
   const [tailorOpen, setTailorOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [baseData, setBaseData] = useState(null)   // parent json_data (for diff + inline marks)
+  const [jobData, setJobData] = useState(null)     // the copy's job (cv_scores, status)
+  const [tracers, setTracers] = useState([])
+  const [coverExists, setCoverExists] = useState(false)
+  const [scoring, setScoring] = useState(false)
+  const [headMenu, setHeadMenu] = useState(false)
   const [toasts, setToasts] = useState([])
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
@@ -162,6 +175,68 @@ export default function ResumeEditor() {
   }, [doc])
 
   const changes = useMemo(() => (isCopy && baseData && data ? computeChanges(baseData, data) : []), [isCopy, baseData, data])
+
+  // copy job context: score/delta, tracers, cover-letter existence
+  const loadJobCtx = useCallback(() => {
+    if (!doc || doc.is_base || !doc.job_id) return
+    api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => setJobData(j)).catch(() => {})
+    api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => setCoverExists((data || []).length > 0)).catch(() => {})
+  }, [doc])
+  useEffect(() => {
+    if (!doc || doc.is_base) { setJobData(null); setTracers([]); return }
+    loadJobCtx()
+    api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => setTracers(data || [])).catch(() => {})
+  }, [doc, id, loadJobCtx])
+
+  const scores = useMemo(() => {
+    const cs = jobData?.cv_scores || {}
+    const tailored = typeof cs['Tailored'] === 'number' ? Math.round(cs['Tailored']) : null
+    const others = Object.entries(cs).filter(([k, v]) => k !== 'Tailored' && typeof v === 'number').map(([, v]) => v)
+    const base = others.length ? Math.round(Math.max(...others)) : null
+    return { tailored, base, delta: tailored != null && base != null ? tailored - base : null }
+  }, [jobData])
+
+  const runScore = useCallback(async (depth) => {
+    if (!doc?.job_id) { pushToast({ msg: 'This copy isn’t linked to a job to score against.' }); return }
+    setHeadMenu(false); setScoring(true)
+    try {
+      await api.post(`/resumes/${id}/score-check`, { depth })
+      pushToast({ msg: `Scoring (${depth}) — runs in the background.` })
+      // poll until the score lands (or ~60s)
+      const t0 = Date.now()
+      const iv = setInterval(async () => {
+        try {
+          const { data: j } = await api.get(`/jobs/${doc.job_id}`)
+          const sc = j?.cv_scores?.['Tailored']
+          if (typeof sc === 'number') { setJobData(j); setScoring(false); clearInterval(iv); pushToast({ msg: `Scored: ${Math.round(sc)}${scores.base != null ? ` (${sc - scores.base >= 0 ? '+' : ''}${Math.round(sc - scores.base)} vs base)` : ''}` }) }
+          else if (Date.now() - t0 > 60000) { setScoring(false); clearInterval(iv) }
+        } catch {}
+      }, 3000)
+    } catch (e) { setScoring(false); pushToast({ msg: e.response?.status === 409 ? 'Already scoring this copy.' : (e.response?.data?.detail || 'Scoring failed to start.') }) }
+  }, [doc, id, pushToast, scores.base])
+
+  const markApplied = useCallback(async () => {
+    if (!doc?.job_id) return
+    setHeadMenu(false)
+    try { await api.patch(`/jobs/${doc.job_id}`, { status: 'applied' }); loadJobCtx(); pushToast({ msg: 'Marked applied.' }) } catch { pushToast({ msg: 'Could not mark applied.' }) }
+  }, [doc, loadJobCtx, pushToast])
+
+  const deleteResume = useCallback(async () => {
+    if (!window.confirm(`Delete “${doc.name}”?${doc.is_base ? ' Its tailored copies will be removed too.' : ''}`)) return
+    try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ msg: 'Delete failed.' }) }
+  }, [doc, id, navigate, pushToast])
+
+  const goCover = () => { setHeadMenu(false); window.location.href = `/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}` }
+
+  // the "one next step" stage for a tailored copy
+  const stage = useMemo(() => {
+    if (!isCopy) return null
+    if (changes.length) return { label: `Review ${changes.length} change${changes.length === 1 ? '' : 's'}`, act: () => setReviewOpen(true) }
+    if (scores.tailored == null) return { label: scoring ? 'Scoring…' : 'Score the result', act: () => runScore('full') }
+    if (!coverExists) return { label: '✉ Write cover letter', act: goCover }
+    if (jobData?.status !== 'applied') return { label: 'Mark applied', act: markApplied }
+    return { label: 'Applied ✓', act: null, done: true }
+  }, [isCopy, changes.length, scores.tailored, scoring, coverExists, jobData, runScore, markApplied]) // eslint-disable-line
 
   // debounced persist
   const persist = useCallback((patch) => {
@@ -248,13 +323,52 @@ export default function ResumeEditor() {
 
       {/* sub-band: base vs copy */}
       {isCopy ? (
-        <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
-          <span>Tailored copy{doc.job_id ? <> · <span onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)} style={{ color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">open job ↗</span></> : ''}</span>
-          <span style={{ color: 'var(--line)' }}>·</span>
-          <span style={{ color: 'var(--muted)' }}>editing here changes only this copy</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }}>
-            {changes.length > 0 && <div onClick={() => setReviewOpen(true)} style={{ height: 30, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Review {changes.length} change{changes.length === 1 ? '' : 's'}</div>}
-            <div onClick={() => setTailorOpen(true)} style={{ height: 30, padding: '0 15px', borderRadius: 99, border: '1px solid var(--edge)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer' }} className="v2-act">✦ Re-tailor…</div>
+        <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13 }}>
+          {scores.tailored != null && (
+            <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px' }}>
+              <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
+                <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="6" />
+                <circle cx="39" cy="39" r="35" fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(219.9 * scores.tailored / 100).toFixed(1)} 219.9`} transform="rotate(-90 39 39)" />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 13.5, transform: 'translateY(1px)' }}>{scores.tailored}</div>
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
+              {scores.delta != null && <span style={{ color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}> {scores.delta >= 0 ? '+' : ''}{scores.delta} vs base</span>}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {tracers.length > 0 ? <>tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</> : 'editing here changes only this copy'}
+            </span>
+          </div>
+          {stage && (
+            <div onClick={() => !stage.done && stage.act && stage.act()} title={stage.done ? 'Pipeline complete' : 'The one next step'} style={{ flex: '0 0 auto', height: 36, padding: '0 19px', borderRadius: 99, background: stage.done ? 'var(--accent-soft)' : 'var(--accent)', color: stage.done ? 'var(--accent)' : 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: stage.done ? 'default' : 'pointer' }}>
+              {scoring && <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+              {stage.label}
+            </div>
+          )}
+          <div style={{ position: 'relative', flex: '0 0 auto' }}>
+            <div onClick={() => setHeadMenu((v) => !v)} className="v2-act" style={{ width: 36, height: 36, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, cursor: 'pointer' }}>⋯</div>
+            {headMenu && (
+              <>
+                <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+                  <MenuHead>This copy</MenuHead>
+                  <MenuItem icon="✦" label="Re-tailor…" hint="replaces" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
+                  <MenuItem icon="◎" label="Quick score" hint="light" onClick={() => runScore('light')} />
+                  <MenuItem icon="◎" label="Full score" hint="report" onClick={() => runScore('full')} />
+                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length}`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
+                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
+                  <MenuHead>Job</MenuHead>
+                  <MenuItem icon="✉" label="Cover letter" hint="c" onClick={goCover} />
+                  {doc.job_id && <MenuItem icon="↗" label="Open in feed" hint="e" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)} />}
+                  {doc.job_id && <MenuItem icon="✓" label="Mark applied" hint="a" onClick={markApplied} />}
+                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
+                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete copy</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : (
