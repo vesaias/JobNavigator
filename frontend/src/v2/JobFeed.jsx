@@ -88,7 +88,10 @@ function Check({ on, label, onClick }) {
   )
 }
 
-const SHORTCUTS = [['j / ↓', 'Next job'], ['k / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], ['⌘-click', 'Select'], ['⇧-click', 'Select range']]
+// pick modifier: ⌘ on macOS, Ctrl elsewhere (matches rowClick's metaKey||ctrlKey)
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '')
+const PICK_KEY = IS_MAC ? '⌘' : 'Ctrl'
+const SHORTCUTS = [['j / ↓', 'Next job'], ['k / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], [`${PICK_KEY}-click`, 'Select'], ['Shift-click', 'Select range']]
 
 // toast (progress + undo). phase: '' | 'start' | 'ok' | 'nok'
 function Toast({ t, onClose }) {
@@ -562,11 +565,11 @@ export default function V2JobFeed() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
         <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ position: 'relative', padding: '12px 22px 8px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
+          <div style={{ position: 'relative', padding: '12px 14px 8px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
             <div onClick={() => setChecked(checked.size === jobs.length && jobs.length ? new Set() : new Set(jobs.map((j) => j.id)))} title="Select all shown" style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`, background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent', color: '#fff', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{checked.size === jobs.length && jobs.length ? '✓' : ''}</div>
-            <span>{jobs.length} shown · {total} matching</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em' }}>⇧ range · ⌘ pick · s save · x skip</span>
+            <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{jobs.length} shown · {total} matching</span>
+            <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick · s · x</span>
               <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 99, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
             </div>
             {shortcutsOpen && (
