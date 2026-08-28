@@ -1015,13 +1015,13 @@ export default function V2JobFeed() {
                       <>
                         {!dCached && (
                           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Reader view · fetched by JobNavigator (extension off)</span>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Fetched by JobNavigator · static (no extension)</span>
                             <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent)' }}>Open ↗</a>
                             <span style={{ width: 1, height: 12, background: 'var(--line)' }} />
                             <span onClick={() => setForceFrame(true)} style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }} className="v2-navlink">Try live preview</span>
                           </div>
                         )}
-                        <iframe title="reader" srcDoc={readerHtml} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
+                        <iframe title="posting-static" srcDoc={readerHtml} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
                       </>
                     ) : d.url && !readerErr ? (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading reader view…</div>
@@ -1031,7 +1031,7 @@ export default function V2JobFeed() {
                         <div style={{ maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
                           <div style={{ width: 46, height: 46, borderRadius: 99, border: '1px dashed var(--edge)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧩</div>
                           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.015em' }}>Couldn’t load this posting inline</span>
-                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>The site blocks embedding (<code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code>) and the server-side reader capture didn’t return content. Install the Navigator extension to strip those headers, or open the posting directly.</span>
+                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>The site blocks embedding (<code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code>) and the server-side fetch didn’t return usable content. Install the Navigator extension to strip those headers and load the live page here, or open the posting directly.</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
                             <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
                             <div onClick={() => setForceFrame(true)} className="v2-act" style={{ height: 36, padding: '0 16px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Try preview anyway</div>

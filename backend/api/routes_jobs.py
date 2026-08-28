@@ -664,17 +664,31 @@ def get_cached_page(job_id: str, db: Session = Depends(get_db)):
     return HTMLResponse(content=_reader_html(job.cached_page_html, f"Cached on {cached_at}"), headers=_READER_CSP)
 
 
+def _inject_base(raw_html: str, url: str) -> str:
+    """Return the page's own HTML with a <base href> so its relative CSS/images/links
+    resolve against the source, and its embedded CSP <meta> stripped (would otherwise
+    block the inlined render). Scripts are neutered by the iframe sandbox, not here."""
+    import re
+    import html as _html
+    raw_html = re.sub(
+        r'<meta[^>]+http-equiv=["\']?content-security-policy["\']?[^>]*>',
+        '', raw_html, flags=re.IGNORECASE)
+    base_tag = f'<base href="{_html.escape(url, quote=True)}">'
+    m = re.search(r'<head[^>]*>', raw_html, flags=re.IGNORECASE)
+    if m:
+        return raw_html[:m.end()] + base_tag + raw_html[m.end():]
+    return base_tag + raw_html
+
+
 @router.get("/{job_id}/live-page")
 async def get_live_page(job_id: str, db: Session = Depends(get_db)):
-    """Server-side reader capture of the posting. Fetches the URL from the backend
-    (SSRF-guarded) so the feed can show the content even when the browser extension
-    isn't stripping X-Frame-Options. Reuses/warms the cached_page_* columns."""
+    """Fetch the posting from the backend (SSRF-guarded) and return its OWN HTML so the
+    feed can show the real page — not a reader extraction — even when the browser
+    extension isn't stripping X-Frame-Options. Warms the cached_page_* columns as a
+    side effect (cleaned text, for scoring)."""
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.cached_page_html:
-        cached_at = job.page_cached_at.strftime("%b %d, %Y") if job.page_cached_at else "earlier"
-        return HTMLResponse(content=_reader_html(job.cached_page_html, f"Reader view · cached {cached_at}"), headers=_READER_CSP)
     if not job.url:
         raise HTTPException(status_code=404, detail="No posting URL captured for this job")
 
@@ -682,25 +696,35 @@ async def get_live_page(job_id: str, db: Session = Depends(get_db)):
     from backend.api.routes_applications import _extract_clean_content
     try:
         resp = await safe_get(job.url, timeout=20, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         })
         resp.raise_for_status()
-        clean_html, text = _extract_clean_content(resp.text[:1_000_000])
+        raw = resp.text[:2_000_000]
     except UnsafeURLError:
         raise HTTPException(status_code=400, detail="URL not allowed")
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not fetch posting: {e}")
-    if not (clean_html or "").strip():
-        raise HTTPException(status_code=502, detail="Posting returned no readable content")
-    try:
-        job.cached_page_html = clean_html
-        job.cached_page_text = text
-        db.commit()
-    except Exception:
-        db.rollback()
-    return HTMLResponse(content=_reader_html(clean_html, "Reader view · fetched server-side"), headers=_READER_CSP)
+    if not (raw or "").strip():
+        raise HTTPException(status_code=502, detail="Posting returned no content")
+    # Probe: is there real server-rendered content, or just a client-side app shell?
+    # JS-rendered postings (Workday, Jobright, …) come back as a near-empty shell that
+    # would only show a spinner without scripts — treat those as a failure so the feed
+    # falls back to the extension message instead of a blank/spinning frame.
+    clean_html, text = _extract_clean_content(raw)
+    if len((text or "").strip()) < 200:
+        raise HTTPException(status_code=502, detail="Posting is rendered client-side — needs the extension")
+    # warm the cache with cleaned text for scoring; never overwrite an existing snapshot
+    if not job.cached_page_html and clean_html:
+        try:
+            job.cached_page_html = clean_html
+            job.cached_page_text = text
+            db.commit()
+        except Exception:
+            db.rollback()
+    return HTMLResponse(content=_inject_base(raw, str(resp.url)), headers=_READER_CSP)
 
 
 def _normalize_report(report, best_cv):
