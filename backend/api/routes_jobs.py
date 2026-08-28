@@ -664,6 +664,32 @@ def get_cached_page(job_id: str, db: Session = Depends(get_db)):
     return HTMLResponse(content=_reader_html(job.cached_page_html, f"Cached on {cached_at}"), headers=_READER_CSP)
 
 
+@router.get("/{job_id}/frame-check")
+async def frame_check(job_id: str, db: Session = Depends(get_db)):
+    """Report whether the posting can be embedded in an iframe without the extension.
+    Blocks only when we CONFIDENTLY see a framing block (X-Frame-Options, or a CSP
+    frame-ancestors directive) on a successful fetch; any fetch error → embeddable
+    True so the feed still tries the live preview."""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if not job.url:
+        return {"embeddable": False}
+    from backend.scraper._shared.url_safety import safe_get, UnsafeURLError
+    try:
+        resp = await safe_get(job.url, timeout=12, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        })
+        xfo = (resp.headers.get("x-frame-options") or "").strip()
+        csp = (resp.headers.get("content-security-policy") or "").lower()
+        blocked = bool(xfo) or ("frame-ancestors" in csp)
+        return {"embeddable": not blocked}
+    except UnsafeURLError:
+        return {"embeddable": False}
+    except Exception:
+        return {"embeddable": True}   # unknown — let the browser try the live frame
+
+
 def _inject_base(raw_html: str, url: str) -> str:
     """Return the page's own HTML with a <base href> so its relative CSS/images/links
     resolve against the source, and its embedded CSP <meta> stripped (would otherwise

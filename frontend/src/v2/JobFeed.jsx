@@ -148,9 +148,8 @@ export default function V2JobFeed() {
   useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
-  const [forceFrame, setForceFrame] = useState(false)   // per-job override to try embedding without the extension
-  const [readerHtml, setReaderHtml] = useState(null)    // server-side reader capture (extension-off fallback)
-  const [readerErr, setReaderErr] = useState(false)
+  const [forceFrame, setForceFrame] = useState(false)   // per-job override to embed regardless of the frame-check
+  const [frameOk, setFrameOk] = useState(null)          // null=checking, true=embeddable, false=blocked (extension off)
   // The Navigator extension marks the page (data-jn-ext) once its content script
   // runs; its declarativeNetRequest rules strip X-Frame-Options so postings embed.
   // Without it, cross-origin postings (Ashby, Workday, …) return "refused to connect".
@@ -275,7 +274,7 @@ export default function V2JobFeed() {
     if (idx < 0 || idx >= list.length) return
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false); setForceFrame(false); setReaderHtml(null); setReaderErr(false)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false); setForceFrame(false); setFrameOk(null)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
   }, [])
   useEffect(() => {
@@ -466,15 +465,14 @@ export default function V2JobFeed() {
       .catch(() => setCachedHtml('<p style="padding:16px;font-family:sans-serif">No cached snapshot.</p>'))
   }, [detail, viewCached, cachedHtml])
 
-  // extension-off reader fallback: fetch a server-side reader capture of the posting
-  // (bypasses X-Frame-Options) when the extension marker isn't present
+  // Extension off: probe whether the posting will embed (X-Frame-Options / CSP
+  // frame-ancestors). We still always TRY the live iframe — only a confident block
+  // routes to the extension message.
   useEffect(() => {
-    if (!detail || !detail.url || viewCached || extActive || forceFrame || readerHtml || readerErr) return
+    if (!detail || !detail.url || viewCached || extActive || forceFrame || frameOk !== null) return
     const id = detail.id
-    api.get(`/jobs/${id}/live-page`, { responseType: 'text', transformResponse: (r) => r })
-      .then(({ data }) => { if (typeof data === 'string' && data.trim()) setReaderHtml(data); else setReaderErr(true) })
-      .catch(() => setReaderErr(true))
-  }, [detail, viewCached, extActive, forceFrame, readerHtml, readerErr])
+    api.get(`/jobs/${id}/frame-check`).then(({ data }) => setFrameOk(data?.embeddable !== false)).catch(() => setFrameOk(true))
+  }, [detail, viewCached, extActive, forceFrame, frameOk])
 
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {}) }, [])
@@ -1008,30 +1006,17 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                    ) : d.url && (extActive || forceFrame) ? (
+                    ) : d.url && (extActive || forceFrame || frameOk === true) ? (
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                    ) : d.url && readerHtml ? (
-                      /* extension off — server-side reader capture (bypasses X-Frame-Options) */
-                      <>
-                        {!dCached && (
-                          <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Fetched by JobNavigator · static (no extension)</span>
-                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent)' }}>Open ↗</a>
-                            <span style={{ width: 1, height: 12, background: 'var(--line)' }} />
-                            <span onClick={() => setForceFrame(true)} style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }} className="v2-navlink">Try live preview</span>
-                          </div>
-                        )}
-                        <iframe title="posting-static" srcDoc={readerHtml} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                      </>
-                    ) : d.url && !readerErr ? (
+                    ) : d.url && frameOk === null ? (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading posting…</div>
                     ) : d.url ? (
-                      /* reader capture failed too — explain and offer the direct frame / open */
+                      /* extension off and the site blocks framing — explain instead of "refused to connect" */
                       <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 30px' }}>
                         <div style={{ maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
                           <div style={{ width: 46, height: 46, borderRadius: 99, border: '1px dashed var(--edge)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧩</div>
-                          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.015em' }}>Couldn’t load this posting inline</span>
-                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>The site blocks embedding (<code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code>) and the server-side fetch didn’t return usable content. Install the Navigator extension to strip those headers and load the live page here, or open the posting directly.</span>
+                          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.015em' }}>This site blocks inline preview</span>
+                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>It sends <code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code> to prevent embedding. The Navigator extension strips those headers so the live posting loads right here — it doesn’t look active in this browser.</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
                             <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
                             <div onClick={() => setForceFrame(true)} className="v2-act" style={{ height: 36, padding: '0 16px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Try preview anyway</div>
