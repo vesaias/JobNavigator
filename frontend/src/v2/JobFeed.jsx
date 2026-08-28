@@ -148,6 +148,20 @@ export default function V2JobFeed() {
   useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
+  const [forceFrame, setForceFrame] = useState(false)   // per-job override to try embedding without the extension
+  // The Navigator extension marks the page (data-jn-ext) once its content script
+  // runs; its declarativeNetRequest rules strip X-Frame-Options so postings embed.
+  // Without it, cross-origin postings (Ashby, Workday, …) return "refused to connect".
+  const [extActive, setExtActive] = useState(() => { try { return !!document.documentElement.getAttribute('data-jn-ext') } catch { return false } })
+  useEffect(() => {
+    if (extActive) return
+    let n = 0
+    const id = setInterval(() => {
+      try { if (document.documentElement.getAttribute('data-jn-ext')) { setExtActive(true); clearInterval(id) } } catch {}
+      if (++n > 10) clearInterval(id)   // stop after ~2s; content script sets it at document_idle
+    }, 200)
+    return () => clearInterval(id)
+  }, [extActive])
 
   const [companyList, setCompanyList] = useState([])
   const [sourceList, setSourceList] = useState([])
@@ -259,7 +273,7 @@ export default function V2JobFeed() {
     if (idx < 0 || idx >= list.length) return
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false); setForceFrame(false)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
   }, [])
   useEffect(() => {
@@ -982,8 +996,22 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
-                    ) : d.url ? (
+                    ) : d.url && (extActive || forceFrame) ? (
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }} />
+                    ) : d.url ? (
+                      /* extension not detected — most ATS sites block embedding; explain instead of a raw "refused to connect" */
+                      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 30px' }}>
+                        <div style={{ maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+                          <div style={{ width: 46, height: 46, borderRadius: 99, border: '1px dashed var(--edge)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧩</div>
+                          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.015em' }}>Inline preview needs the Navigator extension</span>
+                          <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>Most job sites (Ashby, Workday, Greenhouse…) send <code style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>X-Frame-Options</code> to block embedding. The Navigator extension strips those headers so the posting loads here. It doesn’t look active in this browser.</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open posting ↗</a>
+                            <div onClick={() => setForceFrame(true)} className="v2-act" style={{ height: 36, padding: '0 16px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Try preview anyway</div>
+                          </div>
+                          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Some sites embed fine without it — “Try preview anyway” loads the frame directly.</span>
+                        </div>
+                      </div>
                     ) : (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>No posting URL captured for this job.</div>
                     )}
