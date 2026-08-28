@@ -17,6 +17,7 @@ import HealthBanner from './components/HealthBanner'
 import V2App from './v2/V2App'
 import V2JobFeed from './v2/JobFeed'
 import V2Resumes from './v2/Resumes'
+import V2ResumeEditor from './v2/ResumeEditor'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -142,6 +143,7 @@ function App() {
           <Route index element={<Navigate to="feed" replace />} />
           <Route path="feed" element={<V2JobFeed />} />
           <Route path="resumes" element={<V2Resumes />} />
+          <Route path="resumes/:id" element={<V2ResumeEditor />} />
         </Route>
 
         {/* classic shell */}

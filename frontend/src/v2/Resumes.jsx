@@ -47,7 +47,7 @@ export default function V2Resumes() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const openResume = (id) => navigate(`/resumes?resume=${id}`)   // v2 editor lands in P2
+  const openResume = (id) => navigate(`/v2/resumes/${id}`)
   const searching = q.trim().length > 0
 
   // unified search across bases, live copies, and archived copies
