@@ -138,6 +138,8 @@ export default function V2JobFeed() {
   const [reqFilter, setReqFilter] = useState('all')
   const [showMatched, setShowMatched] = useState(false)
   const [breakdownOpen, setBreakdownOpen] = useState(false)
+  const [keywordOpen, setKeywordOpen] = useState(false)
+  const [reqOpen, setReqOpen] = useState(false)
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
 
@@ -867,30 +869,42 @@ export default function V2JobFeed() {
                         )}
 
                         {coverage != null && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: keywordOpen ? 6 : 0 }}>
+                            <div onClick={() => setKeywordOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
                               <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Keyword coverage</span>
+                              <span style={{ flex: 1, minWidth: 8, height: 1, background: 'var(--line-soft)' }} />
                               <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)' }}>{coverage}%</span>
+                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{keywordOpen ? '⌄' : '›'}</span>
                             </div>
-                            <div style={{ height: 4, borderRadius: 99, background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 99, background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 3 }}>
-                              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</span>
-                              {(rpt.matched_keywords || []).length > 0 && <div onClick={() => setShowMatched((v) => !v)} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>{showMatched ? 'Hide matched' : 'Show matched'}</div>}
-                            </div>
-                            {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
-                            {(rpt.missing_keywords || []).length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.missing_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--bad-soft)', color: 'var(--bad)' }}>{w}</span>)}</div>}
+                            {keywordOpen && (
+                              <>
+                                <div style={{ height: 4, borderRadius: 99, background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 99, background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 3 }}>
+                                  <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</span>
+                                  {(rpt.matched_keywords || []).length > 0 && <div onClick={() => setShowMatched((v) => !v)} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>{showMatched ? 'Hide matched' : 'Show matched'}</div>}
+                                </div>
+                                {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
+                                {(rpt.missing_keywords || []).length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.missing_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--bad-soft)', color: 'var(--bad)' }}>{w}</span>)}</div>}
+                              </>
+                            )}
                           </div>
                         )}
 
                         {reqRows.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: reqOpen ? 9 : 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                              <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Requirement mapping</span>
-                              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{reqMet} of {reqRows.length} met</span>
-                              <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
-                                {[['all', `All ${reqRows.length}`], ['gaps', `Gaps ${reqRows.length - reqMet}`]].map(([id, label]) => <div key={id} onClick={() => setReqFilter(id)} style={{ height: 24, padding: '0 11px', display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', background: reqFilter === id ? 'var(--accent)' : 'transparent', color: reqFilter === id ? 'var(--accent-ink)' : 'var(--text-2)' }}>{label}</div>)}
+                              <div onClick={() => setReqOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer', flex: '1 1 auto', minWidth: 0, margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
+                                <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Requirement mapping</span>
+                                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{reqMet} of {reqRows.length} met</span>
+                                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{reqOpen ? '⌄' : '›'}</span>
                               </div>
+                              {reqOpen && (
+                                <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
+                                  {[['all', `All ${reqRows.length}`], ['gaps', `Gaps ${reqRows.length - reqMet}`]].map(([id, label]) => <div key={id} onClick={() => setReqFilter(id)} style={{ height: 24, padding: '0 11px', display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', background: reqFilter === id ? 'var(--accent)' : 'transparent', color: reqFilter === id ? 'var(--accent-ink)' : 'var(--text-2)' }}>{label}</div>)}
+                                </div>
+                              )}
                             </div>
+                            {reqOpen && (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', gap: 14, padding: '0 0 6px', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                               <span style={{ flex: 1.05 }}>Requirement</span><span style={{ flex: 1.1 }}>Résumé match</span><span style={{ flex: '0 0 34px', textAlign: 'center' }}>Status</span>
@@ -903,6 +917,7 @@ export default function V2JobFeed() {
                               </div>
                             ))}
                             </div>
+                            )}
                           </div>
                         )}
 
@@ -926,9 +941,9 @@ export default function V2JobFeed() {
                 </div>
               )}
 
-              {/* posting area (hidden when report is open) */}
-              {!reportOpen && (
-                <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }} className="v2-scroll">
+              {/* posting area — always mounted (display toggled, not unmounted) so the
+                  iframe isn't reloaded each time the report is opened/closed */}
+              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportOpen ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
                   {!dScored && !running && (
                     <div style={{ flex: '0 0 auto', margin: '18px 30px 4px', display: 'flex', alignItems: 'center', gap: 20, padding: '16px 18px', border: '1px dashed var(--edge)', borderRadius: 10 }}>
                       <div style={{ width: 74, height: 74, flex: '0 0 74px', border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
@@ -968,7 +983,6 @@ export default function V2JobFeed() {
                     )}
                   </div>
                 </div>
-              )}
             </>
           )}
         </section>
