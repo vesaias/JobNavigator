@@ -109,7 +109,7 @@ function Toast({ t, onClose }) {
   const bg = t.phase === 'ok' ? 'var(--good)' : t.phase === 'nok' ? 'var(--bad)' : 'var(--rail)'
   const icon = t.phase === 'start' ? '⋯' : t.phase === 'ok' ? '✓' : t.phase === 'nok' ? '✕' : '●'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 13px', borderRadius: 10, background: bg, color: '#f6f3ea', fontSize: 12.5, boxShadow: '0 10px 30px rgba(0,0,0,.28)', maxWidth: 360, transform: vis ? 'translateY(0)' : 'translateY(8px)', opacity: vis ? 1 : 0, transition: 'opacity .28s, transform .28s' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 13px', borderRadius: 10, background: bg, color: 'var(--rail-ink)', fontSize: 12.5, boxShadow: '0 10px 30px rgba(0,0,0,.28)', maxWidth: 360, transform: vis ? 'translateY(0)' : 'translateY(8px)', opacity: vis ? 1 : 0, transition: 'opacity .28s, transform .28s' }}>
       <span style={{ flex: '0 0 auto', color: t.phase === 'start' ? 'var(--rail-accent)' : 'inherit' }}>{icon}</span>
       <span style={{ flex: 1, minWidth: 0 }}>{t.msg}</span>
       {t.actionLabel && <span onClick={t.onAction} style={{ flex: '0 0 auto', color: 'var(--rail-accent)', cursor: 'pointer', fontWeight: 600 }}>{t.actionLabel}</span>}
@@ -689,12 +689,12 @@ export default function V2JobFeed() {
 
           {checked.size > 0 && (
             <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', zIndex: 25, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px 7px 14px', background: 'var(--rail)', borderRadius: 99, boxShadow: '0 10px 30px rgba(0,0,0,.28)' }}>
-              <span style={{ fontSize: 12, color: '#f6f3ea', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
+              <span style={{ fontSize: 12, color: 'var(--rail-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
               <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,.18)', margin: '0 3px' }} />
               <div onClick={() => bulkStatus('saved')} style={{ height: 27, padding: '0 12px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Save</div>
-              <div onClick={() => bulkStatus('skip')} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Skip</div>
-              <div onClick={bulkScore} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}>Score</div>
-              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#f6f3ea', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
+              <div onClick={() => bulkStatus('skip')} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Skip</div>
+              <div onClick={bulkScore} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Score</div>
+              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid rgba(255,255,255,.42)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
               <div onClick={() => setChecked(new Set())} style={{ width: 27, height: 27, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'rgba(255,255,255,.55)', cursor: 'pointer' }}>✕</div>
             </div>
           )}

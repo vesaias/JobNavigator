@@ -74,7 +74,7 @@ export default function V2Resumes() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search bases, copies…"
             style={{ width: 320, height: 38, padding: '0 14px', borderRadius: 99, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 13, fontFamily: 'var(--sans)', color: 'var(--ink)', outline: 'none' }} />
           <button onClick={() => navigate('/resumes')} className="v2-pill"
-            style={{ height: 38, padding: '0 16px', borderRadius: 99, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New résumé</button>
+            style={{ height: 38, padding: '0 16px', borderRadius: 99, border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New résumé</button>
         </div>
 
         {loading ? (

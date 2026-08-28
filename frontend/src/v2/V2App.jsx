@@ -42,7 +42,7 @@ export default function V2App() {
   return (
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
       <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .18s', overflow: 'hidden' }}>
-        <div style={{ height: 64, flex: '0 0 auto', display: 'flex', alignItems: 'center', padding: '0 22px', color: '#f6f3ea', whiteSpace: 'nowrap' }}>
+        <div style={{ height: 64, flex: '0 0 auto', display: 'flex', alignItems: 'center', padding: '0 22px', color: 'var(--rail-ink)', whiteSpace: 'nowrap' }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em' }}>{open ? 'JobNavigator' : 'JN'}</span>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 18, padding: '6px 0', overflow: 'auto' }}>
@@ -63,7 +63,7 @@ export default function V2App() {
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
                 if (!it.ready) return <div key={it.to} title="Coming in the redesign" style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
                 return (
-                  <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? '#f6f3ea' : 'var(--rail-text)', background: active ? 'rgba(255,255,255,.045)' : 'transparent' }}>{inner}</NavLink>
+                  <NavLink key={it.to} to={it.to} className="v2-navdark" style={{ ...base, color: active ? 'var(--rail-ink)' : 'var(--rail-text)', background: active ? 'rgba(255,255,255,.045)' : 'transparent' }}>{inner}</NavLink>
                 )
               })}
             </div>

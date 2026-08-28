@@ -5,7 +5,7 @@
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
   --text:#1b1a16; --text-2:#57534a; --muted:#6d6862; --ink-2:#302d26; --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
   --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
-  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --paper:#ffffff;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
   --sans:'Public Sans',system-ui,sans-serif;
