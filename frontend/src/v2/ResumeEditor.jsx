@@ -378,12 +378,13 @@ export default function ResumeEditor() {
                 const baseName = (doc.name || '').split('→')[0].trim() || 'base'
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
-                  <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer', position: 'relative', top: '1px' }} className="v2-navlink">
-                    <span style={{ color: 'var(--faint)' }}>{' — '}</span>
-                    {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
-                    <span style={{ color: 'var(--text-2)', fontWeight: 400 }}>based on </span>
-                    <span style={{ color: 'var(--accent)' }}>{baseName} ↗</span>
-                  </span>
+                  <>
+                    <span style={{ color: 'var(--faint)' }}>{' – '}</span>
+                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer', position: 'relative', top: '1px' }} className="v2-navlink">
+                      {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
+                      <span style={{ color: 'var(--accent)' }}>based on {baseName} ↗</span>
+                    </span>
+                  </>
                 )
               })()}
             </div>
