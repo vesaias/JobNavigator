@@ -4,6 +4,7 @@ import api from '../api'
 import './theme.css'
 
 const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
+const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
 // contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
 function wordDiff(a = '', b = '') {
@@ -127,6 +128,7 @@ export default function ResumeEditor() {
   const [jobData, setJobData] = useState(null)     // the copy's job (cv_scores, status)
   const [tracers, setTracers] = useState([])
   const [coverExists, setCoverExists] = useState(false)
+  const [baseCopyCount, setBaseCopyCount] = useState(null)
   const [scoring, setScoring] = useState(false)
   const [headMenu, setHeadMenu] = useState(false)
   const [toasts, setToasts] = useState([])
@@ -183,15 +185,24 @@ export default function ResumeEditor() {
     return () => { alive = false }
   }, [id, navigate])
 
-  // parent base data for the diff/marks (tailored copies only)
+  // parent base data for the diff/marks (tailored copies only); copy count for a base
   useEffect(() => {
-    if (!doc || doc.is_base || !doc.parent_id) { setBaseData(null); return }
     let alive = true
-    api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) setBaseData(p.json_data || null) }).catch(() => {})
+    if (doc && doc.is_base) {
+      setBaseData(null)
+      api.get('/resumes', { params: { is_base: false } }).then(({ data }) => { if (alive) setBaseCopyCount((data || []).filter((r) => String(r.parent_id) === String(doc.id)).length) }).catch(() => {})
+    } else if (doc && doc.parent_id) {
+      api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) setBaseData(p.json_data || null) }).catch(() => {})
+    } else { setBaseData(null) }
     return () => { alive = false }
   }, [doc])
 
   const changes = useMemo(() => (isCopy && baseData && data ? computeChanges(baseData, data) : []), [isCopy, baseData, data])
+  const changedSections = useMemo(() => {
+    const s = new Set()
+    changes.forEach((c) => { if (c.key === 'summary') s.add('Summary'); else if (c.key.startsWith('exp')) s.add('Experience') })
+    return s
+  }, [changes])
 
   // copy job context: score/delta, tracers, cover-letter existence
   const loadJobCtx = useCallback(() => {
@@ -347,18 +358,28 @@ export default function ResumeEditor() {
             <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px' }}>
               <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
                 <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="6" />
-                <circle cx="39" cy="39" r="35" fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(219.9 * scores.tailored / 100).toFixed(1)} 219.9`} transform="rotate(-90 39 39)" />
+                <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(scores.tailored)} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(219.9 * scores.tailored / 100).toFixed(1)} 219.9`} transform="rotate(-90 39 39)" />
               </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 13.5, transform: 'translateY(1px)' }}>{scores.tailored}</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 13.5, color: scoreColor(scores.tailored), transform: 'translateY(1px)' }}>{scores.tailored}</div>
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
-              {scores.delta != null && <span style={{ color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}> {scores.delta >= 0 ? '+' : ''}{scores.delta} vs base</span>}
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
+              <span style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}</span>
+              {doc.parent_id && (
+                <>
+                  <span style={{ flex: '0 0 auto', color: 'var(--faint)' }}>—</span>
+                  <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title="Open the base résumé this was tailored from" style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 5, cursor: 'pointer' }} className="v2-navlink">
+                    {scores.delta != null && <span style={{ flex: '0 0 auto', color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta}</span>}
+                    <span style={{ flex: '0 1 auto', minWidth: 0, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(doc.name || '').split('→')[0].trim() || 'base'}</span>
+                    <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>↗</span>
+                  </span>
+                </>
+              )}
             </span>
             <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {tracers.length > 0 ? <>tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</> : 'editing here changes only this copy'}
+              {(changes.length ? `${changes.length} unreviewed change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
+              {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
             </span>
           </div>
           {stage && (
@@ -392,7 +413,7 @@ export default function ResumeEditor() {
         </div>
       ) : (
         <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
-          <span>Base résumé · <span style={{ color: 'var(--text)', fontWeight: 500 }}>editing here changes future tailoring</span></span>
+          <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
           <div onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Tailor for a job…</div>
         </div>
       )}
@@ -406,9 +427,10 @@ export default function ResumeEditor() {
             return (
               <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
                 <div onClick={() => toggle(name)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9 }}>
-                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{isOpen ? '⌄' : '›'}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
                   {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>({counts[name]})</span>}
+                  {changedSections.has(name) && <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span>}
                 </div>
                 {isOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
@@ -633,8 +655,8 @@ function HeaderEditor({ data, setField, mutate }) {
 }
 function ExperienceEditor({ data, setField, mutate, baseExp }) {
   const exp = data.experience || []
+  const [open, setOpen] = useState(() => new Set([0]))   // first entry open by default
   const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
-  // tailoring mark for a bullet vs the base copy: 'changed' | 'added' | null
   const bulletMark = (i, bi, txt) => {
     if (!baseExp) return null
     const bb = baseExp[i]?.bullets || []
@@ -642,41 +664,56 @@ function ExperienceEditor({ data, setField, mutate, baseExp }) {
     if (bb[bi] !== txt) return { kind: 'changed', label: 'Changed by tailoring', base: bb[bi] }
     return null
   }
+  const entryChanged = (e, i) => (e.bullets || []).some((b, bi) => bulletMark(i, bi, b)) || (e.suggested_bullets || []).length > 0
+  const toggle = (i) => setOpen((p) => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      {exp.map((e, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 11, display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <Field label="Company" value={e.company} onChange={(v) => setField(`experience.${i}.company`, v)} />
-            <Field label="Title" value={e.title} onChange={(v) => setField(`experience.${i}.title`, v)} />
-            <Field label="Location" value={e.location} onChange={(v) => setField(`experience.${i}.location`, v)} />
-            <Field label="Date" value={e.date} onChange={(v) => setField(`experience.${i}.date`, v)} placeholder="Jan 2022 – Present" mono />
-          </div>
-          <Field label="Description" value={e.description} onChange={(v) => setField(`experience.${i}.description`, v)} placeholder="Optional role description" />
-          <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>Bullets</span>
-          {(e.bullets || []).map((b, bi) => {
-            const m = bulletMark(i, bi, b)
-            return (
-              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
-                <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>{m ? '✦' : '—'}</span>
-                <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
-                {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.5 }}>↩</span>}
-                <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
-              </div>
-            )
-          })}
-          {(e.suggested_bullets || []).length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '7px 9px', border: '1px solid var(--accent)', background: 'var(--accent-soft)', borderRadius: 6 }}>
-              <span style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>✦ Suggested by tailoring · review to keep</span>
-              {e.suggested_bullets.map((sb, k) => <div key={k} style={{ display: 'flex', gap: 6, fontSize: 12, color: 'var(--text-2)' }}><span style={{ color: 'var(--accent)' }}>+</span><span>{sb}</span></div>)}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
+      {exp.map((e, i) => {
+        const ch = entryChanged(e, i), isOpen = open.has(i), nb = (e.bullets || []).length
+        return (
+          <div key={i} style={{ border: `1px solid ${ch ? 'var(--change-soft)' : 'var(--line)'}`, borderRadius: 8, background: ch ? 'var(--change-bg)' : 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+            <div onClick={() => toggle(i)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8 }}>
+              <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
+              <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
+              <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
+              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{e.date}</span>
+              <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
+              {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
             </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AddLink onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })}>+ Bullet</AddLink>
-            <RemoveLink onClick={() => mutate((d) => d.experience.splice(i, 1))}>Remove role</RemoveLink>
+            {isOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '2px 11px 11px', borderTop: '1px solid var(--line-soft)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, paddingTop: 9 }}>
+                  <Field label="Company" value={e.company} onChange={(v) => setField(`experience.${i}.company`, v)} />
+                  <Field label="Title" value={e.title} onChange={(v) => setField(`experience.${i}.title`, v)} />
+                  <Field label="Location" value={e.location} onChange={(v) => setField(`experience.${i}.location`, v)} />
+                  <Field label="Date" value={e.date} onChange={(v) => setField(`experience.${i}.date`, v)} placeholder="Jan 2022 – Present" mono />
+                </div>
+                <Field label="Description" value={e.description} onChange={(v) => setField(`experience.${i}.description`, v)} placeholder="Optional role description" />
+                {(e.bullets || []).map((b, bi) => {
+                  const m = bulletMark(i, bi, b)
+                  return (
+                    <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
+                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>{m ? '✦' : '—'}</span>
+                      <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
+                      {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.5 }}>↩</span>}
+                      <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
+                    </div>
+                  )
+                })}
+                {(e.suggested_bullets || []).map((sb, k) => (
+                  <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
+                    <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: 1.5 }}>✦</span>
+                    <span style={{ flex: 1, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-2)' }}>{sb}</span>
+                    <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.6 }}>suggested</span>
+                  </div>
+                ))}
+                <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>+ Add bullet</div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.experience.splice(i, 1))}>Remove role</RemoveLink></div>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        )
+      })}
       <AddLink onClick={() => mutate((d) => { d.experience = d.experience || []; d.experience.push({ company: '', title: '', location: '', date: '', description: '', bullets: [] }) })}>+ Add experience</AddLink>
     </div>
   )
