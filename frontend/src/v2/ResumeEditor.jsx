@@ -70,6 +70,24 @@ function Field({ label, value, onChange, placeholder, multiline, rows, mono, fle
     </label>
   )
 }
+// bullet text: borderless auto-growing textarea so a bullet reads as flowing text
+// (the row supplies the border/highlight) — matches the design's static-text bullets
+function BulletText({ value, onChange }) {
+  const ref = useRef(null)
+  const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }
+  useEffect(fit, [value])
+  const boldKey = (e) => {
+    if (!((e.ctrlKey || e.metaKey) && e.key === 'b')) return
+    e.preventDefault()
+    const ta = e.target, s = ta.selectionStart, en = ta.selectionEnd, t = ta.value
+    if (s === en) return
+    const sel = t.slice(s, en)
+    if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
+    else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
+  }
+  return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1}
+    style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-2)', padding: 0, overflow: 'hidden' }} />
+}
 const IconBtn = ({ onClick, title, children, danger }) => (
   <span onClick={onClick} title={title} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 5, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: danger ? 'var(--bad)' : 'var(--muted)', cursor: 'pointer' }}>{children}</span>
 )
@@ -639,11 +657,11 @@ function ExperienceEditor({ data, setField, mutate, baseExp }) {
           {(e.bullets || []).map((b, bi) => {
             const m = bulletMark(i, bi, b)
             return (
-              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, ...(m ? { padding: '2px 6px 2px 2px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 } : {}) }}>
-                <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, paddingTop: 7 }}>{m ? '✦' : '·'}</span>
-                <Field value={b} onChange={(v) => setBullet(i, bi, v)} flex={1} multiline rows={1} />
-                {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline — restore the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, paddingTop: 6 }}>↩</span>}
-                <IconBtn danger onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove">✕</IconBtn>
+              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
+                <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>{m ? '✦' : '—'}</span>
+                <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
+                {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.5 }}>↩</span>}
+                <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
               </div>
             )
           })}
