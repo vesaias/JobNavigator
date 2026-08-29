@@ -250,7 +250,7 @@ export default function Companies() {
   return (
     <div className="v2-scroll" style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header — title + subtitle, matching The Feed */}
-      <header style={{ flex: '0 0 auto', padding: '22px 28px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Companies</h1>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{countLine}</span>
@@ -261,7 +261,7 @@ export default function Companies() {
       </header>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '2px 28px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ position: 'relative', flex: '0 0 226px', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
@@ -290,22 +290,22 @@ export default function Companies() {
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {filtered.length !== companies.length && <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{filtered.length} of {companies.length} shown</span>}
           <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-            <span onClick={() => setSortOpen((v) => !v)} title="Change row order" className="v2-act"
-              style={{ height: 30, padding: '0 12px', border: `1px solid ${sortOpen ? 'var(--accent)' : 'var(--edge)'}`, background: sortOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: sortOpen ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-              Sort · {SORT_OPTIONS.find((s) => s.id === sortBy)?.label}<span style={{ fontSize: 9, color: 'var(--muted)' }}>▾</span>
-            </span>
+            <div onClick={() => setSortOpen((v) => !v)} title="Change row order"
+              style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
+              Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTIONS.find((s) => s.id === sortBy)?.label}</span><span style={{ fontSize: 10 }}>▾</span>
+            </div>
             {sortOpen && (
-              <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 212, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+              <div className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 8, display: 'flex', flexDirection: 'column' }}>
                 {SORT_OPTIONS.map((so) => {
                   const on = so.id === sortBy
                   return (
-                    <span key={so.id} onClick={() => { setSortBy(so.id); setSortOpen(false) }} title={so.hint} className="v2-menuitem"
-                      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: on ? 'var(--text)' : 'var(--text-2)', fontWeight: on ? 600 : 400, cursor: 'pointer' }}>
-                      <span style={{ flex: '0 0 12px', fontSize: 10, color: 'var(--accent)' }}>{on ? '✓' : ''}</span>{so.label}
-                    </span>
+                    <div key={so.id} onClick={() => { setSortBy(so.id); setSortOpen(false) }} title={so.hint} className="v2-menuitem"
+                      style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: on ? 'var(--accent)' : 'var(--text-2)', fontWeight: on ? 500 : 400, background: on ? 'var(--accent-soft)' : 'transparent' }}>
+                      {so.label}{on && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                    </div>
                   )
                 })}
-              </span>
+              </div>
             )}
           </span>
         </span>
@@ -314,7 +314,7 @@ export default function Companies() {
       {/* rows (column header lives inside the scroll container so its width
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
           <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
@@ -334,7 +334,7 @@ export default function Companies() {
           const aliases = c.aliases || []
           return (
             <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
-              style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 28px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
+              style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 30px 0 24px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
