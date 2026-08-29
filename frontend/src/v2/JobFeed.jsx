@@ -587,7 +587,7 @@ export default function V2JobFeed() {
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
         <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3 }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 184, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 226, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
         </div>
         <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} onClear={() => setF({ source: [] })} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
