@@ -154,7 +154,7 @@ export default function V2Resumes() {
                   <div className="v2-card" onClick={() => navigate('/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.avg_fit == null ? 'no recent copies' : null, persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count === 0 ? (persona.archived_count > 0 ? 'no recent copies' : 'no copies') : null, persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
                       {persona.avg_fit != null && (
                         <span title="Average fit across copies tailored from Persona (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(persona.avg_fit) }}>
                           {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
@@ -190,7 +190,7 @@ export default function V2Resumes() {
                   <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.avg_fit == null ? 'no recent copies' : null, `edited ${timeAgo(b.updated_at)}`].filter(Boolean).join(' · ')}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count === 0 ? (b.archived_count > 0 ? 'no recent copies' : 'no copies') : null, `edited ${timeAgo(b.updated_at)}`].filter(Boolean).join(' · ')}</span>
                       {b.avg_fit != null && (
                         <span title="Average fit across this base's scored copies (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(b.avg_fit) }}>
                           {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
