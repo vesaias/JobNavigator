@@ -217,6 +217,7 @@ export default function V2JobFeed() {
     api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => {})
     api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {})
   }, [])
+  const refreshStats = useCallback(() => { api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {}) }, [])
 
   const buildParams = useCallback((off) => {
     const p = { limit: PAGE, offset: off }
@@ -290,7 +291,10 @@ export default function V2JobFeed() {
   }, [jobs, loading])
 
   const patchLocal = useCallback((id, changes) => {
-    const leaves = filters.status.length && changes.status && !filters.status.includes(changes.status)
+    // an empty status filter means "the open feed" (new + saved), so skipping or
+    // applying a job drops it from the list + counts, same as under an explicit filter
+    const openSet = filters.status.length ? filters.status : ['new', 'saved']
+    const leaves = !!(changes.status && !openSet.includes(changes.status))
     setJobs((prev) => {
       if (leaves) {
         const next = prev.filter((j) => j.id !== id)
@@ -304,14 +308,14 @@ export default function V2JobFeed() {
   }, [filters.status, loadMore])
   const patchRemote = useCallback(async (job, changes) => {
     patchLocal(job.id, changes)
-    try { await api.patch(`/jobs/${job.id}`, changes) } catch (e) { console.error(e); fetchJobs() }
-  }, [patchLocal, fetchJobs])
+    try { await api.patch(`/jobs/${job.id}`, changes); refreshStats() } catch (e) { console.error(e); fetchJobs() }
+  }, [patchLocal, fetchJobs, refreshStats])
   const watchForScore = useCallback((id) => {
     if (id && !scoreWatchRef.current.some((w) => w.id === id)) scoreWatchRef.current = [...scoreWatchRef.current, { id, until: Date.now() + 90000 }]
   }, [])
   const showUndo = useCallback((job, prevStatus, prevSaved, msg) => {
-    pushToast({ msg, actionLabel: 'Undo', ttl: 5000, onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs() } catch (e) { console.error(e) } } })
-  }, [pushToast, fetchJobs])
+    pushToast({ msg, actionLabel: 'Undo', ttl: 5000, onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
+  }, [pushToast, fetchJobs, refreshStats])
   const saveJob = (j) => { const willSave = !j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' }) }
   const skipJob = (j) => { showUndo(j, j.status, j.saved, `Skipped "${j.title}"`); patchRemote(j, { status: 'skip' }) }
   const applyJob = (j) => { showUndo(j, j.status, j.saved, `Applied to "${j.title}"`); patchRemote(j, { status: 'applied' }) }
@@ -541,6 +545,7 @@ export default function V2JobFeed() {
             }
           }
           setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
+          refreshStats()
         }
         setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: data[j.id] } : j)))
       } catch { /* retry next tick */ }
