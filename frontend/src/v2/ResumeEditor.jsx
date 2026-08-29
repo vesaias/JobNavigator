@@ -451,8 +451,10 @@ export default function ResumeEditor() {
               <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
                 <div onClick={() => toggle(name)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9 }}>
                   <span style={{ color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-                  {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)', position: 'relative', top: '0.5px' }}>({counts[name]})</span>}
+                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
+                    {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>({counts[name]})</span>}
+                  </span>
                   {changedSections.has(name) && <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span>}
                 </div>
                 {isOpen && (
