@@ -99,8 +99,9 @@ def _flatten_resume(json_data: dict) -> str:
         for edu in education:
             degree = edu.get("degree", "")
             school = edu.get("school", "")
-            # schema has location (no year); keep year as back-compat
-            tail = edu.get("location") or edu.get("year") or ""
+            loc = edu.get("location", "")
+            years = edu.get("years") or edu.get("year") or ""
+            tail = " ".join(x for x in (loc, years) if x)
             parts.append(f"{degree} — {school}, {tail}".strip(" —,"))
 
     projects = json_data.get("projects") or []

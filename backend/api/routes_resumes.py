@@ -550,10 +550,38 @@ def resume_shelf(db: Session = Depends(get_db)):
             "avg_fit": int(round(sum(scores) / len(scores))) if scores else None,
             "copies": copies_out,
         })
+    # Persona group: tailored copies with no base parent (base_resume_id == "persona")
+    persona_copies_out, persona_scores = [], []
+    for c in sorted(by_parent.get(None, []), key=lambda c: c.updated_at or now, reverse=True):
+        job = jobs.get(c.job_id)
+        sc = _copy_score(job, c.name)
+        reason = _archive_reason(c)
+        if reason:
+            archived.append({"id": str(c.id), "name": c.name, "base_id": None,
+                             "job_id": str(c.job_id) if c.job_id else None,
+                             "company": (job.company if job else None),
+                             "role": (job.title if job else None), "why": reason})
+            continue
+        if sc is not None:
+            persona_scores.append(sc)
+        persona_copies_out.append({
+            "id": str(c.id), "name": c.name,
+            "job_id": str(c.job_id) if c.job_id else None,
+            "company": (job.company if job else None),
+            "role": (job.title if job else None),
+            "score": sc, "status": app_status.get(c.job_id) or (job.status if job else None),
+            "fresh": _fresh(c), "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        })
+    persona = {
+        "copy_count": len(persona_copies_out),
+        "avg_fit": int(round(sum(persona_scores) / len(persona_scores))) if persona_scores else None,
+        "copies": persona_copies_out,
+    }
+
     # newest archived first
     archived.sort(key=lambda a: a["why"] != "rejected")
     return {"bases": out, "total_copies": len(copies) - len(archived),
-            "archived": archived, "archived_count": len(archived)}
+            "persona": persona, "archived": archived, "archived_count": len(archived)}
 
 
 @router.post("", status_code=201)

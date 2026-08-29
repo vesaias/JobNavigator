@@ -29,6 +29,7 @@ const copyLabel = (c) => {
 export default function V2Resumes() {
   const navigate = useNavigate()
   const [bases, setBases] = useState([])
+  const [persona, setPersona] = useState(null)
   const [archived, setArchived] = useState([])
   const [totalCopies, setTotalCopies] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -42,6 +43,7 @@ export default function V2Resumes() {
     try {
       const { data } = await api.get('/resumes/shelf')
       setBases(data.bases || [])
+      setPersona(data.persona || null)
       setArchived(data.archived || [])
       setTotalCopies(data.total_copies || 0)
     } catch (e) { console.error('shelf load failed', e) }
@@ -146,6 +148,39 @@ export default function V2Resumes() {
             <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No base résumés yet. Create one to start.</div>
           ) : (
             <>
+              {persona && (
+                <>
+                  <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Profile</span>
+                  <div className="v2-card" onClick={() => navigate('/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                      <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{persona.copy_count} cop{persona.copy_count === 1 ? 'y' : 'ies'} · from /persona</span>
+                      <span title="Average fit across copies tailored from Persona" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: persona.avg_fit == null ? 'var(--faint)' : scoreColor(persona.avg_fit) }}>
+                        {persona.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no scored copies</span> : <>{persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
+                      </span>
+                    </div>
+                    {(persona.copies?.length > 0 || inflight.some((f) => f.baseId === 'persona')) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }}>Recent copies</span>
+                        {inflight.filter((f) => f.baseId === 'persona').map((f, k) => (
+                          <div key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)' }}>
+                            <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /><span>tailoring…</span>
+                          </div>
+                        ))}
+                        {(persona.copies || []).slice(0, 6).map((c) => (
+                          <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={c.name} className="v2-chip" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
+                            <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
+                            {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
+                          </div>
+                        ))}
+                        {(persona.copies?.length || 0) > 6 && <span onClick={(e) => { e.stopPropagation(); setQ('persona') }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ {persona.copies.length - 6} more ›</span>}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Résumés</span>
+                </>
+              )}
               {bases.map((b) => {
                 const copies = b.copies || []
                 const baseInflight = inflight.filter((f) => String(f.baseId) === String(b.id))

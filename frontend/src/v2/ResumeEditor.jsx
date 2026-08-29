@@ -103,8 +103,14 @@ const AddLink = ({ onClick, children }) => (
 const RemoveLink = ({ onClick, children = 'Remove' }) => (
   <span onClick={onClick} style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
 )
-const DashedAdd = ({ onClick, children }) => (
-  <div onClick={onClick} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>{children}</div>
+const DashedAdd = ({ onClick, children, big }) => (
+  <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
+)
+const EmptyState = ({ what }) => (
+  <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+    <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No {what} yet</span>
+    <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>Empty sections are skipped in the PDF — nothing prints until you add one.</span>
+  </div>
 )
 const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
 const MenuItem = ({ icon, label, hint, onClick }) => (
@@ -464,7 +470,7 @@ export default function ResumeEditor() {
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
             {/* template picker */}
             <div style={{ position: 'relative' }}>
-              <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} style={{ fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }} className="v2-navlink">{tplLabel} ▾</span>
+              <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Résumé template" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {tplOpen && (
                 <>
                   <div onClick={() => setTplOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
@@ -476,7 +482,7 @@ export default function ResumeEditor() {
             </div>
             {/* format */}
             <div style={{ position: 'relative' }}>
-              <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} style={{ fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }} className="v2-navlink">{format === 'a4' ? 'A4' : 'US Letter'} ▾</span>
+              <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{format === 'a4' ? 'A4' : 'US Letter'}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {fmtOpen && (
                 <>
                   <div onClick={() => setFmtOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
@@ -645,11 +651,6 @@ const normUrl = (u) => (u || '').replace(/^https?:\/\//, '').replace(/\/$/, '').
 function HeaderEditor({ data, setField, mutate, tracers }) {
   const items = data.header?.contact_items || []
   const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
-  const clicksFor = (url) => {
-    if (!url) return null
-    const t = (tracers || []).find((x) => normUrl(x.destination_url) === normUrl(url.startsWith('http') ? url : `https://${url}`))
-    return t ? t.clicks : null
-  }
   const arrows = (i) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
       <span onClick={() => move(i, -1)} className="v2-navlink">▲</span><span onClick={() => move(i, 1)} className="v2-navlink">▼</span>
@@ -664,18 +665,16 @@ function HeaderEditor({ data, setField, mutate, tracers }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span style={UPPER}>Contact items</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--faint)' }}>text · link · tracer clicks</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--faint)' }}>text · link · stub</span>
         </div>
         {items.map((it, i) => {
           const showStub = it.url && !it.url.startsWith('mailto:')
-          const clicks = showStub ? clicksFor(it.url) : null
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {arrows(i)}
-              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: 1, minWidth: 0 }} />
-              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1.35, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
+              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: '0 0 118px', minWidth: 0 }} />
+              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
               {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
-              <span title={clicks != null ? `${clicks} tracer click${clicks === 1 ? '' : 's'}` : ''} style={{ flex: '0 0 26px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10.5, color: clicks ? 'var(--accent)' : 'var(--faint)' }}>{clicks != null ? clicks : ''}</span>
               <span onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
             </div>
           )
@@ -746,7 +745,8 @@ function ExperienceEditor({ data, setField, mutate, baseExp }) {
           </div>
         )
       })}
-      <AddLink onClick={() => mutate((d) => { d.experience = d.experience || []; d.experience.push({ company: '', title: '', location: '', date: '', description: '', bullets: [] }) })}>+ Add experience</AddLink>
+      {exp.length === 0 && <EmptyState what="experience" />}
+      <DashedAdd big onClick={() => mutate((d) => { d.experience = d.experience || []; d.experience.push({ company: '', title: '', location: '', date: '', description: '', bullets: [] }) })}>+ Add experience</DashedAdd>
     </div>
   )
 }
@@ -789,20 +789,22 @@ function SkillsEditor({ data, setField, mutate, baseSkills }) {
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
               <input value={v} onChange={(e) => setField(`skills.${k}`, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
+              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setField(`skills.${k}`, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
             <span onClick={() => mutate((d) => delete d.skills[k])} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
           </div>
         )
       })}
+      {entries.length === 0 && <EmptyState what="skills" />}
       <DashedAdd onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</DashedAdd>
     </div>
   )
 }
-const MicroField = ({ label, value, onChange, placeholder }) => (
+const MicroField = ({ label, value, onChange, placeholder, mono }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
-    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)' }} />
+    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)' }} />
   </div>
 )
 function EducationEditor({ data, setField, mutate }) {
@@ -814,11 +816,15 @@ function EducationEditor({ data, setField, mutate }) {
             <MicroField label="School" value={e.school} onChange={(v) => setField(`education.${i}.school`, v)} />
             <MicroField label="Location" value={e.location} onChange={(v) => setField(`education.${i}.location`, v)} />
           </div>
-          <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+            <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
+            <MicroField label="Years" value={e.years} onChange={(v) => setField(`education.${i}.years`, v)} placeholder="2015 – 2019" mono />
+          </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
         </div>
       ))}
-      <AddLink onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</AddLink>
+      {(data.education || []).length === 0 && <EmptyState what="education" />}
+      <DashedAdd big onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</DashedAdd>
     </div>
   )
 }
@@ -846,7 +852,8 @@ function ProjectsEditor({ data, setField, mutate }) {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))}>Remove project</RemoveLink></div>
         </div>
       ))}
-      <AddLink onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</AddLink>
+      {(data.projects || []).length === 0 && <EmptyState what="projects" />}
+      <DashedAdd big onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</DashedAdd>
     </div>
   )
 }
@@ -854,19 +861,14 @@ function PublicationsEditor({ data, setField, mutate }) {
   const pubs = data.publications || []
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
-      {pubs.length === 0 ? (
-        <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No publications yet</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>Empty sections are skipped in the PDF — nothing prints until you add one.</span>
-        </div>
-      ) : pubs.map((p, i) => (
+      {pubs.length === 0 ? <EmptyState what="publications" /> : pubs.map((p, i) => (
         <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.publications.splice(i, 1))} /></div>
         </div>
       ))}
-      <AddLink onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</AddLink>
+      <DashedAdd big onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</DashedAdd>
     </div>
   )
 }
