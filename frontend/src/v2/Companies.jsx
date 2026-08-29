@@ -15,21 +15,12 @@ const ago = (iso) => {
 }
 const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, '')
 
-// ATS + tier chip palettes from the canonical design (semantic [bg, fg] pairs).
-const ATS_COLORS = {
-  Greenhouse: ['#eaf1eb', '#2f6b4a'], Workday: ['#f6eee4', '#8a5322'],
-  Lever: ['#e7f0ef', '#2a6259'], Ashby: ['#f3e7ef', '#7c4066'],
-  Phenom: ['#e6f0f4', '#2c5f72'], 'Oracle HCM': ['#f7ecea', '#8f3a30'],
-  SmartRecruiters: ['#e9f0f7', '#2f5580'], Rippling: ['#efeaf6', '#5a4285'],
-  Eightfold: ['#f7f0e2', '#8a6a22'], TalentBrew: ['#eef2e6', '#5a6a2a'],
-  Meta: ['#e9f0f7', '#2f5580'], Google: ['#f7f0e2', '#8a6a22'],
-  Generic: ['#f3f0e8', '#57534a'],
-}
-const TIER_COLORS = { 1: ['#eaf1eb', '#2f6b4a'], 2: ['#e9f0f7', '#2f5580'], 3: ['#f3f0e8', '#57534a'], none: ['#f7f5ef', '#6d6862'] }
+// ATS + tier chip colors live in theme.css (.cc-*) so they flip with dark mode.
+const ATS_SLUGS = new Set(['greenhouse', 'workday', 'lever', 'ashby', 'phenom', 'oraclehcm', 'smartrecruiters', 'rippling', 'eightfold', 'talentbrew', 'meta', 'google'])
 const atsShort = (detected) => (detected || 'Generic')
   .replace(' API', '').replace(' AJAX', '').replace(' (Playwright)', '').replace(' Careers', '')
-const atsColor = (short) => ATS_COLORS[short] || ATS_COLORS.Generic
-const tierColor = (key) => TIER_COLORS[key === 'none' ? 'none' : Number(key)] || TIER_COLORS.none
+const atsSlug = (short) => { const s = (short || 'generic').toLowerCase().replace(/[^a-z0-9]/g, ''); return 'cc-' + (ATS_SLUGS.has(s) ? s : 'generic') }
+const tierSlug = (key) => 'cc-tier' + (key === 'none' ? 'none' : key)
 
 // client-side ATS detection (mirror of backend detect, for live editor chips)
 const hostMatches = (url, ...domains) => {
@@ -83,10 +74,9 @@ function UrlEditor({ urls, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {urls.map((u, i) => {
-        const [bg, fg] = atsColor(detectAts(u))
         return (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, background: bg, color: fg, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
+            <span className={atsSlug(detectAts(u))} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
             <input value={u} onChange={(e) => set(i, e.target.value)} placeholder="https://boards.greenhouse.io/company"
               style={{ ...monoBox, flex: 1, height: 32, minHeight: 0 }} />
             <span title="Remove this URL" onClick={() => onChange(urls.filter((_, j) => j !== i))} className="v2-hover-bad"
@@ -106,7 +96,7 @@ const Seg = ({ opts, value, onPick, valueKey = 'id', big }) => (
       const v = o[valueKey] !== undefined ? o[valueKey] : o.v
       const on = value === v
       return (
-        <div key={String(v)} onClick={() => onPick(v)} title={o.hint || ''}
+        <div key={String(v)} onClick={() => onPick(v)} title={o.hint || ''} className="v2-bd"
           style={{ flex: 1, height: 32, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{o.label}</div>
       )
     })}
@@ -117,10 +107,10 @@ const ResumeChips = ({ resumes, personaPopulated, selected, toggle }) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
     {resumes.map((r) => {
       const on = selected.includes(r.id)
-      return <div key={r.id} onClick={() => toggle(r.id)} style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', whiteSpace: 'nowrap' }}>{r.name}</div>
+      return <div key={r.id} onClick={() => toggle(r.id)} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', whiteSpace: 'nowrap' }}>{r.name}</div>
     })}
     {personaPopulated && (() => { const on = selected.includes('persona'); return (
-      <div onClick={() => toggle('persona')} style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer' }}>Persona</div>
+      <div onClick={() => toggle('persona')} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer' }}>Persona</div>
     ) })()}
   </div>
 )
@@ -258,15 +248,19 @@ export default function Companies() {
 
   return (
     <div className="v2-scroll" style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* header */}
-      <header style={{ flex: '0 0 auto', padding: '20px 28px 0', display: 'flex', alignItems: 'baseline', gap: 14 }}>
-        <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Companies</h1>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
-        <div onClick={() => setAddOpen(true)} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Add company</div>
+      {/* header — title + subtitle, matching The Feed */}
+      <header style={{ flex: '0 0 auto', padding: '22px 28px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Companies</h1>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{countLine}</span>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div onClick={() => setAddOpen(true)} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Add company</div>
+        </div>
       </header>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '14px 28px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: '0 0 auto', padding: '2px 28px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
           style={{ flex: '0 0 226px', height: 30, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', fontSize: 12, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
         <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 3px' }} />
@@ -274,9 +268,9 @@ export default function Companies() {
           const on = tiers.includes(t)
           return (
             <div key={t} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
-              title="Add/remove from filter · multi-select, remembered per browser"
+              title="Add/remove from filter · multi-select, remembered per browser" className="v2-bd"
               style={{ flex: '0 0 auto', height: 30, padding: '0 13px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-              {t === 'none' ? 'Untiered' : `Tier ${t}`}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7 }}>{tierCounts[t]}</span>
+              {t === 'none' ? 'Untiered' : `Tier ${t}`}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, position: 'relative', top: 1 }}>{tierCounts[t]}</span>
             </div>
           )
         })}
@@ -286,7 +280,7 @@ export default function Companies() {
             style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {inactiveInFilter.length} active</div>
         )}
         {activeInFilter.length > 0 && (
-          <div onClick={() => bulkSet(false)} title={bulkHint}
+          <div onClick={() => bulkSet(false)} title={bulkHint} className="v2-bd-warn"
             style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--warn)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {activeInFilter.length} inactive</div>
         )}
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -317,9 +311,9 @@ export default function Companies() {
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          <span style={{ flex: 1, minWidth: 130 }}>Company</span>
+          <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
-          <span style={{ flex: 1.7, minWidth: 200 }}>Health</span>
+          <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
           <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
           <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>
           <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
@@ -333,24 +327,22 @@ export default function Companies() {
           const rn = resumeNames(c)
           const urls = c.scrape_urls || []
           const firstAts = urls.length ? atsShort(c.detected_scrape_types?.[urls[0]]) : 'Generic'
-          const [atsBg, atsFg] = atsColor(firstAts)
-          const [tBg, tFg] = tierColor(tierKey(c))
           const aliases = c.aliases || []
           return (
             <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 28px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
-              <span style={{ flex: 1, minWidth: 130, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
               </span>
               {/* tier */}
               <span style={{ flex: '0 0 62px' }}>
-                <span style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: tBg, color: tFg }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
+                <span className={tierSlug(tierKey(c))} style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
               </span>
               {/* health */}
-              <span style={{ flex: 1.7, minWidth: 200, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1.9, minWidth: 210, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
                 <span title={h.text} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
@@ -358,7 +350,7 @@ export default function Companies() {
               <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
               {/* ats */}
               <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
-                {urls.length > 0 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 7px', borderRadius: 99, background: atsBg, color: atsFg, whiteSpace: 'nowrap' }}>{firstAts}</span>}
+                {urls.length > 0 && <span className={atsSlug(firstAts)} title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
               </span>
@@ -372,7 +364,7 @@ export default function Companies() {
               <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>
               {/* status */}
               <span style={{ flex: '0 0 88px', display: 'flex', justifyContent: 'center' }}>
-                <span onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }} title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'}
+                <span onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }} title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'} className="v2-bd"
                   style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${c.active ? 'var(--accent)' : 'var(--edge)'}`, background: c.active ? 'var(--accent-soft)' : 'var(--surface)', color: c.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>{c.active ? 'Active' : 'Inactive'}</span>
               </span>
               {/* actions */}
@@ -450,7 +442,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   }
 
   return (
-    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 780, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: '-14px 0 40px rgba(0,0,0,.14)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
+    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 720, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: '-14px 0 40px rgba(0,0,0,.14)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
       <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
@@ -574,7 +566,6 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
   const [depth, setDepth] = useState('light')
   const [saving, setSaving] = useState(false)
   const ats = detectAts(url)
-  const [atsBg, atsFg] = atsColor(ats)
   const known = ats !== 'Generic'
   const atsNote = !url ? 'The ATS is detected once you paste a URL.'
     : known ? "Jobs are read from the board's API, so no page settings are needed."
@@ -610,7 +601,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Career page URL</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, background: url ? atsBg : 'var(--surface-2)', color: url ? atsFg : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
+              <span className={url ? atsSlug(ats) : undefined} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, background: url ? undefined : 'var(--surface-2)', color: url ? undefined : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
               <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://boards.greenhouse.io/acme" style={{ ...monoBox, flex: 1, height: 33, minHeight: 0, fontSize: 11 }} />
             </div>
             <span style={{ fontSize: 11, color: url && !known ? 'var(--warn)' : 'var(--muted)' }}>{atsNote}</span>
@@ -642,7 +633,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
               <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Depth</span>
               <div style={{ display: 'flex', gap: 4 }}>
                 {DEPTHS.map((d) => { const on = depth === d.id; return (
-                  <div key={d.id} onClick={() => setDepth(d.id)} title={d.hint} style={{ height: 26, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>{d.label}</div>
+                  <div key={d.id} onClick={() => setDepth(d.id)} title={d.hint} className="v2-bd" style={{ height: 26, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>{d.label}</div>
                 ) })}
               </div>
             </div>
