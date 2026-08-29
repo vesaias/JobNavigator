@@ -154,9 +154,9 @@ export default function V2Resumes() {
                   <div className="v2-card" onClick={() => navigate('/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{persona.copy_count === 0 ? 'No copies yet' : <>{persona.copy_count} cop{persona.copy_count === 1 ? 'y' : 'ies'} · edited {timeAgo(persona.updated_at)}</>}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : ''}</span>
                       <span title="Average fit across copies tailored from Persona" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: persona.avg_fit == null ? 'var(--faint)' : scoreColor(persona.avg_fit) }}>
-                        {persona.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no scored copies</span> : <>{persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
+                        {persona.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no recent copies</span> : <>{persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
                       </span>
                     </div>
                     {(persona.copies?.length > 0 || inflight.some((f) => f.baseId === 'persona')) && (
@@ -188,9 +188,9 @@ export default function V2Resumes() {
                   <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{b.copy_count} cop{b.copy_count === 1 ? 'y' : 'ies'} · edited {timeAgo(b.updated_at)}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>edited {timeAgo(b.updated_at)}</span>
                       <span title="Average fit across this base's scored copies" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: b.avg_fit == null ? 'var(--faint)' : scoreColor(b.avg_fit) }}>
-                        {b.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no scored copies</span> : <>{b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
+                        {b.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no recent copies</span> : <>{b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
                       </span>
                     </div>
                     {(copies.length > 0 || baseInflight.length > 0) && (
