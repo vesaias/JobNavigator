@@ -15,12 +15,21 @@ const ago = (iso) => {
 }
 const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, '')
 
-// Chips use theme tokens (kept on the accepted cream+green palette): ATS is a
-// neutral tag, tier 1 carries the brand green, other tiers stay neutral.
+// ATS + tier chip palettes from the canonical design (semantic [bg, fg] pairs).
+const ATS_COLORS = {
+  Greenhouse: ['#eaf1eb', '#2f6b4a'], Workday: ['#f6eee4', '#8a5322'],
+  Lever: ['#e7f0ef', '#2a6259'], Ashby: ['#f3e7ef', '#7c4066'],
+  Phenom: ['#e6f0f4', '#2c5f72'], 'Oracle HCM': ['#f7ecea', '#8f3a30'],
+  SmartRecruiters: ['#e9f0f7', '#2f5580'], Rippling: ['#efeaf6', '#5a4285'],
+  Eightfold: ['#f7f0e2', '#8a6a22'], TalentBrew: ['#eef2e6', '#5a6a2a'],
+  Meta: ['#e9f0f7', '#2f5580'], Google: ['#f7f0e2', '#8a6a22'],
+  Generic: ['#f3f0e8', '#57534a'],
+}
+const TIER_COLORS = { 1: ['#eaf1eb', '#2f6b4a'], 2: ['#e9f0f7', '#2f5580'], 3: ['#f3f0e8', '#57534a'], none: ['#f7f5ef', '#6d6862'] }
 const atsShort = (detected) => (detected || 'Generic')
   .replace(' API', '').replace(' AJAX', '').replace(' (Playwright)', '').replace(' Careers', '')
-const atsColor = () => ['var(--surface-2)', 'var(--text-2)']
-const tierColor = (key) => (key === '1' ? ['var(--accent-soft)', 'var(--accent)'] : ['var(--surface-2)', 'var(--text-2)'])
+const atsColor = (short) => ATS_COLORS[short] || ATS_COLORS.Generic
+const tierColor = (key) => TIER_COLORS[key === 'none' ? 'none' : Number(key)] || TIER_COLORS.none
 
 // client-side ATS detection (mirror of backend detect, for live editor chips)
 const hostMatches = (url, ...domains) => {
@@ -308,14 +317,14 @@ export default function Companies() {
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          <span style={{ flex: 1, minWidth: 160 }}>Company</span>
+          <span style={{ flex: 1, minWidth: 130 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
-          <span style={{ flex: 1, minWidth: 160 }}>Health</span>
-          <span style={{ flex: '0 0 104px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
-          <span style={{ flex: '0 0 84px' }} title="ATS detected from the career URLs">ATS</span>
+          <span style={{ flex: 1.7, minWidth: 200 }}>Health</span>
+          <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
+          <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>
           <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
           <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Open applications">Apps</span>
-          <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">⌀ Fit</span>
+          <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>
           <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
           <span style={{ flex: '0 0 190px' }} />
         </div>
@@ -331,24 +340,24 @@ export default function Companies() {
             <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 28px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
-              <span style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1, minWidth: 130, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-                {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
+                {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
               </span>
               {/* tier */}
               <span style={{ flex: '0 0 62px' }}>
                 <span style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: tBg, color: tFg }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
               </span>
               {/* health */}
-              <span style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1.7, minWidth: 200, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
                 <span title={h.text} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
-              <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 104px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
+              <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
               {/* ats */}
-              <span style={{ flex: '0 0 84px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
+              <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
                 {urls.length > 0 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 7px', borderRadius: 99, background: atsBg, color: atsFg, whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
@@ -441,7 +450,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   }
 
   return (
-    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 520, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: '-14px 0 40px rgba(0,0,0,.14)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
+    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 780, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: '-14px 0 40px rgba(0,0,0,.14)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
       <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
