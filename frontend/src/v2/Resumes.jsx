@@ -154,7 +154,7 @@ export default function V2Resumes() {
                   <div className="v2-card" onClick={() => navigate('/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count === 0 ? (persona.archived_count > 0 ? 'no recent copies' : 'no copies') : null, persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
                       {persona.avg_fit != null && (
                         <span title="Average fit across copies tailored from Persona (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(persona.avg_fit) }}>
                           {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
@@ -163,7 +163,6 @@ export default function V2Resumes() {
                     </div>
                     {(persona.copies?.length > 0 || inflight.some((f) => f.baseId === 'persona')) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }}>{persona.copy_count} recent cop{persona.copy_count === 1 ? 'y' : 'ies'}</span>
                         {inflight.filter((f) => f.baseId === 'persona').map((f, k) => (
                           <div key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)' }}>
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /><span>tailoring…</span>
@@ -190,7 +189,7 @@ export default function V2Resumes() {
                   <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count === 0 ? (b.archived_count > 0 ? 'no recent copies' : 'no copies') : null, `edited ${timeAgo(b.updated_at)}`].filter(Boolean).join(' · ')}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</span>
                       {b.avg_fit != null && (
                         <span title="Average fit across this base's scored copies (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(b.avg_fit) }}>
                           {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
@@ -199,7 +198,6 @@ export default function V2Resumes() {
                     </div>
                     {(copies.length > 0 || baseInflight.length > 0) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }}>{b.copy_count} recent cop{b.copy_count === 1 ? 'y' : 'ies'}</span>
                         {baseInflight.map((f, k) => (
                           <div key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', maxWidth: 250 }}>
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
