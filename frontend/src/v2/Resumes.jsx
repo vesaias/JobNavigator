@@ -119,7 +119,10 @@ export default function V2Resumes() {
         {loading ? <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
           : searching ? (
             <>
-              <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px' }}>{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
+                <span onClick={() => setQ('')} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
+                <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</span>
+              </div>
               {results.length === 0 ? <div style={{ padding: '20px 14px', border: '1px dashed var(--line)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</div>
                 : results.map((r, i) => (
                   <div key={`${r.kind}-${r.id}-${i}`} className="v2-act" onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer' }}>
