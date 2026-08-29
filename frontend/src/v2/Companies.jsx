@@ -261,8 +261,11 @@ export default function Companies() {
 
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '2px 28px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
-          style={{ flex: '0 0 226px', height: 30, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', fontSize: 12, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+        <span style={{ position: 'relative', flex: '0 0 226px', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
+            style={{ width: '100%', height: 30, padding: '0 12px 0 29px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', fontSize: 12, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+        </span>
         <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 3px' }} />
         {['1', '2', '3', 'none'].map((t) => {
           const on = tiers.includes(t)
