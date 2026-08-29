@@ -133,7 +133,10 @@ export default function ResumeEditor() {
   const [savedAt, setSavedAt] = useState(null)
   const [saving, setSaving] = useState(false)
   const [pdfUrl, setPdfUrl] = useState(null)
-  const [open, setOpen] = useState(() => new Set(['Experience']))
+  const [open, setOpen] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('jobnavigator_v2_resume_sections')); if (Array.isArray(s)) return new Set(s) } catch { /* ignore */ }
+    return new Set(['Experience'])
+  })
   const [tplOpen, setTplOpen] = useState(false)
   const [fmtOpen, setFmtOpen] = useState(false)
   const [tailorOpen, setTailorOpen] = useState(false)
@@ -342,7 +345,11 @@ export default function ResumeEditor() {
     const keys = String(path).split('.'); if (keys.some((k) => DANGEROUS.has(k))) return
     mutate((d) => { let o = d; for (let i = 0; i < keys.length - 1; i++) { if (o == null || typeof o !== 'object') return; o = o[keys[i]] } if (o && typeof o === 'object') o[keys[keys.length - 1]] = val })
   }
-  const toggle = (name) => setOpen((p) => { const n = new Set(p); n.has(name) ? n.delete(name) : n.add(name); return n })
+  const toggle = (name) => setOpen((p) => {
+    const n = new Set(p); n.has(name) ? n.delete(name) : n.add(name)
+    try { localStorage.setItem('jobnavigator_v2_resume_sections', JSON.stringify([...n])) } catch { /* ignore */ }
+    return n
+  })
 
   const pdfDownloadUrl = useMemo(() => {
     const base = (api.defaults.baseURL || '').replace(/\/api$/, '')
