@@ -15,20 +15,12 @@ const ago = (iso) => {
 }
 const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, '')
 
-// ATS chip palette from the canonical design (fixed brand-ish pastels).
-const ATS_COLORS = {
-  Greenhouse: ['#eaf1eb', '#2f6b4a'], Workday: ['#f6eee4', '#8a5322'],
-  Lever: ['#e7f0ef', '#2a6259'], Ashby: ['#f3e7ef', '#7c4066'],
-  Phenom: ['#e6f0f4', '#2c5f72'], 'Oracle HCM': ['#f7ecea', '#8f3a30'],
-  SmartRecruiters: ['#e9f0f7', '#2f5580'], Rippling: ['#efeaf6', '#5a4285'],
-  Eightfold: ['#f7f0e2', '#8a6a22'], TalentBrew: ['#eef2e6', '#5a6a2a'],
-  Meta: ['#e9f0f7', '#2f5580'], Google: ['#f7f0e2', '#8a6a22'],
-  Generic: ['#f3f0e8', '#57534a'],
-}
-const TIER_COLORS = { 1: ['#eaf1eb', '#2f6b4a'], 2: ['#e9f0f7', '#2f5580'], 3: ['#f3f0e8', '#57534a'], none: ['#f7f5ef', '#6d6862'] }
+// Chips use theme tokens (kept on the accepted cream+green palette): ATS is a
+// neutral tag, tier 1 carries the brand green, other tiers stay neutral.
 const atsShort = (detected) => (detected || 'Generic')
   .replace(' API', '').replace(' AJAX', '').replace(' (Playwright)', '').replace(' Careers', '')
-const atsColor = (short) => ATS_COLORS[short] || ATS_COLORS.Generic
+const atsColor = () => ['var(--surface-2)', 'var(--text-2)']
+const tierColor = (key) => (key === '1' ? ['var(--accent-soft)', 'var(--accent)'] : ['var(--surface-2)', 'var(--text-2)'])
 
 // client-side ATS detection (mirror of backend detect, for live editor chips)
 const hostMatches = (url, ...domains) => {
@@ -312,16 +304,16 @@ export default function Companies() {
 
       {/* column header */}
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-        <span style={{ flex: '0 0 206px' }}>Company</span>
+        <span style={{ flex: 1, minWidth: 220 }}>Company</span>
         <span style={{ flex: '0 0 62px' }}>Tier</span>
-        <span style={{ flex: 1, minWidth: 190 }}>Health</span>
+        <span style={{ flex: '0 0 180px' }}>Health</span>
         <span style={{ flex: '0 0 104px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
         <span style={{ flex: '0 0 84px' }} title="ATS detected from the career URLs">ATS</span>
         <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
         <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Open applications">Apps</span>
         <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">⌀ Fit</span>
         <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
-        <span style={{ flex: '0 0 168px' }} />
+        <span style={{ flex: '0 0 190px' }} />
       </div>
 
       {/* rows */}
@@ -332,13 +324,13 @@ export default function Companies() {
           const urls = c.scrape_urls || []
           const firstAts = urls.length ? atsShort(c.detected_scrape_types?.[urls[0]]) : 'Generic'
           const [atsBg, atsFg] = atsColor(firstAts)
-          const [tBg, tFg] = TIER_COLORS[tierKey(c)]
+          const [tBg, tFg] = tierColor(tierKey(c))
           const aliases = c.aliases || []
           return (
             <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 28px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
-              <span style={{ flex: '0 0 206px', display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, paddingRight: 10 }}>
+              <span style={{ flex: 1, minWidth: 220, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
@@ -348,7 +340,7 @@ export default function Companies() {
                 <span style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: tBg, color: tFg }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
               </span>
               {/* health */}
-              <span style={{ flex: 1, minWidth: 190, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: '0 0 180px', display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
                 <span title={h.text} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
@@ -362,7 +354,7 @@ export default function Companies() {
               </span>
               {/* open · 7d */}
               <span title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} new in the last 7 days`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)' }}>
-                {c.open_jobs || '·'}<span style={{ color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)' }}> +{c.open_jobs_week || 0}</span>
+                {c.open_jobs || 0}<span style={{ color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)' }}> +{c.open_jobs_week || 0}</span>
               </span>
               {/* apps */}
               <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.application_count ? 'var(--text-2)' : 'var(--muted)' }}>{c.application_count || '·'}</span>
@@ -374,9 +366,9 @@ export default function Companies() {
                   style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${c.active ? 'var(--accent)' : 'var(--edge)'}`, background: c.active ? 'var(--accent-soft)' : 'var(--surface)', color: c.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>{c.active ? 'Active' : 'Inactive'}</span>
               </span>
               {/* actions */}
-              <span style={{ flex: '0 0 168px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <span style={{ flex: '0 0 190px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                 <span onClick={() => runScrape(c.id)} title="Scrape this company now" className="v2-act"
-                  style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                  style={{ width: 84, height: 25, borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                   {scraping[c.id]
                     ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                     : <span style={{ fontSize: 11 }}>↻</span>}
@@ -490,7 +482,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
           <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Which postings to keep</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Title must match</span>
-            <input value={draft.title_include_expr} onChange={(e) => set({ title_include_expr: e.target.value })} placeholder="(Product OR Project) AND Manager" style={{ ...monoBox, height: 32, minHeight: 0 }} />
+            <input value={draft.title_include_expr} onChange={(e) => set({ title_include_expr: e.target.value })} placeholder="(Product OR Project) AND Manager" style={{ ...inputBox, height: 32 }} />
             <span style={helpTxt}>Supports AND, OR and parentheses. Blank keeps every title.</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -511,7 +503,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
         {/* scraper tuning */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           <div onClick={() => setTuning((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
+            <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
             <span style={{ fontSize: 10.5, color: downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
           </div>
@@ -598,7 +590,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
   }
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
+    <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Add company</span>
@@ -662,7 +654,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
 function TestModal({ test, onClose, showShots, setShowShots }) {
   if (test.error) {
     return (
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
         <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', padding: 22 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
@@ -685,7 +677,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', bg: 'var(--surface)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
+    <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test scrape — {test.company}</span>
