@@ -379,7 +379,7 @@ export default function ResumeEditor() {
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
                   <>
-                    <span style={{ color: 'var(--faint)' }}>{' – '}</span>
+                    <span style={{ color: 'var(--line)' }}>{'  │  '}</span>
                     <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer', position: 'relative', top: '1px' }} className="v2-navlink">
                       {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
                       <span style={{ color: 'var(--accent)' }}>based on {baseName} ↗</span>
