@@ -372,19 +372,18 @@ export default function ResumeEditor() {
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.4 }}>
               Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
               {doc.parent_id && (() => {
                 const baseName = (doc.name || '').split('→')[0].trim() || 'base'
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
-                  <>{'  '}<span style={{ color: 'var(--faint)' }}>—</span>{' '}
-                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={scores.delta != null ? `${scores.delta >= 0 ? '+' : ''}${scores.delta} fit vs the ${baseName} base — open it` : `Open the ${baseName} base résumé`} style={{ cursor: 'pointer' }} className="v2-navlink">
-                      {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
-                      <span style={{ color: 'var(--accent)' }}>{baseName}</span>
-                      <span style={{ fontSize: 10, color: 'var(--accent)' }}> ↗</span>
-                    </span>
-                  </>
+                  <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer' }} className="v2-navlink">
+                    <span style={{ color: 'var(--faint)' }}>{' · '}</span>
+                    {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
+                    <span style={{ color: 'var(--muted)', fontWeight: 400 }}>based on </span>
+                    <span style={{ color: 'var(--accent)' }}>{baseName} ↗</span>
+                  </span>
                 )
               })()}
             </div>
