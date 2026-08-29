@@ -116,20 +116,25 @@ def list_companies(
     # Per-company feed aggregates (open roles, new-in-7d, average fit) — grouped
     # by normalized Job.company, then summed across each company's name + aliases.
     from datetime import timedelta
-    from sqlalchemy import case
     def _norm(s):
         return (s or "").lower().replace(" ", "")
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     open_by_key, week_by_key = {}, {}
-    for name, cnt, wk in (
-        db.query(Job.company, func.count(Job.id),
-                 func.sum(case((Job.discovered_at >= week_ago, 1), else_=0)))
+    # "open roles" = jobs currently sitting in the feed (new or saved)
+    for name, cnt in (
+        db.query(Job.company, func.count(Job.id))
         .filter(Job.status.in_(("new", "saved")))
         .group_by(Job.company).all()
     ):
-        k = _norm(name)
-        open_by_key[k] = open_by_key.get(k, 0) + (cnt or 0)
-        week_by_key[k] = week_by_key.get(k, 0) + int(wk or 0)
+        open_by_key[_norm(name)] = open_by_key.get(_norm(name), 0) + (cnt or 0)
+    # "+7d" = every job that landed (was discovered) in the last 7 days, whatever
+    # its status is now — recent scraper yield, not just what's still unactioned
+    for name, cnt in (
+        db.query(Job.company, func.count(Job.id))
+        .filter(Job.discovered_at >= week_ago)
+        .group_by(Job.company).all()
+    ):
+        week_by_key[_norm(name)] = week_by_key.get(_norm(name), 0) + (cnt or 0)
     fitsum_by_key, fitcnt_by_key = {}, {}
     for name, s, cnt in (
         db.query(Job.company, func.sum(Job.best_cv_score), func.count(Job.best_cv_score))
