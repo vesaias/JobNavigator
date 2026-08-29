@@ -517,6 +517,9 @@ def resume_shelf(db: Session = Depends(get_db)):
         for c in clist:
             job = jobs.get(c.job_id)
             sc = _copy_score(job, c.name)
+            # avg_fit counts every scored copy, archived (rejected/stale) ones included
+            if sc is not None:
+                scores.append(sc)
             reason = _archive_reason(c)
             if reason:
                 archived.append({
@@ -529,8 +532,6 @@ def resume_shelf(db: Session = Depends(get_db)):
                     "why": reason,
                 })
                 continue
-            if sc is not None:
-                scores.append(sc)
             copies_out.append({
                 "id": str(c.id),
                 "name": c.name,
@@ -555,6 +556,9 @@ def resume_shelf(db: Session = Depends(get_db)):
     for c in sorted(by_parent.get(None, []), key=lambda c: c.updated_at or now, reverse=True):
         job = jobs.get(c.job_id)
         sc = _copy_score(job, c.name)
+        # avg_fit counts every scored copy, archived ones included
+        if sc is not None:
+            persona_scores.append(sc)
         reason = _archive_reason(c)
         if reason:
             archived.append({"id": str(c.id), "name": c.name, "base_id": None,
@@ -562,8 +566,6 @@ def resume_shelf(db: Session = Depends(get_db)):
                              "company": (job.company if job else None),
                              "role": (job.title if job else None), "why": reason})
             continue
-        if sc is not None:
-            persona_scores.append(sc)
         persona_copies_out.append({
             "id": str(c.id), "name": c.name,
             "job_id": str(c.job_id) if c.job_id else None,
