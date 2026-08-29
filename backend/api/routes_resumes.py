@@ -369,22 +369,37 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
             if not token:
                 token = existing.token
         else:
+            from sqlalchemy.exc import IntegrityError
             if token:
                 existing_by_token = db.query(TracerLink).filter(TracerLink.token == token).first()
                 if existing_by_token:
                     _repoint(existing_by_token, dest_url, label)
                     db.commit()
                 else:
-                    db.add(_new_link(token, dest_url, label))
-                    db.commit()
+                    # concurrent PDF renders can race here (same deterministic token);
+                    # on the unique-violation, recover the row the other request inserted.
+                    try:
+                        db.add(_new_link(token, dest_url, label))
+                        db.commit()
+                    except IntegrityError:
+                        db.rollback()
+                        winner = db.query(TracerLink).filter(TracerLink.token == token).first()
+                        if winner:
+                            _repoint(winner, dest_url, label)
+                            db.commit()
             else:
                 chars = string.ascii_lowercase + string.digits
                 for _ in range(100):
                     token = ''.join(random.choices(chars, k=6))
-                    if not db.query(TracerLink).filter(TracerLink.token == token).first():
+                    if db.query(TracerLink).filter(TracerLink.token == token).first():
+                        continue
+                    try:
+                        db.add(_new_link(token, dest_url, label))
+                        db.commit()
                         break
-                db.add(_new_link(token, dest_url, label))
-                db.commit()
+                    except IntegrityError:
+                        db.rollback()
+                        continue
 
         if url_style in ("param", "param_jobid"):
             tracer_url = f"{base_url}?cv={token}"

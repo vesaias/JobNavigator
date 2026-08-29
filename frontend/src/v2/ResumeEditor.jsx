@@ -100,7 +100,6 @@ export default function ResumeEditor() {
   const [savedAt, setSavedAt] = useState(null)
   const [saving, setSaving] = useState(false)
   const [pdfUrl, setPdfUrl] = useState(null)
-  const [pdfLoading, setPdfLoading] = useState(true)
   const [open, setOpen] = useState(() => new Set(['Experience']))
   const [tplOpen, setTplOpen] = useState(false)
   const [fmtOpen, setFmtOpen] = useState(false)
@@ -251,18 +250,20 @@ export default function ResumeEditor() {
   const pickTemplate = (t) => { setTemplate(t); setTplOpen(false); persist({ template: t }) }
   const pickFormat = (f) => { setFormat(f); setFmtOpen(false); persist({ page_format: f }) }
 
-  // live PDF preview (endpoint renders stored template/format; persist fires first at 500ms, this at 800ms)
+  // live PDF preview — one request at a time (abort the in-flight render before the
+  // next so overlapping edits don't hammer /pdf or race the tracer-link writer)
+  const pdfAbort = useRef(null)
   useEffect(() => {
     if (!doc) return
     clearTimeout(pdfTimer.current)
-    setPdfLoading(true)
     pdfTimer.current = setTimeout(async () => {
+      if (pdfAbort.current) pdfAbort.current.abort()
+      const ac = new AbortController(); pdfAbort.current = ac
       try {
-        const r = await api.get(`/resumes/${id}/pdf`, { responseType: 'arraybuffer', params: { template, format } })
+        const r = await api.get(`/resumes/${id}/pdf`, { responseType: 'arraybuffer', params: { template, format }, signal: ac.signal })
         const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }))
         setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return url })
-      } catch (e) { console.error('pdf', e) }
-      setPdfLoading(false)
+      } catch (e) { if (e.code !== 'ERR_CANCELED' && e.name !== 'CanceledError') console.error('pdf', e) }
     }, 800)
     return () => clearTimeout(pdfTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -438,10 +439,7 @@ export default function ResumeEditor() {
             <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500 }}>↓ Download PDF</a>
           </div>
           <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--surface-2)' }}>
-            {pdfUrl
-              ? <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />
-              : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Rendering…</div>}
-            {pdfLoading && pdfUrl && <div style={{ position: 'absolute', top: 10, right: 14, fontSize: 11, color: 'var(--muted)', background: 'var(--surface)', padding: '3px 8px', borderRadius: 99, border: '1px solid var(--line)' }}>updating…</div>}
+            {pdfUrl && <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />}
           </div>
         </section>
       </div>
