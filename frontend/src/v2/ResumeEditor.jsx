@@ -372,22 +372,22 @@ export default function ResumeEditor() {
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
-              <span style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}</span>
+            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+              Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
               {doc.parent_id && (() => {
                 const baseName = (doc.name || '').split('→')[0].trim() || 'base'
+                const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
-                  <>
-                    <span style={{ flex: '0 0 auto', color: 'var(--faint)' }}>—</span>
-                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={scores.delta != null ? `${scores.delta >= 0 ? '+' : ''}${scores.delta} fit vs the ${baseName} base — open it` : `Open the ${baseName} base résumé`} style={{ flex: '0 0 auto', whiteSpace: 'nowrap', cursor: 'pointer' }} className="v2-navlink">
-                      {scores.delta != null && <span style={{ color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
+                  <>{'  '}<span style={{ color: 'var(--faint)' }}>—</span>{' '}
+                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={scores.delta != null ? `${scores.delta >= 0 ? '+' : ''}${scores.delta} fit vs the ${baseName} base — open it` : `Open the ${baseName} base résumé`} style={{ cursor: 'pointer' }} className="v2-navlink">
+                      {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
                       <span style={{ color: 'var(--accent)' }}>{baseName}</span>
                       <span style={{ fontSize: 10, color: 'var(--accent)' }}> ↗</span>
                     </span>
                   </>
                 )
               })()}
-            </span>
+            </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {(changes.length ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
@@ -406,10 +406,9 @@ export default function ResumeEditor() {
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column' }}>
                   <MenuHead>This copy</MenuHead>
-                  <MenuItem icon="✦" label="Re-tailor…" hint="replaces" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
-                  <MenuItem icon="◎" label="Quick score" hint="light" onClick={() => runScore('light')} />
-                  <MenuItem icon="◎" label="Full score" hint="report" onClick={() => runScore('full')} />
-                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length}`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
+                  <MenuItem icon="✦" label="Re-tailor…" hint="replaces copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
+                  <MenuItem icon="◎" label="Score again" hint="quick / full" onClick={() => runScore('full')} />
+                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length} applied`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
                   <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
                   <MenuHead>Job</MenuHead>
                   <MenuItem icon="✉" label="Cover letter" hint="c" onClick={goCover} />
