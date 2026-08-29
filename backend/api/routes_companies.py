@@ -112,14 +112,52 @@ def list_companies(
     # H-1B metrics come from VisaCache (one query, mapped by normalized name).
     from backend.models.db import VisaCache
     h1b_map = {r.name_key: r for r in db.query(VisaCache).filter(VisaCache.country == "US").all()}
-    return [
-        _company_to_dict(
+
+    # Per-company feed aggregates (open roles, new-in-7d, average fit) — grouped
+    # by normalized Job.company, then summed across each company's name + aliases.
+    from datetime import timedelta
+    from sqlalchemy import case
+    def _norm(s):
+        return (s or "").lower().replace(" ", "")
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    open_by_key, week_by_key = {}, {}
+    for name, cnt, wk in (
+        db.query(Job.company, func.count(Job.id),
+                 func.sum(case((Job.discovered_at >= week_ago, 1), else_=0)))
+        .filter(Job.status.in_(("new", "saved")))
+        .group_by(Job.company).all()
+    ):
+        k = _norm(name)
+        open_by_key[k] = open_by_key.get(k, 0) + (cnt or 0)
+        week_by_key[k] = week_by_key.get(k, 0) + int(wk or 0)
+    fitsum_by_key, fitcnt_by_key = {}, {}
+    for name, s, cnt in (
+        db.query(Job.company, func.sum(Job.best_cv_score), func.count(Job.best_cv_score))
+        .filter(Job.best_cv_score.isnot(None))
+        .group_by(Job.company).all()
+    ):
+        k = _norm(name)
+        fitsum_by_key[k] = fitsum_by_key.get(k, 0) + (s or 0)
+        fitcnt_by_key[k] = fitcnt_by_key.get(k, 0) + (cnt or 0)
+
+    def _aggregates(c):
+        keys = [_norm(c.name)] + [_norm(a) for a in (c.aliases or [])]
+        open_jobs = sum(open_by_key.get(k, 0) for k in keys)
+        open_week = sum(week_by_key.get(k, 0) for k in keys)
+        fs = sum(fitsum_by_key.get(k, 0) for k in keys)
+        fc = sum(fitcnt_by_key.get(k, 0) for k in keys)
+        return open_jobs, open_week, (round(fs / fc) if fc else None)
+
+    out = []
+    for c in companies:
+        open_jobs, open_week, avg_fit = _aggregates(c)
+        out.append(_company_to_dict(
             c,
             application_count=app_counts.get(c.name.lower().replace(" ", ""), 0),
             h1b=h1b_map.get((c.name or "").strip().lower()),
-        )
-        for c in companies
-    ]
+            open_jobs=open_jobs, open_jobs_week=open_week, avg_fit=avg_fit,
+        ))
+    return out
 
 
 @router.post("")
@@ -181,6 +219,18 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
         VisaCache.name_key == (company.name or "").strip().lower(), VisaCache.country == "US"
     ).first()
     return _company_to_dict(company, h1b=h1b)
+
+
+@router.delete("/{company_id}")
+def delete_company(company_id: str, db: Session = Depends(get_db)):
+    """Delete a company record. Jobs already found under this company are kept
+    (they carry the company name, not an FK), so the feed is unaffected."""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    db.delete(company)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.post("/auto-create-from-jobs")
@@ -520,7 +570,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
             await pw.stop()
 
 
-def _company_to_dict(c: Company, application_count: int = 0, h1b=None) -> dict:
+def _company_to_dict(c: Company, application_count: int = 0, h1b=None,
+                     open_jobs: int = 0, open_jobs_week: int = 0, avg_fit=None) -> dict:
     urls = c.scrape_urls or []
     detected_types = {url: detect_scrape_type(url) for url in urls if url.strip()}
     # h1b is a VisaCache row (or None) for this company — H-1B metrics live there now.
@@ -543,6 +594,9 @@ def _company_to_dict(c: Company, application_count: int = 0, h1b=None) -> dict:
         "h1b_slug": c.h1b_slug,
         "detected_scrape_types": detected_types,
         "application_count": application_count,
+        "open_jobs": open_jobs,
+        "open_jobs_week": open_jobs_week,
+        "avg_fit": avg_fit,
         "h1b_lca_count": h1b.lca_count if h1b else None,
         "h1b_approval_rate": h1b.approval_rate if h1b else None,
         "h1b_median_salary": h1b.median_salary if h1b else None,

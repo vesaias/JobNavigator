@@ -54,6 +54,7 @@
 .v2-dashadd:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; color:var(--accent) !important; }
 .v2-act:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
 .v2-menuitem:hover { background:var(--surface-2); }
+.v2-crow:hover { background:var(--hover-soft); }
 .v2-tab { transition:color .12s; }
 
 .v2-scroll::-webkit-scrollbar { width:9px; height:9px; }
