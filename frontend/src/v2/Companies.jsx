@@ -51,6 +51,7 @@ const detectAts = (url) => {
 const SORT_OPTIONS = [
   { id: 'health', label: 'Needs attention', hint: 'Warnings, then active, then inactive' },
   { id: 'name', label: 'Company name', hint: 'A to Z' },
+  { id: 'tier', label: 'Priority tier', hint: 'Tier 1 first, untiered last' },
   { id: 'open', label: 'Open roles', hint: 'Most roles in the feed first' },
   { id: 'fit', label: 'Average fit', hint: 'Best-scoring companies first' },
   { id: 'run', label: 'Last scrape', hint: 'Longest since a run first' },
@@ -174,6 +175,7 @@ export default function Companies() {
     const cmp = {
       health: (a, b) => (down(b) - down(a)) || ((b.active ? 1 : 0) - (a.active ? 1 : 0)) || a.name.localeCompare(b.name),
       name: (a, b) => a.name.localeCompare(b.name),
+      tier: (a, b) => (a.tier ?? 99) - (b.tier ?? 99) || a.name.localeCompare(b.name),
       open: (a, b) => (b.open_jobs || 0) - (a.open_jobs || 0) || a.name.localeCompare(b.name),
       fit: (a, b) => (b.avg_fit ?? -1) - (a.avg_fit ?? -1) || a.name.localeCompare(b.name),
       run: (a, b) => (new Date(a.last_scraped_at || 0)) - (new Date(b.last_scraped_at || 0)) || a.name.localeCompare(b.name),
@@ -302,22 +304,21 @@ export default function Companies() {
         </span>
       </div>
 
-      {/* column header */}
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-        <span style={{ flex: 1, minWidth: 220 }}>Company</span>
-        <span style={{ flex: '0 0 62px' }}>Tier</span>
-        <span style={{ flex: '0 0 180px' }}>Health</span>
-        <span style={{ flex: '0 0 104px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
-        <span style={{ flex: '0 0 84px' }} title="ATS detected from the career URLs">ATS</span>
-        <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
-        <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Open applications">Apps</span>
-        <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">⌀ Fit</span>
-        <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
-        <span style={{ flex: '0 0 190px' }} />
-      </div>
-
-      {/* rows */}
+      {/* rows (column header lives inside the scroll container so its width
+          tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 28px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <span style={{ flex: 1, minWidth: 160 }}>Company</span>
+          <span style={{ flex: '0 0 62px' }}>Tier</span>
+          <span style={{ flex: 1, minWidth: 160 }}>Health</span>
+          <span style={{ flex: '0 0 104px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
+          <span style={{ flex: '0 0 84px' }} title="ATS detected from the career URLs">ATS</span>
+          <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
+          <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Open applications">Apps</span>
+          <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">⌀ Fit</span>
+          <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
+          <span style={{ flex: '0 0 190px' }} />
+        </div>
         {filtered.map((c) => {
           const h = healthOf(c)
           const rn = resumeNames(c)
@@ -330,7 +331,7 @@ export default function Companies() {
             <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 28px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
-              <span style={{ flex: 1, minWidth: 220, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
@@ -340,7 +341,7 @@ export default function Companies() {
                 <span style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: tBg, color: tFg }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
               </span>
               {/* health */}
-              <span style={{ flex: '0 0 180px', display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
                 <span title={h.text} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
