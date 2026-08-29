@@ -35,6 +35,8 @@ export default function V2Resumes() {
   const [q, setQ] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [inflight, setInflight] = useState([])   // [{baseId, jobId}] tailors in progress
+  const inflightKeys = useRef('')
 
   const load = useCallback(async () => {
     try {
@@ -46,6 +48,29 @@ export default function V2Resumes() {
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
+
+  // in-flight tailors: poll /monitor/active; refresh the shelf when the set shrinks
+  useEffect(() => {
+    const tick = async () => {
+      try {
+        const { data } = await api.get('/monitor/active')
+        const rows = (data || []).filter((r) => r.job_type === 'tailor_resume').map((r) => {
+          const [baseId, jobId] = (r.scope_key || '').split(':')
+          return { baseId, jobId }
+        })
+        const key = rows.map((r) => `${r.baseId}:${r.jobId}`).sort().join(',')
+        if (key !== inflightKeys.current) {
+          const shrank = key.length < inflightKeys.current.length
+          inflightKeys.current = key
+          setInflight(rows)
+          if (shrank) load()   // a tailor finished → new copy exists
+        }
+      } catch {}
+    }
+    tick()
+    const iv = setInterval(tick, 3000)
+    return () => clearInterval(iv)
+  }, [load])
 
   const openResume = (id) => navigate(`/v2/resumes/${id}`)
   const searching = q.trim().length > 0
@@ -123,6 +148,7 @@ export default function V2Resumes() {
             <>
               {bases.map((b) => {
                 const copies = b.copies || []
+                const baseInflight = inflight.filter((f) => String(f.baseId) === String(b.id))
                 return (
                   <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
@@ -132,9 +158,15 @@ export default function V2Resumes() {
                         {b.avg_fit == null ? <span style={{ fontFamily: 'var(--sans)', fontSize: 11 }}>no scored copies</span> : <>{b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span></>}
                       </span>
                     </div>
-                    {copies.length > 0 && (
+                    {(copies.length > 0 || baseInflight.length > 0) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }}>Recent copies</span>
+                        {baseInflight.map((f, k) => (
+                          <div key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', maxWidth: 250 }}>
+                            <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                            <span>tailoring…</span>
+                          </div>
+                        ))}
                         {copies.slice(0, 6).map((c) => (
                           <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={c.name} className="v2-chip"
                             style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>

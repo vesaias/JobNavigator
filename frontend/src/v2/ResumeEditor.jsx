@@ -38,6 +38,11 @@ function computeChanges(base, copy) {
     })
     ;(ce.suggested_bullets || []).forEach((sb, k) => out.push({ key: `exp${i}sb${k}`, where: `Experience · ${ce.company || 'role'} · suggested bullet`, kind: 'suggested', expIdx: i, sbIdx: k, before: '', removed: '', added: sb, after: '', text: sb }))
   })
+  const bs = base.skills || {}, cs = copy.skills || {}
+  Object.keys(cs).forEach((cat) => {
+    if (!(cat in bs)) out.push({ key: `sk:${cat}`, where: `Skills · ${cat}`, kind: 'added', path: `skills.${cat}`, before: '', removed: '', added: String(cs[cat] || ''), after: '', text: String(cs[cat] || '') })
+    else { const d = wordDiff(String(bs[cat] || ''), String(cs[cat] || '')); if (d) out.push({ key: `sk:${cat}`, where: `Skills · ${cat}`, kind: 'modified', path: `skills.${cat}`, baseText: String(bs[cat] || ''), ...d }) }
+  })
   return out
 }
 const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
@@ -97,6 +102,9 @@ const AddLink = ({ onClick, children }) => (
 )
 const RemoveLink = ({ onClick, children = 'Remove' }) => (
   <span onClick={onClick} style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
+)
+const DashedAdd = ({ onClick, children }) => (
+  <div onClick={onClick} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>{children}</div>
 )
 const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
 const MenuItem = ({ icon, label, hint, onClick }) => (
@@ -200,7 +208,7 @@ export default function ResumeEditor() {
   const changes = useMemo(() => (isCopy && baseData && data ? computeChanges(baseData, data) : []), [isCopy, baseData, data])
   const changedSections = useMemo(() => {
     const s = new Set()
-    changes.forEach((c) => { if (c.key === 'summary') s.add('Summary'); else if (c.key.startsWith('exp')) s.add('Experience') })
+    changes.forEach((c) => { if (c.key === 'summary') s.add('Summary'); else if (c.key.startsWith('exp')) s.add('Experience'); else if (c.key.startsWith('sk:')) s.add('Skills') })
     return s
   }, [changes])
 
@@ -434,10 +442,10 @@ export default function ResumeEditor() {
                 </div>
                 {isOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
-                    {name === 'Header' && <HeaderEditor data={data} setField={setField} mutate={mutate} />}
-                    {name === 'Summary' && <Field multiline rows={4} value={data.summary} onChange={(v) => setField('summary', v)} placeholder="Professional summary…" />}
+                    {name === 'Header' && <HeaderEditor data={data} setField={setField} mutate={mutate} tracers={tracers} />}
+                    {name === 'Summary' && <SummaryEditor data={data} setField={setField} baseSummary={baseData?.summary} />}
                     {name === 'Experience' && <ExperienceEditor data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />}
-                    {name === 'Skills' && <SkillsEditor data={data} setField={setField} mutate={mutate} />}
+                    {name === 'Skills' && <SkillsEditor data={data} setField={setField} mutate={mutate} baseSkills={baseData?.skills} />}
                     {name === 'Education' && <EducationEditor data={data} setField={setField} mutate={mutate} />}
                     {name === 'Projects' && <ProjectsEditor data={data} setField={setField} mutate={mutate} />}
                     {name === 'Publications' && <PublicationsEditor data={data} setField={setField} mutate={mutate} />}
@@ -628,27 +636,49 @@ function ReviewModal({ changes, onClose, onApply }) {
 }
 
 // ── section editors (v2-styled, same handlers as v1) ─────────────────────────
-function HeaderEditor({ data, setField, mutate }) {
+const UPPER = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
+const cellInput = { width: '100%', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
+const normUrl = (u) => (u || '').replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()
+
+function HeaderEditor({ data, setField, mutate, tracers }) {
   const items = data.header?.contact_items || []
   const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
+  const clicksFor = (url) => {
+    if (!url) return null
+    const t = (tracers || []).find((x) => normUrl(x.destination_url) === normUrl(url.startsWith('http') ? url : `https://${url}`))
+    return t ? t.clicks : null
+  }
+  const arrows = (i) => (
+    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
+      <span onClick={() => move(i, -1)} className="v2-navlink">▲</span><span onClick={() => move(i, 1)} className="v2-navlink">▼</span>
+    </span>
+  )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 8 }}>
-      <Field label="Name" value={data.header?.name} onChange={(v) => setField('header.name', v)} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <span style={UPPER}>Full name</span>
+        <input value={data.header?.name || ''} onChange={(e) => setField('header.name', e.target.value)} style={{ ...cellInput, height: 32, fontSize: 13 }} />
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>Contact items</span>
-        {items.map((it, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <IconBtn onClick={() => move(i, -1)} title="Up">↑</IconBtn>
-              <IconBtn onClick={() => move(i, 1)} title="Down">↓</IconBtn>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={UPPER}>Contact items</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--faint)' }}>text · link · tracer clicks</span>
+        </div>
+        {items.map((it, i) => {
+          const showStub = it.url && !it.url.startsWith('mailto:')
+          const clicks = showStub ? clicksFor(it.url) : null
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {arrows(i)}
+              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: 1, minWidth: 0 }} />
+              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1.35, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
+              {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
+              <span title={clicks != null ? `${clicks} tracer click${clicks === 1 ? '' : 's'}` : ''} style={{ flex: '0 0 26px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10.5, color: clicks ? 'var(--accent)' : 'var(--faint)' }}>{clicks != null ? clicks : ''}</span>
+              <span onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
             </div>
-            <Field value={it.text} onChange={(v) => setField(`header.contact_items.${i}.text`, v)} placeholder="Display text" />
-            <Field value={it.url} onChange={(v) => setField(`header.contact_items.${i}.url`, v)} placeholder="URL (optional)" flex={1} />
-            {it.url && !it.url.startsWith('mailto:') && <div style={{ width: 46 }}><Field value={it.stub} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" /></div>}
-            <IconBtn danger onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove">✕</IconBtn>
-          </div>
-        ))}
-        <AddLink onClick={() => mutate((d) => { d.header = d.header || { contact_items: [] }; (d.header.contact_items = d.header.contact_items || []).push({ text: '', url: '' }) })}>+ Add item</AddLink>
+          )
+        })}
+        <DashedAdd onClick={() => mutate((d) => { d.header = d.header || { contact_items: [] }; (d.header.contact_items = d.header.contact_items || []).push({ text: '', url: '' }) })}>+ Add contact item</DashedAdd>
       </div>
     </div>
   )
@@ -718,35 +748,72 @@ function ExperienceEditor({ data, setField, mutate, baseExp }) {
     </div>
   )
 }
-function SkillsEditor({ data, setField, mutate }) {
-  const entries = Object.entries(data.skills || {})
-  const rename = (oldK, newK) => { if (oldK === newK || !newK.trim()) return; mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns }) }
-  const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
+// Summary as a marked row (tailoring ✦/— + revert + highlight) with a char-count meta
+function SummaryEditor({ data, setField, baseSummary }) {
+  const txt = data.summary || ''
+  const changed = baseSummary != null && baseSummary !== txt
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 7, paddingTop: 8 }}>
-      {entries.map(([k, v]) => (
-        <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}><IconBtn onClick={() => move(k, -1)} title="Up">↑</IconBtn><IconBtn onClick={() => move(k, 1)} title="Down">↓</IconBtn></div>
-          <div style={{ width: '32%' }}><input defaultValue={k} onBlur={(e) => rename(k, e.target.value)} placeholder="Category" style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)' }} /></div>
-          <Field value={v} onChange={(nv) => setField(`skills.${k}`, nv)} placeholder="Skill values…" flex={1} />
-          <IconBtn danger onClick={() => mutate((d) => delete d.skills[k])} title="Remove">✕</IconBtn>
-        </div>
-      ))}
-      <AddLink onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</AddLink>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
+        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.55 }}>{changed ? '✦' : '—'}</span>
+        <BulletText value={txt} onChange={(v) => setField('summary', v)} />
+        {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.55 }}>↩</span>}
+      </div>
+      <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{txt.length} characters{txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
     </div>
   )
 }
+
+// Skills: fixed-width category + value with tailoring ✦/revert/highlight when changed
+function SkillsEditor({ data, setField, mutate, baseSkills }) {
+  const entries = Object.entries(data.skills || {})
+  const rename = (oldK, newK) => { if (oldK === newK || !newK.trim()) return; mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns }) }
+  const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
+  const arrows = (k) => (
+    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
+      <span onClick={() => move(k, -1)} className="v2-navlink">▲</span><span onClick={() => move(k, 1)} className="v2-navlink">▼</span>
+    </span>
+  )
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
+      {entries.map(([k, v]) => {
+        const changed = baseSkills != null && (k in baseSkills) && String(baseSkills[k] || '') !== String(v || '')
+        const added = baseSkills != null && !(k in baseSkills)
+        const marked = changed || added
+        return (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {arrows(k)}
+            <input defaultValue={k} onBlur={(e) => rename(k, e.target.value)} placeholder="Category" style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
+              {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
+              <input value={v} onChange={(e) => setField(`skills.${k}`, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
+              {changed && <span onClick={() => setField(`skills.${k}`, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
+            </div>
+            <span onClick={() => mutate((d) => delete d.skills[k])} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+          </div>
+        )
+      })}
+      <DashedAdd onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</DashedAdd>
+    </div>
+  )
+}
+const MicroField = ({ label, value, onChange, placeholder }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
+    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)' }} />
+  </div>
+)
 function EducationEditor({ data, setField, mutate }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.education || []).map((e, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <Field label="School" value={e.school} onChange={(v) => setField(`education.${i}.school`, v)} />
-            <Field label="Location" value={e.location} onChange={(v) => setField(`education.${i}.location`, v)} />
+            <MicroField label="School" value={e.school} onChange={(v) => setField(`education.${i}.school`, v)} />
+            <MicroField label="Location" value={e.location} onChange={(v) => setField(`education.${i}.location`, v)} />
           </div>
-          <Field label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
-          <div style={{ alignSelf: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
+          <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
         </div>
       ))}
       <AddLink onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</AddLink>
@@ -755,16 +822,26 @@ function EducationEditor({ data, setField, mutate }) {
 }
 function ProjectsEditor({ data, setField, mutate }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.projects || []).map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <Field label="Name" value={p.name} onChange={(v) => setField(`projects.${i}.name`, v)} />
-            <Field label="URL" value={p.url} onChange={(v) => setField(`projects.${i}.url`, v)} />
+            <MicroField label="Name" value={p.name} onChange={(v) => setField(`projects.${i}.name`, v)} />
+            <MicroField label="URL" value={p.url} onChange={(v) => setField(`projects.${i}.url`, v)} />
           </div>
-          <Field label="Description" value={p.description} onChange={(v) => setField(`projects.${i}.description`, v)} />
-          <Field label="Bullets (one per line)" multiline rows={3} value={(p.bullets || []).join('\n')} onChange={(v) => setField(`projects.${i}.bullets`, v.split('\n'))} />
-          <div style={{ alignSelf: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))} /></div>
+          <MicroField label="Description" value={p.description} onChange={(v) => setField(`projects.${i}.description`, v)} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
+            {(p.bullets || []).map((b, bi) => (
+              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
+                <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>—</span>
+                <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
+                <span onClick={() => mutate((d) => d.projects[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
+              </div>
+            ))}
+            <DashedAdd onClick={() => mutate((d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.push('') })}>+ Add bullet</DashedAdd>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))}>Remove project</RemoveLink></div>
         </div>
       ))}
       <AddLink onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</AddLink>
@@ -772,13 +849,19 @@ function ProjectsEditor({ data, setField, mutate }) {
   )
 }
 function PublicationsEditor({ data, setField, mutate }) {
+  const pubs = data.publications || []
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      {(data.publications || []).map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Field label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
-          <Field label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
-          <div style={{ alignSelf: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.publications.splice(i, 1))} /></div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
+      {pubs.length === 0 ? (
+        <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No publications yet</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>Empty sections are skipped in the PDF — nothing prints until you add one.</span>
+        </div>
+      ) : pubs.map((p, i) => (
+        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
+          <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.publications.splice(i, 1))} /></div>
         </div>
       ))}
       <AddLink onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</AddLink>
