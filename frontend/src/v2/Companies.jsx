@@ -122,7 +122,7 @@ export default function Companies() {
   const [personaPopulated, setPersonaPopulated] = useState(false)
   const [downMap, setDownMap] = useState({})
   const [scraping, setScraping] = useState({})       // company id -> true while running
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() => { try { return localStorage.getItem('company_query') || '' } catch { return '' } })
   const [tiers, setTiers] = useState(() => { try { return JSON.parse(localStorage.getItem('company_filter_tiers')) || [] } catch { return [] } })
   const [sortBy, setSortBy] = useState(() => { try { return localStorage.getItem('company_sort') || 'health' } catch { return 'health' } })
   const [sortOpen, setSortOpen] = useState(false)
@@ -144,6 +144,7 @@ export default function Companies() {
     api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setScraping(m) }).catch(() => {})
   }, [fetchCompanies])
   useEffect(() => { try { localStorage.setItem('company_filter_tiers', JSON.stringify(tiers)) } catch {} }, [tiers])
+  useEffect(() => { try { localStorage.setItem('company_query', query) } catch {} }, [query])
   useEffect(() => { try { localStorage.setItem('company_sort', sortBy) } catch {} }, [sortBy])
 
   // close menus on outside click / escape
@@ -416,7 +417,11 @@ export default function Companies() {
 // ── edit drawer ───────────────────────────────────────────────────────────────
 function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, onTest, testingId, downReason }) {
   const { company, draft } = state
-  const [tuning, setTuning] = useState(!!downReason)
+  const [tuning, setTuning] = useState(() => {
+    try { const v = localStorage.getItem('company_tuning_open'); if (v !== null) return v === 'true' } catch { /* ignore */ }
+    return !!downReason
+  })
+  const toggleTuning = () => setTuning((v) => { const n = !v; try { localStorage.setItem('company_tuning_open', String(n)) } catch {} return n })
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
   const toggleResume = (id) => set({ selected_resume_ids: draft.selected_resume_ids.includes(id) ? draft.selected_resume_ids.filter((x) => x !== id) : [...draft.selected_resume_ids, id] })
   const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${draft.scrape_urls.filter(Boolean).length} career URL(s) · ${company.application_count || 0} open application(s)`
@@ -507,8 +512,8 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
 
         {/* scraper tuning */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <div onClick={() => setTuning((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
-            <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
+          <div onClick={toggleTuning} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+            <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', position: 'relative', top: -2, fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
             <span style={{ fontSize: 10.5, color: downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
           </div>
