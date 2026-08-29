@@ -374,19 +374,22 @@ export default function ResumeEditor() {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
               <span style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}</span>
-              {doc.parent_id && (
-                <>
-                  <span style={{ flex: '0 0 auto', color: 'var(--faint)' }}>—</span>
-                  <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title="Open the base résumé this was tailored from" style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 5, cursor: 'pointer' }} className="v2-navlink">
-                    {scores.delta != null && <span style={{ flex: '0 0 auto', color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta}</span>}
-                    <span style={{ flex: '0 1 auto', minWidth: 0, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(doc.name || '').split('→')[0].trim() || 'base'}</span>
-                    <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--accent)' }}>↗</span>
-                  </span>
-                </>
-              )}
+              {doc.parent_id && (() => {
+                const baseName = (doc.name || '').split('→')[0].trim() || 'base'
+                return (
+                  <>
+                    <span style={{ flex: '0 0 auto', color: 'var(--faint)' }}>—</span>
+                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={scores.delta != null ? `${scores.delta >= 0 ? '+' : ''}${scores.delta} fit vs the ${baseName} base — open it` : `Open the ${baseName} base résumé`} style={{ flex: '0 0 auto', whiteSpace: 'nowrap', cursor: 'pointer' }} className="v2-navlink">
+                      {scores.delta != null && <span style={{ color: scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)', fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
+                      <span style={{ color: 'var(--accent)' }}>{baseName}</span>
+                      <span style={{ fontSize: 10, color: 'var(--accent)' }}> ↗</span>
+                    </span>
+                  </>
+                )
+              })()}
             </span>
             <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {(changes.length ? `${changes.length} unreviewed change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
+              {(changes.length ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
             </span>
           </div>
