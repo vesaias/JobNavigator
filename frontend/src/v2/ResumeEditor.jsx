@@ -445,7 +445,7 @@ export default function ResumeEditor() {
                 <div onClick={() => toggle(name)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9 }}>
                   <span style={{ color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-                  {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>({counts[name]})</span>}
+                  {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)', position: 'relative', top: '1.5px' }}>({counts[name]})</span>}
                   {changedSections.has(name) && <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span>}
                 </div>
                 {isOpen && (
@@ -672,7 +672,7 @@ function HeaderEditor({ data, setField, mutate, tracers }) {
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {arrows(i)}
-              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: '0 0 118px', minWidth: 0 }} />
+              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: 1, minWidth: 0 }} />
               <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
               {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
               <span onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
@@ -707,7 +707,7 @@ function ExperienceEditor({ data, setField, mutate, baseExp }) {
               <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
-              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{e.date}</span>
+              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 10.5, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{e.date}</span>
               <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
             </div>

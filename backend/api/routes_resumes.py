@@ -576,6 +576,8 @@ def resume_shelf(db: Session = Depends(get_db)):
         "copy_count": len(persona_copies_out),
         "avg_fit": int(round(sum(persona_scores) / len(persona_scores))) if persona_scores else None,
         "copies": persona_copies_out,
+        # newest copy's timestamp powers the "edited X ago" meta on the shelf card
+        "updated_at": persona_copies_out[0]["updated_at"] if persona_copies_out else None,
     }
 
     # newest archived first
