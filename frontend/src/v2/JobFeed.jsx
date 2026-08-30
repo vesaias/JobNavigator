@@ -976,28 +976,33 @@ export default function V2JobFeed() {
                 </div>
               )}
 
+              {/* unscored band — mirrors the report band's placement + height */}
+              {!dScored && !running && (
+                <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
+                  <span style={{ flex: '0 0 auto', width: 19 }} />
+                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Not scored yet</span>
+                    <span style={{ color: 'var(--muted)' }}>{' '}Score against your résumés for the </span>
+                    <span style={{ color: 'var(--accent)' }}>fit breakdown, requirements and keywords</span>
+                  </div>
+                  <div onClick={() => openRescore(d)} style={{ flex: '0 0 auto', height: 28, padding: '0 14px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>Score this role</div>
+                </div>
+              )}
+              {running && (
+                <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
+                  <span style={{ flex: '0 0 auto', width: 19 }} />
+                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, position: 'relative' }}><div className="v2-spin" style={{ position: 'absolute', inset: 3, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /></div>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Scoring in progress</span>
+                    <span style={{ color: 'var(--muted)' }}>{' '}This continues in the background if you navigate away.</span>
+                  </div>
+                </div>
+              )}
+
               {/* posting area — always mounted (display toggled, not unmounted) so the
                   iframe isn't reloaded each time the report is opened/closed */}
               <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportOpen ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
-                  {!dScored && !running && (
-                    <div style={{ flex: '0 0 auto', margin: '18px 30px 4px', display: 'flex', alignItems: 'center', gap: 20, padding: '16px 18px', border: '1px dashed var(--edge)', borderRadius: 10 }}>
-                      <div style={{ width: 74, height: 74, flex: '0 0 74px', border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>Not scored yet</span>
-                        <span style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: '54ch' }}>Score this role against your résumés to see the fit breakdown, requirement mapping and missing keywords.</span>
-                      </div>
-                      <div onClick={() => openRescore(d)} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Score this role</div>
-                    </div>
-                  )}
-                  {running && (
-                    <div style={{ flex: '0 0 auto', margin: '18px 30px 4px', display: 'flex', alignItems: 'center', gap: 20, padding: '16px 18px', border: '1px solid var(--accent)', borderRadius: 10, background: 'var(--accent-soft)' }}>
-                      <div style={{ position: 'relative', width: 74, height: 74, flex: '0 0 74px' }}><div className="v2-spin" style={{ position: 'absolute', inset: 0, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /></div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>Scoring in progress</span>
-                        <span style={{ fontSize: 13, color: 'var(--text-2)' }}>This continues in the background if you navigate away.</span>
-                      </div>
-                    </div>
-                  )}
                   {/* live / cached posting — full-bleed iframe */}
                   <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     {dCached && (
