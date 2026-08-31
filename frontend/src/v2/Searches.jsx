@@ -478,7 +478,7 @@ export default function Searches() {
                 </span>
                 {ext ? (
                   <span title="Jobs arrive from the browser extension — there is nothing to run or test"
-                    style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'help' }}>passive capture</span>
+                    style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <span onClick={() => runNow(s)} className="v2-bdc"
