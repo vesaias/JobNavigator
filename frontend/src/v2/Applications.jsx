@@ -229,7 +229,7 @@ export default function Applications() {
       {/* split body */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
-        <div className="v2-scroll" style={{ flex: '0 0 340px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div className="v2-scroll" style={{ flex: '0 0 472px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {STAGES.map((st) => {
             const rows = visible.filter((a) => a.status === st.id)
             const shut = !!closed[st.id]
@@ -299,7 +299,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
       {/* header block */}
       <div style={{ flex: '0 0 auto', padding: '16px 26px 14px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               {d.short_id ? `#${d.short_id} · ` : ''}{d.company_canonical || d.company}
             </span>
@@ -353,20 +353,20 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
       {/* body */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', gap: 24, minHeight: 0 }}>
         <div style={{ flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 15 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={LABEL}>Notes · saves on blur</span>
             <textarea key={d.id} defaultValue={d.notes || ''} onBlur={(e) => onNotes(e.target.value)} placeholder="Notes…"
               style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
           </div>
 
           {d.last_email_snippet && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={LABEL}>Last email · Gmail detection</span>
               <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: 1.55, color: 'var(--text-2)', textWrap: 'pretty' }}>“{d.last_email_snippet}”</div>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={LABEL}>Interviews · {ivs.length}</span>
               <div onClick={openPrep} className="v2-bdc"
@@ -405,7 +405,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <span style={LABEL}>Cached posting · application day</span>
             {d.has_cached_page
               ? <iframe title="cached posting" src={`/api/jobs/${d.job_id}/cached-page`} sandbox="allow-same-origin"
-                  style={{ height: 240, width: '100%', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)' }} />
+                  style={{ height: 140, width: '100%', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)' }} />
               : <div style={{ height: 140, border: '1px solid var(--line)', borderRadius: 9, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>No snapshot was captured for this posting</div>}
           </div>
         </div>
