@@ -483,64 +483,166 @@ def delete_interview(interview_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{app_id}/prep")
 def prep_bundle(app_id: str, db: Session = Depends(get_db)):
-    """Assemble the 'Prep for LLM' bundle: role, posting, résumé, notes, email
-    and interviews as one pasteable block. Built here so the full cached posting
-    text and flattened résumé never have to round-trip through the client."""
+    """Assemble the 'Prep for LLM' bundle — everything a model needs about this
+    application in one pasteable block: the role, where the application stands,
+    how the résumé scored against the posting (requirements, keywords, blockers),
+    visa posture, my notes, their last email, the full posting, and the résumé as
+    submitted. No LLM call here — this is the context, not the answer."""
     from backend.models.db import Resume
     app = db.query(Application).filter(Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
     job = app.job
-    stage = (app.status or "applied").capitalize()
-    days = (utcnow() - app.updated_at).days if app.updated_at else 0
-    cv_name = app.cv_version_used or (job.best_cv if job else None) or "unknown résumé"
 
-    posting_bits = []
+    def money(lo, hi):
+        def k(v):
+            return "$" + str(round(v / 1000)) + "K"
+        if lo and hi and lo != hi:
+            return k(lo) + "–" + k(hi)
+        return k(lo or hi) if (lo or hi) else None
+
+    def days_ago(dt):
+        return str((utcnow() - dt).days) + "d ago" if dt else "unknown"
+
+    L = []
+    add = L.append
+    title = (job.title if job else None) or "Unknown Role"
+    company = (job.company if job else None) or "Unknown Company"
+    add("# Interview prep — " + title + " at " + company)
+
+    add("")
+    add("## The role")
+    add("- Company: " + company)
+    add("- Title: " + title)
     if job:
-        lo, hi = job.salary_min, job.salary_max
-        if lo or hi:
-            k = lambda v: f"${round(v / 1000)}K"
-            posting_bits.append(k(lo) if lo == hi or not hi else
-                                (f"{k(lo)}–{k(hi)}" if lo else k(hi)))
         if job.location:
-            posting_bits.append(job.location)
+            add("- Location: " + job.location + (" (remote)" if job.remote else ""))
+        sal = money(job.salary_min, job.salary_max)
+        if sal:
+            add("- Listed salary: " + sal)
+        if job.discovered_at:
+            add("- Found: " + days_ago(job.discovered_at) + " via " + (job.source or "the job feed"))
+        if job.url:
+            add("- Posting: " + job.url)
 
-    lines = [
-        f"# Interview prep — {(job.title if job else 'Unknown Role')} @ {(job.company if job else 'Unknown Company')}",
-        "",
-        f"Stage: {stage} · applied {days}d ago with {cv_name}",
-    ]
-    if posting_bits:
-        lines.append("Posting: " + " · ".join(posting_bits))
-    if app.notes:
-        lines.append(f"My notes: {app.notes}")
-    if app.last_email_snippet:
-        lines.append(f"Last email from them: “{app.last_email_snippet}”")
-
+    add("")
+    add("## Where this application stands")
+    add("- Stage: " + (app.status or "applied").capitalize())
+    add("- Applied: " + days_ago(app.applied_at))
+    add("- Last activity: " + days_ago(app.updated_at))
+    trail = [t for t in (app.status_transitions or []) if t.get("to")]
+    if trail:
+        chain = [str(trail[0].get("from") or "new")] + [str(t.get("to")) for t in trail]
+        add("- Timeline: " + " → ".join(chain))
     if app.interviews:
-        lines += ["", "Interviews:"]
+        add("- Interviews so far:")
         for iv in app.interviews:
-            row = f"- {iv.what} ({iv.when_text or 'Unscheduled'}, {iv.status or 'scheduled'})"
+            row = "  - " + iv.what + " — " + (iv.when_text or "unscheduled") + " (" + (iv.status or "scheduled") + ")"
             if iv.prep:
-                row += f" — {iv.prep}"
-            lines.append(row)
+                row += "\n    prep note: " + iv.prep
+            add(row)
+    else:
+        add("- Interviews: none logged yet")
 
-    posting_text = (job.cached_page_text or job.description or "") if job else ""
-    lines += ["", "## Cached job posting", posting_text.strip() or "[no posting text captured]"]
+    tailored = None
+    if app.job_id:
+        tailored = (db.query(Resume)
+                    .filter(Resume.job_id == app.job_id, Resume.is_base == False)  # noqa: E712
+                    .order_by(Resume.updated_at.desc()).first())
+    cv_name = (tailored.name if tailored else None) or app.cv_version_used or (job.best_cv if job else None)
+
+    reports = (job.scoring_report or {}) if job else {}
+    scores = (job.cv_scores or {}) if job else {}
+    rpt_name = cv_name if cv_name in reports else (max(scores, key=scores.get) if scores else None)
+    rpt = reports.get(rpt_name) or {}
+    score = scores.get(rpt_name)
+
+    add("")
+    add("## How my résumé scored against this posting")
+    add("- Résumé used: " + (cv_name or "unknown"))
+    if score is not None:
+        note = " (scored as '" + str(rpt_name) + "')" if rpt_name != cv_name else ""
+        add("- Fit score: " + str(score) + "/100" + note)
+    if rpt.get("summary"):
+        add("- Verdict: " + rpt["summary"])
+    if rpt.get("keyword_coverage_pct") is not None:
+        add("- Keyword coverage: " + str(rpt["keyword_coverage_pct"]) + "%")
+    if rpt.get("missing_keywords"):
+        add("- Missing keywords: " + ", ".join(rpt["missing_keywords"]))
+    if rpt.get("matched_keywords"):
+        add("- Matched keywords: " + ", ".join(rpt["matched_keywords"]))
+    if rpt.get("hard_blockers"):
+        add("- Hard blockers: " + "; ".join(rpt["hard_blockers"]))
+    if rpt.get("ats_tip"):
+        add("- ATS note: " + rpt["ats_tip"])
+
+    reqs = rpt.get("requirement_mapping") or []
+    if reqs:
+        met = [r for r in reqs if r.get("matched")]
+        gap = [r for r in reqs if not r.get("matched")]
+        add("")
+        add("### Requirements I meet (" + str(len(met)) + " of " + str(len(reqs)) + ")")
+        for r in met:
+            add("- " + str(r.get("requirement")) + "\n  evidence: " + str(r.get("cv_evidence") or "—"))
+        if gap:
+            add("")
+            add("### Requirements I do NOT clearly meet (" + str(len(gap)) + ") — expect probing here")
+            for r in gap:
+                sev = r.get("severity")
+                add(("- [" + sev + "] " if sev else "- ") + str(r.get("requirement")))
+
+    if job and (job.h1b_verdict or job.h1b_company_lca_count):
+        add("")
+        add("## Visa / sponsorship")
+        if job.h1b_verdict:
+            add("- Verdict: " + str(job.h1b_verdict))
+        if job.h1b_company_lca_count:
+            rate = ""
+            if job.h1b_company_approval_rate:
+                rate = " · " + str(job.h1b_company_approval_rate) + "% approved"
+            add("- Employer LCA filings on record: " + str(job.h1b_company_lca_count) + rate)
+        if job.h1b_jd_snippet:
+            add("- From the posting: “" + job.h1b_jd_snippet + "”")
+
+    if app.notes:
+        add("")
+        add("## My notes on this application")
+        add(app.notes)
+    if app.last_email_snippet:
+        add("")
+        add("## Their last email")
+        add("“" + app.last_email_snippet + "”")
+
+    posting = ((job.cached_page_text or job.description) if job else "") or ""
+    add("")
+    add("## The posting")
+    add(posting.strip() or "[no posting text was captured]")
 
     resume_text = ""
-    if app.cv_version_used:
-        r = db.query(Resume).filter(Resume.name == app.cv_version_used).first()
-        if r and r.json_data:
-            try:
-                from backend.analyzer.cv_scorer import _flatten_resume
-                resume_text = _flatten_resume(r.json_data)
-            except Exception as e:
-                logger.info("prep: could not flatten résumé %s: %s", app.cv_version_used, e)
-    lines += ["", f"## My résumé (as submitted) — {cv_name}", resume_text.strip() or "[résumé content unavailable]"]
-    lines += ["", "Help me prepare: likely questions, what to emphasise from my background, "
-                  "and questions I should ask them."]
-    return {"text": "\n".join(lines)}
+    src = tailored
+    if not src and cv_name:
+        src = db.query(Resume).filter(Resume.name == cv_name).first()
+    if src and src.json_data:
+        try:
+            from backend.analyzer.cv_scorer import _flatten_resume
+            resume_text = _flatten_resume(src.json_data)
+        except Exception as e:
+            logger.info("prep: could not flatten résumé %s: %s", cv_name, e)
+    add("")
+    add("## My résumé as submitted — " + (cv_name or "unknown"))
+    add(resume_text.strip() or "[résumé content unavailable]")
+
+    add("")
+    add("---")
+    add("## What I need from you")
+    add("1. The 10 questions this panel is most likely to ask, ordered by likelihood, with a "
+        "short answer for each drawn from my résumé above — use my real projects and numbers, invent nothing.")
+    add("2. For every requirement I do not clearly meet, the honest framing to use and the "
+        "closest adjacent experience I can point to.")
+    add("3. Two or three stories from my background worth rehearsing, in STAR form.")
+    add("4. The questions I should ask them that show I read this posting closely.")
+    add("5. Anything in my résumé that is a liability for this role, and how to handle it if raised.")
+    return {"text": "\n".join(L)}
 
 
 def _app_to_dict(a: Application, lookup=None, tailored=None) -> dict:
