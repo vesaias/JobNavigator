@@ -76,7 +76,7 @@ function UrlEditor({ urls, onChange }) {
       {urls.map((u, i) => {
         return (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span className={atsSlug(detectAts(u))} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
+            <span className={atsSlug(detectAts(u))} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
             <input value={u} onChange={(e) => set(i, e.target.value)} placeholder="https://boards.greenhouse.io/company"
               style={{ ...monoBox, flex: 1, height: 32, minHeight: 0 }} />
             <span title="Remove this URL" onClick={() => onChange(urls.filter((_, j) => j !== i))} className="v2-hover-bad"
@@ -353,7 +353,7 @@ export default function Companies() {
               <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
               {/* ats */}
               <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
-                {urls.length > 0 && <span className={atsSlug(firstAts)} title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
+                {urls.length > 0 && <span className={atsSlug(firstAts)} title={urls.join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
               </span>
@@ -608,7 +608,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Career page URL</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span className={url ? atsSlug(ats) : undefined} style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.05em', padding: '3px 8px', borderRadius: 99, background: url ? undefined : 'var(--surface-2)', color: url ? undefined : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
+              <span className={url ? atsSlug(ats) : undefined} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, background: url ? undefined : 'var(--surface-2)', color: url ? undefined : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
               <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://boards.greenhouse.io/acme" style={{ ...monoBox, flex: 1, height: 33, minHeight: 0, fontSize: 11 }} />
             </div>
             <span style={{ fontSize: 11, color: url && !known ? 'var(--warn)' : 'var(--muted)' }}>{atsNote}</span>
