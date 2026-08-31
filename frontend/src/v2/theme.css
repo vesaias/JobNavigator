@@ -63,55 +63,59 @@
 /* border + text turn accent, no background wash (the design's pill hover) */
 .v2-bdc:hover { border-color:var(--accent) !important; color:var(--accent) !important; }
 
-/* ATS + tier chips — light pastels; dark gets a dark tint + light ink (both AA) */
-.jn-v2 .cc-greenhouse{background:#eaf1eb;color:#2f6b4a}
-.jn-v2 .cc-workday{background:#f6eee4;color:#8a5322}
-.jn-v2 .cc-lever{background:#e7f0ef;color:#2a6259}
-.jn-v2 .cc-ashby{background:#f3e7ef;color:#7c4066}
-.jn-v2 .cc-phenom{background:#e6f0f4;color:#2c5f72}
-.jn-v2 .cc-oraclehcm{background:#f7ecea;color:#8f3a30}
-.jn-v2 .cc-smartrecruiters{background:#e9f0f7;color:#2f5580}
-.jn-v2 .cc-rippling{background:#efeaf6;color:#5a4285}
-.jn-v2 .cc-eightfold{background:#f7f0e2;color:#8a6a22}
-.jn-v2 .cc-talentbrew{background:#eef2e6;color:#5a6a2a}
-.jn-v2 .cc-meta{background:#e9f0f7;color:#2f5580}
-.jn-v2 .cc-google{background:#f7f0e2;color:#8a6a22}
-.jn-v2 .cc-generic{background:#f3f0e8;color:#57534a}
+/* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
+   light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
+   Tier chips are a separate taxonomy and are not part of that badge set. */
+.jn-v2 .cc-greenhouse{background:#e6efe7;color:#2f6b4a}
+.jn-v2 .cc-workday{background:#f6eee0;color:#8a5c22}
+.jn-v2 .cc-lever{background:#e3efee;color:#2f6a62}
+.jn-v2 .cc-ashby{background:#f3e8f0;color:#7a4066}
+.jn-v2 .cc-phenom{background:#f1efe8;color:#57534a}
+.jn-v2 .cc-oraclehcm{background:#f7ebe7;color:#96402f}
+.jn-v2 .cc-smartrecruiters{background:#e8eef6;color:#3a5a86}
+.jn-v2 .cc-rippling{background:#edeaf6;color:#5a4488}
+.jn-v2 .cc-eightfold{background:#f6eee0;color:#8a5c22}
+.jn-v2 .cc-talentbrew{background:#f1efe8;color:#57534a}
+.jn-v2 .cc-meta{background:#f1efe8;color:#57534a}
+.jn-v2 .cc-google{background:#f1efe8;color:#57534a}
+.jn-v2 .cc-generic{background:#f1efe8;color:#57534a}
 .jn-v2 .cc-tier1{background:#eaf1eb;color:#2f6b4a}
 .jn-v2 .cc-tier2{background:#e9f0f7;color:#2f5580}
 .jn-v2 .cc-tier3{background:#f3f0e8;color:#57534a}
 .jn-v2 .cc-tiernone{background:#f7f5ef;color:#6d6862}
-.jn-v2[data-theme="dark"] .cc-greenhouse{background:#22302a;color:#8dbb9f}
-.jn-v2[data-theme="dark"] .cc-workday{background:#322a20;color:#d7a674}
-.jn-v2[data-theme="dark"] .cc-lever{background:#1f2e2b;color:#86b8ac}
-.jn-v2[data-theme="dark"] .cc-ashby{background:#2f2432;color:#cba0bc}
-.jn-v2[data-theme="dark"] .cc-phenom{background:#1f2d34;color:#8cc0d3}
-.jn-v2[data-theme="dark"] .cc-oraclehcm{background:#341f1c;color:#dd9084}
-.jn-v2[data-theme="dark"] .cc-smartrecruiters{background:#212b37;color:#93b5da}
-.jn-v2[data-theme="dark"] .cc-rippling{background:#282235;color:#ac9adb}
-.jn-v2[data-theme="dark"] .cc-eightfold{background:#322b1d;color:#cdac70}
-.jn-v2[data-theme="dark"] .cc-talentbrew{background:#272d1f;color:#adc07e}
-.jn-v2[data-theme="dark"] .cc-meta{background:#212b37;color:#93b5da}
-.jn-v2[data-theme="dark"] .cc-google{background:#322b1d;color:#cdac70}
-.jn-v2[data-theme="dark"] .cc-generic{background:#302d25;color:#b4b0a8}
+.jn-v2[data-theme="dark"] .cc-greenhouse{background:#22352a;color:#a4cdb2}
+.jn-v2[data-theme="dark"] .cc-workday{background:#3a3021;color:#d3b083}
+.jn-v2[data-theme="dark"] .cc-lever{background:#1f3432;color:#96c8c0}
+.jn-v2[data-theme="dark"] .cc-ashby{background:#392a34;color:#d3aac4}
+.jn-v2[data-theme="dark"] .cc-phenom{background:#34322c;color:#b5b0a3}
+.jn-v2[data-theme="dark"] .cc-oraclehcm{background:#3d2823;color:#dba393}
+.jn-v2[data-theme="dark"] .cc-smartrecruiters{background:#232f3f;color:#a3bedd}
+.jn-v2[data-theme="dark"] .cc-rippling{background:#2d2a3d;color:#b7abdd}
+.jn-v2[data-theme="dark"] .cc-eightfold{background:#3a3021;color:#d3b083}
+.jn-v2[data-theme="dark"] .cc-talentbrew{background:#34322c;color:#b5b0a3}
+.jn-v2[data-theme="dark"] .cc-meta{background:#34322c;color:#b5b0a3}
+.jn-v2[data-theme="dark"] .cc-google{background:#34322c;color:#b5b0a3}
+.jn-v2[data-theme="dark"] .cc-generic{background:#34322c;color:#b5b0a3}
 .jn-v2[data-theme="dark"] .cc-tier1{background:#22302a;color:#8dbb9f}
 .jn-v2[data-theme="dark"] .cc-tier2{background:#212b37;color:#93b5da}
 .jn-v2[data-theme="dark"] .cc-tier3{background:#302d25;color:#cfcbc3}
 .jn-v2[data-theme="dark"] .cc-tiernone{background:#2a271f;color:#b4b0a8}
 
 /* Search mode badges — light pastels; dark tint + light ink */
-.jn-v2 .sm-keyword{background:#eef3f8;color:#2f5580}
-.jn-v2 .sm-levels{background:#eaf1eb;color:#2f6b4a}
-.jn-v2 .sm-lipersonal{background:#f3e7ef;color:#7c4066}
-.jn-v2 .sm-jobright{background:#e7f0ef;color:#2a6259}
-.jn-v2 .sm-freehire{background:#f6eee4;color:#8a5322}
-.jn-v2 .sm-extension{background:#f3f0e8;color:#57534a}
-.jn-v2[data-theme="dark"] .sm-keyword{background:#212b37;color:#93b5da}
-.jn-v2[data-theme="dark"] .sm-levels{background:#22302a;color:#8dbb9f}
-.jn-v2[data-theme="dark"] .sm-lipersonal{background:#2f2432;color:#cba0bc}
-.jn-v2[data-theme="dark"] .sm-jobright{background:#1f2e2b;color:#86b8ac}
-.jn-v2[data-theme="dark"] .sm-freehire{background:#322a20;color:#d7a674}
-.jn-v2[data-theme="dark"] .sm-extension{background:#302d25;color:#b4b0a8}
+.jn-v2 .sm-keyword{background:#e8eef6;color:#3a5a86}
+.jn-v2 .sm-levels{background:#e6efe7;color:#2f6b4a}
+.jn-v2 .sm-lipersonal{background:#f3e8f0;color:#7a4066}
+.jn-v2 .sm-jobright{background:#e3efee;color:#2f6a62}
+.jn-v2 .sm-freehire{background:#f6eee0;color:#8a5c22}
+.jn-v2 .sm-extension{background:#f1efe8;color:#57534a}
+.jn-v2 .sm-url{background:#edeaf6;color:#5a4488}
+.jn-v2[data-theme="dark"] .sm-keyword{background:#232f3f;color:#a3bedd}
+.jn-v2[data-theme="dark"] .sm-levels{background:#22352a;color:#a4cdb2}
+.jn-v2[data-theme="dark"] .sm-lipersonal{background:#392a34;color:#d3aac4}
+.jn-v2[data-theme="dark"] .sm-jobright{background:#1f3432;color:#96c8c0}
+.jn-v2[data-theme="dark"] .sm-freehire{background:#3a3021;color:#d3b083}
+.jn-v2[data-theme="dark"] .sm-extension{background:#34322c;color:#b5b0a3}
+.jn-v2[data-theme="dark"] .sm-url{background:#2d2a3d;color:#b7abdd}
 .v2-tab { transition:color .12s; }
 
 .v2-scroll::-webkit-scrollbar { width:9px; height:9px; }

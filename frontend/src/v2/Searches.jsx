@@ -36,7 +36,7 @@ const MODES = {
   freehire: ['FREEHIRE.ME', 'sm-freehire'],
   linkedin_extension: ['EXTENSION', 'sm-extension'],
   extension: ['EXTENSION', 'sm-extension'],
-  url: ['URL', 'sm-extension'],
+  url: ['URL', 'sm-url'],
 }
 const MODE_OPTIONS = [
   ['keyword', 'Keyword (JobSpy)'],
