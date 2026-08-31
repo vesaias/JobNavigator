@@ -479,9 +479,9 @@ export default function Searches() {
                 </span>
                 {ext ? (
                   <span title="Jobs arrive from the browser extension — there is nothing to run or test"
-                    style={{ flex: '0 0 170px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>passive capture with extension</span>
+                    style={{ flex: '0 0 169px', marginLeft: -7, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension passive capture</span>
                 ) : (
-                  <span style={{ flex: '0 0 170px', display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                  <span style={{ flex: '0 0 169px', marginLeft: -7, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <span onClick={() => runNow(s)} className="v2-bdc"
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
