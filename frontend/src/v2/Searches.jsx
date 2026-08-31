@@ -60,11 +60,12 @@ const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Appl
 const MICRO = { fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 const HELP = { fontSize: 10.5, color: 'var(--muted)' }
 
+// note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
-  if (mode === 'levels_fyi') return ['Configure filters on levels.fyi, then paste the URL here — location, job family, salary and recency are all encoded in it.', 'var(--accent-soft)', 'var(--good)']
-  if (mode === 'jobright') return ['Personalized AI recommendations from your Jobright.ai account. A search term switches it to search mode; credentials live in Settings.', 'var(--accent-soft)', 'var(--good)']
-  if (mode === 'extension') return ['Jobs arrive via the “Save to Job Feed” button on any website. Set auto-score depth and the filters below — they apply as each job is saved.', 'var(--accent-soft)', 'var(--good)']
-  if (mode === 'linkedin_extension') return ['Jobs import via passive capture on linkedin.com/jobs/collections/* pages. The filters below auto-filter during import.', 'var(--accent-soft)', 'var(--good)']
+  if (mode === 'levels_fyi') return ['Configure filters on levels.fyi, then paste the URL here — location, job family, salary and recency are all encoded in it.', 'sm-levels']
+  if (mode === 'jobright') return ['Personalized AI recommendations from your Jobright.ai account. A search term switches it to search mode; credentials live in Settings.', 'sm-jobright']
+  if (mode === 'extension') return ['Jobs arrive via the “Save to Job Feed” button on any website. Set auto-score depth and the filters below — they apply as each job is saved.', 'sm-levels']
+  if (mode === 'linkedin_extension') return ['Jobs import via passive capture on linkedin.com/jobs/collections/* pages. The filters below auto-filter during import.', 'sm-levels']
   return null
 }
 
@@ -160,7 +161,7 @@ const Chip = ({ on, label, onClick }) => (
   </div>
 )
 const Check = ({ on, label, title, onClick }) => (
-  <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', height: 31, gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
+  <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
     <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
     {label}
   </div>
@@ -172,7 +173,7 @@ const DepthPills = ({ value, onPick }) => (
       return (
         <div key={d.id} title={d.hint} onClick={(e) => { e.stopPropagation(); onPick(d.id) }} className="v2-bd"
           style={{ height: 31, padding: '0 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-          {d.dots && <span>{d.dots}</span>}{d.label}
+          <span>{d.dots}</span>{d.label}
         </div>
       )
     })}
@@ -180,7 +181,7 @@ const DepthPills = ({ value, onPick }) => (
 )
 
 // ── the shared config form (new + edit) ──────────────────────────────────────
-function ConfigForm({ d, set, isNew }) {
+function ConfigForm({ d, set }) {
   const m = d.search_mode
   const ext = isExt(m)
   const toggleSrc = (id) => set({ sources: d.sources.includes(id) ? d.sources.filter((x) => x !== id) : [...d.sources, id] })
@@ -239,17 +240,17 @@ function ConfigForm({ d, set, isNew }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>{fields}</div>
 
       {note && (
-        <div style={{ padding: '9px 12px', borderRadius: 8, background: note[1], fontSize: 11.5, lineHeight: 1.5, color: note[2], textWrap: 'pretty' }}>{note[0]}</div>
+        <div className={note[1]} style={{ padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: 1.5, textWrap: 'pretty' }}>{note[0]}</div>
       )}
 
       {m === 'keyword' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <span style={{ ...MICRO, marginRight: 3 }}>Sources</span>
           {SOURCES.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} onClick={() => toggleSrc(id)} />)}
         </div>
       )}
       {m === 'linkedin_personal' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <span style={{ ...MICRO, marginRight: 3 }}>Collections</span>
           {COLLECTIONS.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} onClick={() => toggleSrc(id)} />)}
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>Credentials live in Settings › Accounts</span>
@@ -277,16 +278,17 @@ function ConfigForm({ d, set, isNew }) {
             <span style={HELP}>0 follows the global schedule from Settings</span>
           </div>
         ) : <div />}
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, minHeight: 31 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={MICRO}>Import rules</span>
-          <Check on={d.exclude_active_companies} label="Skip active companies"
-            title="Their Company scrapes already bring these postings"
-            onClick={() => set({ exclude_active_companies: !d.exclude_active_companies })} />
-          {m === 'jobright' && <Check on={d.require_salary} label="Require salary" title="Drop results without a listed salary"
-            onClick={() => set({ require_salary: !d.require_salary })} />}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, minHeight: 31 }}>
+            <Check on={d.exclude_active_companies} label="Skip active companies"
+              title="Their Company scrapes already bring these postings"
+              onClick={() => set({ exclude_active_companies: !d.exclude_active_companies })} />
+            {m === 'jobright' && <Check on={d.require_salary} label="Require salary" title="Drop results without a listed salary"
+              onClick={() => set({ require_salary: !d.require_salary })} />}
+          </div>
         </div>
       </div>
-      {isNew && null}
     </>
   )
 }
@@ -344,7 +346,9 @@ export default function Searches() {
   }, [])
 
   const nActive = searches.filter((s) => s.active).length
-  const warnOf = (s) => s.last_error || downMap[s.id] || null
+  // an error wins; then health's 3-run verdict; then a single clean-but-empty run
+  const warnOf = (s) => s.last_error || downMap[s.id]
+    || (s.last_run_warning ? 'Last run finished cleanly but returned no jobs' : null)
   const nWarn = searches.filter((s) => warnOf(s)).length
   const countLine = [
     `${searches.length} config${searches.length === 1 ? '' : 's'}`,
@@ -411,7 +415,7 @@ export default function Searches() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}
-            style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ New search</div>
+            style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ New search</div>
         </div>
       </header>
       <div style={{ flex: '0 0 auto', margin: '0 30px', borderBottom: '1px solid var(--line)' }} />
@@ -426,10 +430,10 @@ export default function Searches() {
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>pick a mode — the fields below follow it</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--bg)' }}>
-              <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} isNew />
+              <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Runs on the next scheduled sweep once created</span>
-                <div onClick={() => setNewOpen(false)} className="v2-act" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                <div onClick={() => setNewOpen(false)} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
                 <div onClick={create} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Create search</div>
               </div>
             </div>
@@ -448,7 +452,7 @@ export default function Searches() {
           const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
-            <div key={s.id} style={{ border: `1px solid ${warn ? 'var(--warn)' : isOpen ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+            <div key={s.id} style={{ border: `1px solid ${warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
               {/* summary row */}
               <div onClick={() => openEdit(s)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', cursor: 'pointer' }}>
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
@@ -477,19 +481,19 @@ export default function Searches() {
                     style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'help' }}>passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                    <span onClick={() => runNow(s)} className="v2-act"
+                    <span onClick={() => runNow(s)} className="v2-bdc"
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                       {spin ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </span>
                     {TESTABLE.includes(s.search_mode) && (
-                      <span onClick={() => runTest(s)} className="v2-act" title="Dry run — previews results and per-job filter reasons, saves nothing"
+                      <span onClick={() => runTest(s)} className="v2-bdc" title="Dry run — previews results and per-job filter reasons, saves nothing"
                         style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                         {testingId === s.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
                     )}
-                    <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-act" title="More actions"
+                    <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
                       style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                     {menuFor === s.id && (
                       <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
@@ -515,7 +519,7 @@ export default function Searches() {
                   <ConfigForm d={draft} set={(p) => setDraft((x) => ({ ...x, ...p }))} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>Changes apply from the next run</span>
-                    <div onClick={() => setEditing(null)} className="v2-act" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                    <div onClick={() => setEditing(null)} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
                     <div onClick={() => save(s)} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Save changes</div>
                   </div>
                 </div>
@@ -547,7 +551,14 @@ function TestModal({ test, tab, setTab, onClose }) {
   const rows = tab === 'kept' ? kept : tab === 'filtered' ? filtered : jobs
   const cfg = d.config || {}
   const bySource = d.by_source || {}
-  const SRC_CLS = { linkedin: 'sm-keyword', indeed: 'sm-lipersonal', zip_recruiter: 'sm-freehire', zip: 'sm-freehire', google: 'sm-jobright', direct: 'sm-extension' }
+  // per-board chip colours from the design: linkedin blue, indeed plum, zip amber, google red
+  const srcChip = (k) => {
+    if (k === 'linkedin') return { className: 'sm-keyword' }
+    if (k === 'indeed') return { className: 'sm-lipersonal' }
+    if (k.startsWith('zip')) return { style: { background: 'var(--warn-soft)', color: 'var(--warn)' } }
+    if (k === 'google') return { style: { background: 'var(--bad-soft)', color: 'var(--bad)' } }
+    return { className: 'sm-extension' }
+  }
 
   // params strip — mode aware (v1 rendered freehire through the keyword branch)
   const params = []
@@ -570,14 +581,12 @@ function TestModal({ test, tab, setTab, onClose }) {
   }
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 880, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test run — {test.name}</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>
-          </div>
-          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</span>
+          <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>
+          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
         </div>
 
         {test.error ? (
@@ -586,13 +595,14 @@ function TestModal({ test, tab, setTab, onClose }) {
           <>
             <div style={{ flex: '0 0 auto', padding: '9px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-2)' }}>
               {cfg.search_term && cfg.mode !== 'jobright' && cfg.mode !== 'freehire' && (
-                <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>{cfg.search_term}</span></span>
+                <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>“{cfg.search_term}”</span></span>
               )}
               <span>{params.join(' · ')}</span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {Object.entries(bySource).map(([k, v]) => (
-                  <span key={k} className={SRC_CLS[k] || 'sm-extension'} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 99 }}>{k} {v}</span>
-                ))}
+                {Object.entries(bySource).map(([k, v]) => {
+                  const c = srcChip(k)
+                  return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 99, ...(c.style || {}) }}>{k} {v}</span>
+                })}
               </span>
             </div>
 
@@ -606,7 +616,7 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
 
             <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                 <span style={{ flex: '0 0 80px' }}>Source</span>
                 <span style={{ flex: 1.3, minWidth: 0 }}>Company</span>
                 <span style={{ flex: 2, minWidth: 0 }}>Title</span>
@@ -619,13 +629,13 @@ function TestModal({ test, tab, setTab, onClose }) {
                 const ok = !!j.kept
                 const hasDesc = !!(j.desc_length || j.description_length || j.has_description)
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '2px 22px', borderBottom: '1px solid var(--line-soft)', background: ok ? 'transparent' : 'var(--bad-soft)' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '2px 22px', borderBottom: '1px solid var(--line-soft)', background: ok ? 'transparent' : 'var(--bad-faint)' }}>
                     <span style={{ flex: '0 0 80px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{j.source}</span>
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
                     <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.title}</a>
                     <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
                     <span style={{ flex: '0 0 92px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-2)' }}>{j.salary || '—'}</span>
-                    <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--faint, var(--muted))' }}>{hasDesc ? '✓' : '✕'}</span>
+                    <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
                       <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : 'Out'}</span>
                     </span>
@@ -643,7 +653,7 @@ function TestModal({ test, tab, setTab, onClose }) {
               <span>
                 <b style={{ color: 'var(--good)' }}>{d.after_filter ?? kept.length} kept</b> · <b style={{ color: 'var(--bad)' }}>{(d.raw_count ?? jobs.length) - (d.after_filter ?? kept.length)} filtered</b> · {d.raw_count ?? jobs.length} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
               </span>
-              <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+              <div onClick={onClose} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
             </div>
           </>
         )}
