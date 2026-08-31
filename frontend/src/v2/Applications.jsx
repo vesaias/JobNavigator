@@ -176,12 +176,12 @@ export default function Applications() {
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
         <div style={{ flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>⌕</span>
+          <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
         </div>
 
-        <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+        <span style={{ position: 'relative', flex: '0 0 auto', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
           <div onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')}
             style={{ height: 30, padding: '0 13px', border: `1px solid ${openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--edge)'}`, background: openFlt === 'company' || companies.length ? 'var(--accent-soft)' : 'var(--surface)', color: openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
@@ -210,7 +210,7 @@ export default function Applications() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {openFlt === 'sort' && (
-              <div style={{ ...POPOVER, right: 0, marginTop: 8, width: 190 }}>
+              <div style={{ ...POPOVER, right: 0, marginTop: 8, width: 190, gap: 1 }}>
                 {SORTS.map(([id, label]) => {
                   const on = sortBy === id
                   return (
@@ -310,9 +310,9 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
             {d.has_cached_page && <a href={`/api/jobs/${d.job_id}/cached-page`} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Snapshot of the posting from application day"
-              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', textDecoration: 'none' }}>Cached</a>}
+              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Cached</a>}
             {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Open the live posting"
-              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-2)', textDecoration: 'none' }}>Live ↗</a>}
+              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Live ↗</a>}
             <div onClick={() => setMenuOpen((v) => !v)} className="v2-bd" title="More actions"
               style={{ width: 25, height: 25, border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
             {menuOpen && (
@@ -449,9 +449,9 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         </div>
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Posting text and résumé content are included</span>
-          <div onClick={onClose} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <div onClick={onClose} style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
           <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-            <span>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
+            <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </div>
         </div>
       </div>
@@ -514,16 +514,18 @@ function LogModal({ onClose, onSaved }) {
               placeholder="Paste the job URL — title and company are read from it"
               style={{ ...box, fontFamily: 'var(--mono)', fontSize: 11 }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={FIELD_LABEL}>Title</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Backend Engineer" style={box} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+              <span style={FIELD_LABEL}>Title</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Backend Engineer" style={box} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+              <span style={FIELD_LABEL}>Company</span>
+              <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme" style={box} />
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={FIELD_LABEL}>Company</span>
-            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme" style={box} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2, borderTop: '1px solid var(--line-soft)' }}>
-            <span style={{ ...FIELD_LABEL, paddingTop: 8 }}>Applied with</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={FIELD_LABEL}>Applied with</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {resumes.map((r) => {
                 const on = cv === r.name
@@ -531,7 +533,8 @@ function LogModal({ onClose, onSaved }) {
               })}
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <span style={FIELD_LABEL}>Stage</span>
             <div style={{ display: 'flex', gap: 5 }}>
               {['applied', 'interview', 'offer'].map((id) => {
@@ -540,9 +543,10 @@ function LogModal({ onClose, onSaved }) {
               })}
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <span style={FIELD_LABEL}>Applied on</span>
             <input type="date" value={when} onChange={(e) => setWhen(e.target.value)} style={box} />
+          </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={FIELD_LABEL}>Notes</span>
@@ -552,7 +556,7 @@ function LogModal({ onClose, onSaved }) {
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>The posting is cached on save</span>
-          <div onClick={onClose} className="v2-bdc" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+          <div onClick={onClose} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
           <div onClick={busy ? undefined : save} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Save application'}</div>
         </div>
       </div>
