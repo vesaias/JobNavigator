@@ -418,7 +418,6 @@ export default function Searches() {
             style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ New search</div>
         </div>
       </header>
-      <div style={{ flex: '0 0 auto', margin: '0 30px 0 24px', borderBottom: '1px solid var(--line)' }} />
 
       {/* body */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
