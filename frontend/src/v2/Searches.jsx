@@ -471,13 +471,11 @@ export default function Searches() {
                     <span style={{ color: 'var(--accent)', letterSpacing: 2, fontSize: 9 }}>{dep?.dots}</span>{dep?.label}
                   </span>
                 )}
-                {/* fixed slot so Active / Paused sit on the same vertical axis across rows */}
-                <span style={{ flex: '0 0 70px', display: 'flex', justifyContent: 'center' }}>
-                  <span onClick={(e) => { e.stopPropagation(); toggleActive(s) }} className="v2-bd"
-                    title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
-                    style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`, background: s.active ? 'var(--accent-soft)' : 'var(--surface)', color: s.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                    {s.active ? 'Active' : 'Paused'}
-                  </span>
+                {/* fixed width so Active matches Paused and both sit on one vertical axis */}
+                <span onClick={(e) => { e.stopPropagation(); toggleActive(s) }} className="v2-bd"
+                  title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
+                  style={{ flex: '0 0 62px', height: 23, borderRadius: 99, border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`, background: s.active ? 'var(--accent-soft)' : 'var(--surface)', color: s.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                  {s.active ? 'Active' : 'Paused'}
                 </span>
                 {ext ? (
                   <span title="Jobs arrive from the browser extension — there is nothing to run or test"
