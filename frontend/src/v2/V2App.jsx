@@ -9,7 +9,7 @@ import './theme.css'
 const GROUPS = [
   { label: 'Find', items: [
     { to: '/v2/feed', label: 'Jobs', ready: true, countKey: 'jobs' },
-    { to: '/v2/searches', label: 'Searches' },
+    { to: '/v2/searches', label: 'Searches', ready: true, countKey: 'searches' },
     { to: '/v2/companies', label: 'Companies', ready: true, countKey: 'companies' },
   ]},
   { label: 'Apply', items: [
@@ -37,6 +37,7 @@ export default function V2App() {
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setCounts((c) => ({ ...c, resumes: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
     api.get('/applications').then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
     api.get('/companies').then(({ data }) => setCounts((c) => ({ ...c, companies: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
+    api.get('/searches').then(({ data }) => setCounts((c) => ({ ...c, searches: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
   }, [])
 
   const W = open ? 206 : 60

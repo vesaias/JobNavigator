@@ -94,6 +94,20 @@
 .jn-v2[data-theme="dark"] .cc-tier2{background:#212b37;color:#93b5da}
 .jn-v2[data-theme="dark"] .cc-tier3{background:#302d25;color:#cfcbc3}
 .jn-v2[data-theme="dark"] .cc-tiernone{background:#2a271f;color:#b4b0a8}
+
+/* Search mode badges — light pastels; dark tint + light ink */
+.jn-v2 .sm-keyword{background:#eef3f8;color:#2f5580}
+.jn-v2 .sm-levels{background:#eaf1eb;color:#2f6b4a}
+.jn-v2 .sm-lipersonal{background:#f3e7ef;color:#7c4066}
+.jn-v2 .sm-jobright{background:#e7f0ef;color:#2a6259}
+.jn-v2 .sm-freehire{background:#f6eee4;color:#8a5322}
+.jn-v2 .sm-extension{background:#f3f0e8;color:#57534a}
+.jn-v2[data-theme="dark"] .sm-keyword{background:#212b37;color:#93b5da}
+.jn-v2[data-theme="dark"] .sm-levels{background:#22302a;color:#8dbb9f}
+.jn-v2[data-theme="dark"] .sm-lipersonal{background:#2f2432;color:#cba0bc}
+.jn-v2[data-theme="dark"] .sm-jobright{background:#1f2e2b;color:#86b8ac}
+.jn-v2[data-theme="dark"] .sm-freehire{background:#322a20;color:#d7a674}
+.jn-v2[data-theme="dark"] .sm-extension{background:#302d25;color:#b4b0a8}
 .v2-tab { transition:color .12s; }
 
 .v2-scroll::-webkit-scrollbar { width:9px; height:9px; }

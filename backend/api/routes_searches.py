@@ -44,7 +44,22 @@ class SearchCreate(BaseModel):
 @router.get("")
 def list_searches(db: Session = Depends(get_db)):
     searches = db.query(Search).order_by(Search.created_at).all()
-    return [_search_to_dict(s) for s in searches]
+    # Latest ScrapeLog per search → surface the most recent run's outcome so the
+    # UI can show a live summary/health line (mirrors what /companies does).
+    from sqlalchemy import func, and_
+    from backend.models.db import ScrapeLog
+    latest_sub = (
+        db.query(ScrapeLog.search_id, func.max(ScrapeLog.ran_at).label("mx"))
+        .filter(ScrapeLog.search_id.isnot(None))
+        .group_by(ScrapeLog.search_id).subquery()
+    )
+    last_log = {
+        str(l.search_id): l
+        for l in db.query(ScrapeLog).join(
+            latest_sub, and_(ScrapeLog.search_id == latest_sub.c.search_id,
+                             ScrapeLog.ran_at == latest_sub.c.mx)).all()
+    }
+    return [_search_to_dict(s, last_log.get(str(s.id))) for s in searches]
 
 
 @router.post("")
@@ -85,27 +100,32 @@ def delete_search(search_id: str, db: Session = Depends(get_db)):
     return {"deleted": True}
 
 
-@router.post("/{search_id}/run")
+@router.post("/{search_id}/run", status_code=202)
 async def trigger_search(search_id: str, auto_score: bool = None, db: Session = Depends(get_db)):
-    """Trigger a single search immediately. auto_score: True/False override, null=use search setting."""
+    """Trigger a single search. Returns immediately with a run_id — the run continues
+    in the background and is pollable via /api/monitor/active (scope_key = search id).
+    auto_score: True/False override, null=use the search's auto_scoring_depth."""
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
+    search_name = search.name
 
-    from backend.scraper.orchestrator import _run_search_by_id as run_single_search
-    result = await run_single_search(str(search.id), auto_score=auto_score)
-    # Project to an explicit whitelist of safe fields — never forward scraper exception
-    # strings to the client (CodeQL py/stack-trace-exposure).
-    if isinstance(result, dict) and result.get("error"):
-        logger.warning("Search %s finished with scrape error: %s", search.id, result.get("error"))
-    safe_result = {
-        "jobs_found": int(result.get("jobs_found", 0)) if isinstance(result, dict) else 0,
-        "new_jobs": int(result.get("new_jobs", 0)) if isinstance(result, dict) else 0,
-        "duration": result.get("duration") if isinstance(result, dict) else None,
-        "error": "Scrape failed; see server logs for details."
-                 if isinstance(result, dict) and result.get("error") else None,
-    }
-    return {"message": "Search completed", "search_id": str(search.id), "result": safe_result}
+    async def _do():
+        from backend.scraper.orchestrator import _run_search_by_id as run_single_search
+        result = await run_single_search(search_id, auto_score=auto_score)
+        # Never forward scraper exception strings to the client (py/stack-trace-exposure);
+        # the real text is already persisted on the ScrapeLog row and logged here.
+        if isinstance(result, dict) and result.get("error"):
+            logger.warning("Search %s finished with scrape error: %s", search_id, result.get("error"))
+
+    from backend.job_monitor import launch_background, JobAlreadyRunningError
+    try:
+        run_id = launch_background("search_run", _do, trigger="manual",
+                                   scope_key=search_id, meta={"search": search_name})
+        return {"run_id": run_id, "status": "running", "search_id": search_id, "search": search_name}
+    except JobAlreadyRunningError as e:
+        logger.info("Duplicate search run rejected for %s", search_id)
+        return JSONResponse(status_code=409, content={"detail": f"{e.job_type} is already running"})
 
 
 @router.post("/{search_id}/test")
@@ -615,7 +635,7 @@ async def _test_levelsfyi_search(search, db):
     }
 
 
-def _search_to_dict(s: Search) -> dict:
+def _search_to_dict(s: Search, last_log=None) -> dict:
     return {
         "id": str(s.id),
         "name": s.name,
@@ -641,4 +661,10 @@ def _search_to_dict(s: Search) -> dict:
         "run_interval_minutes": s.run_interval_minutes,
         "last_run_at": s.last_run_at.isoformat() if s.last_run_at else None,
         "created_at": s.created_at.isoformat() if s.created_at else None,
+        # most recent ScrapeLog for this search (None until it has run once)
+        "last_error": (last_log.error if last_log else None),
+        "last_run_warning": (bool(last_log.is_warning) if last_log else False),
+        "last_jobs_found": (last_log.jobs_found if last_log else None),
+        "last_new_jobs": (last_log.new_jobs if last_log else None),
+        "last_duration": (last_log.duration_seconds if last_log else None),
     }

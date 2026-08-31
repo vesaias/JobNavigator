@@ -185,13 +185,16 @@ async def run_all(force: bool = False):
                 logger.exception(f"Search '{search.name}' failed: {e}")
                 result = {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": 0}
 
-            # Log the scrape
+            # Log the scrape. A clean run that found nothing is a warning (same rule
+            # company scrapes use) so /health/entities can flag a search that has
+            # quietly stopped returning results.
             log = ScrapeLog(
                 search_id=search.id,
                 source=_source_for_search(search),
                 jobs_found=result.get("jobs_found", 0),
                 new_jobs=result.get("new_jobs", 0),
                 error=result.get("error"),
+                is_warning=(result.get("jobs_found", 0) == 0 and not result.get("error")),
                 duration_seconds=result.get("duration", 0),
             )
             db.add(log)
@@ -274,6 +277,7 @@ async def _run_search_by_id(search_id: str, auto_score: Optional[bool] = None) -
             jobs_found=result.get("jobs_found", 0),
             new_jobs=result.get("new_jobs", 0),
             error=result.get("error"),
+            is_warning=(result.get("jobs_found", 0) == 0 and not result.get("error")),
             duration_seconds=result.get("duration", 0),
         )
         db.add(log)

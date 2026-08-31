@@ -19,6 +19,7 @@ import V2JobFeed from './v2/JobFeed'
 import V2Resumes from './v2/Resumes'
 import V2ResumeEditor from './v2/ResumeEditor'
 import V2Companies from './v2/Companies'
+import V2Searches from './v2/Searches'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -146,6 +147,7 @@ function App() {
           <Route path="resumes" element={<V2Resumes />} />
           <Route path="resumes/:id" element={<V2ResumeEditor />} />
           <Route path="companies" element={<V2Companies />} />
+          <Route path="searches" element={<V2Searches />} />
         </Route>
 
         {/* classic shell */}

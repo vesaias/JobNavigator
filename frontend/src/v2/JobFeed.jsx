@@ -191,6 +191,13 @@ export default function V2JobFeed() {
   const pendingRef = useRef({})   // {jobId:{title,company}} → completion toast
   const seenActiveRef = useRef(new Set())   // jobs confirmed in-flight (avoids first-tick false completion)
   const [searchParams, setSearchParams] = useSearchParams()
+  // ?search=<id> scopes the feed to one saved search (from Searches → View results in feed)
+  const [searchId, setSearchId] = useState(() => { try { return new URLSearchParams(window.location.search).get('search') || '' } catch { return '' } })
+  const [searchName, setSearchName] = useState('')
+  useEffect(() => {
+    if (!searchId) { setSearchName(''); return }
+    api.get('/searches').then(({ data }) => setSearchName((data || []).find((s) => String(s.id) === String(searchId))?.name || 'search')).catch(() => setSearchName('search'))
+  }, [searchId])
   const PAGE = 40
 
   const dismissToast = useCallback((id) => {
@@ -229,9 +236,10 @@ export default function V2JobFeed() {
     if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
     if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
     if (dSearch) p.title_search = dSearch
+    if (searchId) p.search_id = searchId
     if (sortBy !== 'date') p.sort_by = sortBy
     return p
-  }, [filters, sortBy, dSearch])
+  }, [filters, sortBy, dSearch, searchId])
 
   const fetchJobs = useCallback(async () => {
     setLoading(true)
@@ -594,6 +602,12 @@ export default function V2JobFeed() {
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 226, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
         </div>
+        {searchId && (
+          <span onClick={() => { setSearchId(''); setSearchParams({}, { replace: true }) }} title="Showing only jobs from this saved search — click to clear"
+            style={{ flex: '0 0 auto', height: 30, padding: '0 12px', borderRadius: 99, border: '1px solid var(--accent)', background: 'var(--accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+            from “{searchName}”<span style={{ fontSize: 11, opacity: 0.7 }}>✕</span>
+          </span>
+        )}
         <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} onClear={() => setF({ source: [] })} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
