@@ -39,7 +39,7 @@ const STAGES = [
   { id: 'rejected', label: 'Rejected', dot: 'var(--bad)', hint: 'Closed — kept for the Stats funnel' },
 ]
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
-const GROUP_LABEL = { applied: 'Applied', interview: 'Interview', offer: 'Offer', rejected: 'Rejected · kept for stats' }
+const GROUP_LABEL = { applied: 'Applied', interview: 'Interview', offer: 'Offer', rejected: 'Rejected' }
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
@@ -49,6 +49,16 @@ const POPOVER = {
   position: 'absolute', top: '100%', zIndex: 40, background: 'var(--surface)',
   border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)',
   padding: 6, display: 'flex', flexDirection: 'column',
+}
+// Header action pill — same metrics as the Feed's "Open ↗" (collapsed header).
+// lineHeight:1 is local to these fixed-height controls: at the inherited 1.5 the
+// line box stops centring in the pill and the label rides ~1px high, and under
+// `normal` a fallback-font glyph (the ↗) drags it 1px the other way. Because the
+// height is fixed, this cannot affect any surrounding layout.
+const ACT_BTN = {
+  height: 30, padding: '0 14px', borderRadius: 99, border: '1px solid var(--edge)',
+  background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
+  fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap',
 }
 const inputSt = {
   height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6,
@@ -220,7 +230,7 @@ export default function Applications() {
 
         <span style={{ position: 'relative', flex: '0 0 auto', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
           <div onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')}
-            style={{ height: 30, padding: '0 13px', border: `1px solid ${openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--edge)'}`, background: openFlt === 'company' || companies.length ? 'var(--accent-soft)' : 'var(--surface)', color: openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+            style={{ height: 30, padding: '0 13px', border: `1px solid ${openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--edge)'}`, background: openFlt === 'company' || companies.length ? 'var(--accent-soft)' : 'var(--surface)', color: openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1, gap: 6, fontSize: 12.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
           </div>
           {openFlt === 'company' && (
@@ -358,11 +368,11 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
             {d.has_cached_page && <a href={`/api/jobs/${d.job_id}/cached-page`} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Snapshot of the posting from application day"
-              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Cached</a>}
+              style={{ ...ACT_BTN, textDecoration: 'none' }}>Cached</a>}
             {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Open the live posting"
-              style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Live ↗</a>}
+              style={{ ...ACT_BTN, gap: 4, textDecoration: 'none' }}>Live ↗</a>}
             <div onClick={() => setMenuOpen((v) => !v)} className="v2-bd" title="More actions"
-              style={{ width: 25, height: 25, border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
+              style={{ ...ACT_BTN, width: 30, padding: 0, justifyContent: 'center', border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', cursor: 'pointer' }}>⋯</div>
             {menuOpen && (
               <div style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, padding: 5, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
