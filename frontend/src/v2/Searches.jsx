@@ -471,14 +471,17 @@ export default function Searches() {
                     <span style={{ color: 'var(--accent)', letterSpacing: 2, fontSize: 9 }}>{dep?.dots}</span>{dep?.label}
                   </span>
                 )}
-                <span onClick={(e) => { e.stopPropagation(); toggleActive(s) }} className="v2-bd"
-                  title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
-                  style={{ flex: '0 0 auto', height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`, background: s.active ? 'var(--accent-soft)' : 'var(--surface)', color: s.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                  {s.active ? 'Active' : 'Paused'}
+                {/* fixed slot so Active / Paused sit on the same vertical axis across rows */}
+                <span style={{ flex: '0 0 70px', display: 'flex', justifyContent: 'center' }}>
+                  <span onClick={(e) => { e.stopPropagation(); toggleActive(s) }} className="v2-bd"
+                    title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
+                    style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`, background: s.active ? 'var(--accent-soft)' : 'var(--surface)', color: s.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    {s.active ? 'Active' : 'Paused'}
+                  </span>
                 </span>
                 {ext ? (
                   <span title="Jobs arrive from the browser extension — there is nothing to run or test"
-                    style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension passive capture</span>
+                    style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 148px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <span onClick={() => runNow(s)} className="v2-bdc"
@@ -582,7 +585,7 @@ function TestModal({ test, tab, setTab, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 880, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 980, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</span>
           <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>
@@ -621,7 +624,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                 <span style={{ flex: 1.3, minWidth: 0 }}>Company</span>
                 <span style={{ flex: 2, minWidth: 0 }}>Title</span>
                 <span style={{ flex: '0 0 116px' }}>Location</span>
-                <span style={{ flex: '0 0 92px', textAlign: 'right' }}>Salary</span>
+                <span style={{ flex: '0 0 120px', textAlign: 'right' }}>Salary</span>
                 <span style={{ flex: '0 0 44px', textAlign: 'center' }} title="Description scraped">Desc</span>
                 <span style={{ flex: '0 0 66px', textAlign: 'right' }}>Status</span>
               </div>
@@ -634,7 +637,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
                     <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.title}</a>
                     <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
-                    <span style={{ flex: '0 0 92px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-2)' }}>{j.salary || '—'}</span>
+                    <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
                       <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : 'Out'}</span>
