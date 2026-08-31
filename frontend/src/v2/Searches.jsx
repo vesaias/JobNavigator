@@ -408,7 +408,7 @@ export default function Searches() {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header */}
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Searches</h1>
           <span style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
@@ -418,10 +418,10 @@ export default function Searches() {
             style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ New search</div>
         </div>
       </header>
-      <div style={{ flex: '0 0 auto', margin: '0 30px', borderBottom: '1px solid var(--line)' }} />
+      <div style={{ flex: '0 0 auto', margin: '0 30px 0 24px', borderBottom: '1px solid var(--line)' }} />
 
       {/* body */}
-      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* new search card */}
         {newOpen && (
           <div style={{ border: '1px solid var(--accent)', borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
