@@ -269,7 +269,7 @@ export default function Applications() {
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                           <span title={a.title || 'Unknown Role'} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
-                          <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, color: a.last_email_snippet ? 'var(--accent)' : 'transparent' }}>✉</span>
+                          <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent' }}>✉</span>
                         </div>
                         <span title={companyOf(a)} style={{ fontSize: 11, color: companyOf(a) === 'Unknown Company' ? 'var(--edge)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyOf(a)}</span>
                       </div>
@@ -321,7 +321,11 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               {d.short_id ? `#${d.short_id} · ` : ''}{d.company_canonical || d.company}
             </span>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1.15, textWrap: 'pretty' }}>{d.title || 'Unknown Role'}</span>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1.15, textWrap: 'pretty' }}>
+              {d.title || 'Unknown Role'}
+              {(d.last_email_received || d.last_email_snippet) &&
+                <span title="Reply detected in Gmail" style={{ marginLeft: 8, fontSize: 13, color: 'var(--accent)', verticalAlign: 'middle' }}>✉</span>}
+            </span>
             <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
               {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
@@ -374,10 +378,10 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', gap: 24, minHeight: 0 }}>
         <div style={{ flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 15 }}>
 
-          {d.last_email_snippet && (
+          {(d.last_email_received || d.last_email_snippet) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={LABEL}>Last email · Gmail detection</span>
-              <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: 1.55, color: 'var(--text-2)', textWrap: 'pretty' }}>“{d.last_email_snippet}”</div>
+              <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: 1.55, color: 'var(--text-2)', textWrap: 'pretty' }}>{d.last_email_snippet ? `“${d.last_email_snippet}”` : 'A reply was detected, but no snippet was stored.'}</div>
             </div>
           )}
 
