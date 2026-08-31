@@ -139,13 +139,13 @@ export default function V2JobFeed() {
   const [detail, setDetail] = useState(null)
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? true)
   const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
-  const [reportTab, setReportTab] = useState(0)
-  const [reqFilter, setReqFilter] = useState('all')
-  const [showMatched, setShowMatched] = useState(false)
+  const [reportTab, setReportTab] = useState(0)   // per-job: reports differ per résumé, so this resets
+  const [reqFilter, setReqFilter] = useState(() => loadUI().reqFilter ?? 'all')
+  const [showMatched, setShowMatched] = useState(() => loadUI().showMatched ?? false)
   const [breakdownOpen, setBreakdownOpen] = useState(() => loadUI().breakdownOpen ?? false)
   const [keywordOpen, setKeywordOpen] = useState(() => loadUI().keywordOpen ?? false)
   const [reqOpen, setReqOpen] = useState(() => loadUI().reqOpen ?? false)
-  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen])
+  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
   const [forceFrame, setForceFrame] = useState(false)   // per-job override to embed regardless of the frame-check
@@ -285,7 +285,7 @@ export default function V2JobFeed() {
     pinnedRef.current = null                 // picking from the list releases a ?job= pin
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false); setForceFrame(false); setFrameOk(null)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setForceFrame(false); setFrameOk(null)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
   }, [])
   useEffect(() => {
@@ -504,7 +504,7 @@ export default function V2JobFeed() {
     api.get(`/jobs/${jid}`).then(({ data }) => {
       if (pinnedRef.current !== jid) return
       setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null)
-      setReqFilter('all'); setShowMatched(false); setForceFrame(false); setFrameOk(null)
+      setForceFrame(false); setFrameOk(null)
     }).catch(() => { pinnedRef.current = null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
