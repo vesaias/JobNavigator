@@ -215,6 +215,7 @@ export default function V2JobFeed() {
   const jobsRef = useRef(jobs); useEffect(() => { jobsRef.current = jobs }, [jobs])
   const selRef = useRef(sel); useEffect(() => { selRef.current = sel }, [sel])
   const detailRef = useRef(detail); useEffect(() => { detailRef.current = detail }, [detail])
+  const pinnedRef = useRef(null)   // job id opened via ?job=, held until the user picks from the list
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   useEffect(() => {
@@ -281,6 +282,7 @@ export default function V2JobFeed() {
   const focusAt = useCallback((idx) => {
     const list = jobsRef.current
     if (idx < 0 || idx >= list.length) return
+    pinnedRef.current = null                 // picking from the list releases a ?job= pin
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
     setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setReqFilter('all'); setShowMatched(false); setForceFrame(false); setFrameOk(null)
@@ -294,6 +296,10 @@ export default function V2JobFeed() {
     const curId = detailRef.current?.id
     const idx = curId ? jobs.findIndex((j) => j.id === curId) : -1
     if (idx >= 0) setSel(idx)
+    // a ?job= permalink owns the panel until the user picks from the list — it stays
+    // open even when that job isn't in the list (applied/skipped jobs are filtered
+    // out of the default feed), and holds while its fetch is still in flight
+    else if (pinnedRef.current) setSel(-1)
     else focusAt(Math.min(sel, jobs.length - 1))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, loading])
@@ -489,13 +495,31 @@ export default function V2JobFeed() {
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {}) }, [])
 
-  // deep-link ?job=<id> → open that job's detail
+  // ?job=<id> is the job permalink — open that job's detail. The param is kept in
+  // the URL (and re-synced below) so the link survives a refresh or a copy-paste.
   useEffect(() => {
     const jid = searchParams.get('job')
-    if (!jid) return
-    api.get(`/jobs/${jid}`).then(({ data }) => { setDetail(data); setSearchParams({}, { replace: true }) }).catch(() => {})
+    if (!jid || jid === detailRef.current?.id) return
+    pinnedRef.current = jid
+    api.get(`/jobs/${jid}`).then(({ data }) => {
+      if (pinnedRef.current !== jid) return
+      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null)
+      setReqFilter('all'); setShowMatched(false); setForceFrame(false); setFrameOk(null)
+    }).catch(() => { pinnedRef.current = null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
+
+  // keep ?job= pointing at whatever is open, without disturbing ?search=
+  useEffect(() => {
+    const id = detail?.id || null
+    if (id === (searchParams.get('job') || null)) return
+    setSearchParams((p) => {
+      const n = new URLSearchParams(p)
+      if (id) n.set('job', id); else n.delete('job')
+      return n
+    }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.id])
 
   // drop selected filter values that fall out of the dynamic lists
   useEffect(() => { if (sourceList.length && filters.source.length) { const v = filters.source.filter((s) => sourceList.includes(s)); if (v.length !== filters.source.length) setFilters((f) => ({ ...f, source: v })) } }, [sourceList]) // eslint-disable-line

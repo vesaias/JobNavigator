@@ -15,6 +15,18 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 VALID_STATUSES = {"applied", "interview", "offer", "rejected"}
 
 
+def _parse_dt(value):
+    """Lenient ISO parse for calendar inputs ('2026-09-09T14:00' has no zone)."""
+    if not value:
+        return None
+    from datetime import datetime, timezone
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 class ApplicationCreate(BaseModel):
     title: str
     company: str
@@ -27,7 +39,8 @@ class ApplicationCreate(BaseModel):
 
 class InterviewCreate(BaseModel):
     what: str
-    when_text: Optional[str] = None
+    when_at: Optional[str] = None      # ISO datetime from the calendar picker
+    where_text: Optional[str] = None
     status: Optional[str] = "scheduled"
     prep: Optional[str] = None
 
@@ -323,9 +336,13 @@ def list_applications(
     total = q.count()
     apps = q.order_by(desc(Application.updated_at)).offset(offset).limit(limit).all()
 
-    from backend.models.db import build_company_lookup, Resume
+    from backend.models.db import build_company_lookup, Resume, CoverLetter
     lookup = build_company_lookup(db)
     job_ids = [a.job_id for a in apps]
+    with_letter = set()
+    if job_ids:
+        with_letter = {str(r[0]) for r in db.query(CoverLetter.job_id)
+                       .filter(CoverLetter.job_id.in_(job_ids)).distinct().all()}
     tailored = {}
     if job_ids:
         for r in (db.query(Resume)
@@ -334,7 +351,8 @@ def list_applications(
             tailored[str(r.job_id)] = r      # asc → last write wins = most recent
     return {
         "total": total,
-        "applications": [_app_to_dict(a, lookup, tailored.get(str(a.job_id))) for a in apps],
+        "applications": [_app_to_dict(a, lookup, tailored.get(str(a.job_id)),
+                                      str(a.job_id) in with_letter) for a in apps],
     }
 
 
@@ -449,8 +467,8 @@ def add_interview(app_id: str, data: InterviewCreate, db: Session = Depends(get_
     app = db.query(Application).filter(Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
-    iv = Interview(application_id=app.id, what=data.what,
-                   when_text=data.when_text, status=data.status or "scheduled", prep=data.prep)
+    iv = Interview(application_id=app.id, what=data.what, where_text=data.where_text,
+                   when_at=_parse_dt(data.when_at), status=data.status or "scheduled", prep=data.prep)
     db.add(iv)
     app.updated_at = utcnow()
     db.commit()
@@ -463,9 +481,11 @@ def update_interview(interview_id: str, updates: dict, db: Session = Depends(get
     iv = db.query(Interview).filter(Interview.id == interview_id).first()
     if not iv:
         raise HTTPException(status_code=404, detail="Interview not found")
-    for key in ("what", "when_text", "status", "prep"):
+    for key in ("what", "where_text", "status", "prep"):
         if key in updates:
             setattr(iv, key, updates[key])
+    if "when_at" in updates:
+        iv.when_at = _parse_dt(updates["when_at"])
     db.commit()
     return _interview_to_dict(iv)
 
@@ -483,11 +503,10 @@ def delete_interview(interview_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{app_id}/prep")
 def prep_bundle(app_id: str, db: Session = Depends(get_db)):
-    """Assemble the 'Prep for LLM' bundle — everything a model needs about this
-    application in one pasteable block: the role, where the application stands,
-    how the résumé scored against the posting (requirements, keywords, blockers),
-    visa posture, my notes, their last email, the full posting, and the résumé as
-    submitted. No LLM call here — this is the context, not the answer."""
+    """Assemble the interview prep handover — four plain sections in the order a
+    model reads best: the role, my résumé, the posting, and what I want back.
+    The closing ask is the editable `prep_ask` setting. No LLM call here — this
+    is the context, not the answer."""
     from backend.models.db import Resume
     app = db.query(Application).filter(Application.id == app_id).first()
     if not app:
@@ -501,15 +520,13 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
             return k(lo) + "–" + k(hi)
         return k(lo or hi) if (lo or hi) else None
 
-    def days_ago(dt):
-        return str((utcnow() - dt).days) + "d ago" if dt else "unknown"
-
     L = []
     add = L.append
     title = (job.title if job else None) or "Unknown Role"
     company = (job.company if job else None) or "Unknown Company"
-    add("# Interview prep — " + title + " at " + company)
 
+    # ── 1. the role ──────────────────────────────────────────────────────────
+    add("# " + title + " at " + company)
     add("")
     add("## The role")
     add("- Company: " + company)
@@ -520,108 +537,32 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
         sal = money(job.salary_min, job.salary_max)
         if sal:
             add("- Listed salary: " + sal)
-        if job.discovered_at:
-            add("- Found: " + days_ago(job.discovered_at) + " via " + (job.source or "the job feed"))
         if job.url:
             add("- Posting: " + job.url)
-
-    add("")
-    add("## Where this application stands")
     add("- Stage: " + (app.status or "applied").capitalize())
-    add("- Applied: " + days_ago(app.applied_at))
-    add("- Last activity: " + days_ago(app.updated_at))
-    trail = [t for t in (app.status_transitions or []) if t.get("to")]
-    if trail:
-        chain = [str(trail[0].get("from") or "new")] + [str(t.get("to")) for t in trail]
-        add("- Timeline: " + " → ".join(chain))
     if app.interviews:
-        add("- Interviews so far:")
+        add("- Interviews booked:")
         for iv in app.interviews:
-            row = "  - " + iv.what + " — " + (iv.when_text or "unscheduled") + " (" + (iv.status or "scheduled") + ")"
+            when = iv.when_at.strftime("%a %d %b %Y, %H:%M") if iv.when_at else "unscheduled"
+            where = (" · " + iv.where_text) if iv.where_text else ""
+            row = "  - " + iv.what + " — " + when + where + " (" + (iv.status or "scheduled") + ")"
             if iv.prep:
                 row += "\n    prep note: " + iv.prep
             add(row)
-    else:
-        add("- Interviews: none logged yet")
+    if app.notes:
+        add("- My notes on this application: " + " ".join(app.notes.split()))
 
+    # ── 2. my résumé, flattened to plain text ────────────────────────────────
     tailored = None
     if app.job_id:
         tailored = (db.query(Resume)
                     .filter(Resume.job_id == app.job_id, Resume.is_base == False)  # noqa: E712
                     .order_by(Resume.updated_at.desc()).first())
     cv_name = (tailored.name if tailored else None) or app.cv_version_used or (job.best_cv if job else None)
-
-    reports = (job.scoring_report or {}) if job else {}
-    scores = (job.cv_scores or {}) if job else {}
-    rpt_name = cv_name if cv_name in reports else (max(scores, key=scores.get) if scores else None)
-    rpt = reports.get(rpt_name) or {}
-    score = scores.get(rpt_name)
-
-    add("")
-    add("## How my résumé scored against this posting")
-    add("- Résumé used: " + (cv_name or "unknown"))
-    if score is not None:
-        note = " (scored as '" + str(rpt_name) + "')" if rpt_name != cv_name else ""
-        add("- Fit score: " + str(score) + "/100" + note)
-    if rpt.get("summary"):
-        add("- Verdict: " + rpt["summary"])
-    if rpt.get("keyword_coverage_pct") is not None:
-        add("- Keyword coverage: " + str(rpt["keyword_coverage_pct"]) + "%")
-    if rpt.get("missing_keywords"):
-        add("- Missing keywords: " + ", ".join(rpt["missing_keywords"]))
-    if rpt.get("matched_keywords"):
-        add("- Matched keywords: " + ", ".join(rpt["matched_keywords"]))
-    if rpt.get("hard_blockers"):
-        add("- Hard blockers: " + "; ".join(rpt["hard_blockers"]))
-    if rpt.get("ats_tip"):
-        add("- ATS note: " + rpt["ats_tip"])
-
-    reqs = rpt.get("requirement_mapping") or []
-    if reqs:
-        met = [r for r in reqs if r.get("matched")]
-        gap = [r for r in reqs if not r.get("matched")]
-        add("")
-        add("### Requirements I meet (" + str(len(met)) + " of " + str(len(reqs)) + ")")
-        for r in met:
-            add("- " + str(r.get("requirement")) + "\n  evidence: " + str(r.get("cv_evidence") or "—"))
-        if gap:
-            add("")
-            add("### Requirements I do NOT clearly meet (" + str(len(gap)) + ") — expect probing here")
-            for r in gap:
-                sev = r.get("severity")
-                add(("- [" + sev + "] " if sev else "- ") + str(r.get("requirement")))
-
-    if job and (job.h1b_verdict or job.h1b_company_lca_count):
-        add("")
-        add("## Visa / sponsorship")
-        if job.h1b_verdict:
-            add("- Verdict: " + str(job.h1b_verdict))
-        if job.h1b_company_lca_count:
-            rate = ""
-            if job.h1b_company_approval_rate:
-                rate = " · " + str(job.h1b_company_approval_rate) + "% approved"
-            add("- Employer LCA filings on record: " + str(job.h1b_company_lca_count) + rate)
-        if job.h1b_jd_snippet:
-            add("- From the posting: “" + job.h1b_jd_snippet + "”")
-
-    if app.notes:
-        add("")
-        add("## My notes on this application")
-        add(app.notes)
-    if app.last_email_snippet:
-        add("")
-        add("## Their last email")
-        add("“" + app.last_email_snippet + "”")
-
-    posting = ((job.cached_page_text or job.description) if job else "") or ""
-    add("")
-    add("## The posting")
-    add(posting.strip() or "[no posting text was captured]")
-
-    resume_text = ""
     src = tailored
     if not src and cv_name:
         src = db.query(Resume).filter(Resume.name == cv_name).first()
+    resume_text = ""
     if src and src.json_data:
         try:
             from backend.analyzer.cv_scorer import _flatten_resume
@@ -629,23 +570,27 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
         except Exception as e:
             logger.info("prep: could not flatten résumé %s: %s", cv_name, e)
     add("")
-    add("## My résumé as submitted — " + (cv_name or "unknown"))
-    add(resume_text.strip() or "[résumé content unavailable]")
+    add("## My résumé" + (" — " + cv_name if cv_name else ""))
+    # _flatten_resume emits its own "## Summary"/"## Experience" headings — demote
+    # them so they read as parts of the résumé, not siblings of "The posting".
+    body = resume_text.strip() or "[résumé content unavailable]"
+    add("\n".join(("#" + ln) if ln.startswith("##") else ln for ln in body.splitlines()))
 
+    # ── 3. the posting, plain text ───────────────────────────────────────────
+    posting = ((job.cached_page_text or job.description) if job else "") or ""
     add("")
-    add("---")
+    add("## The posting")
+    add(posting.strip() or "[no posting text was captured]")
+
+    # ── 4. the ask — editable in Settings → AI ───────────────────────────────
+    ask = db.query(Setting).filter(Setting.key == "prep_ask").first()
+    add("")
     add("## What I need from you")
-    add("1. The 10 questions this panel is most likely to ask, ordered by likelihood, with a "
-        "short answer for each drawn from my résumé above — use my real projects and numbers, invent nothing.")
-    add("2. For every requirement I do not clearly meet, the honest framing to use and the "
-        "closest adjacent experience I can point to.")
-    add("3. Two or three stories from my background worth rehearsing, in STAR form.")
-    add("4. The questions I should ask them that show I read this posting closely.")
-    add("5. Anything in my résumé that is a liability for this role, and how to handle it if raised.")
+    add((ask.value.strip() if ask and ask.value else "") or "Prepare me for this interview.")
     return {"text": "\n".join(L)}
 
 
-def _app_to_dict(a: Application, lookup=None, tailored=None) -> dict:
+def _app_to_dict(a: Application, lookup=None, tailored=None, has_cover_letter=False) -> dict:
     """Serialize an Application. Pass lookup={lowercase: Company} (from
     build_company_lookup) to populate company_canonical for alias-aware
     grouping in the UI. When omitted, company_canonical falls back to the
@@ -681,6 +626,7 @@ def _app_to_dict(a: Application, lookup=None, tailored=None) -> dict:
         "discovered_at": job.discovered_at.isoformat() if (job and job.discovered_at) else None,
         "tailored_resume_id": str(tailored.id) if tailored else None,
         "tailored_resume_name": tailored.name if tailored else None,
+        "has_cover_letter": has_cover_letter,
         "interviews": [_interview_to_dict(i) for i in (a.interviews or [])],
     }
 
@@ -689,7 +635,8 @@ def _interview_to_dict(i) -> dict:
     return {
         "id": str(i.id),
         "what": i.what,
-        "when_text": i.when_text,
+        "when_at": i.when_at.isoformat() if i.when_at else None,
+        "where_text": i.where_text,
         "status": i.status or "scheduled",
         "prep": i.prep,
         "created_at": i.created_at.isoformat() if i.created_at else None,

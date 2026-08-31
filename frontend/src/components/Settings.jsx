@@ -874,6 +874,24 @@ export default function SettingsPage() {
         </div>
 
         <hr className="border-gray-200 dark:border-gray-700 my-4" />
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Interview Prep Handover</h3>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          The prep handover (Applications &rarr; <em>Generate prep handover for AI</em>) is assembled as four plain sections:
+          the role, your r&eacute;sum&eacute;, the posting, and the closing ask below. No LLM call is made &mdash; you paste the block into the AI of your choice.
+        </p>
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">What I Need From You</label>
+          <textarea
+            className="w-full border rounded px-3 py-2 text-sm font-mono dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            rows={8}
+            defaultValue={settings.prep_ask || ''}
+            onBlur={e => saveSetting('prep_ask', e.target.value)}
+            placeholder="What you want the AI to produce from the handover..."
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Plain text, no placeholders &mdash; appended verbatim as the last section.</p>
+        </div>
+
+        <hr className="border-gray-200 dark:border-gray-700 my-4" />
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application Autofill (structured)</h3>
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Fills known-answer fields directly from field/option dictionaries — no LLM call for matched fields. Unmatched free-text questions still fall back to the generated flow above. On/off and the fill trigger (one-click vs. on page load) live in the extension popup.</p>
 

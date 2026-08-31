@@ -13,6 +13,13 @@ const ago = (iso) => {
   if (h < 24) return `${h}h ago`
   return `${Math.floor(h / 24)}d ago`
 }
+// interview slot: "Tue 9 Sep, 14:00" — locale-formatted from the stored UTC instant
+const fmtWhen = (iso) => {
+  if (!iso) return ''
+  const dt = new Date(iso)
+  if (isNaN(dt)) return ''
+  return dt.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 const fmtSalary = (lo, hi) => {
   const k = (v) => `$${Math.round(v / 1000)}K`
   if (lo && hi && lo !== hi) return `${k(lo)}–${k(hi)}`
@@ -60,7 +67,8 @@ export default function Applications() {
   const [closed, setClosed] = useState({ rejected: true })
   const [menuOpen, setMenuOpen] = useState(false)
   const [intForm, setIntForm] = useState(false)
-  const [intWhat, setIntWhat] = useState(''); const [intWhen, setIntWhen] = useState(''); const [intPrep, setIntPrep] = useState('')
+  const [intWhat, setIntWhat] = useState(''); const [intWhen, setIntWhen] = useState('')
+  const [intWhere, setIntWhere] = useState(''); const [intPrep, setIntPrep] = useState('')
   const [prep, setPrep] = useState(null)           // {text} | 'loading'
   const [copied, setCopied] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
@@ -94,10 +102,21 @@ export default function Applications() {
     + (nStale ? ` · ${nStale} waiting >7d` : '')
 
   const companyOf = (a) => a.company_canonical || a.company || 'Unknown Company'
+  // live companies (≥1 non-rejected application) first, then a rule, then the closed ones
   const companyOpts = useMemo(() => {
     const m = new Map()
-    apps.forEach((a) => { const c = companyOf(a); m.set(c, (m.get(c) || 0) + 1) })
-    return [...m.entries()].sort((x, y) => x[0].localeCompare(y[0]))
+    apps.forEach((a) => {
+      const c = companyOf(a)
+      const e = m.get(c) || { n: 0, live: false }
+      e.n += 1; if (a.status !== 'rejected') e.live = true
+      m.set(c, e)
+    })
+    const byName = (x, y) => x[0].localeCompare(y[0])
+    const all = [...m.entries()]
+    return {
+      live: all.filter(([, e]) => e.live).sort(byName),
+      closed: all.filter(([, e]) => !e.live).sort(byName),
+    }
   }, [apps])
 
   const visible = useMemo(() => {
@@ -142,10 +161,10 @@ export default function Applications() {
     if (!d) return
     try {
       await api.post(`/applications/${d.id}/interviews`, {
-        what: intWhat.trim() || 'Interview', when_text: intWhen.trim() || 'Unscheduled',
-        status: 'scheduled', prep: intPrep.trim() || null,
+        what: intWhat.trim() || 'Interview', when_at: intWhen || null,
+        where_text: intWhere.trim() || null, status: 'scheduled', prep: intPrep.trim() || null,
       })
-      setIntForm(false); setIntWhat(''); setIntWhen(''); setIntPrep(''); load(d.id)
+      setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); load(d.id)
     } catch (e) { console.error(e) }
   }
   const delInterview = async (iv) => {
@@ -206,17 +225,18 @@ export default function Applications() {
           </div>
           {openFlt === 'company' && (
             <div className="v2-scroll" style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, gap: 1, maxHeight: 340, overflow: 'auto' }}>
-              {companyOpts.map(([name, n]) => {
+              {['live', 'closed'].map((band) => companyOpts[band].map(([name, e], i) => {
                 const on = companies.includes(name)
+                const first = band === 'closed' && i === 0 && companyOpts.live.length > 0
                 return (
                   <div key={name} className="v2-menuitem" onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
-                    style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
+                    style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)', cursor: 'pointer', marginTop: first ? 5 : 0, borderTop: first ? '1px solid var(--line)' : 'none', paddingTop: first ? 10 : 6 }}>
                     <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
-                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{n}</span>
+                    <span title={band === 'closed' ? 'Every application here is rejected' : undefined} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{e.n}</span>
                   </div>
                 )
-              })}
+              }))}
             </div>
           )}
         </span>
@@ -265,8 +285,10 @@ export default function Applications() {
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
                   return (
                     <div key={a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, marginBottom: 3, padding: '0 10px', borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 46px', height: 46, marginBottom: 3, padding: '0 10px', borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
+                      {/* lineHeight:normal — the design is authored at the browser default;
+                          Tailwind's preflight sets 1.5 on <html>, which would inflate the block */}
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 'normal' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                           <span title={a.title || 'Unknown Role'} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
                           <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent' }}>✉</span>
@@ -293,7 +315,8 @@ export default function Applications() {
           onStage={(s) => patch(d.id, { status: s })} onNotes={(v, now) => saveNotes(d.id, v, now)}
           onDelete={() => remove(d)} navigate={navigate}
           intForm={intForm} setIntForm={setIntForm} intWhat={intWhat} setIntWhat={setIntWhat}
-          intWhen={intWhen} setIntWhen={setIntWhen} intPrep={intPrep} setIntPrep={setIntPrep}
+          intWhen={intWhen} setIntWhen={setIntWhen} intWhere={intWhere} setIntWhere={setIntWhere}
+          intPrep={intPrep} setIntPrep={setIntPrep}
           addInterview={addInterview} delInterview={delInterview} toggleInterview={toggleInterview} openPrep={openPrep} />
           : <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13 }}>Select an application.</div>}
       </div>
@@ -306,7 +329,8 @@ export default function Applications() {
 
 // ── detail pane ──────────────────────────────────────────────────────────────
 function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes, onDelete, navigate,
-                  intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen, intPrep, setIntPrep,
+                  intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen,
+                  intWhere, setIntWhere, intPrep, setIntPrep,
                   addInterview, delInterview, toggleInterview, openPrep }) {
   const meta = [fmtSalary(d.salary_min, d.salary_max), d.location].filter(Boolean).join(' · ') || 'No posting details captured'
   const cv = d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'
@@ -342,7 +366,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             {menuOpen && (
               <div style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, padding: 5, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
-                  ['✎', 'Open cover letter', () => { window.location.href = `/cover-letters?job=${d.job_id}` }]].map(([g, label, act]) => (
+                  ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => { window.location.href = `/cover-letters?job=${d.job_id}` }]] : [])].map(([g, label, act]) => (
                   <div key={label} onClick={() => { setMenuOpen(false); act() }} className="v2-menuitem"
                     style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
                     <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{g}</span>{label}
@@ -389,9 +413,9 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={LABEL}>Interviews · {ivs.length}</span>
               <div onClick={openPrep} className="v2-bdc"
-                title="Copies role, posting, résumé, notes, email and interview details as one block — paste it into the LLM of your choice to prep"
-                style={{ marginLeft: 'auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>
-                <span style={{ fontSize: 11 }}>⧉</span>Prep for LLM
+                title="Builds one pasteable block — the role, my résumé, the posting and what to ask for — for the AI of your choice"
+                style={{ marginLeft: 'auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                <span style={{ fontSize: 11 }}>⧉</span>Generate prep handover for AI
               </div>
             </div>
             {ivs.map((iv) => (
@@ -401,17 +425,34 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
                   <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
                   <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
                 </div>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{iv.when_text}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>
+                  {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
+                </span>
                 {iv.prep && <span style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)', textWrap: 'pretty' }}>{iv.prep}</span>}
               </div>
             ))}
             {intForm ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid var(--accent)', borderRadius: 9, padding: '10px 12px', background: 'var(--surface)' }}>
-                <input value={intWhat} onChange={(e) => setIntWhat(e.target.value)} placeholder="What — e.g. System design round" style={inputSt} />
-                <input value={intWhen} onChange={(e) => setIntWhen(e.target.value)} placeholder="When — e.g. Tue Sep 9 · 14:00 · Zoom" style={inputSt} />
-                <input value={intPrep} onChange={(e) => setIntPrep(e.target.value)} placeholder="Prep note — optional" style={inputSt} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={FIELD_LABEL}>What</span>
+                  <input value={intWhat} onChange={(e) => setIntWhat(e.target.value)} placeholder="e.g. System design round" style={inputSt} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                    <span style={FIELD_LABEL}>When</span>
+                    <input type="datetime-local" value={intWhen} onChange={(e) => setIntWhen(e.target.value)} style={{ ...inputSt, minWidth: 0 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                    <span style={FIELD_LABEL}>Where</span>
+                    <input value={intWhere} onChange={(e) => setIntWhere(e.target.value)} placeholder="Zoom · Onsite — London" style={{ ...inputSt, minWidth: 0 }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={FIELD_LABEL}>Prep note · optional</span>
+                  <input value={intPrep} onChange={(e) => setIntPrep(e.target.value)} placeholder="Who I'm meeting, what to revise…" style={inputSt} />
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
-                  <div onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntPrep('') }} className="v2-bdc" style={{ height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                  <div onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }} className="v2-bdc" style={{ height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
                   <div onClick={addInterview} style={{ height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Add interview</div>
                 </div>
               </div>
@@ -426,13 +467,6 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <textarea key={d.id} defaultValue={d.notes || ''} onChange={(e) => onNotes(e.target.value)}
               onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…"
               style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
-          </div>
-          <div style={{ flex: 1, minHeight: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={LABEL}>Cached posting · application day</span>
-            {d.has_cached_page
-              ? <iframe title="cached posting" src={`/api/jobs/${d.job_id}/cached-page`} sandbox="allow-same-origin"
-                  style={{ flex: 1, minHeight: 180, width: '100%', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)' }} />
-              : <div style={{ flex: 1, minHeight: 140, border: '1px solid var(--line)', borderRadius: 9, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>No snapshot was captured for this posting</div>}
           </div>
         </div>
 
@@ -464,8 +498,8 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep bundle — {company}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the LLM of your choice</span>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep handover — {company}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the AI of your choice</span>
           <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
@@ -474,7 +508,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
           </pre>
         </div>
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Posting text and résumé content are included</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Edit the closing ask in Settings → AI</span>
           <div onClick={onClose} style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
           <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}

@@ -57,7 +57,7 @@
 .v2-act:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
 .v2-menuitem:hover { background:var(--surface-2); }
 .v2-crow:hover { background:var(--hover-soft); }
-.v2-arow:hover { background:var(--hover-soft) !important; }
+.v2-arow:hover { background:var(--surface-2) !important; }
 /* border-only hovers for pills that already carry their own fill */
 .v2-bd:hover { border-color:var(--accent) !important; }
 .v2-bd-warn:hover { border-color:var(--warn) !important; }

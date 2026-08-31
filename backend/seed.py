@@ -293,6 +293,17 @@ DEFAULT_SETTINGS = {
         "Return ONLY this JSON:\n{\"answer\": \"...\"}",
         "Editable application-autofill LLM prompt. Placeholders: {persona}, {qa_bank}, {company}, {position}, {question}, {max_chars}."
     ),
+    "prep_ask": (
+        "Prepare me for this interview. Ground every answer in my resume above — use my real projects, "
+        "employers and numbers, and invent nothing.\n\n"
+        "1. The 10 questions this panel is most likely to ask, ordered by likelihood, with a short answer for each.\n"
+        "2. Every requirement in the posting I do not clearly meet, the honest framing to use, and the closest "
+        "adjacent experience I can point to.\n"
+        "3. Two or three stories from my background worth rehearsing, in STAR form.\n"
+        "4. The questions I should ask them that show I read this posting closely.\n"
+        "5. Anything in my resume that is a liability for this role, and how to handle it if raised.",
+        "The closing 'What I need from you' section of the interview prep handover (Applications → Generate prep handover for AI)."
+    ),
 }
 
 SEED_COMPANIES = [

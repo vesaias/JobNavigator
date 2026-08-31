@@ -219,15 +219,16 @@ class Application(Base):
 
 
 class Interview(Base):
-    """One interview round on an application. `when_text` is deliberately free text
-    ("Tue Sep 2 · 14:00 · Zoom") — rounds get described, not calendared."""
+    """One interview round on an application: what it is, when it is (calendar),
+    where/how it happens, and a free-text prep note."""
     __tablename__ = "interviews"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     application_id = Column(UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"),
                             nullable=False, index=True)
     what = Column(String, nullable=False)
-    when_text = Column(String, nullable=True)
+    when_at = Column(DateTime(timezone=True), nullable=True)   # calendar-picked
+    where_text = Column(String, nullable=True)                 # "Zoom", "Onsite — London"
     status = Column(String, default="scheduled")   # scheduled | done
     prep = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
