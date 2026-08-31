@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from backend.models.db import get_db, Company, Job, Application, Setting
+from backend.models.db import get_db, Company, Job, Application, Setting, ScrapeLog
 
 logger = logging.getLogger("jobnavigator.companies")
 
@@ -153,14 +153,33 @@ def list_companies(
         fc = sum(fitcnt_by_key.get(k, 0) for k in keys)
         return open_jobs, open_week, (round(fs / fc) if fc else None)
 
+    # Latest ScrapeLog per company → surface the most recent run's error/warning
+    # in Health right away (the /health/entities "down" state needs 3 bad runs).
+    from sqlalchemy import and_
+    latest_sub = (
+        db.query(ScrapeLog.company_id, func.max(ScrapeLog.ran_at).label("mx"))
+        .filter(ScrapeLog.company_id.isnot(None))
+        .group_by(ScrapeLog.company_id).subquery()
+    )
+    last_log = {
+        str(l.company_id): l
+        for l in db.query(ScrapeLog).join(
+            latest_sub, and_(ScrapeLog.company_id == latest_sub.c.company_id,
+                             ScrapeLog.ran_at == latest_sub.c.mx)).all()
+    }
+
     out = []
     for c in companies:
         open_jobs, open_week, avg_fit = _aggregates(c)
+        ll = last_log.get(str(c.id))
         out.append(_company_to_dict(
             c,
             application_count=app_counts.get(c.name.lower().replace(" ", ""), 0),
             h1b=h1b_map.get((c.name or "").strip().lower()),
             open_jobs=open_jobs, open_jobs_week=open_week, avg_fit=avg_fit,
+            last_error=(ll.error if ll else None),
+            last_run_warning=(bool(ll.is_warning) if ll else False),
+            last_run_at=(ll.ran_at.isoformat() if (ll and ll.ran_at) else None),
         ))
     return out
 
@@ -576,7 +595,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
 
 
 def _company_to_dict(c: Company, application_count: int = 0, h1b=None,
-                     open_jobs: int = 0, open_jobs_week: int = 0, avg_fit=None) -> dict:
+                     open_jobs: int = 0, open_jobs_week: int = 0, avg_fit=None,
+                     last_error=None, last_run_warning: bool = False, last_run_at=None) -> dict:
     urls = c.scrape_urls or []
     detected_types = {url: detect_scrape_type(url) for url in urls if url.strip()}
     # h1b is a VisaCache row (or None) for this company — H-1B metrics live there now.
@@ -602,6 +622,9 @@ def _company_to_dict(c: Company, application_count: int = 0, h1b=None,
         "open_jobs": open_jobs,
         "open_jobs_week": open_jobs_week,
         "avg_fit": avg_fit,
+        "last_error": last_error,
+        "last_run_warning": last_run_warning,
+        "last_run_at": last_run_at,
         "h1b_lca_count": h1b.lca_count if h1b else None,
         "h1b_approval_rate": h1b.approval_rate if h1b else None,
         "h1b_median_salary": h1b.median_salary if h1b else None,

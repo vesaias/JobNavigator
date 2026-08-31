@@ -225,6 +225,7 @@ export default function Companies() {
   }
   const healthOf = (c) => {
     if (scraping[c.id]) return { dot: 'var(--accent)', fg: 'var(--accent)', text: 'scraping now…' }
+    if (c.last_error) return { dot: 'var(--bad)', fg: 'var(--bad)', text: `error · ${c.last_error}` }
     if (downMap[c.id]) return { dot: 'var(--warn)', fg: 'var(--warn)', text: downMap[c.id] }
     if (c.active) return { dot: 'var(--good)', fg: 'var(--text-2)', text: `healthy · scraped ${ago(c.last_scraped_at)}` }
     return { dot: 'var(--edge)', fg: 'var(--muted)', text: `inactive · last run ${ago(c.last_scraped_at)}` }
@@ -336,7 +337,7 @@ export default function Companies() {
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 30px 0 24px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
-                {downMap[c.id] && <span title={`Needs attention — ${downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
+                {(c.last_error || downMap[c.id]) && <span title={`Needs attention — ${c.last_error || downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
                 <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
               </span>
@@ -418,7 +419,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   const { company, draft } = state
   const [tuning, setTuning] = useState(() => {
     try { const v = localStorage.getItem('company_tuning_open'); if (v !== null) return v === 'true' } catch { /* ignore */ }
-    return !!downReason
+    return !!(downReason || company.last_error)
   })
   const toggleTuning = () => setTuning((v) => { const n = !v; try { localStorage.setItem('company_tuning_open', String(n)) } catch {} return n })
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
@@ -428,7 +429,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
   const resumeHelp = selNames.length ? `New jobs are scored against ${selNames.join(', ')}.` : 'Nothing selected, so new jobs use your default résumé from Settings.'
-  const tuningNote = downReason ? 'needs attention' : (draft.scrape_interval_minutes || draft.wait_for_selector || (draft.max_pages && draft.max_pages !== 5) || draft.h1b_slug) ? 'customised' : 'using defaults'
+  const tuningNote = (downReason || company.last_error) ? 'needs attention' : (draft.scrape_interval_minutes || draft.wait_for_selector || (draft.max_pages && draft.max_pages !== 5) || draft.h1b_slug) ? 'customised' : 'using defaults'
 
   const save = () => {
     const payload = {
@@ -459,12 +460,12 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
       </div>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px 20px', display: 'flex', flexDirection: 'column', gap: 15, minHeight: 0 }}>
-        {downReason && (
-          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', border: '1px solid var(--warn)', background: 'var(--warn-soft)', borderRadius: 9 }}>
-            <span style={{ flex: '0 0 auto', fontSize: 12, color: 'var(--warn)' }}>▲</span>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>{downReason}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>Detected on the recent runs · last ran {ago(company.last_scraped_at)}</span>
+        {(company.last_error || downReason) && (
+          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', border: `1px solid ${company.last_error ? 'var(--bad)' : 'var(--warn)'}`, background: company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)', borderRadius: 9 }}>
+            <span style={{ flex: '0 0 auto', fontSize: 12, color: company.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>{company.last_error || downReason}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{company.last_error ? 'Last scrape run' : 'Detected on the recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}</span>
             </div>
           </div>
         )}
@@ -514,7 +515,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
           <div onClick={toggleTuning} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
             <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', position: 'relative', top: -2, fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
-            <span style={{ fontSize: 10.5, color: downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
+            <span style={{ fontSize: 10.5, color: company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
           </div>
           {tuning && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
