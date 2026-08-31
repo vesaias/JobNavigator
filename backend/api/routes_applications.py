@@ -323,11 +323,18 @@ def list_applications(
     total = q.count()
     apps = q.order_by(desc(Application.updated_at)).offset(offset).limit(limit).all()
 
-    from backend.models.db import build_company_lookup
+    from backend.models.db import build_company_lookup, Resume
     lookup = build_company_lookup(db)
+    job_ids = [a.job_id for a in apps]
+    tailored = {}
+    if job_ids:
+        for r in (db.query(Resume)
+                  .filter(Resume.job_id.in_(job_ids), Resume.is_base == False)  # noqa: E712
+                  .order_by(Resume.updated_at.asc()).all()):
+            tailored[str(r.job_id)] = r      # asc → last write wins = most recent
     return {
         "total": total,
-        "applications": [_app_to_dict(a, lookup) for a in apps],
+        "applications": [_app_to_dict(a, lookup, tailored.get(str(a.job_id))) for a in apps],
     }
 
 
@@ -536,7 +543,7 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
     return {"text": "\n".join(lines)}
 
 
-def _app_to_dict(a: Application, lookup=None) -> dict:
+def _app_to_dict(a: Application, lookup=None, tailored=None) -> dict:
     """Serialize an Application. Pass lookup={lowercase: Company} (from
     build_company_lookup) to populate company_canonical for alias-aware
     grouping in the UI. When omitted, company_canonical falls back to the
@@ -569,6 +576,9 @@ def _app_to_dict(a: Application, lookup=None) -> dict:
         "salary_max": job.salary_max if job else None,
         "source": job.source if job else None,
         "has_cached_page": bool(job.cached_page_html) if job else False,
+        "discovered_at": job.discovered_at.isoformat() if (job and job.discovered_at) else None,
+        "tailored_resume_id": str(tailored.id) if tailored else None,
+        "tailored_resume_name": tailored.name if tailored else None,
         "interviews": [_interview_to_dict(i) for i in (a.interviews or [])],
     }
 

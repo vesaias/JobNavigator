@@ -19,6 +19,12 @@ const fmtSalary = (lo, hi) => {
   return lo || hi ? k(lo || hi) : ''
 }
 
+const srcLabel = (v) => ({
+  direct: 'a company scrape', jobright: 'Jobright.ai', levels_fyi: 'Levels.fyi',
+  linkedin_personal: 'LinkedIn Personal', linkedin_extension: 'the LinkedIn extension',
+  extension: 'the extension', freehire: 'freehire.me',
+}[v] || (v ? v.replace(/^jobspy_/, '').replace(/_/g, ' ') : 'the Job Feed'))
+
 const STAGES = [
   { id: 'applied', label: 'Applied', dot: 'var(--stage-applied)', hint: 'Waiting on a first response' },
   { id: 'interview', label: 'Interview', dot: 'var(--warn)', hint: 'In the interview loop' },
@@ -59,7 +65,8 @@ export default function Applications() {
   const [copied, setCopied] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const timers = useRef([])
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  const notesTimer = useRef(null)
+  useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(notesTimer.current) }, [])
 
   const load = useCallback(async (keep) => {
     try {
@@ -116,6 +123,16 @@ export default function Applications() {
     setApps((p) => p.map((a) => (a.id === id ? { ...a, ...body } : a)))   // optimistic
     try { await api.patch(`/applications/${id}`, body); load(id) } catch (e) { console.error(e); load(id) }
   }
+  // autosave: debounce while typing, flush immediately on blur
+  const saveNotes = useCallback((id, value, now) => {
+    clearTimeout(notesTimer.current)
+    const run = () => {
+      setApps((p) => p.map((a) => (a.id === id ? { ...a, notes: value } : a)))
+      api.patch(`/applications/${id}`, { notes: value }).catch((e) => console.error(e))
+    }
+    if (now) run(); else notesTimer.current = setTimeout(run, 700)
+  }, [])
+
   const remove = async (a) => {
     setMenuOpen(false)
     if (!window.confirm(`Delete the application for "${a.title}"?`)) return
@@ -156,7 +173,8 @@ export default function Applications() {
       dot: STAGE[t.to]?.dot || 'var(--line-strong)',
     }))
     if (d.last_email_received) h.push({ what: 'Reply detected in Gmail', at: d.last_email_received, dot: 'var(--line-strong)' })
-    if (d.applied_at) h.push({ what: `Applied with ${d.cv_version_used || d.best_cv || 'unknown résumé'}`, at: d.applied_at, dot: 'var(--line-strong)' })
+    if (d.applied_at) h.push({ what: `Applied with ${d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'}`, at: d.applied_at, dot: 'var(--line-strong)' })
+    if (d.discovered_at) h.push({ what: `Discovered via ${srcLabel(d.source)}`, at: d.discovered_at, dot: 'var(--line-strong)' })
     return h.sort((a, b) => new Date(b.at) - new Date(a.at))
   }, [d])
 
@@ -247,8 +265,8 @@ export default function Applications() {
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
                   return (
                     <div key={a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, padding: '0 10px', borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, marginBottom: 3, padding: '0 10px', borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                           <span title={a.title || 'Unknown Role'} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
                           <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, color: a.last_email_snippet ? 'var(--accent)' : 'transparent' }}>✉</span>
@@ -272,7 +290,7 @@ export default function Applications() {
 
         {/* detail */}
         {d ? <Detail d={d} history={history} menuOpen={menuOpen} setMenuOpen={setMenuOpen} closeAll={closeAll}
-          onStage={(s) => patch(d.id, { status: s })} onNotes={(v) => v !== (d.notes || '') && patch(d.id, { notes: v })}
+          onStage={(s) => patch(d.id, { status: s })} onNotes={(v, now) => saveNotes(d.id, v, now)}
           onDelete={() => remove(d)} navigate={navigate}
           intForm={intForm} setIntForm={setIntForm} intWhat={intWhat} setIntWhat={setIntWhat}
           intWhen={intWhen} setIntWhen={setIntWhen} intPrep={intPrep} setIntPrep={setIntPrep}
@@ -291,7 +309,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
                   intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen, intPrep, setIntPrep,
                   addInterview, delInterview, toggleInterview, openPrep }) {
   const meta = [fmtSalary(d.salary_min, d.salary_max), d.location].filter(Boolean).join(' · ') || 'No posting details captured'
-  const cv = d.cv_version_used || d.best_cv || 'unknown résumé'
+  const cv = d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'
   const ivs = d.interviews || []
 
   return (
@@ -305,7 +323,9 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             </span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1.15, textWrap: 'pretty' }}>{d.title || 'Unknown Role'}</span>
             <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-              {meta} · applied with <span onClick={() => navigate('/v2/resumes')} style={{ color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}>{cv} ↗</span>
+              {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
+                title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
+                style={{ color: 'var(--accent)', fontWeight: 500, cursor: d.tailored_resume_id ? 'pointer' : 'default' }}>{cv}{d.tailored_resume_id ? ' ↗' : ''}</span>
             </span>
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -353,11 +373,6 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
       {/* body */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', gap: 24, minHeight: 0 }}>
         <div style={{ flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 15 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={LABEL}>Notes · saves on blur</span>
-            <textarea key={d.id} defaultValue={d.notes || ''} onBlur={(e) => onNotes(e.target.value)} placeholder="Notes…"
-              style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
-          </div>
 
           {d.last_email_snippet && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -401,12 +416,19 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={LABEL}>Notes · autosaves</span>
+            <textarea key={d.id} defaultValue={d.notes || ''} onChange={(e) => onNotes(e.target.value)}
+              onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…"
+              style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
+          </div>
+          <div style={{ flex: 1, minHeight: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={LABEL}>Cached posting · application day</span>
             {d.has_cached_page
               ? <iframe title="cached posting" src={`/api/jobs/${d.job_id}/cached-page`} sandbox="allow-same-origin"
-                  style={{ height: 140, width: '100%', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)' }} />
-              : <div style={{ height: 140, border: '1px solid var(--line)', borderRadius: 9, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>No snapshot was captured for this posting</div>}
+                  style={{ flex: 1, minHeight: 180, width: '100%', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)' }} />
+              : <div style={{ flex: 1, minHeight: 140, border: '1px solid var(--line)', borderRadius: 9, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>No snapshot was captured for this posting</div>}
           </div>
         </div>
 
