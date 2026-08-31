@@ -13,7 +13,7 @@ const GROUPS = [
     { to: '/v2/companies', label: 'Companies', ready: true, countKey: 'companies' },
   ]},
   { label: 'Apply', items: [
-    { to: '/v2/applications', label: 'Applications', countKey: 'apps' },
+    { to: '/v2/applications', label: 'Applications', ready: true, countKey: 'apps' },
     { to: '/v2/resumes', label: 'Résumés', ready: true, countKey: 'resumes' },
     { to: '/v2/cover-letters', label: 'Cover Letters' },
   ]},

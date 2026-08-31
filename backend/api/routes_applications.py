@@ -12,12 +12,28 @@ logger = logging.getLogger("jobnavigator.applications")
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
+VALID_STATUSES = {"applied", "interview", "offer", "rejected"}
+
+
 class ApplicationCreate(BaseModel):
     title: str
     company: str
     url: str
     cv_version_used: Optional[str] = None
     notes: Optional[str] = None
+    status: Optional[str] = None          # applied|interview|offer (Log-application modal)
+    applied_at: Optional[str] = None      # ISO date/datetime for back-dated entries
+
+
+class InterviewCreate(BaseModel):
+    what: str
+    when_text: Optional[str] = None
+    status: Optional[str] = "scheduled"
+    prep: Optional[str] = None
+
+
+class ExtractRequest(BaseModel):
+    url: str
 
 
 def _extract_clean_content(raw_html: str) -> tuple:
@@ -220,21 +236,42 @@ def create_application(
         job.status = "applied"
 
     # Upsert application — overwrite if one already exists for this job
+    from backend.models.db import record_transition
+    new_status = data.status if data.status in VALID_STATUSES else "applied"
+    applied_at = None
+    if data.applied_at:
+        from datetime import datetime
+        try:
+            applied_at = datetime.fromisoformat(data.applied_at.replace("Z", "+00:00"))
+        except ValueError:
+            logger.info("ignoring unparseable applied_at %r", data.applied_at)
+
     app = db.query(Application).filter(Application.job_id == job.id).first()
     if app:
-        app.status = "applied"
+        # go through record_transition so the move shows up in the Stats funnel
+        record_transition(app, new_status, "ui")
         if data.cv_version_used is not None:
             app.cv_version_used = data.cv_version_used
         if data.notes is not None:
             app.notes = data.notes
+        if applied_at:
+            app.applied_at = applied_at
         app.updated_at = utcnow()
     else:
         app = Application(
             job_id=job.id,
-            status="applied",
+            status=new_status,
             cv_version_used=data.cv_version_used,
             notes=data.notes,
+            # seed the funnel edge — extension-created rows used to have an empty
+            # history, so they never showed as an "-> applied" edge in the Sankey
+            status_transitions=[{
+                "from": None, "to": new_status,
+                "at": utcnow().isoformat(), "source": "ui",
+            }],
         )
+        if applied_at:
+            app.applied_at = applied_at
         db.add(app)
     db.commit()
 
@@ -274,11 +311,12 @@ def create_application(
 @router.get("")
 def list_applications(
     status: Optional[str] = None,
-    limit: int = Query(50, le=200),
+    limit: int = Query(200, le=2000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Application)
+    from sqlalchemy.orm import selectinload
+    q = db.query(Application).options(selectinload(Application.interviews))
     if status:
         q = q.filter(Application.status == status)
 
@@ -299,7 +337,10 @@ def update_application(app_id: str, updates: dict, db: Session = Depends(get_db)
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    allowed = {"status", "notes", "next_action", "next_action_date", "cv_version_used"}
+    allowed = {"status", "notes", "next_action", "next_action_date", "cv_version_used", "applied_at"}
+    if "status" in updates and updates["status"] not in VALID_STATUSES:
+        raise HTTPException(status_code=400,
+                            detail=f"status must be one of {sorted(VALID_STATUSES)}")
     # Track status transitions
     if "status" in updates and updates["status"] != app.status:
         from backend.models.db import record_transition
@@ -320,9 +361,179 @@ def delete_application(app_id: str, db: Session = Depends(get_db)):
     app = db.query(Application).filter(Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    # Deleting the application must also release the job, otherwise it stays
+    # status='applied' forever and keeps counting in the Companies "Apps" column.
+    job = app.job
+    if job is not None and job.status == "applied":
+        job.status = "saved"
     db.delete(app)
     db.commit()
     return {"deleted": True}
+
+
+@router.post("/extract")
+async def extract_posting(payload: ExtractRequest):
+    """Read title + company off a posting URL for the Log-application modal.
+    JSON-LD JobPosting first, then OpenGraph, then <title>/hostname. Always
+    returns 200 with whatever it found — the form fields stay editable."""
+    import json
+    import re
+    from urllib.parse import urlparse
+    from bs4 import BeautifulSoup
+    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
+
+    url = (payload.url or "").strip()
+    try:
+        assert_public_http_url(url)
+    except UnsafeURLError as e:
+        raise HTTPException(status_code=400, detail=f"Unsafe URL: {e}")
+
+    title = company = None
+    try:
+        resp = await safe_get(url, timeout=15, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text[:1_000_000], "html.parser")
+
+        # 1. JSON-LD JobPosting (most ATS emit this)
+        for tag in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(tag.string or "{}")
+            except Exception:
+                continue
+            for node in (data if isinstance(data, list) else [data]):
+                if not isinstance(node, dict):
+                    continue
+                if node.get("@type") == "JobPosting":
+                    title = title or node.get("title")
+                    org = node.get("hiringOrganization")
+                    if isinstance(org, dict):
+                        company = company or org.get("name")
+                    elif isinstance(org, str):
+                        company = company or org
+        # 2. OpenGraph
+        if not title:
+            og = soup.find("meta", property="og:title")
+            if og and og.get("content"):
+                title = og["content"]
+        if not company:
+            og = soup.find("meta", property="og:site_name")
+            if og and og.get("content"):
+                company = og["content"]
+        # 3. <title>, minus the trailing " | Company" / " at Company" tail
+        if not title and soup.title and soup.title.string:
+            title = re.split(r"\s+[|–—-]\s+", soup.title.string.strip())[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.info("extract failed for %s: %s", url, e)
+
+    if not company:
+        host = (urlparse(url).hostname or "").replace("www.", "")
+        parts = [p for p in host.split(".") if p not in ("com", "io", "co", "org", "net", "ai", "jobs", "careers")]
+        company = parts[-1].title() if parts else None
+
+    return {"title": (title or "").strip() or None, "company": (company or "").strip() or None}
+
+
+@router.post("/{app_id}/interviews", status_code=201)
+def add_interview(app_id: str, data: InterviewCreate, db: Session = Depends(get_db)):
+    from backend.models.db import Interview
+    app = db.query(Application).filter(Application.id == app_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    iv = Interview(application_id=app.id, what=data.what,
+                   when_text=data.when_text, status=data.status or "scheduled", prep=data.prep)
+    db.add(iv)
+    app.updated_at = utcnow()
+    db.commit()
+    return _interview_to_dict(iv)
+
+
+@router.patch("/interviews/{interview_id}")
+def update_interview(interview_id: str, updates: dict, db: Session = Depends(get_db)):
+    from backend.models.db import Interview
+    iv = db.query(Interview).filter(Interview.id == interview_id).first()
+    if not iv:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    for key in ("what", "when_text", "status", "prep"):
+        if key in updates:
+            setattr(iv, key, updates[key])
+    db.commit()
+    return _interview_to_dict(iv)
+
+
+@router.delete("/interviews/{interview_id}")
+def delete_interview(interview_id: str, db: Session = Depends(get_db)):
+    from backend.models.db import Interview
+    iv = db.query(Interview).filter(Interview.id == interview_id).first()
+    if not iv:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    db.delete(iv)
+    db.commit()
+    return {"deleted": True}
+
+
+@router.get("/{app_id}/prep")
+def prep_bundle(app_id: str, db: Session = Depends(get_db)):
+    """Assemble the 'Prep for LLM' bundle: role, posting, résumé, notes, email
+    and interviews as one pasteable block. Built here so the full cached posting
+    text and flattened résumé never have to round-trip through the client."""
+    from backend.models.db import Resume
+    app = db.query(Application).filter(Application.id == app_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    job = app.job
+    stage = (app.status or "applied").capitalize()
+    days = (utcnow() - app.updated_at).days if app.updated_at else 0
+    cv_name = app.cv_version_used or (job.best_cv if job else None) or "unknown résumé"
+
+    posting_bits = []
+    if job:
+        lo, hi = job.salary_min, job.salary_max
+        if lo or hi:
+            k = lambda v: f"${round(v / 1000)}K"
+            posting_bits.append(k(lo) if lo == hi or not hi else
+                                (f"{k(lo)}–{k(hi)}" if lo else k(hi)))
+        if job.location:
+            posting_bits.append(job.location)
+
+    lines = [
+        f"# Interview prep — {(job.title if job else 'Unknown Role')} @ {(job.company if job else 'Unknown Company')}",
+        "",
+        f"Stage: {stage} · applied {days}d ago with {cv_name}",
+    ]
+    if posting_bits:
+        lines.append("Posting: " + " · ".join(posting_bits))
+    if app.notes:
+        lines.append(f"My notes: {app.notes}")
+    if app.last_email_snippet:
+        lines.append(f"Last email from them: “{app.last_email_snippet}”")
+
+    if app.interviews:
+        lines += ["", "Interviews:"]
+        for iv in app.interviews:
+            row = f"- {iv.what} ({iv.when_text or 'Unscheduled'}, {iv.status or 'scheduled'})"
+            if iv.prep:
+                row += f" — {iv.prep}"
+            lines.append(row)
+
+    posting_text = (job.cached_page_text or job.description or "") if job else ""
+    lines += ["", "## Cached job posting", posting_text.strip() or "[no posting text captured]"]
+
+    resume_text = ""
+    if app.cv_version_used:
+        r = db.query(Resume).filter(Resume.name == app.cv_version_used).first()
+        if r and r.json_data:
+            try:
+                from backend.analyzer.cv_scorer import _flatten_resume
+                resume_text = _flatten_resume(r.json_data)
+            except Exception as e:
+                logger.info("prep: could not flatten résumé %s: %s", app.cv_version_used, e)
+    lines += ["", f"## My résumé (as submitted) — {cv_name}", resume_text.strip() or "[résumé content unavailable]"]
+    lines += ["", "Help me prepare: likely questions, what to emphasise from my background, "
+                  "and questions I should ask them."]
+    return {"text": "\n".join(lines)}
 
 
 def _app_to_dict(a: Application, lookup=None) -> dict:
@@ -352,4 +563,22 @@ def _app_to_dict(a: Application, lookup=None) -> dict:
         "url": job.url if job else None,
         "best_cv": job.best_cv if job else None,
         "short_id": job.short_id if job else None,
+        # posting details the detail pane shows, so it never has to re-fetch the job
+        "location": job.location if job else None,
+        "salary_min": job.salary_min if job else None,
+        "salary_max": job.salary_max if job else None,
+        "source": job.source if job else None,
+        "has_cached_page": bool(job.cached_page_html) if job else False,
+        "interviews": [_interview_to_dict(i) for i in (a.interviews or [])],
+    }
+
+
+def _interview_to_dict(i) -> dict:
+    return {
+        "id": str(i.id),
+        "what": i.what,
+        "when_text": i.when_text,
+        "status": i.status or "scheduled",
+        "prep": i.prep,
+        "created_at": i.created_at.isoformat() if i.created_at else None,
     }

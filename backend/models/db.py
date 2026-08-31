@@ -210,10 +210,29 @@ class Application(Base):
     next_action_date = Column(Date, nullable=True)
     last_email_received = Column(DateTime(timezone=True), nullable=True)
     last_email_snippet = Column(Text, nullable=True)
-    status_transitions = Column(JSON, default=[])  # [{status, changed_at, source}]
+    status_transitions = Column(JSON, default=[])  # [{from, to, at, source}]
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     job = relationship("Job", back_populates="applications")
+    interviews = relationship("Interview", back_populates="application",
+                              cascade="all, delete-orphan", order_by="Interview.created_at")
+
+
+class Interview(Base):
+    """One interview round on an application. `when_text` is deliberately free text
+    ("Tue Sep 2 · 14:00 · Zoom") — rounds get described, not calendared."""
+    __tablename__ = "interviews"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    application_id = Column(UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+    what = Column(String, nullable=False)
+    when_text = Column(String, nullable=True)
+    status = Column(String, default="scheduled")   # scheduled | done
+    prep = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+    application = relationship("Application", back_populates="interviews")
 
 
 def record_transition(app, new_status: str, source: str):
