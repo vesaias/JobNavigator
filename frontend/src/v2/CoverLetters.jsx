@@ -43,7 +43,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
   const cur = options.find((o) => o.id === value)
   return (
     <span style={{ position: 'relative', display: 'block' }} onClick={(e) => e.stopPropagation()}>
-      <div onClick={() => setOpen((v) => !v)} className="v2-bd" style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
+      <div onClick={() => setOpen((v) => !v)} style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
         <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)' }}>
           {cur ? cur.label : placeholder}
         </span>
@@ -74,7 +74,7 @@ export function VoicePicker({ presets, value, onPick }) {
       {presets.map((v) => {
         const on = v.id === value
         return (
-          <div key={v.id} onClick={() => onPick(v.id)} title={v.instruction || ''} className="v2-bd"
+          <div key={v.id} onClick={() => onPick(v.id)} title={v.instruction || ''}
             style={{ height: 27, padding: '0 11px', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
               color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 11.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>{v.label}</div>
@@ -90,7 +90,7 @@ export function LengthPicker({ value, onPick }) {
       {LENGTHS.map(([id, name]) => {
         const on = id === value
         return (
-          <div key={id} onClick={() => onPick(id)} className="v2-bd"
+          <div key={id} onClick={() => onPick(id)}
             style={{ flex: 1, height: 31, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
               color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{name}</div>
