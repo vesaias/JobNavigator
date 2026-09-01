@@ -45,8 +45,8 @@ function Card({ title, note, open, onToggle, children }) {
           </svg>
         </span>
         <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 9 }}>
-          <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
-          {note && <span style={{ flex: '0 1 auto', fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
+          <span style={{ flex: '0 0 auto', fontSize: 13, lineHeight: '20px', fontWeight: 600 }}>{title}</span>
+          {note && <span style={{ flex: '0 1 auto', fontSize: 11.5, lineHeight: '20px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
         </span>
       </div>
       {open && (
@@ -262,13 +262,13 @@ export default function CoverLetterEditor() {
       {/* context band */}
       <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Written for <span style={{ color: 'var(--text)' }}>{doc.company ? `${doc.company} — ${doc.title}` : doc.name}</span>
             {doc.source_name && <> · from <span onClick={() => doc.resume_id && navigate(`/v2/resumes/${doc.resume_id}`)}
               title={doc.resume_id ? 'Open the source résumé' : 'Written from your Persona'}
               style={{ color: 'var(--accent)', cursor: doc.resume_id ? 'pointer' : 'default' }}>{doc.source_name}{doc.resume_id ? ' ↗' : ''}</span></>}
           </span>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{voiceLen}</span>
+          <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--muted)' }}>{voiceLen}</span>
         </div>
         <div onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length"
           className="v2-ctl" style={{ flex: '0 0 auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -392,7 +392,7 @@ export default function CoverLetterEditor() {
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
                 </div>
                 <textarea value={text} rows={4} onChange={(e) => update((d) => { d.body_paragraphs[i] = e.target.value })}
-                  style={{ margin: '4px 10px 9px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.55, color: 'var(--text)', outline: 'none', resize: 'none' }} />
+                  style={{ margin: '4px 10px 9px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: '19px', color: 'var(--text)', outline: 'none', resize: 'none' }} />
               </div>
             ))}
             <div onClick={() => update((d) => { d.body_paragraphs = [...(d.body_paragraphs || []), ''] })} className="v2-dashadd"

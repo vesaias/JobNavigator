@@ -7,6 +7,9 @@
   --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
   --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5; --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42);
   --warn-line:#d4a06a; --line-strong:#c9c3b4; --bad-faint:#fdf6f4; --stage-applied:#3a5a86;
+  /* a surface that reads as set-back from --surface (archived rows, pending rows).
+     Not --change-bg: that one is the diff tint and is green in dark. */
+  --recessed:#fdfcf9;
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
@@ -27,6 +30,7 @@
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
   --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#232a25; --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58);
   --warn-line:#6b5638; --line-strong:#4a4638; --bad-faint:#241a18; --stage-applied:#a3bedd;
+  --recessed:#221f19;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
@@ -63,6 +67,11 @@
 .v2-bd-warn:hover { border-color:var(--warn) !important; }
 /* border + text turn accent, no background wash (the design's pill hover) */
 .v2-bdc:hover { border-color:var(--accent) !important; color:var(--accent) !important; }
+
+/* Controls only: at the inherited 1.5 a fixed-height control's label rides
+   high, and a fallback-font glyph in the label (↗ ▾ ›) drags it further.
+   Never put this on the root — content-driven card heights depend on 1.5. */
+.v2-ctl { line-height:1; }
 
 /* Cover letters: card headers wash on hover, paragraph/contact buttons tint */
 .v2-clhead:hover { background:var(--bg); }

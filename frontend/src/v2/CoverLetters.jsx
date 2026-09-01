@@ -258,10 +258,10 @@ export default function CoverLetters() {
     return (
       <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} className="v2-bd"
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 10, cursor: 'pointer',
-          border: `1px solid ${arc ? 'var(--line-soft)' : 'var(--line)'}`, background: arc ? 'var(--change-bg)' : 'var(--surface)' }}>
+          border: `1px solid ${arc ? 'var(--line-soft)' : 'var(--line)'}`, background: arc ? 'var(--recessed)' : 'var(--surface)' }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+          <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', lineHeight: '22px', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+          <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
         </div>
         {(c.stage || arc) && (
           <span title={c.stage ? 'Stage of the linked application' : 'No application yet'} className={STAGE_CLASS[c.stage] || 'cc-generic'}
@@ -278,7 +278,7 @@ export default function CoverLetters() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Cover Letters</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search letters, companies… "
@@ -323,13 +323,13 @@ export default function CoverLetters() {
         {/* list */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--surface)' }}>
           <div className="v2-gutter-head" style={{ flex: '0 0 auto', padding: '13px 30px 9px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line-soft)' }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>All letters</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{letters.length + pending.length}</span>
+            <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>All letters</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{letters.length + pending.length}</span>
           </div>
 
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
             {pending.map((r) => (
-              <div key={r.run_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--change-bg)' }}>
+              <div key={r.run_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--recessed)' }}>
                 <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                 <span style={{ fontSize: 12.5, color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Generating — {rowLabel(r)}
