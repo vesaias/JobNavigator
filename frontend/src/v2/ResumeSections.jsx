@@ -95,10 +95,12 @@ export const RemoveLink = ({ onClick, children = 'Remove' }) => (
 export const DashedAdd = ({ onClick, children, big }) => (
   <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
 )
-export const EmptyState = ({ what }) => (
+// `note` is the second line. It defaults to the résumé PDF wording; Persona
+// overrides it, since its resume_content is a source pool that never prints.
+export const EmptyState = ({ what, note }) => (
   <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
     <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No {what} yet</span>
-    <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>Empty sections are skipped in the PDF — nothing prints until you add one.</span>
+    <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
   </div>
 )
 export const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
@@ -140,15 +142,15 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
 
 // Renders the right section editor for a SECTION_ORDER name. Tailoring props are
 // optional — Persona passes none, so nothing renders as changed.
-export function SectionEditor({ name, data, setField, mutate, baseData }) {
+export function SectionEditor({ name, data, setField, mutate, baseData, emptyNote, pageHint = true }) {
   switch (name) {
     case 'Header': return <HeaderEditor data={data} setField={setField} mutate={mutate} />
-    case 'Summary': return <SummaryEditor data={data} setField={setField} baseSummary={baseData?.summary} />
-    case 'Experience': return <ExperienceEditor data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />
-    case 'Skills': return <SkillsEditor data={data} setField={setField} mutate={mutate} baseSkills={baseData?.skills} />
-    case 'Education': return <EducationEditor data={data} setField={setField} mutate={mutate} />
-    case 'Projects': return <ProjectsEditor data={data} setField={setField} mutate={mutate} />
-    case 'Publications': return <PublicationsEditor data={data} setField={setField} mutate={mutate} />
+    case 'Summary': return <SummaryEditor pageHint={pageHint} data={data} setField={setField} baseSummary={baseData?.summary} />
+    case 'Experience': return <ExperienceEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />
+    case 'Skills': return <SkillsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseSkills={baseData?.skills} />
+    case 'Education': return <EducationEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
+    case 'Projects': return <ProjectsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
+    case 'Publications': return <PublicationsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
     default: return null
   }
 }
@@ -189,7 +191,7 @@ export function HeaderEditor({ data, setField, mutate }) {
     </div>
   )
 }
-export function ExperienceEditor({ data, setField, mutate, baseExp }) {
+export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp }) {
   const exp = data.experience || []
   const [open, setOpen] = useState(() => new Set([0]))   // first entry open by default
   const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
@@ -250,13 +252,13 @@ export function ExperienceEditor({ data, setField, mutate, baseExp }) {
           </div>
         )
       })}
-      {exp.length === 0 && <EmptyState what="experience" />}
+      {exp.length === 0 && <EmptyState note={emptyNote} what="experience" />}
       <DashedAdd big onClick={() => mutate((d) => { d.experience = d.experience || []; d.experience.push({ company: '', title: '', location: '', date: '', description: '', bullets: [] }) })}>+ Add experience</DashedAdd>
     </div>
   )
 }
 // Summary as a marked row (tailoring ✦/— + revert + highlight) with a char-count meta
-export function SummaryEditor({ data, setField, baseSummary }) {
+export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) {
   const txt = data.summary || ''
   const changed = baseSummary != null && baseSummary !== txt
   return (
@@ -266,13 +268,13 @@ export function SummaryEditor({ data, setField, baseSummary }) {
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
         {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.55 }}>↩</span>}
       </div>
-      <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{txt.length} characters{txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
+      <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
     </div>
   )
 }
 
 // Skills: fixed-width category + value with tailoring ✦/revert/highlight when changed
-export function SkillsEditor({ data, setField, mutate, baseSkills }) {
+export function SkillsEditor({ emptyNote, data, setField, mutate, baseSkills }) {
   const entries = Object.entries(data.skills || {})
   const rename = (oldK, newK) => { if (oldK === newK || !newK.trim()) return; mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns }) }
   const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
@@ -301,12 +303,12 @@ export function SkillsEditor({ data, setField, mutate, baseSkills }) {
           </div>
         )
       })}
-      {entries.length === 0 && <EmptyState what="skills" />}
+      {entries.length === 0 && <EmptyState note={emptyNote} what="skills" />}
       <DashedAdd onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</DashedAdd>
     </div>
   )
 }
-export function EducationEditor({ data, setField, mutate }) {
+export function EducationEditor({ emptyNote, data, setField, mutate }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.education || []).map((e, i) => (
@@ -322,12 +324,12 @@ export function EducationEditor({ data, setField, mutate }) {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
         </div>
       ))}
-      {(data.education || []).length === 0 && <EmptyState what="education" />}
+      {(data.education || []).length === 0 && <EmptyState note={emptyNote} what="education" />}
       <DashedAdd big onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</DashedAdd>
     </div>
   )
 }
-export function ProjectsEditor({ data, setField, mutate }) {
+export function ProjectsEditor({ emptyNote, data, setField, mutate }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.projects || []).map((p, i) => (
@@ -351,16 +353,16 @@ export function ProjectsEditor({ data, setField, mutate }) {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))}>Remove project</RemoveLink></div>
         </div>
       ))}
-      {(data.projects || []).length === 0 && <EmptyState what="projects" />}
+      {(data.projects || []).length === 0 && <EmptyState note={emptyNote} what="projects" />}
       <DashedAdd big onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</DashedAdd>
     </div>
   )
 }
-export function PublicationsEditor({ data, setField, mutate }) {
+export function PublicationsEditor({ emptyNote, data, setField, mutate }) {
   const pubs = data.publications || []
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
-      {pubs.length === 0 ? <EmptyState what="publications" /> : pubs.map((p, i) => (
+      {pubs.length === 0 ? <EmptyState note={emptyNote} what="publications" /> : pubs.map((p, i) => (
         <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />

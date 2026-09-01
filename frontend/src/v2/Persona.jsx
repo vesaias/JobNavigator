@@ -35,9 +35,9 @@ const ORIENT = [['heterosexual', 'Heterosexual / straight'], ['gay', 'Gay'], ['l
 const WORK_AUTH_TYPE = [['citizen', 'U.S. citizen'], ['permanent_resident', 'Permanent resident'],
   ['visa', 'Visa holder'], ['other', 'Other']]
 
-// [node, key, label, kind, opts]
+// GROUPS: [id, title, fields[]]   fields: [node, key, label, kind, opts]
 const GROUPS = [
-  ['contact', 'Contact / basics', 'name, links, current company — writes the contact node', [
+  ['contact', 'Contact / basics', [
     ['contact', 'first_name', 'First name', 'text'],
     ['contact', 'last_name', 'Last name', 'text'],
     ['contact', 'email', 'Email', 'text'],
@@ -50,7 +50,7 @@ const GROUPS = [
     ['contact', 'github', 'GitHub', 'text'],
     ['contact', 'portfolio', 'Portfolio URL', 'text', { wide: true }],
   ]],
-  ['demographics', 'Demographics · EEO', 'unset by default — filled only where you choose', [
+  ['demographics', 'Demographics · EEO', [
     ['demographics', 'gender', 'Gender', 'enum', { options: GENDER }],
     ['demographics', 'race_ethnicity', 'Race / ethnicity', 'enum', { options: RACE }],
     ['demographics', 'hispanic_latino', 'Hispanic or Latino?', 'enum', { options: YESNO }],
@@ -64,14 +64,14 @@ const GROUPS = [
       text: 'Prefer not to answer demographic questions — autofill picks “decline” where the form allows it',
     }],
   ]],
-  ['workauth', 'Work authorization', 'the yes/no answers every ATS asks', [
+  ['workauth', 'Work authorization', [
     ['work_auth', 'authorized_us', 'Authorized to work in the US?', 'bool'],
     ['work_auth', 'requires_sponsorship_now', 'Require sponsorship now?', 'bool'],
     ['work_auth', 'requires_sponsorship_future', 'Require sponsorship in the future?', 'bool'],
     ['work_auth', 'over_18', 'Are you over 18?', 'bool'],
     ['work_auth', 'work_auth_type', 'Work authorization type', 'enum', { options: WORK_AUTH_TYPE, wide: true }],
   ]],
-  ['screening', 'Screening defaults', 'relocation, notice, salary — writes preferences + compensation', [
+  ['screening', 'Screening defaults', [
     ['preferences', 'willing_to_relocate', 'Willing to relocate?', 'bool'],
     ['preferences', 'willing_remote', 'Willing to work remote?', 'bool'],
     ['preferences', 'notice_period', 'Notice period', 'text'],
@@ -81,7 +81,7 @@ const GROUPS = [
     ['compensation', 'desired_salary', 'Desired salary', 'text', { wide: true }],
   ]],
 ]
-const ANSWERABLE = GROUPS.reduce((n, g) => n + g[3].filter((f) => !f[4]?.uncounted).length, 0)
+const ANSWERABLE = GROUPS.reduce((n, g) => n + g[2].filter((f) => !f[4]?.uncounted).length, 0)
 
 const isSet = (v) => v !== undefined && v !== null && v !== ''
 const labelFor = (opts, v) => (opts.find(([ov]) => ov === v) || [])[1] || v
@@ -158,12 +158,11 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
   )
 }
 
-function ColumnHead({ title, help, meta }) {
+function ColumnHead({ title, help }) {
   return (
     <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, padding: '16px 26px 10px', lineHeight: '26px' }}>
       <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, letterSpacing: '-.015em' }}>{title}</span>
-      <span title={help} style={{ fontSize: 11, color: 'var(--muted)', cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>what is this?</span>
-      <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{meta}</span>
+      <span title={help} style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: '14px', color: 'var(--muted)', cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>what is this?</span>
     </div>
   )
 }
@@ -219,7 +218,7 @@ export default function Persona() {
 
   const filled = useMemo(() => {
     if (!p) return 0
-    return GROUPS.reduce((n, g) => n + g[3].filter((f) => !f[4]?.uncounted && isSet((p[f[0]] || {})[f[1]])).length, 0)
+    return GROUPS.reduce((n, g) => n + g[2].filter((f) => !f[4]?.uncounted && isSet((p[f[0]] || {})[f[1]])).length, 0)
   }, [p])
 
   const toggler = (setter, storeKey) => (name) => setter((prev) => {
@@ -252,12 +251,13 @@ export default function Persona() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* left — résumé content, edited with the Résumé editor's own components */}
         <div style={{ flex: 1.1, minWidth: 0, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <ColumnHead title="Résumé content" meta="the pool tailored résumés draw from"
+          <ColumnHead title="Résumé content"
             help="Your full work history, summary, skills and achievements. The AI uses this as the source pool for tailored résumés, as raw material for cover-letter anecdotes, and as the candidate profile when scoring jobs." />
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 26px 24px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             {SECTION_ORDER.map((name) => (
               <SectionShell key={name} name={name} count={counts[name]} open={sections.has(name)} onToggle={() => toggleSection(name)}>
-                <SectionEditor name={name} data={resume} setField={setField} mutate={mutate} />
+                <SectionEditor name={name} data={resume} setField={setField} mutate={mutate}
+                  pageHint={false} emptyNote="Tailored résumés draw from whatever you add here." />
               </SectionShell>
             ))}
           </div>
@@ -265,10 +265,10 @@ export default function Persona() {
 
         {/* right — the autofill nodes + the Q&A bank */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <ColumnHead title="Autofill content" meta="read by the extension on ATS forms"
+          <ColumnHead title="Autofill content"
             help="Personal info used to auto-fill application forms — contact details, work authorization, EEO answers, salary expectations and reusable screener answers. Not used by the AI for résumé generation or scoring." />
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 26px 24px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
-            {GROUPS.map(([id, title, sub, fields]) => {
+            {GROUPS.map(([id, title, fields]) => {
               const open = groups.has(id)
               const counted = fields.filter((f) => !f[4]?.uncounted)
               const n = counted.filter((f) => isSet((p[f[0]] || {})[f[1]])).length
@@ -278,7 +278,7 @@ export default function Persona() {
                   <div onClick={() => toggleGroup(id)} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{open ? '⌄' : '›'}</span>
                     <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+                    <span style={{ flex: 1, minWidth: 0 }} />
                     <span style={{ flex: '0 0 auto', fontSize: 10.5, color: done ? 'var(--accent)' : 'var(--edge)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</span>
                   </div>
                   {open && (
@@ -297,7 +297,7 @@ export default function Persona() {
               <div onClick={() => toggleGroup('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{groups.has('qa') ? '⌄' : '›'}</span>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers — sent verbatim, worth writing well</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</span>
                 <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--edge)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
               </div>
               {groups.has('qa') && (
