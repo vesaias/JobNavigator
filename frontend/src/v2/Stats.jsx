@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { ResponsiveContainer, Sankey, Tooltip } from 'recharts'
+import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import './theme.css'
 
@@ -67,8 +67,10 @@ const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpa
 const NOTE = { fontSize: 11, color: 'var(--muted)' }
 const COL = { fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5 }
+// Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
+const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, lineHeight: '14px', whiteSpace: 'nowrap' }
 const Pill = ({ children, bg, fg }) => (
-  <span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: bg, color: fg, lineHeight: '14px' }}>{children}</span>
+  <span style={{ ...BADGE, background: bg, color: fg }}>{children}</span>
 )
 
 export default function Stats() {
@@ -291,10 +293,12 @@ export default function Stats() {
               )}
             </div>
             {flowView === 'sankey' && sankey ? (
-              <div style={{ height: 232, marginTop: -4 }}>
+              /* 115 bars + 12 gap + a two-line footnote — the funnel's exact
+                 footprint, so toggling doesn't resize the card */
+              <div style={{ height: 160 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <Sankey data={sankey} nodePadding={26} nodeWidth={11} margin={{ top: 6, right: 116, left: 4, bottom: 6 }}
-                    link={{ stroke: 'var(--accent)', strokeOpacity: 0.28 }} node={<SankeyNode />}>
+                  <Sankey data={sankey} nodePadding={18} nodeWidth={10} margin={{ top: 4, right: 112, left: 4, bottom: 4 }}
+                    link={{ stroke: 'var(--funnel-low)', strokeOpacity: 0.3 }} node={<SankeyNode />}>
                     <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontSize: 12 }} />
                   </Sankey>
                 </ResponsiveContainer>
@@ -343,27 +347,22 @@ export default function Stats() {
 
         {/* timeline + llm costs */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>New jobs · last 30 days</span>
               <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
-              {[['new', 'var(--accent)'], ['applied', 'var(--gold)']].map(([l, c]) => (
+              {[['new', 'var(--accent)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
                 <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}><span style={{ width: 14, height: 2, background: c }} />{l}</span>
               ))}
             </div>
-            <Spark series={series} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', ...MONO, fontSize: 10, lineHeight: '14px', color: 'var(--muted)' }}>
-              <span>{dayLabel(series[0]?.date)}</span>
-              {peak?.total > 0 && <span>peak {peak.total} · {dayLabel(peak.date)}</span>}
-              <span>{dayLabel(series[series.length - 1]?.date)}</span>
-            </div>
+            <Spark series={series} peak={peak} />
           </div>
 
           <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>LLM costs</span>
               <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
-                style={{ ...NOTE, cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</span>
+                style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: '14px', color: 'var(--muted)', cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</span>
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
                   const on = period === id
@@ -381,12 +380,12 @@ export default function Stats() {
               ))}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
+              <div className="v2-gutter-head" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
                 <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
                 <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
-              <div className="v2-scroll" style={{ flex: 1, minHeight: 0, maxHeight: 182, overflow: 'auto' }}>
+              <div className="v2-scroll v2-gutter" style={{ flex: 1, minHeight: 0, maxHeight: 218, overflow: 'auto' }}>
               {(costs?.by_purpose || []).map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
@@ -510,7 +509,7 @@ export default function Stats() {
                 <div key={a.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
                   <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(a.created_at)}</span>
                   <span style={{ flex: '0 0 110px', display: 'flex' }}>
-                    <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, lineHeight: '14px' }}>{String(a.type || '').replace('_', ' ')}</span>
+                    <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={BADGE}>{String(a.type || '').replace('_', ' ')}</span>
                   </span>
                   <span title={a.message} style={{ flex: 1, minWidth: 0, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{a.message}</span>
                   <span style={{ flex: '0 0 130px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</span>
@@ -525,42 +524,45 @@ export default function Stats() {
   )
 }
 
-// 30-day arrivals. Two independent scales: applied is an order of magnitude
-// smaller than new, so a shared axis flattens it onto the baseline. Each line
-// gets its own axis, labelled in its own colour so the pairing is unambiguous.
-function Spark({ series }) {
-  const W = 600, HT = 150, TOP = 14, BASE = 148
-  const maxNew = Math.max(4, ...series.map((r) => r.total))
-  const maxApp = Math.max(2, ...series.map((r) => r.applied))
-  const path = (key, max) => series.map((r, i) => `${(i * W / Math.max(1, series.length - 1)).toFixed(1)},${(BASE - (r[key] / max) * (BASE - TOP)).toFixed(1)}`).join(' ')
-  const ticks = (max) => [max, Math.round(max / 2), 0]
-  const axis = (max, color, align) => (
-    <div style={{ flex: '0 0 26px', height: HT, position: 'relative', textAlign: align }}>
-      {ticks(max).map((v, i) => (
-        <span key={v + '-' + i} style={{ position: 'absolute', right: align === 'right' ? 0 : undefined, left: align === 'left' ? 0 : undefined, top: [TOP, (TOP + BASE) / 2, BASE][i] - 7, fontFamily: 'var(--mono)', fontSize: 9.5, lineHeight: '14px', color }}>{v}</span>
-      ))}
-    </div>
-  )
+// 30-day arrivals, on Recharts like v1 — a real dated X axis and one Y axis per
+// series, because applied is an order of magnitude smaller than new and a shared
+// scale flattens it onto the baseline. The chart flexes to fill the card, which
+// is sized by the taller LLM card beside it; a fixed height left a third of the
+// card empty.
+function Spark({ series, peak }) {
+  const data = series.map((r) => ({ ...r, label: dayLabel(r.date) }))
+  const axis = { tick: { fontSize: 9.5, fill: 'var(--muted)', fontFamily: 'var(--mono)' }, axisLine: false, tickLine: false }
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingTop: 10 }}>
-      {axis(maxNew, 'var(--accent)', 'right')}
-      <svg viewBox={`0 0 ${W} ${HT}`} preserveAspectRatio="none" style={{ flex: 1, minWidth: 0, height: HT, display: 'block' }}>
-        {[TOP, (TOP + BASE) / 2].map((y) => <line key={y} x1="0" y1={y} x2={W} y2={y} stroke="var(--line-soft)" strokeWidth="1" />)}
-        <line x1="0" y1={BASE} x2={W} y2={BASE} stroke="var(--line)" strokeWidth="1.5" />
-        <polyline points={path('total', maxNew)} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        <polyline points={path('applied', maxApp)} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      </svg>
-      {axis(maxApp, 'var(--gold)', 'left')}
+    <div style={{ flex: 1, minHeight: 168, display: 'flex', flexDirection: 'column' }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 6, right: 4, left: -14, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
+          <XAxis dataKey="label" interval={6} {...axis} />
+          <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--accent)' }} />
+          <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--stage-applied)' }} />
+          <Tooltip
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, padding: '6px 10px' }}
+            labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
+          <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+          <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--stage-applied)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
+      {peak?.total > 0 && <span style={{ flex: '0 0 auto', alignSelf: 'center', ...MONO, fontSize: 10, lineHeight: '14px', color: 'var(--muted)' }}>peak {peak.total} · {dayLabel(peak.date)}</span>}
     </div>
   )
 }
 
-// Recharts renders Sankey nodes itself; this draws them in the v2 palette with
-// the "name (value)" label v1 used.
+// Recharts renders Sankey nodes itself; this draws them on the funnel's own
+// neutral-to-accent ramp so the two views read as the same data, with the
+// "name (value)" label v1 used.
+const STAGE_FILL = {
+  new: 'var(--line-strong)', saved: 'var(--line-strong)', applied: 'var(--funnel-low)',
+  interview: 'var(--funnel-mid)', offer: 'var(--accent)',
+}
 function SankeyNode({ x, y, width, height, payload }) {
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={3} fill="var(--accent)" opacity={0.85} />
+      <rect x={x} y={y} width={width} height={height} rx={3} fill={STAGE_FILL[payload.name] || 'var(--edge)'} />
       <text x={x + width + 6} y={y + height / 2} textAnchor="start" dominantBaseline="middle" fontSize={11} fill="var(--text-2)">
         {payload.name} ({payload.value})
       </text>
