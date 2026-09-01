@@ -293,6 +293,8 @@ DEFAULT_SETTINGS = {
         "Return ONLY this JSON:\n{\"answer\": \"...\"}",
         "Editable application-autofill LLM prompt. Placeholders: {persona}, {qa_bank}, {company}, {position}, {question}, {max_chars}."
     ),
+    "prep_include": ("resume,posting,notes",
+        "Sections the interview prep handover includes by default (comma-separated: resume, posting, notes)"),
     "prep_ask": (
         "Prepare me for this interview. Ground every answer in my resume above — use my real projects, "
         "employers and numbers, and invent nothing.\n\n"

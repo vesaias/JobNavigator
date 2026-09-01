@@ -520,6 +520,10 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
             return k(lo) + "–" + k(hi)
         return k(lo or hi) if (lo or hi) else None
 
+    # Which optional sections to include (Settings -> Interview prep).
+    inc_row = db.query(Setting).filter(Setting.key == "prep_include").first()
+    inc = {x.strip() for x in ((inc_row.value if inc_row else None) or "resume,posting,notes").split(",") if x.strip()}
+
     L = []
     add = L.append
     title = (job.title if job else None) or "Unknown Role"
@@ -549,7 +553,7 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
             if iv.prep:
                 row += "\n    prep note: " + iv.prep
             add(row)
-    if app.notes:
+    if app.notes and "notes" in inc:
         add("- My notes on this application: " + " ".join(app.notes.split()))
 
     # ── 2. my résumé, flattened to plain text ────────────────────────────────
@@ -569,18 +573,20 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
             resume_text = _flatten_resume(src.json_data)
         except Exception as e:
             logger.info("prep: could not flatten résumé %s: %s", cv_name, e)
-    add("")
-    add("## My résumé" + (" — " + cv_name if cv_name else ""))
+    if "resume" in inc:
+        add("")
+        add("## My résumé" + (" — " + cv_name if cv_name else ""))
     # _flatten_resume emits its own "## Summary"/"## Experience" headings — demote
     # them so they read as parts of the résumé, not siblings of "The posting".
-    body = resume_text.strip() or "[résumé content unavailable]"
-    add("\n".join(("#" + ln) if ln.startswith("##") else ln for ln in body.splitlines()))
+        body = resume_text.strip() or "[résumé content unavailable]"
+        add("\n".join(("#" + ln) if ln.startswith("##") else ln for ln in body.splitlines()))
 
     # ── 3. the posting, plain text ───────────────────────────────────────────
-    posting = ((job.cached_page_text or job.description) if job else "") or ""
-    add("")
-    add("## The posting")
-    add(posting.strip() or "[no posting text was captured]")
+    if "posting" in inc:
+        posting = ((job.cached_page_text or job.description) if job else "") or ""
+        add("")
+        add("## The posting")
+        add(posting.strip() or "[no posting text was captured]")
 
     # ── 4. the ask — editable in Settings → AI ───────────────────────────────
     ask = db.query(Setting).filter(Setting.key == "prep_ask").first()

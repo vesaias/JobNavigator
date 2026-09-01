@@ -25,6 +25,16 @@ from backend.scraper.sources.linkedin_extension import _SESSION_PATH
 
 PIN_FILE = "/tmp/li_pin.txt"
 
+# Phase of the current refresh, read by GET /api/linkedin/session so the
+# Settings row can show "waiting for the PIN" and take the code from the user.
+#   idle | running | awaiting_pin | ok | failed
+STATE = {"phase": "idle", "detail": ""}
+
+
+def _phase(phase: str, detail: str = "") -> None:
+    STATE["phase"] = phase
+    STATE["detail"] = detail
+
 
 def _creds():
     from backend.models.db import SessionLocal, Setting
@@ -109,6 +119,7 @@ async def _solve_pin(page) -> bool:
         os.remove(PIN_FILE)
     print(f"CHECKPOINT: LinkedIn emailed a PIN to the mock account. Drop the 6 "
           f"digits into {PIN_FILE} (waiting up to 300s)...", flush=True)
+    _phase("awaiting_pin", "LinkedIn emailed a PIN to the mock account.")
     pin = None
     for _ in range(100):
         if os.path.exists(PIN_FILE):
@@ -120,6 +131,7 @@ async def _solve_pin(page) -> bool:
         print("No PIN provided within 300s.")
         return False
     print(f"Got PIN ({len(pin)} digits), submitting...", flush=True)
+    _phase("running", "Submitting the PIN…")
     await pin_box.fill(pin)
     await page.locator("#email-pin-submit-button").click()
     try:
@@ -133,6 +145,24 @@ async def _solve_pin(page) -> bool:
     except OSError:
         pass
     return True
+
+
+async def run_refresh() -> int:
+    """Entry point for the Settings row — same flow as the CLI, with STATE set
+    so the UI can follow along and hand over the emailed PIN."""
+    email, password = _creds()
+    if not email or not password:
+        _phase("failed", "Mock account email/password are not set.")
+        return 2
+    _phase("running", "Signing in as " + email)
+    try:
+        code = await _login_and_save(email, password)
+    except Exception as e:  # noqa: BLE001 - surfaced to the UI verbatim
+        _phase("failed", str(e)[:200])
+        return 1
+    _phase("ok" if code == 0 else "failed",
+           "Session refreshed." if code == 0 else "Login did not complete — see backend logs.")
+    return code
 
 
 def main() -> int:

@@ -92,3 +92,11 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             logger.exception("reload_tracking_params failed after settings update")
 
     return {"updated": updated, "warnings": warnings}
+
+
+@router.get("/defaults")
+def get_defaults():
+    """Seeded defaults, so an editor can offer "Reset to default" without
+    hardcoding a second copy of every prompt in the frontend."""
+    from backend.seed import DEFAULT_SETTINGS
+    return {k: v[0] for k, v in DEFAULT_SETTINGS.items()}
