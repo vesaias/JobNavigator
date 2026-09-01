@@ -13,7 +13,7 @@
     --mono: ui-monospace, 'SF Mono', Menlo, monospace;
     --favicon-bg: #DCE7F3; --scrim: rgba(26,25,23,0.28);
     --shadow-sheet: 0 -8px 24px rgba(26,25,23,0.16);
-    --shadow-knob: 0 1px 2px rgba(0,0,0,.2); --shadow-seg: 0 1px 2px rgba(0,0,0,.08);
+    --shadow-knob: 0 1px 2px rgba(0,0,0,.2); --shadow-seg: 0 0 2px rgba(0,0,0,.08);
     --accent: oklch(0.52 0.15 255); --accent-h: oklch(0.46 0.15 255);
     --accent-tint: oklch(0.97 0.015 255); --accent-tint-bd: oklch(0.92 0.03 255); --accent-tint-tx: oklch(0.42 0.14 255);
     --accent-chip: oklch(0.96 0.02 255); --accent-soft: oklch(0.62 0.09 255);
@@ -67,7 +67,7 @@
   .spin { width: 12px; height: 12px; border-radius: 999px; border: 2px solid var(--on-accent-dim); border-top-color: var(--on-accent); animation: navspin .7s linear infinite; }
   .check { width: 10px; height: 6px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); margin-top: -3px; }
   .row2 { display: flex; gap: 8px; }
-  .btn-sm { flex: 1; height: 34px; border-radius: 7px; border: 1px solid var(--border); font-size: 13px; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; background: var(--paper); transition: background .16s; }
+  .btn-sm { flex: 1; height: 34px; border-radius: 7px; border: 1px solid var(--border); font-size: 13px; color: var(--ink2); display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; background: var(--paper); transition: background .16s; }
   .btn-sm:hover { background: var(--hover); }
   .btn-sm.saved { border-color: var(--green-bd); background: var(--green-tint); color: var(--green-tx); font-weight: 600; }
   .btn-sm.err-btn { border-color: var(--red-obd); color: var(--red-otx); font-weight: 600; }
@@ -108,10 +108,10 @@
 
   /* segmented */
   .seg { display: flex; background: var(--track); border-radius: 6px; padding: 2px; gap: 2px; }
-  .seg-opt { font-size: 11.5px; padding: 4px 9px; border-radius: 4px; cursor: pointer; color: var(--ink2); }
+  .seg-opt { font-size: 11.5px; line-height: 14px; padding: 4px 9px; border-radius: 4px; cursor: pointer; color: var(--ink2); }
   .seg-opt.active { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-seg); font-weight: 600; }
   /* On click / Auto are ON states and read as accent; Off is merely selected */
-  .seg-opt.active:not([data-mode="off"]) { background: var(--accent-tint); color: var(--accent-tint-tx); }
+  .seg-opt.active[data-mode]:not([data-mode="off"]) { background: var(--accent-tint); color: var(--accent-tint-tx); }
 
   /* chars panel */
   .presets { display: flex; gap: 6px; }
@@ -136,8 +136,11 @@
   .sheet-ta:focus { border-color: var(--accent); background: var(--paper); }
   /* Chrome renders popups on a lifted grey, not near-black. --muted is a step
      brighter than a straight flip: at 11px it fails AA against the footer. */
+  /* Two selectors, one palette — keep them in step. The media query is the
+     default so a system-themed popup paints correctly before popup.js runs;
+     the attribute is how an explicit Light/Dark choice overrides the OS. */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --ink: #ece9e0; --ink2: #b8b3a8; --muted: #918c81; --disabled: #736f64;
       --bg: #2a2925; --paper: #34322d; --footer: #302e29; --fill: #34322d;
       --hover: #3a3833; --hover2: #3a3833; --track: #3a3833;
@@ -154,8 +157,27 @@
       --red-hd: oklch(0.84 0.10 25); --red-bo: oklch(0.75 0.08 25);
       --red-obd: oklch(0.55 0.14 25); --red-otx: oklch(0.80 0.12 25); --red-hover: oklch(0.34 0.05 25);
       --scrim: rgba(0,0,0,0.5); --shadow-sheet: 0 -8px 24px rgba(0,0,0,.4);
-      --shadow-knob: 0 1px 2px rgba(0,0,0,.4); --shadow-seg: 0 1px 2px rgba(0,0,0,.3);
+      --shadow-knob: 0 1px 2px rgba(0,0,0,.4); --shadow-seg: 0 0 2px rgba(0,0,0,.3);
     }
+  }
+  :root[data-theme="dark"] {
+      --ink: #ece9e0; --ink2: #b8b3a8; --muted: #918c81; --disabled: #736f64;
+      --bg: #2a2925; --paper: #34322d; --footer: #302e29; --fill: #34322d;
+      --hover: #3a3833; --hover2: #3a3833; --track: #3a3833;
+      --divider: #403d37; --border: #4a473f; --border-h: #5f5b51;
+      --toggle-off: #55524a; --favicon-bg: #35414f;
+      --accent: oklch(0.62 0.14 255); --accent-h: oklch(0.68 0.14 255);
+      --accent-tint: oklch(0.33 0.045 255); --accent-tint-bd: oklch(0.42 0.06 255);
+      --accent-tint-tx: oklch(0.84 0.07 255);
+      --accent-chip: oklch(0.33 0.045 255); --accent-soft: oklch(0.45 0.09 255);
+      --accent-hover-tint: oklch(0.38 0.055 255); --accent-strip-tx: oklch(0.84 0.07 255);
+      --green: oklch(0.62 0.13 150); --green-tint: oklch(0.30 0.04 150);
+      --green-bd: oklch(0.42 0.06 150); --green-tx: oklch(0.82 0.09 150); --green-dot: oklch(0.62 0.13 150);
+      --red-dot: oklch(0.62 0.18 25); --red-tint: oklch(0.30 0.05 25); --red-bd: oklch(0.42 0.07 25);
+      --red-hd: oklch(0.84 0.10 25); --red-bo: oklch(0.75 0.08 25);
+      --red-obd: oklch(0.55 0.14 25); --red-otx: oklch(0.80 0.12 25); --red-hover: oklch(0.34 0.05 25);
+      --scrim: rgba(0,0,0,0.5); --shadow-sheet: 0 -8px 24px rgba(0,0,0,.4);
+      --shadow-knob: 0 1px 2px rgba(0,0,0,.4); --shadow-seg: 0 0 2px rgba(0,0,0,.3);
   }
 </style>
 </head>
@@ -215,7 +237,7 @@
 
         <div class="row2">
           <button class="btn-sm" id="btnApplied">Save as applied</button>
-          <button class="btn-sm" id="btnEditUrl" style="color:var(--ink2)">Edit URL</button>
+          <button class="btn-sm" id="btnEditUrl">Edit URL</button>
         </div>
       </div>
     </div>
@@ -282,6 +304,14 @@
   <!-- ===== SETTINGS SCREEN ===== -->
   <div id="screenSettings" class="hide">
     <div class="body">
+      <div class="field">
+        <div class="lbl">Theme</div>
+        <div class="seg" id="themeSeg">
+          <div class="seg-opt" data-theme-opt="light" style="flex:1; text-align:center">Light</div>
+          <div class="seg-opt" data-theme-opt="dark" style="flex:1; text-align:center">Dark</div>
+          <div class="seg-opt" data-theme-opt="system" style="flex:1; text-align:center">System</div>
+        </div>
+      </div>
       <div class="field">
         <div class="lbl">Server URL</div>
         <input id="serverUrl" class="in mono" spellcheck="false">

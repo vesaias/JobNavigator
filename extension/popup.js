@@ -1,4 +1,11 @@
 // ===== The Navigator popup — capture + settings =====
+// Theme: 'system' leaves the attribute off so the prefers-color-scheme rule
+// decides; an explicit choice pins it and wins over the OS.
+function applyTheme(t) {
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+
 const $ = (id) => document.getElementById(id);
 const VERSION = (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '';
 
@@ -113,6 +120,7 @@ const state = {
   screen: 'capture', url: '', host: '', path: '',
   send: 'idle', applied: 'idle', lastError: '',
   li: false, af: false, atsMode: 'off', len: 250, captured: 0,
+  theme: 'system',
   liInfo: false, afInfo: false, charsOpen: false, urlOpen: false,
   serverUrl: 'http://localhost', apiKey: '',
 };
@@ -177,7 +185,8 @@ function render() {
   document.querySelectorAll('.preset').forEach(p => p.classList.toggle('active', Number(p.dataset.len) === state.len));
 
   // ats segmented
-  document.querySelectorAll('.seg-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === state.atsMode));
+  document.querySelectorAll('.seg-opt[data-mode]').forEach(o => o.classList.toggle('active', o.dataset.mode === state.atsMode));
+  document.querySelectorAll('[data-theme-opt]').forEach(o => o.classList.toggle('active', o.dataset.themeOpt === state.theme));
 
   // url sheet
   $('urlSheet').classList.toggle('hide', !state.urlOpen);
@@ -238,11 +247,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('apiKey').value = state.apiKey;
 
   // storage-backed feature state
-  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'structuredAutofillTrigger']);
+  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'structuredAutofillTrigger', 'theme']);
   state.li = !!st.linkedinCapture;
   state.af = !!st.autofillEnabled;
   state.len = Number(st.autofillDefaultLength) > 0 ? Number(st.autofillDefaultLength) : 250;
   state.atsMode = !st.structuredAutofillEnabled ? 'off' : (st.structuredAutofillTrigger === 'auto' ? 'auto' : 'click');
+  state.theme = ['light', 'dark', 'system'].includes(st.theme) ? st.theme : 'system';
+  applyTheme(state.theme);
   $('lenCustom').value = String(state.len);
 
   // captured count
@@ -308,7 +319,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // footer: Fill ATS forms segmented
-  document.querySelectorAll('.seg-opt').forEach(o => o.onclick = () => {
+  document.querySelectorAll('[data-theme-opt]').forEach(o => o.onclick = () => {
+    state.theme = o.dataset.themeOpt;
+    chrome.storage.sync.set({ theme: state.theme });
+    applyTheme(state.theme);
+    render();
+  });
+  document.querySelectorAll('.seg-opt[data-mode]').forEach(o => o.onclick = () => {
     state.atsMode = o.dataset.mode;
     if (state.atsMode === 'off') chrome.storage.sync.set({ structuredAutofillEnabled: false });
     else chrome.storage.sync.set({ structuredAutofillEnabled: true, structuredAutofillTrigger: state.atsMode });
