@@ -23,6 +23,11 @@ class RunningJob:
     task: Optional[asyncio.Task] = None
     scope_key: Optional[str] = None
     target_job_id: Optional[uuid.UUID] = None
+    # One-line "what this run did", shown in Stats > Run history. A tracked_run
+    # body assigns it (`run.summary = ...`); a launch_background coroutine gets
+    # the same effect by returning a string. Left None, the run reads as bare
+    # status + duration, which is what every run looked like before.
+    summary: Optional[str] = None
 
 
 # Keyed by dedup key (e.g. "scrape_all" or "company_scrape:<uuid>")
@@ -172,7 +177,7 @@ async def tracked_run(
 
     try:
         yield running_job
-        _finish_job_run(run_id, "completed", None, None)
+        _finish_job_run(run_id, "completed", running_job.summary, None)
     except Exception as e:
         _finish_job_run(run_id, "failed", None, str(e))
         raise
@@ -209,8 +214,10 @@ def launch_background(
 
     async def _wrapper():
         try:
-            await coro_func(*(func_args or ()), **(func_kwargs or {}))
-            _finish_job_run(run_id, "completed", None, None)
+            result = await coro_func(*(func_args or ()), **(func_kwargs or {}))
+            # A coroutine that returns a string is describing what it did.
+            summary = result.strip() if isinstance(result, str) and result.strip() else None
+            _finish_job_run(run_id, "completed", summary, None)
         except Exception as e:
             logger.error(f"Background job {job_type} failed: {e}")
             _finish_job_run(run_id, "failed", None, str(e))

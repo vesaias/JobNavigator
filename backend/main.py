@@ -347,10 +347,14 @@ async def trigger_all_scrapes():
     Returns immediately with a run_id. Check progress via /api/monitor/active.
     """
     async def _do():
+        from datetime import datetime as _dt, timezone as _tz
+        from backend.scheduler import _scrape_summary
+        started = _dt.now(_tz.utc)
         from backend.scraper.orchestrator import run_all as run_all_searches
         await run_all_searches(force=True)
         from backend.analyzer.cv_scorer import analyze_unscored_jobs
         await analyze_unscored_jobs()
+        return _scrape_summary(started)
 
     try:
         run_id = launch_background("scrape_all", _do, trigger="manual")
@@ -367,8 +371,12 @@ async def trigger_all_scrapes():
 async def trigger_email_check():
     """Poll Gmail for new emails. Returns immediately with a run_id."""
     async def _do():
+        from datetime import datetime as _dt, timezone as _tz
+        from backend.scheduler import _activity_summary
+        started = _dt.now(_tz.utc)
         from backend.email_monitor.gmail_client import check_emails
         await check_emails()
+        return _activity_summary(started, "email", "repl")
 
     try:
         run_id = launch_background("email_check", _do, trigger="manual")
@@ -385,8 +393,17 @@ async def trigger_email_check():
 async def trigger_h1b_refresh():
     """Scrape MyVisaJobs.com for all active companies. Returns immediately with a run_id."""
     async def _do():
+        from datetime import datetime as _dt, timezone as _tz
+        from backend.models.db import VisaCache
+        started = _dt.now(_tz.utc)
         from backend.analyzer.h1b_checker import refresh_all_h1b
         await refresh_all_h1b()
+        db = SessionLocal()
+        try:
+            n = db.query(VisaCache).filter(VisaCache.fetched_at >= started).count()
+            return f"{n} compan{'y' if n == 1 else 'ies'} refreshed"
+        finally:
+            db.close()
 
     try:
         run_id = launch_background("h1b_refresh", _do, trigger="manual")
@@ -437,7 +454,7 @@ async def trigger_job_cleanup():
         try:
             archive_days = int(get_setting(db, "job_archive_after_days", "0"))
             if archive_days <= 0:
-                return
+                return "Disabled (job_archive_after_days = 0)"
             cutoff = dt.now(tz.utc) - timedelta(days=archive_days)
             old_skipped = db.query(Job).filter(Job.status == "skip", Job.discovered_at < cutoff).all()
             count = len(old_skipped)
@@ -446,6 +463,7 @@ async def trigger_job_cleanup():
             db.commit()
             from backend.activity import log_activity
             log_activity("scrape", f"Job cleanup: deleted {count} old skipped jobs (>{archive_days} days)")
+            return f"{count} skipped job{'' if count == 1 else 's'} deleted (>{archive_days}d old)"
         finally:
             db.close()
 
@@ -472,7 +490,7 @@ async def trigger_auto_reject():
         try:
             days = int(get_setting(db, "auto_reject_after_days", "0"))
             if days <= 0:
-                return
+                return "Disabled (auto_reject_after_days = 0)"
             cutoff = dt.now(tz.utc) - timedelta(days=days)
             keep = ["rejected", "offer"]
             stale = db.query(Application).filter(
@@ -485,6 +503,7 @@ async def trigger_auto_reject():
                 count += 1
             if count:
                 db.commit()
+            return f"{count} application{'' if count == 1 else 's'} auto-rejected (>{days}d silent)"
         finally:
             db.close()
 
@@ -574,8 +593,13 @@ async def trigger_db_backup():
 
         # Keep only last 5 backups
         backups = sorted(glob.glob(f"{backup_dir}/jobnavigator_*.sql"))
+        pruned = 0
         while len(backups) > 5:
             os.remove(backups.pop(0))
+            pruned += 1
+
+        size_mb = os.path.getsize(backup_file) / (1024 * 1024)
+        return f"Snapshot {size_mb:.0f} MB -> {os.path.basename(backup_file)}" + (f" - {pruned} old pruned" if pruned else "")
 
     try:
         run_id = launch_background("db_backup", _do, trigger="manual")
@@ -592,8 +616,12 @@ async def trigger_db_backup():
 async def trigger_digest():
     """Send the daily Telegram digest immediately. Returns immediately with a run_id."""
     async def _do():
+        from datetime import datetime as _dt, timezone as _tz
+        from backend.scheduler import _activity_summary
+        started = _dt.now(_tz.utc)
         from backend.notifier.telegram import send_digest
         await send_digest()
+        return _activity_summary(started, "telegram", "alert") or "Digest sent"
 
     try:
         run_id = launch_background("daily_digest", _do, trigger="manual")
@@ -633,6 +661,8 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
                 if should_score and result and result.get("new_jobs", 0) > 0:
                     from backend.analyzer.cv_scorer import analyze_unscored_jobs
                     await analyze_unscored_jobs(status="new")
+                if result:
+                    return f"{c.name} - {result.get('jobs_found', 0)} seen, +{result.get('new_jobs', 0)} new"
         finally:
             db2.close()
 
@@ -1151,14 +1181,26 @@ def get_failing_entities(window: int = 3):
 
 
 @app.get("/api/stats/score-distribution", tags=["stats"], summary="Resume score distribution")
-def get_score_distribution():
-    """Distribution of best resume scores across all scored jobs."""
+def get_score_distribution(detail: bool = False):
+    """Distribution of best resume scores across all scored jobs.
+
+    Default response is the bare bucket list the classic Stats page expects.
+    `detail=true` wraps it with the averages the v2 Stats screen shows:
+
+        {buckets: [...5...], scored_count, avg, tailored_count, tailored_avg}
+
+    `avg` averages the best score per job (the same number the buckets bin on);
+    `tailored_avg` averages only the "Tailored" entry, which the scorer writes
+    when a job is scored against a tailored copy.
+    """
     from backend.models.db import Job
 
     db = SessionLocal()
     try:
         jobs = db.query(Job).filter(Job.cv_scores != None).all()
         buckets = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0}
+        bests: list[float] = []
+        tailored: list[float] = []
         for job in jobs:
             scores = job.cv_scores or {}
             if not isinstance(scores, dict):
@@ -1167,6 +1209,10 @@ def get_score_distribution():
             if not numeric:
                 continue
             best = max(numeric)
+            bests.append(best)
+            t = scores.get("Tailored")
+            if isinstance(t, (int, float)):
+                tailored.append(t)
             if best <= 20:
                 buckets["0-20"] += 1
             elif best <= 40:
@@ -1177,7 +1223,16 @@ def get_score_distribution():
                 buckets["61-80"] += 1
             else:
                 buckets["81-100"] += 1
-        return [{"range": k, "count": v} for k, v in buckets.items()]
+        rows = [{"range": k, "count": v} for k, v in buckets.items()]
+        if not detail:
+            return rows
+        return {
+            "buckets": rows,
+            "scored_count": len(bests),
+            "avg": round(sum(bests) / len(bests), 1) if bests else None,
+            "tailored_count": len(tailored),
+            "tailored_avg": round(sum(tailored) / len(tailored), 1) if tailored else None,
+        }
     finally:
         db.close()
 

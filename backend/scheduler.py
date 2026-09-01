@@ -87,12 +87,52 @@ def configure_scheduler():
     )
 
 
+# ── Run summaries ───────────────────────────────────────────────────────────
+# JobRun.result_summary is what Stats > Run history shows next to a run. These
+# read back rows the run itself just wrote rather than threading counts up
+# through every subsystem, so a summary can never disagree with the log.
+
+
+def _scrape_summary(since) -> str:
+    from backend.models.db import ScrapeLog
+    db = SessionLocal()
+    try:
+        rows = db.query(ScrapeLog).filter(ScrapeLog.ran_at >= since).all()
+        if not rows:
+            return "No sources ran"
+        found = sum(r.new_jobs or 0 for r in rows)
+        failed = sum(1 for r in rows if r.error)
+        warned = sum(1 for r in rows if r.is_warning and not r.error)
+        parts = [f"{len(rows)} source{'' if len(rows) == 1 else 's'}", f"+{found} new"]
+        if failed:
+            parts.append(f"{failed} failed")
+        if warned:
+            parts.append(f"{warned} empty")
+        return " - ".join(parts)
+    finally:
+        db.close()
+
+
+def _activity_summary(since, log_type: str, noun: str) -> str:
+    """"Count the activity-log rows a run produced, e.g. "3 replies"."""
+    from backend.models.db import ActivityLog
+    db = SessionLocal()
+    try:
+        n = db.query(ActivityLog).filter(
+            ActivityLog.created_at >= since, ActivityLog.type == log_type
+        ).count()
+        return f"{n} {noun}{'' if n == 1 else 's'}" if n else ""
+    finally:
+        db.close()
+
+
 # ── Job stubs (implementations added in later phases) ────────────────────────
 async def run_all_scrapes():
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("scrape_all", "scheduler"):
+        async with tracked_run("scrape_all", "scheduler") as run:
             logger.info("Running all scrapes...")
+            started = datetime.now(timezone.utc)
             from backend.scraper.orchestrator import run_all
             await run_all()
             # CV scoring happens per-search/company based on their auto_scoring_depth setting
@@ -101,6 +141,7 @@ async def run_all_scrapes():
             await analyze_unscored_jobs(status="saved")
             # Check for repeated scrape failures
             await check_scrape_health()
+            run.summary = _scrape_summary(started)
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 
@@ -108,10 +149,12 @@ async def run_all_scrapes():
 async def run_email_check():
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("email_check", "scheduler"):
+        async with tracked_run("email_check", "scheduler") as run:
             logger.info("Running email check...")
+            started = datetime.now(timezone.utc)
             from backend.email_monitor.gmail_client import check_emails
             await check_emails()
+            run.summary = _activity_summary(started, "email", "repl")
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 
@@ -119,10 +162,12 @@ async def run_email_check():
 async def send_daily_digest():
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("daily_digest", "scheduler"):
+        async with tracked_run("daily_digest", "scheduler") as run:
             logger.info("Sending daily digest...")
+            started = datetime.now(timezone.utc)
             from backend.notifier.telegram import send_digest
             await send_digest()
+            run.summary = _activity_summary(started, "telegram", "alert") or "Digest sent"
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 
@@ -130,10 +175,20 @@ async def send_daily_digest():
 async def refresh_h1b_data():
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("h1b_refresh", "scheduler"):
+        async with tracked_run("h1b_refresh", "scheduler") as run:
             logger.info("Refreshing H-1B data...")
+            from backend.models.db import VisaCache
             from backend.analyzer.h1b_checker import refresh_all_h1b
+            started = datetime.now(timezone.utc)
             await refresh_all_h1b()
+            _db = SessionLocal()
+            try:
+                # H-1B metrics live in VisaCache (keyed by company name), not on Company.
+                refreshed = _db.query(VisaCache).filter(VisaCache.fetched_at >= started).count()
+                with_data = _db.query(VisaCache).filter(VisaCache.has_data.is_(True)).count()
+                run.summary = f"{refreshed} refreshed - {with_data} compan{'y' if with_data == 1 else 'ies'} with LCA data"
+            finally:
+                _db.close()
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 
@@ -142,7 +197,7 @@ async def run_auto_reject():
     """Move old non-rejected/non-offer applications to rejected after X days."""
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("auto_reject", "scheduler"):
+        async with tracked_run("auto_reject", "scheduler") as run:
             db = SessionLocal()
             try:
                 setting = db.query(Setting).filter(Setting.key == "auto_reject_after_days").first()
@@ -166,6 +221,7 @@ async def run_auto_reject():
                 if count:
                     db.commit()
                     logger.info(f"Auto-rejected {count} applications (>{days} days)")
+                run.summary = f"{count} application{'' if count == 1 else 's'} auto-rejected (>{days}d silent)"
             finally:
                 db.close()
     except JobAlreadyRunningError as e:
@@ -176,7 +232,7 @@ async def run_job_cleanup_auto():
     """Auto-delete old skipped jobs if job_archive_after_days > 0."""
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("job_cleanup", "scheduler"):
+        async with tracked_run("job_cleanup", "scheduler") as run:
             db = SessionLocal()
             try:
                 setting = db.query(Setting).filter(Setting.key == "job_archive_after_days").first()
@@ -193,6 +249,7 @@ async def run_job_cleanup_auto():
                 if count:
                     db.commit()
                     logger.info(f"Job cleanup: deleted {count} skipped jobs (>{days} days)")
+                run.summary = f"{count} skipped job{'' if count == 1 else 's'} deleted (>{days}d old)"
             finally:
                 db.close()
     except JobAlreadyRunningError as e:
@@ -231,7 +288,7 @@ async def run_db_backup():
     """Run pg_dump and keep max 5 backup files."""
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
-        async with tracked_run("db_backup", "scheduler"):
+        async with tracked_run("db_backup", "scheduler") as run:
             import subprocess
             import glob
             import os
@@ -265,10 +322,17 @@ async def run_db_backup():
 
             # Keep only last 5 backups
             backups = sorted(glob.glob(f"{backup_dir}/jobnavigator_*.sql"))
+            pruned = 0
             while len(backups) > 5:
                 oldest = backups.pop(0)
                 os.remove(oldest)
+                pruned += 1
                 logger.info(f"Removed old backup: {oldest}")
+
+            size_mb = os.path.getsize(backup_file) / (1024 * 1024)
+            run.summary = f"Snapshot {size_mb:.0f} MB -> {os.path.basename(backup_file)}"
+            if pruned:
+                run.summary += f" - {pruned} old pruned"
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 
