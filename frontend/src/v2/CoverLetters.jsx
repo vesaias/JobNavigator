@@ -117,6 +117,10 @@ export default function CoverLetters() {
   const [pending, setPending] = useState([])     // active generate_cover_letter runs
   const [query, setQuery] = useState('')
   const [archOpen, setArchOpen] = useState(() => { try { return localStorage.getItem(ARCH_KEY) === '1' } catch { return false } })
+  // While searching, show archived matches too — otherwise a query that only
+  // hits archived letters looks like it found nothing. Doesn't touch the
+  // remembered preference.
+  const showArch = archOpen || query.trim().length > 0
   useEffect(() => { try { localStorage.setItem(ARCH_KEY, archOpen ? '1' : '0') } catch {} }, [archOpen])
   const [err, setErr] = useState('')
   const [runMeta, setRunMeta] = useState({})   // run_id -> {label, voice, length}
@@ -276,6 +280,10 @@ export default function CoverLetters() {
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Cover Letters</h1>
           <span style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search letters, companies… "
+            style={{ height: 36, width: 280, padding: '0 13px', border: 'none', borderBottom: '1px solid var(--line-strong)', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)' }} />
+        </div>
       </header>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -309,9 +317,6 @@ export default function CoverLetters() {
             {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
           </div>
-          <span style={{ fontSize: 10.5, color: 'var(--muted)', textWrap: 'pretty' }}>
-            Takes about 30 seconds — the letter appears in the list when it's done, drafted for your review.
-          </span>
           {err && <span style={{ fontSize: 11.5, color: 'var(--bad)', textWrap: 'pretty' }}>{err}</span>}
         </div>
 
@@ -320,13 +325,6 @@ export default function CoverLetters() {
           <div className="v2-gutter-head" style={{ flex: '0 0 auto', padding: '13px 30px 9px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line-soft)' }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>All letters</span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{letters.length + pending.length}</span>
-            {query && visible.length !== letters.length &&
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{visible.length} shown</span>}
-            <div style={{ marginLeft: 'auto', flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search letter or company…"
-                style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
-            </div>
           </div>
 
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
@@ -349,11 +347,11 @@ export default function CoverLetters() {
                   Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
                 </span>
                 <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  {archOpen ? 'hide ⌄' : 'browse ›'}
+                  {showArch ? 'hide ⌄' : 'browse ›'}
                 </span>
               </div>
             )}
-            {archOpen && archived.map((c) => row(c, true))}
+            {showArch && archived.map((c) => row(c, true))}
 
             {visible.length === 0 && pending.length === 0 && (
               <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
