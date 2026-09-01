@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
+import { useToasts, ToastStack } from './Toast'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
 import {
@@ -90,19 +91,13 @@ export default function ResumeEditor() {
   const [baseCopyCount, setBaseCopyCount] = useState(null)
   const [scoring, setScoring] = useState(false)
   const [headMenu, setHeadMenu] = useState(false)
-  const [toasts, setToasts] = useState([])
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
   const pendingRef = useRef([])   // [{baseId, jobId, company, since}]
 
   const isCopy = doc && !doc.is_base
 
-  const pushToast = useCallback((t) => {
-    const tid = `${Date.now()}-${Math.random()}`
-    setToasts((p) => [...p, { id: tid, ...t }])
-    if (t.ttl !== 0) setTimeout(() => setToasts((p) => p.filter((x) => x.id !== tid)), t.ttl || 5000)
-    return tid
-  }, [])
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   // background tailoring: after POST, watch for the new copy (parent+job, updated after start)
   useEffect(() => {
@@ -113,7 +108,7 @@ export default function ResumeEditor() {
         const list = data || []
         pendingRef.current = pendingRef.current.filter((p) => {
           const hit = list.find((r) => String(r.parent_id) === String(p.baseId) && String(r.job_id) === String(p.jobId) && new Date(r.updated_at).getTime() >= p.since - 1000)
-          if (hit) { pushToast({ msg: `Tailored copy for ${p.company} is ready.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) }); return false }
+          if (hit) { pushToast({ kind: 'success', msg: `Tailored copy for ${p.company} is ready.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) }); return false }
           if (Date.now() - p.since > 120000) return false   // give up after 2m
           return true
         })
@@ -127,10 +122,10 @@ export default function ResumeEditor() {
     try {
       await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: jobId || undefined, job_description: jobDescription || undefined })
       if (jobId) pendingRef.current.push({ baseId, jobId, company: company || 'the job', since: Date.now() })
-      pushToast({ msg: `Tailoring ${company ? 'for ' + company : ''}… runs in the background.` })
+      pushToast({ kind: 'progress', msg: `Tailoring ${company ? 'for ' + company : ''}… runs in the background.` })
     } catch (e) {
-      if (e.response?.status === 409) pushToast({ msg: 'Already tailoring for that job.' })
-      else pushToast({ msg: e.response?.data?.detail || 'Tailoring failed to start.' })
+      if (e.response?.status === 409) pushToast({ kind: 'error', msg: 'Already tailoring for that job.' })
+      else pushToast({ kind: 'error', msg: e.response?.data?.detail || 'Tailoring failed to start.' })
     }
   }, [pushToast])
 
@@ -143,15 +138,15 @@ export default function ResumeEditor() {
     try {
       if (mode === 'copy') {
         const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: doc.job_id })
-        pushToast({ msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
+        pushToast({ kind: 'success', msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
       } else {
         await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
         pendingRef.current.push({ baseId, jobId: doc.job_id, company, since: Date.now() })
-        pushToast({ msg: `Tailoring for ${company}… runs in the background.` })
+        pushToast({ kind: 'progress', msg: `Tailoring for ${company}… runs in the background.` })
       }
     } catch (e) {
-      if (e.response?.status === 409) pushToast({ msg: 'Already tailoring for that job.' })
-      else pushToast({ msg: e.response?.data?.detail || 'Could not start.' })
+      if (e.response?.status === 409) pushToast({ kind: 'error', msg: 'Already tailoring for that job.' })
+      else pushToast({ kind: 'error', msg: e.response?.data?.detail || 'Could not start.' })
     }
   }, [doc, jobData, pushToast, navigate])
 
@@ -205,33 +200,33 @@ export default function ResumeEditor() {
   }, [jobData])
 
   const runScore = useCallback(async (depth) => {
-    if (!doc?.job_id) { pushToast({ msg: 'This copy isn’t linked to a job to score against.' }); return }
+    if (!doc?.job_id) { pushToast({ kind: 'error', msg: 'This copy isn’t linked to a job to score against.' }); return }
     setHeadMenu(false); setScoring(true)
     try {
       await api.post(`/resumes/${id}/score-check`, { depth })
-      pushToast({ msg: `Scoring (${depth}) — runs in the background.` })
+      pushToast({ kind: 'progress', msg: `Scoring (${depth}) — runs in the background.` })
       // poll until the score lands (or ~60s)
       const t0 = Date.now()
       const iv = setInterval(async () => {
         try {
           const { data: j } = await api.get(`/jobs/${doc.job_id}`)
           const sc = j?.cv_scores?.['Tailored']
-          if (typeof sc === 'number') { setJobData(j); setScoring(false); clearInterval(iv); pushToast({ msg: `Scored: ${Math.round(sc)}${scores.base != null ? ` (${sc - scores.base >= 0 ? '+' : ''}${Math.round(sc - scores.base)} vs base)` : ''}` }) }
+          if (typeof sc === 'number') { setJobData(j); setScoring(false); clearInterval(iv); pushToast({ kind: 'success', msg: `Scored: ${Math.round(sc)}${scores.base != null ? ` (${sc - scores.base >= 0 ? '+' : ''}${Math.round(sc - scores.base)} vs base)` : ''}` }) }
           else if (Date.now() - t0 > 60000) { setScoring(false); clearInterval(iv) }
         } catch {}
       }, 3000)
-    } catch (e) { setScoring(false); pushToast({ msg: e.response?.status === 409 ? 'Already scoring this copy.' : (e.response?.data?.detail || 'Scoring failed to start.') }) }
+    } catch (e) { setScoring(false); pushToast({ kind: 'error', msg: e.response?.status === 409 ? 'Already scoring this copy.' : (e.response?.data?.detail || 'Scoring failed to start.') }) }
   }, [doc, id, pushToast, scores.base])
 
   const markApplied = useCallback(async () => {
     if (!doc?.job_id) return
     setHeadMenu(false)
-    try { await api.patch(`/jobs/${doc.job_id}`, { status: 'applied' }); loadJobCtx(); pushToast({ msg: 'Marked applied.' }) } catch { pushToast({ msg: 'Could not mark applied.' }) }
+    try { await api.patch(`/jobs/${doc.job_id}`, { status: 'applied' }); loadJobCtx(); pushToast({ kind: 'success', msg: 'Marked applied.' }) } catch { pushToast({ kind: 'error', msg: 'Could not mark applied.' }) }
   }, [doc, loadJobCtx, pushToast])
 
   const deleteResume = useCallback(async () => {
     if (!window.confirm(`Delete “${doc.name}”?${doc.is_base ? ' Its tailored copies will be removed too.' : ''}`)) return
-    try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ msg: 'Delete failed.' }) }
+    try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ kind: 'error', msg: 'Delete failed.' }) }
   }, [doc, id, navigate, pushToast])
 
   const goCover = () => { setHeadMenu(false); navigate(`/v2/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
@@ -299,7 +294,7 @@ export default function ResumeEditor() {
     ;(d.experience || []).forEach((e) => { delete e.suggested_bullets })
     onData(d)
     setReviewOpen(false)
-    pushToast({ msg: 'Review applied — declined changes restored to base.' })
+    pushToast({ kind: 'success', msg: 'Review applied — declined changes restored to base.' })
   }, [changes, data, onData, pushToast])
 
   // ── json_data mutation (mirrors v1 ResumeContentEditor) ────────────────────
@@ -454,15 +449,7 @@ export default function ResumeEditor() {
         : <TailorModal doc={doc} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
       {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
 
-      {/* toasts */}
-      <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-        {toasts.map((t) => (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--rail)', borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,.28)', maxWidth: 360 }}>
-            <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--rail-ink)' }}>{t.msg}</span>
-            {t.action && <span onClick={() => { t.onAction?.(); setToasts((p) => p.filter((x) => x.id !== t.id)) }} style={{ flex: '0 0 auto', fontSize: 12, fontWeight: 600, color: 'var(--rail-accent)', cursor: 'pointer' }}>{t.action}</span>}
-          </div>
-        ))}
-      </div>
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }

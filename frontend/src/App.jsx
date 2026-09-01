@@ -26,6 +26,7 @@ import V2CoverLetterEditor from './v2/CoverLetterEditor'
 import V2Settings from './v2/Settings'
 import V2Persona from './v2/Persona'
 import V2Stats from './v2/Stats'
+import V2ToastLab from './v2/ToastLab'   // TEMP: /v2/toasts debug page
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -161,6 +162,9 @@ function App() {
           <Route path="persona" element={<V2Persona />} />
           <Route path="stats" element={<V2Stats />} />
         </Route>
+
+        {/* TEMP: toast taxonomy lab — delete with v2/ToastLab.jsx */}
+        <Route path="/v2/toasts" element={<V2ToastLab />} />
 
         {/* classic shell */}
         <Route element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>

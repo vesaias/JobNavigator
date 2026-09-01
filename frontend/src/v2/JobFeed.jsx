@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -101,23 +102,6 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(
 const PICK_KEY = IS_MAC ? '⌘' : 'Ctrl'
 const SHORTCUTS = [['j / ↓', 'Next job'], ['k / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], [`${PICK_KEY}-click`, 'Select'], ['Shift-click', 'Select range']]
 
-// toast (progress + undo). phase: '' | 'start' | 'ok' | 'nok'
-function Toast({ t, onClose }) {
-  const [shown, setShown] = useState(false)
-  useEffect(() => { const r = requestAnimationFrame(() => setShown(true)); return () => cancelAnimationFrame(r) }, [])
-  const vis = shown && !t.leaving
-  const bg = t.phase === 'ok' ? 'var(--good)' : t.phase === 'nok' ? 'var(--bad)' : 'var(--rail)'
-  const icon = t.phase === 'start' ? '⋯' : t.phase === 'ok' ? '✓' : t.phase === 'nok' ? '✕' : '●'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 13px', borderRadius: 10, background: bg, color: 'var(--rail-ink)', fontSize: 12.5, boxShadow: '0 10px 30px rgba(0,0,0,.28)', maxWidth: 360, transform: vis ? 'translateY(0)' : 'translateY(8px)', opacity: vis ? 1 : 0, transition: 'opacity .28s, transform .28s' }}>
-      <span style={{ flex: '0 0 auto', color: t.phase === 'start' ? 'var(--rail-accent)' : 'inherit' }}>{icon}</span>
-      <span style={{ flex: 1, minWidth: 0 }}>{t.msg}</span>
-      {t.actionLabel && <span onClick={t.onAction} style={{ flex: '0 0 auto', color: 'var(--rail-accent)', cursor: 'pointer', fontWeight: 600 }}>{t.actionLabel}</span>}
-      <span onClick={onClose} style={{ flex: '0 0 auto', opacity: 0.6, cursor: 'pointer' }}>✕</span>
-    </div>
-  )
-}
-
 // ── component ────────────────────────────────────────────────────────────
 export default function V2JobFeed() {
   const [jobs, setJobs] = useState([])
@@ -178,7 +162,6 @@ export default function V2JobFeed() {
   const lastIdx = useRef(null)
 
   const [personaAvailable, setPersonaAvailable] = useState(false)
-  const [toasts, setToasts] = useState([])
   const [watchExtra, setWatchExtra] = useState([])   // ids of jobs pruned from view but still processing
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(true)
@@ -201,16 +184,7 @@ export default function V2JobFeed() {
   }, [searchId])
   const PAGE = 40
 
-  const dismissToast = useCallback((id) => {
-    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)))
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 300)
-  }, [])
-  const pushToast = useCallback((toast) => {
-    const id = `${toast.phase || 'x'}-${Object.keys(pendingRef.current).length}-${Math.random().toString(36).slice(2, 7)}`
-    setToasts((prev) => [...prev, { ...toast, id }])
-    setTimeout(() => dismissToast(id), toast.ttl ?? 2600)
-    return id
-  }, [dismissToast])
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const listRef = useRef(null)
   const jobsRef = useRef(jobs); useEffect(() => { jobsRef.current = jobs }, [jobs])
@@ -329,7 +303,7 @@ export default function V2JobFeed() {
     if (id && !scoreWatchRef.current.some((w) => w.id === id)) scoreWatchRef.current = [...scoreWatchRef.current, { id, until: Date.now() + 90000 }]
   }, [])
   const showUndo = useCallback((job, prevStatus, prevSaved, msg) => {
-    pushToast({ msg, actionLabel: 'Undo', ttl: 5000, onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
+    pushToast({ kind: 'undo', msg, action: 'Undo', onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
   }, [pushToast, fetchJobs, refreshStats])
   const saveJob = (j) => { const willSave = !j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' }) }
   const skipJob = (j) => { showUndo(j, j.status, j.saved, `Skipped "${j.title}"`); patchRemote(j, { status: 'skip' }) }
@@ -351,11 +325,11 @@ export default function V2JobFeed() {
   }, [fetchJobs])
   const scoreJob = useCallback((job) => {
     pendingRef.current[job.id] = { title: job.title, company: job.company }
-    pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` })
+    pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` })
     api.post(`/analyze/${job.id}?depth=full`, {}).then(() => {
       setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
       setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
-    }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
+    }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
   }, [pushToast])
 
   // rescoreJob holds { label, jobs:[...] } — one job or a bulk set
@@ -376,9 +350,9 @@ export default function V2JobFeed() {
     if (!target || !rescoreSel.length) return
     const list = target.jobs || []
     setRescoreJob(null)
-    if (list.length > 1) pushToast({ phase: 'start', msg: `Scoring ${list.length} jobs…` })
+    if (list.length > 1) pushToast({ kind: 'progress', msg: `Scoring ${list.length} jobs…` })
     for (const job of list) {
-      if (list.length === 1) { pendingRef.current[job.id] = { title: job.title, company: job.company }; pushToast({ phase: 'start', msg: `Scoring "${job.title}"…` }) }
+      if (list.length === 1) { pendingRef.current[job.id] = { title: job.title, company: job.company }; pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` }) }
       try {
         await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
         setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
@@ -394,12 +368,12 @@ export default function V2JobFeed() {
         if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) window.location.href = `/resumes?resume=${data.id}` }
         else {
           pendingRef.current[job.id] = { title: job.title, company: job.company }
-          pushToast({ phase: 'start', msg: `Tailoring for "${job.title}"…` })
+          pushToast({ kind: 'progress', msg: `Tailoring for "${job.title}"…` })
           await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id })
           setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x))
           setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
         }
-      } catch (e) { delete pendingRef.current[job.id]; pushToast({ phase: 'nok', msg: `${mode === 'copy' ? 'Copy' : 'Tailor'} failed for "${job.title}"` }); console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
+      } catch (e) { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `${mode === 'copy' ? 'Copy' : 'Tailor'} failed for "${job.title}"` }); console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
     }
     setChecked(new Set())
   }, [pushToast])
@@ -573,7 +547,7 @@ export default function V2JobFeed() {
             const meta = pendingRef.current[id]
             if (meta) {
               const ok = statusMap[id] !== 'failed'
-              pushToast({ phase: ok ? 'ok' : 'nok', msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` })
+              pushToast({ kind: ok ? 'success' : 'error', msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` })
               delete pendingRef.current[id]
             }
           }
@@ -1200,9 +1174,7 @@ export default function V2JobFeed() {
       )}
 
       {/* toasts (progress + undo) */}
-      <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-        {toasts.map((t) => <Toast key={t.id} t={t} onClose={() => dismissToast(t.id)} />)}
-      </div>
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }

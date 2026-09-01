@@ -16,6 +16,12 @@
   /* Stats chart ramp: the funnel and the score buckets both run neutral -> accent,
      and --gold doubles as the "applied" line on the 30-day chart. */
   --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  /* Toast tints: softer than --accent-soft/--bad-soft, which are already spoken
+     for by chips and inline diffs. */
+  --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  /* Toast tints: softer than --accent-soft/--bad-soft, which are already spoken
+     for by chips and inline diffs. */
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
@@ -43,6 +49,8 @@
   /* lifted, not darkened: these are ink on a dark ground, so they need to stay
      readable as bar fills against --surface rather than mirror the light hexes */
   --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
   /* --hover-soft is a faint accent wash on white in light (#f4f8f5). Its dark
      value was never retuned and read as a green-grey against this warm palette,
      so Companies rows and Résumé cards hovered green while everything else
