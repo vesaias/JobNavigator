@@ -94,12 +94,12 @@ export default function V2App() {
           <span style={{ position: 'absolute', left: 0, width: W, display: 'flex', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 17, letterSpacing: '.02em', opacity: open ? 0 : 1, transition: 'opacity .18s, width .22s ease', pointerEvents: 'none' }}>JN</span>
         </div>
 
-        <nav className="v2-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '6px 0', overflow: 'auto' }}>
+        <nav className="v2-railscroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '6px 0', overflowX: 'hidden', overflowY: 'auto' }}>
           {GROUPS.map((g) => (
             <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                 <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{g.label}</span>
-                <span style={{ position: 'absolute', left: 24, width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .18s', pointerEvents: 'none' }} />
+                <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .18s', pointerEvents: 'none' }} />
               </div>
               {g.items.map((it) => {
                 const active = loc.pathname === it.to || loc.pathname.startsWith(it.to + '/')
@@ -108,7 +108,10 @@ export default function V2App() {
                 const { Icon } = it
                 const tip = open ? undefined : `${it.label}${count != null ? ` · ${count}` : ''}${warned ? ' · needs attention' : ''}`
                 const base = {
-                  position: 'relative', display: 'flex', alignItems: 'center', height: 34, padding: `0 ${padX}px`,
+                  position: 'relative', display: 'flex', alignItems: 'center', height: 34,
+                  // the 2px left border is inside the 50px column, so collapsed
+                  // padding is asymmetric to keep the icon on the axis
+                  padding: open ? `0 ${padX}px` : '0 13px 0 11px',
                   fontSize: 14, whiteSpace: 'nowrap', borderLeft: `2px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
                   background: active ? 'rgba(255,255,255,.045)' : 'transparent', transition: 'padding .22s ease',
                 }
@@ -117,9 +120,9 @@ export default function V2App() {
                     <span style={{ flex: `0 0 ${open ? 0 : 24}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: open ? 'flex-start' : 'center', opacity: open ? 0 : 1, transition: 'opacity .18s, flex-basis .22s ease' }}>
                       <Icon size={15} strokeWidth={1.8} />
                     </span>
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{it.label}</span>
-                    {count != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{count}</span>}
-                    {!open && warned && <span title="Needs attention" style={{ position: 'absolute', left: 34, width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
+                    <span style={{ flex: open ? 1 : '0 0 0px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{it.label}</span>
+                    {count != null && <span style={{ flex: '0 0 auto', width: open ? undefined : 0, overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{count}</span>}
+                    {!open && warned && <span title="Needs attention" style={{ position: 'absolute', left: 'calc(50% + 7px)', width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
                   </>
                 )
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" title={tip} className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>

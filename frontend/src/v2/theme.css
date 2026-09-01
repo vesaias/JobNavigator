@@ -169,6 +169,10 @@
    stay aligned whatever width the platform gives the scrollbar. */
 .v2-gutter { scrollbar-gutter:stable; }
 .v2-gutter-head { overflow:hidden; scrollbar-gutter:stable; }
+/* The rail is 50px collapsed — a 9px scrollbar there would push every icon off
+   the axis, so it scrolls with no gutter at all. */
+.v2-railscroll { scrollbar-width:none; -ms-overflow-style:none; }
+.v2-railscroll::-webkit-scrollbar { width:0; height:0; }
 .v2-scroll::-webkit-scrollbar { width:9px; height:9px; }
 .v2-scroll::-webkit-scrollbar-thumb { background:var(--muted); border-radius:99px; border:2px solid var(--bg); }
 .v2-scroll::-webkit-scrollbar-track { background:transparent; }
