@@ -198,6 +198,15 @@ export default function Settings() {
       ...(personaAvailable ? [['persona', 'Persona']] : []),
       ...resumes.map((r) => [r.id, r.name])]
 
+    // Default voice has to name an id from the presets, so offer exactly those
+    // rather than a free-text box you can typo. A stored id that no longer
+    // exists is kept as an option so the row doesn't silently read as unset.
+    let vp = S.cover_letter_voice_presets
+    if (typeof vp === 'string') { try { vp = JSON.parse(vp) } catch { vp = [] } }
+    const voiceOpts = (Array.isArray(vp) ? vp : []).filter((v) => v && v.id).map((v) => [v.id, v.label || v.id])
+    const curVoice = S.cover_letter_default_voice
+    if (curVoice && !voiceOpts.some((o) => o[0] === curVoice)) voiceOpts.push([curVoice, `${curVoice} — not in presets`])
+
     return [
       ['models', 'AI', 'Models', 'one Primary model for everything; override per feature only where it pays', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
@@ -236,7 +245,7 @@ export default function Settings() {
           [['off', "Off — don't score after tailoring"], ['light', 'Light — score only'], ['full', 'Full — score + keywords + report']], { w: '260px', dflt: 'light' }),
       ]],
       ['letters', '', 'Cover letters', 'voice presets are injected into the prompt', [
-        B('Default voice', 'Preselected in the generate panel; switchable per letter.', 'cover_letter_default_voice', { w: '260px' }),
+        SEL('Default voice', 'Preselected in the generate panel; switchable per letter — the list comes from the presets below.', 'cover_letter_default_voice', voiceOpts, { w: '260px' }),
         E('Voice presets', 'Label + prompt per voice — the Cover Letters screen offers these.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
         E('Cover letter prompt', 'The generation instruction.', 'cover_letter_prompt', { sub: 'placeholders: {voice_instruction} {length_instruction} {job_description}' }),
       ]],
