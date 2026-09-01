@@ -35,6 +35,14 @@ const when = (iso) => {
   catch { return iso }
 }
 const dur = (s) => (s == null ? '—' : s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`)
+const ago = (iso) => {
+  if (!iso) return null
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+}
 // Turn a 5-field cron into English; anything else (including "Every 90 min") passes through.
 const decodeCron = (expr) => {
   if (!expr || expr.includes('Every')) return expr || '—'
@@ -76,6 +84,8 @@ export default function Stats() {
   const [activity, setActivity] = useState([])
   const [tab, setTab] = useState('runs')
   const [flowView, setFlowView] = useState('bar')
+  const [sweep, setSweep] = useState(null)
+  const [failing, setFailing] = useState(0)
   const [actType, setActType] = useState('')
   const [actQuery, setActQuery] = useState('')
   const [typeOpen, setTypeOpen] = useState(false)
@@ -95,6 +105,12 @@ export default function Stats() {
       get('/jobs', { status: 'new,saved', sort_by: 'score', limit: 1 }),
       get('/stats/sankey'),
     ])
+    const [sw, he] = await Promise.all([
+      get('/monitor/history', { limit: 1, job_type: 'scrape_all' }),
+      get('/health/entities'),
+    ])
+    setSweep((sw || [])[0] || null)
+    setFailing(((he?.companies || []).length) + ((he?.searches || []).length))
     if (s) setStats(s)
     if (tl) setTimeline(tl)
     if (sd) setScores(sd)
@@ -220,9 +236,15 @@ export default function Stats() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Stats</h1>
+          {/* Volume, outcomes, scoring and spend each already have a card below,
+              so the header carries the one thing none of them shows: whether the
+              pipeline ran and whether anything is broken. */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {int(stats?.total_jobs)} jobs tracked · {int(stats?.total_applications)} application{stats?.total_applications === 1 ? '' : 's'}, {inPlay} in play
-            {spend != null && <> · {money(spend)} LLM spend {period ? `in ${period}d` : 'all time'}</>}
+            {sweep
+              ? `Last sweep ${sweep.status === 'failed' ? 'failed ' : ''}${ago(sweep.finished_at || sweep.started_at) || '—'}`
+              : 'No scrape recorded yet'}
+            {failing > 0 && <> · <span style={{ color: 'var(--warn)' }}>{failing} source{failing === 1 ? ' needs' : 's need'} attention</span></>}
+            {spend != null && <> · {money(spend)} on LLM calls {period ? `in ${period}d` : 'all time'}</>}
           </span>
         </div>
         <span onClick={refresh} className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
