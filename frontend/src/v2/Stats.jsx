@@ -270,7 +270,7 @@ export default function Stats() {
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {value}{sub && <span style={{ fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}> {sub}</span>}
+                {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
               </span>
             </div>
           ))}
@@ -284,7 +284,7 @@ export default function Stats() {
           <div style={{ ...CARD, height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Application funnel</span>
-              <span style={{ flex: 1, ...NOTE }}>{flowView === 'bar' ? '' : 'every recorded status transition'}</span>
+              <span style={{ flex: 1 }} />
               {sankey && (
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
                   {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
