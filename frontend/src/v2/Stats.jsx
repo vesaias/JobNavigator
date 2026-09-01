@@ -199,15 +199,14 @@ export default function Stats() {
   const funnel = useMemo(() => {
     const applied = stats?.total_applications || 0
     const rows = [
-      ['Saved', stats?.saved_jobs || 0, 'var(--line-strong)', null],
-      ['Applied', applied, 'var(--funnel-low)', applied],
-      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)', applied],
-      ['Offer', reached.offer || st.offer || 0, 'var(--accent)', applied],
+      ['Saved', stats?.saved_jobs || 0, 'var(--line-strong)'],
+      ['Applied', applied, 'var(--funnel-low)'],
+      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)'],
+      ['Offer', reached.offer || st.offer || 0, 'var(--accent)'],
     ]
     const widest = Math.max(1, ...rows.map((r) => r[1]))
-    return rows.map(([label, count, color, basis]) => ({
+    return rows.map(([label, count, color]) => ({
       label, count, color,
-      pct: basis ? `${Math.round((count / basis) * 100)}%` : '',
       w: `${Math.max(count ? 2 : 0, Math.round((count / widest) * 100))}%`,
     }))
   }, [stats, st, reached])
@@ -279,13 +278,13 @@ export default function Stats() {
 
         {/* funnel + score distribution */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {/* Fixed height: the funnel and the Sankey are different shapes, and
-              letting either size the card made the whole row jump on toggle.
-              250 leaves the funnel a little slack and gives the Sankey room. */}
-          <div style={{ ...CARD, height: 250, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Fixed height: the funnel and the Sankey are different shapes, so
+              letting either size the card made the row jump on toggle. Both
+              views get the same 162px of content area inside 230. */}
+          <div style={{ ...CARD, height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Application funnel</span>
-              <span style={{ flex: 1, ...NOTE }}>{flowView === 'bar' ? `where the ${int(stats?.total_applications)} applications stand` : 'every recorded status transition'}</span>
+              <span style={{ flex: 1, ...NOTE }}>{flowView === 'bar' ? '' : 'every recorded status transition'}</span>
               {sankey && (
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
                   {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
@@ -313,7 +312,7 @@ export default function Stats() {
                   <div style={{ flex: 1, height: 22, background: 'var(--surface-2)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
                     <div style={{ width: f.w, background: f.color, borderRadius: 5 }} />
                   </div>
-                  <span style={{ flex: '0 0 56px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}<span style={{ color: 'var(--muted)' }}> {f.pct}</span></span>
+                  <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
                 </div>
               ))}
             </div>
@@ -363,7 +362,7 @@ export default function Stats() {
             <Spark series={series} peak={peak} />
           </div>
 
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ ...CARD, height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>LLM costs</span>
               <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
@@ -384,15 +383,15 @@ export default function Stats() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <div className="v2-gutter-head" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
                 <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
                 <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
-              {/* fixed, not max: 3 purposes at 30d and 6 at all-time otherwise
-                  grow the card when you switch period */}
-              <div className="v2-scroll v2-gutter" style={{ flex: '0 0 176px', height: 176, overflow: 'auto' }}>
+              {/* takes whatever the fixed-height card leaves, so switching period
+                  (2 rows at 1d, 13 at all-time) can't resize anything */}
+              <div className="v2-scroll v2-gutter" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {(costs?.by_purpose || []).map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
