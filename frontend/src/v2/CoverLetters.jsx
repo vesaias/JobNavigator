@@ -208,8 +208,8 @@ export default function CoverLetters() {
   const active = useMemo(() => visible.filter(isActive), [visible])
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
-  const linked = letters.filter((c) => c.has_application).length
-  const countLine = `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${linked} linked to applications`
+  const live = letters.filter((c) => c.stage && c.stage !== 'rejected').length
+  const countLine = `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${live} live application${live === 1 ? '' : 's'}`
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
   const voiceLabel = presets.find((p) => p.id === genVoice)?.label || genVoice
@@ -322,7 +322,7 @@ export default function CoverLetters() {
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{letters.length + pending.length}</span>
             {query && visible.length !== letters.length &&
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>{visible.length} shown</span>}
-            <div style={{ marginLeft: 'auto', flex: '0 1 210px', minWidth: 0, height: 28, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ marginLeft: 'auto', flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search letter or company…"
                 style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />

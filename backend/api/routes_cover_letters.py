@@ -271,13 +271,20 @@ async def export_pdf(cl_id: str, db: Session = Depends(get_db)):
 
     # Filename: {Name}_{Type}_CoverLetter_{number}.pdf
     header_name = (cl.json_data or {}).get("header", {}).get("name", "CoverLetter").replace(" ", "")
-    base_type = (cl.name.split(" → ")[0] if " → " in (cl.name or "") else (cl.name or "Cover")).replace(" ", "")
+    def _safe(text: str) -> str:
+        """ASCII, no spaces or punctuation that muddles a download filename."""
+        out = "".join(c for c in (text or "") if c.isalnum() or c in " -_").strip()
+        return out.replace(" ", "")
+
     number = ""
+    label = _safe(cl.name) or "Cover"
     if cl.job_id:
         job = db.query(Job).filter(Job.id == cl.job_id).first()
-        if job and job.short_id:
-            number = f"_{job.short_id}"
-    filename = f"{header_name}_{base_type}_CoverLetter{number}".encode("ascii", "replace").decode()
+        if job:
+            if job.short_id:
+                number = f"_{job.short_id}"
+            label = _safe(job.company) or label
+    filename = f"{header_name}_{label}_CoverLetter{number}".encode("ascii", "replace").decode()
 
     return Response(
         content=pdf_bytes,
@@ -440,7 +447,7 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         if cl:
             # Regenerate: rewrite this draft in place. The template and paper the
             # user picked in the editor are theirs — only the writing is replaced.
-            cl.name = f"{base_name} → {job_label}"
+            cl.name = job_label
             cl.resume_id = stored_resume_id
             cl.from_persona = persona_as_base
             cl.json_data = json_data
@@ -454,7 +461,7 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
             action = "regenerated"
         else:
             cl = CoverLetter(
-                name=f"{base_name} → {job_label}",
+                name=job_label,
                 job_id=job_id,
                 resume_id=stored_resume_id,
                 from_persona=persona_as_base,
