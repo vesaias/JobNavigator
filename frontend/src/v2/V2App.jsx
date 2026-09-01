@@ -113,7 +113,7 @@ export default function V2App() {
                   // padding is asymmetric to keep the icon on the axis
                   padding: open ? `0 ${padX}px` : '0 13px 0 11px',
                   fontSize: 14, whiteSpace: 'nowrap', borderLeft: `2px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
-                  background: active ? 'rgba(255,255,255,.045)' : 'transparent', transition: 'padding .32s ease',
+                  background: active ? 'var(--rail-active)' : 'transparent', transition: 'padding .32s ease',
                 }
                 const inner = (
                   <>

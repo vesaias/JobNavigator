@@ -27,7 +27,7 @@ const CTRL = {
 }
 const POPOVER = {
   position: 'absolute', top: '100%', left: 0, zIndex: 40, marginTop: 4, background: 'var(--surface)',
-  border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)',
+  border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)',
   padding: 5, display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 300, overflow: 'auto',
 }
 

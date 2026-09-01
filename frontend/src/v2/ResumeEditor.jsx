@@ -371,7 +371,7 @@ export default function ResumeEditor() {
             {headMenu && (
               <>
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column' }}>
                   <MenuHead>This copy</MenuHead>
                   <MenuItem icon="✦" label="Re-tailor…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
                   <MenuItem icon="◎" label="Score again · light" hint="score only" onClick={() => runScore('light')} />
@@ -418,7 +418,7 @@ export default function ResumeEditor() {
               {tplOpen && (
                 <>
                   <div onClick={() => setTplOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                  <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
+                  <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
                     {templates.map((t) => <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : 'transparent' }}>{t.name}</div>)}
                   </div>
                 </>
@@ -430,7 +430,7 @@ export default function ResumeEditor() {
               {fmtOpen && (
                 <>
                   <div onClick={() => setFmtOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
                     {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <div key={v} onClick={() => pickFormat(v)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === format ? 'var(--accent)' : 'var(--text-2)', background: v === format ? 'var(--accent-soft)' : 'transparent' }}>{l}</div>)}
                   </div>
                 </>
@@ -485,7 +485,7 @@ function RetailorModal({ doc, job, onClose, onRun }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Re-tailor for this job</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -571,8 +571,8 @@ function TailorModal({ doc, onClose, onRun }) {
   const run = () => onRun({ baseId: personaBase ? 'persona' : baseId, jobId: pick, jobDescription: pick ? '' : jd.trim(), company: chosen?.company })
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailor {doc.name} for a job</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
@@ -621,8 +621,8 @@ function ReviewModal({ changes, onClose, onApply }) {
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailoring changes — already applied</span>

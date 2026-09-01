@@ -295,7 +295,7 @@ export default function Companies() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTIONS.find((s) => s.id === sortBy)?.label}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {sortOpen && (
-              <div className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 8, display: 'flex', flexDirection: 'column' }}>
+              <div className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 8, display: 'flex', flexDirection: 'column' }}>
                 {SORT_OPTIONS.map((so) => {
                   const on = so.id === sortBy
                   return (
@@ -387,7 +387,7 @@ export default function Companies() {
                 <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
                   style={{ width: 25, height: 25, border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                 {menuId === c.id && (
-                  <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                  <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                     <span onClick={() => { setMenuId(null); openDrawer(c) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>✎</span>Edit config</span>
                     {urls.length > 0 && <span onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>↗</span>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</span>}
                     <a href={`/v2/feed?company=${encodeURIComponent(c.name)}`} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer', textDecoration: 'none' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span>View jobs in feed</a>
@@ -450,7 +450,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   }
 
   return (
-    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 720, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: '-14px 0 40px rgba(0,0,0,.14)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
+    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 720, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: 'var(--shadow-drawer)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
       <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
@@ -600,7 +600,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Add company</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Paste a careers URL — the ATS is read from it.</span>
@@ -664,7 +664,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   if (test.error) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', padding: 22 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
           <div onClick={onClose} style={{ marginTop: 16, height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
@@ -687,7 +687,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test scrape — {test.company}</span>
           {shots.length > 0 && (

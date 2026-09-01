@@ -41,7 +41,7 @@ export default function LoginModal({ onSuccess }) {
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'}
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
       <form onSubmit={submit}
-        style={{ width: 360, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', padding: '26px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        style={{ width: 360, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '26px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {success ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
             <span style={{ width: 34, height: 34, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>

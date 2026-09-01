@@ -47,7 +47,7 @@ const LABEL = { fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase
 const FIELD_LABEL = { fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
 const POPOVER = {
   position: 'absolute', top: '100%', zIndex: 40, background: 'var(--surface)',
-  border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)',
+  border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)',
   padding: 6, display: 'flex', flexDirection: 'column',
 }
 // Header action pill — same metrics as the Feed's "Open ↗" (collapsed header).
@@ -512,7 +512,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
 function PrepModal({ prep, company, copied, onCopy, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep handover — {company}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the AI of your choice</span>
@@ -578,7 +578,7 @@ function LogModal({ onClose, onSaved }) {
   const box = { height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)', width: '100%' }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Log application</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</span>

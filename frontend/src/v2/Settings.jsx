@@ -49,7 +49,7 @@ function Select({ value, options, onPick, width, mono, placeholder }) {
         <span style={CARET}>▾</span>
       </div>
       {open && (
-        <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, minWidth: '100%', maxWidth: 420, maxHeight: 320, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, minWidth: '100%', maxWidth: 420, maxHeight: 320, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {options.map((o) => (
             <div key={String(o[0])} className="v2-menuitem" onClick={() => { onPick(o[0]); setOpen(false) }}
               style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -92,7 +92,7 @@ function Toggle({ on, label, onPick }) {
     <span onClick={onPick} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: '0 0 auto' }}>
       <span style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</span>
       <span style={{ width: 26, height: 15, borderRadius: 99, background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
-        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: '#fff', transition: 'left 150ms' }} />
+        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: 'var(--knob)', transition: 'left 150ms' }} />
       </span>
     </span>
   )
@@ -646,7 +646,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1020px, 94vw)', maxHeight: 'min(1280px, 92vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1020px, 94vw)', maxHeight: 'min(1280px, 92vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{spec.label}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</span>
@@ -714,7 +714,7 @@ function ModelsModal({ S, save, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 600, maxHeight: 620, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 600, maxHeight: 620, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Model catalog</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>available in every model picker</span>

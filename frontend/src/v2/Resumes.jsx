@@ -262,8 +262,8 @@ function AddModal({ onClose, onCreated }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', padding: 22 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
         <div style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', marginBottom: 4 }}>New base résumé</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Résumé name (e.g. Backend — Platform v4)"

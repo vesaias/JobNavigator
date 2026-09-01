@@ -463,7 +463,7 @@ export default function Stats() {
                   {typeOpen && (
                     <>
                       <span onClick={() => setTypeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
-                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {TYPE_OPTS.map(([id, label]) => (
                           <span key={id} onClick={() => { setActType(id); setTypeOpen(false) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', padding: '6px 9px', borderRadius: 6, fontSize: 12, lineHeight: '16px', color: actType === id ? 'var(--accent)' : 'var(--text-2)', fontWeight: actType === id ? 500 : 400, background: actType === id ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
                             {label}<span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--accent)' }}>{actType === id ? '✓' : ''}</span>

@@ -281,7 +281,7 @@ export default function CoverLetterEditor() {
           <div onClick={() => setMenuOpen((v) => !v)} title="More actions"
             style={{ width: 36, height: 36, border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
           {menuOpen && (
-            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', zIndex: 50, padding: 5, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', zIndex: 50, padding: 5, display: 'flex', flexDirection: 'column' }}>
               {doc.has_application && (
                 <div onClick={() => { setMenuOpen(false); navigate('/v2/applications') }} className="v2-menuitem"
                   style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
@@ -422,7 +422,7 @@ export default function CoverLetterEditor() {
                 <span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {tplOpen && (
-                <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 210, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 210, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {templates.map((t) => (
                     <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" title={t.description || ''}
                       style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : 'transparent' }}>{t.name}</div>
@@ -437,7 +437,7 @@ export default function CoverLetterEditor() {
                 <span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{fmtLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {fmtOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 130, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 130, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {PAGE_FORMATS.map(([f, label]) => (
                     <div key={f} onClick={() => pickFormat(f)} className="v2-menuitem"
                       style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: f === format ? 'var(--accent)' : 'var(--text-2)', background: f === format ? 'var(--accent-soft)' : 'transparent' }}>{label}</div>
@@ -458,7 +458,7 @@ export default function CoverLetterEditor() {
 
       {regenOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => !regening && setRegenOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Regenerate letter</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>

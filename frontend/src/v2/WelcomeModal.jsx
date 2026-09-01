@@ -24,7 +24,7 @@ export default function WelcomeModal({ onClose }) {
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ width: 420, maxWidth: '100%', background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        style={{ width: 420, maxWidth: '100%', background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '22px 24px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 21, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px' }}>Welcome to JobNavigator</span>

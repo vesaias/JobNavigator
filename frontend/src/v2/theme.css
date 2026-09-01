@@ -22,6 +22,41 @@
   --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
   /* Toast tints: softer than --accent-soft/--bad-soft, which are already spoken
      for by chips and inline diffs. */
+  /* Every colour the app can render lives in these two blocks and nowhere
+     else — a theme is a wholesale replacement of this list. */
+  --shadow-modal:0 18px 50px rgba(0,0,0,.28); --shadow-menu:0 12px 32px rgba(0,0,0,.16);
+  --shadow-pop:0 10px 30px rgba(0,0,0,.28); --shadow-toast:0 8px 24px rgba(20,19,15,.18);
+  --shadow-drawer:-14px 0 40px rgba(0,0,0,.14);
+  /* overlays that sit ON the dark rail/bars, so they don't flip with the theme */
+  --rail-active:rgba(255,255,255,.045); --on-rail-line:rgba(255,255,255,.42);
+  --on-rail-dim:rgba(255,255,255,.55); --on-rail-sep:rgba(255,255,255,.18);
+  /* a switch knob and an embedded document are white in either theme */
+  --knob:#ffffff; --iframe-bg:#ffffff;
+  /* ATS + search-mode badge hues */
+  --cc-greenhouse-bg:#e6efe7; --cc-greenhouse-fg:#2f6b4a;
+  --cc-workday-bg:#f6eee0; --cc-workday-fg:#8a5c22;
+  --cc-lever-bg:#e3efee; --cc-lever-fg:#2f6a62;
+  --cc-ashby-bg:#f3e8f0; --cc-ashby-fg:#7a4066;
+  --cc-phenom-bg:#edeaf6; --cc-phenom-fg:#5a4488;
+  --cc-oraclehcm-bg:#f7ebe7; --cc-oraclehcm-fg:#96402f;
+  --cc-smartrecruiters-bg:#e8eef6; --cc-smartrecruiters-fg:#3a5a86;
+  --cc-rippling-bg:#edeaf6; --cc-rippling-fg:#5a4488;
+  --cc-eightfold-bg:#f6eee0; --cc-eightfold-fg:#8a5c22;
+  --cc-talentbrew-bg:#f3e8f0; --cc-talentbrew-fg:#7a4066;
+  --cc-meta-bg:#e8eef6; --cc-meta-fg:#3a5a86;
+  --cc-google-bg:#f7ebe7; --cc-google-fg:#96402f;
+  --cc-generic-bg:#f1efe8; --cc-generic-fg:#57534a;
+  --cc-tier1-bg:#eaf1eb; --cc-tier1-fg:#2f6b4a;
+  --cc-tier2-bg:#e9f0f7; --cc-tier2-fg:#2f5580;
+  --cc-tier3-bg:#f3f0e8; --cc-tier3-fg:#57534a;
+  --cc-tiernone-bg:#f7f5ef; --cc-tiernone-fg:#6d6862;
+  --sm-keyword-bg:#e8eef6; --sm-keyword-fg:#3a5a86;
+  --sm-levels-bg:#e6efe7; --sm-levels-fg:#2f6b4a;
+  --sm-lipersonal-bg:#f3e8f0; --sm-lipersonal-fg:#7a4066;
+  --sm-jobright-bg:#e3efee; --sm-jobright-fg:#2f6a62;
+  --sm-freehire-bg:#f6eee0; --sm-freehire-fg:#8a5c22;
+  --sm-extension-bg:#f1efe8; --sm-extension-fg:#57534a;
+  --sm-url-bg:#edeaf6; --sm-url-fg:#5a4488;
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
@@ -55,6 +90,30 @@
      value was never retuned and read as a green-grey against this warm palette,
      so Companies rows and Résumé cards hovered green while everything else
      warmed. It is now a warm lift from --surface, matching the rest. */
+  --cc-greenhouse-bg:#22352a; --cc-greenhouse-fg:#a4cdb2;
+  --cc-workday-bg:#3a3021; --cc-workday-fg:#d3b083;
+  --cc-lever-bg:#1f3432; --cc-lever-fg:#96c8c0;
+  --cc-ashby-bg:#392a34; --cc-ashby-fg:#d3aac4;
+  --cc-phenom-bg:#2d2a3d; --cc-phenom-fg:#b7abdd;
+  --cc-oraclehcm-bg:#3d2823; --cc-oraclehcm-fg:#dba393;
+  --cc-smartrecruiters-bg:#232f3f; --cc-smartrecruiters-fg:#a3bedd;
+  --cc-rippling-bg:#2d2a3d; --cc-rippling-fg:#b7abdd;
+  --cc-eightfold-bg:#3a3021; --cc-eightfold-fg:#d3b083;
+  --cc-talentbrew-bg:#392a34; --cc-talentbrew-fg:#d3aac4;
+  --cc-meta-bg:#232f3f; --cc-meta-fg:#a3bedd;
+  --cc-google-bg:#3d2823; --cc-google-fg:#dba393;
+  --cc-generic-bg:#34322c; --cc-generic-fg:#b5b0a3;
+  --cc-tier1-bg:#22302a; --cc-tier1-fg:#8dbb9f;
+  --cc-tier2-bg:#212b37; --cc-tier2-fg:#93b5da;
+  --cc-tier3-bg:#302d25; --cc-tier3-fg:#cfcbc3;
+  --cc-tiernone-bg:#2a271f; --cc-tiernone-fg:#b4b0a8;
+  --sm-keyword-bg:#232f3f; --sm-keyword-fg:#a3bedd;
+  --sm-levels-bg:#22352a; --sm-levels-fg:#a4cdb2;
+  --sm-lipersonal-bg:#392a34; --sm-lipersonal-fg:#d3aac4;
+  --sm-jobright-bg:#1f3432; --sm-jobright-fg:#96c8c0;
+  --sm-freehire-bg:#3a3021; --sm-freehire-fg:#d3b083;
+  --sm-extension-bg:#34322c; --sm-extension-fg:#b5b0a3;
+  --sm-url-bg:#2d2a3d; --sm-url-fg:#b7abdd;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
@@ -74,7 +133,7 @@
 .v2-navlink { cursor:pointer; text-decoration:none; transition:background .12s,color .12s; }
 .v2-navlink:hover { background:var(--surface-2); color:var(--text); }
 .v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
-.v2-navdark:hover { color:#f6f3ea; }
+.v2-navdark:hover { color:var(--rail-ink); }
 /* inline styles set border/background on these, so :hover must use !important to win */
 .v2-card { transition:border-color .12s,background .12s; }
 /* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other
@@ -120,56 +179,32 @@
 /* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
    light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
    Tier chips are a separate taxonomy and are not part of that badge set. */
-.jn-v2 .cc-greenhouse{background:#e6efe7;color:#2f6b4a}
-.jn-v2 .cc-workday{background:#f6eee0;color:#8a5c22}
-.jn-v2 .cc-lever{background:#e3efee;color:#2f6a62}
-.jn-v2 .cc-ashby{background:#f3e8f0;color:#7a4066}
-.jn-v2 .cc-phenom{background:#edeaf6;color:#5a4488}
-.jn-v2 .cc-oraclehcm{background:#f7ebe7;color:#96402f}
-.jn-v2 .cc-smartrecruiters{background:#e8eef6;color:#3a5a86}
-.jn-v2 .cc-rippling{background:#edeaf6;color:#5a4488}
-.jn-v2 .cc-eightfold{background:#f6eee0;color:#8a5c22}
-.jn-v2 .cc-talentbrew{background:#f3e8f0;color:#7a4066}
-.jn-v2 .cc-meta{background:#e8eef6;color:#3a5a86}
-.jn-v2 .cc-google{background:#f7ebe7;color:#96402f}
-.jn-v2 .cc-generic{background:#f1efe8;color:#57534a}
-.jn-v2 .cc-tier1{background:#eaf1eb;color:#2f6b4a}
-.jn-v2 .cc-tier2{background:#e9f0f7;color:#2f5580}
-.jn-v2 .cc-tier3{background:#f3f0e8;color:#57534a}
-.jn-v2 .cc-tiernone{background:#f7f5ef;color:#6d6862}
-.jn-v2[data-theme="dark"] .cc-greenhouse{background:#22352a;color:#a4cdb2}
-.jn-v2[data-theme="dark"] .cc-workday{background:#3a3021;color:#d3b083}
-.jn-v2[data-theme="dark"] .cc-lever{background:#1f3432;color:#96c8c0}
-.jn-v2[data-theme="dark"] .cc-ashby{background:#392a34;color:#d3aac4}
-.jn-v2[data-theme="dark"] .cc-phenom{background:#2d2a3d;color:#b7abdd}
-.jn-v2[data-theme="dark"] .cc-oraclehcm{background:#3d2823;color:#dba393}
-.jn-v2[data-theme="dark"] .cc-smartrecruiters{background:#232f3f;color:#a3bedd}
-.jn-v2[data-theme="dark"] .cc-rippling{background:#2d2a3d;color:#b7abdd}
-.jn-v2[data-theme="dark"] .cc-eightfold{background:#3a3021;color:#d3b083}
-.jn-v2[data-theme="dark"] .cc-talentbrew{background:#392a34;color:#d3aac4}
-.jn-v2[data-theme="dark"] .cc-meta{background:#232f3f;color:#a3bedd}
-.jn-v2[data-theme="dark"] .cc-google{background:#3d2823;color:#dba393}
-.jn-v2[data-theme="dark"] .cc-generic{background:#34322c;color:#b5b0a3}
-.jn-v2[data-theme="dark"] .cc-tier1{background:#22302a;color:#8dbb9f}
-.jn-v2[data-theme="dark"] .cc-tier2{background:#212b37;color:#93b5da}
-.jn-v2[data-theme="dark"] .cc-tier3{background:#302d25;color:#cfcbc3}
-.jn-v2[data-theme="dark"] .cc-tiernone{background:#2a271f;color:#b4b0a8}
+.jn-v2 .cc-greenhouse{background:var(--cc-greenhouse-bg);color:var(--cc-greenhouse-fg)}
+.jn-v2 .cc-workday{background:var(--cc-workday-bg);color:var(--cc-workday-fg)}
+.jn-v2 .cc-lever{background:var(--cc-lever-bg);color:var(--cc-lever-fg)}
+.jn-v2 .cc-ashby{background:var(--cc-ashby-bg);color:var(--cc-ashby-fg)}
+.jn-v2 .cc-phenom{background:var(--cc-phenom-bg);color:var(--cc-phenom-fg)}
+.jn-v2 .cc-oraclehcm{background:var(--cc-oraclehcm-bg);color:var(--cc-oraclehcm-fg)}
+.jn-v2 .cc-smartrecruiters{background:var(--cc-smartrecruiters-bg);color:var(--cc-smartrecruiters-fg)}
+.jn-v2 .cc-rippling{background:var(--cc-rippling-bg);color:var(--cc-rippling-fg)}
+.jn-v2 .cc-eightfold{background:var(--cc-eightfold-bg);color:var(--cc-eightfold-fg)}
+.jn-v2 .cc-talentbrew{background:var(--cc-talentbrew-bg);color:var(--cc-talentbrew-fg)}
+.jn-v2 .cc-meta{background:var(--cc-meta-bg);color:var(--cc-meta-fg)}
+.jn-v2 .cc-google{background:var(--cc-google-bg);color:var(--cc-google-fg)}
+.jn-v2 .cc-generic{background:var(--cc-generic-bg);color:var(--cc-generic-fg)}
+.jn-v2 .cc-tier1{background:var(--cc-tier1-bg);color:var(--cc-tier1-fg)}
+.jn-v2 .cc-tier2{background:var(--cc-tier2-bg);color:var(--cc-tier2-fg)}
+.jn-v2 .cc-tier3{background:var(--cc-tier3-bg);color:var(--cc-tier3-fg)}
+.jn-v2 .cc-tiernone{background:var(--cc-tiernone-bg);color:var(--cc-tiernone-fg)}
+.jn-v2 .sm-keyword{background:var(--sm-keyword-bg);color:var(--sm-keyword-fg)}
+.jn-v2 .sm-levels{background:var(--sm-levels-bg);color:var(--sm-levels-fg)}
+.jn-v2 .sm-lipersonal{background:var(--sm-lipersonal-bg);color:var(--sm-lipersonal-fg)}
+.jn-v2 .sm-jobright{background:var(--sm-jobright-bg);color:var(--sm-jobright-fg)}
+.jn-v2 .sm-freehire{background:var(--sm-freehire-bg);color:var(--sm-freehire-fg)}
+.jn-v2 .sm-extension{background:var(--sm-extension-bg);color:var(--sm-extension-fg)}
+.jn-v2 .sm-url{background:var(--sm-url-bg);color:var(--sm-url-fg)}
 
-/* Search mode badges — light pastels; dark tint + light ink */
-.jn-v2 .sm-keyword{background:#e8eef6;color:#3a5a86}
-.jn-v2 .sm-levels{background:#e6efe7;color:#2f6b4a}
-.jn-v2 .sm-lipersonal{background:#f3e8f0;color:#7a4066}
-.jn-v2 .sm-jobright{background:#e3efee;color:#2f6a62}
-.jn-v2 .sm-freehire{background:#f6eee0;color:#8a5c22}
-.jn-v2 .sm-extension{background:#f1efe8;color:#57534a}
-.jn-v2 .sm-url{background:#edeaf6;color:#5a4488}
-.jn-v2[data-theme="dark"] .sm-keyword{background:#232f3f;color:#a3bedd}
-.jn-v2[data-theme="dark"] .sm-levels{background:#22352a;color:#a4cdb2}
-.jn-v2[data-theme="dark"] .sm-lipersonal{background:#392a34;color:#d3aac4}
-.jn-v2[data-theme="dark"] .sm-jobright{background:#1f3432;color:#96c8c0}
-.jn-v2[data-theme="dark"] .sm-freehire{background:#3a3021;color:#d3b083}
-.jn-v2[data-theme="dark"] .sm-extension{background:#34322c;color:#b5b0a3}
-.jn-v2[data-theme="dark"] .sm-url{background:#2d2a3d;color:#b7abdd}
+
 .v2-tab { transition:color .12s; }
 
 /* Reserve the scrollbar's space even when it isn't showing, so a list that

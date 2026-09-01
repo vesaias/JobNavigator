@@ -114,7 +114,7 @@ function Picker({ value, options, onChange, placeholder = '—' }) {
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 31, minWidth: '100%', maxWidth: 280, maxHeight: 260, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5 }}>
+          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 31, minWidth: '100%', maxWidth: 280, maxHeight: 260, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
             <div onClick={() => { onChange(undefined); setOpen(false) }} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: !set ? 'var(--accent)' : 'var(--muted)', background: !set ? 'var(--accent-soft)' : 'transparent' }}>— not answered</div>
             {options.map(([v, l]) => (
               <div key={String(v)} onClick={() => { onChange(v); setOpen(false) }} className="v2-menuitem"

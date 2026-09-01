@@ -501,7 +501,7 @@ export default function Searches() {
                     <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
                       style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                     {menuFor === s.id && (
-                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
                           ['☰', 'View results in feed', () => navigate(`/v2/feed?search=${s.id}`)],
                           ['⧉', 'Duplicate', () => duplicate(s)]].map(([g, label, act]) => (
@@ -587,7 +587,7 @@ function TestModal({ test, tab, setTab, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 980, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 980, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</span>
           <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>

@@ -53,7 +53,7 @@ function Toast({ t, onClose }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
       background: k.bg, border: `1px solid ${k.bd}`, borderRadius: 9, color: k.fg,
-      boxShadow: '0 8px 24px rgba(20,19,15,.18)',
+      boxShadow: 'var(--shadow-toast)',
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(10px)',
       transition: 'opacity 250ms ease, transform 250ms ease',
     }}>
