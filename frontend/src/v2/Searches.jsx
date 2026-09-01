@@ -451,7 +451,12 @@ export default function Searches() {
           const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
-            <div key={s.id} style={{ border: `1px solid ${warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+            /* same card hover as Résumés and Cover Letters. Not while open — the
+               expanded editor shouldn't wash under the cursor — and a warned card
+               keeps its amber edge (.v2-bd-warn comes later in theme.css, so its
+               border-color wins over .v2-card's accent). */
+            <div key={s.id} className={isOpen ? undefined : warn ? 'v2-card v2-bd-warn' : 'v2-card'}
+              style={{ border: `1px solid ${warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
               {/* summary row */}
               <div onClick={() => openEdit(s)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', cursor: 'pointer' }}>
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}

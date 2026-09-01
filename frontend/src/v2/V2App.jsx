@@ -88,18 +88,18 @@ export default function V2App() {
   const padX = open ? 20 : 13
   return (
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-      <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .22s ease', overflow: 'hidden' }}>
-        <div style={{ height: 64, flex: '0 0 auto', position: 'relative', display: 'flex', alignItems: 'center', padding: `0 ${padX}px`, color: 'var(--rail-ink)', whiteSpace: 'nowrap', transition: 'padding .22s ease' }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>JobNavigator</span>
-          <span style={{ position: 'absolute', left: 0, width: W, display: 'flex', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 17, letterSpacing: '.02em', opacity: open ? 0 : 1, transition: 'opacity .18s, width .22s ease', pointerEvents: 'none' }}>JN</span>
+      <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .32s ease', overflow: 'hidden' }}>
+        <div style={{ height: 64, flex: '0 0 auto', position: 'relative', display: 'flex', alignItems: 'center', padding: `0 ${padX}px`, color: 'var(--rail-ink)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>JobNavigator</span>
+          <span style={{ position: 'absolute', left: 0, width: W, display: 'flex', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 17, letterSpacing: '.02em', opacity: open ? 0 : 1, transition: 'opacity .2s, width .32s ease', pointerEvents: 'none' }}>JN</span>
         </div>
 
         <nav className="v2-railscroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '6px 0', overflowX: 'hidden', overflowY: 'auto' }}>
           {GROUPS.map((g) => (
             <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
-                <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{g.label}</span>
-                <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .18s', pointerEvents: 'none' }} />
+                <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{g.label}</span>
+                <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .2s', pointerEvents: 'none' }} />
               </div>
               {g.items.map((it) => {
                 const active = loc.pathname === it.to || loc.pathname.startsWith(it.to + '/')
@@ -113,16 +113,16 @@ export default function V2App() {
                   // padding is asymmetric to keep the icon on the axis
                   padding: open ? `0 ${padX}px` : '0 13px 0 11px',
                   fontSize: 14, whiteSpace: 'nowrap', borderLeft: `2px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
-                  background: active ? 'rgba(255,255,255,.045)' : 'transparent', transition: 'padding .22s ease',
+                  background: active ? 'rgba(255,255,255,.045)' : 'transparent', transition: 'padding .32s ease',
                 }
                 const inner = (
                   <>
-                    <span style={{ flex: `0 0 ${open ? 0 : 24}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: open ? 'flex-start' : 'center', opacity: open ? 0 : 1, transition: 'opacity .18s, flex-basis .22s ease' }}>
+                    <span style={{ flex: `0 0 ${open ? 0 : 24}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: open ? 'flex-start' : 'center', opacity: open ? 0 : 1, transition: 'opacity .2s, flex-basis .32s ease' }}>
                       <Icon size={15} strokeWidth={1.8} />
                     </span>
-                    <span style={{ flex: open ? 1 : '0 0 0px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{it.label}</span>
-                    {count != null && <span style={{ flex: '0 0 auto', width: open ? undefined : 0, overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>{count}</span>}
-                    {!open && warned && <span title="Needs attention" style={{ position: 'absolute', left: 'calc(50% + 7px)', width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
+                    <span style={{ flex: open ? 1 : '0 0 0px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{it.label}</span>
+                    {count != null && <span style={{ flex: '0 0 auto', width: open ? undefined : 0, overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{count}</span>}
+                    {!open && warned && <span title="Needs attention" style={{ position: 'absolute', top: 8, left: 'calc(50% + 5px)', width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
                   </>
                 )
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" title={tip} className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
@@ -133,24 +133,24 @@ export default function V2App() {
           ))}
         </nav>
 
-        <a href="/" className="v2-navdark" title={open ? undefined : 'Classic UI'} style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap', transition: 'padding .22s ease' }}>
-          <span style={{ flex: `0 0 ${open ? 0 : 24}px`, display: 'flex', justifyContent: 'center', overflow: 'hidden', opacity: open ? 0 : 1, transition: 'opacity .18s, flex-basis .22s ease' }}>←</span>
-          <span style={{ opacity: open ? 1 : 0, transition: 'opacity .18s' }}>← Classic UI</span>
+        <a href="/" className="v2-navdark" title={open ? undefined : 'Classic UI'} style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+          <span style={{ flex: `0 0 ${open ? 0 : 24}px`, display: 'flex', justifyContent: 'center', overflow: 'hidden', opacity: open ? 0 : 1, transition: 'opacity .2s, flex-basis .32s ease' }}>←</span>
+          <span style={{ opacity: open ? 1 : 0, transition: 'opacity .2s' }}>← Classic UI</span>
         </a>
 
         {/* pipeline pulse — the dot yields its slot to the theme toggle when collapsed */}
-        <div onClick={() => navigate('/v2/stats')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .22s ease' }}>
+        <div onClick={() => navigate('/v2/stats')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
               ? <span style={{ width: 7, height: 7, borderRadius: 99, background: healthy ? 'var(--rail-accent)' : 'var(--warn)' }} />
               : <span onClick={(e) => { e.stopPropagation(); toggleTheme() }} title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>}
           </span>
-          <span style={{ fontSize: 11.5, lineHeight: '18px', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .18s', overflow: 'hidden', textOverflow: 'ellipsis' }}>{healthText}</span>
+          <span style={{ fontSize: 11.5, lineHeight: '18px', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s', overflow: 'hidden', textOverflow: 'ellipsis' }}>{healthText}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', height: 34, padding: `0 12px 0 ${padX}px`, borderTop: '1px solid var(--rail-line)', whiteSpace: 'nowrap', transition: 'padding .22s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', height: 34, padding: `0 12px 0 ${padX}px`, borderTop: '1px solid var(--rail-line)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span onClick={toggleRail} title={open ? 'Collapse to icons' : 'Expand navigation'} className="v2-navdark" style={{ flex: '0 0 24px', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>{open ? '‹' : '›'}</span>
-          <span onClick={toggleRail} className="v2-navdark" style={{ flex: 1, fontSize: 12, lineHeight: '18px', color: 'var(--rail-dim)', cursor: 'pointer', opacity: open ? 1 : 0, transition: 'opacity .18s' }}>Collapse</span>
+          <span onClick={toggleRail} className="v2-navdark" style={{ flex: 1, fontSize: 12, lineHeight: '18px', color: 'var(--rail-dim)', cursor: 'pointer', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>Collapse</span>
           <span onClick={toggleTheme} title={`Switch to ${dark ? 'light' : 'dark'} mode`} className="v2-navdark" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: open ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>
         </div>
       </aside>
