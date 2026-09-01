@@ -112,7 +112,7 @@ export default function Settings() {
   const [editFor, setEditFor] = useState(null)
   const [modelsOpen, setModelsOpen] = useState(false)
   const [li, setLi] = useState(null)          // linkedin session status
-  const [toast, setToast] = useState('')
+  const [toast, setToast] = useState(null)
   const scrollRef = useRef(null)
   const timers = useRef([])
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
@@ -137,15 +137,15 @@ export default function Settings() {
     api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => {})
   }, [load])
 
-  const flash = (msg) => {
-    setToast(msg)
-    timers.current.push(setTimeout(() => setToast(''), 2200))
+  const flash = (msg, bad = false) => {
+    setToast({ msg, bad })
+    timers.current.push(setTimeout(() => setToast(null), 2200))
   }
 
   const save = useCallback(async (key, value) => {
     setS((p) => ({ ...p, [key]: value }))
     try { await api.patch('/settings', { [key]: value }); flash('Saved') }
-    catch (e) { console.error(e); flash('Could not save — try again') }
+    catch (e) { console.error(e); flash('Could not save — try again', true) }
   }, [])
 
   const val = (k, fallback = '') => {
@@ -188,7 +188,7 @@ export default function Settings() {
     } catch (e) {
       console.error(e)
       setTrig((t) => ({ ...t, [id]: '' }))
-      flash(e?.response?.data?.detail || 'That did not work')
+      flash(e?.response?.data?.detail || 'That did not work', true)
     }
   }
 
@@ -354,8 +354,8 @@ export default function Settings() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Settings</h1>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Saves automatically · everything stays on this machine
+          <span style={{ fontSize: 13, lineHeight: '20px', color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color .15s' }}>
+            {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
         </div>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto', height: 30, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -401,10 +401,6 @@ export default function Settings() {
           </div>
         </div>
       </div>
-
-      {toast && (
-        <div style={{ position: 'absolute', top: 16, right: 30, zIndex: 70, height: 30, padding: '0 14px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500 }}>{toast}</div>
-      )}
 
       {editFor && <EditModal spec={editFor} S={S} defaults={defaults} onSave={save} onClose={() => setEditFor(null)} />}
       {modelsOpen && <ModelsModal S={S} save={save} onClose={() => setModelsOpen(false)} />}
@@ -546,7 +542,7 @@ function ApiKeyRow({ value, save, flash }) {
         <span onClick={() => setShown((v) => !v)} style={{ fontSize: 10.5, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</span>
       </span>
       <ActionBtn label="Save key" state="" onClick={async () => {
-        if (!local.trim()) { flash('Type the new key first'); return }
+        if (!local.trim()) { flash('Type the new key first', true); return }
         await save('dashboard_api_key', local.trim())
         try { localStorage.setItem('jobnavigator_api_key', local.trim()) } catch {}
         try { await api.post('/auth/set-session', { api_key: local.trim() }) } catch { /* cookie refresh is best effort */ }
@@ -572,7 +568,7 @@ function LinkedInRow({ li, setLi, flash }) {
           if (!['running', 'awaiting_pin'].includes(data.phase)) clearInterval(poll.current)
         } catch { /* keep polling */ }
       }, 2500)
-    } catch (e) { flash(e?.response?.data?.detail || 'Could not start the refresh') }
+    } catch (e) { flash(e?.response?.data?.detail || 'Could not start the refresh', true) }
   }
 
   const phase = li?.phase || 'idle'
@@ -594,7 +590,7 @@ function LinkedInRow({ li, setLi, flash }) {
           </span>
           <ActionBtn label="Submit PIN" state="" onClick={async () => {
             const { data } = await api.post('/linkedin/session/pin', { pin })
-            if (!data.ok) flash(data.detail || 'Enter the digits from the email')
+            if (!data.ok) flash(data.detail || 'Enter the digits from the email', true)
             else { setPin(''); flash('PIN sent') }
           }} />
         </>
