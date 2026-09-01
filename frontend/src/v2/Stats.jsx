@@ -268,7 +268,7 @@ export default function Stats() {
             ['Applications', int(stats?.total_applications), `${inPlay} in play`, 'In play = not rejected, ghosted or withdrawn'],
             ['Best open score', best?.cv_scores ? String(Math.round(Math.max(...Object.values(best.cv_scores).filter((v) => typeof v === 'number')))) : '—', best?.company || '', 'Highest-scoring posting you haven’t applied to'],
           ].map(([label, value, sub, hint], i, arr) => (
-            <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7, padding: '14px 20px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
+            <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {value}{sub && <span style={{ fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}> {sub}</span>}
@@ -279,8 +279,11 @@ export default function Stats() {
 
         {/* funnel + score distribution */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+          {/* Fixed height: the funnel and the Sankey are different shapes, and
+              letting either size the card made the whole row jump on toggle.
+              250 leaves the funnel a little slack and gives the Sankey room. */}
+          <div style={{ ...CARD, height: 250, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Application funnel</span>
               <span style={{ flex: 1, ...NOTE }}>{flowView === 'bar' ? `where the ${int(stats?.total_applications)} applications stand` : 'every recorded status transition'}</span>
               {sankey && (
@@ -293,9 +296,7 @@ export default function Stats() {
               )}
             </div>
             {flowView === 'sankey' && sankey ? (
-              /* 115 bars + 12 gap + a two-line footnote — the funnel's exact
-                 footprint, so toggling doesn't resize the card */
-              <div style={{ height: 160 }}>
+              <div style={{ flex: 1, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <Sankey data={sankey} nodePadding={18} nodeWidth={10} margin={{ top: 4, right: 112, left: 4, bottom: 4 }}
                     link={{ stroke: 'var(--funnel-low)', strokeOpacity: 0.3 }} node={<SankeyNode />}>
@@ -303,7 +304,8 @@ export default function Stats() {
                   </Sankey>
                 </ResponsiveContainer>
               </div>
-            ) : (<>
+            ) : (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               {funnel.map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -319,7 +321,8 @@ export default function Stats() {
               Saved is your live shortlist; the rest count every application that ever reached that stage ·
               applied → interview {conv(stats?.total_applications, reached.interview || 0)}, interview → offer {conv(reached.interview || 0, reached.offer || 0)}
             </span>
-            </>)}
+            </div>
+            )}
           </div>
 
           <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -351,8 +354,10 @@ export default function Stats() {
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>New jobs · last 30 days</span>
               <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
-              {[['new', 'var(--accent)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
-                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}><span style={{ width: 14, height: 2, background: c }} />{l}</span>
+              {[['new', 'var(--accent)', false], ['applied', 'var(--warn)', true]].map(([l, c, dash]) => (
+                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}>
+                  <span style={{ width: 14, height: 2, background: dash ? `repeating-linear-gradient(90deg, ${c} 0 4px, transparent 4px 7px)` : c }} />{l}
+                </span>
               ))}
             </div>
             <Spark series={series} peak={peak} />
@@ -385,7 +390,9 @@ export default function Stats() {
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
                 <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
-              <div className="v2-scroll v2-gutter" style={{ flex: 1, minHeight: 0, maxHeight: 218, overflow: 'auto' }}>
+              {/* fixed, not max: 3 purposes at 30d and 6 at all-time otherwise
+                  grow the card when you switch period */}
+              <div className="v2-scroll v2-gutter" style={{ flex: '0 0 218px', height: 218, overflow: 'auto' }}>
               {(costs?.by_purpose || []).map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
@@ -539,12 +546,12 @@ function Spark({ series, peak }) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
           <XAxis dataKey="label" interval={6} {...axis} />
           <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--accent)' }} />
-          <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--stage-applied)' }} />
+          <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--warn)' }} />
           <Tooltip
             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, padding: '6px 10px' }}
             labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
           <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-          <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--stage-applied)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+          <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--warn)" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
       {peak?.total > 0 && <span style={{ flex: '0 0 auto', alignSelf: 'center', ...MONO, fontSize: 10, lineHeight: '14px', color: 'var(--muted)' }}>peak {peak.total} · {dayLabel(peak.date)}</span>}
