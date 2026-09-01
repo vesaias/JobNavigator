@@ -134,6 +134,27 @@ export default function ResumeEditor() {
     }
   }, [pushToast])
 
+  // Re-tailor keeps this copy's job and swaps what it is built from: either run
+  // the tailoring LLM against another base, or take a plain copy of that base
+  // (no LLM) purely to get a fresh set of tracer links.
+  const runRetailor = useCallback(async ({ mode, baseId }) => {
+    setTailorOpen(false)
+    const company = jobData?.company || 'this job'
+    try {
+      if (mode === 'copy') {
+        const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: doc.job_id })
+        pushToast({ msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
+      } else {
+        await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
+        pendingRef.current.push({ baseId, jobId: doc.job_id, company, since: Date.now() })
+        pushToast({ msg: `Tailoring for ${company}… runs in the background.` })
+      }
+    } catch (e) {
+      if (e.response?.status === 409) pushToast({ msg: 'Already tailoring for that job.' })
+      else pushToast({ msg: e.response?.data?.detail || 'Could not start.' })
+    }
+  }, [doc, jobData, pushToast, navigate])
+
   useEffect(() => {
     let alive = true
     api.get(`/resumes/${id}`).then(({ data: d }) => {
@@ -428,7 +449,9 @@ export default function ResumeEditor() {
         </section>
       </div>
 
-      {tailorOpen && <TailorModal doc={doc} job={jobData} onClose={() => setTailorOpen(false)} onRun={runTailor} />}
+      {tailorOpen && (isCopy
+        ? <RetailorModal doc={doc} job={jobData} onClose={() => setTailorOpen(false)} onRun={runRetailor} />
+        : <TailorModal doc={doc} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
       {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
 
       {/* toasts */}
@@ -444,14 +467,97 @@ export default function ResumeEditor() {
   )
 }
 
+// ── re-tailor (a tailored copy) ──────────────────────────────────────────────
+// The job is already decided — we are on that job's résumé. What is open is
+// which base to work from, and whether to run the tailoring LLM at all or just
+// take an exact copy for a fresh set of tracer links.
+function RetailorModal({ doc, job, onClose, onRun }) {
+  const [mode, setMode] = useState('tailor')
+  const [bases, setBases] = useState([])
+  const [persona, setPersona] = useState(false)
+  const [baseId, setBaseId] = useState(doc.parent_id || 'persona')
+
+  useEffect(() => {
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch(() => {})
+    api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
+  }, [])
+
+  // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be tailored from.
+  const personaCopyable = false
+  const options = [
+    ...(persona ? [{ id: 'persona', name: 'Persona', note: 'your full profile' }] : []),
+    ...bases.map((b) => ({ id: String(b.id), name: b.name, note: 'base résumé' })),
+  ]
+  const disabled = (id) => mode === 'copy' && id === 'persona' && !personaCopyable
+  const canRun = !!baseId && !disabled(baseId)
+
+  const MODES = [
+    ['tailor', '✦ Tailor', 'Rewrites bullets against this job description'],
+    ['copy', 'Copy', 'Exact copy of the base, with its own tracer links'],
+  ]
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Re-tailor for this job</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy
+          </span>
+        </div>
+
+        <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 13, maxHeight: 460, overflow: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>How</span>
+            <div style={{ display: 'flex', gap: 7 }}>
+              {MODES.map(([id, label, hint]) => {
+                const on = mode === id
+                return (
+                  <div key={id} onClick={() => setMode(id)} title={hint} className="v2-act"
+                    style={{ flex: 1, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
+                    <span style={{ fontSize: 10.5, lineHeight: 1.4, color: 'var(--muted)', textWrap: 'pretty' }}>{hint}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>From which base</span>
+            {options.map((o) => {
+              const on = String(baseId) === String(o.id), off = disabled(o.id)
+              return (
+                <div key={o.id} onClick={() => !off && setBaseId(o.id)} className={off ? undefined : 'v2-act'}
+                  title={off ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: off ? 'default' : 'pointer', opacity: off ? 0.45 : 1 }}>
+                  <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
+                  <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</span>
+                </div>
+              )
+            })}
+            {options.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, color: 'var(--muted)' }}>No base résumés yet.</div>}
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
+          <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+          <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── tailor modal (job picker + freeform + persona) ───────────────────────────
-function TailorModal({ doc, job, onClose, onRun }) {
-  const isCopy = !doc.is_base
-  const baseId = isCopy ? (doc.parent_id || 'persona') : doc.id
+function TailorModal({ doc, onClose, onRun }) {
+  const baseId = doc.id
   const [jobs, setJobs] = useState([])
   const [existing, setExisting] = useState(new Set())
   const [q, setQ] = useState('')
-  const [pick, setPick] = useState(isCopy && doc.job_id ? doc.job_id : null)
+  const [pick, setPick] = useState(null)
   const [jd, setJd] = useState('')
   const [personaBase, setPersonaBase] = useState(baseId === 'persona')
 
@@ -474,22 +580,20 @@ function TailorModal({ doc, job, onClose, onRun }) {
     .sort((a, b) => (['saved', 'applied'].includes(b.status) ? 1 : 0) - (['saved', 'applied'].includes(a.status) ? 1 : 0))
 
   const canRun = !!(pick || jd.trim())
-  const chosen = jobs.find((j) => String(j.id) === String(pick)) || job
+  const chosen = jobs.find((j) => String(j.id) === String(pick))
   const run = () => onRun({ baseId: personaBase ? 'persona' : baseId, jobId: pick, jobDescription: pick ? '' : jd.trim(), company: chosen?.company })
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,19,15,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 50px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{isCopy ? 'Re-tailor for a job' : `Tailor ${doc.name} for a job`}</span>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailor {doc.name} for a job</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
         </div>
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
-          {/* Re-tailor is the same action as Tailor — pick a different base or a
-              different job and mint a fresh copy — so the modal is identical. */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
             <input type="checkbox" checked={personaBase} onChange={(e) => setPersonaBase(e.target.checked)} />
-            Tailor from Persona instead of {isCopy ? 'this copy’s base' : 'this base'}
+            Tailor from Persona instead of this base
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Pick a job · saved and scored first</span>
@@ -518,7 +622,7 @@ function TailorModal({ doc, job, onClose, onRun }) {
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{isCopy ? '✦ Re-tailor' : '✦ Tailor'}</div>
+          <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
         </div>
       </div>
     </div>
