@@ -66,6 +66,8 @@
 
 /* Cover letters: card headers wash on hover, paragraph/contact buttons tint */
 .v2-clhead:hover { background:var(--bg); }
+/* inline style sets the dashed border, so :hover needs !important to win */
+.v2-archband:hover { border-color:var(--edge) !important; }
 .v2-parabtn:hover { background:var(--surface-2); }
 .v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
 .v2-hover-accent-text:hover { color:var(--accent); }

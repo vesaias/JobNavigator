@@ -340,14 +340,13 @@ export default function CoverLetters() {
             {active.map((c) => row(c, false))}
 
             {archived.length > 0 && (
-              <div onClick={() => setArchOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 4px', cursor: 'pointer' }}>
-                <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Not active · drafts &amp; rejected</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{archived.length}</span>
-                <span style={{ marginLeft: 'auto', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
-                  <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"
-                    style={{ display: 'block', transform: archOpen ? 'none' : 'rotate(-90deg)', transition: 'transform .12s' }}>
-                    <path d="M2 4 L5 7 L8 4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+              <div onClick={() => setArchOpen((v) => !v)} className="v2-archband"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginTop: 6, border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from drafts &amp; rejected applications
+                </span>
+                <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                  {archOpen ? 'hide ⌄' : 'browse ›'}
                 </span>
               </div>
             )}
