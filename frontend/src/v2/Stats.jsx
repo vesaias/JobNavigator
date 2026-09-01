@@ -1,0 +1,473 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import api from '../api'
+import './theme.css'
+
+// Stats reads the pipeline back to you: what's in the funnel, how the scorer is
+// doing, what the LLM costs, and what the scheduler has actually been up to.
+// Everything here is derived from endpoints that already existed, except the
+// score averages (score-distribution?detail=true) and run result summaries
+// (JobRun.result_summary, which used to be written as None on every run).
+
+const PERIODS = [[1, '1d'], [7, '7d'], [30, '30d'], [0, 'all']]
+const BUCKET_COLOR = {
+  '0-20': 'var(--line)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
+  '61-80': 'var(--funnel-mid)', '81-100': 'var(--accent)',
+}
+const TYPE_CLASS = {
+  scrape: 'sm-keyword', h1b: 'sm-lipersonal', cv_score: 'sm-levels',
+  email: 'sm-freehire', telegram: 'sm-jobright',
+}
+const TYPE_OPTS = [['', 'All types'], ['scrape', 'Scrape'], ['h1b', 'H-1B'], ['cv_score', 'Résumé score'], ['email', 'Email'], ['telegram', 'Telegram']]
+
+const money = (n) => (n == null ? '—' : n === 0 || n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(n < 0.01 ? 4 : 3)}`)
+const int = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'))
+const dayLabel = (iso) => { try { return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) } catch { return iso } }
+const cet = (iso) => {
+  if (!iso) return '—'
+  try { return new Date(iso).toLocaleString('en-GB', { timeZone: 'Europe/Berlin', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' ·') }
+  catch { return iso }
+}
+const dur = (s) => (s == null ? '—' : s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`)
+// Turn a 5-field cron into English; anything else (including "Every 90 min") passes through.
+const decodeCron = (expr) => {
+  if (!expr || expr.includes('Every')) return expr || '—'
+  const p = expr.trim().split(/\s+/)
+  if (p.length !== 5) return expr
+  const [min, hour, day, month, dow] = p
+  const DOW = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' }
+  let t
+  if (hour !== '*' && min !== '*') t = `at ${hour.padStart(2, '0')}:${min.padStart(2, '0')}`
+  else if (hour !== '*') t = `at ${hour.padStart(2, '0')}:00`
+  else if (min.startsWith('*/')) t = `every ${min.slice(2)} min`
+  else if (hour.startsWith('*/')) t = `every ${hour.slice(2)}h`
+  else return expr
+  if (dow !== '*') return `${DOW[dow] || dow} ${t}`
+  if (day !== '*') return `Day ${day} ${t}`
+  if (month !== '*') return `Month ${month} ${t}`
+  return `Daily ${t}`
+}
+
+const CARD = { border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)' }
+const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
+const NOTE = { fontSize: 11, color: 'var(--muted)' }
+const COL = { fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
+const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5 }
+const Pill = ({ children, bg, fg }) => (
+  <span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, background: bg, color: fg, lineHeight: '14px' }}>{children}</span>
+)
+
+export default function Stats() {
+  const [stats, setStats] = useState(null)
+  const [timeline, setTimeline] = useState([])
+  const [scores, setScores] = useState(null)
+  const [best, setBest] = useState(null)
+  const [flows, setFlows] = useState([])
+  const [costs, setCosts] = useState(null)
+  const [period, setPeriod] = useState(30)
+  const [jobs, setJobs] = useState([])
+  const [runs, setRuns] = useState([])
+  const [activity, setActivity] = useState([])
+  const [tab, setTab] = useState('runs')
+  const [actType, setActType] = useState('')
+  const [actQuery, setActQuery] = useState('')
+  const [typeOpen, setTypeOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [triggering, setTriggering] = useState(new Set())
+  const [loading, setLoading] = useState(true)
+  const pollRef = useRef(null)
+  const runningRef = useRef(false)
+  const qRef = useRef(null)
+
+  const loadCore = useCallback(async () => {
+    const get = (u, params) => api.get(u, { params }).then(({ data }) => data).catch(() => null)
+    const [s, tl, sd, bj, fl] = await Promise.all([
+      get('/stats'),
+      get('/stats/timeline', { days: 30 }),
+      get('/stats/score-distribution', { detail: true }),
+      get('/jobs', { status: 'new,saved', sort_by: 'score', limit: 1 }),
+      get('/stats/sankey'),
+    ])
+    if (s) setStats(s)
+    if (tl) setTimeline(tl)
+    if (sd) setScores(sd)
+    const list = bj?.jobs || bj?.items || (Array.isArray(bj) ? bj : [])
+    setBest(list[0] || null)
+    setFlows(Array.isArray(fl) ? fl : [])
+  }, [])
+
+  const loadLive = useCallback(async () => {
+    const [j, r] = await Promise.all([
+      api.get('/scheduler/jobs').then(({ data }) => data).catch(() => null),
+      api.get('/monitor/history', { params: { limit: 30 } }).then(({ data }) => data).catch(() => null),
+    ])
+    if (j) { setJobs(j); runningRef.current = j.some((x) => x.running) }
+    if (r) setRuns(r)
+  }, [])
+
+  const loadActivity = useCallback(() => {
+    api.get('/activity-log', { params: { limit: 50, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
+      .then(({ data }) => setActivity(data || [])).catch(() => {})
+  }, [actType, actQuery])
+
+  useEffect(() => { loadCore().finally(() => setLoading(false)); loadLive() }, [loadCore, loadLive])
+  useEffect(() => { api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => setCosts(null)) }, [period])
+  // debounce the company box — v1 fired a request per keystroke
+  useEffect(() => { clearTimeout(qRef.current); qRef.current = setTimeout(loadActivity, 300); return () => clearTimeout(qRef.current) }, [loadActivity])
+
+  // poll the live half only: 3s while something runs, 10s otherwise
+  useEffect(() => {
+    const poll = () => { loadLive(); pollRef.current = setTimeout(poll, runningRef.current ? 3000 : 10000) }
+    pollRef.current = setTimeout(poll, 3000)
+    return () => clearTimeout(pollRef.current)
+  }, [loadLive])
+
+  const refresh = async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    await Promise.all([loadCore(), loadLive()])
+    loadActivity()
+    api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => {})
+    setRefreshing(false)
+  }
+
+  const trigger = async (job) => {
+    if (!job.trigger_url) return
+    setTriggering((p) => new Set(p).add(job.id))
+    try { await api.post(job.trigger_url); loadLive() } catch (e) { console.error('trigger', e) }
+    finally { setTimeout(() => setTriggering((p) => { const n = new Set(p); n.delete(job.id); return n }), 4000) }
+  }
+
+  // ── derived ───────────────────────────────────────────────────────────────
+  const st = stats?.application_statuses || {}
+  const inPlay = Math.max(0, (stats?.total_applications || 0) - ((st.rejected || 0) + (st.ghosted || 0) + (st.withdrawn || 0)))
+
+  // fill the 30-day window: the API omits days with no discoveries
+  const series = useMemo(() => {
+    const byDate = Object.fromEntries((timeline || []).map((r) => [r.date, r]))
+    const out = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      const r = byDate[key]
+      out.push({ date: key, total: r?.total || 0, applied: r?.applied || 0 })
+    }
+    return out
+  }, [timeline])
+  const weekly = useMemo(() => {
+    const sum = (a) => a.reduce((n, r) => n + r.total, 0)
+    return { now: sum(series.slice(-7)), prev: sum(series.slice(-14, -7)) }
+  }, [series])
+  const peak = useMemo(() => series.reduce((m, r) => (r.total > (m?.total ?? -1) ? r : m), null), [series])
+
+  // A funnel needs "ever reached", not "currently in". application_statuses is a
+  // snapshot — an application that interviewed and was then rejected counts as
+  // rejected there, so reading Interview off it undercounts badly. The status
+  // transition graph records every hop, so downstream stages come from that.
+  // Saved is a different population (the live shortlist), so it carries no
+  // conversion percentage; bar widths are relative to the widest stage.
+  const reached = useMemo(() => {
+    const to = {}
+    for (const f of flows) to[f.target] = (to[f.target] || 0) + (f.value || 0)
+    return to
+  }, [flows])
+  const funnel = useMemo(() => {
+    const applied = stats?.total_applications || 0
+    const rows = [
+      ['Saved', stats?.saved_jobs || 0, 'var(--line-strong)', null],
+      ['Applied', applied, 'var(--funnel-low)', applied],
+      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)', applied],
+      ['Offer', reached.offer || st.offer || 0, 'var(--accent)', applied],
+    ]
+    const widest = Math.max(1, ...rows.map((r) => r[1]))
+    return rows.map(([label, count, color, basis]) => ({
+      label, count, color,
+      pct: basis ? `${Math.round((count / basis) * 100)}%` : '',
+      w: `${Math.max(count ? 2 : 0, Math.round((count / widest) * 100))}%`,
+    }))
+  }, [stats, st, reached])
+  const conv = (a, b) => (a ? `${Math.round((b / a) * 100)}%` : '—')
+
+  const buckets = scores?.buckets || []
+  const maxBucket = Math.max(1, ...buckets.map((b) => b.count))
+  const spend = costs?.total_cost_usd
+
+  if (loading) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Stats</h1>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {int(stats?.total_jobs)} jobs tracked · {int(stats?.total_applications)} application{stats?.total_applications === 1 ? '' : 's'}, {inPlay} in play
+            {spend != null && <> · {money(spend)} LLM spend {period ? `in ${period}d` : 'all time'}</>}
+          </span>
+        </div>
+        <span onClick={refresh} className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
+          {refreshing
+            ? <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+            : <span style={{ fontSize: 12 }}>↻</span>}
+          Refresh
+        </span>
+      </header>
+
+      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 30px 30px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* KPI strip */}
+        <div style={{ ...CARD, display: 'flex' }}>
+          {[
+            ['Total jobs', int(stats?.total_jobs), '', 'Everything ever scraped or captured, minus cleanup'],
+            ['New this week', int(weekly.now), weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs last` : '', 'Discovered in the last 7 days'],
+            ['Saved', int(stats?.saved_jobs), '', 'In your feed shortlist'],
+            ['Applications', int(stats?.total_applications), `${inPlay} in play`, 'In play = not rejected, ghosted or withdrawn'],
+            ['Best open score', best?.cv_scores ? String(Math.round(Math.max(...Object.values(best.cv_scores).filter((v) => typeof v === 'number')))) : '—', best?.company || '', 'Highest-scoring posting you haven’t applied to'],
+          ].map(([label, value, sub, hint], i, arr) => (
+            <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '14px 20px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
+              <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
+              <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {value}{sub && <span style={{ fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}> {sub}</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* funnel + score distribution */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+              <span style={H}>Application funnel</span>
+              <span style={NOTE}>where the {int(stats?.total_applications)} applications stand</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {funnel.map((f) => (
+                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ flex: '0 0 76px', fontSize: 12, lineHeight: '18px', color: 'var(--text-2)' }}>{f.label}</span>
+                  <div style={{ flex: 1, height: 22, background: 'var(--surface-2)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ width: f.w, background: f.color, borderRadius: 5 }} />
+                  </div>
+                  <span style={{ flex: '0 0 56px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}<span style={{ color: 'var(--muted)' }}> {f.pct}</span></span>
+                </div>
+              ))}
+            </div>
+            <span style={NOTE}>
+              Saved is your live shortlist; the rest count every application that ever reached that stage ·
+              applied → interview {conv(stats?.total_applications, reached.interview || 0)}, interview → offer {conv(reached.interview || 0, reached.offer || 0)}
+            </span>
+          </div>
+
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+              <span style={H}>Score distribution</span>
+              <span style={{ flex: 1, ...NOTE }}>{int(scores?.scored_count)} scored jobs · best résumé per job</span>
+              {scores?.avg != null && (
+                <span style={{ fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                  avg {scores.avg}
+                  {scores.tailored_avg != null && <> · <span title={`Average score after tailoring, across the ${scores.tailored_count} jobs with a tailored copy`} style={{ color: 'var(--accent)', cursor: 'help' }}>tailored {scores.tailored_avg}</span></>}
+                </span>
+              )}
+            </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 14, minHeight: 118, padding: '0 6px' }}>
+              {buckets.map((b) => (
+                <div key={b.range} title={`${b.count} jobs scored ${b.range}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                  <span style={{ ...MONO, lineHeight: '14px', color: 'var(--text-2)' }}>{b.count}</span>
+                  <div style={{ width: '100%', height: Math.max(2, Math.round((b.count / maxBucket) * 96)), background: BUCKET_COLOR[b.range] || 'var(--accent)', borderRadius: '5px 5px 0 0' }} />
+                  <span style={{ fontSize: 10, lineHeight: '14px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{b.range}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* timeline + llm costs */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+              <span style={H}>New jobs · last 30 days</span>
+              <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
+              {[['new', 'var(--accent)'], ['applied', 'var(--gold)']].map(([l, c]) => (
+                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}><span style={{ width: 14, height: 2, background: c }} />{l}</span>
+              ))}
+            </div>
+            <Spark series={series} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', ...MONO, fontSize: 10, lineHeight: '14px', color: 'var(--muted)' }}>
+              <span>{dayLabel(series[0]?.date)}</span>
+              {peak?.total > 0 && <span>peak {peak.total} · {dayLabel(peak.date)}</span>}
+              <span>{dayLabel(series[series.length - 1]?.date)}</span>
+            </div>
+          </div>
+
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+              <span style={H}>LLM costs</span>
+              <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
+                style={{ ...NOTE, cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</span>
+              <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
+                {PERIODS.map(([id, label]) => {
+                  const on = period === id
+                  return <span key={label} onClick={() => setPeriod(id)} className="v2-bdc v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                })}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 18 }}>
+              {[['Spend', money(costs?.total_cost_usd)], ['Calls', int(costs?.total_calls)],
+                ['Avg / call', costs?.total_calls ? money(costs.total_cost_usd / costs.total_calls) : '—']].map(([l, v]) => (
+                <div key={l} style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>{l}</span>
+                  <span style={{ fontFamily: 'var(--serif)', fontSize: 23, lineHeight: '28px', letterSpacing: '-.02em' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
+                <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
+                <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
+                <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
+              </div>
+              {(costs?.by_purpose || []).slice(0, 6).map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
+                  <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
+                  <span title={c.model} style={{ flex: 1.4, ...MONO, fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.model || '—'}</span>
+                  <span style={{ flex: '0 0 42px', textAlign: 'right', ...MONO, color: 'var(--text-2)' }}>{c.calls}</span>
+                  <span style={{ flex: '0 0 58px', textAlign: 'right', ...MONO, color: 'var(--text)' }}>{money(c.cost_usd)}</span>
+                  <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--edge)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
+                </div>
+              ))}
+              {!(costs?.by_purpose || []).length && <div style={{ padding: '14px 0', ...NOTE }}>No LLM calls in this window.</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* schedules */}
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
+            <span style={H}>Schedules</span>
+            <span style={NOTE}>{jobs.length} job{jobs.length === 1 ? '' : 's'} · next runs in CET, schedules as configured (UTC) · intervals and crons live in Settings</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+            <span style={{ flex: '0 0 190px' }}>Job</span><span style={{ flex: '0 0 150px' }}>Schedule</span>
+            <span style={{ flex: '0 0 130px' }}>Next run</span><span style={{ flex: 1 }}>Status</span>
+            <span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
+          </div>
+          {jobs.map((j) => {
+            const running = !!j.running || triggering.has(j.id)
+            return (
+              <div key={j.id} style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 20px', borderBottom: '1px solid var(--line-soft)' }}>
+                <span title={j.name} style={{ flex: '0 0 190px', fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.name}</span>
+                <span title={j.schedule} style={{ flex: '0 0 150px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>
+                <span style={{ flex: '0 0 130px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : cet(j.next_run)}</span>
+                <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {running
+                    ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                    : <span style={{ width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />}
+                  <span style={{ fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)' }}>
+                    {running ? `Running · ${Math.round(j.running?.elapsed_seconds || 0)}s` : j.pending ? 'Pending' : 'Scheduled'}
+                  </span>
+                </span>
+                <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
+                  {j.trigger_url
+                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>{running ? 'Running…' : 'Run now'}</span>
+                    : <span style={{ ...NOTE }}>—</span>}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* run history / activity log */}
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 20px 10px' }}>
+            {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
+              <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--edge)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
+            ))}
+            <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? 'last 30 scheduler and manual runs' : 'everything the pipeline did, newest first'}</span>
+            {tab === 'activity' && (
+              <span style={{ display: 'flex', gap: 6 }}>
+                <span style={{ position: 'relative' }}>
+                  <span onClick={() => setTypeOpen((v) => !v)} className="v2-bdc v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
+                    Type{actType ? ' · 1' : ''}<span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
+                  </span>
+                  {typeOpen && (
+                    <>
+                      <span onClick={() => setTypeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
+                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,.16)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {TYPE_OPTS.map(([id, label]) => (
+                          <span key={id} onClick={() => { setActType(id); setTypeOpen(false) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', padding: '6px 9px', borderRadius: 6, fontSize: 12, lineHeight: '16px', color: actType === id ? 'var(--accent)' : 'var(--text-2)', fontWeight: actType === id ? 500 : 400, background: actType === id ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
+                            {label}<span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--accent)' }}>{actType === id ? '✓' : ''}</span>
+                          </span>
+                        ))}
+                      </span>
+                    </>
+                  )}
+                </span>
+                <span style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
+                  <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"
+                    style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--text)' }} />
+                </span>
+              </span>
+            )}
+          </div>
+
+          {tab === 'runs' ? (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+                <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 140px' }}>Job</span><span style={{ flex: '0 0 90px' }}>Trigger</span>
+                <span style={{ flex: '0 0 100px' }}>Status</span><span style={{ flex: '0 0 76px' }}>Duration</span><span style={{ flex: 1 }}>Result</span>
+              </div>
+              {runs.map((r) => {
+                const failed = r.status === 'failed'
+                return (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
+                    <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{cet(r.started_at)}</span>
+                    <span style={{ flex: '0 0 140px', ...MONO, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</span>
+                    <span style={{ flex: '0 0 90px', fontSize: 10.5, color: 'var(--muted)' }}>{r.trigger}</span>
+                    <span style={{ flex: '0 0 100px', display: 'flex' }}>
+                      <Pill bg={failed ? 'var(--bad-soft)' : r.status === 'running' ? 'var(--accent-soft)' : 'var(--hover-soft)'} fg={failed ? 'var(--bad)' : 'var(--accent)'}>{r.status}</Pill>
+                    </span>
+                    <span style={{ flex: '0 0 76px', ...MONO, color: 'var(--text-2)' }}>{dur(r.duration_seconds)}</span>
+                    <span title={r.error || r.result_summary || ''} style={{ flex: 1, minWidth: 0, color: failed ? 'var(--bad)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.error || r.result_summary || '—'}</span>
+                  </div>
+                )
+              })}
+              {!runs.length && <div style={{ padding: '16px 20px', ...NOTE }}>No runs yet.</div>}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+                <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 110px' }}>Type</span>
+                <span style={{ flex: 1 }}>Message</span><span style={{ flex: '0 0 130px' }}>Company</span>
+              </div>
+              {activity.map((a) => (
+                <div key={a.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
+                  <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{cet(a.created_at)}</span>
+                  <span style={{ flex: '0 0 110px', display: 'flex' }}>
+                    <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, lineHeight: '14px' }}>{String(a.type || '').replace('_', ' ')}</span>
+                  </span>
+                  <span title={a.message} style={{ flex: 1, minWidth: 0, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{a.message}</span>
+                  <span style={{ flex: '0 0 130px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</span>
+                </div>
+              ))}
+              {!activity.length && <div style={{ padding: '16px 20px', ...NOTE }}>No activity matches.</div>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 30-day arrivals, drawn directly rather than via Recharts: two polylines on a
+// fixed 600x150 viewBox is less code than the chart lib and matches the design.
+function Spark({ series }) {
+  const W = 600, HT = 150
+  const max = Math.max(4, ...series.map((r) => r.total))
+  const path = (key) => series.map((r, i) => `${(i * W / Math.max(1, series.length - 1)).toFixed(1)},${(HT - (r[key] / max) * (HT - 10)).toFixed(1)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${HT}`} preserveAspectRatio="none" style={{ width: '100%', height: 150, display: 'block' }}>
+      {[37, 74, 111].map((y) => <line key={y} x1="0" y1={y} x2={W} y2={y} stroke="var(--line-soft)" strokeWidth="1" />)}
+      <line x1="0" y1="148" x2={W} y2="148" stroke="var(--line)" strokeWidth="1.5" />
+      <polyline points={path('total')} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <polyline points={path('applied')} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}

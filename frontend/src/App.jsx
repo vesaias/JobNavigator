@@ -25,6 +25,7 @@ import V2CoverLetters from './v2/CoverLetters'
 import V2CoverLetterEditor from './v2/CoverLetterEditor'
 import V2Settings from './v2/Settings'
 import V2Persona from './v2/Persona'
+import V2Stats from './v2/Stats'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -158,6 +159,7 @@ function App() {
           <Route path="cover-letters/:id" element={<V2CoverLetterEditor />} />
           <Route path="settings" element={<V2Settings />} />
           <Route path="persona" element={<V2Persona />} />
+          <Route path="stats" element={<V2Stats />} />
         </Route>
 
         {/* classic shell */}
