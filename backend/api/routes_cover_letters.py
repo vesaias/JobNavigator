@@ -108,6 +108,7 @@ def _to_dict(cl: CoverLetter, include_json_data: bool = False, ctx: dict | None 
         "company": ctx.get("company"),
         "title": ctx.get("title"),
         "job_url": ctx.get("job_url"),
+        "job_status": ctx.get("job_status"),
         "stage": ctx.get("stage"),
         "has_application": bool(ctx.get("stage")),
     }
@@ -142,6 +143,7 @@ def _build_ctx(rows: list[CoverLetter], db: Session) -> dict:
             "company": j.company if j else None,
             "title": j.title if j else None,
             "job_url": j.url if j else None,
+            "job_status": j.status if j else None,
             "stage": stages.get(cl.job_id),
             "source_name": names.get(cl.resume_id) or ("Persona" if cl.from_persona else None),
         }

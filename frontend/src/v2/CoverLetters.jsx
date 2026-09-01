@@ -199,9 +199,12 @@ export default function CoverLetters() {
     return letters.filter((c) => `${c.name || ''} ${c.company || ''} ${c.title || ''}`.toLowerCase().includes(q))
   }, [letters, query])
 
-  // Active = linked to a live application. Drafts (never applied) and rejected
-  // ones sink into the collapsed "Not active" group.
-  const isActive = (c) => c.stage && c.stage !== 'rejected'
+  // Active = still in play. That covers a live application, and also a draft
+  // whose job is still new/saved — you haven't applied yet, so the letter is
+  // work in progress, not history. Only rejected applications and letters for
+  // jobs you skipped (or that are gone) sink into the archive.
+  const LIVE_JOB = ['new', 'saved', 'applied']
+  const isActive = (c) => (c.stage ? c.stage !== 'rejected' : LIVE_JOB.includes(c.job_status))
   const active = useMemo(() => visible.filter(isActive), [visible])
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
@@ -343,7 +346,7 @@ export default function CoverLetters() {
               <div onClick={() => setArchOpen((v) => !v)} className="v2-archband"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginTop: 6, border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from drafts &amp; rejected applications
+                  Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
                 </span>
                 <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
                   {archOpen ? 'hide ⌄' : 'browse ›'}

@@ -23,6 +23,11 @@ const ago = (iso) => {
 }
 
 const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
+// Contact-item cells are 1:1 with the Résumé editor's header (cellInput there)
+const CELL = {
+  width: '100%', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6,
+  background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)',
+}
 const INPUT = {
   height: 32, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 6,
   background: 'var(--surface)', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', outline: 'none',
@@ -39,8 +44,10 @@ function Card({ title, note, open, onToggle, children }) {
             <path d="M2 4 L5 7 L8 4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
-        {note && <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
+          {note && <span style={{ flex: '0 1 auto', fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
+        </span>
       </div>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '2px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
@@ -278,7 +285,13 @@ export default function CoverLetterEditor() {
               {doc.has_application && (
                 <div onClick={() => { setMenuOpen(false); navigate('/v2/applications') }} className="v2-menuitem"
                   style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span><span style={{ flex: 1 }}>View application</span>
+                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>▤</span><span style={{ flex: 1 }}>View application</span>
+                </div>
+              )}
+              {doc.job_id && (
+                <div onClick={() => { setMenuOpen(false); navigate(`/v2/feed?job=${doc.job_id}`) }} className="v2-menuitem"
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
+                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span><span style={{ flex: 1 }}>View job in feed</span>
                 </div>
               )}
               {doc.job_url && (
@@ -320,14 +333,14 @@ export default function CoverLetterEditor() {
                       <span onClick={() => i < arr.length - 1 && update((d) => { const a = d.header.contact_items; [a[i + 1], a[i]] = [a[i], a[i + 1]] })}
                         title="Move down" className="v2-hover-accent-text" style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
                     </span>
-                    <input value={ct.text || ''} placeholder="text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
-                      style={{ ...INPUT, flex: '0 0 118px', height: 29, padding: '0 9px', fontSize: 12, minWidth: 0 }} />
-                    <input value={ct.url || ''} placeholder="url" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
-                      style={{ ...INPUT, flex: 1, height: 29, padding: '0 9px', fontSize: 11.5, color: 'var(--text-2)', minWidth: 0 }} />
+                    <input value={ct.text || ''} placeholder="Display text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
+                      style={{ ...CELL, flex: '0 0 170px', minWidth: 0 }} />
+                    <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
+                      style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--accent)', minWidth: 0 }} />
                     {tracked && (
                       <input value={ct.stub || ''} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)"
                         onChange={(e) => update((d) => { d.header.contact_items[i].stub = e.target.value })}
-                        style={{ ...INPUT, flex: '0 0 34px', height: 29, padding: '0 6px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)', textAlign: 'center', minWidth: 0 }} />
+                        style={{ ...CELL, flex: '0 0 34px', padding: '0 6px', fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', minWidth: 0 }} />
                     )}
                     <span onClick={() => update((d) => { d.header.contact_items.splice(i, 1) })} title="Remove"
                       className="v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>✕</span>
