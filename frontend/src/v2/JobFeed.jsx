@@ -365,9 +365,9 @@ export default function V2JobFeed() {
     setPicker(null)
     for (const job of list) {
       try {
-        if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) window.location.href = `/resumes?resume=${data.id}` }
+        if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) navigate(`/v2/resumes/${data.id}`) }
         else {
-          pendingRef.current[job.id] = { title: job.title, company: job.company }
+          pendingRef.current[job.id] = { title: job.title, company: job.company, op: 'tailor' }
           pushToast({ kind: 'progress', msg: `Tailoring for "${job.title}"…` })
           await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id })
           setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x))
@@ -378,10 +378,10 @@ export default function V2JobFeed() {
     setChecked(new Set())
   }, [pushToast])
   const openTailored = useCallback(async (job) => {
-    if (job.tailored_resume_id) { window.location.href = `/resumes?resume=${job.tailored_resume_id}`; return }
-    try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { window.location.href = `/resumes?resume=${copy.id}`; return } } catch {}
+    if (job.tailored_resume_id) { navigate(`/v2/resumes/${job.tailored_resume_id}`); return }
+    try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { navigate(`/v2/resumes/${copy.id}`); return } } catch {}
     setPicker({ mode: 'tailor', jobs: [job] })
-  }, [])
+  }, [navigate])
 
   // Create-copy modal: seed method + default base when it opens
   useEffect(() => {
@@ -543,11 +543,18 @@ export default function V2JobFeed() {
           } catch { /* status unknown — assume ok */ }
           for (const id of finished) {
             seenActiveRef.current.delete(id)
-            try { const { data: jd } = await api.get(`/jobs/${id}`); setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
+            let fresh = null
+            try { const { data: jd } = await api.get(`/jobs/${id}`); fresh = jd; setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
             const meta = pendingRef.current[id]
             if (meta) {
               const ok = statusMap[id] !== 'failed'
-              pushToast({ kind: ok ? 'success' : 'error', msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}` })
+              // a finished tailor has a résumé to show; a finished score doesn't
+              const rid = ok && meta.op === 'tailor' ? fresh?.tailored_resume_id : null
+              pushToast({
+                kind: ok ? 'success' : 'error',
+                msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}`,
+                ...(rid ? { action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${rid}`) } : {}),
+              })
               delete pendingRef.current[id]
             }
           }
