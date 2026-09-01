@@ -100,14 +100,14 @@ export default function Stats() {
 
   const loadCore = useCallback(async () => {
     const get = (u, params) => api.get(u, { params }).then(({ data }) => data).catch(() => null)
-    const [s, tl, sd, bj, fl] = await Promise.all([
+    // one round, not two: the sweep and health calls used to wait on the first
+    // batch for no reason
+    const [s, tl, sd, bj, fl, sw, he] = await Promise.all([
       get('/stats'),
       get('/stats/timeline', { days: 30 }),
       get('/stats/score-distribution', { detail: true }),
       get('/jobs', { status: 'new,saved', sort_by: 'score', limit: 1 }),
       get('/stats/sankey'),
-    ])
-    const [sw, he] = await Promise.all([
       get('/monitor/history', { limit: 1, job_type: 'scrape_all' }),
       get('/health/entities'),
     ])

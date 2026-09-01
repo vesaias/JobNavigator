@@ -1197,12 +1197,15 @@ def get_score_distribution(detail: bool = False):
 
     db = SessionLocal()
     try:
-        jobs = db.query(Job).filter(Job.cv_scores != None).all()
+        # Only the scores column: loading whole Job rows (descriptions, cached page
+        # text) to read one JSON field cost ~800ms on a few thousand jobs and was
+        # the single thing the Stats page waited on.
+        rows = db.query(Job.cv_scores).filter(Job.cv_scores != None).all()
         buckets = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0}
         bests: list[float] = []
         tailored: list[float] = []
-        for job in jobs:
-            scores = job.cv_scores or {}
+        for (scores,) in rows:
+            scores = scores or {}
             if not isinstance(scores, dict):
                 continue
             numeric = [v for v in scores.values() if isinstance(v, (int, float))]
