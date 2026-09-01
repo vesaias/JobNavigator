@@ -18,6 +18,7 @@ export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['deta
 // Stage chip on a row mirrors the Applications stage colours.
 export const STAGE_CLASS = { applied: 'cc-smartrecruiters', interview: 'cc-workday', offer: 'cc-tier1', rejected: 'cc-generic' }
 
+const ARCH_KEY = 'v2_cl_archive_open'
 const LABEL = { fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 const CTRL = {
   height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8,
@@ -115,6 +116,8 @@ export default function CoverLetters() {
   const [genLength, setGenLength] = useState('standard')
   const [pending, setPending] = useState([])     // active generate_cover_letter runs
   const [query, setQuery] = useState('')
+  const [archOpen, setArchOpen] = useState(() => { try { return localStorage.getItem(ARCH_KEY) === '1' } catch { return false } })
+  useEffect(() => { try { localStorage.setItem(ARCH_KEY, archOpen ? '1' : '0') } catch {} }, [archOpen])
   const [err, setErr] = useState('')
   const [runMeta, setRunMeta] = useState({})   // run_id -> {label, voice, length}
   const pendingRef = useRef([])
@@ -196,6 +199,12 @@ export default function CoverLetters() {
     return letters.filter((c) => `${c.name || ''} ${c.company || ''} ${c.title || ''}`.toLowerCase().includes(q))
   }, [letters, query])
 
+  // Active = linked to a live application. Drafts (never applied) and rejected
+  // ones sink into the collapsed "Not active" group.
+  const isActive = (c) => c.stage && c.stage !== 'rejected'
+  const active = useMemo(() => visible.filter(isActive), [visible])
+  const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
+
   const linked = letters.filter((c) => c.has_application).length
   const countLine = `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${linked} linked to applications`
 
@@ -232,6 +241,29 @@ export default function CoverLetters() {
     if (m) return [m.label, m.voice, m.length].filter(Boolean).join(' · ')
     const j = jobs.find((x) => x.id === r.target_job_id)
     return j ? (j.company ? `${j.company} — ${j.title}` : j.title) : 'a cover letter'
+  }
+
+  // One row, dimmed with a neutral chip when it sits in the Not-active group
+  const row = (c, arc) => {
+    const bits = [c.source_name, presets.find((p) => p.id === c.voice)?.label || c.voice,
+      LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
+    const sub = [...bits, `edited ${ago(c.updated_at)} ago`].join(' · ')
+    return (
+      <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} className="v2-bd"
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 10, cursor: 'pointer',
+          border: `1px solid ${arc ? 'var(--line-soft)' : 'var(--line)'}`, background: arc ? 'var(--change-bg)' : 'var(--surface)' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+        </div>
+        {(c.stage || arc) && (
+          <span title={c.stage ? 'Stage of the linked application' : 'No application yet'} className={STAGE_CLASS[c.stage] || 'cc-generic'}
+            style={{ flex: '0 0 auto', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.stage || 'Draft'}</span>
+        )}
+        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{ago(c.updated_at)}</span>
+        <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
+      </div>
+    )
   }
 
   return (
@@ -305,26 +337,21 @@ export default function CoverLetters() {
               </div>
             ))}
 
-            {visible.map((c) => {
-              const bits = [c.source_name, presets.find((p) => p.id === c.voice)?.label || c.voice,
-                LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
-              const sub = [...bits, `edited ${ago(c.updated_at)} ago`].join(' · ')
-              return (
-                <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} className="v2-bd"
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)', cursor: 'pointer' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-                    <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
-                  </div>
-                  {c.stage && (
-                    <span title="Stage of the linked application" className={STAGE_CLASS[c.stage] || 'cc-generic'}
-                      style={{ flex: '0 0 auto', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.stage}</span>
-                  )}
-                  <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{ago(c.updated_at)}</span>
-                  <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
-                </div>
-              )
-            })}
+            {active.map((c) => row(c, false))}
+
+            {archived.length > 0 && (
+              <div onClick={() => setArchOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 4px', cursor: 'pointer' }}>
+                <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Not active · drafts &amp; rejected</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{archived.length}</span>
+                <span style={{ marginLeft: 'auto', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
+                  <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"
+                    style={{ display: 'block', transform: archOpen ? 'none' : 'rotate(-90deg)', transition: 'transform .12s' }}>
+                    <path d="M2 4 L5 7 L8 4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </div>
+            )}
+            {archOpen && archived.map((c) => row(c, true))}
 
             {visible.length === 0 && pending.length === 0 && (
               <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
