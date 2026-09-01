@@ -274,6 +274,7 @@ DEFAULT_SETTINGS = {
     ]), "URL query params stripped before dedup hashing — tracking/referral noise"),
     "autofill_llm_provider": ("", "LLM provider for application autofill (empty = use primary llm_provider)"),
     "autofill_llm_model": ("", "LLM model for application autofill (empty = use primary llm_model)"),
+    "autofill_llm_api_key": ("", "API key for the autofill LLM (empty = use the primary llm_api_key)"),
     "autofill_default_length": ("250", "Default target character length for autofill answers when a field has no maxlength"),
     "autofill_decline_self_id": ("true", "When on, diversity self-ID questions not covered by the persona (pronouns, marital status, etc.) auto-select 'I prefer not to answer' instead of being left blank"),
     "autofill_prompt": (
