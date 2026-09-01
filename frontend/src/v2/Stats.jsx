@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ResponsiveContainer, Sankey, Tooltip } from 'recharts'
 import api from '../api'
 import './theme.css'
 
@@ -22,9 +23,15 @@ const TYPE_OPTS = [['', 'All types'], ['scrape', 'Scrape'], ['h1b', 'H-1B'], ['c
 const money = (n) => (n == null ? '—' : n === 0 || n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(n < 0.01 ? 4 : 3)}`)
 const int = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'))
 const dayLabel = (iso) => { try { return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) } catch { return iso } }
-const cet = (iso) => {
+// The viewer's own zone — v1 hardcoded Europe/Berlin, which is only right for one person.
+const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return 'UTC' } })()
+const TZ_SHORT = (() => {
+  try { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, timeZoneName: 'short' }).formatToParts(new Date()).find((x) => x.type === 'timeZoneName')?.value || TZ }
+  catch { return TZ }
+})()
+const when = (iso) => {
   if (!iso) return '—'
-  try { return new Date(iso).toLocaleString('en-GB', { timeZone: 'Europe/Berlin', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' ·') }
+  try { return new Date(iso).toLocaleString('en-GB', { timeZone: TZ, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' ·') }
   catch { return iso }
 }
 const dur = (s) => (s == null ? '—' : s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`)
@@ -68,6 +75,7 @@ export default function Stats() {
   const [runs, setRuns] = useState([])
   const [activity, setActivity] = useState([])
   const [tab, setTab] = useState('runs')
+  const [flowView, setFlowView] = useState('bar')
   const [actType, setActType] = useState('')
   const [actQuery, setActQuery] = useState('')
   const [typeOpen, setTypeOpen] = useState(false)
@@ -187,6 +195,20 @@ export default function Stats() {
   }, [stats, st, reached])
   const conv = (a, b) => (a ? `${Math.round((b / a) * 100)}%` : '—')
 
+  const RANK = { new: 0, saved: 1, applied: 2, interview: 3, offer: 4, rejected: 5, ghosted: 5, withdrawn: 5 }
+  const sankey = useMemo(() => {
+    const fwd = flows.filter((d) => d.source && d.target && d.source !== d.target && (RANK[d.source] ?? 99) < (RANK[d.target] ?? 99))
+    if (!fwd.length) return null
+    const names = [...new Set(fwd.flatMap((d) => [d.source, d.target]))]
+    const links = fwd.map((d) => ({ source: names.indexOf(d.source), target: names.indexOf(d.target), value: d.value }))
+      .filter((l) => l.source !== -1 && l.target !== -1 && l.value > 0)
+    return links.length ? { nodes: names.map((name) => ({ name })), links } : null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flows])
+
+  // scrape_all is the job you look at first, so it leads regardless of APScheduler order
+  const ordered = useMemo(() => [...jobs].sort((a, b) => (a.id === 'scrape_all' ? -1 : b.id === 'scrape_all' ? 1 : 0)), [jobs])
+
   const buckets = scores?.buckets || []
   const maxBucket = Math.max(1, ...buckets.map((b) => b.count))
   const spend = costs?.total_cost_usd
@@ -222,7 +244,7 @@ export default function Stats() {
             ['Applications', int(stats?.total_applications), `${inPlay} in play`, 'In play = not rejected, ghosted or withdrawn'],
             ['Best open score', best?.cv_scores ? String(Math.round(Math.max(...Object.values(best.cv_scores).filter((v) => typeof v === 'number')))) : '—', best?.company || '', 'Highest-scoring posting you haven’t applied to'],
           ].map(([label, value, sub, hint], i, arr) => (
-            <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '14px 20px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
+            <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7, padding: '14px 20px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {value}{sub && <span style={{ fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}> {sub}</span>}
@@ -236,8 +258,26 @@ export default function Stats() {
           <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Application funnel</span>
-              <span style={NOTE}>where the {int(stats?.total_applications)} applications stand</span>
+              <span style={{ flex: 1, ...NOTE }}>{flowView === 'bar' ? `where the ${int(stats?.total_applications)} applications stand` : 'every recorded status transition'}</span>
+              {sankey && (
+                <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
+                  {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
+                    const on = flowView === id
+                    return <span key={id} onClick={() => setFlowView(id)} className="v2-bdc v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                  })}
+                </span>
+              )}
             </div>
+            {flowView === 'sankey' && sankey ? (
+              <div style={{ height: 232, marginTop: -4 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <Sankey data={sankey} nodePadding={26} nodeWidth={11} margin={{ top: 6, right: 116, left: 4, bottom: 6 }}
+                    link={{ stroke: 'var(--accent)', strokeOpacity: 0.28 }} node={<SankeyNode />}>
+                    <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontSize: 12 }} />
+                  </Sankey>
+                </ResponsiveContainer>
+              </div>
+            ) : (<>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               {funnel.map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -253,6 +293,7 @@ export default function Stats() {
               Saved is your live shortlist; the rest count every application that ever reached that stage ·
               applied → interview {conv(stats?.total_applications, reached.interview || 0)}, interview → offer {conv(reached.interview || 0, reached.offer || 0)}
             </span>
+            </>)}
           </div>
 
           <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -296,8 +337,8 @@ export default function Stats() {
             </div>
           </div>
 
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
+          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>LLM costs</span>
               <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
                 style={{ ...NOTE, cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</span>
@@ -317,13 +358,14 @@ export default function Stats() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
                 <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
                 <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
-              {(costs?.by_purpose || []).slice(0, 6).map((c, i) => (
+              <div className="v2-scroll" style={{ flex: 1, minHeight: 0, maxHeight: 182, overflow: 'auto' }}>
+              {(costs?.by_purpose || []).map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
                   <span title={c.model} style={{ flex: 1.4, ...MONO, fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.model || '—'}</span>
@@ -333,6 +375,7 @@ export default function Stats() {
                 </div>
               ))}
               {!(costs?.by_purpose || []).length && <div style={{ padding: '14px 0', ...NOTE }}>No LLM calls in this window.</div>}
+              </div>
             </div>
           </div>
         </div>
@@ -341,20 +384,21 @@ export default function Stats() {
         <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <span style={H}>Schedules</span>
-            <span style={NOTE}>{jobs.length} job{jobs.length === 1 ? '' : 's'} · next runs in CET, schedules as configured (UTC) · intervals and crons live in Settings</span>
+            <span style={NOTE}>{jobs.length} job{jobs.length === 1 ? '' : 's'} · next runs in {TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
-            <span style={{ flex: '0 0 190px' }}>Job</span><span style={{ flex: '0 0 150px' }}>Schedule</span>
-            <span style={{ flex: '0 0 130px' }}>Next run</span><span style={{ flex: 1 }}>Status</span>
-            <span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
+            <span style={{ flex: '0 0 250px' }}>Job</span><span style={{ flex: '0 0 132px' }}>Job ID</span>
+            <span style={{ flex: '0 0 140px' }}>Schedule</span><span style={{ flex: '0 0 132px' }}>Next run</span>
+            <span style={{ flex: 1 }}>Status</span><span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
           </div>
-          {jobs.map((j) => {
+          {ordered.map((j) => {
             const running = !!j.running || triggering.has(j.id)
             return (
               <div key={j.id} style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 20px', borderBottom: '1px solid var(--line-soft)' }}>
-                <span title={j.name} style={{ flex: '0 0 190px', fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.name}</span>
-                <span title={j.schedule} style={{ flex: '0 0 150px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>
-                <span style={{ flex: '0 0 130px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : cet(j.next_run)}</span>
+                <span title={j.name} style={{ flex: '0 0 250px', fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
+                <span title={j.id} style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</span>
+                <span title={j.schedule} style={{ flex: '0 0 140px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>
+                <span style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : when(j.next_run)}</span>
                 <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {running
                     ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
@@ -365,7 +409,10 @@ export default function Stats() {
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>{running ? 'Running…' : 'Run now'}</span>
+                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
+                        {running && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+                        {running ? 'Running' : 'Run now'}
+                      </span>
                     : <span style={{ ...NOTE }}>—</span>}
                 </span>
               </div>
@@ -418,7 +465,7 @@ export default function Stats() {
                 const failed = r.status === 'failed'
                 return (
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
-                    <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{cet(r.started_at)}</span>
+                    <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(r.started_at)}</span>
                     <span style={{ flex: '0 0 140px', ...MONO, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</span>
                     <span style={{ flex: '0 0 90px', fontSize: 10.5, color: 'var(--muted)' }}>{r.trigger}</span>
                     <span style={{ flex: '0 0 100px', display: 'flex' }}>
@@ -439,7 +486,7 @@ export default function Stats() {
               </div>
               {activity.map((a) => (
                 <div key={a.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
-                  <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{cet(a.created_at)}</span>
+                  <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(a.created_at)}</span>
                   <span style={{ flex: '0 0 110px', display: 'flex' }}>
                     <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99, lineHeight: '14px' }}>{String(a.type || '').replace('_', ' ')}</span>
                   </span>
@@ -456,18 +503,45 @@ export default function Stats() {
   )
 }
 
-// 30-day arrivals, drawn directly rather than via Recharts: two polylines on a
-// fixed 600x150 viewBox is less code than the chart lib and matches the design.
+// 30-day arrivals. Two independent scales: applied is an order of magnitude
+// smaller than new, so a shared axis flattens it onto the baseline. Each line
+// gets its own axis, labelled in its own colour so the pairing is unambiguous.
 function Spark({ series }) {
-  const W = 600, HT = 150
-  const max = Math.max(4, ...series.map((r) => r.total))
-  const path = (key) => series.map((r, i) => `${(i * W / Math.max(1, series.length - 1)).toFixed(1)},${(HT - (r[key] / max) * (HT - 10)).toFixed(1)}`).join(' ')
+  const W = 600, HT = 150, TOP = 14, BASE = 148
+  const maxNew = Math.max(4, ...series.map((r) => r.total))
+  const maxApp = Math.max(2, ...series.map((r) => r.applied))
+  const path = (key, max) => series.map((r, i) => `${(i * W / Math.max(1, series.length - 1)).toFixed(1)},${(BASE - (r[key] / max) * (BASE - TOP)).toFixed(1)}`).join(' ')
+  const ticks = (max) => [max, Math.round(max / 2), 0]
+  const axis = (max, color, align) => (
+    <div style={{ flex: '0 0 26px', height: HT, position: 'relative', textAlign: align }}>
+      {ticks(max).map((v, i) => (
+        <span key={v + '-' + i} style={{ position: 'absolute', right: align === 'right' ? 0 : undefined, left: align === 'left' ? 0 : undefined, top: [TOP, (TOP + BASE) / 2, BASE][i] - 7, fontFamily: 'var(--mono)', fontSize: 9.5, lineHeight: '14px', color }}>{v}</span>
+      ))}
+    </div>
+  )
   return (
-    <svg viewBox={`0 0 ${W} ${HT}`} preserveAspectRatio="none" style={{ width: '100%', height: 150, display: 'block' }}>
-      {[37, 74, 111].map((y) => <line key={y} x1="0" y1={y} x2={W} y2={y} stroke="var(--line-soft)" strokeWidth="1" />)}
-      <line x1="0" y1="148" x2={W} y2="148" stroke="var(--line)" strokeWidth="1.5" />
-      <polyline points={path('total')} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      <polyline points={path('applied')} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingTop: 10 }}>
+      {axis(maxNew, 'var(--accent)', 'right')}
+      <svg viewBox={`0 0 ${W} ${HT}`} preserveAspectRatio="none" style={{ flex: 1, minWidth: 0, height: HT, display: 'block' }}>
+        {[TOP, (TOP + BASE) / 2].map((y) => <line key={y} x1="0" y1={y} x2={W} y2={y} stroke="var(--line-soft)" strokeWidth="1" />)}
+        <line x1="0" y1={BASE} x2={W} y2={BASE} stroke="var(--line)" strokeWidth="1.5" />
+        <polyline points={path('total', maxNew)} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        <polyline points={path('applied', maxApp)} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {axis(maxApp, 'var(--gold)', 'left')}
+    </div>
+  )
+}
+
+// Recharts renders Sankey nodes itself; this draws them in the v2 palette with
+// the "name (value)" label v1 used.
+function SankeyNode({ x, y, width, height, payload }) {
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} rx={3} fill="var(--accent)" opacity={0.85} />
+      <text x={x + width + 6} y={y + height / 2} textAnchor="start" dominantBaseline="middle" fontSize={11} fill="var(--text-2)">
+        {payload.name} ({payload.value})
+      </text>
+    </g>
   )
 }
