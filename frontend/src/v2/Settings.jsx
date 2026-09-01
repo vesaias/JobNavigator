@@ -501,7 +501,11 @@ function Row({ r, ctx }) {
           {r.label}
           {r.info && (
             <span onClick={() => setInfo(infoOpen ? null : r.label)} title="More detail"
-              style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>i</span>
+              style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>
+              {/* the italic serif 'i' has no descender and slants right, so flex
+                  centring leaves its ink high and right of the circle's centre */}
+              <span style={{ display: 'block', transform: 'translate(-0.5px, 1.2px)' }}>i</span>
+            </span>
           )}
         </span>
         <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: '16px', textWrap: 'pretty' }}>
