@@ -116,6 +116,7 @@ export default function CoverLetters() {
   const [pending, setPending] = useState([])     // active generate_cover_letter runs
   const [query, setQuery] = useState('')
   const [err, setErr] = useState('')
+  const [runMeta, setRunMeta] = useState({})   // run_id -> {label, voice, length}
   const pendingRef = useRef([])
   useEffect(() => { pendingRef.current = pending }, [pending])
 
@@ -198,22 +199,39 @@ export default function CoverLetters() {
   const linked = letters.filter((c) => c.has_application).length
   const countLine = `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${linked} linked to applications`
 
-  const generating = pending.length > 0
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
   const voiceLabel = presets.find((p) => p.id === genVoice)?.label || genVoice
   const lengthLabel = LENGTHS.find(([id]) => id === genLength)?.[1] || genLength
+  // The backend keys duplicates on cl:{resume}:{job}, so only this exact pair is
+  // barred while it runs — other pairs generate alongside it.
+  const thisPairRunning = pending.some((r) => r.scope_key === `cl:${genResume}:${genJob}`)
+  const canGenerate = genResume && genJob && !thisPairRunning
 
   const generate = async () => {
-    if (!genResume || !genJob || generating) return
+    if (!canGenerate) return
     setErr('')
+    const label = genJobLabel, v = voiceLabel, l = lengthLabel
     try {
       const { data } = await api.post('/cover-letters/generate', {
         resume_id: genResume, job_id: genJob, voice: genVoice, length: genLength,
       })
-      setPending((p) => [...p, { run_id: data.run_id, job_type: 'generate_cover_letter' }])
+      setRunMeta((m) => ({ ...m, [data.run_id]: { label, voice: v, length: l } }))
+      setPending((p) => [...p, { run_id: data.run_id, job_type: 'generate_cover_letter',
+                                 scope_key: `cl:${genResume}:${genJob}`, target_job_id: genJob }])
+      // clear just the job — the next letter is nearly always a different role,
+      // and it stops a second click hitting the same-pair guard
+      setGenJob('')
     } catch (e) {
       setErr(e?.response?.data?.detail || 'Generation failed')
     }
+  }
+
+  // label a pending row from what we recorded, else from its target job
+  const rowLabel = (r) => {
+    const m = runMeta[r.run_id]
+    if (m) return [m.label, m.voice, m.length].filter(Boolean).join(' · ')
+    const j = jobs.find((x) => x.id === r.target_job_id)
+    return j ? (j.company ? `${j.company} — ${j.title}` : j.title) : 'a cover letter'
   }
 
   return (
@@ -251,10 +269,10 @@ export default function CoverLetters() {
             <LengthPicker value={genLength} onPick={setGenLength} />
           </div>
 
-          <div onClick={generate} title={!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter'}
-            style={{ height: 36, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, lineHeight: 1, fontSize: 13, fontWeight: 500, cursor: (!genResume || !genJob || generating) ? 'default' : 'pointer', opacity: (!genResume || !genJob || generating) ? 0.55 : 1 }}>
-            {generating && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
-            {generating ? 'Generating…' : '✦ Generate cover letter'}
+          <div onClick={generate} title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}
+            style={{ height: 36, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, lineHeight: 1, fontSize: 13, fontWeight: 500, cursor: canGenerate ? 'pointer' : 'default', opacity: canGenerate ? 1 : 0.55 }}>
+            {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+            {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
           </div>
           <span style={{ fontSize: 10.5, color: 'var(--muted)', textWrap: 'pretty' }}>
             Takes about 30 seconds — the letter appears in the list when it's done, drafted for your review.
@@ -277,15 +295,15 @@ export default function CoverLetters() {
           </div>
 
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
-            {generating && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--change-bg)' }}>
+            {pending.map((r) => (
+              <div key={r.run_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--change-bg)' }}>
                 <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                 <span style={{ fontSize: 12.5, color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Generating{genJobLabel ? ` — ${genJobLabel}` : ''}{voiceLabel ? ` · ${voiceLabel}` : ''} · {lengthLabel}
+                  Generating — {rowLabel(r)}
                 </span>
                 <span style={{ marginLeft: 'auto', flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>~30s</span>
               </div>
-            )}
+            ))}
 
             {visible.map((c) => {
               const bits = [c.source_name, presets.find((p) => p.id === c.voice)?.label || c.voice,
@@ -308,7 +326,7 @@ export default function CoverLetters() {
               )
             })}
 
-            {visible.length === 0 && !generating && (
+            {visible.length === 0 && pending.length === 0 && (
               <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
                 {letters.length === 0 ? 'No cover letters yet — generate one on the left.' : 'Nothing matches that search.'}
               </div>
