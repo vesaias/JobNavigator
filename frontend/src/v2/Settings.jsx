@@ -254,7 +254,6 @@ export default function Settings() {
         E('Autofill prompt', 'Answers as the candidate, from Persona autofill content only.', 'autofill_prompt', { sub: 'placeholders: {persona} {qa_bank} {company} {position} {question} {max_chars}' }),
         E('Field patterns', 'Maps form-field names to Persona fields.', 'autofill_field_patterns', { json: true, sub: 'JSON — Persona field → name patterns' }),
         E('Option synonyms', 'Normalises dropdown options.', 'autofill_option_synonyms', { json: true, sub: 'JSON — canonical option → synonyms' }),
-        SW('Decline self-ID by default', 'Diversity self-ID questions the Persona doesn’t cover auto-select “I prefer not to answer”.', 'Left blank instead.', 'autofill_decline_self_id', { dflt: true }),
       ]],
       ['prep', '', 'Interview prep', 'the handover bundle Applications exports for your LLM of choice', [
         E('What I need from you', 'The closing ask appended to the handover — the four sections above it are assembled from the application.', 'prep_ask', { sub: 'plain text, no placeholders' }),
