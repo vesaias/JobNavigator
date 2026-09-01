@@ -21,10 +21,31 @@ def _flatten_persona(p: Persona) -> str:
     return "\n\n".join(parts) if parts else "(empty)"
 
 
+def _qa_pair(entry) -> tuple:
+    """Normalise one qa_bank entry to (question, answer).
+
+    Canonical shape is {"question": ..., "answer": ...} — what POST /persona/qa-bank
+    writes and what the Persona editor saves. Hand-written banks also used a
+    single-key map {"<question>": "<answer>"}; those silently flattened to blank
+    Q/A pairs, so the whole bank vanished from the prompt. Accept both.
+    """
+    if not isinstance(entry, dict):
+        return "", ""
+    if "question" in entry or "answer" in entry:
+        return str(entry.get("question") or ""), str(entry.get("answer") or "")
+    for k, v in entry.items():
+        return str(k or ""), str(v or "")
+    return "", ""
+
+
 def _flatten_qa_bank(bank) -> str:
     if not bank:
         return "(empty)"
-    return "\n\n".join(f"Q: {e.get('question','')}\nA: {e.get('answer','')}" for e in bank)
+    pairs = [_qa_pair(e) for e in bank]
+    pairs = [(q, a) for q, a in pairs if q or a]
+    if not pairs:
+        return "(empty)"
+    return "\n\n".join(f"Q: {q}\nA: {a}" for q, a in pairs)
 
 
 def _setting(db, key, default=""):
