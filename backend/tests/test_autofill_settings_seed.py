@@ -20,7 +20,7 @@ def test_structured_autofill_settings_present(test_db):
     # not in DB settings. The dictionaries + decline policy are seeded here.
     seed_settings(test_db)
     keys = {s.key: s.value for s in test_db.query(Setting).all()}
-    assert keys["autofill_decline_self_id"] == "true"
+    assert "autofill_decline_self_id" not in keys  # retired: Persona owns the decline flag
     patterns = json.loads(keys["autofill_field_patterns"])
     assert "veteran_status" in patterns and "veteran" in patterns["veteran_status"]
     syn = json.loads(keys["autofill_option_synonyms"])

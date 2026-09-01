@@ -276,7 +276,6 @@ DEFAULT_SETTINGS = {
     "autofill_llm_model": ("", "LLM model for application autofill (empty = use primary llm_model)"),
     "autofill_llm_api_key": ("", "API key for the autofill LLM (empty = use the primary llm_api_key)"),
     "autofill_default_length": ("250", "Default target character length for autofill answers when a field has no maxlength"),
-    "autofill_decline_self_id": ("true", "When on, diversity self-ID questions not covered by the persona (pronouns, marital status, etc.) auto-select 'I prefer not to answer' instead of being left blank"),
     "autofill_prompt": (
         "You are the candidate, writing a short first-person answer to a job-application question.\n\n"
         "Use ONLY facts from the candidate profile and the reusable Q&A bank below. Never invent employers, "
@@ -590,6 +589,9 @@ def cleanup_removed_settings(db):
         "max_jobs_per_scrape",
         "company_domains",
         "ats_domains",
+        # Retired 2026-09: duplicated the Persona's own decline_demographics
+        # checkbox, which Persona.jsx documents as the single decline control.
+        "autofill_decline_self_id",
         # 2026-07: openai_compat provider removed — these endpoints were only for it
         "llm_base_url",
         "llm_fallback_base_url",

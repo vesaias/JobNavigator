@@ -58,7 +58,12 @@ def autofill_config():
             "field_patterns": _json_setting(db, "autofill_field_patterns", {}),
             "option_synonyms": _json_setting(db, "autofill_option_synonyms", {}),
             "schema": ANSWER_SCHEMA,
-            "decline_self_id": _setting(db, "autofill_decline_self_id", "true") == "true",
+            # One source of truth: the Persona's own "prefer not to answer"
+            # checkbox. autofill_schema already fills unset demographics with
+            # "decline" from the same flag; this carries it to the extension so
+            # it can pick a decline option on questions the Persona has no field
+            # for at all.
+            "decline_self_id": bool((persona.get("demographics") or {}).get("decline_demographics")),
         }
     finally:
         db.close()
