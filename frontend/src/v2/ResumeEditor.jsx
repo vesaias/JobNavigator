@@ -2,8 +2,13 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
+// The résumé-content editors are shared with /v2/persona (a Persona's
+// resume_content is the same shape as a Resume's json_data).
+import {
+  EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
+  MenuHead, MenuItem, SectionShell, SectionEditor,
+} from './ResumeSections'
 
-const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
 // contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
@@ -45,8 +50,6 @@ function computeChanges(base, copy) {
   })
   return out
 }
-const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
-const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
 const timeAgo = (s) => {
   if (!s) return ''
   const m = Math.floor((Date.now() - new Date(s).getTime()) / 60000)
@@ -55,72 +58,11 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// ── field primitives (v2-styled, with the **bold** shortcut) ─────────────────
-function Field({ label, value, onChange, placeholder, multiline, rows, mono, flex }) {
-  const boldKey = (e) => {
-    if (!((e.ctrlKey || e.metaKey) && e.key === 'b')) return
-    e.preventDefault()
-    const ta = e.target, s = ta.selectionStart, en = ta.selectionEnd, t = ta.value
-    if (s === en) return
-    const sel = t.slice(s, en)
-    if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
-    else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
-  }
-  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, fontFamily: mono ? 'var(--mono)' : 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? 1.5 : undefined }
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: flex || undefined, minWidth: 0 }}>
-      {label && <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{label}</span>}
-      {multiline
-        ? <textarea value={value || ''} onChange={(e) => onChange(e.target.value)} onKeyDown={boldKey} placeholder={placeholder} rows={rows || 3} style={st} />
-        : <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={st} />}
-    </label>
-  )
-}
-// bullet text: borderless auto-growing textarea so a bullet reads as flowing text
-// (the row supplies the border/highlight) — matches the design's static-text bullets
-function BulletText({ value, onChange }) {
-  const ref = useRef(null)
-  const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }
-  useEffect(fit, [value])
-  const boldKey = (e) => {
-    if (!((e.ctrlKey || e.metaKey) && e.key === 'b')) return
-    e.preventDefault()
-    const ta = e.target, s = ta.selectionStart, en = ta.selectionEnd, t = ta.value
-    if (s === en) return
-    const sel = t.slice(s, en)
-    if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
-    else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
-  }
-  return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1}
-    style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-2)', padding: 0, overflow: 'hidden' }} />
-}
-const IconBtn = ({ onClick, title, children, danger }) => (
-  <span onClick={onClick} title={title} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 5, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: danger ? 'var(--bad)' : 'var(--muted)', cursor: 'pointer' }}>{children}</span>
-)
-const AddLink = ({ onClick, children }) => (
-  <span onClick={onClick} style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', alignSelf: 'flex-start' }} className="v2-navlink">{children}</span>
-)
-const RemoveLink = ({ onClick, children = 'Remove' }) => (
-  <span onClick={onClick} style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
-)
-const DashedAdd = ({ onClick, children, big }) => (
-  <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
-)
-const EmptyState = ({ what }) => (
-  <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-    <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No {what} yet</span>
-    <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>Empty sections are skipped in the PDF — nothing prints until you add one.</span>
-  </div>
-)
-const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
-const MenuItem = ({ icon, label, hint, onClick }) => (
-  <div onClick={onClick} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-    <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{icon}</span>
-    <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
-    {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--faint)' }}>{hint}</span>}
-  </div>
-)
-
+// ── MOVED to ResumeSections.jsx ──────────────────────────────────────────────
+// Field, BulletText, MicroField, RemoveLink, DashedAdd, EmptyState, MenuHead,
+// MenuItem, UPPER, cellInput and the seven *Editor sections now live there so
+// /v2/persona edits resume_content with the identical components. IconBtn,
+// AddLink and normUrl were unreferenced and were dropped rather than moved.
 export default function ResumeEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -340,11 +282,7 @@ export default function ResumeEditor() {
   }, [changes, data, onData, pushToast])
 
   // ── json_data mutation (mirrors v1 ResumeContentEditor) ────────────────────
-  const mutate = (fn) => { const d = JSON.parse(JSON.stringify(data || EMPTY)); fn(d); onData(d) }
-  const setField = (path, val) => {
-    const keys = String(path).split('.'); if (keys.some((k) => DANGEROUS.has(k))) return
-    mutate((d) => { let o = d; for (let i = 0; i < keys.length - 1; i++) { if (o == null || typeof o !== 'object') return; o = o[keys[i]] } if (o && typeof o === 'object') o[keys[keys.length - 1]] = val })
-  }
+  const { mutate, setField } = makeMutators(data, onData)
   const toggle = (name) => setOpen((p) => {
     const n = new Set(p); n.has(name) ? n.delete(name) : n.add(name)
     try { localStorage.setItem('jobnavigator_v2_resume_sections', JSON.stringify([...n])) } catch { /* ignore */ }
@@ -358,7 +296,7 @@ export default function ResumeEditor() {
 
   if (!doc || !data) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
 
-  const counts = { Experience: data.experience?.length || 0, Skills: Object.keys(data.skills || {}).length, Education: data.education?.length || 0, Projects: data.projects?.length || 0, Publications: data.publications?.length || 0 }
+  const counts = sectionCounts(data)
   const tplLabel = templates.find((t) => t.id === template)?.name || template || 'Template'
 
   return (
@@ -445,32 +383,12 @@ export default function ResumeEditor() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* left: sections */}
         <section className="v2-scroll" style={{ flex: '0 0 47%', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '14px 20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {SECTION_ORDER.map((name) => {
-            const isOpen = open.has(name)
-            return (
-              <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-                <div onClick={() => toggle(name)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9 }}>
-                  <span style={{ color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-                    {counts[name] != null && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>({counts[name]})</span>}
-                  </span>
-                  {changedSections.has(name) && <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span>}
-                </div>
-                {isOpen && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
-                    {name === 'Header' && <HeaderEditor data={data} setField={setField} mutate={mutate} tracers={tracers} />}
-                    {name === 'Summary' && <SummaryEditor data={data} setField={setField} baseSummary={baseData?.summary} />}
-                    {name === 'Experience' && <ExperienceEditor data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />}
-                    {name === 'Skills' && <SkillsEditor data={data} setField={setField} mutate={mutate} baseSkills={baseData?.skills} />}
-                    {name === 'Education' && <EducationEditor data={data} setField={setField} mutate={mutate} />}
-                    {name === 'Projects' && <ProjectsEditor data={data} setField={setField} mutate={mutate} />}
-                    {name === 'Publications' && <PublicationsEditor data={data} setField={setField} mutate={mutate} />}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {SECTION_ORDER.map((name) => (
+            <SectionShell key={name} name={name} count={counts[name]} open={open.has(name)} onToggle={() => toggle(name)}
+              meta={changedSections.has(name) ? <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span> : null}>
+              <SectionEditor name={name} data={data} setField={setField} mutate={mutate} baseData={baseData} />
+            </SectionShell>
+          ))}
         </section>
 
         {/* right: PDF preview */}
@@ -648,236 +566,6 @@ function ReviewModal({ changes, onClose, onApply }) {
           <div onClick={() => onApply(declined)} style={{ marginLeft: 'auto', height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Done reviewing</div>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── section editors (v2-styled, same handlers as v1) ─────────────────────────
-const UPPER = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
-const cellInput = { width: '100%', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
-const normUrl = (u) => (u || '').replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()
-
-function HeaderEditor({ data, setField, mutate, tracers }) {
-  const items = data.header?.contact_items || []
-  const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
-  const arrows = (i) => (
-    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(i, -1)} className="v2-navlink">▲</span><span onClick={() => move(i, 1)} className="v2-navlink">▼</span>
-    </span>
-  )
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <span style={UPPER}>Full name</span>
-        <input value={data.header?.name || ''} onChange={(e) => setField('header.name', e.target.value)} style={{ ...cellInput, height: 32, fontSize: 13 }} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={UPPER}>Contact items</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--faint)' }}>text · link · stub</span>
-        </div>
-        {items.map((it, i) => {
-          const showStub = it.url && !it.url.startsWith('mailto:')
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {arrows(i)}
-              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: '0 0 170px', minWidth: 0 }} />
-              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
-              {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
-              <span onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
-            </div>
-          )
-        })}
-        <DashedAdd onClick={() => mutate((d) => { d.header = d.header || { contact_items: [] }; (d.header.contact_items = d.header.contact_items || []).push({ text: '', url: '' }) })}>+ Add contact item</DashedAdd>
-      </div>
-    </div>
-  )
-}
-function ExperienceEditor({ data, setField, mutate, baseExp }) {
-  const exp = data.experience || []
-  const [open, setOpen] = useState(() => new Set([0]))   // first entry open by default
-  const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
-  const bulletMark = (i, bi, txt) => {
-    if (!baseExp) return null
-    const bb = baseExp[i]?.bullets || []
-    if (bi >= bb.length) return { kind: 'added', label: 'Added by tailoring' }
-    if (bb[bi] !== txt) return { kind: 'changed', label: 'Changed by tailoring', base: bb[bi] }
-    return null
-  }
-  const entryChanged = (e, i) => (e.bullets || []).some((b, bi) => bulletMark(i, bi, b)) || (e.suggested_bullets || []).length > 0
-  const toggle = (i) => setOpen((p) => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
-      {exp.map((e, i) => {
-        const ch = entryChanged(e, i), isOpen = open.has(i), nb = (e.bullets || []).length
-        return (
-          <div key={i} style={{ border: `1px solid ${ch ? 'var(--change-soft)' : 'var(--line)'}`, borderRadius: 8, background: ch ? 'var(--change-bg)' : 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-            <div onClick={() => toggle(i)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8 }}>
-              <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
-              <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
-              <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
-              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{e.date}</span>
-              <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
-              {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
-            </div>
-            {isOpen && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '2px 11px 11px', borderTop: '1px solid var(--line-soft)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, paddingTop: 9 }}>
-                  <Field label="Company" value={e.company} onChange={(v) => setField(`experience.${i}.company`, v)} />
-                  <Field label="Title" value={e.title} onChange={(v) => setField(`experience.${i}.title`, v)} />
-                  <Field label="Location" value={e.location} onChange={(v) => setField(`experience.${i}.location`, v)} />
-                  <Field label="Date" value={e.date} onChange={(v) => setField(`experience.${i}.date`, v)} placeholder="Jan 2022 – Present" mono />
-                </div>
-                <Field label="Description" value={e.description} onChange={(v) => setField(`experience.${i}.description`, v)} placeholder="Optional role description" />
-                {(e.bullets || []).map((b, bi) => {
-                  const m = bulletMark(i, bi, b)
-                  return (
-                    <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
-                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>{m ? '✦' : '—'}</span>
-                      <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
-                      {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.5 }}>↩</span>}
-                      <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
-                    </div>
-                  )
-                })}
-                {(e.suggested_bullets || []).map((sb, k) => (
-                  <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
-                    <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: 1.5 }}>✦</span>
-                    <span style={{ flex: 1, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-2)' }}>{sb}</span>
-                    <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.6 }}>suggested</span>
-                  </div>
-                ))}
-                <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>+ Add bullet</div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.experience.splice(i, 1))}>Remove role</RemoveLink></div>
-              </div>
-            )}
-          </div>
-        )
-      })}
-      {exp.length === 0 && <EmptyState what="experience" />}
-      <DashedAdd big onClick={() => mutate((d) => { d.experience = d.experience || []; d.experience.push({ company: '', title: '', location: '', date: '', description: '', bullets: [] }) })}>+ Add experience</DashedAdd>
-    </div>
-  )
-}
-// Summary as a marked row (tailoring ✦/— + revert + highlight) with a char-count meta
-function SummaryEditor({ data, setField, baseSummary }) {
-  const txt = data.summary || ''
-  const changed = baseSummary != null && baseSummary !== txt
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
-        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.55 }}>{changed ? '✦' : '—'}</span>
-        <BulletText value={txt} onChange={(v) => setField('summary', v)} />
-        {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.55 }}>↩</span>}
-      </div>
-      <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{txt.length} characters{txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
-    </div>
-  )
-}
-
-// Skills: fixed-width category + value with tailoring ✦/revert/highlight when changed
-function SkillsEditor({ data, setField, mutate, baseSkills }) {
-  const entries = Object.entries(data.skills || {})
-  const rename = (oldK, newK) => { if (oldK === newK || !newK.trim()) return; mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns }) }
-  const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
-  const arrows = (k) => (
-    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(k, -1)} className="v2-navlink">▲</span><span onClick={() => move(k, 1)} className="v2-navlink">▼</span>
-    </span>
-  )
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
-      {entries.map(([k, v]) => {
-        const changed = baseSkills != null && (k in baseSkills) && String(baseSkills[k] || '') !== String(v || '')
-        const added = baseSkills != null && !(k in baseSkills)
-        const marked = changed || added
-        return (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {arrows(k)}
-            <input defaultValue={k} onBlur={(e) => rename(k, e.target.value)} placeholder="Category" style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
-              {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
-              <input value={v} onChange={(e) => setField(`skills.${k}`, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
-              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
-              {changed && <span onClick={() => setField(`skills.${k}`, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
-            </div>
-            <span onClick={() => mutate((d) => delete d.skills[k])} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
-          </div>
-        )
-      })}
-      {entries.length === 0 && <EmptyState what="skills" />}
-      <DashedAdd onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</DashedAdd>
-    </div>
-  )
-}
-const MicroField = ({ label, value, onChange, placeholder, mono }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-    <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
-    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)' }} />
-  </div>
-)
-function EducationEditor({ data, setField, mutate }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
-      {(data.education || []).map((e, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <MicroField label="School" value={e.school} onChange={(v) => setField(`education.${i}.school`, v)} />
-            <MicroField label="Location" value={e.location} onChange={(v) => setField(`education.${i}.location`, v)} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
-            <MicroField label="Years" value={e.years} onChange={(v) => setField(`education.${i}.years`, v)} placeholder="2015 – 2019" mono />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
-        </div>
-      ))}
-      {(data.education || []).length === 0 && <EmptyState what="education" />}
-      <DashedAdd big onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</DashedAdd>
-    </div>
-  )
-}
-function ProjectsEditor({ data, setField, mutate }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
-      {(data.projects || []).map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            <MicroField label="Name" value={p.name} onChange={(v) => setField(`projects.${i}.name`, v)} />
-            <MicroField label="URL" value={p.url} onChange={(v) => setField(`projects.${i}.url`, v)} />
-          </div>
-          <MicroField label="Description" value={p.description} onChange={(v) => setField(`projects.${i}.description`, v)} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
-            {(p.bullets || []).map((b, bi) => (
-              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
-                <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>—</span>
-                <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
-                <span onClick={() => mutate((d) => d.projects[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
-              </div>
-            ))}
-            <DashedAdd onClick={() => mutate((d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.push('') })}>+ Add bullet</DashedAdd>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))}>Remove project</RemoveLink></div>
-        </div>
-      ))}
-      {(data.projects || []).length === 0 && <EmptyState what="projects" />}
-      <DashedAdd big onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</DashedAdd>
-    </div>
-  )
-}
-function PublicationsEditor({ data, setField, mutate }) {
-  const pubs = data.publications || []
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
-      {pubs.length === 0 ? <EmptyState what="publications" /> : pubs.map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
-          <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.publications.splice(i, 1))} /></div>
-        </div>
-      ))}
-      <DashedAdd big onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</DashedAdd>
     </div>
   )
 }

@@ -10,6 +10,9 @@
   /* a surface that reads as set-back from --surface (archived rows, pending rows).
      Not --change-bg: that one is the diff tint and is green in dark. */
   --recessed:#fdfcf9;
+  /* Persona's Q&A bank is the one amber-tinted card in v2 — its answers reach the
+     LLM verbatim, so the design sets it apart from the neutral autofill groups. */
+  --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
 
   --serif:'Newsreader',Georgia,serif;
@@ -31,6 +34,9 @@
   --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20; --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58);
   --warn-line:#6b5638; --line-strong:#4a4638; --bad-faint:#241a18; --stage-applied:#a3bedd;
   --recessed:#221f19;
+  /* tuned the way --warn-soft/--warn-line were: a warm tint of --surface, not a
+     darkened light-mode hex, so the card still reads amber against the palette */
+  --amber-bg:#2a2418; --amber-line:#4a4029; --amber-line-soft:#38301f; --amber-hover:#332c1d;
   /* --hover-soft is a faint accent wash on white in light (#f4f8f5). Its dark
      value was never retuned and read as a green-grey against this warm palette,
      so Companies rows and Résumé cards hovered green while everything else
@@ -80,8 +86,10 @@
    Never put this on the root — content-driven card heights depend on 1.5. */
 .v2-ctl { line-height:1; }
 
-/* Cover letters: card headers wash on hover, paragraph/contact buttons tint */
+/* Cover letters + Persona: card headers wash on hover, paragraph/contact buttons tint */
 .v2-clhead:hover { background:var(--bg); }
+/* the Q&A bank card sits on --amber-bg, so it washes to its own amber hover */
+.v2-qahead:hover { background:var(--amber-hover); }
 /* inline style sets the dashed border, so :hover needs !important to win */
 .v2-archband:hover { border-color:var(--edge) !important; }
 .v2-anchor:hover { color:var(--text); }

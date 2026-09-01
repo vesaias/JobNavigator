@@ -18,7 +18,7 @@ const GROUPS = [
     { to: '/v2/cover-letters', label: 'Cover Letters', ready: true, countKey: 'letters' },
   ]},
   { label: 'You', items: [
-    { to: '/v2/persona', label: 'Persona' },
+    { to: '/v2/persona', label: 'Persona', ready: true },
     { to: '/v2/stats', label: 'Stats' },
     { to: '/v2/settings', label: 'Settings', ready: true },
     { to: '/docs', label: 'API Docs', external: true },
