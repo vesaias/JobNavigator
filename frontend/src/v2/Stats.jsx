@@ -200,9 +200,9 @@ export default function Stats() {
     const applied = stats?.total_applications || 0
     const rows = [
       ['Saved', stats?.saved_jobs || 0, 'var(--line-strong)'],
-      ['Applied', applied, 'var(--funnel-low)'],
-      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)'],
-      ['Offer', reached.offer || st.offer || 0, 'var(--accent)'],
+      ['Applied', applied, 'var(--stage-applied)'],
+      ['Interview', reached.interview || st.interview || 0, 'var(--warn)'],
+      ['Offer', reached.offer || st.offer || 0, 'var(--good)'],
     ]
     const widest = Math.max(1, ...rows.map((r) => r[1]))
     return rows.map(([label, count, color]) => ({
@@ -298,7 +298,7 @@ export default function Stats() {
               <div style={{ flex: 1, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <Sankey data={sankey} nodePadding={18} nodeWidth={10} margin={{ top: 4, right: 112, left: 4, bottom: 4 }}
-                    link={{ stroke: 'var(--funnel-low)', strokeOpacity: 0.3 }} node={<SankeyNode />}>
+                    link={{ stroke: 'var(--stage-applied)', strokeOpacity: 0.22 }} node={<SankeyNode />}>
                     <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontSize: 12 }} />
                   </Sankey>
                 </ResponsiveContainer>
@@ -558,12 +558,13 @@ function Spark({ series, peak }) {
   )
 }
 
-// Recharts renders Sankey nodes itself; this draws them on the funnel's own
-// neutral-to-accent ramp so the two views read as the same data, with the
+// Recharts renders Sankey nodes itself; this draws them on the Applications
+// stage palette so a stage looks the same on both screens, with the
 // "name (value)" label v1 used.
 const STAGE_FILL = {
-  new: 'var(--line-strong)', saved: 'var(--line-strong)', applied: 'var(--funnel-low)',
-  interview: 'var(--funnel-mid)', offer: 'var(--accent)',
+  new: 'var(--line-strong)', saved: 'var(--line-strong)', applied: 'var(--stage-applied)',
+  interview: 'var(--warn)', offer: 'var(--good)', rejected: 'var(--bad)',
+  ghosted: 'var(--bad)', withdrawn: 'var(--bad)',
 }
 function SankeyNode({ x, y, width, height, payload }) {
   return (
