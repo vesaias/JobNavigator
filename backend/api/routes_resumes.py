@@ -358,22 +358,41 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
             token = None
 
         # Find or create tracer link for this owner + destination
+        from sqlalchemy.exc import IntegrityError
         existing = db.query(TracerLink).filter(
             owner_filter, TracerLink.destination_url == dest_url,
         ).first()
 
+        # The deterministic token is a preference, never a guarantee. Only a
+        # job-derived {short_id}{stub} is unique by construction; the job-less
+        # 0{stub} fallback is not — every job-less owner with a stub of "l"
+        # wants "0l" — so it may only be taken when nothing else holds it.
+        def _taken_by_other(tok):
+            q = db.query(TracerLink).filter(TracerLink.token == tok)
+            if existing is not None:
+                q = q.filter(TracerLink.id != existing.id)
+            return q.first()
+
         if existing:
-            if token and existing.token != token:
-                existing.token = token
-                db.commit()
-            if not token:
-                token = existing.token
+            if token and existing.token != token and _taken_by_other(token) is None:
+                try:
+                    existing.token = token
+                    db.commit()
+                except IntegrityError:
+                    db.rollback()   # lost a race for it; keep the token we have
+            # whatever happened above, the row's own token is the truth
+            token = existing.token
         else:
-            from sqlalchemy.exc import IntegrityError
+            holder = _taken_by_other(token) if token else None
+            if holder is not None and not job_short_id:
+                # 0{stub} already belongs to a different job-less owner — taking
+                # it would break their links, so fall back to a random token.
+                token = None
             if token:
-                existing_by_token = db.query(TracerLink).filter(TracerLink.token == token).first()
-                if existing_by_token:
-                    _repoint(existing_by_token, dest_url, label)
+                if holder is not None:
+                    # Same job → a resume and its cover letter intentionally share
+                    # this token; hand it to whoever is rendering now.
+                    _repoint(holder, dest_url, label)
                     db.commit()
                 else:
                     # concurrent PDF renders can race here (same deterministic token);
@@ -387,7 +406,7 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
                         if winner:
                             _repoint(winner, dest_url, label)
                             db.commit()
-            else:
+            if not token:
                 chars = string.ascii_lowercase + string.digits
                 for _ in range(100):
                     token = ''.join(random.choices(chars, k=6))
