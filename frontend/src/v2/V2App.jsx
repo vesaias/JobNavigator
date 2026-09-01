@@ -20,7 +20,7 @@ const GROUPS = [
   { label: 'You', items: [
     { to: '/v2/persona', label: 'Persona' },
     { to: '/v2/stats', label: 'Stats' },
-    { to: '/v2/settings', label: 'Settings' },
+    { to: '/v2/settings', label: 'Settings', ready: true },
     { to: '/docs', label: 'API Docs', external: true },
   ]},
 ]

@@ -23,6 +23,7 @@ import V2Searches from './v2/Searches'
 import V2Applications from './v2/Applications'
 import V2CoverLetters from './v2/CoverLetters'
 import V2CoverLetterEditor from './v2/CoverLetterEditor'
+import V2Settings from './v2/Settings'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -154,6 +155,7 @@ function App() {
           <Route path="applications" element={<V2Applications />} />
           <Route path="cover-letters" element={<V2CoverLetters />} />
           <Route path="cover-letters/:id" element={<V2CoverLetterEditor />} />
+          <Route path="settings" element={<V2Settings />} />
         </Route>
 
         {/* classic shell */}
