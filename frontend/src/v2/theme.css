@@ -28,9 +28,13 @@
   --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#3e3b32; --line-soft:#2c2a20; --edge:#7f7a66; --track:#8c8672;
   --text:#d9d7d0; --text-2:#cbc7bf; --muted:#a8a49d; --ink-2:#d1cec6; --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#243029;
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
-  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#232a25; --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58);
+  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20; --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58);
   --warn-line:#6b5638; --line-strong:#4a4638; --bad-faint:#241a18; --stage-applied:#a3bedd;
   --recessed:#221f19;
+  /* --hover-soft is a faint accent wash on white in light (#f4f8f5). Its dark
+     value was never retuned and read as a green-grey against this warm palette,
+     so Companies rows and Résumé cards hovered green while everything else
+     warmed. It is now a warm lift from --surface, matching the rest. */
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
