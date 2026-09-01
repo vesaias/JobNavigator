@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Newspaper, Search, Building2, Send, FileUser, Mail,
-  Fingerprint, ChartLine, Settings as SettingsIcon, BookOpen,
+  Fingerprint, ChartLine, Settings as SettingsIcon,
 } from 'lucide-react'
 import api from '../api'
 import './theme.css'
@@ -29,7 +29,7 @@ const GROUPS = [
     { to: '/v2/persona', label: 'Persona', ready: true, Icon: Fingerprint },
     { to: '/v2/stats', label: 'Stats', ready: true, Icon: ChartLine },
     { to: '/v2/settings', label: 'Settings', ready: true, Icon: SettingsIcon },
-    { to: '/docs', label: 'API Docs', external: true, Icon: BookOpen },
+    // API docs moved to the Settings footer — it is a reference link, not a screen
   ]},
 ]
 

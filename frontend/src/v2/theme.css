@@ -101,7 +101,9 @@
 .v2-anchor:hover { color:var(--text); }
 .v2-parabtn:hover { background:var(--surface-2); }
 .v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
-.v2-hover-accent-text:hover { color:var(--accent); }
+/* every caller sets an inline colour, which beats a bare class rule — the
+   sibling --bad rule already knew this */
+.v2-hover-accent-text:hover { color:var(--accent) !important; }
 .v2-hover-bad-text:hover { color:var(--bad) !important; }
 /* welcome steps are links in v1 and stay links here, so they need an affordance */
 .v2-welcomestep { transition:background .12s; }

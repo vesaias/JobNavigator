@@ -404,6 +404,19 @@ export default function Settings() {
             {visible.length === 0 && (
               <div style={{ padding: '44px 0', fontSize: 12.5, color: 'var(--muted)' }}>No settings match “{query}”.</div>
             )}
+
+            {/* colophon — API docs lives here now rather than in the nav rail */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '34px 0 6px', fontSize: 11, lineHeight: '16px', color: 'var(--edge)' }}>
+              <span style={{ fontStyle: 'italic' }}>
+                <span style={{ color: 'var(--muted)', fontFamily: 'var(--serif)', fontSize: 12, fontStyle: 'normal' }}>JobNavigator</span>&nbsp;v.2.0
+              </span>
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
+                <a href="/docs" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
+                  style={{ color: 'var(--edge)', textDecoration: 'none', cursor: 'pointer' }}>API docs ↗</a>
+                <a href="https://github.com/vesaias/JobNavigator" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
+                  style={{ color: 'var(--edge)', textDecoration: 'none' }}>github.com/vesaias/JobNavigator ↗</a>
+              </span>
+            </div>
           </div>
         </div>
       </div>
