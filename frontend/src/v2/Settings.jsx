@@ -335,8 +335,6 @@ export default function Settings() {
         B('Proxy URL', 'Used by scrapes that hit rate limits or geo-blocks. Empty = direct.', 'proxy_url', { mono: true, w: '340px', placeholder: 'socks5://127.0.0.1:9050' }),
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes and downloads keep working.' },
         BT('DB backup', 'Snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup')),
-        BT('H-1B data', 'Re-import the sponsorship dataset.', 'Refresh now', () => api.post('/h1b/refresh')),
-        BT('Job cleanup', 'Purge expired postings now.', 'Run cleanup', () => api.post('/db/cleanup')),
       ]],
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
