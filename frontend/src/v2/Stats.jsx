@@ -450,13 +450,13 @@ export default function Stats() {
 
         {/* run history / activity log */}
         <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 20px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '12px 20px 10px' }}>
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
               <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--edge)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
             ))}
             <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? 'last 30 scheduler and manual runs' : 'everything the pipeline did, newest first'}</span>
             {tab === 'activity' && (
-              <span style={{ display: 'flex', gap: 6 }}>
+              <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>
                   <span onClick={() => setTypeOpen((v) => !v)} className="v2-bdc v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
                     Type{actType ? ' · 1' : ''}<span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
@@ -486,7 +486,7 @@ export default function Stats() {
           {tab === 'runs' ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
-                <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 140px' }}>Job</span><span style={{ flex: '0 0 90px' }}>Trigger</span>
+                <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 140px' }}>Job ID</span><span style={{ flex: '0 0 90px' }}>Trigger</span>
                 <span style={{ flex: '0 0 100px' }}>Status</span><span style={{ flex: '0 0 76px' }}>Duration</span><span style={{ flex: 1 }}>Result</span>
               </div>
               {runs.map((r) => {
