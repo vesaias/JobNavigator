@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
+import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
 import {
@@ -298,6 +299,7 @@ export default function ResumeEditor() {
   }, [changes, data, onData, pushToast])
 
   // ── json_data mutation (mirrors v1 ResumeContentEditor) ────────────────────
+  useTitle(doc?.name)
   const { mutate, setField } = makeMutators(data, onData)
   const toggle = (name) => setOpen((p) => {
     const n = new Set(p); n.has(name) ? n.delete(name) : n.add(name)

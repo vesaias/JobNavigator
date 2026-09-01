@@ -28,6 +28,7 @@ import V2Persona from './v2/Persona'
 import V2Stats from './v2/Stats'
 import V2ToastLab from './v2/ToastLab'   // TEMP: /v2/toasts debug page
 import axios from 'axios'
+import { TitleSync } from './useTitle'
 
 const NAV_ITEMS = [
   { to: '/', icon: Briefcase, label: 'Jobs' },
@@ -146,6 +147,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <TitleSync />
       <Routes>
         {/* v2 redesign — separate shell, additive, swap to / when complete */}
         <Route path="/v2" element={<V2App />}>

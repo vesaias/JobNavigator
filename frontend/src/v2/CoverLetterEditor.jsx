@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
 import './theme.css'
+import { useTitle } from '../useTitle'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -62,6 +63,7 @@ export default function CoverLetterEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [doc, setDoc] = useState(null)
+  useTitle(doc?.name)
   const [data, setData] = useState(EMPTY)
   const [template, setTemplate] = useState('')
   const [format, setFormat] = useState('letter')
