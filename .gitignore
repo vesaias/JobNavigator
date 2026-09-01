@@ -159,3 +159,4 @@ resumes-example/
 
 # Extension source lib is NOT a build dir — keep it tracked
 !extension/lib/
+instance2/
