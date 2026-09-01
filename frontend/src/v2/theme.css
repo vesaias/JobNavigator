@@ -103,6 +103,9 @@
 .v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
 .v2-hover-accent-text:hover { color:var(--accent); }
 .v2-hover-bad-text:hover { color:var(--bad) !important; }
+/* welcome steps are links in v1 and stay links here, so they need an affordance */
+.v2-welcomestep { transition:background .12s; }
+.v2-welcomestep:hover { background:var(--surface-2); }
 
 /* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
    light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
