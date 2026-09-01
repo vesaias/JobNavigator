@@ -317,9 +317,9 @@ export default function Stats() {
                 </div>
               ))}
             </div>
-            <span style={NOTE}>
-              Saved is your live shortlist; the rest count every application that ever reached that stage ·
-              applied → interview {conv(stats?.total_applications, reached.interview || 0)}, interview → offer {conv(reached.interview || 0, reached.offer || 0)}
+            <span style={{ ...NOTE, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: '15px' }}>
+              <span>Saved is your live shortlist; the rest count every application that ever reached that stage</span>
+              <span>applied → interview {conv(stats?.total_applications, reached.interview || 0)} · interview → offer {conv(reached.interview || 0, reached.offer || 0)}</span>
             </span>
             </div>
             )}
@@ -392,7 +392,7 @@ export default function Stats() {
               </div>
               {/* fixed, not max: 3 purposes at 30d and 6 at all-time otherwise
                   grow the card when you switch period */}
-              <div className="v2-scroll v2-gutter" style={{ flex: '0 0 218px', height: 218, overflow: 'auto' }}>
+              <div className="v2-scroll v2-gutter" style={{ flex: '0 0 176px', height: 176, overflow: 'auto' }}>
               {(costs?.by_purpose || []).map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
