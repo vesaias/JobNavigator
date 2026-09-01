@@ -271,7 +271,7 @@ export default function ResumeEditor() {
     try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ msg: 'Delete failed.' }) }
   }, [doc, id, navigate, pushToast])
 
-  const goCover = () => { setHeadMenu(false); window.location.href = `/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}` }
+  const goCover = () => { setHeadMenu(false); navigate(`/v2/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
 
   // the "one next step" stage for a tailored copy
   const stage = useMemo(() => {

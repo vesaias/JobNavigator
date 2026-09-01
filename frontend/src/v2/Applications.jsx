@@ -376,7 +376,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             {menuOpen && (
               <div style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, padding: 5, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
-                  ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => { window.location.href = `/cover-letters?job=${d.job_id}` }]] : [])].map(([g, label, act]) => (
+                  ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => navigate(`/v2/cover-letters?job=${d.job_id}`)]] : [])].map(([g, label, act]) => (
                   <div key={label} onClick={() => { setMenuOpen(false); act() }} className="v2-menuitem"
                     style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
                     <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{g}</span>{label}

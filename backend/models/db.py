@@ -368,6 +368,14 @@ class CoverLetter(Base):
     template = Column(String, default="garamond_alt")
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
+    # How this draft was written. Kept so the list and the editor can say what
+    # produced a letter, and so Regenerate can preselect the same settings —
+    # without them the UI can only show what the generate panel happens to hold.
+    voice = Column(String, nullable=True)          # voice preset id
+    length = Column(String, nullable=True)         # concise | standard | detailed
+    # NULL resume_id + from_persona=True means the evidence came from the
+    # Persona's resume_content rather than a Resume row.
+    from_persona = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

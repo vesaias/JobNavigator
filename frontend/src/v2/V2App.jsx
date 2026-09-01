@@ -15,7 +15,7 @@ const GROUPS = [
   { label: 'Apply', items: [
     { to: '/v2/applications', label: 'Applications', ready: true, countKey: 'apps' },
     { to: '/v2/resumes', label: 'Résumés', ready: true, countKey: 'resumes' },
-    { to: '/v2/cover-letters', label: 'Cover Letters' },
+    { to: '/v2/cover-letters', label: 'Cover Letters', ready: true, countKey: 'letters' },
   ]},
   { label: 'You', items: [
     { to: '/v2/persona', label: 'Persona' },
@@ -38,6 +38,7 @@ export default function V2App() {
     api.get('/applications').then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
     api.get('/companies').then(({ data }) => setCounts((c) => ({ ...c, companies: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
     api.get('/searches').then(({ data }) => setCounts((c) => ({ ...c, searches: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
+    api.get('/cover-letters').then(({ data }) => setCounts((c) => ({ ...c, letters: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
   }, [])
 
   const W = open ? 206 : 60

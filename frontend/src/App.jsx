@@ -21,6 +21,8 @@ import V2ResumeEditor from './v2/ResumeEditor'
 import V2Companies from './v2/Companies'
 import V2Searches from './v2/Searches'
 import V2Applications from './v2/Applications'
+import V2CoverLetters from './v2/CoverLetters'
+import V2CoverLetterEditor from './v2/CoverLetterEditor'
 import axios from 'axios'
 
 const NAV_ITEMS = [
@@ -150,6 +152,8 @@ function App() {
           <Route path="companies" element={<V2Companies />} />
           <Route path="searches" element={<V2Searches />} />
           <Route path="applications" element={<V2Applications />} />
+          <Route path="cover-letters" element={<V2CoverLetters />} />
+          <Route path="cover-letters/:id" element={<V2CoverLetterEditor />} />
         </Route>
 
         {/* classic shell */}

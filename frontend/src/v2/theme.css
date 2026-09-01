@@ -64,6 +64,13 @@
 /* border + text turn accent, no background wash (the design's pill hover) */
 .v2-bdc:hover { border-color:var(--accent) !important; color:var(--accent) !important; }
 
+/* Cover letters: card headers wash on hover, paragraph/contact buttons tint */
+.v2-clhead:hover { background:var(--bg); }
+.v2-parabtn:hover { background:var(--surface-2); }
+.v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
+.v2-hover-accent-text:hover { color:var(--accent); }
+.v2-hover-bad-text:hover { color:var(--bad) !important; }
+
 /* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
    light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
    Tier chips are a separate taxonomy and are not part of that badge set. */

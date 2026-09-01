@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 
 const FILTERS_KEY = 'v2_feed_filters'
@@ -190,6 +190,7 @@ export default function V2JobFeed() {
   const scoreWatchRef = useRef([])
   const pendingRef = useRef({})   // {jobId:{title,company}} → completion toast
   const seenActiveRef = useRef(new Set())   // jobs confirmed in-flight (avoids first-tick false completion)
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   // ?search=<id> scopes the feed to one saved search (from Searches → View results in feed)
   const [searchId, setSearchId] = useState(() => { try { return new URLSearchParams(window.location.search).get('search') || '' } catch { return '' } })
@@ -861,7 +862,7 @@ export default function V2JobFeed() {
                               ...(d.tailored_resume_id ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
-                              ['Cover letter ↗', 'c', () => { window.location.href = `/cover-letters?job=${d.id}` }],
+                              ['Cover letter ↗', 'c', () => navigate(`/v2/cover-letters?job=${d.id}`)],
                               ['Copy résumé with tracers', '', () => setPicker({ mode: 'copy', jobs: [d] })],
                             ].map(([label, kb, act, bold]) => (
                               <div key={label} className="v2-menuitem" onClick={() => { setHeadMenu(false); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, cursor: 'pointer' }}>{label}{kb && <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span>}</div>
