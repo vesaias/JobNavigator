@@ -57,7 +57,10 @@
 .v2-navdark:hover { color:#f6f3ea; }
 /* inline styles set border/background on these, so :hover must use !important to win */
 .v2-card { transition:border-color .12s,background .12s; }
-.v2-card:hover { border-color:var(--edge) !important; background:var(--hover-soft) !important; }
+/* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other
+   clickable card/row in v2 goes to the accent — and --edge was stronger than
+   that beige anyway. Unified on the accent; the background lift is unchanged. */
+.v2-card:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
 .v2-chip { transition:border-color .12s,background .12s,box-shadow .12s,color .12s; }
 .v2-chip:hover { border-color:var(--accent) !important; background:var(--surface) !important; color:var(--good) !important; box-shadow:0 0 0 2px var(--ring-accent) !important; }
 .v2-dashadd { transition:border-color .12s,background .12s; }

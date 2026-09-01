@@ -69,6 +69,9 @@ const inputSt = {
 export default function Applications() {
   const navigate = useNavigate()
   const [apps, setApps] = useState([])
+  // hold the screen back until the first fetch lands — otherwise the chrome
+  // paints with "0 applications" and an empty list, then everything pops in
+  const [loaded, setLoaded] = useState(false)
   const [sel, setSel] = useState(null)
   const [query, setQuery] = useState('')
   const [companies, setCompanies] = useState([])
@@ -93,6 +96,7 @@ export default function Applications() {
       setApps(list)
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
     } catch (e) { console.error(e) }
+    setLoaded(true)
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -206,6 +210,8 @@ export default function Applications() {
     if (d.discovered_at) h.push({ what: `Discovered via ${srcLabel(d.source)}`, at: d.discovered_at, dot: 'var(--line-strong)' })
     return h.sort((a, b) => new Date(b.at) - new Date(a.at))
   }, [d])
+
+  if (!loaded) return <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)' }} />
 
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
