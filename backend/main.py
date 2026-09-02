@@ -851,7 +851,7 @@ def get_scheduler_jobs():
                 "schedule": f"Every {s.run_interval_minutes} min (search override)",
                 "next_run": next_run,
                 "pending": False,
-                "trigger_url": f"/scrape/search/{s.id}",
+                "trigger_url": f"/searches/{s.id}/run",
                 "running": None,
             })
 

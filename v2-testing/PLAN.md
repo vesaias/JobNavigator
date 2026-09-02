@@ -12,15 +12,16 @@ Environment: stack via `docker compose` (Docker Desktop). Backend tests run in-c
 - [x] Backend suite in container: 587 passed, 1 warning, 22.75s (2026-09-01)
 - [x] pg_dump baseline: `backups/v2testing_baseline_20260901_2345.dump` (custom format, 23.6 MB). Counts: jobs 19012 · applications 377 · companies 126 · searches 6 · resumes 349 · cover_letters 16 · settings 86 · personas 1 · job_runs 1585
 - [x] Bundle confirmed: rebuilt frontend from HEAD 438d27a; served `index-Dnrx3n0f.js` contains V2App tokens (`jobnavigator_v2_rail`, `No scrape recorded yet`)
-- [ ] Verify the baseline dump restores into a scratch DB (`jobnavigator_restoretest`) before any destructive step
+- [x] Verified: baseline dump restores into `jobnavigator_restoretest` (jobs 19012 · applications 377 · settings 86 · resumes 349)
 
 ## Stage 1 — Inventory
-- [ ] Routes (v1 + v2) listed below
-- [ ] Endpoints listed (94 paths from openapi) → `inventory/endpoints.md`
-- [ ] v2 screen inventories → `inventory/v2-*.md` (feed, searches, companies, applications, resumes, cover-letters, persona-stats, settings)
-- [ ] v1 screen inventories → `inventory/v1-*.md`
+- [x] Routes (v1 + v2) listed below
+- [x] Endpoints listed (94 paths / 110 operations) → `inventory/endpoints.md`
+- [x] v2 screen inventories: feed (193 boxes) · searches (150) · companies (202) · applications (137) · resumes (292) · cover-letters (230) · settings (207)
+- [ ] v2 persona-stats inventory → `inventory/v2-persona-stats.md`
+- [x] v1 screen inventories → `inventory/v1-*.md` (3 files)
 - [ ] Settings matrix → `inventory/settings-matrix.md`
-- [ ] Design boards decoded → `design/` (gitignored)
+- [x] Design boards decoded → `design/` (14 boards byte-exact + MAIN.md + github.md). Note: MAIN.md names `Resumes Shelf` canonical for Résumés while HANDOVER names `Resumes Home D`; github.md names `Applications Ops` (split inbox) canonical while MAIN.md lists Applications as open. Testing follows the HANDOVER table.
 - [ ] Commit
 
 ### Routes
@@ -29,10 +30,10 @@ v1 (`ClassicShell`): `/` · `/applications` · `/companies` · `/searches` · `/
 Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{token}` · `/?cv=`
 
 ## Stage 2 — Static sweeps
-- [ ] Dead links (every `<a href>`, `NavLink to`, `navigate()` target in v2 resolves to a route or a real URL)
+- [x] Dead links: 46 targets checked; 2 defects → F-001 (v1 route), F-002 (`?company=` unread). `/docs` + GitHub external OK; `/api/...` hrefs rely on the `jn_session` cookie set by App.jsx startup sync
 - [ ] No-op handlers (onClick without effect, handlers never attached)
-- [ ] Colour literals in v2 JSX + theme.css audit (unused tokens, missing dark variants)
-- [ ] Console errors/warnings on every route, light AND dark (Playwright)
+- [x] Colour literals: 0 in v2 JSX. Tokens: 10 unused (F-003), 5 shadows without dark (F-004); every `var(--x)` used in JSX is defined
+- [x] Console sweep, 23 routes × 2 themes → `artifacts/sweep1/` (gitignored). Clean except: Feed mounts the posting iframe while the frame-check is still pending (XFO refusals logged; Stage 3 Feed item); PDF blob aborts in headless are expected
 - [ ] Commit
 
 ## Stage 3 — Per screen (each: every control · empty/one/many/long/null · light+dark · hovers vs design style-hover · API-failure path · empty DB)

@@ -6,3 +6,43 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 (filled at Stage 7)
 
 ## Entries
+
+### F-001 · P2 · Feed · Tailored-résumé ✦ mark in the list row leaves v2 for the classic UI
+**Where** `frontend/src/v2/JobFeed.jsx:766`, route `/v2/feed`
+**Repro** Open the feed, find a row with the green ✦ (any job with `tailored_resume_id`), click it.
+**Expected + why** Opens `/v2/resumes/{id}` in the v2 editor — every other tailored-résumé link in the file (`JobFeed.jsx:381,382,556`) navigates to `/v2/resumes/${id}`; the design's master board has no hand-off to the classic UI.
+**Actual** `href="/resumes?resume={id}"` — a full page load into the v1 Résumé Builder.
+**Proposed fix** `href="/v2/resumes/{id}"` + `navigate()` on click (keeps middle-click/open-in-new-tab working).
+**Status** fixed in Stage 2 commit.
+
+### F-002 · P2 · Companies → Feed · "View in feed" passes `?company=` but the Feed never reads it
+**Where** `frontend/src/v2/Companies.jsx:393` (link) → `frontend/src/v2/JobFeed.jsx:110-113` (filter init), routes `/v2/companies` → `/v2/feed`
+**Repro** Companies → any row ⋯ → "View in feed".
+**Expected + why** Feed opens filtered to that company (the menu item says so; the Companies Ops design's row menu item is "View in feed"). `?search=` from Searches is honoured the same way at `JobFeed.jsx:179`.
+**Actual** Feed initialises `filters.company` from localStorage only; the param is ignored and the unfiltered feed shows. Measured: `grep "get('company')"` → 0 hits before the fix.
+**Proposed fix** Read `?company=` in the filters initializer and set `company: [name]`. Caveat: `JobFeed.jsx:501` prunes any company not present in `/jobs/companies/list`, so a company with no jobs in the feed silently drops back to "all companies" — worth a "no roles for X" state (logged as a follow-up in Stage 3 Feed).
+**Status** fixed in Stage 2 commit.
+
+### F-003 · P4 · theme.css · 10 tokens defined but never used
+**Where** `frontend/src/v2/theme.css:60,67-69`
+**Repro** For each `--name:` in theme.css, `grep -o "var(--name)"` across `frontend/src` → 0 hits for: `--accent-bg --border --border-lt --danger --danger-bg --ink --panel --stone --warn-bg` (the back-compat aliases) and `--paper` (defined in both light `:60` and dark `:117`).
+**Expected + why** HANDOVER lists the 9 aliases as known; `--paper` is new to this sweep. Dead tokens make the "one theme = replace this list" promise wrong by 10 entries.
+**Actual** 10 unused.
+**Proposed fix** Delete the 9 alias lines and `--paper`, or wire `--paper` to the PDF-preview iframe ground (`--iframe-bg` already does that). Needs a decision only on whether the aliases are kept for the planned skin work.
+**Status** needs decision: delete now, or keep until the primitive layer lands?
+
+### F-004 · P4 · theme.css · 5 shadow tokens have no dark variant
+**Where** `frontend/src/v2/theme.css:27-29` (light only)
+**Repro** `sed -n 74,118p theme.css | grep shadow` → 0 hits.
+**Expected + why** Dark surfaces sit on `#1e1c17`; a `rgba(0,0,0,.16)` menu shadow is nearly invisible there, so menus/drawers/modals lose their edge separation in dark mode. HANDOVER flags this as outstanding.
+**Actual** Same light shadows in both themes.
+**Proposed fix** Add dark overrides with higher alpha (e.g. `.28 → .55`, `.16 → .4`) and verify by measuring the pixel delta at a menu edge in dark.
+**Status** needs decision (design choice — I can propose values and measure).
+
+### F-005 · P2 · Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
+**Where** `backend/main.py:854` (`trigger_url`), consumed by `frontend/src/v2/Stats.jsx:162` and `frontend/src/components/Stats.jsx:515`; routes `/v2/stats`, `/stats`
+**Repro** Stats → Schedules → any "Search: …" row with a per-search interval → Run.
+**Expected + why** Triggers the search (`POST /api/searches/{id}/run`, `routes_searches.py:103`, the endpoint Searches' own Run button uses).
+**Actual** `POST /api/scrape/search/{id}` → measured `404` via curl. v2 swallows it (`console.error('trigger', e)`, no toast); v1 shows nothing either.
+**Proposed fix** Point `trigger_url` at `/searches/{id}/run`.
+**Status** fixed in backend; no search currently has a per-search interval so the row is absent from `/api/scheduler/jobs` — live verification deferred to Stage 3 Searches (set `run_interval_minutes` on a scratch search). The silent-failure UX in v2 Stats is logged separately under Stage 3 Stats.
