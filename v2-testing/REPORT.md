@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 66 | 33 | 12 |
-| P4 | 90 | 36 | 26 | 28 |
-| **All** | **276** | **176** | **59** | **41** |
+| P3 | 111 | 69 | 26 | 16 |
+| P4 | 90 | 40 | 25 | 25 |
+| **All** | **276** | **183** | **51** | **42** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -22,7 +22,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 36 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
-| searches.md | 29 | 0 | 6 | 11 | 12 | 7 |
+| searches.md | 29 | 0 | 6 | 11 | 12 | 14 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 10 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
 | FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
@@ -194,6 +194,13 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SRCH-05 (P2) — No loading and no error state for the list — a failed GET renders “No searches yet · 0 configs”
 - SRCH-06 (P2) — A 409 from Run clears the spinner although the run really is in flight
 - SRCH-07 (P3) — Every card in the list lands on a half pixel
+- SRCH-09 (P3) — Header “N need attention” and the rail's “N sources need attention” count different things
+- SRCH-10 (P3) — The rail “Searches” badge diverges from the header count after create / duplicate / delete
+- SRCH-15 (P3) — New-search card body and edit drawer paint `--bg`; the design specifies `#fdfcf9` → `--recessed`
+- SRCH-22 (P4) — New-card Cancel keeps the typed draft
+- SRCH-23 (P4) — No concurrency guard on Test
+- SRCH-24 (P4) — `/health/entities` and `/scheduler/jobs` are fetched once and never refreshed
+- SRCH-29 (P4) — No pending state on “Create search” or “Save changes”
 - SET-01 (P1) — Typing after a revealed secret mask saves `••••••<typed>` and destroys the stored secret
 - SET-02 (P2) — An unset secret renders as six bullets, identical to a set one
 - SET-03 (P1) — "Save key" writes the new API key locally and refreshes the session cookie even when the PATCH failed → dashboard lockout
