@@ -118,9 +118,11 @@ export default function Stats() {
     ])
     setSweep((sw || [])[0] || null)
     setFailing(((he?.companies || []).length) + ((he?.searches || []).length))
-    if (s) setStats(s)
-    if (tl) setTimeline(tl)
-    if (sd) setScores(sd)
+    // STAT-03: keeping the previous value on failure rendered a dead backend as a
+    // plausible dashboard. Clear the node instead — int(null) renders “—”.
+    setStats(s)
+    setTimeline(tl)
+    setScores(sd)
     const list = bj?.jobs || bj?.items || (Array.isArray(bj) ? bj : [])
     setBest(list[0] || null)
     setFlows(Array.isArray(fl) ? fl : [])
@@ -162,17 +164,34 @@ export default function Stats() {
     setRefreshing(false)
   }
 
+  // STAT-01: 202, 409 and 500 used to give byte-identical UI for a fixed 4s, so a
+  // refused or failed trigger read as a started one. Toast the outcome, and drop
+  // the optimistic "Running" immediately when nothing was actually started.
   const trigger = async (job) => {
     if (!job.trigger_url) return
+    const clear = () => setTriggering((p) => { const n = new Set(p); n.delete(job.id); return n })
     setTriggering((p) => new Set(p).add(job.id))
-    try { await api.post(job.trigger_url); loadLive() }
-    catch (e) { console.error('trigger', e); pushToast({ kind: 'error', msg: `Could not start ${job.name}` + errSuffix(e) }) }
-    finally { setTimeout(() => setTriggering((p) => { const n = new Set(p); n.delete(job.id); return n }), 4000) }
+    try {
+      await api.post(job.trigger_url)
+      pushToast({ kind: 'progress', msg: `${job.name} started.` })
+      loadLive()
+      setTimeout(clear, 4000)
+    } catch (e) {
+      console.error('trigger', e)
+      clear()
+      pushToast({ kind: 'error', msg: e.response?.status === 409 ? `${job.name} is already running.` : `Could not start ${job.name}` + errSuffix(e) })
+    }
   }
 
   // ── derived ───────────────────────────────────────────────────────────────
   const st = stats?.application_statuses || {}
   const inPlay = Math.max(0, (stats?.total_applications || 0) - ((st.rejected || 0) + (st.ghosted || 0) + (st.withdrawn || 0)))
+  // STAT-02: cv_scores can be {} (routes_jobs.py treats that as unscored) and
+  // Math.max() of an empty list is -Infinity — the tile rendered "-Infinity".
+  const bestScore = useMemo(() => {
+    const nums = Object.values(best?.cv_scores || {}).filter((v) => typeof v === 'number')
+    return nums.length ? String(Math.round(Math.max(...nums))) : '—'
+  }, [best])
 
   // fill the 30-day window: the API omits days with no discoveries
   const series = useMemo(() => {
@@ -269,10 +288,10 @@ export default function Stats() {
         <div style={{ ...CARD, display: 'flex' }}>
           {[
             ['Total jobs', int(stats?.total_jobs), '', 'Everything ever scraped or captured, minus cleanup'],
-            ['New this week', int(weekly.now), weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs last` : '', 'Discovered in the last 7 days'],
+            ['New this week', int(timeline ? weekly.now : null), timeline && weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs last` : '', 'Discovered in the last 7 days'],
             ['Saved', int(stats?.saved_jobs), '', 'In your feed shortlist'],
             ['Applications', int(stats?.total_applications), `${inPlay} in play`, 'In play = not rejected, ghosted or withdrawn'],
-            ['Best open score', best?.cv_scores ? String(Math.round(Math.max(...Object.values(best.cv_scores).filter((v) => typeof v === 'number')))) : '—', best?.company || '', 'Highest-scoring posting you haven’t applied to'],
+            ['Best open score', bestScore, bestScore === '—' ? '' : (best?.company || ''), 'Highest-scoring posting you haven’t applied to'],
           ].map(([label, value, sub, hint], i, arr) => (
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>

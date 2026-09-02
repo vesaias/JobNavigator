@@ -65,6 +65,17 @@ const timeAgo = (s) => {
 // MenuItem, UPPER, cellInput and the seven *Editor sections now live there so
 // /v2/persona edits resume_content with the identical components. IconBtn,
 // AddLink and normUrl were unreferenced and were dropped rather than moved.
+// RES-06: "reviewed" was recomputed from the base-vs-copy diff on every render,
+// so every change the user *kept* stayed a diff forever and the "one next step"
+// CTA could never leave "Review N changes". Record the acknowledgement instead.
+// localStorage rather than a json_data marker: it is a per-user UI
+// acknowledgement, needs no backend change, no migration and no extra write on
+// a screen that already saves continuously. Promote it to json_data later if it
+// has to survive a browser change.
+const REVIEWED_KEY = 'jobnavigator_v2_resume_reviewed'
+const readReviewed = () => { try { const a = JSON.parse(localStorage.getItem(REVIEWED_KEY)); return Array.isArray(a) ? a : [] } catch { return [] } }
+const markReviewed = (rid) => { try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...readReviewed().filter((x) => x !== rid), rid].slice(-300))) } catch { /* ignore */ } }
+
 export default function ResumeEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -85,6 +96,9 @@ export default function ResumeEditor() {
   const [fmtOpen, setFmtOpen] = useState(false)
   const [tailorOpen, setTailorOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewed, setReviewed] = useState(false)   // RES-06: tailoring changes acknowledged for this copy
+  const [pdfErr, setPdfErr] = useState(false)      // RES-08: last preview render failed
+  const [pdfNonce, setPdfNonce] = useState(0)      // RES-08: Retry re-arms the preview effect
   const [baseData, setBaseData] = useState(null)   // parent json_data (for diff + inline marks)
   const [jobData, setJobData] = useState(null)     // the copy's job (cv_scores, status)
   const [tracers, setTracers] = useState([])
@@ -150,6 +164,8 @@ export default function ResumeEditor() {
       else pushToast({ kind: 'error', msg: e.response?.data?.detail || 'Could not start.' })
     }
   }, [doc, jobData, pushToast, navigate])
+
+  useEffect(() => { setReviewed(readReviewed().includes(id)) }, [id])   // RES-06
 
   useEffect(() => {
     let alive = true
@@ -235,12 +251,12 @@ export default function ResumeEditor() {
   // the "one next step" stage for a tailored copy
   const stage = useMemo(() => {
     if (!isCopy) return null
-    if (changes.length) return { label: `Review ${changes.length} change${changes.length === 1 ? '' : 's'}`, act: () => setReviewOpen(true) }
+    if (changes.length && !reviewed) return { label: `Review ${changes.length} change${changes.length === 1 ? '' : 's'}`, act: () => setReviewOpen(true) }
     if (scores.tailored == null) return { label: scoring ? 'Scoring…' : 'Score the result', act: () => runScore('full') }
     if (!coverExists) return { label: '✉ Write cover letter', act: goCover }
     if (jobData?.status !== 'applied') return { label: 'Mark applied', act: markApplied }
     return { label: 'Applied ✓', act: null, done: true }
-  }, [isCopy, changes.length, scores.tailored, scoring, coverExists, jobData, runScore, markApplied]) // eslint-disable-line
+  }, [isCopy, changes.length, reviewed, scores.tailored, scoring, coverExists, jobData, runScore, markApplied]) // eslint-disable-line
 
   // debounced persist
   const persist = useCallback((patch) => {
@@ -269,11 +285,19 @@ export default function ResumeEditor() {
         const r = await api.get(`/resumes/${id}/pdf`, { responseType: 'arraybuffer', params: { template, format }, signal: ac.signal })
         const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }))
         setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return url })
-      } catch (e) { if (e.code !== 'ERR_CANCELED' && e.name !== 'CanceledError') console.error('pdf', e) }
+        setPdfErr(false)
+      } catch (e) {
+        if (e.code === 'ERR_CANCELED' || e.name === 'CanceledError') return
+        // RES-08: a failed render used to leave the *previous* PDF on screen with
+        // no signal, so a stale preview and a current one looked identical.
+        console.error('pdf', e)
+        setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null })
+        setPdfErr(true)
+      }
     }, 800)
     return () => clearTimeout(pdfTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, template, format, doc, id])
+  }, [data, template, format, doc, id, pdfNonce])
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl) }, [pdfUrl])
 
   // apply the decline-based review: declined modified/added → revert to base; kept
@@ -296,8 +320,9 @@ export default function ResumeEditor() {
     ;(d.experience || []).forEach((e) => { delete e.suggested_bullets })
     onData(d)
     setReviewOpen(false)
+    markReviewed(id); setReviewed(true)   // RES-06: the diff survives; the acknowledgement is what advances the stage
     pushToast({ kind: 'success', msg: 'Review applied — declined changes restored to base.' })
-  }, [changes, data, onData, pushToast])
+  }, [changes, data, id, onData, pushToast])
 
   // ── json_data mutation (mirrors v1 ResumeContentEditor) ────────────────────
   useTitle(doc?.name)
@@ -359,7 +384,7 @@ export default function ResumeEditor() {
               })()}
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {(changes.length ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
+              {(changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
             </span>
           </div>
@@ -406,7 +431,7 @@ export default function ResumeEditor() {
           {SECTION_ORDER.map((name) => (
             <SectionShell key={name} name={name} count={counts[name]} open={open.has(name)} onToggle={() => toggle(name)}
               meta={changedSections.has(name) ? <span title="Contains unreviewed tailoring changes" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--warn)' }}>● changed by tailoring</span> : null}>
-              <SectionEditor name={name} data={data} setField={setField} mutate={mutate} baseData={baseData} />
+              <SectionEditor name={name} data={data} setField={setField} mutate={mutate} baseData={baseData} onError={(msg) => pushToast({ kind: 'error', msg })} />
             </SectionShell>
           ))}
         </section>
@@ -443,6 +468,12 @@ export default function ResumeEditor() {
           </div>
           <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--surface-2)' }}>
             {pdfUrl && <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />}
+            {pdfErr && !pdfUrl && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 12.5 }}>
+                <span>Preview failed — the PDF could not be rendered.</span>
+                <span onClick={() => setPdfNonce((n) => n + 1)} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Retry</span>
+              </div>
+            )}
           </div>
         </section>
       </div>

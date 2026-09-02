@@ -126,6 +126,7 @@ export default function Settings() {
   const [modelsOpen, setModelsOpen] = useState(false)
   const [li, setLi] = useState(null)          // linkedin session status
   const [toast, setToast] = useState(null)
+  const [loadErr, setLoadErr] = useState(null)   // SET-06: a failed GET /settings
   const scrollRef = useRef(null)
   const timers = useRef([])
   const flashTimer = useRef(null)
@@ -141,7 +142,11 @@ export default function Settings() {
         o[k] = !!(s.data || {})[`${k}_provider`]
       }
       setOvr(o)
-    } catch (e) { console.error(e) }
+      setLoadErr(null)
+    } catch (e) {
+      console.error(e)
+      setLoadErr(e?.response?.data?.detail || e?.message || 'The server did not answer.')
+    }
   }, [])
 
   useEffect(() => {
@@ -163,10 +168,13 @@ export default function Settings() {
   // returns whether the PATCH landed, so callers with side effects of their own
   // (ApiKeyRow writes localStorage + refreshes the session cookie) can bail out
   const save = useCallback(async (key, value) => {
+    // SET-06: never PATCH from a pane that never loaded — a blur would write a
+    // control's placeholder over the real stored value.
+    if (!S) { flash('Settings are not loaded yet', true); return false }
     setS((p) => ({ ...p, [key]: value }))
     try { await api.patch('/settings', { [key]: value }); flash('Saved'); return true }
     catch (e) { console.error(e); flash('Could not save — try again', true); return false }
-  }, [])
+  }, [S])
 
   const val = (k, fallback = '') => {
     const v = S?.[k]
@@ -366,7 +374,23 @@ export default function Settings() {
     sec[4].some((r) => `${r.label} ${r.help || ''}`.toLowerCase().includes(q))
   const visible = sections.filter(matches)
 
-  if (!S) return <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)' }} />
+  // SET-06: a failed load used to render an empty pane identical to the loading
+  // state, so a hard failure and a hung request were indistinguishable.
+  if (!S) return (
+    <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {loadErr ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
+          <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your settings</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
+          <span onClick={() => { setLoadErr(null); load() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+        </div>
+      ) : (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--muted)' }}>
+          <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading settings…
+        </span>
+      )}
+    </div>
+  )
 
   const jump = (id) => {
     setActive(id); setQuery('')

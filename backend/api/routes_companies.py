@@ -152,7 +152,11 @@ def list_companies(
         open_week = sum(week_by_key.get(k, 0) for k in keys)
         fs = sum(fitsum_by_key.get(k, 0) for k in keys)
         fc = sum(fitcnt_by_key.get(k, 0) for k in keys)
-        return open_jobs, open_week, (round(fs / fc) if fc else None)
+        # Applications summed over name + aliases too: "Open", "+7d" and "Ø Fit"
+        # already are, so a name-only count made the Apps column disagree with
+        # its neighbours for any company that has applications under an alias.
+        apps = sum(app_counts.get(k, 0) for k in keys)
+        return open_jobs, open_week, (round(fs / fc) if fc else None), apps
 
     # Latest ScrapeLog per company → surface the most recent run's error/warning
     # in Health right away (the /health/entities "down" state needs 3 bad runs).
@@ -171,11 +175,11 @@ def list_companies(
 
     out = []
     for c in companies:
-        open_jobs, open_week, avg_fit = _aggregates(c)
+        open_jobs, open_week, avg_fit, app_count = _aggregates(c)
         ll = last_log.get(str(c.id))
         out.append(_company_to_dict(
             c,
-            application_count=app_counts.get(c.name.lower().replace(" ", ""), 0),
+            application_count=app_count,
             h1b=h1b_map.get((c.name or "").strip().lower()),
             open_jobs=open_jobs, open_jobs_week=open_week, avg_fit=avg_fit,
             last_error=(ll.error if ll else None),
