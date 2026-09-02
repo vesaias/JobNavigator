@@ -37,7 +37,7 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Expected + why** Dark surfaces sit on `#1e1c17`; a `rgba(0,0,0,.16)` menu shadow is nearly invisible there, so menus/drawers/modals lose their edge separation in dark mode. HANDOVER flags this as outstanding.
 **Actual** Same light shadows in both themes.
 **Proposed fix** Add dark overrides with higher alpha (e.g. `.28 → .55`, `.16 → .4`) and verify by measuring the pixel delta at a menu edge in dark.
-**Status** needs decision (design choice — I can propose values and measure).
+**Status** fixed (9e03e5b): dark overrides — modal/pop rgba(0,0,0,.6), menu rgba(0,0,0,.5) + 1 px rgba(255,255,255,.04) ring, toast .5, drawer .45. Measured under an open Feed row menu: dark ground luminance 28 → 17 at the edge (+3 px), 20 at +12 px; light 251 → 222 / 230 for comparison — the dark separation is now the same order as light.
 
 ### F-005 · P2 · Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
 **Where** `backend/main.py:854` (`trigger_url`), consumed by `frontend/src/v2/Stats.jsx:162` and `frontend/src/components/Stats.jsx:515`; routes `/v2/stats`, `/stats`

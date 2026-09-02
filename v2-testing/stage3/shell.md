@@ -61,3 +61,9 @@ Design: `Nav Rail.dc.html`, `Toasts.dc.html`, `System Overlays.dc.html` (panels 
 
 ## Scratch data
 - none created
+
+## Follow-up round (2026-09-03)
+User requests outside the numbered findings, all in `9e03e5b` and measured on the rebuilt bundle:
+- **Late Applications count** — the rail fetched the whole application list (200 rows) to count it, landing ~0.5 s after the others. Now `GET /applications?limit=1` + `total`; measured: all six count responses arrive within 118–191 ms of navigation, applications at 186 ms alongside companies. The count slot reserves 18 px until the value lands so labels never shift; no `0` placeholder.
+- **Stronger active accent** — rail active item and Settings section anchors `2 px → 3 px` left bar, padding −1 px so text stays put. Measured: rail `3px rgb(141,187,159)` padL 19; Settings anchor `3px` padL 29. The only other 2 px left bar in v2 is the Applications email-quote bar (not an indicator) — left alone.
+- **Health dot** — aggregates companies + searches needing attention from `/health/entities`, plus the last `scrape_all` outcome. Tooltip now says so: measured "1 company and 0 searches need attention. Click → Stats · Run history."
