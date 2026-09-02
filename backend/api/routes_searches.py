@@ -11,6 +11,11 @@ from backend.models.db import get_db, Search, Setting
 
 logger = logging.getLogger("jobnavigator.routes_searches")
 
+# The two seeded browser-extension searches ("Extension" / "Extension LI") have
+# no scraper and must not be deleted — jobs arrive by push from the extension.
+# PATCH stays open (the editor saves their filters through it).
+EXTENSION_MODES = ("extension", "linkedin_extension")
+
 router = APIRouter(prefix="/searches", tags=["searches"])
 
 # In-memory store for async test results
@@ -27,8 +32,10 @@ class SearchCreate(BaseModel):
     location: str = "United States"
     is_remote: Optional[bool] = None
     job_type: str = "fulltime"
-    hours_old: int = 24
-    results_wanted: int = 50
+    # Optional so the editor can clear the field: an explicit null falls back to
+    # the column default on insert (SQLAlchemy applies it for a None value).
+    hours_old: Optional[int] = 24
+    results_wanted: Optional[int] = 50
     title_include_keywords: list = []
     title_exclude_keywords: list = ["intern", "junior", "associate"]
     company_filter: list = []
@@ -95,6 +102,12 @@ def delete_search(search_id: str, db: Session = Depends(get_db)):
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
+    if search.search_mode in EXTENSION_MODES:
+        raise HTTPException(
+            status_code=409,
+            detail="Built-in extension searches cannot be deleted — "
+                   "pause it instead to stop importing captured jobs",
+        )
     db.delete(search)
     db.commit()
     return {"deleted": True}
@@ -108,6 +121,12 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
+    if search.search_mode in EXTENSION_MODES:
+        raise HTTPException(
+            status_code=409,
+            detail="Extension searches have no scraper to run — "
+                   "jobs arrive from the browser extension",
+        )
     search_name = search.name
 
     async def _do():

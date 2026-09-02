@@ -37,9 +37,6 @@ async def run_search(search: Search, proxy_url: Optional[str] = None) -> dict:
     if mode == "keyword":
         from backend.scraper.sources.jobspy import run
         return await run(search, proxy_url=proxy_url)
-    if mode == "url":
-        from backend.scraper.sources.company_pages import scrape_url_mode
-        return await scrape_url_mode(search)
     if mode == "levels_fyi":
         from backend.scraper.sources.levelsfyi import run
         return await run(search)
@@ -91,7 +88,6 @@ def _source_for_search(search: Search) -> str:
     """Source string used for ScrapeLog.source — matches old jobspy_scraper behavior."""
     source_map = {
         "keyword": "jobspy",
-        "url": "playwright_url",
         "levels_fyi": "levels_fyi",
         "linkedin_personal": "linkedin_personal",
         "jobright": "jobright",
@@ -104,14 +100,12 @@ def _search_mode_is_valid(search: Search) -> bool:
     """Check if a search has a runnable configuration — preserves old behavior of
     skipping invalid searches rather than raising.
 
-    URL / levels_fyi modes require direct_url; linkedin_extension has no scraper
+    levels_fyi requires direct_url; linkedin_extension has no scraper
     (passive capture only); other known modes are always runnable.
     """
     mode = search.search_mode
     if mode == "keyword":
         return True
-    if mode == "url":
-        return bool(search.direct_url)
     if mode == "levels_fyi":
         return bool(search.direct_url)
     if mode in ("linkedin_personal", "jobright"):
@@ -131,8 +125,8 @@ async def run_all(force: bool = False):
       as seen after the run so only truly new jobs trigger alerts.
     - Per-search interval check (skipped if force=True): skip searches whose
       `last_run_at + run_interval_minutes` is still in the future.
-    - Invalid-config searches (e.g. url mode without direct_url) are logged
-      and skipped.
+    - Invalid-config searches (e.g. levels_fyi mode without direct_url) are
+      logged and skipped.
     - linkedin_extension is not scheduler-driven; skipped silently here (those
       searches should be filtered out, but if one sneaks through we treat it
       the same as any other non-runnable config).

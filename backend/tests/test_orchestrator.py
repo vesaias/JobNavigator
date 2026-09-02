@@ -39,18 +39,15 @@ async def test_run_search_dispatches_keyword(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_run_search_dispatches_url_mode(monkeypatch):
-    called = {"src": None}
-    async def fake_url(search):
-        called["src"] = "url"; return {}
-    monkeypatch.setattr("backend.scraper.sources.company_pages.scrape_url_mode", fake_url)
-
+async def test_run_search_rejects_legacy_url_mode():
+    """The legacy `url` search mode was removed — it is now an unknown mode."""
     class FakeSearch:
-        id = "s-1"; search_mode = "url"
+        id = "s-1"; search_mode = "url"; direct_url = "https://example.com/jobs"
 
-    from backend.scraper.orchestrator import run_search
-    await run_search(FakeSearch())
-    assert called["src"] == "url"
+    from backend.scraper import orchestrator
+    assert orchestrator._search_mode_is_valid(FakeSearch()) is False
+    with pytest.raises(ValueError):
+        await orchestrator.run_search(FakeSearch())
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
@@ -17,10 +17,11 @@ const ago = (iso) => {
 const until = (iso) => {
   if (!iso) return null
   const m = Math.round((new Date(iso).getTime() - Date.now()) / 60000)
-  if (m <= 0) return 'any moment'
+  if (m <= 0) return 'due now'
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
-  return `${h}h ${m % 60}m`
+  if (h < 24) return `${h}h ${m % 60}m`
+  return `${Math.floor(h / 24)}d ${h % 24}h`
 }
 const short = (u, n = 52) => {
   const s = (u || '').replace(/^https?:\/\//, '')
@@ -36,8 +37,8 @@ const errText = (e, fallback) => {
   return fallback
 }
 
-// mode → [badge label, badge class]. `url` is legacy: still rendered if a search
-// has it, but never offered in the picker (see MODE_OPTIONS).
+// mode → [badge label, badge class]. The legacy `url` mode was removed from the
+// backend dispatch, so it is no longer rendered here either.
 const MODES = {
   keyword: ['JOBSPY', 'sm-keyword'],
   levels_fyi: ['LEVELS.FYI', 'sm-levels'],
@@ -46,7 +47,6 @@ const MODES = {
   freehire: ['FREEHIRE.ME', 'sm-freehire'],
   linkedin_extension: ['EXTENSION', 'sm-extension'],
   extension: ['EXTENSION', 'sm-extension'],
-  url: ['URL', 'sm-url'],
 }
 const MODE_OPTIONS = [
   ['keyword', 'Keyword (JobSpy)'],
@@ -55,6 +55,10 @@ const MODE_OPTIONS = [
   ['jobright', 'Jobright.ai'],
   ['freehire', 'freehire.me'],
 ]
+// /monitor/active carries every background job. Only POST /searches/{id}/run
+// tags its run with job_type 'search_run' (routes_searches.py) - company scrapes
+// and resume jobs also carry a scope_key, and used to keep this screen polling.
+const isSearchRun = (r) => r?.job_type === 'search_run'
 const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
 const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
@@ -127,13 +131,16 @@ const NEW_DRAFT = draftOf({ sources: ['linkedin', 'indeed', 'zip_recruiter', 'go
 
 const toPayload = (d) => {
   const list = (v) => (v || '').split(',').map((x) => x.trim()).filter(Boolean)
-  return {
+  // SRCH-12: `parseInt(x) || fallback` turned an explicit 0 into 24 / 50. A
+  // cleared field now goes out as null — the backend falls back to the column
+  // default on create and stores NULL on update, which reads back as the default.
+  const num = (v) => { const n = parseInt(v, 10); return Number.isNaN(n) ? null : n }
+  const p = {
     name: d.name, search_mode: d.search_mode,
     search_term: d.search_term || null, direct_url: d.direct_url || null,
-    location: d.location || 'United States',
     is_remote: d.is_remote === 'true' ? true : d.is_remote === 'false' ? false : null,
-    job_type: d.job_type, hours_old: parseInt(d.hours_old) || 24,
-    results_wanted: parseInt(d.results_wanted) || 50,
+    job_type: d.job_type, hours_old: num(d.hours_old),
+    results_wanted: num(d.results_wanted),
     max_pages: parseInt(d.max_pages) || 50, min_fit_score: parseInt(d.min_fit_score) || 0,
     require_salary: !!d.require_salary, sources: d.sources,
     title_include_keywords: list(d.title_include_keywords),
@@ -143,6 +150,10 @@ const toPayload = (d) => {
     auto_scoring_depth: d.auto_scoring_depth,
     run_interval_minutes: parseInt(d.run_interval_minutes) || 0,
   }
+  // SRCH-12: location is a keyword-search field only — sending it for
+  // levels_fyi / jobright / freehire / extension searches means nothing.
+  if (d.search_mode === 'keyword') p.location = d.location || 'United States'
+  return p
 }
 
 // ── small pieces ─────────────────────────────────────────────────────────────
@@ -241,8 +252,6 @@ function ConfigForm({ d, set }) {
         sub="Role, seniority, countries, posted_within_days… pass straight through" />,
       <Cell key="rw" label="Results wanted" mono type="number" value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
-  } else if (m === 'url') {
-    fields.push(<Cell key="url" label="Direct URL" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })} placeholder="https://…" />)
   }
 
   return (
@@ -347,29 +356,58 @@ export default function Searches() {
   useEffect(() => {
     load()
     loadAux()
-    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => {})
+    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => {})
   }, [load, loadAux])
 
-  // poll while anything is running
+  // SRCH-28: one interval for the life of the screen. It used to list `running`
+  // and `load` as deps, so every tick (which always wrote a fresh object) tore
+  // the timer down and rebuilt it; state and callbacks are read through refs now.
+  const runningRef = useRef(running)
+  const cbRef = useRef({ load, loadAux })
+  useEffect(() => { runningRef.current = running }, [running])
+  useEffect(() => { cbRef.current = { load, loadAux } }, [load, loadAux])
   useEffect(() => {
-    if (!Object.keys(running).length) return
     const h = setInterval(async () => {
+      if (!Object.keys(runningRef.current).length) return
       try {
         const { data } = await api.get('/monitor/active')
         if (!mounted.current) return
-        const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true })
-        setRunning((prev) => { if (Object.keys(prev).some((k) => !m[k])) { load(); loadAux() } return m })
+        const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true })
+        setRunning((prev) => {
+          const pk = Object.keys(prev)
+          if (pk.some((k) => !m[k])) { cbRef.current.load(); cbRef.current.loadAux() }
+          // keep the same object when nothing changed - otherwise every tick
+          // re-rendered the whole list for nothing
+          return (pk.length === Object.keys(m).length && pk.every((k) => m[k])) ? prev : m
+        })
       } catch { /* retry */ }
     }, 3000)
     return () => clearInterval(h)
-  }, [running, load, loadAux])
+  }, [])
+
+  // SRCH-20: relative times ("last run 3d ago", the countdown) are computed at
+  // render, so without this they froze until some other state changed.
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const h = setInterval(() => setTick((t) => t + 1), 60000)
+    return () => clearInterval(h)
+  }, [])
 
   useEffect(() => {
     const onDoc = () => setMenuFor(null)
-    const onKey = (e) => { if (e.key === 'Escape') { setMenuFor(null); setTest(null) } }
+    // SRCH-21: the test modal is the top layer - Escape closes it alone;
+    // otherwise Escape closes whichever editor is open (drawer / New search),
+    // and the New-search draft is reset exactly as its Cancel button does.
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      setMenuFor(null)
+      if (test) { setTest(null); return }
+      if (editing) setEditing(null)
+      if (newOpen) { setNewOpen(false); setNewDraft(NEW_DRAFT) }
+    }
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
-  }, [])
+  }, [test, editing, newOpen])
 
   const nActive = searches.filter((s) => s.active).length
   // an error wins; then health's 3-run verdict; then a single clean-but-empty run
@@ -379,12 +417,15 @@ export default function Searches() {
   // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
   // the broader warnOf() predicate.
   const nWarn = searches.filter((s) => downMap[s.id]).length
-  const countLine = [
-    `${searches.length} config${searches.length === 1 ? '' : 's'}`,
-    `${nActive} active`,
-    ...(nWarn ? [`${nWarn} need attention`] : []),
-    ...(until(nextRun) ? [`next scheduled run in ${until(nextRun)}`] : []),
-  ].join(' · ')
+  const countLine = useMemo(() => {
+    const nxt = until(nextRun)
+    return [
+      `${searches.length} config${searches.length === 1 ? '' : 's'}`,
+      `${nActive} active`,
+      ...(nWarn ? [`${nWarn} need attention`] : []),
+      ...(nxt ? [nxt === 'due now' ? 'next scheduled run due now' : `next scheduled run in ${nxt}`] : []),
+    ].join(' · ')
+  }, [searches.length, nActive, nWarn, nextRun, tick])
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
   const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
@@ -463,7 +504,7 @@ export default function Searches() {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header */}
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Searches</h1>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
@@ -473,9 +514,11 @@ export default function Searches() {
             style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ New search</div>
         </div>
       </header>
+      {/* the design draws the rule inset by 30px on both sides, not full-bleed */}
+      <div style={{ flex: '0 0 auto', height: 1, margin: '0 30px', background: 'var(--line)' }} />
 
       {/* body */}
-      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* new search card */}
         {newOpen && (
           <div style={{ border: '1px solid var(--accent)', borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
@@ -716,7 +759,11 @@ function TestModal({ test, tab, setTab, onClose }) {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '2px 22px', borderBottom: '1px solid var(--line-soft)', background: ok ? 'transparent' : 'var(--bad-faint)' }}>
                     <span style={{ flex: '0 0 80px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{j.source}</span>
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
-                    <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.title}</a>
+                    {/* SRCH-27: a preview row can arrive with url: null - render
+                        the title as text then, not as a link that goes nowhere */}
+                    {j.url
+                      ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.title}</a>
+                      : <span title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8, cursor: 'default' }}>{j.title}</span>}
                     <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
                     <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
