@@ -421,6 +421,21 @@ export default function ResumeEditor() {
         <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
           <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
           <div onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Tailor for a job…</div>
+          {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too) */}
+          <div style={{ position: 'relative', flex: '0 0 auto', marginLeft: 8 }}>
+            <div onClick={() => setHeadMenu((v) => !v)} className="v2-act" title="More" style={{ width: 36, height: 36, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
+            {headMenu && (
+              <>
+                <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+                  <MenuHead>This base</MenuHead>
+                  <MenuItem icon="✦" label="Tailor for a job…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
+                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
+                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete copy</div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 

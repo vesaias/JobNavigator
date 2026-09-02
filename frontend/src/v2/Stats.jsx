@@ -95,6 +95,7 @@ export default function Stats() {
   const [actQuery, setActQuery] = useState('')
   const [typeOpen, setTypeOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [coreErr, setCoreErr] = useState(false)   // STAT-03: any core stats request failed
   const [triggering, setTriggering] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
@@ -126,6 +127,7 @@ export default function Stats() {
     const list = bj?.jobs || bj?.items || (Array.isArray(bj) ? bj : [])
     setBest(list[0] || null)
     setFlows(Array.isArray(fl) ? fl : [])
+    setCoreErr(anyFailed)
     if (anyFailed) pushToast({ kind: 'error', msg: 'Some stats failed to load — try Refresh' })
   }, [pushToast])
 
@@ -281,6 +283,13 @@ export default function Stats() {
           Refresh
         </span>
       </header>
+      {coreErr && (
+        <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
+          <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
+          <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
+          <span onClick={refresh} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
+        </div>
+      )}
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 30px 30px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
@@ -320,7 +329,7 @@ export default function Stats() {
                 </span>
               )}
             </div>
-            {flowView === 'sankey' && sankey ? (
+            {coreErr && !stats ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div> : flowView === 'sankey' && sankey ? (
               <div style={{ flex: 1, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <Sankey data={sankey} nodePadding={18} nodeWidth={10} margin={{ top: 4, right: 112, left: 4, bottom: 4 }}
@@ -385,7 +394,7 @@ export default function Stats() {
                 </span>
               ))}
             </div>
-            <Spark series={series} peak={peak} />
+            {coreErr && !timeline ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div> : <Spark series={series} peak={peak} />}
           </div>
 
           <div style={{ ...CARD, height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
