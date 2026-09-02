@@ -61,4 +61,12 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Expected + why** 404 — `Job.id` is a UUID column; a malformed id can never match. The v2 editors deep-link by id, so a mistyped URL currently shows a generic failure instead of the "not found" state (FEED-10, RES/CL id checks).
 **Actual** Measured `500` on all seven probes; only `/api/searches/test-result/abc` (in-memory dict) returns 404.
 **Proposed fix** One `DataError` exception handler in `main.py` mapping Postgres "invalid input syntax for type uuid" to 404 (added; live after the next backend restart).
-**Status** fixed in source; restart pending; verify with the same seven probes.
+**Status** fixed + verified after the 14:03 restart: `/api/jobs/abc`, `/api/resumes/abc`, `/api/cover-letters/abc`, `/api/monitor/run/abc` all 404.
+
+### F-008 · P2 · Backend · Order-only edits to dict-shaped JSON columns were silently dropped (Résumé + Persona skills ▲▼)
+**Where** `backend/api/routes_resumes.py:972` (`update_resume`), `backend/api/routes_persona.py:66` (`update_persona`); surfaced by the v2 Résumé editor and Persona Skills reorder arrows
+**Repro** `PATCH /api/resumes/{id}` with `json_data.skills` keys in a new order → 200, read-back shows the old order. Same for `PATCH /api/persona` `resume_content.skills`.
+**Expected + why** The new order persists. SQLAlchemy's JSON type decides dirtiness by `old == new`; two dicts with the same pairs are equal regardless of key order, so no UPDATE is emitted. `POST /persona/qa-bank` in the same file already calls `flag_modified` for this reason.
+**Actual** Measured by both screen agents at API level (no browser): order unchanged after PATCH; UI shows the new order until reload, then snaps back.
+**Proposed fix** `flag_modified(obj, column)` after `setattr` for the JSON columns. Other PATCH routes (companies, searches, applications, jobs) assign list-shaped JSON, which compares in order and is not affected; `update_cover_letter` already flags `json_data` at `routes_cover_letters.py:460`.
+**Status** fixed + verified live after the 14:03 / 14:09 restarts (Résumés and Persona agents re-ran their checks).

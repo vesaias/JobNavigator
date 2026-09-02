@@ -89,6 +89,7 @@ export default function CoverLetterEditor() {
   useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, recipOpen, letterOpen })) } catch {} }, [headOpen, recipOpen, letterOpen])
 
   const saveTimer = useRef(null)
+  const pendingPatch = useRef({})
   const pdfTimer = useRef(null)
   const prevBlob = useRef(null)
   const loaded = useRef(false)
@@ -122,12 +123,18 @@ export default function CoverLetterEditor() {
   useEffect(() => () => { clearTimeout(saveTimer.current); clearTimeout(pdfTimer.current) }, [])
   useEffect(() => () => { if (prevBlob.current) URL.revokeObjectURL(prevBlob.current) }, [])
 
-  // autosave (debounced) — the header says "autosaves", so no save button
+  // autosave (debounced) — the header says "autosaves", so no save button.
+  // One timer serves every patch kind, so the pending patches must MERGE:
+  // replacing them wholesale silently dropped a {template} pick made within
+  // 500 ms of a keystroke (and vice versa) while the header still said "saved".
   const persist = useCallback((patch) => {
     if (!loaded.current) return
+    pendingPatch.current = { ...pendingPatch.current, ...patch }
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
-      try { await api.patch(`/cover-letters/${id}`, patch); setSavedAt(new Date().toISOString()); setErr('') }
+      const body = pendingPatch.current
+      pendingPatch.current = {}
+      try { await api.patch(`/cover-letters/${id}`, body); setSavedAt(new Date().toISOString()); setErr('') }
       catch (e) { console.error(e); setErr('Could not save — your last edit is not stored.') }
     }, 500)
   }, [id])
@@ -207,11 +214,16 @@ export default function CoverLetterEditor() {
     const iv = setInterval(async () => {
       try {
         const { data: runs } = await api.get('/monitor/active')
-        const live = (runs || []).some((r) => r.job_type === 'generate_cover_letter')
+        // scope to THIS letter — the backend keys a regenerate as cl:{letter id}
+        // (routes_cover_letters.py:341). Matching any generate_cover_letter run
+        // kept this modal spinning until every unrelated generation finished.
+        const live = (runs || []).some((r) => r.job_type === 'generate_cover_letter' && r.scope_key === `cl:${id}`)
         if (!live && !dead) {
-          clearInterval(iv)
+          // reload FIRST: clearing the interval before a GET that throws left
+          // `regening` true for ever with no poll to clear it (modal locked)
           const { data: d } = await api.get(`/cover-letters/${id}`)
           if (dead) return
+          clearInterval(iv)
           setDoc(d); setData({ ...EMPTY, ...(d.json_data || {}) })
           setTemplate(d.template || ''); setFormat(d.page_format || 'letter'); setSavedAt(d.updated_at)
           setRVoice(d.voice || ''); setRLength(d.length || 'standard')
@@ -323,7 +335,9 @@ export default function CoverLetterEditor() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={FLABEL}>Contact items</span>
-                <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)' }}>text · link · stub</span>
+                {/* integer line-height: at 1.5 this 10.5px hint is 15.75 tall and
+                    pushes every card below onto a half pixel (borders drop out) */}
+                <span style={{ marginLeft: 'auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>text · link · stub</span>
               </div>
               {(data.header?.contact_items || []).map((ct, i, arr) => {
                 const tracked = ct.url && !String(ct.url).startsWith('mailto:')

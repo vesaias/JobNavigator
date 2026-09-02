@@ -64,6 +64,12 @@ def update_persona(updates: dict, db: Session = Depends(get_db)):
 
     for k, v in updates.items():
         setattr(p, k, v)
+        # JSON columns compare by value, and two dicts with the same items are
+        # equal regardless of key order — so an order-only change (reordering
+        # resume_content.skills from the editor) produced no UPDATE at all and
+        # was silently dropped. Flag every touched node explicitly, the way
+        # POST /qa-bank below already does.
+        flag_modified(p, k)
     p.updated_at = utcnow()
     db.commit()
     db.refresh(p)

@@ -210,7 +210,11 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp })
         const ch = entryChanged(e, i), isOpen = open.has(i), nb = (e.bullets || []).length
         return (
           <div key={i} style={{ border: `1px solid ${ch ? 'var(--change-soft)' : 'var(--line)'}`, borderRadius: 8, background: ch ? 'var(--change-bg)' : 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-            <div onClick={() => toggle(i)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8 }}>
+            {/* explicit integer line-height: at the inherited 1.5 a 12.5px line is
+                18.75px, which made this row 36.75px tall and put every row below it
+                (and the Skills/Education/Projects cards) on a half pixel, where
+                Chrome rounds their 1px borders away — same fix as SectionShell */}
+            <div onClick={() => toggle(i)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8, lineHeight: '18px' }}>
               <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>

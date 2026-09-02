@@ -63,23 +63,36 @@ function Select({ value, options, onPick, width, mono, placeholder }) {
 }
 
 // Free-text box; secrets mask until revealed.
+// GET /settings returns a set secret as the literal six-bullet MASK string, so
+// three things have to be true at once: an *unset* secret must not look set,
+// revealing must not leave the mask in the box (typing after it used to PATCH
+// "••••••<typed>", and the server only drops an exact mask — that silently
+// destroyed the stored secret), and clearing the box must not wipe the secret.
 function TextBox({ value, onSave, width, mono, secret, placeholder }) {
   const [shown, setShown] = useState(false)
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => { setLocal(value ?? '') }, [value])
-  const masked = secret && !shown
+  const isMask = value === MASK
+  const masked = secret && !shown && !!value
+  const reveal = () => { setShown(true); if (local === MASK) setLocal('') }
+  const commit = () => {
+    if (masked) return
+    if (local === MASK) return                  // untouched mask — nothing to save
+    if (local === '' && isMask) return          // emptied but nothing typed — don't wipe the stored secret
+    if (local !== (value ?? '')) onSave(local)
+  }
   return (
     <span style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
       <input
         value={masked ? MASK : local}
         onChange={(e) => !masked && setLocal(e.target.value)}
-        onFocus={() => { if (masked) setShown(true) }}
-        onBlur={() => { if (!masked && local !== (value ?? '')) onSave(local) }}
-        placeholder={placeholder || ''}
+        onFocus={() => { if (masked) reveal() }}
+        onBlur={commit}
+        placeholder={placeholder || (secret && shown && isMask ? 'type a new value to replace it' : '')}
         autoComplete="off"
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, color: 'var(--text)' }} />
-      {secret && (
-        <span onClick={() => setShown((v) => !v)} style={{ fontSize: 10.5, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+      {secret && !!value && (
+        <span onClick={() => (shown ? setShown(false) : reveal())} style={{ fontSize: 10.5, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
           {shown ? 'hide' : 'show'}
         </span>
       )}
@@ -115,6 +128,7 @@ export default function Settings() {
   const [toast, setToast] = useState(null)
   const scrollRef = useRef(null)
   const timers = useRef([])
+  const flashTimer = useRef(null)
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
 
   const load = useCallback(async () => {
@@ -137,15 +151,21 @@ export default function Settings() {
     api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => {})
   }, [load])
 
+  // one timer, not one per flash: two saves inside 2.2 s used to leave the
+  // first flash's timer running, which cleared the second message early
   const flash = (msg, bad = false) => {
     setToast({ msg, bad })
-    timers.current.push(setTimeout(() => setToast(null), 2200))
+    clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setToast(null), 2200)
+    timers.current.push(flashTimer.current)
   }
 
+  // returns whether the PATCH landed, so callers with side effects of their own
+  // (ApiKeyRow writes localStorage + refreshes the session cookie) can bail out
   const save = useCallback(async (key, value) => {
     setS((p) => ({ ...p, [key]: value }))
-    try { await api.patch('/settings', { [key]: value }); flash('Saved') }
-    catch (e) { console.error(e); flash('Could not save — try again', true) }
+    try { await api.patch('/settings', { [key]: value }); flash('Saved'); return true }
+    catch (e) { console.error(e); flash('Could not save — try again', true); return false }
   }, [])
 
   const val = (k, fallback = '') => {
@@ -286,7 +306,7 @@ export default function Settings() {
         E('Title exclude', 'Exclusion of the job title matches.', 'title_exclude_global', { list: true, sub: 'one phrase per line · case-insensitive' }),
         E('Company exclude', 'Exclusion of exact company names', 'company_exclude_global', { list: true, sub: 'one company per line · exact match' }),
       ]],
-      ['dedup', '', 'Dedup tracking params', "", [
+      ['dedup', '', 'Dedup tracking params', "so the same job from two sources isn't saved twice", [
         E('Stripped params', 'Query params removed from job URLs. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
       ]],
       ['notifications', 'INTEGRATIONS', 'Notifications', 'Telegram bot · digest schedule lives under Scheduler', [
@@ -307,7 +327,9 @@ export default function Settings() {
           const url = window.prompt('Public base URL (https://...):')
           if (!url) return
           const { data } = await api.post('/telegram/register-webhook', { public_url: url })
-          flash(data?.ok === false ? (data.description || 'Registration failed') : 'Webhook registered')
+          // local failures carry `error`, Telegram's own carry `description`
+          const failed = data?.ok === false
+          flash(failed ? (data.description || data.error || 'Registration failed') : 'Webhook registered', failed)
         }),
       ]],
       ['tracer', '', 'Tracer links', 'per-application link click tracking', [
@@ -330,7 +352,7 @@ export default function Settings() {
           info: 'Capture happens while the extension browses LinkedIn collections. Doing that on a throwaway account means rate limits, CAPTCHAs or bans hit the mock identity — never your real profile.' }),
         B('Mock account password', 'Stored locally only.', 'linkedin_mock_password', { secret: true, w: '260px' }),
       ]],
-      ['advanced', 'SYSTEM', 'Advanced', '', [
+      ['advanced', 'SYSTEM', 'Advanced', 'escape hatches — most days none of this gets touched', [
         B('Proxy URL', 'Used by scrapes that hit rate limits or geo-blocks. Empty = direct.', 'proxy_url', { mono: true, w: '340px', placeholder: 'socks5://127.0.0.1:9050' }),
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup')),
@@ -566,7 +588,10 @@ function ApiKeyRow({ value, save, flash }) {
       </span>
       <ActionBtn label="Save key" state="" onClick={async () => {
         if (!local.trim()) { flash('Type the new key first', true); return }
-        await save('dashboard_api_key', local.trim())
+        // if the PATCH failed, writing the key locally would lock the dashboard
+        // out on the next request — stop before touching localStorage
+        const saved = await save('dashboard_api_key', local.trim())
+        if (!saved) return
         try { localStorage.setItem('jobnavigator_api_key', local.trim()) } catch {}
         try { await api.post('/auth/set-session', { api_key: local.trim() }) } catch { /* cookie refresh is best effort */ }
         setLocal(''); flash('Key saved')
@@ -612,9 +637,11 @@ function LinkedInRow({ li, setLi, flash }) {
               style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
           </span>
           <ActionBtn label="Submit PIN" state="" onClick={async () => {
-            const { data } = await api.post('/linkedin/session/pin', { pin })
-            if (!data.ok) flash(data.detail || 'Enter the digits from the email', true)
-            else { setPin(''); flash('PIN sent') }
+            try {
+              const { data } = await api.post('/linkedin/session/pin', { pin })
+              if (!data.ok) flash(data.detail || 'Enter the digits from the email', true)
+              else { setPin(''); flash('PIN sent') }
+            } catch (e) { flash(e?.response?.data?.detail || 'Could not send the PIN', true) }
           }} />
         </>
       )}
@@ -660,7 +687,14 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</span>
           <div onClick={() => {
-            const d = defaults[spec.key]
+            // /settings/defaults returns the raw seed *strings*, so a list key
+            // arrives as '["a","b"]'. Feeding that to asList() made one line,
+            // which committed as a single-element list containing JSON text.
+            let d = defaults[spec.key]
+            if (d === undefined) { setErr('Defaults are unavailable — nothing was reset'); return }
+            if ((spec.list || spec.json) && typeof d === 'string') {
+              try { d = JSON.parse(d) } catch { /* not JSON after all — use the raw string */ }
+            }
             const t = spec.list ? asList(d) : spec.json ? asJson(d) : String(d ?? '')
             setText(t); commit(t)
           }} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Reset to default</div>
