@@ -3,7 +3,6 @@
 Entry points:
   - scrape_single_career_page(company, shared_browser=None) — scrape one company's scrape_urls
   - scrape_career_pages(force=False) — batch over all active companies
-  - scrape_url_mode(search) — URL-mode search handler (paste-URL)
 
 Dispatch: _dispatch_ats(url, ...) detects the ATS by URL and calls the matching
 ats.<name>.scrape; falls through to ats.generic.scrape if nothing matches.
@@ -16,7 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from backend.models.db import (
-    SessionLocal, Company, Job, ScrapeLog, Search, get_existing_external_ids,
+    SessionLocal, Company, Job, ScrapeLog, get_existing_external_ids,
 )
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
 from backend.scraper._shared.filters import _apply_company_filters
@@ -454,124 +453,3 @@ async def scrape_career_pages(force: bool = False):
         if shared_pw:
             await shared_pw.stop()
         db.close()
-
-
-# ── Search-level URL mode scraper ────────────────────────────────────────────
-
-async def scrape_url_mode(search: Search) -> dict:
-    """URL mode: visit a direct URL and extract job listings via Playwright."""
-    start_time = time.time()
-
-    if not search.direct_url:
-        return {"jobs_found": 0, "new_jobs": 0, "error": "No direct URL configured"}
-
-    pw = None
-    browser = None
-    try:
-        pw, browser = await _get_browser()
-        page = await _new_page(browser)
-        try:
-            await generic._setup_route_blocks(page)
-
-            await page.goto(search.direct_url, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(3)
-
-            unique_jobs = await generic._extract_all_pages(page, search.direct_url, max_pages=5)
-        finally:
-            await _close_page(page)
-
-        db = SessionLocal()
-        new_jobs = 0
-        try:
-            existing_ids = get_existing_external_ids(db)
-
-            # Pre-filter and fetch descriptions in parallel
-            jobs_needing_desc = []
-            for j in unique_jobs:
-                ext_id = make_external_id("", j["title"], j["url"])
-                content_hash = make_content_hash("", j["title"])
-                if ext_id in existing_ids:
-                    continue
-                j["_ext_id"] = ext_id
-                j["_content_hash"] = content_hash
-                jobs_needing_desc.append(j)
-
-            if jobs_needing_desc:
-                desc_results = await _fetch_descriptions_parallel(jobs_needing_desc)
-                desc_map = {}
-                for result in desc_results:
-                    if isinstance(result, Exception):
-                        continue
-                    job_dict, desc = result
-                    desc_map[job_dict["url"]] = desc
-            else:
-                desc_map = {}
-
-            for j in jobs_needing_desc:
-                ext_id = j["_ext_id"]
-                content_hash = j["_content_hash"]
-                desc = desc_map.get(j["url"])
-
-                job = Job(
-                    external_id=ext_id,
-                    content_hash=content_hash,
-                    company="",
-                    title=j["title"],
-                    url=_normalize_url(j["url"]) or j["url"],
-                    source="playwright_direct",
-                    search_id=search.id,
-                    status="new",
-                    seen=False,
-                    saved=False,
-                    description=desc,
-                )
-
-                try:
-                    from backend.analyzer.h1b_checker import check_job_h1b
-                    from backend.analyzer.salary_extractor import apply_salary_to_job
-                    await check_job_h1b(job, db)
-                    apply_salary_to_job(job)
-                except Exception as analysis_err:
-                    logger.warning(f"Inline analysis failed for {j['title']}: {analysis_err}")
-
-                if job.h1b_jd_flag:
-                    job.status = "ignored"
-
-                try:
-                    with db.begin_nested():
-                        db.add(job)
-                        db.flush()
-                    if job.status == "new":
-                        new_jobs += 1
-                    existing_ids.add(ext_id)
-                except IntegrityError:
-                    continue
-
-            search_obj = db.query(Search).filter(Search.id == search.id).first()
-            if search_obj:
-                search_obj.last_run_at = datetime.now(timezone.utc)
-
-            db.commit()
-        finally:
-            db.close()
-
-        duration = time.time() - start_time
-
-        from backend.activity import log_activity
-        log_activity("scrape", f"URL mode '{search.name}': {new_jobs} new / {len(unique_jobs)} found in {duration:.1f}s")
-
-        return {"jobs_found": len(unique_jobs), "new_jobs": new_jobs, "error": None, "duration": duration}
-
-    except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"URL mode scrape failed for '{search.name}': {e}")
-
-        from backend.activity import log_activity
-        log_activity("scrape", f"URL mode '{search.name}' failed: {e}")
-
-        return {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": duration}
-    finally:
-        if browser:
-            await browser.close()
-        if pw:
-            await pw.stop()

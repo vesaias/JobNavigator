@@ -93,9 +93,8 @@ async def test_dispatch_falls_back_to_generic(monkeypatch):
 
 
 def test_company_pages_module_exports():
-    """Module re-exports the 3 orchestrator functions."""
+    """Module re-exports the orchestrator functions."""
     from backend.scraper.sources import company_pages
     assert hasattr(company_pages, "scrape_single_career_page")
     assert hasattr(company_pages, "scrape_career_pages")
-    assert hasattr(company_pages, "scrape_url_mode")
     assert hasattr(company_pages, "_dispatch_ats")
