@@ -212,11 +212,12 @@ the warm one.
   matches the design.
 - **`ToastLab.jsx` and the `/v2/toasts` route are temporary**, built to review
   the toast taxonomy. Delete both once signed off.
-- **Theming groundwork.** `theme.css` holds 122 tokens: 96 have dark overrides,
-  10 are aliases, and **9 are defined but never used** (`--accent-bg`,
-  `--border`, `--border-lt`, `--danger`, `--danger-bg`, `--ink`, `--panel`,
-  `--stone`, `--warn-bg`). The five `--shadow-*` tokens have **no dark
-  variants**. 48 of the 122 are ATS/source badge brand colours (`--cc-*`,
+- **Theming groundwork.** `theme.css` holds 111 tokens: 98 have dark overrides
+  and one is a back-compat alias (`--faint`). None are unused — F-003 deleted
+  the nine dead aliases (`--accent-bg`, `--border`, `--border-lt`, `--danger`,
+  `--danger-bg`, `--ink`, `--panel`, `--stone`, `--warn-bg`) plus `--paper`, and
+  F-004 gave the five `--shadow-*` tokens dark variants. 48 of the 111 are
+  ATS/source badge brand colours (`--cc-*`,
   `--sm-*`). No colour literal remains in any v2 JSX, and the Recharts series
   already take `var(--accent)` etc., so charts follow a theme for free.
   Outstanding for real theming: one source of truth for the mode (the boolean
