@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 81 | 13 | 17 |
-| P4 | 90 | 48 | 16 | 26 |
-| **All** | **276** | **203** | **29** | **44** |
+| P3 | 111 | 91 | 3 | 17 |
+| P4 | 91 | 56 | 8 | 27 |
+| **All** | **277** | **221** | **11** | **45** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -21,7 +21,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | feed.md | 38 | 0 | 10 | 18 | 10 | 31 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 36 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
+| resumes.md | 32 | 1 | 8 | 13 | 10 | 29 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 21 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
@@ -186,7 +186,25 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - RES-08 (P2) — PDF render failure leaves a stale preview with no signal
 - RES-09 (P2) — A base résumé cannot be deleted anywhere in v2
 - RES-10 (P3) — Shelf: every other card and row landed on a half pixel — **fixed**
+- RES-11 (P3) — Editor: section cards, bullet rows, modal rows all fractional
 - RES-12 (P3) — The Template and Paper dropdown items had no hover at all — **fixed**
+- RES-13 (P3) — "+ N more ›" promises N and delivers a first-word search over everything
+- RES-14 (P3) — A 200-character base name is not truncated and overflows its card
+- RES-15 (P3) — Escape closes none of the four modals
+- RES-16 (P3) — Destructive edits have no confirm and no undo; the one confirm is the browser's
+- RES-17 (P3) — Disabled primary buttons are filled with `--edge`, which reads as enabled
+- RES-18 (P3) — Import PDF shows its busy state on the *other* button
+- RES-19 (P3) — The archived band and the "+N more" search render every row unvirtualised
+- RES-20 (P3) — On a job-less copy the "one next step" is an action that can only fail
+- RES-21 (P3) — A missing, malformed or just-deleted id redirects silently
+- RES-23 (P4) — `.v2-navlink:hover`'s colour rule never fires where the caller sets an inline colour
+- RES-25 (P4) — The success toast that carries "Open ↗" expires in 2.5 s
+- RES-26 (P4) — A freeform tailor never reports completion
+- RES-27 (P4) — `setSearchParams` is declared and never used; `?job=` is inert
+- RES-28 (P4) — Dead code and always-false branches
+- RES-29 (P4) — Archived view has no empty branch; the archived sort comment is wrong
+- RES-30 (P4) — The score poll resolves on any numeric `Tailored`, so a re-score reports the old number
+- RES-31 (P4) — "autosaves on blur" is wrong — saving is per keystroke, debounced 500 ms
 - SRCH-01 (P2) — Test-modal source chips never render — the modal reads `by_source`, every backend path sends `source_breakdown`
 - SRCH-02 (P2) — A preview that fails with HTTP 200 + `{"error": …}` is rendered as “No results returned.”
 - SRCH-03 (P2) — A 422 from `POST /searches` alerts “[object Object]”

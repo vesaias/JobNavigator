@@ -241,7 +241,7 @@ Verdicts: **match** · **deviates** · **DCC** = deliberate-consistency-candidat
 - `:775-778` — the chip `title` is the board's deliberate overflow channel: `"<base> · <job> · fit N (+d vs <base> avg) · N changes unreviewed"`, with the comment "the delta it carried survives in the tooltip, which is the one place the chip can say more without occupying space".
 **Actual** measured: base card `title` = `null`; no "Recent copies" span exists anywhere in the shelf DOM; chip `title` = `"Persona → Decagon — Senior Agent Product Manager"` (the bare name — no job, no fit, no delta, no unreviewed count).
 **Proposed fix** add the base-card `title`; add the "Recent copies" label span to both chip rows; build the chip `title` from `name · job · fit N (±d vs <base> avg)` and append the fresh clause when `c.fresh`.
-**Status** needs decision: keep code (consistency) or match design?
+**Status** fixed (a858334): base cards carry `title="Open … — the base résumé"`, chip rows open with the "Recent copies" label, chip tooltips read "base · job · fit N (+d vs base avg) · changes unreviewed" (no unreviewed count in the payload). Measured: 5 titled cards, 3 labels, tooltip "Persona · Decagon · Senior Agent Product Manager · changes unreviewed".
 
 ### RES2-04 · P3 · Card hover — the background matches the board exactly; only the border was changed, and `theme.css` justifies it against a colour the board doesn't contain
 **Where** `frontend/src/v2/theme.css:140-143`
@@ -293,7 +293,7 @@ Verdicts: **match** · **deviates** · **DCC** = deliberate-consistency-candidat
 - `:139` — `‹ Résumés` has **no `style-hover` at all**.
 **Actual** measured: the divider is the literal string `"  │  "` coloured `rgb(226,221,208)` (`--line`, one step lighter than the design's `--edge`), 13.53 × 15 px — a glyph whose weight and baseline are font-dependent. The delta + base name are wrapped in one `.v2-navlink`, so hovering changes `color` **and** `background` for the whole cluster and no underline appears anywhere. The back-link measured `color rgb(63,107,82) → rgb(27,26,22)` + `background rgba(0,0,0,0) → rgb(246,244,238)` — an extra hover by §4.
 **Proposed fix** replace the glyph with `<span style={{width:1,height:11,background:'var(--edge)',alignSelf:'center'}} />`; split the link into the two design hovers (`.v2-hover-accent-text` on the delta; a transparent-underline span that gains `text-decoration-color` on hover); leave the back-link's hover if the shell convention keeps it.
-**Status** needs decision: keep code (consistency) or match design?
+**Status** fixed (a858334): shared `BandRule` (1 × 11 px `--edge` block) in the résumé and cover-letter bands. Measured: 1 × rgb(127,122,102) = `--edge` (dark).
 
 ### RES2-11 · P4 · The ⋯ trigger is transparent, so the band tint shows through where the board paints it white
 **Where** `ResumeEditor.jsx:369`

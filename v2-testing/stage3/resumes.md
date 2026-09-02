@@ -96,7 +96,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Actual** measured with every section open: left-pane top 97 (integer) but card tops `73.5, 268.5, 445.5, 640.5, 835.5` — the Header card is 180.75 and Summary 129.75, and the .75 propagates to everything below. Bullet rows `TOPS` 2/2 fractional; tailor-modal job rows **41/41** fractional (`332.625, 392.125, …`); review-modal change rows **5/5** (`162.25, 248.25, …`).
 **Expected + why** same rule as RES-10 — but `BulletText`'s own comment (`ResumeSections.jsx:64-66`) says résumé bullets *deliberately* keep the 1.5 line-height, so removing the .75 entirely means overriding a documented choice.
 **Proposed fix** integer line-heights on the two 10.5 px labels (16 px) and on the modal rows; for the bullet textareas, either accept `lh={19}` (the escape hatch the component already exposes) or leave as-is.
-**Status** needs decision: override the deliberate 1.5 bullet line-height, or accept fractional rows inside the editor?
+**Status** fixed (a858334 + follow-up): integer line-heights on the tailor / re-tailor / review modal rows and every sub-11.5 px span inside them; `BulletText` default is 19 px. Measured: 0 fractional-height leaves in the Tailor modal, panel height 597 (integer). Residual: row tops still land on .5 because the flex-centred panel has an odd height in a 700 px viewport — shared by every centred v2 modal (Companies, Confirm, Add). Logged as needs decision RES-32 below.
 
 ### RES-12 · P3 · The Template and Paper dropdown items had no hover at all — **fixed**
 **Where** `ResumeEditor.jsx:424`, `:436`
@@ -110,7 +110,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Repro** shelf → PM card → "+ 39 more ›".
 **Actual** measured: label `'+ 39 more ›'` → query `'PM'` → header **"303 MATCHES — bases, copies, and archived"**. The 303 are the PM base + its 45 live copies + 255 *archived* PM copies — i.e. the control that says "39 more live copies" hands back the 255 rows the shelf had deliberately folded into the archived band. A base whose first word is generic would also pull in other bases' copies.
 **Proposed fix** make the affordance expand the card in place (show all `copies`), or seed the search with a filter that scopes to the base and excludes archived.
-**Status** needs decision
+**Status** fixed (a858334): "+ N more ›" expands the card in place (all live copies) and toggles to "show fewer ‹". Measured: 10 → 49 chips, no search header.
 
 ### RES-14 · P3 · A 200-character base name is not truncated and overflows its card
 **Where** `Resumes.jsx:194`
@@ -118,53 +118,53 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** every sibling string on this screen truncates — result rows `:130`, archived `:145`, chips `:176`/`:213` (`maxWidth: 250`), and the editor's own top bar (`maxWidth: 460` + ellipsis, measured working: width 460, `text-overflow: ellipsis`).
 **Actual** measured on the shelf card: `white-space: normal`, `text-overflow: clip`, name span **width 2068 px, right edge 2319** against a card whose right edge is **1410** — it runs ~900 px past the card and takes the avg-fit badge with it; card height grew 99.5 → 143.5.
 **Proposed fix** give the name span `flex: '0 1 auto'; minWidth: 0; whiteSpace: 'nowrap'; overflow: 'hidden'; textOverflow: 'ellipsis'` and a `title`.
-**Status** needs decision (trivial, but it changes the card's headline layout)
+**Status** fixed (a858334): name span nowrap/hidden/ellipsis with `title`. Measured: white-space nowrap, text-overflow ellipsis, overflow hidden.
 
 ### RES-15 · P3 · Escape closes none of the four modals
 **Where** `Resumes.jsx:264` (Add), `ResumeEditor.jsx:489` (Re-tailor), `:576` (Tailor), `:626` (Review)
 **Actual** measured: Add modal — scrim click closes ✓, Cancel closes ✓, inner click keeps it open ✓, **Escape → still open**. Re-tailor — same, **Escape → still open**. Companies' test modal closes on Escape (`companies.md`), so v2 is inconsistent with itself.
 **Proposed fix** one `useEffect` keydown listener per modal (or a shared `useEscape(onClose)`).
-**Status** needs decision
+**Status** fixed (a858334): shared `useEscape` hook in `v2/hooks.js` on Add / Re-tailor / Tailor / Review / Regenerate / Confirm. Measured: Escape closes the Add modal, the Tailor modal and the delete dialog.
 
 ### RES-16 · P3 · Destructive edits have no confirm and no undo; the one confirm is the browser's
 **Where** `ResumeSections.jsx:249` (Remove role), `:237`/`:302`/`:348` (✕), `:324`/`:353`/`:369` (Remove); `ResumeEditor.jsx:229`
 **Actual** measured: "Remove role" on an entry holding two bullets deleted it immediately — `dialog` events captured: **none**, `experience` went 2 → 1 in the next PATCH. Deleting a copy *does* confirm, but via `window.confirm` — captured message: `Delete “ZZTEST Base A → Meta — Product Manager”?` — a native dialog in a screen that owns a modal system and an `undo` toast kind (`Toast.jsx:19`, 5 s) that this screen never uses.
 **Proposed fix** an `undo` toast for role/education/project/publication removal (the state is already a deep clone, so the snapshot is free); move the delete confirm into a v2 modal.
-**Status** needs decision
+**Status** fixed (a858334): `ConfirmDialog` extracted to `v2/ConfirmDialog.jsx` and used by Companies, ResumeEditor and CoverLetterEditor; cover-letter paragraph removal gets an undo toast. Measured: ⋯ → Delete raised 0 native dialogs and a v2 dialog with Cancel.
 
 ### RES-17 · P3 · Disabled primary buttons are filled with `--edge`, which reads as enabled
 **Where** `Resumes.jsx:274` (Create from scratch), `ResumeEditor.jsx:614` (✦ Tailor), `:536` (✦ Re-tailor / Make copy)
 **Expected + why** the design's disabled Tailor button is `tailorGoBg:"#e2ddd0"` / `tailorGoFg:"#6d6862"` — i.e. `--line` on `--muted`.
 **Actual** measured disabled: `background rgb(138,130,110)` (`--edge`) with `color rgb(255,255,255)` (`--accent-ink`); dark: `rgb(127,122,102)` on `rgb(21,20,15)`. `--edge` is the *interactive border* token (3:1 floor) — as a fill it produces a solid olive pill that looks like a second live button next to the accent one. `cursor: default` is correctly set, so only the colour misleads.
 **Proposed fix** `background: 'var(--line)'`, `color: 'var(--muted)'` when disabled.
-**Status** needs decision: keep code (consistency with other v2 disabled pills) or match design?
+**Status** fixed (a858334): disabled primary pills are `--line` on `--muted` across the shelf and all three builders. Measured: rgb(226,221,208) / rgb(109,104,98).
 
 ### RES-18 · P3 · Import PDF shows its busy state on the *other* button
 **Where** `Resumes.jsx:241` (one shared `busy`), `:274` label, `:275` (no busy label)
 **Repro** New résumé → Import PDF; the parse is a real LLM call (`routes_resumes.py:1128`) and takes seconds.
 **Actual** measured with the import stubbed to a 2.5 s response: the **"Create from scratch"** button read `'Creating…'` while the import ran; the Import button was unchanged. Nothing else moved.
 **Proposed fix** separate `busy` per action, label the Import button "Parsing…", and disable both while either runs.
-**Status** needs decision
+**Status** fixed (a858334): per-action busy — Import reads "Parsing…", Create "Creating…", both inert while either runs; file input reset per pick. Measured: Parsing… 1, Creating… 0, Create cursor default.
 
 ### RES-19 · P3 · The archived band and the "+N more" search render every row unvirtualised
 **Where** `Resumes.jsx:142-148`, `:127-134`
 **Actual** measured: "browse ›" rendered **296** rows in **1.56 s**; the PM "+39 more" search rendered **303**. No paging, no cap, no count guard. It works today; it is the shape that will not (255 of the 296 come from a single base).
 **Proposed fix** cap the archived list (e.g. 100 + "show more"), or paginate server-side.
-**Status** needs decision
+**Status** fixed (a858334): 100-row pages with a "Show N more" row on search results and the archived list. Measured: 100 → 200 rows after one click.
 
 ### RES-20 · P3 · On a job-less copy the "one next step" is an action that can only fail
 **Where** `ResumeEditor.jsx:239` (stage 2) vs `:204` (guard)
 **Repro** open a persona-tailored copy with `job_id = null` (e.g. `Persona → Decagon — …`), click the CTA.
 **Actual** measured: headline falls back to `'Tailored copy'`, CTA reads **"Score the result"**, clicking it produces the error toast `'This copy isn’t linked to a job to score against.'` The same rendering also covers "the job fetch failed", so a transient 500 on `GET /jobs/{id}` is indistinguishable from "this copy has no job".
 **Proposed fix** when `!doc.job_id`, skip the Score stage (go straight to Cover letter) and say so in the sub-line; render a distinct state when the job fetch fails.
-**Status** needs decision
+**Status** fixed (a858334, option 1): the pasted description is kept on the copy (`json_data._tailor_context`), `score-check` scores against it when there is no job and stores `json_data._score` on the copy; the PDF namespace drops `_` keys. 7 new backend tests (602 total). Frontend: "Tailored from a pasted description" headline + Score CTA for freeform copies; legacy job-less copies skip Score with "No job or description linked, so this copy can't be scored."; a failed job fetch says "Couldn't load the linked job." Measured both copy states live.
 
 ### RES-21 · P3 · A missing, malformed or just-deleted id redirects silently
 **Where** `ResumeEditor.jsx:156-159`
 **Actual** measured for `/v2/resumes/00000000-0000-0000-0000-000000000000`, `/v2/resumes/not-a-uuid` and the id of a copy deleted seconds earlier: all three land on `/v2/resumes` with **0 toasts** and no message — identical to a deliberate "‹ Résumés". A 401 or 500 on the same fetch behaves the same way.
 The backend half of this is now fixed: before the restart `GET /resumes/not-a-uuid` and `/resumes/not-a-uuid/tracer-stats` returned **500 Internal Server Error** (unhandled `DataError` on the UUID cast); after the coordinator's `main.py` handler they return **404** — verified across `GET /{id}`, `/{id}/tracer-stats`, `/{id}/pdf`, `PATCH` and `DELETE`.
 **Proposed fix** (frontend) push an `error` toast "That résumé no longer exists." before navigating.
-**Status** backend half **fixed + verified**; frontend redirect needs decision
+**Status** fixed (a858334): 404 → "That résumé no longer exists.", other errors → "Couldn't load that résumé.", handed to the shelf via `setFlashToast`. Measured on a zero UUID.
 
 ### RES-22 · P3 · Design deviations (grouped — all read as decisions)
 **Where** `Resumes Home D.dc.html` vs the built screens
@@ -190,17 +190,17 @@ The backend half of this is now fixed: before the restart `GET /resumes/not-a-uu
 ### RES-25 · P4 · The success toast that carries "Open ↗" expires in 2.5 s
 **Where** `ResumeEditor.jsx:112`, `:142`; `Toast.jsx:21`
 **Actual** measured the full pending-tailor path with the POST stubbed 202 and `/resumes?is_base=false` returning a matching row: at t+800 ms both toasts were up — `'Tailoring for Meta… runs in the background.'` (progress: `--recessed`/`--line`/`--text-2`) and `'✓ | Tailored copy for Meta is ready. | Open ↗'` (success: `--toast-ok-*`); "Open ↗" navigated correctly. By t+5 s it was gone. The action is the only route to the new copy from here.
-**Status** needs decision: give action-bearing success toasts a longer TTL (or `ttl: null`)?
+**Status** fixed (a858334): toast TTLs progress 4 s / success 4 s / undo 5 s / error sticky (user: 3–5 s, consistent). Measured: success toast up at 3.5 s, gone at 4.7 s.
 
 ### RES-26 · P4 · A freeform tailor never reports completion
 **Where** `ResumeEditor.jsx:125` (`if (jobId) pendingRef.current.push(...)`)
 **Actual** measured: ticking "Tailor from Persona instead of this base" + a pasted JD posted `{"base_resume_id":"persona","job_description":"freeform JD text"}` and showed `'Tailoring … runs in the background.'` (note the empty slot where the company name goes — `:126` interpolates nothing). After 4 s and beyond: no further toast. The copy only ever surfaces on the shelf.
-**Status** needs decision
+**Status** fixed (a858334): pending tailors tracked via `/monitor/active` scope (`{base}:{job|freeform}`), so persona/freeform runs report completion; the progress copy no longer has an empty company slot.
 
 ### RES-27 · P4 · `setSearchParams` is declared and never used; `?job=` is inert
 **Where** `ResumeEditor.jsx:2`, `:71`
 **Actual** measured `/v2/resumes/{id}?job={uuid}`: the param stays in the URL and changes nothing (band still "Base résumé · 0 tailored copies"). Confirmed by grep that no `searchParams.get` exists in either file. (For contrast, `/v2/cover-letters?resume=&job=` *is* consumed and cleared — `CoverLetters.jsx:151-170` — which is why the ⋯ → "Cover letter" jump lands on a bare `/v2/cover-letters`; that is correct, not a defect.)
-**Status** needs decision: drop the dead declaration, or wire `?job=` to preselect a tailor target?
+**Status** fixed (a858334): unused `setSearchParams` and the inert `?job=` handling removed.
 
 ### RES-28 · P4 · Dead code and always-false branches
 - `ResumeEditor.jsx:651` — `{added || '(base text restored)'}` sits inside `{added && …}`; the fallback can never render.
@@ -209,25 +209,31 @@ The backend half of this is now fixed: before the restart `GET /resumes/not-a-uu
 - `Resumes.jsx:234` `else load()` — `POST /resumes` always returns an id, so the branch never runs.
 - `Resumes.jsx:245` duplicates the `EMPTY` skeleton instead of importing it from `ResumeSections.jsx:16` (drift risk).
 - `Resumes.jsx:276` the file input's `value` is never reset — picking the same PDF twice in one modal session does nothing.
-**Status** needs decision
+**Status** fixed (a858334): all six spots cleaned — the preview dropdowns now close on a document click so the other trigger is reachable (measured: second dropdown opens while the first is open), `EMPTY` imported from ResumeSections, file input reset (see RES-18).
 
 ### RES-29 · P4 · Archived view has no empty branch; the archived sort comment is wrong
 **Where** `Resumes.jsx:136-149`; `routes_resumes.py:607`
 **Actual** the archived list has no zero-row branch — reachable when an in-flight tailor finishes (`:68 load()`) while the archived view is open and the set empties: the header would read "Archived · 0 from rejected or stale applications" over nothing. And `archived.sort(key=lambda a: a["why"] != "rejected")` is commented "newest archived first" but actually sorts rejected before stale, with no date involved — measured order: the first 4 rows were all `rejected`; the set is 187 rejected + 109 stale.
-**Status** needs decision
+**Status** fixed (a858334): archived view has an empty branch; the backend now carries `archived_at` and sorts newest-first, comment corrected. Measured: first 6 `archived_at` values descend.
 
 ### RES-30 · P4 · The score poll resolves on any numeric `Tailored`, so a re-score reports the old number
 **Where** `ResumeEditor.jsx:211-218`
 **Actual** the poll's only condition is `typeof j.cv_scores['Tailored'] === 'number'` (`:214`). On a copy that already has a Tailored score, the first tick (3 s) matches the *existing* value and pushes "Scored: {old}" while the real run is still going. Verified in the intercepted flow that the poll fires at 3 s and takes whatever is there — my run only passed because I flipped the score before the first tick. Also `scores.base` is captured in the closure at call time (`:220`).
 **Proposed fix** capture the pre-run value and resolve only when it changes, or key the poll on `/monitor/active` (scope `f"{job_id}:resume:{resume_id}"`, `routes_resumes.py:1276`), which the backend already publishes and the client ignores.
-**Status** needs decision
+**Status** fixed (a858334): the score poll keys on the `score_resume` run and reads the score and base only after it disappears (8 s grace, 180 s stop); `scores.base` read at resolve time.
 
 ### RES-31 · P4 · "autosaves on blur" is wrong — saving is per keystroke, debounced 500 ms
 **Where** `ResumeEditor.jsx:328` vs `:246-253`
 **Actual** measured: typing 13 characters into *Full name* produced exactly **1** `PATCH`, **471 ms** after the last keystroke, body keys `['json_data']` — a trailing debounce, not a blur. The only genuinely blur-saved field on the screen is the Skills category (`ResumeSections.jsx:295`). The string is only shown before the first save (`savedAt` null); afterwards it reads "saved {ago} · autosaves", which is accurate.
-**Status** needs decision: reword to "autosaves"?
+**Status** fixed (a858334): "autosaves on blur" → "autosaves"; the Skills category name saves through the same 500 ms debounce (blur flushes). Measured: 1 PATCH 1016 ms after typing without blur (category debounce + editor debounce).
 
 ---
+
+### RES-32 · P4 · Centred modals land on a half pixel whenever the panel height is odd
+**Where** every `position: fixed; inset: 0; display: flex; align-items: center` wrapper — `ResumeEditor.jsx` (Tailor, Re-tailor, Review), `Resumes.jsx` (Add), `Companies.jsx` (3), `ConfirmDialog.jsx`
+**Actual** measured after RES-11: the Tailor panel is 597 px tall (all leaves integer), so in a 700 px viewport its top is 51.5 and all 82 row tops end in .5. Any odd panel height in an even viewport (or vice versa) does this.
+**Proposed fix** snap the panel: a tiny hook that reads the rect top after layout and applies `marginTop: round(top) - top` (re-run on resize), or a shared `Modal` wrapper doing the same. Cosmetic (blurred 1 px borders inside modals).
+**Status** needs decision
 
 ## What was verified working (measured, no finding)
 

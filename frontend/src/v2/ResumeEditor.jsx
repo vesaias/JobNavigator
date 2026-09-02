@@ -636,7 +636,7 @@ function RetailorModal({ doc, job, onClose, onRun }) {
       <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Re-tailor for this job</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy
           </span>
         </div>
@@ -672,12 +672,12 @@ function RetailorModal({ doc, job, onClose, onRun }) {
                 </div>
               )
             })}
-            {options.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, color: 'var(--muted)' }}>No base résumés yet.</div>}
+            {options.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No base résumés yet.</div>}
           </div>
         </div>
 
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
+          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
           {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
           <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
@@ -727,7 +727,7 @@ function TailorModal({ doc, onClose, onRun }) {
       <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailor {doc.name} for a job</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
+          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
         </div>
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
@@ -746,12 +746,12 @@ function TailorModal({ doc, onClose, onRun }) {
                     <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>
                     <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</span>
                   </div>
-                  {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)' }}>{sc}</span>}
-                  {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--warn)' }}>✦ exists</span>}
+                  {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)' }}>{sc}</span>}
+                  {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, lineHeight: '14px', color: 'var(--warn)' }}>✦ exists</span>}
                 </div>
               )
             })}
-            {list.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, color: 'var(--muted)' }}>No jobs match — paste a description below instead.</div>}
+            {list.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No jobs match — paste a description below instead.</div>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>…or a freeform job description</span>
@@ -759,7 +759,7 @@ function TailorModal({ doc, onClose, onRun }) {
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
+          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Runs in the background</span>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
           {/* RES-17 */}
           <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
@@ -780,7 +780,7 @@ function ReviewModal({ changes, onClose, onApply }) {
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailoring changes — already applied</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>These landed automatically. Decline any you don't want; the base text comes back.</span>
+            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>These landed automatically. Decline any you don't want; the base text comes back.</span>
           </div>
           <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
         </div>
