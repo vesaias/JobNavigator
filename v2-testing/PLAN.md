@@ -75,3 +75,10 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [x] `v2-testing/REPORT.md` — 276 findings: P1 5 (all fixed) · P2 70 (26 fixed) · P3 111 · P4 90; 44 fixed, 217 need a decision, 15 logged
 - [x] Restored from `backups/v2testing_baseline_20260901_2345.dump`: jobs 19012 · applications 377 · companies 126 · searches 6 · resumes 349 · cover_letters 16 · settings 86 · 0 ZZTEST rows
 - [x] Commit
+
+## Follow-up round (2026-09-02, after the 7 stages) — how to resume
+Workflow the user settled on: they read one screen's open P3/P4 list (`P3-P4.md` / `DECISIONS-design.md`), reply per id (fix / keep / explain / what?); I explain the unclear ones in chat, then an **Opus** subagent applies the clear fixes (source only), I rebuild the frontend (`docker compose build frontend && docker compose up -d frontend`), restart the backend if a `.py` changed, verify each item with a Playwright script in the backend container (harness `v2-testing/tools/h.py` → copy to `/tmp/v2t/h.py`), set each finding's `**Status**` line, regenerate `REPORT.md` with `py v2-testing/tools/report_gen.py`, commit (bare message). Subagents: Opus for fixes, Sonnet for mechanical work, Fable only orchestrates. Never push.
+- Closed screens: Feed, Searches, Companies, Applications, Cover Letters, Persona, Stats (all open items fixed or decided).
+- Still open for the user's call: Résumés (`stage3/resumes.md` + `stage3/resumes-shelf-recheck.md` RES2-01..12), Settings (`stage3/settings.md`), Shell (`stage3/shell.md` SHELL-02/04/05), plus cross-cutting F-003/F-004 in `FINDINGS.md`.
+- Data notes: DB is at the 2026-09-01 baseline plus deliberate changes (5 application histories backfilled with a `→ applied` edge, 105 `applied→applied` self-loops left in place). Scratch rows are always `ZZTEST*` and are cleaned at the end of every script.
+- Tools: `tools/h.py` (harness), `tools/console_sweep.py` (all routes × themes), `tools/lh_scan3.py` (fractional-row scan), `tools/report_gen.py` (recount + REPORT.md).
