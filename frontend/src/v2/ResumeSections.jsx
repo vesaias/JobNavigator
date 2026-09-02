@@ -48,7 +48,7 @@ export function makeMutators(data, onData) {
 }
 
 // ── field primitives (v2-styled, with the **bold** shortcut) ─────────────────
-export function Field({ label, value, onChange, placeholder, multiline, rows, mono, flex }) {
+export function Field({ label, value, onChange, placeholder, multiline, rows, flex }) {
   const boldKey = (e) => {
     if (!((e.ctrlKey || e.metaKey) && e.key === 'b')) return
     e.preventDefault()
@@ -58,7 +58,7 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, mo
     if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
-  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, fontFamily: mono ? 'var(--mono)' : 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? '19px' : undefined }
+  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, fontFamily: 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? '19px' : undefined }
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: flex || undefined, minWidth: 0 }}>
       {label && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>}
@@ -143,10 +143,10 @@ export const MenuItem = ({ icon, label, hint, onClick }) => (
     {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>{hint}</span>}
   </div>
 )
-export const MicroField = ({ label, value, onChange, placeholder, mono }) => (
+export const MicroField = ({ label, value, onChange, placeholder }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
-    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)' }} />
+    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)' }} />
   </div>
 )
 
@@ -250,7 +250,10 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
       {exp.map((e, i) => {
         const ch = entryChanged(e, i), isOpen = open.has(i), nb = (e.bullets || []).length
         return (
-          <div key={i} style={{ border: `1px solid ${ch ? 'var(--change-soft)' : 'var(--line)'}`, borderRadius: 8, background: ch ? 'var(--change-bg)' : 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+          // containers are never tinted — only the prose rows inside them are.
+          // The header's ● still says the entry holds unreviewed changes, and the
+          // bullet rows below carry the --change-soft/--change-bg treatment.
+          <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
             {/* explicit integer line-height: at the inherited 1.5 a 12.5px line is
                 18.75px, which made this row 36.75px tall and put every row below it
                 (and the Skills/Education/Projects cards) on a half pixel, where
@@ -259,7 +262,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
               <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
-              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{e.date}</span>
+              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--sans)', color: 'var(--muted)' }}>{e.date}</span>
               <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
             </div>
@@ -269,7 +272,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   <Field label="Company" value={e.company} onChange={(v) => setField(`experience.${i}.company`, v)} />
                   <Field label="Title" value={e.title} onChange={(v) => setField(`experience.${i}.title`, v)} />
                   <Field label="Location" value={e.location} onChange={(v) => setField(`experience.${i}.location`, v)} />
-                  <Field label="Date" value={e.date} onChange={(v) => setField(`experience.${i}.date`, v)} placeholder="Jan 2022 – Present" mono />
+                  <Field label="Date" value={e.date} onChange={(v) => setField(`experience.${i}.date`, v)} placeholder="Jan 2022 – Present" />
                 </div>
                 <Field label="Description" value={e.description} onChange={(v) => setField(`experience.${i}.description`, v)} placeholder="Optional role description" />
                 {(e.bullets || []).map((b, bi) => {
@@ -413,7 +416,7 @@ export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
             <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
-            <MicroField label="Years" value={e.years} onChange={(v) => setField(`education.${i}.years`, v)} placeholder="2015 – 2019" mono />
+            <MicroField label="Years" value={e.years} onChange={(v) => setField(`education.${i}.years`, v)} placeholder="2015 – 2019" />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed education entry',
             (d) => d.education.splice(i, 1),
