@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -14,6 +15,8 @@ const ago = (iso) => {
   return `${d}d ago`
 }
 const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, '')
+// FastAPI's `detail` is a plain string for HTTPException; append it when present.
+const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
 // ATS + tier chip colors live in theme.css (.cc-*) so they flip with dark mode.
 const ATS_SLUGS = new Set(['greenhouse', 'workday', 'lever', 'ashby', 'phenom', 'oraclehcm', 'smartrecruiters', 'rippling', 'eightfold', 'talentbrew', 'meta', 'google'])
@@ -137,10 +140,12 @@ export default function Companies() {
   const [test, setTest] = useState(null)              // test-scrape result
   const [testingId, setTestingId] = useState(null)
   const [showShots, setShowShots] = useState(false)
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const fetchCompanies = useCallback(async () => {
-    try { const { data } = await api.get('/companies'); setCompanies(data) } catch (e) { console.error(e) }
-  }, [])
+    try { const { data } = await api.get('/companies'); setCompanies(data) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not load companies' + errSuffix(e) }) }
+  }, [pushToast])
   useEffect(() => {
     fetchCompanies()
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => {})
@@ -198,15 +203,22 @@ export default function Companies() {
     : `Applies to all ${filtered.length} companies · jobs already found are kept`
 
   // ── actions ──
-  const patchCompany = async (id, patch) => { try { await api.patch(`/companies/${id}`, patch); fetchCompanies(); return true } catch (e) { console.error(e); return false } }
+  const patchCompany = async (id, patch) => {
+    try { await api.patch(`/companies/${id}`, patch); fetchCompanies(); return true }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save company changes' + errSuffix(e) }); return false }
+  }
   const bulkSet = async (active) => {
     const targets = active ? inactiveInFilter : activeInFilter
-    await Promise.all(targets.map((c) => api.patch(`/companies/${c.id}`, { active }).catch(() => {})))
+    const results = await Promise.allSettled(targets.map((c) => api.patch(`/companies/${c.id}`, { active })))
+    const failed = results.filter((r) => r.status === 'rejected').length
+    if (failed) pushToast({ kind: 'error', msg: `Could not update ${failed} of ${targets.length} companies` })
+    else pushToast({ kind: 'success', msg: `${targets.length} companies made ${active ? 'active' : 'inactive'}` })
     fetchCompanies()
   }
   const runScrape = async (id) => {
     setScraping((m) => ({ ...m, [id]: true }))
-    try { await api.post(`/scrape/company/${id}`) } catch (e) { console.error(e) }
+    try { await api.post(`/scrape/company/${id}`) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not start the scrape' + errSuffix(e) }) }
     setTimeout(() => { setScraping((m) => { const n = { ...m }; delete n[id]; return n }); fetchCompanies() }, 2600)
   }
   const runTest = async (id) => {
@@ -217,7 +229,8 @@ export default function Companies() {
   }
   const deleteCompany = async (c) => {
     if (!window.confirm(`Delete ${c.name}? Jobs already found are kept.`)) return
-    try { await api.delete(`/companies/${c.id}`); setMenuId(null); setDrawer(null); fetchCompanies() } catch (e) { console.error(e) }
+    try { await api.delete(`/companies/${c.id}`); setMenuId(null); setDrawer(null); fetchCompanies(); pushToast({ kind: 'success', msg: `${c.name} deleted` }) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not delete ${c.name}` + errSuffix(e) }) }
   }
 
   // ── row cell derivations ──
@@ -418,8 +431,9 @@ export default function Companies() {
       </div>
 
       {drawer && <Drawer state={drawer} setState={setDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[drawer.company.id]} />}
-      {addOpen && <AddModal onClose={() => setAddOpen(false)} resumes={resumes} personaPopulated={personaPopulated} onCreated={fetchCompanies} />}
+      {addOpen && <AddModal onClose={() => setAddOpen(false)} resumes={resumes} personaPopulated={personaPopulated} onCreated={fetchCompanies} pushToast={pushToast} />}
       {test && <TestModal test={test} onClose={() => setTest(null)} showShots={showShots} setShowShots={setShowShots} />}
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
@@ -583,7 +597,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
 }
 
 // ── add modal ─────────────────────────────────────────────────────────────────
-function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
+function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) {
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
   const [aliases, setAliases] = useState('')
@@ -603,7 +617,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
   const toggle = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
 
   const save = async () => {
-    if (!name.trim()) { window.alert('Company name is required'); return }
+    if (!name.trim()) { pushToast({ kind: 'error', msg: 'Company name is required' }); return }
     setSaving(true)
     try {
       await api.post('/companies', {
@@ -614,7 +628,10 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated }) {
         selected_resume_ids: selected, auto_scoring_depth: depth,
       })
       onCreated(); onClose()
-    } catch (e) { window.alert(e.response?.data?.detail || 'Failed to add company'); setSaving(false) }
+    } catch (e) {
+      pushToast({ kind: 'error', msg: 'Could not add company' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') })
+      setSaving(false)
+    }
   }
 
   return (

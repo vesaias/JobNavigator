@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -64,6 +65,8 @@ const inputSt = {
   height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6,
   background: 'var(--surface)', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--text)', outline: 'none',
 }
+// FastAPI's `detail` is a plain string for HTTPException; append it when present.
+const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
 // ── main ─────────────────────────────────────────────────────────────────────
 export default function Applications() {
@@ -88,6 +91,7 @@ export default function Applications() {
   const timers = useRef([])
   const notesTimer = useRef(null)
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(notesTimer.current) }, [])
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const load = useCallback(async (keep) => {
     try {
@@ -95,9 +99,9 @@ export default function Applications() {
       const list = data.applications || []
       setApps(list)
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) }) }
     setLoaded(true)
-  }, [])
+  }, [pushToast])
   useEffect(() => { load() }, [load])
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
@@ -154,22 +158,25 @@ export default function Applications() {
   // ── actions ──
   const patch = async (id, body) => {
     setApps((p) => p.map((a) => (a.id === id ? { ...a, ...body } : a)))   // optimistic
-    try { await api.patch(`/applications/${id}`, body); load(id) } catch (e) { console.error(e); load(id) }
+    try { await api.patch(`/applications/${id}`, body); load(id) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save that change' + errSuffix(e) }); load(id) }
   }
   // autosave: debounce while typing, flush immediately on blur
   const saveNotes = useCallback((id, value, now) => {
     clearTimeout(notesTimer.current)
     const run = () => {
       setApps((p) => p.map((a) => (a.id === id ? { ...a, notes: value } : a)))
-      api.patch(`/applications/${id}`, { notes: value }).catch((e) => console.error(e))
+      api.patch(`/applications/${id}`, { notes: value })
+        .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not save notes' + errSuffix(e) }) })
     }
     if (now) run(); else notesTimer.current = setTimeout(run, 700)
-  }, [])
+  }, [pushToast])
 
   const remove = async (a) => {
     setMenuOpen(false)
     if (!window.confirm(`Delete the application for "${a.title}"?`)) return
-    try { await api.delete(`/applications/${a.id}`); setSel(null); load(null) } catch (e) { console.error(e) }
+    try { await api.delete(`/applications/${a.id}`); setSel(null); load(null); pushToast({ kind: 'success', msg: 'Application deleted' }) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this application' + errSuffix(e) }) }
   }
   const addInterview = async () => {
     if (!d) return
@@ -179,13 +186,15 @@ export default function Applications() {
         where_text: intWhere.trim() || null, status: 'scheduled', prep: intPrep.trim() || null,
       })
       setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); load(d.id)
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not add the interview' + errSuffix(e) }) }
   }
   const delInterview = async (iv) => {
-    try { await api.delete(`/applications/interviews/${iv.id}`); load(d.id) } catch (e) { console.error(e) }
+    try { await api.delete(`/applications/interviews/${iv.id}`); load(d.id) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not remove the interview' + errSuffix(e) }) }
   }
   const toggleInterview = async (iv) => {
-    try { await api.patch(`/applications/interviews/${iv.id}`, { status: iv.status === 'done' ? 'scheduled' : 'done' }); load(d.id) } catch (e) { console.error(e) }
+    try { await api.patch(`/applications/interviews/${iv.id}`, { status: iv.status === 'done' ? 'scheduled' : 'done' }); load(d.id) }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not update the interview' + errSuffix(e) }) }
   }
   const openPrep = async () => {
     if (!d) return
@@ -340,7 +349,8 @@ export default function Applications() {
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
-      {logOpen && <LogModal onClose={() => setLogOpen(false)} onSaved={(id) => { setLogOpen(false); load(id) }} />}
+      {logOpen && <LogModal onClose={() => setLogOpen(false)} onSaved={(id) => { setLogOpen(false); load(id) }} pushToast={pushToast} />}
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
@@ -538,7 +548,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
 }
 
 // ── log-application modal ────────────────────────────────────────────────────
-function LogModal({ onClose, onSaved }) {
+function LogModal({ onClose, onSaved, pushToast }) {
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
   const [company, setCompany] = useState('')
@@ -560,12 +570,12 @@ function LogModal({ onClose, onSaved }) {
       const { data } = await api.post('/applications/extract', { url: u.trim() })
       if (data.title && !title) setTitle(data.title)
       if (data.company && !company) setCompany(data.company)
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not read job details from that URL' + errSuffix(e) }) }
     setReading(false)
   }
 
   const save = async () => {
-    if (!title.trim() || !company.trim() || !url.trim()) { window.alert('URL, title and company are all required'); return }
+    if (!title.trim() || !company.trim() || !url.trim()) { pushToast({ kind: 'error', msg: 'URL, title and company are all required' }); return }
     setBusy(true)
     try {
       const { data } = await api.post('/applications', {
@@ -574,7 +584,7 @@ function LogModal({ onClose, onSaved }) {
         status: stage, applied_at: when ? new Date(when).toISOString() : null,
       })
       onSaved(data.id)
-    } catch (e) { window.alert(e.response?.data?.detail || 'Could not save this application'); setBusy(false) }
+    } catch (e) { pushToast({ kind: 'error', msg: 'Could not save this application' + errSuffix(e) }); setBusy(false) }
   }
 
   const box = { height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)', width: '100%' }
