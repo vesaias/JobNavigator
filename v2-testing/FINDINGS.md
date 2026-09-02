@@ -70,3 +70,17 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Actual** Measured by both screen agents at API level (no browser): order unchanged after PATCH; UI shows the new order until reload, then snaps back.
 **Proposed fix** `flag_modified(obj, column)` after `setattr` for the JSON columns. Other PATCH routes (companies, searches, applications, jobs) assign list-shaped JSON, which compares in order and is not affected; `update_cover_letter` already flags `json_data` at `routes_cover_letters.py:460`.
 **Status** fixed + verified live after the 14:03 / 14:09 restarts (Résumés and Persona agents re-ran their checks).
+
+### F-009 · P3 · Cross-cutting · Half-pixel rows persist outside the rows the screen passes fixed
+**Where** measured after the rebuild (`artifacts/reverify_1.json`, `frac_scan` = every element 18–140 px tall and ≥280 px wide with a fractional `top`): Feed detail band (7: `h2` title 59.78 px, meta row 19.5 px), Searches cards (24: card top 105.5 — the offset originates above the list), Applications rows (37 at x.5), Cover Letters generate panel pickers (9 at x.25), Persona résumé-content editor (34: label 48.75 px, bullets 112 px).
+**Expected + why** HANDOVER convention: integer line-heights everywhere so 1 px borders never drop. Per-screen fixes landed for the specific rows measured (Companies 0, Résumés shelf 0, Settings 0, Welcome 0 — confirmed), but each screen has more text sizes at the inherited 1.5.
+**Proposed fix** One systematic pass: a small set of `.v2-t13/.v2-t12/.v2-t11` utility classes (or inline integer line-heights) for the recurring 13/12.5/12/11.5 px text, applied where `frac_scan` reports; re-measure to zero per screen. ~1–2 lines per site, but many sites.
+**Status** needs decision: do the systematic pass now (est. 40–60 edits) or accept as P3 backlog?
+
+### F-010 · P3 · Feed · First-run (empty database) shows the filter-miss copy instead of a first-run state
+**Where** `frontend/src/v2/JobFeed.jsx` list empty branch; route `/v2/feed` on a freshly seeded DB (`artifacts/empty/empty_sweep.json`, `artifacts/empty/v2_feed_light.png`)
+**Repro** Rename the real DB away, start the backend (seeds 79 settings, 6 searches, 12 companies, 1 sample résumé, 0 jobs), open `/v2/feed`.
+**Expected + why** A first-run message that points at Searches/Companies ("nothing has been scraped yet — activate a search or company"), the way Applications ("No applications yet — mark a job applied in the Feed, or log one") and Persona ("No experience yet") do. HANDOVER ranks first-run/empty DB as the highest-yield risk.
+**Actual** Header "0 open roles · 0 arrived today · 0 not yet scored", list "No jobs match.", detail "Select a job." — identical to a filter that matched nothing. All other v2 routes render sensibly on the empty DB with 0 page errors (46 route×theme loads); `/v2/resumes/<missing id>` silently redirects to the shelf, `/v2/cover-letters/<missing id>` shows "Could not load this letter." without a way back (both already in the screen reports).
+**Proposed fix** Branch on `total === 0 && no filters active` → first-run copy with links to `/v2/searches` and `/v2/companies`.
+**Status** needs decision (copy is yours to write; the branch is a 5-line change).

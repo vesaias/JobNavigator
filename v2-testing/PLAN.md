@@ -48,13 +48,14 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [x] Persona + Stats → `stage3/persona-stats.md` (45: 1 P1 · 10 P2 · 13 P3 · 21 P4; 2 fixes incl. backend flag_modified)
 - [x] Settings screen → `stage3/settings.md` (27: 2 P1 · 4 P2 · 12 P3 · 9 P4; 9 fixes; design re-diff done: 15/15 sections, 64 vs 68 rows)
 - [x] Shell (rail, counts, health line, theme toggle, collapse, overlays, toasts) → `stage3/shell.md` (SHELL-01..06; 1 fixed hover bug, rest decisions)
-- [ ] Wave-level: theme.css hover hardening (done in source), F-007 DataError→404 handler (restart pending), frontend rebuild + re-verify every 'fixed in source' item
+- [x] Wave-level: theme.css hover hardening, F-007 handler (live), frontend rebuilt (index-ClAeCNUL.js) + re-verified → `stage3/REVERIFY.md` (18 confirmed; residual half-pixel sites → F-009)
+- [x] Stage 3b empty-DB sweep: 23 routes × 2 themes on a fresh seed, 0 page errors, empty copy recorded → `artifacts/empty/`; F-010 (Feed first-run copy)
 - [x] Committed (5ec8736)
 
 **PAUSED HERE 2026-09-02 ~14:40 at the user's request.** Next: wave-level frontend rebuild → re-verify every 'fixed in source (rebuild pending)' item → Stage 3b empty-DB sweep → Stage 4.
 
 ## Stage 4 — Settings round-trip (every key: API read → type-valid write → read back → UI shows it → takes effect → restore)
-- [ ] All keys (see inventory/settings-matrix.md)
+- [x] All keys → `stage4/settings-roundtrip.md` (74/74 persist + restore; 7/7 scheduler; 58/58 visible controls show the value)
 - [ ] Commit
 
 ## Stage 5 — Cross-cutting
