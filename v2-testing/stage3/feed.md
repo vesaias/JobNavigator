@@ -174,7 +174,7 @@ Cause: each cell sets an inline `color` (and ⋯ also an inline `background`), w
 non-`!important` rules in `theme.css`.
 **Proposed fix** add `!important` to the `color`/`background` in `.v2-rail-save/.v2-rail-skip/.v2-rail-copy`,
 or drop the inline colours.
-**Status** fixed + verified after rebuild: `.v2-rail-save/-skip/-copy` hovers carry `!important` — ♥ ✕ ⋯ now change colour and background
+**Status** fixed + verified after rebuild: `.v2-rail-save/-skip/-copy` hovers carry `!important`; per the user's follow-up ♥ now tints `--accent-soft` and ⋯ `--line-soft` so all three read as clearly as ✕
 
 ### FEED-13 · P3 · The row SCORE button's hover is the wrong hover
 **Where** `JobFeed.jsx:760` (`.v2-hover-accent`); `theme.css:129`
@@ -182,7 +182,7 @@ or drop the inline colours.
 background:var(--accent-soft)"` (`…Redesign.dc.html:212`).
 **Actual** measured: only `backgroundColor → rgb(246,244,238)` (`--surface-2`). Border stays dashed
 `rgb(138,130,110)`, colour stays `rgb(109,104,98)`.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: the row SCORE button hovers like the design — dashed border and text turn accent, no wash (`.v2-bdc`)
 
 ### FEED-14 · P3 · Detail chevron and "+ Rescore" get a background wash instead of the design's colour change
 **Where** `JobFeed.jsx:820` / `:822` (chevron, `.v2-hover-accent`), `:895` (`+ Rescore`, `.v2-navlink`)
@@ -211,7 +211,7 @@ bulk Skip/Score/Tailor `style-hover="border-color:#f6f3ea"`, bulk ✕ `style-hov
 appeared to close, and that was the click that preceded it. Every overlay is backdrop-only.
 **Proposed fix** one `if (e.key === 'Escape')` branch closing `menu`, `rowMenu`, `headMenu`,
 `shortcutsOpen`, `picker`, `rescoreJob`.
-**Status** fixed + verified after rebuild: Escape closes filter dropdowns, row/head menus, the shortcuts popover, the copy/tailor picker and the rescore modal
+**Status** fixed + verified after rebuild: Escape closes filter dropdowns, row/head menus, the shortcuts popover, the copy/tailor picker and the rescore modal — and Escape also works from inside a menu's search box
 
 ### FEED-17 · P3 · The keyboard legend and the handler disagree
 **Where** `JobFeed.jsx:103` (`SHORTCUTS`), `:430-443` (handler), `:797`/`:845`/`:848` (menu hints)
@@ -235,7 +235,7 @@ The header therefore attributes TPgM's coverage to PM.
 (`…dc.html` x-dc L826-834) and `bandCounts`/`dReqSummary` from `active` (L845, L803) — i.e. the design has
 the same split, it is just never visible there because its band is only shown collapsed.
 **Proposed fix** drive the whole band header off `active`, or hide the counts while the band is open.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: keep design parity, or make the band self-consistent?
+**Status** fixed + verified after rebuild: the collapsed band's ring, score, name, keyword % and requirements all come from the best report (measured 65% / 10 of 14 = the best report's own numbers)
 
 ### FEED-19 · P3 · Rescoring an already-scored job gives no signal in the detail panel
 **Where** `JobFeed.jsx:591` (`running`), `:359-361` (`runRescore` updates `jobs` but not `detail`),
@@ -296,14 +296,14 @@ and source have their own filters." + a **Clear search** button (`…dc.html:180
 "Nothing to show" overlay on the detail pane (`…dc.html:246-250`).
 **Actual** "No jobs match." only, in both the no-results and the filtered-to-nothing case, with no way
 back. The detail pane shows "Select a job."
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: a filtered miss shows "No jobs match." + a Clear filters link (resets filters, search and the search-scope)
 
 ### FEED-25 · P3 · Title search has no clear affordance
 **Where** `JobFeed.jsx:611`
 **Expected** design has a ✕ inside the input (`clearTitleQuery`, `…dc.html:84`) plus a
 `Title · “{query}”` removable chip in the filter bar (`…dc.html:145-148`).
 **Actual** neither exists; the only way to clear is to select-all-and-delete. Every other filter has a ✕.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: the title search shows a ✕ while it has text; clicking clears it and the list comes back
 
 ### FEED-26 · P3 · Source and H-1B dropdowns show no per-value counts
 **Where** `JobFeed.jsx:620` / `:645`
@@ -352,7 +352,7 @@ no confirmation.
 | header / filter-bar left pad | 30 px | 24 px |
 Pill geometry, panel widths (216/248/196/212/224/172/228/236/436) and the detail header
 (`20px 30px 15px`, 26px title, clamp 2 → collapsed `11px 30px 12px`, 17px, clamp 1) all match exactly.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (the 24 px left inset is consistent across the screen, so it reads deliberate)
+**Status** decided 2026-09-02: keep
 
 ### FEED-31 · P4 · Dead code
 **Where** `JobFeed.jsx:578` `arrivedToday` (computed every render, never rendered — the header uses
@@ -361,19 +361,19 @@ Pill geometry, panel widths (216/248/196/212/224/172/228/236/436) and the detail
 "embed anyway" override does not exist); `theme.css:208` `.v2-tab { transition: color .12s }` with no
 `:hover` rule anywhere — measured `changed: []`, which **matches the design** (no `style-hover` on tabs),
 so the transition is simply inert.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (safe deletions, but out of a testing pass's remit)
+**Status** fixed + verified after rebuild: `arrivedToday`, the `unscored` memo, `Drop`'s `align` prop and `forceFrame` removed (a leftover `setForceFrame` call was caught by the build and removed too); 0 console errors
 
 ### FEED-32 · P4 · The Company menu remembers the previous query
 **Where** `JobFeed.jsx:623`
 **Actual** measured: type `ZZTEST`, pick a company, close, reopen → the input still reads `ZZTEST` and
 the list is still filtered. Nothing resets `companyQuery`.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: the Company menu's search box resets when the menu closes
 
 ### FEED-33 · P4 · The Score and Salary number inputs fire one request per keystroke
 **Where** `JobFeed.jsx:653` / `:663`
 **Actual** measured **3** `GET /jobs` requests while typing "55" (clear + two digits). The title search is
 debounced 400 ms (`:195`); these are not debounced at all.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: Score / Salary boxes commit 400 ms after the last keystroke (0 requests while typing "55", 1 afterwards)
 
 ### FEED-34 · P4 · A job with no company still offers "Ignore  everywhere"
 **Where** `JobFeed.jsx:801` / `:854`, handler `:315-327`
@@ -400,7 +400,7 @@ switches back. The no-URL case renders "No posting URL captured for this job." a
 **Actual** measured `backgroundColor rgb(255,255,255)` for the posting iframe in light **and** dark — the
 only token in the whole sweep that does not change. Defensible for third-party pages; it also applies to
 our own cached-snapshot document.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** decided 2026-09-02: keep the white frame ground
 
 ### FEED-37 · P4 · Palette values differ from the design's map
 **Where** `theme.css:5`

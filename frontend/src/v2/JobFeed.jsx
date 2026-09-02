@@ -54,7 +54,7 @@ const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], min_sco
 
 // small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
 // when the panel would overflow the viewport's right edge.
-function Drop({ label, active, open, onToggle, children, align = 'left', width = 216, trigger, onClear }) {
+function Drop({ label, active, open, onToggle, children, width = 216, trigger, onClear }) {
   const ref = useRef(null)
   const [pos, setPos] = useState(null)
   useLayoutEffect(() => {
@@ -122,6 +122,7 @@ export default function V2JobFeed() {
   const [dSearch, setDSearch] = useState('')
   const [menu, setMenu] = useState(null)
   const [companyQuery, setCompanyQuery] = useState('')
+  useEffect(() => { if (menu !== 'company') setCompanyQuery('') }, [menu])   // FEED-32
 
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
@@ -136,7 +137,6 @@ export default function V2JobFeed() {
   useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
-  const [forceFrame, setForceFrame] = useState(false)   // per-job override to embed regardless of the frame-check
   const [frameOk, setFrameOk] = useState(null)          // null=checking, true=embeddable, false=blocked (extension off)
   // The Navigator extension marks the page (data-jn-ext) once its content script
   // runs; its declarativeNetRequest rules strip X-Frame-Options so postings embed.
@@ -200,6 +200,11 @@ export default function V2JobFeed() {
   const deadPinRef = useRef(false) // a ?job= id that 404s: keep the panel empty instead of focusing an unrelated job (FEED-09)
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
+  // FEED-33: the Score / Salary boxes commit 400 ms after the last keystroke, like the title search
+  const [numDraft, setNumDraft] = useState({ min_score: filters.min_score, min_salary: filters.min_salary })
+  useEffect(() => { setNumDraft({ min_score: filters.min_score, min_salary: filters.min_salary }) }, [filters.min_score, filters.min_salary])
+  const numTimer = useRef(null)
+  const setNum = (key, v) => { setNumDraft((p) => ({ ...p, [key]: v })); clearTimeout(numTimer.current); numTimer.current = setTimeout(() => setF({ [key]: v }), 400) }
   useEffect(() => {
     api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => {})
     api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => {})   // FEED-26
@@ -274,7 +279,7 @@ export default function V2JobFeed() {
     deadPinRef.current = false
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setForceFrame(false); setFrameOk(null)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(null)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
   }, [])
   useEffect(() => {
@@ -420,7 +425,6 @@ export default function V2JobFeed() {
     return list
   }, [resumes, cvMode, personaAvailable])
 
-  const unscored = useMemo(() => jobs.filter((j) => scoredCount(j) === 0 && ['new', 'saved'].includes(j.status)), [jobs])
   const openRescoreBulk = useCallback(async () => {
     loadRescoreOpts()
     try {
@@ -448,6 +452,7 @@ export default function V2JobFeed() {
   // keyboard
   useEffect(() => {
     const onKey = (e) => {
+      if (e.key === 'Escape') { setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null); return }   // FEED-16: also from inside a menu's search box
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       if (e.ctrlKey || e.metaKey || e.altKey) return  // let browser shortcuts (Ctrl+Shift+R etc.) through
       const list = jobsRef.current, idx = selRef.current, job = list[idx]
@@ -461,7 +466,6 @@ export default function V2JobFeed() {
         case 'r': if (job) openRescore(job); break
         case 't': if (job) setPicker({ mode: 'tailor', jobs: [job] }); break   // FEED-17: the ⋯ menus hint t
         case 'c': if (job) navigate(`/v2/cover-letters?job=${job.id}`); break   // and c
-        case 'Escape': setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null); break   // FEED-16
         default: break
       }
     }
@@ -486,10 +490,10 @@ export default function V2JobFeed() {
   // frame-ancestors). We still always TRY the live iframe — only a confident block
   // routes to the extension message.
   useEffect(() => {
-    if (!detail || !detail.url || viewCached || extActive || forceFrame || frameOk !== null) return
+    if (!detail || !detail.url || viewCached || extActive || frameOk !== null) return
     const id = detail.id
     api.get(`/jobs/${id}/frame-check`).then(({ data }) => setFrameOk(data?.embeddable !== false)).catch(() => setFrameOk(true))
-  }, [detail, viewCached, extActive, forceFrame, frameOk])
+  }, [detail, viewCached, extActive, frameOk])
 
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {}) }, [])
@@ -502,8 +506,7 @@ export default function V2JobFeed() {
     pinnedRef.current = jid
     api.get(`/jobs/${jid}`).then(({ data }) => {
       if (pinnedRef.current !== jid) return
-      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null)
-      setForceFrame(false); setFrameOk(null)
+      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(null)
     }).catch(() => {
       if (pinnedRef.current !== jid) return
       pinnedRef.current = null; deadPinRef.current = true   // FEED-09: don't fall through to an unrelated job
@@ -603,7 +606,6 @@ export default function V2JobFeed() {
   const togF = (key, val) => setF({ [key]: filters[key].includes(val) ? filters[key].filter((x) => x !== val) : [...filters[key], val] })
 
   const d = detail
-  const arrivedToday = jobs.filter((j) => isToday(j.discovered_at)).length
   const visaText = d ? `${(H1B[d.h1b_verdict] || H1B.unknown).label}${d.h1b_company_lca_count ? ` · ${d.h1b_company_lca_count} LCAs` : ' · no LCA records'}` : ''
   const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
 
@@ -615,6 +617,10 @@ export default function V2JobFeed() {
   const reqRows = rpt?.requirement_mapping || []
   const reqMet = reqRows.filter((r) => r.matched).length
   const coverage = rpt?.keyword_coverage_pct
+  // FEED-18: the collapsed band header is one résumé's story — the best one
+  const bandReq = best?.rpt?.requirement_mapping || []
+  const bandMet = bandReq.filter((r) => r.matched).length
+  const bandCov = best?.rpt?.keyword_coverage_pct
   const running = d && (d.in_flight || []).some((o) => o === 'analyze_job')
   const dScored = reports.length > 0 && !running   // FEED-19: the running band replaces the report while a rescore runs
   const dCached = d && d.status === 'applied' && d.has_cached_page
@@ -636,7 +642,10 @@ export default function V2JobFeed() {
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 9, rowGap: 8, borderBottom: '1px solid var(--line)' }}>
         <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3 }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
+          <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>   {/* FEED-25 */}
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 226, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+            {search && <span onClick={() => setSearch('')} title="Clear search" className="v2-x" style={{ position: 'absolute', right: 8, width: 18, height: 18, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✕</span>}
+          </span>
         </div>
         {searchId && (
           <span onClick={() => { setSearchId(''); setSearchParams({}, { replace: true }) }} title="Showing only jobs from this saved search — click to clear"
@@ -678,7 +687,7 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
-            <input type="number" value={filters.min_score} onChange={(e) => setF({ min_score: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
+            <input type="number" value={numDraft.min_score} onChange={(e) => setNum('min_score', e.target.value)} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides unscored jobs — they have no score to compare</div>
         </Drop>
@@ -688,11 +697,11 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
-            <input type="number" placeholder="$K" value={filters.min_salary} onChange={(e) => setF({ min_salary: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
+            <input type="number" placeholder="$K" value={numDraft.min_salary} onChange={(e) => setNum('min_salary', e.target.value)} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides jobs without a listed salary</div>
         </Drop>
-        <Drop align="left" width={170} active open={menu === 'status'} onToggle={() => setMenu(menu === 'status' ? null : 'status')}
+        <Drop width={170} active open={menu === 'status'} onToggle={() => setMenu(menu === 'status' ? null : 'status')}
           trigger={(t) => {
             const statusActive = !(filters.status.length === DEFAULTS.status.length && DEFAULTS.status.every((s) => filters.status.includes(s)))
             return (
@@ -706,7 +715,7 @@ export default function V2JobFeed() {
           {STATUS_OPTS.map(([v, label]) => <Check key={v} on={filters.status.includes(v)} label={label} onClick={() => togF('status', v)} />)}
         </Drop>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto' }}>
-          <Drop align="right" width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
+          <Drop width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
             trigger={(t) => <div onClick={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
             {SORT_OPTS.map(([v, label]) => (
               <div key={v} className="v2-menuitem" onClick={() => { setSortBy(v); setMenu(null); setSel(0) }} style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: sortBy === v ? 'var(--accent)' : 'var(--text-2)', fontWeight: sortBy === v ? 500 : 400, ...(sortBy === v ? { background: 'var(--accent-soft)' } : {}) }}>{label}{sortBy === v && <span style={{ marginLeft: 'auto' }}>✓</span>}</div>
@@ -763,7 +772,7 @@ export default function V2JobFeed() {
                         <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--text)', marginBottom: 6 }}>No open roles yet</div>
                         Jobs arrive from <a href="/v2/searches" onClick={(e) => { e.preventDefault(); navigate('/v2/searches') }}>Searches</a> and <a href="/v2/companies" onClick={(e) => { e.preventDefault(); navigate('/v2/companies') }}>Companies</a> — activate one, or widen the Status filter to see skipped and applied roles.
                       </div>
-                    : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No jobs match.</div>)
+                    : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>No jobs match.<br /><span onClick={() => { setFilters(DEFAULTS); setSearch(''); setSearchId('') }} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>Clear filters</span></div>)   /* FEED-24 */
               : jobs.map((j, i) => {
                 const score = bestScore(j), nsc = scoredCount(j)
                 const badge = BADGE[j.status]
@@ -792,7 +801,7 @@ export default function V2JobFeed() {
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent)' }}>···</div>
                           </>
                         ) : (
-                          <div className="v2-hover-accent" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title="Score this role" style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
+                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title="Score this role" style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
                         )}
                         {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 99, background: 'var(--accent)', border: '2px solid var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
                       </div>
@@ -910,8 +919,8 @@ export default function V2JobFeed() {
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0), transform: 'translateY(1px)' }}>{best?.score}</div>
                     </div>
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
-                    {coverage != null && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{coverage}% keywords</span></>}
-                    {reqRows.length > 0 && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reqMet} of {reqRows.length} requirements met</span></>}
+                    {bandCov != null && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{bandCov}% keywords</span></>}
+                    {bandReq.length > 0 && <><span style={{ width: 1, height: 14, background: 'var(--line)' }} /><span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bandMet} of {bandReq.length} requirements met</span></>}
                     <span style={{ marginLeft: 'auto', width: 1, height: 14, background: 'var(--line)' }} />
                     <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>{reports.length} report{reports.length === 1 ? '' : 's'}</span>
                   </div>
@@ -1075,9 +1084,9 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
-                    ) : d.url && !extActive && !forceFrame && frameOk === null ? (
+                    ) : d.url && !extActive && frameOk === null ? (
                       <div style={{ flex: 1, minHeight: 0 }} />   /* FEED-22: probing — mount nothing until the frame-check answers */
-                    ) : d.url && (extActive || forceFrame || frameOk) ? (
+                    ) : d.url && (extActive || frameOk) ? (
                       /* optimistic: always try the live frame; only a confirmed block swaps it out */
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                     ) : d.url ? (
