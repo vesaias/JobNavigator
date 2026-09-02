@@ -9,8 +9,8 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
 | P3 | 111 | 92 | 1 | 18 |
-| P4 | 91 | 57 | 5 | 29 |
-| **All** | **277** | **223** | **6** | **48** |
+| P4 | 91 | 59 | 3 | 29 |
+| **All** | **277** | **225** | **4** | **48** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -25,8 +25,8 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 21 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
-| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 8 |
-| cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 0 |
+| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 9 |
+| cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 1 |
 
 ## The five P1s — all fixed and re-verified on the rebuilt bundle
 - **COMP-01** — Drawer `Save changes` closes before the PATCH resolves — a failed save loses the edit silently
@@ -253,12 +253,14 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SHELL-03 (P4) — Welcome step rows land on half pixels
 - F-001 (P2) — Feed · Tailored-résumé ✦ mark in the list row leaves v2 for the classic UI
 - F-002 (P2) — Companies → Feed · "View in feed" passes `?company=` but the Feed never reads it
+- F-003 (P4) — theme.css · 10 tokens defined but never used
 - F-004 (P4) — theme.css · 5 shadow tokens have no dark variant
 - F-005 (P2) — Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
 - F-007 (P2) — Backend · Any non-UUID id in a path returns 500 instead of 404
 - F-008 (P2) — Backend · Order-only edits to dict-shaped JSON columns were silently dropped (Résumé + Persona skills ▲▼)
 - F-009 (P3) — Cross-cutting · Half-pixel rows persist outside the rows the screen passes fixed
 - F-010 (P3) — Feed · First-run (empty database) shows the filter-miss copy instead of a first-run state
+- X-01 (P4) — `/api/monitor/active` entries carry no target id for company scrapes
 
 ### Cross-cutting fixes not tied to one finding id
 - Toast system mounted on Searches, Companies, Applications, Persona and Stats (every failure there was console-only); Searches' helper used `text:` instead of `msg:` (blank toasts) — fixed.

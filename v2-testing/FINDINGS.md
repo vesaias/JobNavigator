@@ -29,7 +29,7 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Expected + why** HANDOVER lists the 9 aliases as known; `--paper` is new to this sweep. Dead tokens make the "one theme = replace this list" promise wrong by 10 entries.
 **Actual** 10 unused.
 **Proposed fix** Delete the 9 alias lines and `--paper`, or wire `--paper` to the PDF-preview iframe ground (`--iframe-bg` already does that). Needs a decision only on whether the aliases are kept for the planned skin work.
-**Status** needs decision: delete now, or keep until the primitive layer lands?
+**Status** fixed (cf50554): the 9 aliases and `--paper` deleted from both theme blocks (0 usages each, re-grepped incl. string literals); HANDOVER theming bullet recounted (111 tokens, 1 alias, none unused). Smoke after rebuild: 0 unresolved `var()` and 0 console/page errors on Feed, Companies, Résumés, Settings in both themes.
 
 ### F-004 · P4 · theme.css · 5 shadow tokens have no dark variant
 **Where** `frontend/src/v2/theme.css:27-29` (light only)

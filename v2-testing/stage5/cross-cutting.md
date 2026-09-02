@@ -32,4 +32,4 @@ Error toasts persist (7.2 s check in the lab; every load-failure site re-verifie
 **Where** `backend/job_monitor.py` running-state dict (`target_id`/`company_id` null for `company_scrape`)
 **Actual** `[["company_scrape", null, null]]` while a specific company was scraping — the Companies screen must infer "scraping now" by name/time.
 **Proposed fix** Populate `target_id` with the company id in `launch_background` for company scrapes (résumé jobs already carry `(resume_id, target_job_id)`).
-**Status** needs decision.
+**Status** fixed (cf50554): `RunningJob.company_id` threaded through `tracked_run`/`launch_background`, serialised by `/monitor/active`; Companies keys its run map on `company_id` with `scope_key` fallback; 2 tests added (604 total). Verified live: a manual Anthropic scrape showed `{"job_type": "company_scrape", "company_id": "6f9e…"}` matching the company row.
