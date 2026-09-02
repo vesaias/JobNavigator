@@ -26,7 +26,7 @@ Design: `Nav Rail.dc.html`, `Toasts.dc.html`, `System Overlays.dc.html` (panels 
 **Expected + why** Nav Rail spec: "◐ … cycles Light → Dark → System (tooltip names the current mode)", icons ◐/◑/◒, tooltip "Theme: Dark — click to switch". HANDOVER lists the System option as outstanding theming work.
 **Actual** Boolean flip, icon always ◐, tooltip "Switch to dark mode"; four components each read `jobnavigator_dark_mode` independently (`V2App`, `ToastLab`, `LoginModal`, `WelcomeModal`).
 **Proposed fix** One theme store (`light|dark|system`) + `prefers-color-scheme` listener + no-flash boot script; out of scope for a contained fix.
-**Status** needs decision: schedule with the theming groundwork, or accept two-state for now?
+**Status** decided keep current (user 2026-09-03): two-state toggle stays; the System mode waits for the theming groundwork.
 
 ### SHELL-03 · P4 · Welcome step rows land on half pixels
 **Where** `WelcomeModal.jsx:56` (desc `lineHeight: 1.5` at 11.5 px = 17.25 px)
@@ -38,7 +38,7 @@ Design: `Nav Rail.dc.html`, `Toasts.dc.html`, `System Overlays.dc.html` (panels 
 **Where** `WelcomeModal.jsx:52` (`.v2-welcomestep:hover` → `--surface-2`), `:43` (✕ uses `.v2-hover-accent-text` → accent)
 **Expected + why** `System Overlays.dc.html` panel 2: steps have no `style-hover`; ✕ hovers to `#1b1a16` (`--text`), not the accent. The code comment says the step hover is deliberate ("v1 made each one a link").
 **Actual** Step bg → `rgb(246,244,238)`; ✕ → `rgb(63,107,82)`.
-**Status** needs decision: keep (consistency with the app's link affordance) or match the board?
+**Status** decided keep current (user 2026-09-03): consistency with the app's link affordance.
 
 ### SHELL-05 · P4 · Rail values that differ from the Nav Rail board
 **Where** `theme.css:60,117`, `V2App.jsx:71`
@@ -48,7 +48,7 @@ Design: `Nav Rail.dc.html`, `Toasts.dc.html`, `System Overlays.dc.html` (panels 
 ### SHELL-06 · P4 · `App.jsx` and V2App keep separate copies of the theme flag
 **Where** `App.jsx:105-116` (sets `html.dark` from its own state), `V2App.jsx:52`
 **Actual** Toggling in v2 updates localStorage + `data-theme` but `html.dark` only follows on the next full load (`after_toggle.html_dark` stayed `false`). Harmless today because "← Classic UI" is a full navigation; becomes a bug the moment the two shells share a route transition.
-**Status** fold into SHELL-02.
+**Status** decided keep current (user 2026-09-03, folded into SHELL-02): harmless while "← Classic UI" is a full navigation.
 
 ## Fixed in source
 - `theme.css:31` — `--rail-hover` token; `theme.css:136-137` — `!important` on `.v2-navdark:hover`, new `.v2-themebtn:hover`

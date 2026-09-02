@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 91 | 2 | 18 |
-| P4 | 91 | 56 | 8 | 27 |
-| **All** | **277** | **221** | **10** | **46** |
+| P3 | 111 | 92 | 1 | 18 |
+| P4 | 91 | 56 | 7 | 28 |
+| **All** | **277** | **222** | **8** | **47** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -25,7 +25,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 21 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
-| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
+| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 7 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 0 |
 
 ## The five P1s — all fixed and re-verified on the rebuilt bundle
@@ -256,6 +256,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - F-005 (P2) — Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
 - F-007 (P2) — Backend · Any non-UUID id in a path returns 500 instead of 404
 - F-008 (P2) — Backend · Order-only edits to dict-shaped JSON columns were silently dropped (Résumé + Persona skills ▲▼)
+- F-009 (P3) — Cross-cutting · Half-pixel rows persist outside the rows the screen passes fixed
 - F-010 (P3) — Feed · First-run (empty database) shows the filter-miss copy instead of a first-run state
 
 ### Cross-cutting fixes not tied to one finding id

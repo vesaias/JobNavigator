@@ -57,7 +57,9 @@ export default function V2App() {
   const loadCounts = useCallback(() => {
     api.get('/jobs', { params: { status: 'new', limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, jobs: data.total }))).catch(() => {})
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setCounts((c) => ({ ...c, resumes: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
-    api.get('/applications').then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
+    // /applications returns {applications, total} — ask for one row and read the
+    // total, so this count no longer trails the others by ~half a second
+    api.get('/applications', { params: { limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
     api.get('/companies').then(({ data }) => setCounts((c) => ({ ...c, companies: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
     api.get('/searches').then(({ data }) => setCounts((c) => ({ ...c, searches: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
     api.get('/cover-letters').then(({ data }) => setCounts((c) => ({ ...c, letters: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
@@ -82,9 +84,16 @@ export default function V2App() {
     : health
       ? `Scraper ${health.status === 'failed' ? 'run failed' : 'healthy'} · ${ago(health.finished_at || health.started_at) || '—'}`
       : 'No scrape recorded yet'
+  // the label merges both signals into one number; the tooltip says what the dot
+  // actually aggregates — failing companies and failing searches, named separately
+  const nC = warn.companies || 0
+  const nS = warn.searches || 0
+  const lastSweep = health ? (ago(health.finished_at || health.started_at) || '—') : 'no sweep recorded yet'
   const healthTip = failing
-    ? `${failing} source${failing === 1 ? ' needs' : 's need'} attention. Click → Stats · Run history.`
-    : 'Last scrape sweep finished without failures. Click → Stats · Run history.'
+    ? `${nC} compan${nC === 1 ? 'y' : 'ies'} and ${nS} search${nS === 1 ? '' : 'es'} need attention. Click → Stats · Run history.`
+    : health?.status === 'failed'
+      ? `No company or search is failing, but the last scrape sweep failed · ${lastSweep}. Click → Stats · Run history.`
+      : `All companies and searches healthy · last sweep ${lastSweep}. Click → Stats · Run history.`
 
   const W = open ? 206 : 50
   const padX = open ? 20 : 13
@@ -111,10 +120,12 @@ export default function V2App() {
                 const tip = open ? undefined : `${it.label}${count != null ? ` · ${count}` : ''}${warned ? ' · needs attention' : ''}`
                 const base = {
                   position: 'relative', display: 'flex', alignItems: 'center', height: 34,
-                  // the 2px left border is inside the 50px column, so collapsed
-                  // padding is asymmetric to keep the icon on the axis
-                  padding: open ? `0 ${padX}px` : '0 13px 0 11px',
-                  fontSize: 14, whiteSpace: 'nowrap', borderLeft: `2px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
+                  // the 3px left border is inside the 50px column, so collapsed
+                  // padding is asymmetric to keep the icon on the axis; each
+                  // left padding is 1px short of its old value so widening the
+                  // accent from 2px to 3px doesn't shift the label
+                  padding: open ? `0 ${padX}px 0 ${padX - 1}px` : '0 13px 0 10px',
+                  fontSize: 14, whiteSpace: 'nowrap', borderLeft: `3px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
                   background: active ? 'var(--rail-active)' : 'transparent', transition: 'padding .32s ease',
                 }
                 const inner = (
@@ -123,7 +134,10 @@ export default function V2App() {
                       <Icon size={15} strokeWidth={1.8} />
                     </span>
                     <span style={{ flex: open ? 1 : '0 0 0px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{it.label}</span>
-                    {count != null && <span style={{ flex: '0 0 auto', width: open ? undefined : 0, overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{count}</span>}
+                    {/* the slot is reserved at its final width while the count is
+                        in flight — an empty span, never a placeholder 0, so the
+                        label doesn't shift when the number lands */}
+                    {it.countKey != null && <span style={{ flex: '0 0 auto', minWidth: open ? 18 : 0, width: open ? undefined : 0, textAlign: 'right', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{count != null ? count : ''}</span>}
                     {!open && warned && <span title="Needs attention" style={{ position: 'absolute', top: 8, left: 'calc(50% + 5px)', width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
                   </>
                 )
