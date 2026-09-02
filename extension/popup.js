@@ -159,6 +159,7 @@ function render() {
   ab.classList.remove('saved', 'err-btn');
   if (state.applied === 'saving') ab.innerHTML = '<div class="spin" style="border-color:rgba(0,0,0,.18); border-top-color:#57534C"></div>';
   else if (state.applied === 'saved') { ab.classList.add('saved'); ab.innerHTML = '<div class="check-sm"></div>Saved'; }
+  else if (state.applied === 'exists') { ab.classList.add('saved'); ab.innerHTML = '<div class="check-sm"></div>Already logged'; }
   else if (state.applied === 'error') { ab.classList.add('err-btn'); ab.innerHTML = 'Retry'; }
   else ab.innerHTML = 'Save as applied';
 
@@ -223,6 +224,7 @@ async function doApplied() {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': state.apiKey },
       body: JSON.stringify({ title, company, url }),
     });
+    if (resp.status === 409) { state.applied = 'exists'; render(); clearTimeout(_saveT); _saveT = setTimeout(() => { state.applied = 'idle'; render(); }, 2200); return; }   // already logged for this posting
     if (!resp.ok) throw new Error(String(resp.status));
     state.applied = 'saved'; render();
     clearTimeout(_saveT); _saveT = setTimeout(() => { state.applied = 'idle'; render(); }, 1800);
