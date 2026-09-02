@@ -31,7 +31,11 @@ v1 still exists at the unprefixed routes and shares one backend. Do not break it
 
 ---
 
-## The job now: a deep testing pass
+## The testing pass (2026-09-02) — done
+
+Results live in `v2-testing/REPORT.md` (totals, P1s, open decisions), `v2-testing/FINDINGS.md` + `v2-testing/stage3/*.md` (every finding with repro + measurement), `v2-testing/PLAN.md` (what was and wasn't covered). Read those before touching a screen.
+
+## The job then: a deep testing pass
 
 ### What coverage actually exists
 

@@ -19,7 +19,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Expected + why** Every other malformed node degrades gracefully — `resume_content` served as a bare string still renders all seven section cards without throwing (measured). The backend's `_to_dict` returns `p.qa_bank or []` (`routes_persona.py:34`), so any *truthy* non-list passes straight through, and HANDOVER §"Hostile data" names legacy `qa_bank` shapes from the extension as a live risk.
 **Actual** `pageerror: "…|| []).map is not a function"`, `document.body.innerText.length === 0`. The entire v2 shell unmounts, rail included. There is no error boundary anywhere in v2, so the user gets a blank white page with no way out but editing the URL.
 **Proposed fix** One line at `:216` — `(Array.isArray(p?.qa_bank) ? p.qa_bank : []).map(toPair)`.
-**Status** needs decision: apply the one-line `Array.isArray` guard here, or add a v2-wide error boundary as its own task?
+**Status** fixed + verified after rebuild (`Persona.jsx` qa memo accepts list, legacy dict → pairs, anything else → []; dict qa_bank rendered with 0 page errors)
 
 ### PERS-02 · P2 · `PATCH /api/persona` silently dropped every order-only write — Skills ▲▼ did nothing
 **Where** `backend/api/routes_persona.py:63-64` (was `setattr(p, k, v)` with no `flag_modified`); surfaced by `ResumeSections.jsx:280` (`move`) / `:283` (arrows)

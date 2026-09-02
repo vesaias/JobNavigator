@@ -19,7 +19,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** v1 `CompanyManager.jsx` keeps the edit modal open until the request settles. The v2 toast taxonomy has an `error` kind with `TTL.error = null` precisely so a failure cannot evaporate (`Toast.jsx:19,21`) — but `Toast.jsx` is never imported here.
 **Actual** measured: drawer already gone at **t+0.30 s** while the PATCH was still in flight; at t+2.5 s (after the 500) there is **no toast, no banner, no text matching /boom|failed|error/ anywhere in the document** — only two console errors. Server value unchanged (`name` still `ZZTEST Alpha`), and the row still shows the old name. The user has no way to know the edit was discarded.
 **Proposed fix** `await onSave(...)` and only `setState(null)` on success; show a pending state on the button (`Saving…`) and an `error` toast on failure. Requires `patchCompany` to rethrow (or return a status) instead of swallowing.
-**Status** needs decision: make Save awaited + toasted (adds `Toast.jsx` to this screen), or keep fire-and-forget?
+**Status** fixed + verified after rebuild (drawer stays open on PATCH 500, inline "Save failed — nothing was changed", error toast; Drawer `save` awaits `patchCompany`, which now returns true/false)
 
 ### COMP-02 · P2 · Drawer's `company` object is never refreshed, so the banner / tuning note / subtitle go stale while the drawer is open
 **Where** `Companies.jsx:560` (footer toggle calls `onSave` → `fetchCompanies()`), `:415` (`drawer.company` captured once at `openDrawer` `:241`)

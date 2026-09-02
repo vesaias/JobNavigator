@@ -19,7 +19,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** every other write on this screen surfaces failure as an `error` toast (`:128`, `:149`, `:204`, `:219`, `:225`, `:230`), and `Toast.jsx:21` gives `error` a null TTL precisely so "a failure that evaporates before you read it may as well not exist". The autosave is the *only* write that can lose typed text.
 **Actual** measured: status text after the failed PATCH = `'saved just now · autosaves'`; toast count 0; `GET /resumes/{id}` still returned the pre-edit value `'ZZTEST Person'`. The catch at `:250` is `console.error(e)` and `savedAt` is left at its last successful value, so the reading is not just missing — it is affirmatively wrong.
 **Proposed fix** in the catch: `pushToast({ kind: 'error', msg: 'Could not save — your last change is not stored.' })` and set a `saveFailed` flag that makes the status line read "not saved" until the next success.
-**Status** needs decision: the toast text/retry policy (auto-retry once, or leave it to the user?)
+**Status** fixed + verified after rebuild (`ResumeEditor.jsx:250` autosave catch → error toast "Save failed — your last edit is not stored", `savedAt` cleared; measured on PATCH 500)
 
 ### RES-02 · P2 · Skills ▲▼ reorder was never persisted — the UI showed the new order until reload, then snapped back
 **Where** `backend/api/routes_resumes.py:958-976` (`update_resume`); control at `ResumeSections.jsx:280-284`

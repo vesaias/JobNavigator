@@ -22,7 +22,7 @@ Environment: stack via `docker compose` (Docker Desktop). Backend tests run in-c
 - [x] v1 screen inventories → `inventory/v1-*.md` (3 files)
 - [ ] Settings matrix → `inventory/settings-matrix.md`
 - [x] Design boards decoded → `design/` (14 boards byte-exact + MAIN.md + github.md). Note: MAIN.md names `Resumes Shelf` canonical for Résumés while HANDOVER names `Resumes Home D`; github.md names `Applications Ops` (split inbox) canonical while MAIN.md lists Applications as open. Testing follows the HANDOVER table.
-- [ ] Commit
+- [x] Commit
 
 ### Routes
 v2 (shell `V2App`, `/v2` → redirect `feed`): `/v2/feed` · `/v2/searches` · `/v2/companies` · `/v2/applications` · `/v2/resumes` · `/v2/resumes/:id` · `/v2/cover-letters` · `/v2/cover-letters/:id` · `/v2/persona` · `/v2/stats` · `/v2/settings` · `/v2/toasts` (ToastLab, temporary, outside the shell)
@@ -34,7 +34,7 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [ ] No-op handlers (onClick without effect, handlers never attached)
 - [x] Colour literals: 0 in v2 JSX. Tokens: 10 unused (F-003), 5 shadows without dark (F-004); every `var(--x)` used in JSX is defined
 - [x] Console sweep, 23 routes × 2 themes → `artifacts/sweep1/` (gitignored). Clean except: Feed mounts the posting iframe while the frame-check is still pending (XFO refusals logged; Stage 3 Feed item); PDF blob aborts in headless are expected
-- [ ] Commit
+- [x] Commit
 
 **Backend does NOT hot-reload** (F-006): `docker compose restart backend` after every backend edit; agents ask `main` for restarts between waves.
 
@@ -52,26 +52,26 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [x] Stage 3b empty-DB sweep: 23 routes × 2 themes on a fresh seed, 0 page errors, empty copy recorded → `artifacts/empty/`; F-010 (Feed first-run copy)
 - [x] Committed (5ec8736)
 
-**PAUSED HERE 2026-09-02 ~14:40 at the user's request.** Next: wave-level frontend rebuild → re-verify every 'fixed in source (rebuild pending)' item → Stage 3b empty-DB sweep → Stage 4.
+**All stages complete 2026-09-02 ~17:00.** Follow-ups: decisions in REPORT.md; Résumés geometry re-check against `Resumes Shelf`; F-009 line-height pass if approved.
 
 ## Stage 4 — Settings round-trip (every key: API read → type-valid write → read back → UI shows it → takes effect → restore)
 - [x] All keys → `stage4/settings-roundtrip.md` (74/74 persist + restore; 7/7 scheduler; 58/58 visible controls show the value)
-- [ ] Commit
+- [x] Commit
 
 ## Stage 5 — Cross-cutting
-- [ ] Counts that must agree (rail vs list vs Stats vs feed header vs company apps)
-- [ ] Background jobs: navigate away mid-run, duplicate launch → 409, backend restart mid-run
-- [ ] Deep links to missing ids (`?job=`, `?resume=&job=`, `/v2/resumes/:id`, `/v2/cover-letters/:id`)
-- [ ] Toasts: error kind at every failure site, never auto-dismiss
-- [ ] Keyboard shortcuts
-- [ ] Narrow viewports
-- [ ] Commit
+- [x] Counts agree → `stage5/cross-cutting.md`
+- [x] Background jobs: 202 → 409 duplicate → survives navigation → restart marks run failed 'Process restarted'
+- [x] Deep links to missing ids (empty-DB sweep + F-007; residual UX items in RES/CL reports)
+- [x] Toasts: system now mounted on all 9 screens; error kind persists (lab 7.2 s); load-failure sites re-verified after rebuild
+- [x] Keyboard shortcuts (FEED report: j/k/s/x/a/e/r work; `o` listed-unhandled, `f`/`g` unlisted)
+- [x] Narrow viewports: 1024×700 pass per screen (FEED-03 fixed; APPS-09, CL download button open)
+- [x] Commit
 
 ## Stage 6 — v1 regression
-- [ ] Every v1 screen loads, every endpoint it uses still responds with the expected shape
-- [ ] Commit
+- [x] v1: 9 routes × 2 themes clean on the real DB after all backend changes; 587 backend tests green; backend changes are additive (404 handler, flag_modified, aliases on create, trigger_url)
+- [x] Commit
 
 ## Stage 7 — Report
-- [ ] Totals by severity, fixed vs needs-you, untestable
-- [ ] Restore real DB from baseline dump; verify counts
-- [ ] Commit
+- [x] `v2-testing/REPORT.md` — 276 findings: P1 5 (all fixed) · P2 70 (26 fixed) · P3 111 · P4 90; 44 fixed, 217 need a decision, 15 logged
+- [x] Restored from `backups/v2testing_baseline_20260901_2345.dump`: jobs 19012 · applications 377 · companies 126 · searches 6 · resumes 349 · cover_letters 16 · settings 86 · 0 ZZTEST rows
+- [x] Commit
