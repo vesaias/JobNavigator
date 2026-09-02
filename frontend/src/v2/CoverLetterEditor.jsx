@@ -351,7 +351,7 @@ export default function CoverLetterEditor() {
                 const tracked = ct.url && !String(ct.url).startsWith('mailto:')
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* controls + text: half the row */}
+                    <div style={{ flex: '45 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* controls + text: 45 % of the row */}
                     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--muted)', fontSize: 8 }}>
                       <span onClick={() => i > 0 && update((d) => { const a = d.header.contact_items; [a[i - 1], a[i]] = [a[i], a[i - 1]] })}
                         title="Move up" className={i > 0 ? 'v2-hover-accent-text' : ''} style={{ cursor: i > 0 ? 'pointer' : 'default', opacity: i > 0 ? 1 : 0.35 }}>▲</span>
@@ -361,7 +361,7 @@ export default function CoverLetterEditor() {
                     <input value={ct.text || ''} placeholder="Display text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
                       style={{ ...CELL, flex: 1, minWidth: 0 }} />
                     </div>
-                    <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: the other half */}
+                    <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
                     <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
                       style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--accent)', minWidth: 0 }} />
                     {tracked && (
