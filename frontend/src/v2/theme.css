@@ -113,6 +113,13 @@
   --sm-freehire-bg:#3a3021; --sm-freehire-fg:#d3b083;
   --sm-extension-bg:#34322c; --sm-extension-fg:#b5b0a3;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
+  /* F-004: the light alphas vanish against #1e1c17 — dark surfaces need a higher
+     alpha (and the menu a hairline) to read as lifted off the page at all. */
+  --shadow-modal:0 18px 50px rgba(0,0,0,.6);
+  --shadow-menu:0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
+  --shadow-pop:0 10px 30px rgba(0,0,0,.6);
+  --shadow-toast:0 8px 24px rgba(0,0,0,.5);
+  --shadow-drawer:-14px 0 40px rgba(0,0,0,.45);
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
 .jn-v2 a { color:var(--accent); text-decoration:none; }

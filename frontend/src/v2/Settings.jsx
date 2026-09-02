@@ -495,9 +495,10 @@ export default function Settings() {
           {sections.map(([id, group, title]) => (
             <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
               {group && <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '14px 26px 6px 30px' }}>{group}</div>}
-              <div onClick={() => jump(id)} {...kb(() => jump(id), 'link')} aria-label={`Jump to ${title}`} className="v2-anchor" style={{ display: 'flex', alignItems: 'center', height: 29, padding: '0 26px 0 30px', fontSize: 12.5, cursor: 'pointer',
+              <div onClick={() => jump(id)} {...kb(() => jump(id), 'link')} aria-label={`Jump to ${title}`} className="v2-anchor" style={{ display: 'flex', alignItems: 'center', height: 29, padding: '0 26px 0 29px', fontSize: 12.5, cursor: 'pointer',
                 color: active === id && !q ? 'var(--text)' : 'var(--text-2)', fontWeight: active === id && !q ? 600 : 400,
-                borderLeft: `2px solid ${active === id && !q ? 'var(--accent)' : 'transparent'}` }}>{title}</div>
+                /* 3px accent + 29px pad keeps the label on the same axis as the 2px version */
+                borderLeft: `3px solid ${active === id && !q ? 'var(--accent)' : 'transparent'}` }}>{title}</div>
             </div>
           ))}
         </div>
