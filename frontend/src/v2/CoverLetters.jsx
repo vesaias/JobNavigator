@@ -133,12 +133,16 @@ export default function CoverLetters() {
 
   useEffect(() => {
     load()
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => {})
+    // merge, don't replace: the ?job=/?resume= effect below prepends a row that
+    // isn't in these windows, and this response usually lands last (the 200-job
+    // list is the slowest call on the screen) — replacing wiped the deep link.
+    const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch(() => {})
     api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
     // landed on an id with no matching option and the field rendered blank
     api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
-      .then(({ data }) => setJobs(data.jobs || [])).catch(() => {})
+      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch(() => {})
     api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
@@ -331,7 +335,10 @@ export default function CoverLetters() {
             {pending.map((r) => (
               <div key={r.run_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--recessed)' }}>
                 <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
-                <span style={{ fontSize: 12.5, color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {/* integer line-height: at 1.5 this 12.5px label makes the row
+                    46.75px tall and every letter row below it lands on a half
+                    pixel, which drops their 1px borders on alternating rows */}
+                <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Generating — {rowLabel(r)}
                 </span>
                 <span style={{ marginLeft: 'auto', flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>~30s</span>

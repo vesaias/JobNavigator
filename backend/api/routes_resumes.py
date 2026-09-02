@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, Application, SessionLocal, utcnow, Persona
 from backend.job_monitor import launch_background, JobAlreadyRunningError
@@ -969,6 +970,12 @@ def update_resume(resume_id: str, body: dict, db: Session = Depends(get_db)):
     for key, value in body.items():
         if key in allowed:
             setattr(resume, key, value)
+            # SQLAlchemy decides whether to emit an UPDATE by comparing old == new.
+            # Two dicts with the same pairs in a different order compare equal, so a
+            # pure reorder (e.g. moving a skills row with the editor's ▲▼) was silently
+            # dropped. Force the column dirty for the JSON payload.
+            if key == "json_data":
+                flag_modified(resume, "json_data")
 
     resume.updated_at = utcnow()
     db.commit()

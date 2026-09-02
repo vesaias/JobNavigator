@@ -106,7 +106,7 @@ export default function V2Resumes() {
       <div style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Résumés</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <input value={q} onChange={(e) => { setQ(e.target.value); setShowArchived(false) }} placeholder="Search bases, copies, archived…"
@@ -125,8 +125,8 @@ export default function V2Resumes() {
               </div>
               {results.length === 0 ? <div style={{ padding: '20px 14px', border: '1px dashed var(--line)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</div>
                 : results.map((r, i) => (
-                  <div key={`${r.kind}-${r.id}-${i}`} className="v2-act" onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer' }}>
-                    <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
+                  <div key={`${r.kind}-${r.id}-${i}`} className="v2-act" onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', lineHeight: '20px' }}>
+                    <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
                     {r.note && <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{r.note}</span>}
                     {r.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(r.score) }}>{r.score}</span>}
@@ -140,8 +140,8 @@ export default function V2Resumes() {
                 <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Archived · {archived.length} from rejected or stale applications</span>
               </div>
               {archived.map((c) => (
-                <div key={c.id} className="v2-act" onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer' }}>
-                  <span style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
+                <div key={c.id} className="v2-act" onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', lineHeight: '20px' }}>
+                  <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{copyLabel(c)}</span>
                   <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{c.why}</span>
                 </div>
@@ -155,7 +155,7 @@ export default function V2Resumes() {
                 <>
                   <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Profile</span>
                   <div className="v2-card" onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
                       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
                       {persona.avg_fit != null && (
@@ -190,7 +190,7 @@ export default function V2Resumes() {
                 const baseInflight = inflight.filter((f) => String(f.baseId) === String(b.id))
                 return (
                   <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
                       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</span>
                       {b.avg_fit != null && (
@@ -256,6 +256,13 @@ function AddModal({ onClose, onCreated }) {
     try {
       const fd = new FormData(); fd.append('file', file)
       const { data: parsed } = await api.post('/resumes/import-pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      // /resumes/import-pdf already persists the parsed résumé (routes_resumes.py:1152)
+      // — reuse that row (renaming it when a name was typed) instead of creating a duplicate.
+      if (parsed?.id) {
+        const wanted = name.trim()
+        if (wanted && wanted !== parsed.name) { try { await api.patch(`/resumes/${parsed.id}`, { name: wanted }) } catch { /* keep the imported name */ } }
+        onCreated(parsed.id); return
+      }
       const { data } = await api.post('/resumes', { name: name.trim() || file.name.replace(/\.pdf$/i, ''), is_base: true, json_data: parsed.json_data || parsed })
       onCreated(data.id)
     } catch (e) { setErr(e.response?.data?.detail || 'Import failed — is it a text PDF?'); setBusy(false) }

@@ -421,7 +421,7 @@ export default function ResumeEditor() {
                 <>
                   <div onClick={() => setTplOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                   <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-                    {templates.map((t) => <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : 'transparent' }}>{t.name}</div>)}
+                    {templates.map((t) => <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : undefined }}>{t.name}</div>)}
                   </div>
                 </>
               )}
@@ -433,7 +433,7 @@ export default function ResumeEditor() {
                 <>
                   <div onClick={() => setFmtOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                   <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-                    {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <div key={v} onClick={() => pickFormat(v)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === format ? 'var(--accent)' : 'var(--text-2)', background: v === format ? 'var(--accent-soft)' : 'transparent' }}>{l}</div>)}
+                    {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <div key={v} onClick={() => pickFormat(v)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === format ? 'var(--accent)' : 'var(--text-2)', background: v === format ? 'var(--accent-soft)' : undefined }}>{l}</div>)}
                   </div>
                 </>
               )}
