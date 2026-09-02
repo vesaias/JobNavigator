@@ -39,16 +39,17 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 **Backend does NOT hot-reload** (F-006): `docker compose restart backend` after every backend edit; agents ask `main` for restarts between waves.
 
 ## Stage 3 — Per screen (each: every control · empty/one/many/long/null · light+dark · hovers vs design style-hover · API-failure path · empty DB)
-- [ ] Feed
-- [ ] Searches
-- [ ] Companies
-- [ ] Applications
+- [x] Feed → `stage3/feed.md` (38 findings: 11 P2 · 17 P3 · 10 P4; 5 fixes)
+- [x] Searches → `stage3/searches.md` (29: 6 P2 · 10 P3 · 13 P4; 7 fixes, diff 89 lines — review)
+- [x] Companies → `stage3/companies.md` (37: 1 P1 · 12 P2 · 16 P3 · 8 P4; 2 fixes + 3 earlier)
+- [x] Applications → `stage3/applications.md` (23: 7 P2 · 10 P3 · 6 P4; 3 fixes)
 - [ ] Résumés (shelf + editor)
 - [ ] Cover Letters (list + editor)
 - [ ] Persona
 - [ ] Stats
 - [ ] Settings (screen)
 - [x] Shell (rail, counts, health line, theme toggle, collapse, overlays, toasts) → `stage3/shell.md` (SHELL-01..06; 1 fixed hover bug, rest decisions)
+- [ ] Wave-level: theme.css hover hardening (done in source), F-007 DataError→404 handler (restart pending), frontend rebuild + re-verify every 'fixed in source' item
 - [ ] Commit after each screen
 
 ## Stage 4 — Settings round-trip (every key: API read → type-valid write → read back → UI shows it → takes effect → restore)

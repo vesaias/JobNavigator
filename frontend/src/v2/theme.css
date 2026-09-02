@@ -131,7 +131,7 @@
 .v2-x:hover { background:var(--line); color:var(--text); }
 .v2-pill { cursor:pointer; }
 .v2-navlink { cursor:pointer; text-decoration:none; transition:background .12s,color .12s; }
-.v2-navlink:hover { background:var(--surface-2); color:var(--text); }
+.v2-navlink:hover { background:var(--surface-2) !important; color:var(--text) !important; }
 .v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
 .v2-navdark:hover { color:var(--rail-ink) !important; }   /* inline colour on every rail control beats a bare rule */
 .v2-themebtn:hover { background:var(--rail-hover) !important; }
@@ -146,7 +146,7 @@
 .v2-dashadd { transition:border-color .12s,background .12s; }
 .v2-dashadd:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; color:var(--accent) !important; }
 .v2-act:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
-.v2-menuitem:hover { background:var(--surface-2); }
+.v2-menuitem:hover { background:var(--surface-2) !important; }   /* menu items carry inline backgrounds (FEED-04, COMP) */
 .v2-crow:hover { background:var(--hover-soft); }
 .v2-arow:hover { background:var(--surface-2) !important; }
 /* border-only hovers for pills that already carry their own fill */
@@ -166,7 +166,7 @@
 .v2-qahead:hover { background:var(--amber-hover); }
 /* inline style sets the dashed border, so :hover needs !important to win */
 .v2-archband:hover { border-color:var(--edge) !important; }
-.v2-anchor:hover { color:var(--text); }
+.v2-anchor:hover { color:var(--text) !important; }
 .v2-parabtn:hover { background:var(--surface-2); }
 .v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
 /* every caller sets an inline colour, which beats a bare class rule — the

@@ -54,3 +54,11 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Actual** Measured: POST `/api/companies` with `aliases` after the source fix returned `aliases: []` until `docker compose restart backend`; afterwards the same POST returned the aliases.
 **Proposed fix** Docs corrected in this pass (HANDOVER, CLAUDE.md, Stage 3 brief). Optionally add `--reload` for dev (`--reload-dir /app/backend`), but that changes prod behaviour — your call.
 **Status** docs fixed; needs decision on `--reload` in the Dockerfile.
+
+### F-007 · P2 · Backend · Any non-UUID id in a path returns 500 instead of 404
+**Where** every `/{id}` route: `routes_jobs.py:517` and equivalents in resumes, cover-letters, applications, companies, searches, `main.py` monitor
+**Repro** `curl /api/jobs/abc` (also `/api/resumes/abc`, `/api/cover-letters/abc`, `/api/applications/abc/prep`, `/api/monitor/run/abc`, `PATCH /api/companies/abc`, `DELETE /api/searches/abc`).
+**Expected + why** 404 — `Job.id` is a UUID column; a malformed id can never match. The v2 editors deep-link by id, so a mistyped URL currently shows a generic failure instead of the "not found" state (FEED-10, RES/CL id checks).
+**Actual** Measured `500` on all seven probes; only `/api/searches/test-result/abc` (in-memory dict) returns 404.
+**Proposed fix** One `DataError` exception handler in `main.py` mapping Postgres "invalid input syntax for type uuid" to 404 (added; live after the next backend restart).
+**Status** fixed in source; restart pending; verify with the same seven probes.
