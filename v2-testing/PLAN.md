@@ -43,14 +43,15 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [x] Searches → `stage3/searches.md` (29: 6 P2 · 10 P3 · 13 P4; 7 fixes, diff 89 lines — review)
 - [x] Companies → `stage3/companies.md` (37: 1 P1 · 12 P2 · 16 P3 · 8 P4; 2 fixes + 3 earlier)
 - [x] Applications → `stage3/applications.md` (23: 7 P2 · 10 P3 · 6 P4; 3 fixes)
-- [ ] Résumés (shelf + editor)
-- [ ] Cover Letters (list + editor)
-- [ ] Persona
-- [ ] Stats
-- [ ] Settings (screen)
+- [x] Résumés → `stage3/resumes.md` (31: 1 P1 · 8 P2 · 13 P3 · 9 P4; 7 fixes incl. backend flag_modified)
+- [x] Cover Letters → `stage3/cover-letters.md` (29: 7 P2 · 14 P3 · 8 P4; 5 fixes)
+- [x] Persona + Stats → `stage3/persona-stats.md` (45: 1 P1 · 10 P2 · 13 P3 · 21 P4; 2 fixes incl. backend flag_modified)
+- [x] Settings screen → `stage3/settings.md` (27: 2 P1 · 4 P2 · 12 P3 · 9 P4; 9 fixes; design re-diff done: 15/15 sections, 64 vs 68 rows)
 - [x] Shell (rail, counts, health line, theme toggle, collapse, overlays, toasts) → `stage3/shell.md` (SHELL-01..06; 1 fixed hover bug, rest decisions)
 - [ ] Wave-level: theme.css hover hardening (done in source), F-007 DataError→404 handler (restart pending), frontend rebuild + re-verify every 'fixed in source' item
-- [ ] Commit after each screen
+- [x] Committed (5ec8736)
+
+**PAUSED HERE 2026-09-02 ~14:40 at the user's request.** Next: wave-level frontend rebuild → re-verify every 'fixed in source (rebuild pending)' item → Stage 3b empty-DB sweep → Stage 4.
 
 ## Stage 4 — Settings round-trip (every key: API read → type-valid write → read back → UI shows it → takes effect → restore)
 - [ ] All keys (see inventory/settings-matrix.md)
