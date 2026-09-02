@@ -71,7 +71,7 @@ const DEPTHS = [
 ]
 const TIER_BTNS = [{ v: 1, label: '1' }, { v: 2, label: '2' }, { v: 3, label: '3' }, { v: null, label: 'None' }]
 
-const inputBox = { width: '100%', minHeight: 32, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
+const inputBox = { width: '100%', minHeight: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
 const monoBox = { ...inputBox, fontFamily: 'var(--mono)', fontSize: 10.5 }
 const helpTxt = { fontSize: 10.5, color: 'var(--muted)' }
 const fieldLabel = { fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }
@@ -87,7 +87,7 @@ function UrlEditor({ urls, onChange }) {
             <span className={atsSlug(detectAts(u))} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
             <input value={u} onChange={(e) => set(i, e.target.value)} placeholder="https://boards.greenhouse.io/company"
               style={{ ...monoBox, flex: 1, height: 32, minHeight: 0 }} />
-            <span title="Remove this URL" onClick={() => onChange(urls.filter((_, j) => j !== i))} className="v2-hover-bad"
+            <span title="Remove this URL" onClick={() => onChange(urls.filter((_, j) => j !== i))} className="v2-hover-bad v2-hover-bad-text"
               style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
           </div>
         )
@@ -105,7 +105,7 @@ const Seg = ({ opts, value, onPick, valueKey = 'id' }) => (
       const on = value === v
       return (
         <div key={String(v)} onClick={() => onPick(v)} title={o.hint || ''} className="v2-bd"
-          style={{ flex: 1, height: 32, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{o.label}</div>
+          style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{o.label}</div>
       )
     })}
   </div>
@@ -137,6 +137,7 @@ export default function Companies() {
   const [menuId, setMenuId] = useState(null)
   const [drawer, setDrawer] = useState(null)          // {company, draft}
   const [addOpen, setAddOpen] = useState(false)
+  const [confirm, setConfirm] = useState(null)   // COMP-28/37: styled confirm {title, body, label, danger, onConfirm}
   const [test, setTest] = useState(null)              // test-scrape result
   const [testingId, setTestingId] = useState(null)
   const [showShots, setShowShots] = useState(false)
@@ -190,7 +191,7 @@ export default function Companies() {
   // close menus on outside click / escape
   useEffect(() => {
     const onDoc = () => { setSortOpen(false); setMenuId(null) }
-    const onKey = (e) => { if (e.key === 'Escape') { setSortOpen(false); setMenuId(null); setDrawer(null); setAddOpen(false); setTest(null) } }
+    const onKey = (e) => { if (e.key === 'Escape') { setSortOpen(false); setMenuId(null); setAddOpen(false); setTest(null); setConfirm(null); if (drawerRef.current) closeDrawer() } }
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
@@ -265,11 +266,11 @@ export default function Companies() {
     catch (e) { setTest({ error: e.response?.data?.detail || e.message }) }
     setTestingId(null)
   }
-  const deleteCompany = async (c) => {
-    if (!window.confirm(`Delete ${c.name}? Jobs already found are kept.`)) return
+  const deleteCompany = (c) => setConfirm({ title: `Delete ${c.name}?`, body: 'Jobs already found are kept.', label: 'Delete', danger: true, onConfirm: async () => {   // COMP-28: styled, not window.confirm
+    setConfirm(null)
     try { await api.delete(`/companies/${c.id}`); setMenuId(null); setDrawer(null); fetchCompanies(); pushToast({ kind: 'success', msg: `${c.name} deleted` }) }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not delete ${c.name}` + errSuffix(e) }) }
-  }
+  } })
 
   // ── row cell derivations ──
   const resumeNames = (c) => {
@@ -294,9 +295,7 @@ export default function Companies() {
   const fitColor = (f) => (f == null ? 'var(--muted)' : f >= 80 ? 'var(--good)' : f >= 65 ? 'var(--text-2)' : 'var(--warn)')
 
   const clearFilters = () => { setQuery(''); setTiers([]) }
-  const openDrawer = (c) => setDrawer({
-    company: c,
-    draft: {
+  const toDraft = (c) => ({
       name: c.name, aliases: (c.aliases || []).join(', '),
       scrape_urls: [...(c.scrape_urls || [])],
       title_include_expr: c.title_include_expr || '',
@@ -306,8 +305,21 @@ export default function Companies() {
       tier: c.tier, scrape_interval_minutes: c.scrape_interval_minutes ?? '',
       wait_for_selector: c.wait_for_selector || '', max_pages: c.max_pages ?? 5,
       h1b_slug: c.h1b_slug || '', active: c.active,
-    },
   })
+  const drawerRef = useRef(null)
+  useEffect(() => { drawerRef.current = drawer }, [drawer])
+  const drawerDirty = (d) => !!d && JSON.stringify(d.draft) !== JSON.stringify(toDraft(d.company))
+  // COMP-37: Escape, the ✕ and clicking another row used to drop an edited draft silently
+  const closeDrawer = () => {
+    const cur = drawerRef.current
+    if (drawerDirty(cur)) { setConfirm({ title: 'Discard changes?', body: `Edits to ${cur.company.name} have not been saved.`, label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); setDrawer(null) } }); return }
+    setDrawer(null)
+  }
+  const openDrawer = (c) => {
+    const cur = drawerRef.current
+    if (cur && cur.company.id !== c.id && drawerDirty(cur)) { setConfirm({ title: 'Discard changes?', body: `Edits to ${cur.company.name} have not been saved.`, label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); setDrawer({ company: c, draft: toDraft(c) }) } }); return }
+    setDrawer({ company: c, draft: toDraft(c) })
+  }
 
   return (
     <div className="v2-scroll" style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -404,7 +416,7 @@ export default function Companies() {
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {(c.last_error || downMap[c.id]) && <span title={`Needs attention — ${c.last_error || downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
-                <span title={c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                <span title={c.h1b_lca_count ? `${c.name} · ${c.h1b_lca_count} H-1B filings on record${c.h1b_approval_rate ? `, ${c.h1b_approval_rate}% approved` : ''} — feeds the verdict on each job` : c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
               </span>
               {/* tier */}
@@ -414,13 +426,13 @@ export default function Companies() {
               {/* health */}
               <span style={{ flex: 1.9, minWidth: 210, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
-                <span title={h.text} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
+                <span title={c.last_error || downMap[c.id] || (c.active ? `Last successful run ${ago(c.last_scraped_at)}` : 'Inactive — jobs already found are kept')} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
               <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
               {/* ats */}
               <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
-                {urls.length > 0 && <span className={atsSlug(firstAts)} title={urls.join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
+                {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `H-1B slug · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
               </span>
@@ -481,9 +493,9 @@ export default function Companies() {
         )}
         {!loading && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No companies match</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : 'No companies in the selected tiers.'}</span>
-            <span onClick={clearFilters} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Clear filters</span>
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : `Tier ${t}`)).join(', ')}.`}</span>   {/* COMP-29 */}
+            {companies.length > 0 && <span onClick={clearFilters} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Clear filters</span>}
           </div>
         )}
       </div>
@@ -494,8 +506,9 @@ export default function Companies() {
           and keep only `draft` in drawer state. */}
       {drawer && (() => {
         const live = companies.find((c) => c.id === drawer.company.id) || drawer.company
-        return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} />
+        return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} onClose={closeDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} />
       })()}
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       {addOpen && <AddModal onClose={() => setAddOpen(false)} resumes={resumes} personaPopulated={personaPopulated} onCreated={fetchCompanies} pushToast={pushToast} />}
       {test && <TestModal test={test} onClose={() => setTest(null)} showShots={showShots} setShowShots={setShowShots} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
@@ -504,7 +517,7 @@ export default function Companies() {
 }
 
 // ── edit drawer ───────────────────────────────────────────────────────────────
-function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, onTest, testingId, downReason }) {
+function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, onDelete, onTest, testingId, downReason }) {
   const { company, draft } = state
   const [tuning, setTuning] = useState(() => {
     try { const v = localStorage.getItem('company_tuning_open'); if (v !== null) return v === 'true' } catch { /* ignore */ }
@@ -513,7 +526,8 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   const toggleTuning = () => setTuning((v) => { const n = !v; try { localStorage.setItem('company_tuning_open', String(n)) } catch {} return n })
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
   const toggleResume = (id) => set({ selected_resume_ids: draft.selected_resume_ids.includes(id) ? draft.selected_resume_ids.filter((x) => x !== id) : [...draft.selected_resume_ids, id] })
-  const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${draft.scrape_urls.filter(Boolean).length} career URL(s) · ${company.application_count || 0} application(s)`
+  const nUrl = draft.scrape_urls.filter(Boolean).length, nApp = company.application_count || 0
+  const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
   const lca = company.h1b_lca_count
   const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
@@ -555,7 +569,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{subtitle}</span>
         </div>
-        <div onClick={() => setState(null)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+        <div onClick={onClose} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
       </div>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px 20px', display: 'flex', flexDirection: 'column', gap: 15, minHeight: 0 }}>
@@ -664,6 +678,21 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
 }
 
 // ── add modal ─────────────────────────────────────────────────────────────────
+function ConfirmDialog({ title, body, label, danger, onConfirm, onCancel }) {
+  return (
+    <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 400, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '22px 24px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '26px' }}>{title}</span>
+        {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>{body}</span>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+          <div onClick={onCancel} className="v2-bdc v2-ctl" style={{ height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+          <div onClick={onConfirm} className="v2-ctl" style={{ height: 31, padding: '0 16px', borderRadius: 99, background: danger ? 'var(--bad)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>{label || 'Confirm'}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) {
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
@@ -789,10 +818,10 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   const pag = test.pagination_debug || []
   const shots = test.screenshots || []
   const jobState = (j) => {
-    if (j.reason?.startsWith('[Validation]')) return { tag: 'Drop', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', bg: 'var(--surface)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Validation] ', '') }
-    if (j.kept) return { tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', bg: 'var(--surface)', reasonFg: 'var(--muted)', reason: j.reason || '' }
-    if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', bg: 'var(--surface)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // COMP-24: the global exclude list, not this company's filters
-    return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', bg: 'var(--surface)', reasonFg: 'var(--bad)', reason: j.reason || '' }
+    if (j.reason?.startsWith('[Validation]')) return { tag: 'Drop', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Validation] ', '') }
+    if (j.kept) return { tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', reasonFg: 'var(--muted)', reason: j.reason || '' }
+    if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // COMP-24: the global exclude list, not this company's filters
+    return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
