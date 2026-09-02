@@ -17,7 +17,7 @@ All nine screens are built and live in the rail (`ready: true` on every nav item
 | Searches | `/v2/searches` | `Searches Ops.dc.html` |
 | Companies | `/v2/companies` | `Companies Ops.dc.html` |
 | Applications | `/v2/applications` | `Applications Ops.dc.html` |
-| Résumés | `/v2/resumes`, `/:id` | `Resumes Home D.dc.html` |
+| Résumés | `/v2/resumes`, `/:id` | `Resumes Shelf.dc.html` (canonical per MAIN.md; the 2026-09-02 pass measured against Home D — re-check) |
 | Cover Letters | `/v2/cover-letters`, `/:id` | `Cover Letters Ops.dc.html` |
 | Persona | `/v2/persona` | `Persona Ops.dc.html` |
 | Stats | `/v2/stats` | `Stats Ops.dc.html` |
