@@ -142,7 +142,7 @@ via the sync effect rather than rewriting it) and pushes an `error` toast “Tha
 (psycopg2 `operator does not exist: uuid = text`). The feed swallows it silently (`:483`).
 **Proposed fix** parse the id with `uuid.UUID(job_id)` and raise 404 on `ValueError`, in `get_job`
 (and the same guard on `/{job_id}/cached-page` and `/{job_id}/frame-check`).
-**Status** already fixed by F-007 — `backend/main.py:230-240` registers a `DataError` exception handler that
+**Status** fixed by F-007 (DataError→404 handler in `backend/main.py`), verified live: `GET /api/jobs/abc` → 404
 turns `invalid input syntax for type uuid` into a 404 for every id route (not just `get_job`), and logs +
 500s anything else. No further change needed; verify at runtime after the next backend restart.
 

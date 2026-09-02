@@ -7,10 +7,10 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 66 | 0 | 4 |
+| P2 | 70 | 67 | 0 | 3 |
 | P3 | 111 | 14 | 94 | 3 |
 | P4 | 90 | 3 | 75 | 12 |
-| **All** | **276** | **88** | **169** | **19** |
+| **All** | **276** | **89** | **169** | **18** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -18,7 +18,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | applications.md | 23 | 0 | 7 | 10 | 6 | 8 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 15 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
-| feed.md | 38 | 0 | 10 | 18 | 10 | 10 |
+| feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 11 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 10 |
@@ -77,6 +77,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - FEED-07 (P2) — Skip / Mark-applied announce success before the PATCH resolves, and stay wrong when it fails
 - FEED-08 (P2) — "Ignore {company} everywhere" is destructive with no confirm, no toast and no undo
 - FEED-09 (P2) — A bad `?job=` id silently opens a different job
+- FEED-10 (P2) — `GET /api/jobs/{non-uuid}` returns 500 (backend)
 - FEED-11 (P2) — A failed job list is indistinguishable from an empty one
 - PERS-01 (P1) — A non-list `qa_bank` white-screens the whole app
 - PERS-02 (P2) — `PATCH /api/persona` silently dropped every order-only write — Skills ▲▼ did nothing
@@ -131,8 +132,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Backend: `DataError` → 404 handler for malformed ids on every route; `flag_modified` on Résumé and Persona JSON PATCHes; `create_company` persists `aliases` + `auto_scoring_depth`; per-search `trigger_url` pointed at a real endpoint.
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
-## Open P2s that need you (4)
-- FEED-10 — `GET /api/jobs/{non-uuid}` returns 500 (backend)
+## Open P2s that need you (3)
 - STAT-03 — With every endpoint failing, the screen renders a plausible-looking dashboard
 - RES-09 — A base résumé cannot be deleted anywhere in v2
 - F-006 — Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
