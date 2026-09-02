@@ -8,16 +8,16 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 29 | 72 | 10 |
-| P4 | 90 | 12 | 64 | 14 |
-| **All** | **276** | **115** | **136** | **25** |
+| P3 | 111 | 39 | 61 | 11 |
+| P4 | 90 | 14 | 61 | 15 |
+| **All** | **276** | **127** | **122** | **27** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
-| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
+| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 21 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -90,8 +90,20 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-05 (P2) — A failed list load is rendered as "No cover letters yet"
 - CL-06 (P2) — A background generation that fails looks exactly like one that succeeded
 - CL-07 (P2) — An open Picker popover covers the other Picker's control; clicking the second control picks an option from the first
+- CL-08 (P3) — `.v2-menuitem` hover is dead in every popover that sets an inline background — the two Pickers, the Template list and the Paper list
 - CL-09 (P3) — Pending row is 46.75 px tall, so every letter row below it lands on a half pixel
 - CL-10 (P3) — Editor: the `text · link · stub` hint is 15.75 px tall and pushes the Recipient and Letter cards onto half pixels
+- CL-11 (P3) — The Download PDF button is pushed off-screen below ~1090 px viewport width
+- CL-13 (P3) — No "no voice presets" state — an invisible 0 px gap, and `voice: ""` is posted
+- CL-14 (P3) — Regenerate failures are reported in the top bar, behind the modal's scrim
+- CL-15 (P3) — Load-error page has no back link, no retry, and no distinction between 404, 500 and offline
+- CL-16 (P3) — Backend: a non-UUID cover-letter id returns 500 instead of 404
+- CL-17 (P3) — Rail badge `Cover Letters · N` never refreshes after a generate or a delete
+- CL-18 (P3) — Neither screen imports `Toast.jsx`; every success is silent and every failure is inline text
+- CL-19 (P3) — A failed PDF render is invisible
+- CL-21 (P3) — Neither screen is keyboard-operable and no control shows focus
+- CL-27 (P4) — `POST /cover-letters` returns a context-free row
+- CL-29 (P4) — Disabled arrows still take their hover (matches the design — logged so it is not re-found)
 - FEED-01 (P2) — The default view labels every row in the database "open roles"
 - FEED-02 (P3) — Every list row lands on a half pixel; 1px borders drop on alternating rows
 - FEED-03 (P2) — The filter bar does not wrap; at 1024 px the Sort control is off-screen

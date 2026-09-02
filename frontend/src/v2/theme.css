@@ -228,3 +228,6 @@
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
 .jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--muted) !important; opacity:1; }
 .jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }
+/* CL-21: keyboard focus is visible on every field; inline borders need !important */
+.jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--accent) !important; box-shadow:0 0 0 2px var(--ring-accent) !important; outline:none; }
+.jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--ring-accent); }

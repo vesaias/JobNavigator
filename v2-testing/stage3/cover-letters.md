@@ -86,7 +86,7 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Expected + why** HANDOVER: "Inline styles beat class `:hover` … needs `!important` or it silently does nothing." The class is applied deliberately at all four sites.
 **Actual** Picker option: `{'before': {'backgroundColor': 'rgba(0,0,0,0)'}, 'after': {'backgroundColor': 'rgba(0,0,0,0)'}, 'changed': []}`. Template option: identical. The same class **does** work on the editor's ⋯ menu items (ED:288/294/300 set no inline background) — measured `rgba(0,0,0,0) → rgb(246,244,238)`. So three of five call sites are silently inert.
 **Proposed fix** Either drop the inline `background: 'transparent'` on the unselected branch (keep only the selected `--accent-soft`), or make the rule `background: var(--surface-2) !important`.
-**Status** needs decision — `!important` is a one-word change but `.v2-menuitem` is shared across every v2 screen, and it would also override the *selected* option's `--accent-soft` on hover. Dropping the inline `transparent` at the four call sites is the surgical option. Not fixed pending that call.
+**Status** fixed + verified: `.v2-menuitem:hover` hardened with `!important` in theme.css (tree-wide); picker/template/paper options now wash on hover
 
 ### CL-09 · P3 · Pending row is 46.75 px tall, so every letter row below it lands on a half pixel
 **Where** `CoverLetters.jsx:331-338` (label at `:334`)
@@ -108,88 +108,88 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Repro** (`cl_18_frac.py`) 1024×700, measure the toolbar.
 **Actual** Toolbar `clientWidth 434`, `scrollWidth 467`, `overflow: visible`, and the Download control sits at `x 932.3 → right 1057.4` against a viewport right edge of `1024` — the page itself does not scroll horizontally (`overflow: hidden` upstream), so **the control is unreachable**. Fine at 1280 (`scroll 569 = client 569`) and at 1440. The toolbar is a single non-wrapping flex row with three fixed-width children plus a `margin-left: auto` button.
 **Proposed fix** `flexWrap: 'wrap'` on the toolbar, or shrink the Template control (`minWidth: 0` + ellipsis on the template name — "Garamond Classic" alone is 140.5 px).
-**Status** needs decision: which of the two (the design has no narrow spec).
+**Status** fixed + verified after rebuild: preview toolbar wraps; Download sits at right 1004 inside a 1024 px viewport
 
 ### CL-12 · P3 · The generate panel's explanatory line from the design is missing
 **Where** design `.dc.html:99` vs `CoverLetters.jsx:315-320`
 **Expected** After the Generate button the design puts a 10.5 px muted line: `Takes about 30 seconds — the letter appears in the list when it's done, drafted for your review.`
 **Actual** Nothing follows the button except the (usually empty) inline `err` span. Nothing on this screen tells a first-time user that generation is asynchronous, or that the result is a draft — the `~30s` copy only appears once the pending row exists. Measured real runs: 10 s (concise) and 26 s (detailed regenerate), so the copy is accurate.
 **Proposed fix** Restore the line under the button.
-**Status** needs decision: keep the leaner panel, or match the design?
+**Status** decided 2026-09-02: keep (no explanatory line)
 
 ### CL-13 · P3 · No "no voice presets" state — an invisible 0 px gap, and `voice: ""` is posted
 **Where** `CoverLetters.jsx:72-86` (`VoicePicker`), `:307`; same component in the editor modal (ED:478)
 **Repro** (`cl_05_empty.py`) Route `/api/settings` → `{"cover_letter_voice_presets":"[]", "cover_letter_default_voice":""}`, or → 500.
 **Actual** The `VOICE` label renders above a flex row measured `{h: 0, kids: 0}` — a labelled void. `genVoice` stays `''` and is sent to `POST /generate`. Same on a settings 500 (0 chips). A first-run user who has not configured presets sees a broken-looking form with no explanation.
 **Proposed fix** Empty copy, e.g. "No voice presets — add them in Settings → AI", and hide the label when the list is empty.
-**Status** needs decision.
+**Status** fixed + verified after rebuild: with no presets the voice row reads "No voice presets — add them in Settings → AI."
 
 ### CL-14 · P3 · Regenerate failures are reported in the top bar, behind the modal's scrim
 **Where** `CoverLetterEditor.jsx:198-199` → `:259-260`, modal scrim `:462` (`zIndex 60`)
 **Repro** (`cl_13_dl_regen.py`) Intercept `POST /cover-letters/generate` → 500 / 409, click Regenerate.
 **Actual** The message ("regen boom", "generate_cover_letter is already running for this pair") is written into the top-bar `err` slot, which the still-open scrim dims. The modal itself shows no change other than the button reverting to `Regenerate`. Screenshot `cl-editor-regen-500.png`.
 **Proposed fix** Render `err` inside the modal footer while `regenOpen`.
-**Status** needs decision.
+**Status** fixed + verified after rebuild: a regenerate failure toasts (above the scrim) and replaces the modal footer's "~30 seconds" with the message
 
 ### CL-15 · P3 · Load-error page has no back link, no retry, and no distinction between 404, 500 and offline
 **Where** `CoverLetterEditor.jsx:106, 237-239`
 **Repro** `/v2/cover-letters/11111111-2222-3333-4444-555555555555` (404) and `/v2/cover-letters/abc` (500).
 **Actual** Both render a centred `Could not load this letter.` with nothing else — the rail is the only way out (`.v2-ctl:has-text("Cover Letters")` count = 0, i.e. the ‹ Cover Letters back link is inside the top bar, which is not rendered in this branch). The tab title stays "Cover Letters · JobNavigator". A just-deleted id lands in the same place (verified after a UI delete).
 **Proposed fix** Keep the top bar (or add a "‹ Back to cover letters" link) in the error branch; distinguish 404 ("This letter no longer exists.") from 5xx ("Couldn't load this letter — try again.").
-**Status** needs decision.
+**Status** fixed + verified after rebuild: 404 → "This letter no longer exists." + ‹ Back to cover letters; other failures → "Couldn’t load this letter — try again." + Back + Try again
 
 ### CL-16 · P3 · Backend: a non-UUID cover-letter id returns 500 instead of 404
 **Where** `backend/api/routes_cover_letters.py:185` (and `:193, 234, 249, 210` — same `filter(CoverLetter.id == cl_id)` shape)
 **Repro** `GET /api/cover-letters/abc` → `(500, 'Internal Server Error')`; `GET /api/cover-letters/<valid uuid>` → 404 correctly.
 **Expected** A malformed id is a client error; Postgres raises on the uuid cast and the exception escapes.
 **Proposed fix** Parse with `uuid.UUID(cl_id)` at the top of each handler and raise 404 on `ValueError` (or a shared `_get_or_404` helper).
-**Status** needs decision — five handlers, needs a backend restart, and the same pattern very likely exists on `routes_resumes.py`, so it wants one cross-cutting fix rather than a local one. Not changed.
+**Status** fixed by F-007 (DataError→404 handler), verified live
 
 ### CL-17 · P3 · Rail badge `Cover Letters · N` never refreshes after a generate or a delete
 **Where** `frontend/src/v2/V2App.jsx:63` (fetched once at shell mount)
 **Actual** Measured both directions in one session: after a real generation the rail read `Cover Letters18` while the list header read `19 letters` and the gutter `19`; after deleting a letter through the editor the rail read `Cover Letters19` while the list read `18 letters`. Drift persists until a full page load.
 **Proposed fix** Shell-level refresh (event or a light poll) after mutations. Cross-screen — the same badge is fed by every list.
-**Status** needs decision (shell-wide, out of this screen's scope).
+**Status** fixed in source: the list dispatches `jn:counts-changed` when a generation finishes, the editor after a delete; the shell re-reads the rail counts on that event (APPS-19)
 
 ### CL-18 · P3 · Neither screen imports `Toast.jsx`; every success is silent and every failure is inline text
 **Where** `CoverLetters.jsx`, `CoverLetterEditor.jsx` (no `useToasts`/`ToastStack` import)
 **Expected + why** HANDOVER risk area 2: the `error` toast kind deliberately never auto-dismisses and should be wired "at every failure site".
 **Actual** Verified: generation 409/500/network → inline red text under the Generate button (`rgb(156,59,48)` = `--bad`), persists (still present after 6 s) and is cleared only by the next Generate click; save failure → red top-bar text, persists, cleared by the next successful save; download failure → same slot; delete/download/save/regenerate **success** → nothing at all; delete has no undo. `[class*=toast]` count = 0 in every case.
 **Proposed fix** Route the four editor failures and the list generate failure through the toast system; add an `ok` toast for delete.
-**Status** needs decision: is inline-only feedback the accepted pattern for these two screens?
+**Status** fixed + verified after rebuild: both screens mount the toast system — generate 409/500/failed-run, save, download, delete and regenerate failures toast (error kind persists), a finished generation toasts success
 
 ### CL-19 · P3 · A failed PDF render is invisible
 **Where** `CoverLetterEditor.jsx:145-162` (`:157` console-only)
 **Repro** (`cl_12_actions.py`) Route `**/pdf` → 500 and touch a field.
 **Actual** The previous preview stays on screen with no indication it is stale; on a fresh letter the copy `Rendering the preview…` would remain for ever. Only `console.error` + an Axios error in the console. (The spinner at ED:419 also re-fires on every keystroke — it flickers continuously while typing.)
 **Proposed fix** A "Preview failed — showing the last render" line in the toolbar.
-**Status** needs decision.
+**Status** fixed + verified after rebuild: a failed render shows "Preview failed — showing the last render · Retry" in the toolbar; Retry re-requests the PDF
 
 ### CL-20 · P3 · A Regenerate started in the editor shows on the list as an unlabelled pending row and inflates the gutter count
 **Where** `CoverLetters.jsx:178` (filter is `job_type` only), `:246-251` (`rowLabel`), `:327`
 **Repro** (`cl_14_ids_poll.py`) Intercept `/monitor/active` with a run whose `scope_key` is `cl:some-other-letter`.
 **Actual** A dashed row appears reading `Generating — a cover letter` `~30s`, and the gutter number goes `18 → 19`. When that run finishes no new letter arrives (a regenerate rewrites in place), so the count silently drops back — the list appears to have lost a letter.
 **Proposed fix** Ignore runs whose `scope_key` is not of the `cl:{resume}:{job}` shape, or have the backend tag the run kind.
-**Status** needs decision (the shape test is a bit of a heuristic).
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (the shape test is a bit of a heuristic).
 
 ### CL-21 · P3 · Neither screen is keyboard-operable and no control shows focus
 **Where** both files — every control is a `div`/`span` with `onClick`; no `role`, `tabIndex`, `aria-expanded`, or key handlers.
 **Actual** Measured tab order on the list: 10 rail links → the search `<input>` → `body`. On the editor: 10 rail links, then nothing (the ⋯ menu's `Open job posting` anchor is the only focusable control and it only exists while the menu is open). `aria-expanded` count 0, `role=button` count 0. Focus rings: search input `outline: none, boxShadow: none`; text inputs and the paragraph textarea likewise (`CELL`/`INPUT`/`:397` all set `outline: 'none'` with no replacement) — a keyboard user cannot see where focus is even in the fields that do take it.
 **Proposed fix** At minimum a visible focus style on inputs/textarea (`:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring-accent) }`), then `tabIndex`/`role`/Enter handlers on the row and button divs.
-**Status** needs decision (pattern is v2-wide, not specific to this screen).
+**Status** fixed + verified after rebuild: every v2 input/textarea/select shows an accent focus ring (`:focus-visible`, theme.css); letter rows are `role=button tabIndex=0` and open on Enter; the ring shows on them too
 
 ### CL-22 · P4 · Regenerate keeps no lineage — the previous draft is unrecoverable
 **Where** `routes_cover_letters.py:445-461`; `parent_id` is exposed at `:97` and never written or read
 **Repro** Real regenerate measured end to end: name/`resume_id`/`from_persona`/`json_data`/`voice`/`length` all replaced in place; `template` and `page_format` correctly preserved (`palatino`/`a4` survived); **`parent_id` before `None`, after `None`**; the previous three paragraphs are gone.
 **Expected + why** `CoverLetter.parent_id` exists for regeneration lineage (CLAUDE.md: "`parent_id` for regeneration lineage"), and the modal copy only warns "your edits to this draft are replaced" (ED:467).
 **Proposed fix** Either write `parent_id` and keep the superseded row, or drop the column from the API dict so nothing implies history is kept.
-**Status** needs decision.
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
 
 ### CL-23 · P4 · Header/gutter counts and the archive-band count disagree while a search is typed
 **Where** `CoverLetters.jsx:216, 327` (unfiltered `letters`) vs `:347` (filtered `visible`)
 **Actual** With the query `Jane`: header `16 letters · 1 live application`, gutter `16`, band `Archived · 1 letter from rejected applications & skipped jobs`, 2 rows shown. With `Runpod`: band `Archived · 2 letters`. Also, while a query is active the band reads `hide ⌄` regardless of the stored preference, and clicking it flips the stored preference with no visible effect (verified: `v2_cl_archive_open` toggles `0`↔`1` while the rows stay visible).
 **Proposed fix** Show `N of M` in the header while filtering, and drive the band's chevron from `archOpen` with the search override made explicit.
-**Status** needs decision.
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
 
 ### CL-24 · P4 · Design deviations (deliberate-looking; listed for the record)
 **Where** design `.dc.html` vs both files. Everything measured matched the design unless listed here.
@@ -205,36 +205,36 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 | ⋯ menu | View application / Open job posting / Delete (`:167-169`) | + `View job in feed` (ED:294) |
 | template control tooltip | lists every template id (`:262`) | `Cover letter template` |
 Everything else matched exactly, including: header `22px 30px 16px` + `h1` 30 px Newsreader `line-height 1`; search 280×36 with a `--line-strong` bottom rule; panel `flex 0 0 340px` + `16px 26px 20px 30px`; picker 33 px / radius 8 / `--edge`; voice chips 27 px radius 99; length segments 31 px radius 8 with `fontWeight 600` when on; Generate 36 px radius 99 on `--accent`; gutter head `13px 30px 9px`; rows `13px 15px` radius 10 (69 px tall, integer tops); pending row dashed `--accent` on `--recessed`; editor top bar `10px 24px` on `--surface` with a `--line-soft` rule; context band `9px 24px` on `--surface-2`; Regenerate pill 36 px / `0 19px`; ⋯ 36×36 (accent border + `--accent-soft` when open — measured); left column `flex 0 0 47%` = 579.97 px; cards radius 9, head `10px 14px`, body `2px 14px 14px`; inputs 32 px radius 6; contact cells 29 px; dashed adders 28 px; template/paper controls 24 px; Download 29 px / `0 15px`; modal 460 px radius 12 with `--shadow-modal`, Cancel 33 px / `0 14px`, Regenerate 33 px / `0 17px`, `~30 seconds` footer on `--bg`.
-**Status** needs decision: keep code (consistency) or match design?
+**Status** decided 2026-09-02: keep all except (d) — the contact "Display text" cell is now 118 px in the cover-letter editor AND the résumé editor (user: both must match)
 
 ### CL-25 · P4 · Escape closes the Regenerate modal mid-run while Cancel and the scrim refuse
 **Where** `CoverLetterEditor.jsx:227` vs `:462, 487`
 **Actual** Measured during a live regenerate: Cancel → modal stays (correct), scrim click → modal stays (correct), Escape → modal closes. The run still completes and the poll still reloads, but the user loses the only progress indicator except the ↻ pill spinner.
 **Proposed fix** `if (e.key === 'Escape') { onDoc(); if (!regening) setRegenOpen(false) }`.
-**Status** needs decision (trivial, but "Escape always closes" may be the intended global rule).
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (trivial, but "Escape always closes" may be the intended global rule).
 
 ### CL-26 · P4 · The two screens format the same timestamp differently
 **Where** `CoverLetters.jsx:7-14` vs `CoverLetterEditor.jsx:17-24`
 **Actual** List row: `edited 1d ago` in the sub-line and a bare `1d` in the right column, minimum `1m`, no "just now". Editor: `saved just now · autosaves`, then `5m ago`. Navigating list → editor on a letter saved seconds ago shows `1m` on the list and `just now` in the editor.
 **Proposed fix** One shared helper.
-**Status** needs decision.
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
 
 ### CL-27 · P4 · `POST /cover-letters` returns a context-free row
 **Where** `routes_cover_letters.py:180` — `_to_dict(cl, include_json_data=True)` with no `ctx`
 **Actual** A create that supplies `job_id` and `resume_id` still comes back with `source_name: null, company: null, title: null, job_url: null, job_status: null, stage: null, has_application: false`, unlike `GET /{id}` which builds the ctx. v2 never creates letters this way, so it is latent; any client that renders the POST response would show a letter with no context.
 **Proposed fix** `ctx=_build_ctx([cl], db).get(cl.id)` as in the other handlers.
-**Status** needs decision (backend, restart required).
+**Status** fixed + verified (backend, restarted): `POST /cover-letters` returns the same context fields as GET (company/title/source_name)
 
 ### CL-28 · P4 · One shared `err` slot in the editor, cleared only by a successful save
 **Where** `CoverLetterEditor.jsx:259-260`; set at `:106, 131, 179, 186, 199`
 **Actual** Verified with a download 500: `Could not download the PDF.` sits in the top bar indefinitely (a download failure never triggers a save), and it is only cleared by the next successful `PATCH` or by starting a regenerate (`:191`). The string is unbounded and has no ellipsis, so a long backend detail pushes the letter name out of the bar.
 **Proposed fix** Per-action messages, or clear on a timer for the non-save ones.
-**Status** needs decision.
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
 
 ### CL-29 · P4 · Disabled arrows still take their hover (matches the design — logged so it is not re-found)
 **Where** contact ▲▼ (ED:334, 336, `.v2-hover-accent-text`) and paragraph ↑↓ (ED:389, 391, `.v2-parabtn`)
 **Actual** The first ▲ at `opacity .35` still turns `--accent` on hover; the first ↑ (colour `--line-strong`, `cursor: default`) still takes the `--surface-2` background. The design applies its `style-hover` to both arrows unconditionally too (`:195`, `:236-237`), so this is a faithful reproduction rather than a defect.
-**Status** needs decision (affordance vs fidelity); no change made.
+**Status** fixed + verified after rebuild: disabled ▲▼ / ↑↓ arrows no longer take a hover (user: no hover needed)
 
 ---
 

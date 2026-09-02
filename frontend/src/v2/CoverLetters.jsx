@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useToasts, ToastStack } from './Toast'
 import api from '../api'
 import './theme.css'
 
@@ -75,12 +76,13 @@ export function Picker({ value, options, placeholder, onPick, width }) {
 
 // Voice chips + length segments are shared with the editor's Regenerate modal.
 export function VoicePicker({ presets, value, onPick }) {
+  if (!presets.length) return <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)' }}>No voice presets — add them in Settings → AI.</span>   // CL-13
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
       {presets.map((v) => {
         const on = v.id === value
         return (
-          <div key={v.id} onClick={() => onPick(v.id)} title={v.instruction || ''}
+          <div key={v.id} onClick={() => onPick(v.id)} title={v.instruction || ''} className="v2-bdc v2-ctl"
             style={{ height: 27, padding: '0 11px', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
               color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 11.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>{v.label}</div>
@@ -96,7 +98,7 @@ export function LengthPicker({ value, onPick }) {
       {LENGTHS.map(([id, name]) => {
         const on = id === value
         return (
-          <div key={id} onClick={() => onPick(id)}
+          <div key={id} onClick={() => onPick(id)} className="v2-bdc v2-ctl"
             style={{ flex: 1, height: 31, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
               color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{name}</div>
@@ -110,6 +112,7 @@ export function LengthPicker({ value, onPick }) {
 export default function CoverLetters() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
   const [letters, setLetters] = useState([])
   const [resumes, setResumes] = useState([])
   const [jobs, setJobs] = useState([])
@@ -199,12 +202,14 @@ export default function CoverLetters() {
         const gone = before.filter((b) => !runs.some((r) => r.run_id === b.run_id))
         if (gone.length) {
           load()
+          window.dispatchEvent(new CustomEvent('jn:counts-changed'))   // CL-17
           // CL-06: a failed run leaves /monitor/active exactly like a successful
           // one — the row just vanishes. Ask the history what actually happened.
           try {
             const { data: hist } = await api.get('/monitor/history', { params: { job_type: 'generate_cover_letter', limit: 20 } })
             const bad = (hist || []).find((h) => h.status === 'failed' && gone.some((g) => g.run_id === h.id))
-            if (bad && !dead) setErr(`Generation failed${bad.error ? ' — ' + bad.error : ''}`)
+            if (bad && !dead) { setErr(`Generation failed${bad.error ? ' — ' + bad.error : ''}`); pushToast({ kind: 'error', msg: `Generation failed${bad.error ? ' — ' + bad.error : ''}` }) }
+            else if (!dead) pushToast({ kind: 'success', msg: 'Cover letter ready.' })
           } catch { /* the reloaded list is then the only signal */ }
         }
       } catch { /* retry next tick */ }
@@ -265,6 +270,7 @@ export default function CoverLetters() {
       setGenJob('')
     } catch (e) {
       setErr(e?.response?.data?.detail || 'Generation failed')
+      pushToast({ kind: 'error', msg: e?.response?.status === 409 ? 'A letter for this résumé and job is already generating.' : `Generation failed${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` })
     }
   }
 
@@ -282,7 +288,7 @@ export default function CoverLetters() {
       LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
     const sub = [...bits, `edited ${ago(c.updated_at)} ago`].join(' · ')
     return (
-      <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} className="v2-bd"
+      <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} tabIndex={0} role="button" onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/v2/cover-letters/${c.id}`) }} className="v2-bd"
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 10, cursor: 'pointer',
           border: `1px solid ${arc ? 'var(--line-soft)' : 'var(--line)'}`, background: arc ? 'var(--recessed)' : 'var(--surface)' }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -396,6 +402,7 @@ export default function CoverLetters() {
           </div>
         </div>
       </div>
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }

@@ -177,7 +177,7 @@ def create_cover_letter(body: dict, db: Session = Depends(get_db)):
     db.add(cl)
     db.commit()
     db.refresh(cl)
-    return _to_dict(cl, include_json_data=True)
+    return _to_dict(cl, include_json_data=True, ctx=_build_ctx([cl], db).get(cl.id))   # CL-27
 
 
 @router.get("/{cl_id}")
