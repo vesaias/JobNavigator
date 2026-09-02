@@ -88,19 +88,19 @@ function Drop({ label, active, open, onToggle, children, align = 'left', width =
     </div>
   )
 }
-function Check({ on, label, onClick }) {
+function Check({ on, label, count, onClick }) {
   return (
     <div className="v2-menuitem" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: 'var(--text-2)' }}>
       <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>
       <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-    </div>
+    {count != null && <span style={{ marginLeft: 'auto', paddingLeft: 10, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{count}</span>}</div>
   )
 }
 
 // pick modifier: ⌘ on macOS, Ctrl elsewhere (matches rowClick's metaKey||ctrlKey)
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '')
 const PICK_KEY = IS_MAC ? '⌘' : 'Ctrl'
-const SHORTCUTS = [['j / ↓', 'Next job'], ['k / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], [`${PICK_KEY}-click`, 'Select'], ['Shift-click', 'Select range']]
+const SHORTCUTS = [['j / f / ↓', 'Next job'], ['k / g / ↑', 'Previous job'], ['s', 'Save / unsave'], ['x', 'Skip'], ['a', 'Mark applied'], ['e / o', 'Open posting'], ['r', 'Rescore'], ['t', 'Tailor résumé'], ['c', 'Cover letter'], ['Esc', 'Close menus'], [`${PICK_KEY}-click`, 'Select'], ['Shift-click', 'Select range']]
 
 // ── component ────────────────────────────────────────────────────────────
 export default function V2JobFeed() {
@@ -154,6 +154,7 @@ export default function V2JobFeed() {
 
   const [companyList, setCompanyList] = useState([])
   const [sourceList, setSourceList] = useState([])
+  const [sourceCounts, setSourceCounts] = useState({}); const [verdictCounts, setVerdictCounts] = useState({})   // FEED-26
   const [verdictList, setVerdictList] = useState([])
   const [resumes, setResumes] = useState([])
   const [stats, setStats] = useState({ arrived_today: 0, unscored: 0 })
@@ -169,6 +170,7 @@ export default function V2JobFeed() {
   const [watchExtra, setWatchExtra] = useState([])   // ids of jobs pruned from view but still processing
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)   // FEED-38
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [rescoreJob, setRescoreJob] = useState(null)
   const [rescoreOpts, setRescoreOpts] = useState([])
@@ -200,8 +202,8 @@ export default function V2JobFeed() {
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   useEffect(() => {
     api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => {})
-    api.get('/jobs/sources/list').then(({ data }) => setSourceList(data || [])).catch(() => {})
-    api.get('/jobs/verdicts/list').then(({ data }) => setVerdictList(data || [])).catch(() => {})
+    api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => {})   // FEED-26
+    api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => {})
     api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => {})
     api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {})
   }, [])
@@ -248,7 +250,7 @@ export default function V2JobFeed() {
   const hasMoreRef = useRef(hasMore); useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || !hasMoreRef.current) return
-    loadingMoreRef.current = true
+    loadingMoreRef.current = true; setLoadingMore(true)
     try {
       const off = offsetRef.current
       const { data } = await api.get('/jobs', { params: buildParams(off) })
@@ -258,7 +260,7 @@ export default function V2JobFeed() {
       setOffset(off + fetched.length)
       setHasMore(off + fetched.length < (data.total || 0) && fetched.length > 0)
     } catch (e) { console.error('load more failed', e) }
-    loadingMoreRef.current = false
+    loadingMoreRef.current = false; setLoadingMore(false)
   }, [buildParams])
   const onListScroll = useCallback((e) => {
     const el = e.currentTarget
@@ -319,7 +321,7 @@ export default function V2JobFeed() {
   const showUndo = useCallback((job, prevStatus, prevSaved, msg) => {
     pushToast({ kind: 'undo', msg, action: 'Undo', onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
   }, [pushToast, fetchJobs, refreshStats])
-  const saveJob = (j) => { const willSave = !j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' }) }
+  const saveJob = async (j) => { const willSave = !j.saved, ps = j.status, pv = j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); if (await patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' })) showUndo(j, ps, pv, `${willSave ? 'Saved' : 'Unsaved'} "${j.title}"`) }   // FEED-29
   const skipJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'skip' })) showUndo(j, ps, pv, `Skipped "${j.title}"`) }
   const applyJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'applied' })) showUndo(j, ps, pv, `Applied to "${j.title}"`) }
   // "Ignore {company} everywhere" — add to the global company-exclude setting
@@ -345,7 +347,7 @@ export default function V2JobFeed() {
     pendingRef.current[job.id] = { title: job.title, company: job.company }
     pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` })
     api.post(`/analyze/${job.id}?depth=full`, {}).then(() => {
-      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
+      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'analyze_job'])] } : cur))
       setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
     }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
   }, [pushToast])
@@ -373,7 +375,7 @@ export default function V2JobFeed() {
       if (list.length === 1) { pendingRef.current[job.id] = { title: job.title, company: job.company }; pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` }) }
       try {
         await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
-        setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x))
+        setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'analyze_job'])] } : cur))
         setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
       } catch (e) { delete pendingRef.current[job.id]; console.error(e) }
     }
@@ -388,7 +390,7 @@ export default function V2JobFeed() {
           pendingRef.current[job.id] = { title: job.title, company: job.company, op: 'tailor' }
           pushToast({ kind: 'progress', msg: `Tailoring for "${job.title}"…` })
           await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id })
-          setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x))
+          setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'tailor_resume'])] } : cur))
           setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
         }
       } catch (e) { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `${mode === 'copy' ? 'Copy' : 'Tailor'} failed for "${job.title}"` }); console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
@@ -438,7 +440,8 @@ export default function V2JobFeed() {
   const bulkStatus = async (status) => {
     const ids = [...checked]; if (!ids.length) return
     const updates = status === 'saved' ? { saved: true, status: 'saved' } : { status }
-    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); setChecked(new Set()); fetchJobs() } catch (e) { console.error(e) }
+    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); setChecked(new Set()); fetchJobs(); refreshStats(); pushToast({ kind: 'success', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.` }) }   // FEED-20
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not update ${ids.length} job${ids.length === 1 ? '' : 's'}${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` }) }
   }
   const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
 
@@ -454,8 +457,11 @@ export default function V2JobFeed() {
         case 's': if (job) { saveJob(job); focusAt(Math.min(idx + 1, list.length - 1)) } break
         case 'x': if (job) { skipJob(job); focusAt(Math.min(idx, list.length - 2)) } break
         case 'a': if (job) applyJob(job); break
-        case 'e': if (job?.url) window.open(job.url, '_blank', 'noopener,noreferrer'); break
+        case 'e': case 'o': if (job?.url) window.open(job.url, '_blank', 'noopener,noreferrer'); break
         case 'r': if (job) openRescore(job); break
+        case 't': if (job) setPicker({ mode: 'tailor', jobs: [job] }); break   // FEED-17: the ⋯ menus hint t
+        case 'c': if (job) navigate(`/v2/cover-letters?job=${job.id}`); break   // and c
+        case 'Escape': setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null); break   // FEED-16
         default: break
       }
     }
@@ -585,6 +591,7 @@ export default function V2JobFeed() {
           refreshStats()
         }
         setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: data[j.id] } : j)))
+        setDetail((cur) => (cur && data[cur.id] ? { ...cur, in_flight: data[cur.id] } : cur))   // FEED-19
       } catch { /* retry next tick */ }
     }
     const h = setInterval(tick, 3000); tick()
@@ -608,8 +615,8 @@ export default function V2JobFeed() {
   const reqRows = rpt?.requirement_mapping || []
   const reqMet = reqRows.filter((r) => r.matched).length
   const coverage = rpt?.keyword_coverage_pct
-  const dScored = reports.length > 0
   const running = d && (d.in_flight || []).some((o) => o === 'analyze_job')
+  const dScored = reports.length > 0 && !running   // FEED-19: the running band replaces the report while a rescore runs
   const dCached = d && d.status === 'applied' && d.has_cached_page
 
   return (
@@ -638,7 +645,7 @@ export default function V2JobFeed() {
           </span>
         )}
         <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} onClear={() => setF({ source: [] })} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
-          {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
+          {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={sourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
         <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} onClear={() => setF({ company: [] })} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
           <input autoFocus value={companyQuery} onChange={(e) => setCompanyQuery(e.target.value)} placeholder={`Type to search ${companyList.length} companies…`}
@@ -663,11 +670,11 @@ export default function V2JobFeed() {
           })()}
         </Drop>
         <Drop label={`H-1B${filters.h1b_verdict.length ? ` · ${filters.h1b_verdict.length}` : ''}`} active={filters.h1b_verdict.length > 0} onClear={() => setF({ h1b_verdict: [] })} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
-          {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} onClick={() => togF('h1b_verdict', v)} />)}
+          {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} count={verdictCounts[v]} onClick={() => togF('h1b_verdict', v)} />)}
         </Drop>
         <Drop label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={212}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            {[70, 80, 90].map((n) => <div key={n} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_score === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_score === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_score === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>{n}</div>)}
+            {[70, 80, 90].map((n) => <div key={n} onClick={() => setF({ min_score: String(n) })} className="v2-bdc v2-ctl" style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_score === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_score === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_score === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>{n}</div>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
@@ -677,7 +684,7 @@ export default function V2JobFeed() {
         </Drop>
         <Drop label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            {[150, 180, 220].map((n) => <div key={n} onClick={() => setF({ min_salary: String(n) })} style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_salary === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_salary === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_salary === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>${n}K</div>)}
+            {[150, 180, 220].map((n) => <div key={n} onClick={() => setF({ min_salary: String(n) })} className="v2-bdc v2-ctl" style={{ flex: 1, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', border: `1px solid ${filters.min_salary === String(n) ? 'var(--accent)' : 'var(--edge)'}`, background: filters.min_salary === String(n) ? 'var(--accent-soft)' : 'transparent', color: filters.min_salary === String(n) ? 'var(--accent)' : 'var(--text-2)' }}>${n}K</div>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
@@ -740,8 +747,8 @@ export default function V2JobFeed() {
               <span style={{ fontSize: 12, color: 'var(--rail-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
               <div style={{ width: 1, height: 16, background: 'var(--on-rail-sep)', margin: '0 3px' }} />
               <div onClick={() => bulkStatus('saved')} style={{ height: 27, padding: '0 12px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Save</div>
-              <div onClick={() => bulkStatus('skip')} style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Skip</div>
-              <div onClick={bulkScore} style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Score</div>
+              <div onClick={() => bulkStatus('skip')} className="v2-bdc v2-ctl" style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Skip</div>
+              <div onClick={bulkScore} className="v2-bdc v2-ctl" style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Score</div>
               <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
               <div onClick={() => setChecked(new Set())} style={{ width: 27, height: 27, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--on-rail-dim)', cursor: 'pointer' }}>✕</div>
             </div>
@@ -826,7 +833,7 @@ export default function V2JobFeed() {
                               <div key={label} className="v2-menuitem" onClick={() => { setRowMenu(null); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer', fontWeight: label === 'Tailor résumé' ? 600 : 400 }}>{label}<span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span></div>
                             ))}
                             <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                            <div className="v2-hover-bad" onClick={() => { setRowMenu(null); ignoreCompany(j) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {j.company} everywhere</div>
+                            <div className="v2-hover-bad" onClick={() => { setRowMenu(null); ignoreCompany(j) }} style={{ display: j.company ? 'flex' : 'none', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {j.company} everywhere</div>
                           </div>
                         </>
                       )}
@@ -834,6 +841,8 @@ export default function V2JobFeed() {
                   </div>
                 )
               })}
+            {loadingMore && <div style={{ padding: '14px 0', textAlign: 'center', fontSize: 11.5, color: 'var(--muted)' }}>Loading more…</div>}   {/* FEED-38 */}
+            {!loadingMore && !hasMore && jobs.length > 0 && <div style={{ padding: '14px 0 6px', textAlign: 'center', fontSize: 11.5, color: 'var(--muted)' }}>End of the list · {total} job{total === 1 ? '' : 's'}</div>}
           </div>
         </section>
 
@@ -847,7 +856,7 @@ export default function V2JobFeed() {
                   <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
                   <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10.5, lineHeight: '16px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-                      <span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span><span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
+                      {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
                     </div>}
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
@@ -879,7 +888,7 @@ export default function V2JobFeed() {
                               <div key={label} className="v2-menuitem" onClick={() => { setHeadMenu(false); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, cursor: 'pointer' }}>{label}{kb && <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span>}</div>
                             ))}
                             <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                            <div className="v2-hover-bad" onClick={() => { setHeadMenu(false); ignoreCompany(d) }} style={{ padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {d.company} everywhere</div>
+                            <div className="v2-hover-bad" onClick={() => { setHeadMenu(false); ignoreCompany(d) }} style={{ display: d.company ? 'block' : 'none', padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {d.company} everywhere</div>
                           </div>
                         </>
                       )}
@@ -1066,7 +1075,9 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
-                    ) : d.url && (extActive || forceFrame || frameOk !== false) ? (
+                    ) : d.url && !extActive && !forceFrame && frameOk === null ? (
+                      <div style={{ flex: 1, minHeight: 0 }} />   /* FEED-22: probing — mount nothing until the frame-check answers */
+                    ) : d.url && (extActive || forceFrame || frameOk) ? (
                       /* optimistic: always try the live frame; only a confirmed block swaps it out */
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                     ) : d.url ? (
@@ -1204,7 +1215,7 @@ export default function V2JobFeed() {
             <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
               <div onClick={() => setRescoreJob(null)} className="v2-act" style={{ marginLeft: 'auto', height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-              <div onClick={runRescore} style={{ height: 34, padding: '0 18px', borderRadius: 99, background: rescoreSel.length ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Run scoring</div>
+              <div onClick={rescoreSel.length ? runRescore : undefined} title={rescoreSel.length ? undefined : 'Pick at least one résumé'} style={{ height: 34, padding: '0 18px', borderRadius: 99, pointerEvents: rescoreSel.length ? 'auto' : 'none', background: rescoreSel.length ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: rescoreSel.length ? 'pointer' : 'default', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Run scoring</div>
             </div>
           </div>
         </div>

@@ -123,9 +123,9 @@
 /* interactive (inline styles can't do :hover) */
 .v2-row:hover { background:var(--surface-2) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.v2-rail-copy:hover { background:var(--surface-2); color:var(--text); }
-.v2-rail-save:hover { background:var(--surface-2); color:var(--accent); }
-.v2-rail-skip:hover { background:var(--warn-soft); color:var(--warn); }
+.v2-rail-copy:hover { background:var(--surface-2) !important; color:var(--text) !important; }   /* the cells set inline colour (FEED-12) */
+.v2-rail-save:hover { background:var(--surface-2) !important; color:var(--accent) !important; }
+.v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
 .v2-hover-accent:hover { background:var(--surface-2) !important; color:var(--text) !important; }   /* callers set inline colour (APPS-10) */
 .v2-hover-bad:hover { background:var(--bad-soft) !important; }
 .v2-x:hover { background:var(--line); color:var(--text); }
