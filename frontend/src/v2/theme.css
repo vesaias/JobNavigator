@@ -174,6 +174,10 @@
    sibling --bad rule already knew this */
 .v2-hover-accent-text:hover { color:var(--accent) !important; }
 .v2-hover-bad-text:hover { color:var(--bad) !important; }
+/* SET-15: the model-catalog × turns border AND glyph --bad, per the design's
+   `border-color:#9c3b30;color:#9c3b30`. Kept separate from -bad-text so the ×
+   on the other screens keeps its colour-only hover. */
+.v2-hover-bad-bdc:hover { border-color:var(--bad) !important; color:var(--bad) !important; }
 /* welcome steps are links in v1 and stay links here, so they need an affordance */
 .v2-welcomestep { transition:background .12s; }
 .v2-welcomestep:hover { background:var(--surface-2); }
