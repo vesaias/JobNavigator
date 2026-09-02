@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
@@ -11,6 +12,10 @@ import './theme.css'
 // (JobRun.result_summary, which used to be written as None on every run).
 
 const PERIODS = [[1, '1d'], [7, '7d'], [30, '30d'], [0, 'all']]
+// STAT-18: both logs used to stop at one silent page. They now page with
+// limit+offset, and the control hides itself when a page comes back short.
+const RUN_PAGE = 30
+const ACT_PAGE = 50
 const BUCKET_COLOR = {
   // STAT-21: --line is a border token; as a fill it vanished into the card in dark
   '0-20': 'var(--line-strong)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
@@ -22,9 +27,29 @@ const TYPE_CLASS = {
 }
 const TYPE_OPTS = [['', 'All types'], ['scrape', 'Scrape'], ['h1b', 'H-1B'], ['cv_score', 'Résumé score'], ['email', 'Email'], ['telegram', 'Telegram']]
 
+// STAT-22: v2 draws its controls as span/div, so they were neither focusable nor
+// operable from the keyboard. Spread kb(fn) on such an element; the focus ring is
+// theme.css's `[tabindex="0"]:focus-visible`. (Same helper as ResumeSections.jsx.)
+const kb = (fn, role = 'button') => ({
+  tabIndex: 0,
+  role,
+  onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) } },
+})
+
 const money = (n) => (n == null ? '—' : n === 0 || n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(n < 0.01 ? 4 : 3)}`)
 const int = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'))
-const dayLabel = (iso) => { try { return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) } catch { return iso } }
+// STAT-15: the timeline keys are calendar dates in the viewer's own zone (the
+// backend groups on the DB's local date). `new Date('2026-09-02')` parses as UTC
+// midnight, which renders as the previous day west of UTC — build the Date from
+// the parts instead so the label matches the bucket it names.
+const localKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const dayLabel = (key) => {
+  const p = String(key).split('-').map(Number)
+  if (p.length === 3 && p.every((n) => Number.isFinite(n))) {
+    try { return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-GB', { timeZone: TZ, month: 'short', day: 'numeric' }) } catch { return key }
+  }
+  try { return new Date(key).toLocaleDateString('en-GB', { timeZone: TZ, month: 'short', day: 'numeric' }) } catch { return key }
+}
 // The viewer's own zone — v1 hardcoded Europe/Berlin, which is only right for one person.
 const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return 'UTC' } })()
 const TZ_SHORT = (() => {
@@ -74,6 +99,16 @@ const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em'
 const Pill = ({ children, bg, fg }) => (
   <span style={{ ...BADGE, background: bg, color: fg }}>{children}</span>
 )
+// STAT-18: the pager both logs share.
+const LoadMore = ({ onClick, busy }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
+    <span onClick={busy ? undefined : onClick} {...kb(() => { if (!busy) onClick() })} aria-busy={!!busy} className={busy ? 'v2-ctl' : 'v2-bdc v2-ctl'}
+      style={{ height: 26, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: busy ? 'var(--muted)' : 'var(--text-2)', cursor: busy ? 'default' : 'pointer' }}>
+      {busy && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+      {busy ? 'Loading…' : 'Load more'}
+    </span>
+  </div>
+)
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
 const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
@@ -87,7 +122,10 @@ export default function Stats() {
   const [period, setPeriod] = useState(30)
   const [jobs, setJobs] = useState([])
   const [runs, setRuns] = useState([])
+  const [runsMore, setRunsMore] = useState(false)
   const [activity, setActivity] = useState([])
+  const [actMore, setActMore] = useState(false)
+  const [moreBusy, setMoreBusy] = useState(false)
   const [tab, setTab] = useState('runs')
   const [flowView, setFlowView] = useState('bar')
   const [sweep, setSweep] = useState(null)
@@ -102,6 +140,9 @@ export default function Stats() {
   const pollRef = useRef(null)
   const runningRef = useRef(false)
   const qRef = useRef(null)
+  const runsPaged = useRef(false)   // STAT-18: Load more was used, so the poll must not shrink the list back
+  const runsCardRef = useRef(null)  // STAT-16: the rail links here as /v2/stats#runs
+  const { hash } = useLocation()
   // STAT-04: the schedules columns are fixed-width and the card has no scroller,
   // so below ~1100px the Run now buttons spilled past its right border. Measure
   // the card and drop columns right-to-left as it narrows; the job name (which
@@ -141,15 +182,20 @@ export default function Stats() {
   const loadLive = useCallback(async () => {
     const [j, r] = await Promise.all([
       api.get('/scheduler/jobs').then(({ data }) => data).catch(() => null),
-      api.get('/monitor/history', { params: { limit: 30 } }).then(({ data }) => data).catch(() => null),
+      api.get('/monitor/history', { params: { limit: RUN_PAGE } }).then(({ data }) => data).catch(() => null),
     ])
     if (j) { setJobs(j); runningRef.current = j.some((x) => x.running) }
-    if (r) setRuns(r)
+    // the poll only ever re-reads the first page, so rows fetched by Load more sit
+    // past it and have to survive the refresh
+    if (r) {
+      setRuns((prev) => (prev.length > r.length ? [...r, ...prev.slice(r.length)] : r))
+      if (!runsPaged.current) setRunsMore(r.length >= RUN_PAGE)
+    }
   }, [])
 
   const loadActivity = useCallback(() => {
-    api.get('/activity-log', { params: { limit: 50, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
-      .then(({ data }) => setActivity(data || [])).catch(() => {})
+    api.get('/activity-log', { params: { limit: ACT_PAGE, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
+      .then(({ data }) => { const rows = data || []; setActivity(rows); setActMore(rows.length >= ACT_PAGE) }).catch(() => {})
   }, [actType, actQuery])
 
   useEffect(() => { loadCore().finally(() => setLoading(false)); loadLive() }, [loadCore, loadLive])
@@ -200,6 +246,43 @@ export default function Stats() {
     }
   }
 
+  // STAT-18: one more page of whichever log you're looking at, appended.
+  const moreRuns = async () => {
+    if (moreBusy) return
+    setMoreBusy(true)
+    try {
+      const { data } = await api.get('/monitor/history', { params: { limit: RUN_PAGE, offset: runs.length } })
+      const rows = data || []
+      runsPaged.current = true
+      setRuns((prev) => [...prev, ...rows])
+      setRunsMore(rows.length >= RUN_PAGE)
+    } catch (e) {
+      console.error('more runs', e)
+      pushToast({ kind: 'error', msg: 'Could not load more runs' + errSuffix(e) })
+    } finally { setMoreBusy(false) }
+  }
+  const moreActivity = async () => {
+    if (moreBusy) return
+    setMoreBusy(true)
+    try {
+      const { data } = await api.get('/activity-log', { params: { limit: ACT_PAGE, offset: activity.length, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
+      const rows = data || []
+      setActivity((prev) => [...prev, ...rows])
+      setActMore(rows.length >= ACT_PAGE)
+    } catch (e) {
+      console.error('more activity', e)
+      pushToast({ kind: 'error', msg: 'Could not load more activity' + errSuffix(e) })
+    } finally { setMoreBusy(false) }
+  }
+
+  // STAT-16: the rail's health line promises "Stats · Run history", which is the
+  // last card on a ~2400px page. It now navigates to /v2/stats#runs; scroll there
+  // once the cards exist (before that the ref is null and the page is one screen).
+  useEffect(() => {
+    if (loading || hash !== '#runs') return
+    runsCardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [loading, hash])
+
   // ── derived ───────────────────────────────────────────────────────────────
   const st = stats?.application_statuses || {}
   const inPlay = Math.max(0, (stats?.total_applications || 0) - ((st.rejected || 0) + (st.ghosted || 0) + (st.withdrawn || 0)))
@@ -216,7 +299,9 @@ export default function Stats() {
     const out = []
     for (let i = 29; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      // STAT-15: local calendar date, not the UTC one — toISOString() shifted all
+      // 30 buckets by a day west of UTC, and with them "New this week" and peak
+      const key = localKey(d)
       const r = byDate[key]
       out.push({ date: key, total: r?.total || 0, applied: r?.applied || 0 })
     }
@@ -244,16 +329,20 @@ export default function Stats() {
     const applied = stats?.total_applications || 0
     // STAT-05: the design's one neutral → accent ramp, ending on the neutral
     // --line-strong for the terminal Rejected row.
+    // STAT-09: with no transition history the row falls back to the status
+    // snapshot, which is a different question ("currently in" vs "ever reached")
+    // — flag those rows so the footnote isn't claiming something it can't know.
+    const pick = (k) => (reached[k] ? { count: reached[k], snapshot: false } : { count: st[k] || 0, snapshot: !!st[k] })
     const rows = [
-      ['Applied', applied, 'var(--funnel-low)'],
-      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)'],
-      ['Offer', reached.offer || st.offer || 0, 'var(--accent)'],
-      ['Rejected', reached.rejected || st.rejected || 0, 'var(--line-strong)'],
+      { label: 'Applied', count: applied, snapshot: false, color: 'var(--funnel-low)' },
+      { label: 'Interview', ...pick('interview'), color: 'var(--funnel-mid)' },
+      { label: 'Offer', ...pick('offer'), color: 'var(--accent)' },
+      { label: 'Rejected', ...pick('rejected'), color: 'var(--line-strong)' },
     ]
     const base = Math.max(1, applied)
-    return rows.map(([label, count, color]) => ({
-      label, count, color,
-      w: `${Math.min(100, Math.max(count ? 2 : 0, Math.round((count / base) * 100)))}%`,
+    return rows.map((r) => ({
+      ...r,
+      w: `${Math.min(100, Math.max(r.count ? 2 : 0, Math.round((r.count / base) * 100)))}%`,
     }))
   }, [stats, st, reached])
   const conv = (a, b) => (a ? `${Math.round((b / a) * 100)}%` : '—')
@@ -296,7 +385,7 @@ export default function Stats() {
             {spend != null && <> · {money(spend)} on LLM calls {period ? `in ${period}d` : 'all time'}</>}
           </span>
         </div>
-        <span onClick={refresh} className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
+        <span onClick={refresh} {...kb(refresh)} title="Reload every figure on this page" className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
           {refreshing
             ? <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
             : <span style={{ fontSize: 12 }}>↻</span>}
@@ -307,7 +396,7 @@ export default function Stats() {
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
           <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
           <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
-          <span onClick={refresh} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
+          <span onClick={refresh} {...kb(refresh)} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
         </div>
       )}
 
@@ -344,7 +433,7 @@ export default function Stats() {
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
                   {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
                     const on = flowView === id
-                    return <span key={id} onClick={() => setFlowView(id)} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                    return <span key={id} onClick={() => setFlowView(id)} {...kb(() => setFlowView(id))} aria-pressed={on} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
                   })}
                 </span>
               )}
@@ -368,11 +457,17 @@ export default function Stats() {
                     <div style={{ width: f.w, background: f.color, borderRadius: 5 }} />
                   </div>
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
+                  {f.snapshot && <span title="No stage history recorded for these — counted by current status, so anything that passed through this stage and moved on is missing"
+                    style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '18px', color: 'var(--muted)', cursor: 'help' }}>snapshot</span>}
                 </div>
               ))}
             </div>
             <span style={{ ...NOTE, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: '15px' }}>
-              <span>Every row counts applications that ever reached that stage; bars are relative to Applied</span>
+              {/* the card's height is fixed, so the caveat replaces the "bars are
+                  relative to Applied" clause rather than adding a third line */}
+              <span>{funnel.some((f) => f.snapshot)
+                ? 'Rows count applications that ever reached that stage; snapshot rows count current status'
+                : 'Every row counts applications that ever reached that stage; bars are relative to Applied'}</span>
               <span>applied → interview {conv(stats?.total_applications, reached.interview || 0)} · interview → offer {conv(reached.interview || 0, reached.offer || 0)}</span>
             </span>
             </div>
@@ -427,7 +522,7 @@ export default function Stats() {
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
                   const on = period === id
-                  return <span key={label} onClick={() => setPeriod(id)} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                  return <span key={label} onClick={() => setPeriod(id)} {...kb(() => setPeriod(id))} aria-pressed={on} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
                 })}
               </span>
             </div>
@@ -496,7 +591,9 @@ export default function Stats() {
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
+                    ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
+                        title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
+                        className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
                         {running && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
                         {running ? 'Running…' : 'Run now'}
                       </span>
@@ -508,16 +605,16 @@ export default function Stats() {
         </div>
 
         {/* run history / activity log */}
-        <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+        <div id="runs" ref={runsCardRef} style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '12px 20px 10px' }}>
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
-              <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
+              <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} {...kb(() => { setTab(id); setTypeOpen(false) })} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
             ))}
-            <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? 'last 30 scheduler and manual runs' : 'everything the pipeline did, newest first'}</span>
+            <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? `last ${runs.length} scheduler and manual runs` : 'everything the pipeline did, newest first'}</span>
             {tab === 'activity' && (
               <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>
-                  <span onClick={() => setTypeOpen((v) => !v)} className="v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
+                  <span onClick={() => setTypeOpen((v) => !v)} {...kb(() => setTypeOpen((v) => !v))} aria-expanded={typeOpen} title="Filter the activity log by type" className="v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
                     Type{actType ? ' · 1' : ''}<span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
                   </span>
                   {typeOpen && (
@@ -525,7 +622,7 @@ export default function Stats() {
                       <span onClick={() => setTypeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
                       <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {TYPE_OPTS.map(([id, label]) => (
-                          <span key={id} onClick={() => { setActType(id); setTypeOpen(false) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', padding: '6px 9px', borderRadius: 6, fontSize: 12, lineHeight: '16px', color: actType === id ? 'var(--accent)' : 'var(--text-2)', fontWeight: actType === id ? 500 : 400, background: actType === id ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
+                          <span key={id} onClick={() => { setActType(id); setTypeOpen(false) }} {...kb(() => { setActType(id); setTypeOpen(false) })} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', padding: '6px 9px', borderRadius: 6, fontSize: 12, lineHeight: '16px', color: actType === id ? 'var(--accent)' : 'var(--text-2)', fontWeight: actType === id ? 500 : 400, background: actType === id ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
                             {label}<span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--accent)' }}>{actType === id ? '✓' : ''}</span>
                           </span>
                         ))}
@@ -564,6 +661,7 @@ export default function Stats() {
                 )
               })}
               {!runs.length && <div style={{ padding: '16px 20px', ...NOTE }}>No runs yet.</div>}
+              {runsMore && <LoadMore onClick={moreRuns} busy={moreBusy} />}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -581,7 +679,9 @@ export default function Stats() {
                   <span style={{ flex: '0 0 130px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</span>
                 </div>
               ))}
-              {!activity.length && <div style={{ padding: '16px 20px', ...NOTE }}>No activity matches.</div>}
+              {/* STAT-18: an empty log and an over-tight filter are different problems */}
+              {!activity.length && <div style={{ padding: '16px 20px', ...NOTE }}>{actType || actQuery.trim() ? 'No activity matches these filters.' : 'No activity recorded yet.'}</div>}
+              {actMore && <LoadMore onClick={moreActivity} busy={moreBusy} />}
             </div>
           )}
         </div>

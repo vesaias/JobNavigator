@@ -13,6 +13,15 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 
 export const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
+// PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them were
+// focusable or operable from the keyboard. Spread `kb(fn)` onto such an element:
+// it becomes tabbable, announces a role, and fires the same handler the click
+// does on Enter/Space. The focus ring is theme.css's `[tabindex="0"]:focus-visible`.
+export const kb = (fn, role = 'button') => ({
+  tabIndex: 0,
+  role,
+  onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) } },
+})
 export const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
 export const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
 
@@ -90,7 +99,13 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
 export const RemoveLink = ({ onClick, children = 'Remove' }) => (
-  <span onClick={onClick} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad v2-hover-bad-text">{children}</span>
+  <span onClick={onClick} {...kb(onClick)} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad v2-hover-bad-text">{children}</span>
+)
+// The ✕ every row carries. One component so the keyboard treatment (PERS-15) is
+// written once rather than at each of the five sites.
+export const RemoveX = ({ onClick, title = 'Remove', size = 11, lh }) => (
+  <span onClick={onClick} {...kb(onClick)} title={title} aria-label={title} className="v2-hover-bad v2-hover-bad-text"
+    style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: size, cursor: 'pointer', lineHeight: lh }}>✕</span>
 )
 // PERS-13: removals are undoable rather than confirmed — no window.confirm anywhere.
 // `mutate` closes over the data of the render that produced the toast, so
@@ -103,7 +118,7 @@ export function useUndoRemove(mutate, onRemoved) {
   return (label, remove, restore) => { mutate(remove); onRemoved?.(label, () => live.current(restore)) }
 }
 export const DashedAdd = ({ onClick, children, big }) => (
-  <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
+  <div onClick={onClick} {...kb(onClick)} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
 )
 // `note` is the second line. It defaults to the résumé PDF wording; Persona
 // overrides it, since its resume_content is a source pool that never prints.
@@ -133,7 +148,7 @@ export const MicroField = ({ label, value, onChange, placeholder, mono }) => (
 export function SectionShell({ name, count, open, onToggle, meta, children }) {
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-      <div onClick={onToggle} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
+      <div onClick={onToggle} {...kb(onToggle)} aria-expanded={!!open} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
         <span style={{ color: 'var(--muted)', fontSize: 10 }}>{open ? '⌄' : '›'}</span>
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
@@ -171,7 +186,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
   const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
   const arrows = (i) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(i, -1)} className="v2-navlink">▲</span><span onClick={() => move(i, 1)} className="v2-navlink">▼</span>
+      <span onClick={() => move(i, -1)} {...kb(() => move(i, -1))} title="Move up" className="v2-navlink">▲</span><span onClick={() => move(i, 1)} {...kb(() => move(i, 1))} title="Move down" className="v2-navlink">▼</span>
     </span>
   )
   return (
@@ -196,10 +211,9 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
               <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
               {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
-              <span onClick={() => undoRemove('Removed contact item',
+              <RemoveX onClick={() => undoRemove('Removed contact item',
                 (d) => d.header.contact_items.splice(i, 1),
-                (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })}
-                title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+                (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })} />
               </div>
             </div>
           )
@@ -214,6 +228,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
   const undoRemove = useUndoRemove(mutate, onRemoved)
   const [open, setOpen] = useState(() => new Set([0]))   // first entry open by default
   const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
+  const addBullet = (i) => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })
   const bulletMark = (i, bi, txt) => {
     if (!baseExp) return null
     const bb = baseExp[i]?.bullets || []
@@ -233,7 +248,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 18.75px, which made this row 36.75px tall and put every row below it
                 (and the Skills/Education/Projects cards) on a half pixel, where
                 Chrome rounds their 1px borders away — same fix as SectionShell */}
-            <div onClick={() => toggle(i)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8, lineHeight: '18px' }}>
+            <div onClick={() => toggle(i)} {...kb(() => toggle(i))} aria-expanded={isOpen} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8, lineHeight: '18px' }}>
               <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
@@ -257,10 +272,9 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                       <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
                       {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
-                      <span onClick={() => undoRemove('Removed bullet',
+                      <RemoveX size={10} lh="19px" onClick={() => undoRemove('Removed bullet',
                         (d) => d.experience[i].bullets.splice(bi, 1),
-                        (d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.splice(bi, 0, b) })}
-                        title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
+                        (d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.splice(bi, 0, b) })} />
                     </div>
                   )
                 })}
@@ -272,7 +286,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   </div>
                 ))}
                 {/* PERS-19: accent like every other add-control on the screen */}
-                <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add bullet</div>
+                <div onClick={() => addBullet(i)} {...kb(() => addBullet(i))} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add bullet</div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed role',
                   (d) => d.experience.splice(i, 1),
                   (d) => { d.experience = d.experience || []; d.experience.splice(i, 0, e) })}>Remove role</RemoveLink></div>
@@ -324,7 +338,7 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
   const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
   const arrows = (k) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(k, -1)} className="v2-navlink">▲</span><span onClick={() => move(k, 1)} className="v2-navlink">▼</span>
+      <span onClick={() => move(k, -1)} {...kb(() => move(k, -1))} title="Move up" className="v2-navlink">▲</span><span onClick={() => move(k, 1)} {...kb(() => move(k, 1))} title="Move down" className="v2-navlink">▼</span>
     </span>
   )
   return (
@@ -344,10 +358,9 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
             {/* restore rebuilds the key order so the row comes back where it was */}
-            <span onClick={() => undoRemove('Removed skill category',
+            <RemoveX onClick={() => undoRemove('Removed skill category',
               (d) => { delete d.skills[k] },
-              (d) => { const en = Object.entries(d.skills || {}); en.splice(ei, 0, [k, v]); d.skills = Object.fromEntries(en) })}
-              title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+              (d) => { const en = Object.entries(d.skills || {}); en.splice(ei, 0, [k, v]); d.skills = Object.fromEntries(en) })} />
           </div>
         )
       })}
@@ -397,10 +410,9 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
               <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
                 <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>—</span>
                 <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
-                <span onClick={() => undoRemove('Removed bullet',
+                <RemoveX size={10} lh="19px" onClick={() => undoRemove('Removed bullet',
                   (d) => d.projects[i].bullets.splice(bi, 1),
-                  (d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.splice(bi, 0, b) })}
-                  title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
+                  (d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.splice(bi, 0, b) })} />
               </div>
             ))}
             <DashedAdd onClick={() => mutate((d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.push('') })}>+ Add bullet</DashedAdd>

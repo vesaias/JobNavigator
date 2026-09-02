@@ -995,8 +995,11 @@ def get_finished(job_ids: str = None, since: str = None, limit: int = 200):
 
 
 @app.get("/api/monitor/history", tags=["monitor"], summary="Run history")
-def get_run_history(limit: int = 30, job_type: str = None, status: str = None):
-    """Return recent job run history, newest first."""
+def get_run_history(limit: int = 30, offset: int = 0, job_type: str = None, status: str = None):
+    """Return recent job run history, newest first.
+
+    `offset` skips that many rows so the dashboard can page ("Load more").
+    """
     db = SessionLocal()
     try:
         q = db.query(JobRun)
@@ -1004,7 +1007,7 @@ def get_run_history(limit: int = 30, job_type: str = None, status: str = None):
             q = q.filter(JobRun.job_type == job_type)
         if status:
             q = q.filter(JobRun.status == status)
-        runs = q.order_by(JobRun.started_at.desc()).limit(limit).all()
+        runs = q.order_by(JobRun.started_at.desc()).offset(max(0, offset)).limit(limit).all()
         return [
             {
                 "id": str(r.id),
@@ -1051,6 +1054,7 @@ def get_run_detail(run_id: str):
 @app.get("/api/activity-log", tags=["scheduler"], summary="Activity log")
 def get_activity_log(
     limit: int = 50,
+    offset: int = 0,
     type: str = None,
     company: str = None,
 ):
@@ -1062,6 +1066,7 @@ def get_activity_log(
     - `type` — exact match on activity type
     - `company` — case-insensitive substring match on company name
     - `limit` — max entries to return (default 50)
+    - `offset` — skip this many entries, so the dashboard can page ("Load more")
     """
     from backend.models.db import ActivityLog
     db = SessionLocal()
@@ -1071,7 +1076,7 @@ def get_activity_log(
             q = q.filter(ActivityLog.type == type)
         if company:
             q = q.filter(ActivityLog.company.ilike(f"%{company}%"))
-        logs = q.order_by(ActivityLog.created_at.desc()).limit(limit).all()
+        logs = q.order_by(ActivityLog.created_at.desc()).offset(max(0, offset)).limit(limit).all()
         return [
             {
                 "id": str(log.id),
