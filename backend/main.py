@@ -227,6 +227,19 @@ app.include_router(autofill_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 
 
+# A malformed UUID in a path (/api/jobs/abc) makes Postgres raise DataError deep in
+# the query; without this every id route answers 500 instead of 404 (FEED-10).
+from sqlalchemy.exc import DataError as _SADataError
+
+
+@app.exception_handler(_SADataError)
+async def _bad_uuid_to_404(request: Request, exc: _SADataError):
+    if "invalid input syntax for type uuid" in str(exc.orig or exc):
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    logger.exception("Database DataError on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
 @app.get("/health", tags=["system"], summary="Health check")
 def health_check():
     """Returns OK if the backend is running."""
