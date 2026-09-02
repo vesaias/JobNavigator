@@ -136,7 +136,7 @@ Separately, `application_count` counts every application in any state, so both "
 **Expected + why** design `.dc.html:159` and `:262`: `style-hover="background:#f3f0e8;color:#1b1a16"` — *both* properties.
 **Actual** measured on both: `changed: ['backgroundColor']` only; colour stays `rgb(109,104,98)` (`--muted`) instead of going to `--text`. Identical to the `.v2-hover-accent-text` bug HANDOVER records as "had never fired anywhere until it was caught by measurement".
 **Proposed fix** `theme.css:129` → `color: var(--text) !important;`. **Not applied**: `theme.css` is shared by all nine screens and other agents are measuring hovers against it in this wave — this one belongs to the coordinator.
-**Status** needs decision: add `!important` to `.v2-hover-accent:hover`'s colour in `theme.css` (cross-screen edit)?
+**Status** fixed + verified: `.v2-hover-accent` colour half hardened tree-wide; the drawer's active toggle and both Close buttons (drawer error panel, test modal) now carry the pill hover (`v2-bdc`) — measured border+colour change
 
 ### COMP-17 · P3 · Hover taxonomy differs from the design on six controls
 **Where** `Companies.jsx:289` (`Make n active`), `:381` (Run), `:388` (Test), `:392` (`⋯`), `:561` (drawer `Test scrape`) — all `.v2-act`; `:87` (URL ✕) `.v2-hover-bad`; `:92` (`+ Add another career page`) `.v2-dashadd`; `:104` (Seg) and `:280` (tier chips) `.v2-bd`
@@ -154,26 +154,26 @@ Separately, `application_count` counts every application in any state, so both "
 | depth / tier Seg options | *(none in the design)* | border→accent (extra) |
 | status pill, row, menu items, delete item, sort trigger, `+ Add company`, `Save changes`, `Cancel`, tuning header, `Show screenshots`, `Close` | as designed | ✔ |
 
-**Status** needs decision: keep code (unified accent hovers across v2) or match the design?
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: keep code (unified accent hovers across v2) or match the design?
 
 ### COMP-18 · P3 · A never-scraped active company reads `healthy · scraped never` with a **green** dot
 **Where** `Companies.jsx:235` + `ago(null) → 'never'` (`:7`)
 **Repro** Create a company, don't scrape it, load the screen.
 **Actual** measured on a fresh company: dot `rgb(63,107,82)` (`--good`), text `healthy · scraped never`, title identical. Nothing distinguishes "confirmed healthy" from "never ran". 24 real companies are in this state (`last_scraped_at IS NULL`).
 **Proposed fix** a fifth branch before the `active` one: `not scraped yet` with the `--edge` (or `--muted`) dot.
-**Status** needs decision
+**Status** fixed + verified after rebuild: active company with no `last_scraped_at` reads "not scraped yet" with an `--edge` dot
 
 ### COMP-19 · P3 · `last_run_warning` is returned but never rendered — one zero-result run looks perfectly healthy
 **Where** serialiser `routes_companies.py:626`; no reader in `Companies.jsx`
 **Repro** Insert one `scrape_log` row with `is_warning=true, error=null`.
 **Actual** measured: row unchanged — dot `--good`, text `healthy · …`, no `▲`, header count unchanged, drawer banner absent. The company only becomes visible after three consecutive bad runs promote it into `/health/entities`. `Oracle` is in exactly this state in the real data (`last_run_warning: true`).
 **Proposed fix** a `--warn` dot with `last run found nothing` between the `last_error` and `downMap` branches.
-**Status** needs decision
+**Status** fixed + verified after rebuild: `last_run_warning` renders "last run found nothing · {ago}" with a `--warn` dot, between the error and the 3-run-down branches
 
 ### COMP-20 · P3 · Drawer is 720 px; the design draws 520 px
 **Where** `Companies.jsx:458` (`width: 720`); design `.dc.html:150` (`width:520px`)
 **Actual** measured `w: 720, x: 720` at 1440 (50 % of the viewport, vs 36 % designed) and `w: 720, x: 304` at 1024 (**70 %** of the viewport). Every other drawer measurement matches the design exactly: header padding `16px 22px 13px`, body `15px 22px 20px` gap 15, footer `12px 22px`, title 20 px Newsreader, field boxes 32 px / radius 7, banner `11px 13px` radius 9 with `--bad`/`--bad-soft`.
-**Status** needs decision: keep 720 (the two-column tuning grid is roomier) or match the design's 520?
+**Status** decided 2026-09-02: keep 720 px
 
 ### COMP-21 · P3 · Column widths diverge from the design; `Company` is the column that pays
 **Where** header `Companies.jsx:323-332`, rows `:344-380`
@@ -190,31 +190,31 @@ Separately, `application_count` counts every application in any state, so both "
 | actions | `0 0 168px` | `0 0 190px` | 190 | 190 |
 
 A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 1270, row does not overflow), but at 1024 px `Company` is down to 118 px while `Health` still holds 210.
-**Status** needs decision
+**Status** decided 2026-09-02: keep
 
 ### COMP-22 · P3 · The design's "{n} of {N} shown" counter is not built
 **Where** design `.dc.html:75` + `:588-589` (`shownLine` / `shownDisplay`, shown only while filtered); no equivalent in `Companies.jsx`
 **Actual** measured: no element matching `/^\d+ of \d+ shown$/` in any state. With a filter applied the only feedback is the row count itself; the header keeps showing the unfiltered `126 tracked`.
-**Status** needs decision
+**Status** decided 2026-09-02: keep (no counter)
 
 ### COMP-23 · P3 · The test modal computes per-state row tints and never applies them
 **Where** `Companies.jsx:691-693` (`jobState` returns `bg`), `:748` (row `<div>` has no `background`)
 **Expected + why** design `.dc.html:325` `background:{{ j.bg }}` with `#fff` / `#fdf8f7` (out) / `#fdfaf5` (drop).
 **Actual** measured on a real 577-row result: every row `backgroundColor: rgba(0,0,0,0)`. `bg` is dead code in all three branches.
 **Proposed fix** either apply `st.bg` (mapped to `--surface` / `--bad-faint` / `--recessed`) or delete the field.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-24 · P3 · Globally-excluded rows are indistinguishable from per-company exclusions, and the two "after filter" numbers are never shown
 **Where** `Companies.jsx:690-693` (only `[Validation]` and `kept` are special-cased); backend returns `passes_company_filter`, `global_excluded_by`, `after_company_filter`, `global_exclude_keyword_count` (`routes_companies.py:559-584`)
 **Repro** Test-scrape a company whose titles hit the global `title_exclude_global` list.
 **Actual** measured on the real Anthropic Greenhouse board (577 postings): `after_company_filter: 22`, `after_filter: 12`, `global_exclude_keyword_count: 84` — **10 rows were dropped by the global list**, each rendered as a plain red `Out` whose reason string happens to start with `[Global] Excluded by: …`. Nothing tells the user those 10 were not their company rule, and the "22 passed your filters, 12 will actually save" distinction is discarded.
 **Proposed fix** a third tag (`Global`) or a `[Global]` prefix strip + warn tint, and add "22 pass this company's filters · 10 removed by the global list" to the summary.
-**Status** needs decision
+**Status** fixed + verified after rebuild: rows dropped by the global list get a `Global` tag (warn tint) with the `[Global]` prefix stripped; the summary adds "N pass this company's filters · M removed by the global list" when they differ
 
 ### COMP-25 · P3 · The column-header rule is in the wrong place and the wrong weight
 **Where** `Companies.jsx:322` (`borderTop: 1px var(--line)` + `borderBottom: 1px var(--line)`); design: toolbar carries `border-bottom:1px solid #e2ddd0` (`.dc.html:60`) and the header row carries **only** `border-bottom:1px solid #c9c3b4` = `--line-strong` (`.dc.html:83`)
 **Actual** measured: header `borderTop 1px rgb(226,221,208)`, `borderBottom 1px rgb(226,221,208)`; toolbar `border-bottom-width: 0px`. So the header reads as a boxed strip with two equal hairlines instead of a toolbar rule plus a stronger column rule.
-**Status** needs decision
+**Status** fixed + verified after rebuild: toolbar carries the 1 px `--line` hairline, the column header has no top border and a 1 px `--line-strong` bottom rule
 
 ### COMP-26 · P3 · No in-progress state for the test scrape, and the result table renders every row
 **Where** `Companies.jsx:388` (row spinner), `:561` (footer spinner); no overlay
@@ -225,33 +225,33 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 **Where** `Companies.jsx:591-604` (no re-entry guard), `:660` (only `cursor`/`opacity` change)
 **Actual** verified by code + the 409 path: the second POST returns `409 Company already exists`, which surfaces as a native `alert` and leaves the modal open. Confirmed live that a 409 produces exactly `alert('Company already exists')` and resets the label to `Save`.
 **Proposed fix** `if (saving) return` at the top of `save`.
-**Status** needs decision (2-line change)
+**Status** fixed in source: `if (saving) return` guard at the top of the Add modal's save
 
 ### COMP-28 · P3 · Native `confirm`/`alert` on a screen with no other native dialogs
 **Where** `Companies.jsx:219` (delete confirm), `:592` (name required), `:603` (server error)
 **Actual** measured messages: `Delete ZZTEST Gamma? Jobs already found are kept.` (dismiss → no DELETE, row kept; accept → DELETE, row gone, **no toast**), `Company name is required`, `Company already exists`. The design has no dialog for any of these; the rest of v2 uses modals and toasts.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-29 · P3 · No first-run empty state, and the tier-empty copy doesn't name the tiers
 **Where** `Companies.jsx:406-412`
 **Expected + why** design `.dc.html:594-595`: `emptyHint` for a tier filter is `"No companies in " + tiers.map(…).join(", ") + "."` — it names them.
 **Actual** code always prints the generic `No companies in the selected tiers.`, and a genuinely empty database falls into the same "No companies match" + `Clear filters` branch, which does nothing useful. (Not directly reproducible on this data set: all four tiers have rows, so the tier-only empty branch could not be triggered — see "Couldn't test".)
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-30 · P4 · `Ø Fit` uses U+00D8 (Latin O with stroke); the design uses U+2300 `⌀` (diameter sign)
 **Where** `Companies.jsx:330`; design `.dc.html:90`
 **Actual** measured header text: `Ø Fit`.
-**Status** needs decision
+**Status** decided 2026-09-02: keep Ø
 
 ### COMP-31 · P4 · Tier chip count is bare, and the tooltip doesn't say what the click will do
 **Where** `Companies.jsx:281,283`; design `.dc.html:597-600`: `count: "(" + n + ")"` and `hint: (on ? "Remove from filter" : "Add to filter") + " · multi-select, remembered per browser"`
 **Actual** measured labels `Tier 1 5`, `Tier 2 21`, `Tier 3 35`, `Untiered 65` (no parentheses); tooltip is the static `Add/remove from filter · multi-select, remembered per browser` on all four regardless of state. Counts themselves are correct: 5+21+35+65 = 126 = header `tracked` = rail badge `126`. ✔
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-32 · P4 · Drawer subtitle is not pluralised
 **Where** `Companies.jsx:432`; design `.dc.html:715-716` pluralises both nouns
 **Actual** measured: `Tier 1 · 1 career URL(s) · 1 open application(s)`.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-33 · P4 · Row tooltips drop the information the design put in them
 **Where** `Companies.jsx:346` (name), `:362` (ATS), `:356` (health), `:359` (résumés)
@@ -261,28 +261,28 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 - health `title` = the same string as the visible text; design: `c.down || (active ? "Last successful run …" : "Inactive — jobs already found are kept")` (`.dc.html:645`).
 - résumés `title` = the names again; design: `"New jobs are scored against …"` / `"None selected — falls back to your default résumé from Settings"` (`.dc.html:652`).
 - alias `title` lists **all** aliases; design lists `slice(1)`. (See COMP-11.)
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-34 · P4 · Add-modal control radii/heights differ from the design
 **Where** `Companies.jsx:618,625,629,639` (inputs, `monoBox`/`inputBox` radius 7), `:635` (tier `Seg`, height 32)
 **Actual** measured: inputs `h 33 / radius 7px` (design `33 / 8px`); tier segs `h 32 / radius 7` (design `33 / 8`); depth chips `h 26 / radius 99` ✔; résumé chips `h 27 / radius 99` ✔; card `520 × 555.75`, radius 12, border `--line`, scrim `rgba(20,19,15,0.42)` ✔.
 Also: the card's height is fractional (555.75) — content-driven, harmless, but it puts the modal on a half pixel.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### COMP-35 · P4 · Dead code
 **Where** `Companies.jsx:1` (`useRef` imported, unused), `:16` (`norm`, unused — the row filter re-lowercases inline at `:176`), `:98` (`Seg` prop `big`, never passed), `:415`/`:423` (`onDelete` passed and destructured, no control uses it — the drawer has no delete), `:691-693` (`jobState().bg`, see COMP-23).
-**Status** fixable, unambiguous — but five separate deletions across the file; logged rather than fixed to keep the diff reviewable. needs decision.
+**Status** fixed in source: unused `norm` helper and the never-passed `Seg` `big` prop removed (`useRef` is used once, kept)
 
 ### COMP-36 · P4 · The sort menu has six options; the design has five
 **Where** `Companies.jsx:56-63`; design `.dc.html:572-577`
 **Actual** measured menu: `Needs attention ✓ / Company name / Priority tier / Open roles / Average fit / Last scrape`. `Priority tier` is additive. Menu geometry: `172 px` wide, `margin-top 5px`, `padding 8px`, `z-index 45`; design `190 px`, `margin-top 8px`, `padding 6px`, `z-index 40`.
 All six comparators verified against the data: name `a16z, Addepar, Adobe`; tier `T1` block first; open `2, 1, 1`; fit `87, 85, 84`; run — never-scraped first; health — `downMap` first, then active, then name. ✔
-**Status** needs decision
+**Status** decided 2026-09-02: keep six options
 
 ### COMP-37 · P4 · `Escape` discards an edited draft with no confirmation, and clicking another row silently replaces it
 **Where** `Companies.jsx:158` (one Escape handler closes sort menu + row menu + drawer + add modal + test modal), `:341` → `:241`
 **Actual** measured: typed `ZZTEST Alpha EDITED` into the drawer (title mirrors the draft live), pressed Escape → drawer gone, nothing saved, no prompt. Clicking a second row while a dirty draft is open replaces the draft outright (verified: title changed to the second company). Escape also closes the Add modal mid-entry.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ---
 

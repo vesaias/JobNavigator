@@ -8,15 +8,15 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 20 | 85 | 6 |
-| P4 | 90 | 7 | 72 | 11 |
-| **All** | **276** | **101** | **157** | **18** |
+| P3 | 111 | 26 | 76 | 9 |
+| P4 | 90 | 8 | 69 | 13 |
+| **All** | **276** | **108** | **145** | **23** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
-| companies.md | 37 | 1 | 12 | 16 | 8 | 15 |
+| companies.md | 37 | 1 | 12 | 16 | 8 | 22 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
@@ -69,6 +69,13 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - COMP-13 (P2) — Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
 - COMP-14 (P3) — Every row lands on a half pixel (fractional `getBoundingClientRect().top`)
 - COMP-15 (P3) — The sort menu's hover never fires — an inline `background: 'transparent'` beats `.v2-menuitem:hover`
+- COMP-16 (P3) — `.v2-hover-accent`'s colour half has never fired on this screen (drawer ✕, test-modal ✕)
+- COMP-18 (P3) — A never-scraped active company reads `healthy · scraped never` with a **green** dot
+- COMP-19 (P3) — `last_run_warning` is returned but never rendered — one zero-result run looks perfectly healthy
+- COMP-24 (P3) — Globally-excluded rows are indistinguishable from per-company exclusions, and the two "after filter" numbers are never shown
+- COMP-25 (P3) — The column-header rule is in the wrong place and the wrong weight
+- COMP-27 (P3) — Add-modal `Save` stays live while `saving` — a double click double-POSTs
+- COMP-35 (P4) — Dead code
 - CL-01 (P2) — Editor autosave silently drops a patch of a different kind — the template you picked is never saved and the header says "saved"
 - CL-02 (P2) — Editor gets permanently stuck in "Regenerating…" if the post-run reload fails
 - CL-03 (P2) — Regenerate poll waits for *every* cover-letter run in the system, not this letter's
