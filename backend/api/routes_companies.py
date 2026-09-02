@@ -72,6 +72,7 @@ class CompanyCreate(BaseModel):
     h1b_slug: Optional[str] = None
     notes: Optional[str] = None
     auto_scoring_depth: str = "off"
+    aliases: List[str] = []
 
 
 class BulkActivate(BaseModel):
@@ -200,6 +201,8 @@ def create_company(data: CompanyCreate, background_tasks: BackgroundTasks, db: S
         wait_for_selector=data.wait_for_selector,
         max_pages=data.max_pages,
         notes=data.notes,
+        aliases=[a.strip() for a in data.aliases if a and a.strip()],
+        auto_scoring_depth=data.auto_scoring_depth,
         active=True,
         playwright_enabled=True,
     )

@@ -31,20 +31,25 @@ const pathHas = (url, ...needles) => {
   let p; try { p = new URL(url).pathname.toLowerCase() } catch { return false }
   return needles.some((n) => n && p.includes(n))
 }
+// Rules mirror backend/api/routes_companies.py:detect_scrape_type (and the
+// scraper/ats/*.is_* predicates it calls) so the live chip in the drawer/add
+// modal agrees with the row chip the backend computes. Keep them in step.
 const detectAts = (url) => {
   if (!url) return 'Generic'
   if (url.toUpperCase().startsWith('POST|')) return 'Phenom'
   if (hostMatches(url, 'myworkdayjobs.com')) return 'Workday'
-  if (hostMatches(url, 'oraclecloud.com') && pathHas(url, '/hcmui/')) return 'Oracle HCM'
-  if (hostMatches(url, 'careers.oracle.com')) return 'Oracle HCM'
-  if (hostMatches(url, 'jobs.lever.co', 'jobs.eu.lever.co')) return 'Lever'
+  // oracle_hcm.is_oracle_hcm: exact hcmUI path, or /sites/ + /jobs anywhere in the
+  // URL (hash included) on an oraclecloud.com host or careers.oracle.com
+  if (url.includes('oraclecloud.com/hcmUI/CandidateExperience')) return 'Oracle HCM'
+  if (url.includes('/sites/') && url.includes('/jobs') && hostMatches(url, 'oraclecloud.com', 'careers.oracle.com')) return 'Oracle HCM'
+  if (url.toLowerCase().includes('jobs.lever.co/')) return 'Lever'
+  if (url.toLowerCase().includes('/search-jobs/results?')) return 'TalentBrew'
   if (hostMatches(url, 'jobs.ashbyhq.com')) return 'Ashby'
   if (hostMatches(url, 'greenhouse.io')) return 'Greenhouse'
   if (hostMatches(url, 'ats.rippling.com') || (hostMatches(url, 'rippling.com') && pathHas(url, '/careers'))) return 'Rippling'
   if (hostMatches(url, 'jobs.smartrecruiters.com', 'careers.smartrecruiters.com', 'api.smartrecruiters.com')) return 'SmartRecruiters'
-  if (hostMatches(url, 'eightfold.ai')) return 'Eightfold'
   if (hostMatches(url, 'metacareers.com')) return 'Meta'
-  if (hostMatches(url, 'google.com') && pathHas(url, '/about/careers')) return 'Google'
+  if (url.toLowerCase().includes('google.com/about/careers')) return 'Google'
   return 'Generic'
 }
 
@@ -676,7 +681,9 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   const kept = test.after_filter ?? jobs.filter((j) => j.kept).length
   const rejected = test.total_rejected || 0
   const found = test.total_found ?? jobs.length
-  const summary = `${kept} kept · ${found - kept - rejected} keyword-filtered · ${rejected} validation-rejected · ${found} extracted`
+  // total_found already excludes the validation-rejected rows (routes_companies.py:
+  // len(all_jobs) vs len(all_rejected)), so the four numbers add up to the rows shown.
+  const summary = `${kept} kept · ${found - kept} keyword-filtered · ${rejected} validation-rejected · ${found + rejected} extracted`
   const urls = test.urls_scraped || []
   const pag = test.pagination_debug || []
   const shots = test.screenshots || []

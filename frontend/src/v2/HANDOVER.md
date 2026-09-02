@@ -136,7 +136,7 @@ Screenshots are not evidence. What has actually caught bugs here:
 docker compose exec -T backend sh -c "cd /app && python -m pytest backend/tests -q"
 
 docker compose build frontend && docker compose up -d frontend   # frontend only builds in Docker
-docker compose restart backend                # required for NEW routes; edits hot-reload
+docker compose restart backend                # required for EVERY backend edit: uvicorn runs without --reload (Dockerfile.backend CMD)
 ```
 
 Playwright runs inside the backend container: hit `http://caddy/v2/...`, API key
