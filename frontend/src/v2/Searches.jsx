@@ -317,6 +317,7 @@ export default function Searches() {
   const [nextRun, setNextRun] = useState(null)
   const [test, setTest] = useState(null)       // {name, data} | {name, error}
   const [testingId, setTestingId] = useState(null)
+  const [busy, setBusy] = useState(null)      // SRCH-29: 'new' | search id while a POST/PATCH is in flight
   const [testTab, setTestTab] = useState('all')
   const [loading, setLoading] = useState(true)
   const [loadErr, setLoadErr] = useState(null)
@@ -333,15 +334,21 @@ export default function Searches() {
       pushToast({ kind: 'error', msg: errText(e, 'Could not load your searches') })
     } finally { setLoading(false) }
   }, [pushToast])
-  useEffect(() => {
-    load()
+  // SRCH-24: health + the schedule are re-read after every mutation and whenever
+  // a run finishes, not only on mount. Failures stay silent and leave whatever
+  // was loaded before in place.
+  const loadAux = useCallback(() => {
     api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => {})
-    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => {})
     api.get('/scheduler/jobs').then(({ data }) => {
       const j = (data || []).find((x) => x.id === 'scrape_all')
       if (j?.next_run) setNextRun(j.next_run)
     }).catch(() => {})
-  }, [load])
+  }, [])
+  useEffect(() => {
+    load()
+    loadAux()
+    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => {})
+  }, [load, loadAux])
 
   // poll while anything is running
   useEffect(() => {
@@ -351,11 +358,11 @@ export default function Searches() {
         const { data } = await api.get('/monitor/active')
         if (!mounted.current) return
         const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true })
-        setRunning((prev) => { if (Object.keys(prev).some((k) => !m[k])) load(); return m })
+        setRunning((prev) => { if (Object.keys(prev).some((k) => !m[k])) { load(); loadAux() } return m })
       } catch { /* retry */ }
     }, 3000)
     return () => clearInterval(h)
-  }, [running, load])
+  }, [running, load, loadAux])
 
   useEffect(() => {
     const onDoc = () => setMenuFor(null)
@@ -368,7 +375,10 @@ export default function Searches() {
   // an error wins; then health's 3-run verdict; then a single clean-but-empty run
   const warnOf = (s) => s.last_error || downMap[s.id]
     || (s.last_run_warning ? 'Last run finished cleanly but returned no jobs' : null)
-  const nWarn = searches.filter((s) => warnOf(s)).length
+  // SRCH-09: the header count uses health's verdict alone — the same source as
+  // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
+  // the broader warnOf() predicate.
+  const nWarn = searches.filter((s) => downMap[s.id]).length
   const countLine = [
     `${searches.length} config${searches.length === 1 ? '' : 's'}`,
     `${nActive} active`,
@@ -378,17 +388,26 @@ export default function Searches() {
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
   const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
+  // SRCH-10: the shell re-reads its rail badges on this event, so every mutation
+  // that changes how many searches exist fires it.
+  const bumpCounts = () => window.dispatchEvent(new CustomEvent('jn:counts-changed'))
   const save = async (s) => {
-    try { await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load() } catch (e) { fail(e, 'Could not save this search') }
+    if (busy) return
+    setBusy(s.id)
+    try { await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load(); loadAux() } catch (e) { fail(e, 'Could not save this search') }
+    finally { if (mounted.current) setBusy(null) }
   }
   const create = async () => {
+    if (busy) return
     if (!newDraft.name.trim()) { pushToast({ kind: 'error', msg: 'Name is required' }); return }
-    try { await api.post('/searches', toPayload(newDraft)); setNewOpen(false); setNewDraft(NEW_DRAFT); load() }
+    setBusy('new')
+    try { await api.post('/searches', toPayload(newDraft)); setNewOpen(false); setNewDraft(NEW_DRAFT); load(); loadAux(); bumpCounts() }
     catch (e) { fail(e, 'Could not create this search') }
+    finally { if (mounted.current) setBusy(null) }
   }
   const toggleActive = async (s) => {
     setMenuFor(null)
-    try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load() }
+    try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load(); loadAux() }
     catch (e) { fail(e, `Could not ${s.active ? 'pause' : 'resume'} “${s.name}”`) }
   }
   const runNow = async (s) => {
@@ -405,14 +424,15 @@ export default function Searches() {
   const remove = async (s) => {
     setMenuFor(null)
     if (!window.confirm(`Delete "${s.name}"?`)) return
-    try { await api.delete(`/searches/${s.id}`); load() } catch (e) { fail(e, `Could not delete “${s.name}”`) }
+    try { await api.delete(`/searches/${s.id}`); load(); loadAux(); bumpCounts() } catch (e) { fail(e, `Could not delete “${s.name}”`) }
   }
   const duplicate = async (s) => {
     setMenuFor(null)
-    try { await api.post('/searches', { ...toPayload(draftOf(s)), name: `${s.name} (copy)` }); load() } catch (e) { fail(e, `Could not duplicate “${s.name}”`) }
+    try { await api.post('/searches', { ...toPayload(draftOf(s)), name: `${s.name} (copy)` }); load(); loadAux(); bumpCounts() } catch (e) { fail(e, `Could not duplicate “${s.name}”`) }
   }
 
   const runTest = async (s) => {
+    if (testingId) return                       // SRCH-23: one Test at a time
     setMenuFor(null); setTestingId(s.id); setTestTab('all')
     // Every preview path (jobright/freehire/linkedin_personal, and the keyword
     // scrape-failed branch) reports failure as {"error": …} with HTTP 200.
@@ -463,12 +483,12 @@ export default function Searches() {
               <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em' }}>New search</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>pick a mode — the fields below follow it</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--bg)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Runs on the next scheduled sweep once created</span>
-                <div onClick={() => setNewOpen(false)} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                <div onClick={create} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Create search</div>
+                <div onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                <div onClick={create} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: busy === 'new' ? 'default' : 'pointer', opacity: busy === 'new' ? .6 : 1 }}>{busy === 'new' ? 'Creating…' : 'Create search'}</div>
               </div>
             </div>
           </div>
@@ -483,6 +503,7 @@ export default function Searches() {
           const depth = s.auto_scoring_depth || 'off'
           const dep = DEPTHS.find((x) => x.id === depth)
           const isOpen = editing === s.id
+          const testBlocked = !!testingId && testingId !== s.id   // SRCH-23
           const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
@@ -531,8 +552,9 @@ export default function Searches() {
                       {spin ? 'Running' : 'Run'}
                     </span>
                     {TESTABLE.includes(s.search_mode) && (
-                      <span onClick={() => runTest(s)} className="v2-bdc" title="Dry run — previews results and per-job filter reasons, saves nothing"
-                        style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                      <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
+                        title={testBlocked ? 'A test is already running' : 'Dry run — previews results and per-job filter reasons, saves nothing'}
+                        style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
                         {testingId === s.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
                     )}
@@ -558,12 +580,12 @@ export default function Searches() {
 
               {/* inline edit form */}
               {isOpen && draft && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', borderTop: '1px solid var(--line-soft)', background: 'var(--bg)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', borderTop: '1px solid var(--line-soft)', background: 'var(--recessed)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }} onClick={(e) => e.stopPropagation()}>
                   <ConfigForm d={draft} set={(p) => setDraft((x) => ({ ...x, ...p }))} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>Changes apply from the next run</span>
                     <div onClick={() => setEditing(null)} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                    <div onClick={() => save(s)} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Save changes</div>
+                    <div onClick={() => save(s)} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: busy === s.id ? 'default' : 'pointer', opacity: busy === s.id ? .6 : 1 }}>{busy === s.id ? 'Saving…' : 'Save changes'}</div>
                   </div>
                 </div>
               )}
