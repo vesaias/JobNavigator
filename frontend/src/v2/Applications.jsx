@@ -383,7 +383,7 @@ export default function Applications() {
           intForm={intForm} setIntForm={setIntForm} intWhat={intWhat} setIntWhat={setIntWhat}
           intWhen={intWhen} setIntWhen={setIntWhen} intWhere={intWhere} setIntWhere={setIntWhere}
           intPrep={intPrep} setIntPrep={setIntPrep}
-          addInterview={addInterview} delInterview={delInterview} toggleInterview={toggleInterview} openPrep={openPrep} />
+          addInterview={addInterview} canAddInterview={canAddInterview} delInterview={delInterview} toggleInterview={toggleInterview} openPrep={openPrep} />
           : <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13 }}>Select an application.</div>}
       </div>
 
@@ -398,7 +398,7 @@ export default function Applications() {
 function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes, onDelete, navigate,
                   intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen,
                   intWhere, setIntWhere, intPrep, setIntPrep,
-                  addInterview, delInterview, toggleInterview, openPrep }) {
+                  addInterview, canAddInterview, delInterview, toggleInterview, openPrep }) {
   const meta = [fmtSalary(d.salary_min, d.salary_max), d.location].filter(Boolean).join(' · ') || 'No posting details captured'
   const cv = d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'
   const ivs = d.interviews || []
