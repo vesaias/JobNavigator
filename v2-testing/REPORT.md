@@ -8,15 +8,15 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 26 | 76 | 9 |
-| P4 | 90 | 8 | 69 | 13 |
-| **All** | **276** | **108** | **145** | **23** |
+| P3 | 111 | 29 | 72 | 10 |
+| P4 | 90 | 12 | 64 | 14 |
+| **All** | **276** | **115** | **136** | **25** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
-| companies.md | 37 | 1 | 12 | 16 | 8 | 22 |
+| companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
@@ -72,10 +72,17 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - COMP-16 (P3) — `.v2-hover-accent`'s colour half has never fired on this screen (drawer ✕, test-modal ✕)
 - COMP-18 (P3) — A never-scraped active company reads `healthy · scraped never` with a **green** dot
 - COMP-19 (P3) — `last_run_warning` is returned but never rendered — one zero-result run looks perfectly healthy
+- COMP-23 (P3) — The test modal computes per-state row tints and never applies them
 - COMP-24 (P3) — Globally-excluded rows are indistinguishable from per-company exclusions, and the two "after filter" numbers are never shown
 - COMP-25 (P3) — The column-header rule is in the wrong place and the wrong weight
 - COMP-27 (P3) — Add-modal `Save` stays live while `saving` — a double click double-POSTs
+- COMP-28 (P3) — Native `confirm`/`alert` on a screen with no other native dialogs
+- COMP-29 (P3) — No first-run empty state, and the tier-empty copy doesn't name the tiers
+- COMP-32 (P4) — Drawer subtitle is not pluralised
+- COMP-33 (P4) — Row tooltips drop the information the design put in them
+- COMP-34 (P4) — Add-modal control radii/heights differ from the design
 - COMP-35 (P4) — Dead code
+- COMP-37 (P4) — `Escape` discards an edited draft with no confirmation, and clicking another row silently replaces it
 - CL-01 (P2) — Editor autosave silently drops a patch of a different kind — the template you picked is never saved and the header says "saved"
 - CL-02 (P2) — Editor gets permanently stuck in "Regenerating…" if the post-run reload fails
 - CL-03 (P2) — Regenerate poll waits for *every* cover-letter run in the system, not this letter's

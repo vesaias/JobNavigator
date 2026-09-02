@@ -154,7 +154,7 @@ Separately, `application_count` counts every application in any state, so both "
 | depth / tier Seg options | *(none in the design)* | border→accent (extra) |
 | status pill, row, menu items, delete item, sort trigger, `+ Add company`, `Save changes`, `Cancel`, tuning header, `Show screenshots`, `Close` | as designed | ✔ |
 
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: keep code (unified accent hovers across v2) or match the design?
+**Status** decided 2026-09-02: the accent border+wash hover is deliberate and now unified — the URL ✕ (the one outlier, background only) also tints its glyph `--bad` on hover; tier chips / Seg options keep the same accent border
 
 ### COMP-18 · P3 · A never-scraped active company reads `healthy · scraped never` with a **green** dot
 **Where** `Companies.jsx:235` + `ago(null) → 'never'` (`:7`)
@@ -202,7 +202,7 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 **Expected + why** design `.dc.html:325` `background:{{ j.bg }}` with `#fff` / `#fdf8f7` (out) / `#fdfaf5` (drop).
 **Actual** measured on a real 577-row result: every row `backgroundColor: rgba(0,0,0,0)`. `bg` is dead code in all three branches.
 **Proposed fix** either apply `st.bg` (mapped to `--surface` / `--bad-faint` / `--recessed`) or delete the field.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed in source: the never-painted `bg` field removed from `jobState` (user: tint not needed)
 
 ### COMP-24 · P3 · Globally-excluded rows are indistinguishable from per-company exclusions, and the two "after filter" numbers are never shown
 **Where** `Companies.jsx:690-693` (only `[Validation]` and `kept` are special-cased); backend returns `passes_company_filter`, `global_excluded_by`, `after_company_filter`, `global_exclude_keyword_count` (`routes_companies.py:559-584`)
@@ -230,13 +230,13 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 ### COMP-28 · P3 · Native `confirm`/`alert` on a screen with no other native dialogs
 **Where** `Companies.jsx:219` (delete confirm), `:592` (name required), `:603` (server error)
 **Actual** measured messages: `Delete ZZTEST Gamma? Jobs already found are kept.` (dismiss → no DELETE, row kept; accept → DELETE, row gone, **no toast**), `Company name is required`, `Company already exists`. The design has no dialog for any of these; the rest of v2 uses modals and toasts.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: delete uses a styled ConfirmDialog (400 px card, Cancel / red Delete) — Cancel keeps the row, Delete removes it; no native dialogs left on the screen
 
 ### COMP-29 · P3 · No first-run empty state, and the tier-empty copy doesn't name the tiers
 **Where** `Companies.jsx:406-412`
 **Expected + why** design `.dc.html:594-595`: `emptyHint` for a tier filter is `"No companies in " + tiers.map(…).join(", ") + "."` — it names them.
 **Actual** code always prints the generic `No companies in the selected tiers.`, and a genuinely empty database falls into the same "No companies match" + `Clear filters` branch, which does nothing useful. (Not directly reproducible on this data set: all four tiers have rows, so the tier-only empty branch could not be triggered — see "Couldn't test".)
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: empty database shows "No companies yet — Add one with + Add company…" (no Clear filters); a tier-only miss names the tiers ("No companies in Tier 1, Tier 3.")
 
 ### COMP-30 · P4 · `Ø Fit` uses U+00D8 (Latin O with stroke); the design uses U+2300 `⌀` (diameter sign)
 **Where** `Companies.jsx:330`; design `.dc.html:90`
@@ -246,12 +246,12 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 ### COMP-31 · P4 · Tier chip count is bare, and the tooltip doesn't say what the click will do
 **Where** `Companies.jsx:281,283`; design `.dc.html:597-600`: `count: "(" + n + ")"` and `hint: (on ? "Remove from filter" : "Add to filter") + " · multi-select, remembered per browser"`
 **Actual** measured labels `Tier 1 5`, `Tier 2 21`, `Tier 3 35`, `Untiered 65` (no parentheses); tooltip is the static `Add/remove from filter · multi-select, remembered per browser` on all four regardless of state. Counts themselves are correct: 5+21+35+65 = 126 = header `tracked` = rail badge `126`. ✔
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** decided 2026-09-02: keep the bare counts and static tooltip
 
 ### COMP-32 · P4 · Drawer subtitle is not pluralised
 **Where** `Companies.jsx:432`; design `.dc.html:715-716` pluralises both nouns
 **Actual** measured: `Tier 1 · 1 career URL(s) · 1 open application(s)`.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: "1 career URL · 0 applications" pluralised properly
 
 ### COMP-33 · P4 · Row tooltips drop the information the design put in them
 **Where** `Companies.jsx:346` (name), `:362` (ATS), `:356` (health), `:359` (résumés)
@@ -261,13 +261,13 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 - health `title` = the same string as the visible text; design: `c.down || (active ? "Last successful run …" : "Inactive — jobs already found are kept")` (`.dc.html:645`).
 - résumés `title` = the names again; design: `"New jobs are scored against …"` / `"None selected — falls back to your default résumé from Settings"` (`.dc.html:652`).
 - alias `title` lists **all** aliases; design lists `slice(1)`. (See COMP-11.)
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: name tooltip carries the H-1B filing count and approval rate when known; ATS tooltip lists "{ATS} · {url}" per line plus "H-1B slug · {slug|auto-detected}"; health tooltip is the design's "Last successful run …" / "Inactive — jobs already found are kept" / the down reason. Résumés cell had no tooltip to fix
 
 ### COMP-34 · P4 · Add-modal control radii/heights differ from the design
 **Where** `Companies.jsx:618,625,629,639` (inputs, `monoBox`/`inputBox` radius 7), `:635` (tier `Seg`, height 32)
 **Actual** measured: inputs `h 33 / radius 7px` (design `33 / 8px`); tier segs `h 32 / radius 7` (design `33 / 8`); depth chips `h 26 / radius 99` ✔; résumé chips `h 27 / radius 99` ✔; card `520 × 555.75`, radius 12, border `--line`, scrim `rgba(20,19,15,0.42)` ✔.
 Also: the card's height is fractional (555.75) — content-driven, harmless, but it puts the modal on a half pixel.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: inputs radius 8 px / min-height 33 px; tier segments 33 px
 
 ### COMP-35 · P4 · Dead code
 **Where** `Companies.jsx:1` (`useRef` imported, unused), `:16` (`norm`, unused — the row filter re-lowercases inline at `:176`), `:98` (`Seg` prop `big`, never passed), `:415`/`:423` (`onDelete` passed and destructured, no control uses it — the drawer has no delete), `:691-693` (`jobState().bg`, see COMP-23).
@@ -282,7 +282,7 @@ All six comparators verified against the data: name `a16z, Addepar, Adobe`; tier
 ### COMP-37 · P4 · `Escape` discards an edited draft with no confirmation, and clicking another row silently replaces it
 **Where** `Companies.jsx:158` (one Escape handler closes sort menu + row menu + drawer + add modal + test modal), `:341` → `:241`
 **Actual** measured: typed `ZZTEST Alpha EDITED` into the drawer (title mirrors the draft live), pressed Escape → drawer gone, nothing saved, no prompt. Clicking a second row while a dirty draft is open replaces the draft outright (verified: title changed to the second company). Escape also closes the Add modal mid-entry.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
+**Status** fixed + verified after rebuild: Escape, the drawer ✕ and clicking another row with unsaved edits open a "Discard changes?" confirm; Cancel keeps the draft, Discard closes it without saving
 
 ---
 
