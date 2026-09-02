@@ -12,7 +12,8 @@ import './theme.css'
 
 const PERIODS = [[1, '1d'], [7, '7d'], [30, '30d'], [0, 'all']]
 const BUCKET_COLOR = {
-  '0-20': 'var(--line)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
+  // STAT-21: --line is a border token; as a fill it vanished into the card in dark
+  '0-20': 'var(--line-strong)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
   '61-80': 'var(--funnel-mid)', '81-100': 'var(--accent)',
 }
 const TYPE_CLASS = {
@@ -101,6 +102,12 @@ export default function Stats() {
   const pollRef = useRef(null)
   const runningRef = useRef(false)
   const qRef = useRef(null)
+  // STAT-04: the schedules columns are fixed-width and the card has no scroller,
+  // so below ~1100px the Run now buttons spilled past its right border. Measure
+  // the card and drop columns right-to-left as it narrows; the job name (which
+  // shrinks to an ellipsis) and the run control are the two that always survive.
+  const schedRef = useRef(null)
+  const [schedW, setSchedW] = useState(1200)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const loadCore = useCallback(async () => {
@@ -156,6 +163,14 @@ export default function Stats() {
     pollRef.current = setTimeout(poll, 3000)
     return () => clearTimeout(pollRef.current)
   }, [loadLive])
+
+  useEffect(() => {
+    const el = schedRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(([en]) => setSchedW(en.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [loading])
 
   const refresh = async () => {
     if (refreshing) return
@@ -217,8 +232,9 @@ export default function Stats() {
   // snapshot — an application that interviewed and was then rejected counts as
   // rejected there, so reading Interview off it undercounts badly. The status
   // transition graph records every hop, so downstream stages come from that.
-  // Saved is a different population (the live shortlist), so it carries no
-  // conversion percentage; bar widths are relative to the widest stage.
+  // STAT-06: every row now counts applications (Saved was the live job shortlist,
+  // a different population, which made the widest-row normalisation read upside
+  // down). Widths are relative to Applied, the top of the funnel.
   const reached = useMemo(() => {
     const to = {}
     for (const f of flows) to[f.target] = (to[f.target] || 0) + (f.value || 0)
@@ -226,16 +242,18 @@ export default function Stats() {
   }, [flows])
   const funnel = useMemo(() => {
     const applied = stats?.total_applications || 0
+    // STAT-05: the design's one neutral → accent ramp, ending on the neutral
+    // --line-strong for the terminal Rejected row.
     const rows = [
-      ['Saved', stats?.saved_jobs || 0, 'var(--line-strong)'],
-      ['Applied', applied, 'var(--stage-applied)'],
-      ['Interview', reached.interview || st.interview || 0, 'var(--warn)'],
-      ['Offer', reached.offer || st.offer || 0, 'var(--good)'],
+      ['Applied', applied, 'var(--funnel-low)'],
+      ['Interview', reached.interview || st.interview || 0, 'var(--funnel-mid)'],
+      ['Offer', reached.offer || st.offer || 0, 'var(--accent)'],
+      ['Rejected', reached.rejected || st.rejected || 0, 'var(--line-strong)'],
     ]
-    const widest = Math.max(1, ...rows.map((r) => r[1]))
+    const base = Math.max(1, applied)
     return rows.map(([label, count, color]) => ({
       label, count, color,
-      w: `${Math.max(count ? 2 : 0, Math.round((count / widest) * 100))}%`,
+      w: `${Math.min(100, Math.max(count ? 2 : 0, Math.round((count / base) * 100)))}%`,
     }))
   }, [stats, st, reached])
   const conv = (a, b) => (a ? `${Math.round((b / a) * 100)}%` : '—')
@@ -257,6 +275,8 @@ export default function Stats() {
   const buckets = scores?.buckets || []
   const maxBucket = Math.max(1, ...buckets.map((b) => b.count))
   const spend = costs?.total_cost_usd
+  // widths each column needs, measured against the 250/132/140/132/110 grid + 40px padding
+  const showId = schedW >= 830, showSched = schedW >= 700, showNext = schedW >= 560, showStatus = schedW >= 430
 
   if (loading) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
 
@@ -324,7 +344,7 @@ export default function Stats() {
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
                   {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
                     const on = flowView === id
-                    return <span key={id} onClick={() => setFlowView(id)} className="v2-bdc v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                    return <span key={id} onClick={() => setFlowView(id)} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
                   })}
                 </span>
               )}
@@ -352,7 +372,7 @@ export default function Stats() {
               ))}
             </div>
             <span style={{ ...NOTE, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: '15px' }}>
-              <span>Saved is your live shortlist; the rest count every application that ever reached that stage</span>
+              <span>Every row counts applications that ever reached that stage; bars are relative to Applied</span>
               <span>applied → interview {conv(stats?.total_applications, reached.interview || 0)} · interview → offer {conv(reached.interview || 0, reached.offer || 0)}</span>
             </span>
             </div>
@@ -388,9 +408,11 @@ export default function Stats() {
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>New jobs · last 30 days</span>
               <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
-              {[['new', 'var(--accent)', false], ['applied', 'var(--warn)', true]].map(([l, c, dash]) => (
+              {/* STAT-07: --stage-applied is the applied series everywhere else in
+                  v2 and contrasts in both modes; the swatch is solid, as designed */}
+              {[['new', 'var(--accent)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
                 <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}>
-                  <span style={{ width: 14, height: 2, background: dash ? `repeating-linear-gradient(90deg, ${c} 0 4px, transparent 4px 7px)` : c }} />{l}
+                  <span style={{ width: 14, height: 2, background: c }} />{l}
                 </span>
               ))}
             </div>
@@ -405,7 +427,7 @@ export default function Stats() {
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
                   const on = period === id
-                  return <span key={label} onClick={() => setPeriod(id)} className="v2-bdc v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                  return <span key={label} onClick={() => setPeriod(id)} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
                 })}
               </span>
             </div>
@@ -433,7 +455,7 @@ export default function Stats() {
                   <span title={c.model} style={{ flex: 1.4, ...MONO, fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.model || '—'}</span>
                   <span style={{ flex: '0 0 42px', textAlign: 'right', ...MONO, color: 'var(--text-2)' }}>{c.calls}</span>
                   <span style={{ flex: '0 0 58px', textAlign: 'right', ...MONO, color: 'var(--text)' }}>{money(c.cost_usd)}</span>
-                  <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--edge)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
+                  <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--muted)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
                 </div>
               ))}
               {!(costs?.by_purpose || []).length && <div style={{ padding: '14px 0', ...NOTE }}>No LLM calls in this window.</div>}
@@ -443,37 +465,40 @@ export default function Stats() {
         </div>
 
         {/* schedules */}
-        <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+        <div ref={schedRef} style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <span style={H}>Schedules</span>
             <span style={NOTE}>{jobs.length} job{jobs.length === 1 ? '' : 's'} · next runs in {TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
-            <span style={{ flex: '0 0 250px' }}>Job</span><span style={{ flex: '0 0 132px' }}>Job ID</span>
-            <span style={{ flex: '0 0 140px' }}>Schedule</span><span style={{ flex: '0 0 132px' }}>Next run</span>
-            <span style={{ flex: 1 }}>Status</span><span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
+            <span style={{ flex: '0 1 250px', minWidth: 0 }}>Job</span>
+            {showId && <span style={{ flex: '0 0 132px' }}>Job ID</span>}
+            {showSched && <span style={{ flex: '0 0 140px' }}>Schedule</span>}
+            {showNext && <span style={{ flex: '0 0 132px' }}>Next run</span>}
+            <span style={{ flex: 1, minWidth: 0 }}>{showStatus ? 'Status' : ''}</span>
+            <span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
           </div>
           {ordered.map((j) => {
             const running = !!j.running || triggering.has(j.id)
             return (
               <div key={j.id} style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 20px', borderBottom: '1px solid var(--line-soft)' }}>
-                <span title={j.name} style={{ flex: '0 0 250px', fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
-                <span title={j.id} style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</span>
-                <span title={j.schedule} style={{ flex: '0 0 140px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>
-                <span style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : when(j.next_run)}</span>
-                <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {running
-                    ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
-                    : <span style={{ width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />}
-                  <span style={{ fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)' }}>
-                    {running ? `Running · ${Math.round(j.running?.elapsed_seconds || 0)}s` : j.pending ? 'Pending' : 'Scheduled'}
-                  </span>
+                <span title={j.name} style={{ flex: '0 1 250px', minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
+                {showId && <span title={j.id} style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</span>}
+                {showSched && <span title={j.schedule} style={{ flex: '0 0 140px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>}
+                {showNext && <span style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : when(j.next_run)}</span>}
+                <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {showStatus && (running
+                    ? <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                    : <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />)}
+                  {showStatus && <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {running ? `Running · ${dur(j.running?.elapsed_seconds || 0)}` : j.pending ? 'Pending' : 'Scheduled'}
+                  </span>}
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
+                    ? <span onClick={() => !running && trigger(j)} className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
                         {running && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
-                        {running ? 'Running' : 'Run now'}
+                        {running ? 'Running…' : 'Run now'}
                       </span>
                     : <span style={{ ...NOTE }}>—</span>}
                 </span>
@@ -486,13 +511,13 @@ export default function Stats() {
         <div style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '12px 20px 10px' }}>
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
-              <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--edge)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
+              <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
             ))}
             <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? 'last 30 scheduler and manual runs' : 'everything the pipeline did, newest first'}</span>
             {tab === 'activity' && (
               <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>
-                  <span onClick={() => setTypeOpen((v) => !v)} className="v2-bdc v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
+                  <span onClick={() => setTypeOpen((v) => !v)} className="v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
                     Type{actType ? ' · 1' : ''}<span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
                   </span>
                   {typeOpen && (
@@ -581,12 +606,12 @@ function Spark({ series, peak }) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
           <XAxis dataKey="label" interval={6} {...axis} />
           <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--accent)' }} />
-          <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--warn)' }} />
+          <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--stage-applied)' }} />
           <Tooltip
             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, padding: '6px 10px' }}
             labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
           <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-          <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--warn)" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 3 }} />
+          <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--stage-applied)" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
       {peak?.total > 0 && <span style={{ flex: '0 0 auto', alignSelf: 'center', ...MONO, fontSize: 10, lineHeight: '14px', color: 'var(--muted)' }}>peak {peak.total} · {dayLabel(peak.date)}</span>}
