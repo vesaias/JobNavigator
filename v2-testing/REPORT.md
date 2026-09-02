@@ -7,25 +7,25 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 92 | 1 | 18 |
-| P4 | 91 | 59 | 3 | 29 |
-| **All** | **277** | **225** | **4** | **48** |
+| P2 | 70 | 69 | 1 | 0 |
+| P3 | 111 | 94 | 1 | 0 |
+| P4 | 92 | 61 | 4 | 0 |
+| **All** | **278** | **229** | **6** | **0** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
+| applications.md | 23 | 0 | 7 | 10 | 6 | 19 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
-| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 26 |
+| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 27 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 31 |
-| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 36 |
+| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 37 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 32 | 1 | 8 | 13 | 10 | 29 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
-| settings.md | 27 | 2 | 4 | 12 | 9 | 21 |
+| settings.md | 28 | 2 | 4 | 12 | 10 | 21 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
-| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 9 |
+| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 10 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 1 |
 
 ## The five P1s — all fixed and re-verified on the rebuilt bundle
@@ -50,6 +50,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - APPS-12 (P3) — A completely blank interview form creates an "Interview / Unscheduled" card
 - APPS-13 (P3) — Interview ✕ deletes with no confirm and no undo
 - APPS-15 (P3) — A hand-logged application's history reads "Discovered via a company scrape"
+- APPS-17 (P3) — The Log modal demands a URL although its own copy says it is for off-app applications
 - APPS-18 (P4) — "Cached" never appears for a freshly logged application until a later refetch
 - APPS-19 (P4) — The rail "Applications" badge is never refreshed by this screen
 - APPS-21 (P4) — "Applied on" is a UTC date sent as UTC midnight
@@ -64,12 +65,12 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - COMP-08 (P2) — `Apps` is name-only while `Open`, `+7d` and `Ø Fit` are alias-summed; and the column means *all* applications
 - COMP-09 (P2) — `⋯ → View jobs in feed` is a raw `<a href>` that full-page-reloads into an *unfiltered* feed
 - COMP-10 (P2) — At 1024 px the toolbar overflows and the `Sort` control is pushed off-screen with no way to reach it
-- COMP-11 (P2) — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
 - COMP-12 (P2) — `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
 - COMP-13 (P2) — Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
 - COMP-14 (P3) — Every row lands on a half pixel (fractional `getBoundingClientRect().top`)
 - COMP-15 (P3) — The sort menu's hover never fires — an inline `background: 'transparent'` beats `.v2-menuitem:hover`
 - COMP-16 (P3) — `.v2-hover-accent`'s colour half has never fired on this screen (drawer ✕, test-modal ✕)
+- COMP-17 (P3) — Hover taxonomy differs from the design on six controls
 - COMP-18 (P3) — A never-scraped active company reads `healthy · scraped never` with a **green** dot
 - COMP-19 (P3) — `last_run_warning` is returned but never rendered — one zero-result run looks perfectly healthy
 - COMP-23 (P3) — The test modal computes per-state row tints and never applies them
@@ -105,6 +106,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-21 (P3) — Neither screen is keyboard-operable and no control shows focus
 - CL-22 (P4) — Regenerate keeps no lineage — the previous draft is unrecoverable
 - CL-23 (P4) — Header/gutter counts and the archive-band count disagree while a search is typed
+- CL-24 (P4) — Design deviations (deliberate-looking; listed for the record)
 - CL-25 (P4) — Escape closes the Regenerate modal mid-run while Cancel and the scrim refuse
 - CL-26 (P4) — The two screens format the same timestamp differently
 - CL-27 (P4) — `POST /cover-letters` returns a context-free row
@@ -172,6 +174,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - STAT-13 (P4) — A long-running job reads `Running · 3671s`
 - STAT-15 (P4) — The 30-day series keys on UTC dates while the backend groups on local dates
 - STAT-16 (P4) — Nothing on the screen is a link, including the one the rail advertises
+- STAT-17 (P4) — Hover, column and label deviations from the design (grouped)
 - STAT-18 (P4) — Both logs are silently truncated
 - STAT-19 (P4) — Sankey and funnel disagree on how many applications there are
 - STAT-21 (P4) — Border tokens used as fills and as text lose their contrast in dark
@@ -256,6 +259,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - F-003 (P4) — theme.css · 10 tokens defined but never used
 - F-004 (P4) — theme.css · 5 shadow tokens have no dark variant
 - F-005 (P2) — Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
+- F-006 (P2) — Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
 - F-007 (P2) — Backend · Any non-UUID id in a path returns 500 instead of 404
 - F-008 (P2) — Backend · Order-only edits to dict-shaped JSON columns were silently dropped (Résumé + Persona skills ▲▼)
 - F-009 (P3) — Cross-cutting · Half-pixel rows persist outside the rows the screen passes fixed
@@ -269,7 +273,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
 ## Open P2s that need you (1)
-- F-006 — Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
+- COMP-11 — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
 
 ## Decisions that close many findings at once
 1. **Half-pixel rows (F-009)** — a systematic line-height pass (~40–60 one-line edits) or accept as backlog. Closes the FEED-02 residue, SRCH-07, APPS-08, CL-09/10, PERS-11.

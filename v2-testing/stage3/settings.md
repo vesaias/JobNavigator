@@ -341,6 +341,11 @@ Measured, all as specified — full data in the scripts.
 - `.v2-anchor:hover` (rail anchor → `--text`) and `.v2-menuitem:hover` (Select options and catalog suggestions → `--surface-2`) measure **no change** in bundle `index-Dnrx3n0f.js`; both now carry `!important` in `theme.css:149,168` from commit `5c6c17a` ("harden menu/anchor/navlink hovers"). Rebuild pending.
 - `.v2-hover-accent` (modal ✕) still changes background only, not colour, in the shipped bundle — the source fix flagged in my brief. Not re-logged.
 
+### SET-28 · P4 · POST /settings accepts an unknown key (no allow-list)
+**Where** `backend/api/routes_settings.py:51-54` (filed from the stage-4 round-trip observation by the R1 audit)
+**Actual** the UI cannot produce one, but the API writes any key it is handed.
+**Status** needs decision — reject unknown keys with 400, or keep the open write path.
+
 ## Fixed in source
 
 - `frontend/src/v2/Settings.jsx:66-100` — `TextBox`: an unset secret no longer renders the mask, show/hide is hidden when there is nothing to show, revealing clears the mask instead of leaving it editable, and `commit()` refuses to save a bare mask or to wipe a stored secret with an empty box (SET-01, SET-02).

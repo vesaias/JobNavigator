@@ -98,7 +98,7 @@ Separately, `application_count` counts every application in any state, so both "
 **Expected + why** The design assumed `aliases[0]` is the company's own name (`.dc.html:640`, `aliasHint` uses `c.aliases.slice(1)`, and its fixtures store `aliases: ["Stripe", "Stripe Inc."]`). The real DB stores aliases as **additional** names only: `Microsoft → ["Microsoft AI"]`, `Amazon → ["Amazon Music","AWS", …]` (6). `find_company_by_name` checks name *then* aliases, confirming they are extra.
 **Actual** measured: Microsoft (1 alias) renders **no badge**; a scratch company with 2 aliases renders **`+1`**; Amazon (6) renders `+5`. The tooltip, meanwhile, lists **all** aliases (`aliases.join(', ')`), so badge and tooltip disagree.
 **Proposed fix** `aliases.length > 0` → `+{aliases.length}`, tooltip unchanged.
-**Status** fixed in source? no — logged; one-line change but it silently shifts every row, so: needs decision.
+**Status** needs decision — not fixed (scored as fixed until the R1 audit): `aliases.length > 0` → `+{aliases.length}` is a one-line change; one-line change but it silently shifts every row, so: needs decision.
 
 ### COMP-12 · P2 · `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
 **Where** `Companies.jsx:545` (`min={1} max={20}`), save `:451` (`parseInt(draft.max_pages) || 5`), `:449` (`parseInt || null`)
@@ -154,7 +154,7 @@ Separately, `application_count` counts every application in any state, so both "
 | depth / tier Seg options | *(none in the design)* | border→accent (extra) |
 | status pill, row, menu items, delete item, sort trigger, `+ Add company`, `Save changes`, `Cancel`, tuning header, `Show screenshots`, `Close` | as designed | ✔ |
 
-**Status** decided 2026-09-02: the accent border+wash hover is deliberate and now unified — the URL ✕ (the one outlier, background only) also tints its glyph `--bad` on hover; tier chips / Seg options keep the same accent border
+**Status** fixed + decided 2026-09-02: the accent border+wash hover is deliberate and now unified — the URL ✕ (the one outlier, background only) also tints its glyph `--bad` on hover; tier chips / Seg options keep the same accent border
 
 ### COMP-18 · P3 · A never-scraped active company reads `healthy · scraped never` with a **green** dot
 **Where** `Companies.jsx:235` + `ago(null) → 'never'` (`:7`)

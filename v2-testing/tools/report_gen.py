@@ -1,15 +1,5 @@
 import re, glob, collections, io, os
 os.chdir(r"V:\JTrakProject")
-ups = {"v2-testing/stage3/companies.md": ("COMP-01", "fixed + verified after rebuild (drawer stays open on PATCH 500, inline \"Save failed — nothing was changed\", error toast; Drawer `save` awaits `patchCompany`, which now returns true/false)"),
-       "v2-testing/stage3/persona-stats.md": ("PERS-01", "fixed + verified after rebuild (`Persona.jsx` qa memo accepts list, legacy dict → pairs, anything else → []; dict qa_bank rendered with 0 page errors)"),
-       "v2-testing/stage3/resumes.md": ("RES-01", "fixed + verified after rebuild (`ResumeEditor.jsx:250` autosave catch → error toast \"Save failed — your last edit is not stored\", `savedAt` cleared; measured on PATCH 500)")}
-for f, (fid, new) in ups.items():
-    s = open(f, encoding="utf-8").read()
-    m = re.search(r"(^### " + fid + r" ·.*?\*\*Status\*\*\s*)([^\n]*)", s, re.S | re.M)
-    assert m, fid
-    s = s[:m.start(2)] + new + s[m.end(2):]
-    open(f, "w", encoding="utf-8").write(s); print("updated", fid)
-
 sev = collections.Counter(); status = collections.Counter(); rows = []; per = collections.OrderedDict()
 files = sorted(glob.glob("v2-testing/stage3/*.md")) + ["v2-testing/FINDINGS.md", "v2-testing/stage5/cross-cutting.md"]
 for f in files:
@@ -18,7 +8,7 @@ for f in files:
     c = collections.Counter()
     for m in re.finditer(r"^### ([A-Z]+-\d+) · (P[1-4]) · ([^\n]*)\n((?:(?!^### ).*\n?)*)", s, re.M):
         fid, p, title, body = m.groups(); st = re.search(r"\*\*Status\*\*\s*([^\n]*)", body); st = (st.group(1) if st else "").lower()
-        kind = "fixed" if st.startswith("fixed") else ("decision" if "needs decision" in st or "needs your" in st else "logged")
+        kind = ("fixed" if st.startswith("fixed") else "decision" if ("needs decision" in st or "needs your" in st or st.startswith("awaiting")) else "decided" if (st.startswith("decided") or st.startswith("closed")) else "logged")
         sev[p] += 1; status[kind] += 1; c[p] += 1; c[kind] += 1; rows.append((fid, p, kind, title.strip()))
     per[name] = c
 fixed_ids = [r for r in rows if r[2] == "fixed"]

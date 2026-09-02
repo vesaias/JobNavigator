@@ -53,7 +53,7 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Expected + why** Either the docs are right and the CMD carries `--reload`, or the docs say to restart. During this pass two "verified live" backend fixes (F-005 trigger_url, the Companies `create_company` aliases fix) were in fact not live until a manual restart.
 **Actual** Measured: POST `/api/companies` with `aliases` after the source fix returned `aliases: []` until `docker compose restart backend`; afterwards the same POST returned the aliases.
 **Proposed fix** Docs corrected in this pass (HANDOVER, CLAUDE.md, Stage 3 brief). Optionally add `--reload` for dev (`--reload-dir /app/backend`), but that changes prod behaviour — your call.
-**Status** docs fixed; decided 2026-09-02: keep restart-only (no `--reload`), the watcher could restart mid-scrape.
+**Status** fixed (docs) + decided 2026-09-02: keep restart-only (no `--reload`), the watcher could restart mid-scrape.
 
 ### F-007 · P2 · Backend · Any non-UUID id in a path returns 500 instead of 404
 **Where** every `/{id}` route: `routes_jobs.py:517` and equivalents in resumes, cover-letters, applications, companies, searches, `main.py` monitor

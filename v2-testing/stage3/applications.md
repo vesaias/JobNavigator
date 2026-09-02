@@ -145,7 +145,7 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 **Where** `Applications.jsx:566` — `if (!title || !company || !url) alert('URL, title and company are all required')`. The design's Save has no validation at all.
 **Actual** measured (`validation_alert`): `{type:'alert', msg:'URL, title and company are all required'}`. `create_application` genuinely needs a URL (it is the `external_id` seed, `routes_applications.py:232`), so this is a backend constraint surfacing as a raw `window.alert` — the only `alert()` on the whole screen.
 **Proposed fix** either accept a blank URL (synthesise `manual://{company}/{title}` for the external_id) or say so in the field label; replace `window.alert` with inline field errors.
-**Status** decided: URL stays required (it seeds the dedup id); the message now says why and the first empty field is focused instead of a bare alert
+**Status** fixed + decided: URL stays required (it seeds the dedup id); the message now says why and the first empty field is focused instead of a bare alert
 
 ### APPS-18 · P4 · "Cached" never appears for a freshly logged application until a later refetch
 **Where** page caching is a `BackgroundTask` (`routes_applications.py:314`); `onSaved` → `load(id)` (`:341`) runs immediately.
