@@ -572,3 +572,361 @@ collections `Recommended` / `Top Applicant` (72),
 `fine`: 15 listed + ~90 short.
 
 ---
+## Companies.jsx
+
+| file:line | text | flag | why |
+|---|---|---|---|
+| Companies.jsx:805 | `${k} kept · ${x} keyword-filtered · ${r} validation-rejected · ${t} extracted · ${p} pass this company's filters · ${d} removed by the global list` | long | six figures and four coined terms in one line |
+| Companies.jsx:699 | `No known ATS — the page is loaded and read as HTML. If it lists nothing, set a wait-for selector in the company config.` | long | 23 words, explanation plus conditional fix |
+| Companies.jsx:773 | `Title filters, wait-for selector and max pages use the defaults — change them in the company config when a board needs it.` | long | 21 words, two ideas |
+| Companies.jsx:537 | `No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.` | long | second sentence is about a different thing |
+| Companies.jsx:240,241 | `Applies to the ${n} companies in the current filter · jobs already found are kept` | long | scope plus a reassurance in one line |
+| Companies.jsx:502 | `Add one with + Add company — its career page is scraped and the jobs land in the Feed.` | metaphor | "jobs land in the Feed" |
+| Companies.jsx:601 | `Postings under these names collapse into this company.` | metaphor | "collapse into" |
+| Companies.jsx:537 | `${n} filings on record · ${p}% approved — each job's H-1B verdict is drawn from these.` | metaphor | "drawn from" |
+| Companies.jsx:424 | `${name} · ${n} H-1B filings on record, ${p}% approved — feeds the verdict on each job` (title) | metaphor | "feeds the verdict" |
+| Companies.jsx:466 | `Dry run — shows what would be kept, writes nothing` (title) | unclear | "dry run" unexplained |
+| Companies.jsx:851 | `Pagination debug` | unclear | developer label shown to the user |
+| Companies.jsx:813 | `Global` (status tag on a filtered row) | unclear | a bare adjective as a status |
+| Companies.jsx:440 | `H-1B slug · ${slug or auto-detected}` (title) | unclear | "slug" is a developer term |
+| Companies.jsx:586 | `Detected on the recent runs` | unclear | reads as broken grammar |
+| Companies.jsx:659 | `Stops paging after this many.` | unclear | elliptical; "paging" undefined |
+| Companies.jsx:68 | `Longest since a run first` (sort hint) | unclear | elliptical |
+| Companies.jsx:357 | `Add/remove from filter · multi-select, remembered per browser` (title) | unclear | "remembered per browser" |
+| Companies.jsx:698 | `Jobs are read from the board's API, so no page settings are needed.` | fine | plain, gives the reason |
+| Companies.jsx:701 | `New jobs arrive unscored — you can score them by hand from the feed.` | fine | plain |
+| Companies.jsx:614 | `Supports AND, OR and parentheses. Blank keeps every title.` | fine | plain, two short sentences |
+| Companies.jsx:649 | `Blank follows the schedule set in Settings.` | fine | plain |
+| Companies.jsx:654 | `CSS selector the page must render before reading.` | fine | plain; jargon is the field's subject |
+| Companies.jsx:644 | `Groups companies for filtering and bulk actions.` | fine | plain |
+| Companies.jsx:539 | `Nothing selected, so new jobs use your default résumé from Settings.` | fine | plain |
+| Companies.jsx:404 | `Which résumés new jobs from this company are scored against` (title) | fine | plain |
+| Companies.jsx:445 | `${n} open roles from ${name} in the Job Feed · ${m} new in the last 7 days` (title) | fine | plain |
+| Companies.jsx:434 | `Inactive — jobs already found are kept` (title) | fine | plain |
+| Companies.jsx:673 | `Make inactive — jobs already found are kept` | fine | plain |
+| Companies.jsx:502 | `Nothing matches "${q}" in names, aliases, URLs or ATS.` | fine | plain |
+| Companies.jsx:567 | `Save failed — nothing was changed. Try again.` | fine | plain |
+| Companies.jsx:320,325 | `Discard changes?` / `Edits to ${name} have not been saved.` | fine | plain |
+| Companies.jsx:729 | `Paste a careers URL — the ATS is read from it.` | fine | plain |
+| Companies.jsx:878 | `No job links found on this page.` | fine | plain |
+
+Short/label strings: `never` + relative times (12–19); sort labels `Needs attention` /
+`Company name` / `Priority tier` / `Open roles` / `Average fit` / `Last scrape` (63–68);
+sort hints `Warnings, then active, then inactive` / `A to Z` / `Tier 1 first, untiered last` /
+`Most roles in the feed first` / `Best-scoring companies first` (63–67);
+depth labels and hints `Off` / `New jobs are stored unscored` / `Light` / `Scores only, no report` /
+`Full` / `Full report with keywords and requirements` (71–73); `None` (75);
+`Remove this URL` (93); `+ Add another career page` (99); `Persona` (124);
+`Could not load companies` (167); `${n} tracked · ${a} active · ${d} need attention` (236);
+`Could not save company changes` (246); `Could not update ${n} of ${m} companies` (252);
+`${n} companies made active/inactive` (253); `That company is already being scraped` (263);
+`Could not start the scrape` (264); `Delete ${name}?` / `Jobs already found are kept.` (274);
+`${name} deleted` / `Could not delete ${name}` (276,277); `${n} selected` (289);
+health texts `scraping now…` / `error · ${e}` / `last run found nothing · ${ago}` /
+`not scraped yet` / `healthy · scraped ${ago}` / `inactive · last run ${ago}` (292–298);
+`Companies` (334); `+ Add company` (341); `Search name, alias, URL or ATS…` (349);
+`Untiered` / `Tier ${n}` (359); `Make ${n} active` / `Make ${n} inactive` (366,370);
+`Change row order` / `Sort` (374,376); column heads `Company` / `Tier` / `Health` / `Résumés` /
+`ATS` / `Open · 7d` / `Apps` / `Ø Fit` / `Status` (401–409) with their titles (405–408);
+`Needs attention — ${e}` (423); `Also scraped as ${aliases}` (425);
+`Last successful run ${ago}` (434); `Scored against your default résumé from Settings` /
+`Default` (437); `No scored roles yet` / `Average fit ${n} …` (451);
+`Click to pause scraping` / `Click to resume scraping` (454); `Active` / `Inactive` (455);
+`Scrape this company now` (459); `Running` / `Run` (464); `Test` (468); `More actions` (470);
+`Edit config` (474); `Open career page` / `Open ${n} career pages` (475);
+`View jobs in feed` (476); `Delete company` (477); `Loading companies…` (486);
+`Couldn't load companies` (494); `Try again` (496); `No companies yet` / `No companies match` (501);
+`No companies in ${tiers}.` (502); `Clear filters` (503); drawer subtitle (535);
+`New jobs are scored against ${names}.` (539); `needs attention` / `customised` /
+`using defaults` (540); `Last scrape run` / `last ran ${ago}` (586);
+`Identity and sources` (593); `Display name` (595); `Also known as` (599);
+`Alt names, comma-separated` (600,747); `Which postings to keep` (610); `Title must match` (612);
+`(Product OR Project) AND Manager` (613); `Skip titles containing` (617);
+`intern, junior, associate` (618); `Comma-separated. Applied after the match above.` (619);
+`Score new jobs automatically` (622); `Scraper tuning` (635); `Priority tier` (642);
+`Scrape interval in minutes` (647,756); `Use global interval` (648,757);
+`Wait for element` (652); `CSS selector` (653); `Pages to read` (657);
+`H-1B employer name` (663); `Auto-detect` (664); `Make active` (673);
+`Testing…` / `Test scrape` (676); `Saving…` / `Save changes` (679);
+`The ATS is detected once you paste a URL.` (697); `Company name is required` (707);
+`Could not add company` (719); `Add company` (728); `Career page URL` (733);
+`Acme` (743); `Aliases` (746); `Tier` (752); `Score new jobs against` (761); `Depth` (764);
+`Scrapes on the next scheduled run` (776); `Cancel` (777); `Save` (778);
+`Test scrape — Error` (791); `Close` (793,883); `Drop` / `Kept` / `Out` (811–814);
+`Test scrape — ${company}` (820); `Hide/Show screenshots` (822); `URLs scraped · ${n}` (828);
+`Include` / `Exclude` (832,833); `Page ${n} · Clicked …` / `No next button found` (853);
+columns `#` / `Title` / `Status` / `Reason` / `Link` (860–864).
+
+`fine`: 16 listed + ~95 short.
+
+---
+## Settings.jsx
+
+The densest file on the screen: `help`, `offHelp`, `info` and `sub` fields on
+~70 rows. Flagged rows first, then the plain ones.
+
+| file:line | text | flag | why |
+|---|---|---|---|
+| Settings.jsx:313 | `Providers: Claude API (Anthropic), Claude Code, OpenAI, Ollama (local), OpenRouter. Picking a provider filters the model dropdown to that provider's models — seeded ones plus any you added under Custom models. OpenRouter reaches every vendor with one key but gets no prompt-cache discount.` (info) | long | 43 words, three ideas; "Custom models" is not the real label ("Model catalog") |
+| Settings.jsx:317 | `Fires only when the scoring call errors or hits a rate limit; one retry, then the job is left unscored for the next sweep. Pick a cheap, reliable model from a different provider than the Primary so one outage can't take both down.` (info) | long | 42 words; "sweep"; "take both down" |
+| Settings.jsx:334 | `Only active when the effective provider is claude_api — no effect with Claude Code, Ollama or OpenRouter. If scoring output ever looks stale after a rubric edit, disable this as a rollback lever, run once, re-enable.` (info) | metaphor | "rollback lever"; also 35 words |
+| Settings.jsx:323 | `For models newer than the seeded list. The add search hits the provider's live catalog for OpenRouter, OpenAI and Claude; Ollama has no catalog — enter the local model name. Removals persist.` (info) | long | 31 words, three ideas |
+| Settings.jsx:330 | `Light returns scores + a one-liner (cheap, for high-volume searches). Full adds keyword coverage, requirement mapping and a written report. Companies and Searches can each override this per config.` (info) | long | 29 words, three sentences |
+| Settings.jsx:432 | `Capture happens while the extension browses LinkedIn collections. Doing that on a throwaway account means rate limits, CAPTCHAs or bans hit the mock identity — never your real profile.` (info) | long | 28 words, two ideas |
+| Settings.jsx:399 | `Telegram sends the secret as X-Telegram-Bot-Api-Secret-Token on every webhook call; mismatched headers return 401. Rotating shows the new secret once — copy it immediately, then re-register the webhook.` (info) | long | 27 words, protocol detail plus a procedure |
+| Settings.jsx:376 | `Counts from the last activity on the application (stage change, email, note). Auto-rejected applications keep their history and stay in the Stats funnel — nothing is deleted.` (info) | long | 26 words; "funnel" |
+| Settings.jsx:417 | `Each application gets its own short link per document link. When a recruiter opens one, the hit lands in Stats against that application.` (info) | metaphor | "the hit lands in Stats" |
+| Settings.jsx:333 | `Rubric + résumés + schema sent as a cached block — ~10× cheaper input tokens on repeat calls.` (help) | long | 16 words of dense jargon |
+| Settings.jsx:396 | `Optional — alerts and the digest work without a webhook. Validates every Telegram → backend call.` (help) | long | two unrelated statements in one help line |
+| Settings.jsx:341 | `Default: selection from Persona's richer pool, falls back to the résumé prompt if empty.` (help) | metaphor | "richer pool" |
+| Settings.jsx:430 | `The extension import reuses a signed-in cookie. LinkedIn gates the login behind an emailed PIN.` (help) | metaphor | "gates the login behind" |
+| Settings.jsx:435 | `escape hatches — most days none of this gets touched` (section sub) | metaphor | "escape hatches"; conversational aside |
+| Settings.jsx:391 | `Telegram bot · digest schedule lives under Scheduler` (section sub) | metaphor | "lives under" |
+| Settings.jsx:310 | `each individual prompt can be run against different model, if needed` (section sub) | unclear | missing article; "different model" than what? |
+| Settings.jsx:314 | `Key for the Primary provider API model.` (help) | unclear | three nouns stacked; no article |
+| Settings.jsx:368 | `Additional known sender domains check.` (help) | unclear | not a sentence |
+| Settings.jsx:419 | `Your domain needs to support selected style.` (help) | unclear | missing article; vague "support" |
+| Settings.jsx:385 | `Exclusion of the job title matches.` (help) | unclear | not a sentence |
+| Settings.jsx:384 | `Exclusion of postings whose description matches any phrase from this list.` (help) | unclear | nominalised opener ("Exclusion of…") |
+| Settings.jsx:386 | `Exclusion of exact company names` (help) | unclear | nominalised, no period |
+| Settings.jsx:369 | `Exclusion of newsletters and job-alert spam.` (help) | unclear | same nominalised pattern |
+| Settings.jsx:343 | `Rescores tailored resume when the tailor finishes.` (help) | unclear | "the tailor" reads as a person; also `resume` unaccented here, `résumé` everywhere else |
+| Settings.jsx:340 | `Default: rewrites only bullets that benefit.` (help) | unclear | benefit from what? |
+| Settings.jsx:331 | `Score a job once you save it on the feed, if yet unscored.` (help) | unclear | "if yet unscored" |
+| Settings.jsx:327 | `Extra requests queue — protects the DB pool.` (help) | unclear | "DB pool" is internal |
+| Settings.jsx:335 | `placeholders stay literal — replaced at runtime` (sub) | unclear | the two halves appear to contradict |
+| Settings.jsx:348 | `Label + prompt per voice, can be expanded.` (help) | unclear | "can be expanded" — by whom, how? |
+| Settings.jsx:357 | `the handover bundle Applications exports for your LLM of choice` (section sub) | unclear | "handover bundle" is invented vocabulary |
+| Settings.jsx:358 | `The hardcoded ask appended to the handover.` (help) | unclear | "hardcoded" contradicts an editable field; "the ask" as a noun |
+| Settings.jsx:359 | `Sections the handover carries. Ask is always included.` (help) | unclear | "Ask" as a bare noun |
+| Settings.jsx:392 | `High-fit arrivals and the daily digest go to your chat.` (help) | unclear | "High-fit arrivals" is compressed |
+| Settings.jsx:290 | `That did not work` (error toast) | unclear | says nothing about what failed |
+| Settings.jsx:703 | `No key — the dashboard is open` (placeholder) | unclear | "open" = unprotected is not obvious |
+| Settings.jsx:940,955 | `Search ${n} live models, or paste any slug…` / `${n} of ${m} match · or paste any slug and Add` | unclear | "slug" is a developer term |
+| Settings.jsx:972 | `Remove — removal persists` (title) | unclear | repeats itself; "persists" unexplained |
+| Settings.jsx:311 | `Every AI feature uses this pair unless overridden below.` | fine | plain |
+| Settings.jsx:316 | `Retries scoring once on error or rate limit — scoring only.` | fine | plain |
+| Settings.jsx:326 | `Used when a company has no résumés of its own selected.` | fine | plain |
+| Settings.jsx:328 | `Used when neither the company nor the search sets its own.` | fine | plain |
+| Settings.jsx:364 | `Replies are auto-classified into interview / rejection / offer and attached to the right application.` | fine | plain |
+| Settings.jsx:365 | `0–100 — below this, the email is flagged for manual review instead.` | fine | plain |
+| Settings.jsx:374 | `Days before ignored and skipped job postings are removed.` | fine | plain |
+| Settings.jsx:375 | `Days of silence before an application is auto-moved to Rejected.` | fine | plain |
+| Settings.jsx:383 | `titles, companies and body phrases dropped before anything else runs` (section sub) | fine | plain |
+| Settings.jsx:389 | `Query params removed from job URLs. All utm_* are always stripped.` | fine | plain |
+| Settings.jsx:393 | `Your Telegram chat — get it by messaging @userinfobot.` | fine | plain, actionable |
+| Settings.jsx:394 | `Only jobs scoring at or above this trigger an instant alert.` | fine | plain |
+| Settings.jsx:395 | `Confirms the bot token and chat ID work end to end.` | fine | plain |
+| Settings.jsx:401 | `Rotate the webhook secret? You must re-register the webhook afterward.` (window.confirm) | fine | plain (note: native confirm) |
+| Settings.jsx:403 | `Copy the new secret now — it will not be shown again:` (window.prompt) | fine | plain (note: native prompt) |
+| Settings.jsx:406 | `Points Telegram at your public URL so inbound bot commands reach the backend.` | fine | plain |
+| Settings.jsx:416 | `Résumé and letter links route through your domain.` | fine | plain |
+| Settings.jsx:436 | `Used by scrapes that hit rate limits or geo-blocks. Empty = direct.` | fine | plain |
+| Settings.jsx:437 | `Saving refreshes the session cookie so iframes keep working.` | fine | plain |
+| Settings.jsx:353 | `Answers as the candidate, from Persona autofill content only.` | fine | plain |
+| Settings.jsx:482 | `Saves automatically · everything stays on this machine` | fine | plain |
+| Settings.jsx:70 | `no models for this provider — add one under Model catalog` | fine | plain, names the fix |
+| Settings.jsx:748 | `LinkedIn emailed a PIN to the mock account.` | fine | plain |
+| Settings.jsx:784 | `Not valid JSON — nothing saved yet` | fine | plain |
+| Settings.jsx:810 | `Defaults are unavailable — nothing was reset` | fine | plain |
+
+Short/label strings: provider names (7–11); `Select…` (60); `type a new value to replace it` (123);
+`hide` / `show` (129,706); `On` / `Off` (565); `The server did not answer.` (187);
+`Settings are not loaded yet` (228); `Saved` / `Could not save — try again` (238,245);
+row labels `Primary provider · model` (311), `API key` (314), `Scoring` (315),
+`Scoring fallback` (316), `Tailoring` (318), `Cover letters` (319), `Autofill` (320),
+`Email classification` (321), `Model catalog` (322,923), `Default résumé` (326),
+`Max parallel jobs` (327), `Default depth` (328), `On save action` (331),
+`Prompt caching` (333), `Scoring rubric` (335), `Light output schema` (336),
+`Full output schema` (337), `Résumé tailoring prompt` (340), `Persona tailoring prompt` (341),
+`Max parallel tailors` (342), `Auto-score after tailoring` (343), `Default voice` (347),
+`Voice presets` (348), `Cover letter prompt` (349), `Default answer length` (352),
+`Autofill prompt` (353), `Field patterns` (354), `Option synonyms` (355),
+`"What I need from you" section` (358), `Include by default` (359),
+`LLM classification` (364), `Confidence threshold` (365), `Classification prompt` (366),
+`Gmail query · subjects` / `· senders` / `· exclusions` (367–369),
+`Scrape all companies` (372), `Email check` (373), `Cleanup after` (374),
+`Auto-reject threshold` (375), the five `· cron` rows (377–381), `Body phrases` (384),
+`Title exclude` (385), `Company exclude` (386), `Stripped params` (389), `Telegram` (392),
+`Chat ID` (393), `Score threshold` (394), `Test` / `Send test message` (395),
+`Webhook secret` / `Rotate` (396,397), `Set (hidden — rotate to view)` / `Set` / `Not set` (398),
+`Register webhook` / `Register…` (406), `Rewrite links` (416), `Base URL` (418),
+`URL style` + its four options (419–421), `Email` / `Password` (424,425),
+`Personal email` / `Personal password` (428,429), `Session cookie` (430),
+`Mock account email` / `Mock account password` (431,433), `Proxy URL` (436),
+`Dashboard API key` (437), `DB backup` / `Run backup` (438);
+section titles `Models` / `Scoring behavior` / `Tailoring` / `Cover letters` / `Autofill` /
+`Interview prep` / `Email classification` / `Scheduler` / `Global exclude` /
+`Dedup tracking params` / `Notifications` / `Tracer links` / `Jobright.ai` / `LinkedIn` /
+`Advanced` (310–439) and group heads `AI` / `PIPELINE` / `INTEGRATIONS` / `SYSTEM`;
+select option labels `(all bases + Persona)` (296), `Light — score only` /
+`Full — score + keywords + report` / `Off — don't score on save` (329–332,344),
+`${id} — not in presets` (307), prep-include options (360,361);
+subs `placeholders: {…}` (340,341,349,353,366), `one term per line …` (367–369,384–386,389),
+`JSON — …` (348,354,355), `CV_NAMES_HERE expands to your résumé names` (336,337);
+`Settings` (480), `Search settings…` (487), `No settings match "${q}".` (524),
+`JobNavigator v.2.0` (532), `API docs ↗` (536), `github.com/vesaias/JobNavigator ↗` (538),
+`Couldn't load your settings` / `Try again` (455,457), `Loading settings…` (461),
+`inherits Primary` (588), `Override` (590), `API key for this override's provider` (584),
+`pick provider…` / `pick model…` (572,581,582), `Edit` (614),
+`${n} models · ${x} seeded · ${c} added by you` (624), `Manage…` (626),
+`More detail` (661), `Running…` / `Done ✓` (687),
+`Set — type a new key to replace it` (703), `Save key` (708), `Type the new key first` (709),
+`Key saved` (716), `Could not start the refresh` (738), `Signing in…` / `Unknown` (749,750),
+`6-digit PIN` (755), `Submit PIN` (758), `Enter the digits from the email` (761),
+`PIN sent` (762), `Could not send the PIN` (763), `Refresh cookie` (767),
+`Saves automatically as you type` (844), `Reset to default` (845), `Done` (846),
+`Could not reach the catalog` (871), `Remove "${m}" from ${provider}?` (915),
+`available in every model picker` (924), `Loading live models…` (940),
+`Enter the local model name…` (941), `↵ to add` (951), `Add` (960),
+`added by you` / `seeded` (969).
+
+`fine`: 26 listed + ~130 short.
+
+---
+## JobFeed.jsx
+
+| file:line | text | flag | why |
+|---|---|---|---|
+| JobFeed.jsx:339 | `Ignore "${name}" everywhere?\n\nThis hides ${n} jobs here and excludes the company from every future scrape. Undo it in Settings → global company exclude.` (window.confirm) | long | 27-word body, three ideas (also a native confirm) |
+| JobFeed.jsx:1098 | `${company} sends X-Frame-Options, so the live page cannot render here. Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.` | long | 25 words; HTTP header name as user copy |
+| JobFeed.jsx:773 | `Jobs arrive from Searches and Companies — activate one, or widen the Status filter to see skipped and applied roles.` | long | 19 words, two unrelated suggestions |
+| JobFeed.jsx:1097 | `This posting refuses to be framed` | metaphor | personifies the page; "framed" is jargon |
+| JobFeed.jsx:1169 | `Instant · no LLM cost · lands in Résumés` | metaphor | "lands in" |
+| JobFeed.jsx:1051 | `No fit` (label on the unscored band's ring) | unclear | reads as "a bad fit", not "not scored" |
+| JobFeed.jsx:1040 | `This report was quick-scored — rescore at full depth for the keyword and requirement breakdown.` | unclear | "quick-scored" is called `Light` everywhere else; "full depth" |
+| JobFeed.jsx:1141 | `Rewrites bullets against the report · LLM run` | unclear | it rewrites against the posting, not the report |
+| JobFeed.jsx:1169 | `Runs an LLM pass against résumé` | unclear | missing article; "LLM pass" |
+| JobFeed.jsx:609 | `${verdict} · ${n} LCAs` / `${verdict} · no LCA records` | unclear | "LCA" is never expanded |
+| JobFeed.jsx:1029 | `Hard blockers` (report section heading) | unclear | invented term |
+| JobFeed.jsx:735 | `⇧ range · ${PICK_KEY} pick` | unclear | two glyph-verb pairs, no sentence |
+| JobFeed.jsx:587 | `Done — "${title}" at ${company}` / `Failed — "${title}" at ${company}` (toast) | unclear | "Done" doesn't say what finished (score? tailor?) |
+| JobFeed.jsx:895 | `Copy résumé with tracers` (menu item) | unclear | "tracers" unexplained at this point |
+| JobFeed.jsx:1161,1203 | `from /persona` (option note) | unclear | a route path used as a label |
+| JobFeed.jsx:633 | `The Feed` (page title) | unclear | the nav rail calls the same screen `Jobs` |
+| JobFeed.jsx:1066 | `This continues in the background if you navigate away.` | fine | plain reassurance |
+| JobFeed.jsx:1053–1055 | `Not scored yet Score against your résumés for the fit breakdown, requirements and keywords` | fine | plain |
+| JobFeed.jsx:692 | `Also hides unscored jobs — they have no score to compare` | fine | plain, gives the reason |
+| JobFeed.jsx:702 | `Also hides jobs without a listed salary` | fine | plain |
+| JobFeed.jsx:651 | `Showing only jobs from this saved search — click to clear` (title) | fine | plain |
+| JobFeed.jsx:637 | `Pick résumés + depth, then score every unscored job` (title) | fine | plain |
+| JobFeed.jsx:634 | `${total} open roles · ${n} arrived today · ${m} not yet scored` | fine | plain |
+| JobFeed.jsx:676 | `Top by open roles · picked companies pin to the top` | fine | plain, describes the order |
+| JobFeed.jsx:854 | `End of the list · ${total} jobs` | fine | plain |
+| JobFeed.jsx:1078 | `Cached snapshot · captured when you applied` | fine | plain |
+| JobFeed.jsx:1106 | `No posting URL captured for this job.` | fine | plain |
+| JobFeed.jsx:1132 | `A tailored copy already exists for this job.` | fine | plain |
+| JobFeed.jsx:1141 | `Exact duplicate with tracking links · instant` | fine | plain; explains "tracers" |
+| JobFeed.jsx:1098 | `You applied to this role, so a cached snapshot is available.` | fine | plain |
+
+Short/label strings: H-1B verdicts `H-1B Likely` / `Possible` / `Unlikely` / `Unknown` (34–37);
+badges `Applied` / `Saved` / `Skipped` / `Ignored` (40–43); source labels (46–48);
+status options `New` / `Saved` / `Applied` / `Skip` / `Ignored` (51);
+sort options `Top score` / `Newest first` / `Salary, high to low` / `Company A–Z` (52);
+shortcut rows `Next job` / `Previous job` / `Save / unsave` / `Skip` / `Mark applied` /
+`Open posting` / `Rescore` / `Tailor résumé` / `Cover letter` / `Close menus` / `Select` /
+`Select range` (103); `Clear` (75); `Couldn't load jobs` (246,768);
+`Couldn't update "${t}"` (321); `Saved "${t}"` / `Unsaved "${t}"` (329); `Skipped "${t}"` (330);
+`Applied to "${t}"` (331); `Ignoring "${name}" — ${n} jobs hidden` (348);
+`Couldn't ignore "${name}"` (349); `Scoring "${t}"…` (353,380);
+`Scoring failed for "${t}"` (357); `Scoring ${n} jobs…` (378); `Tailoring for "${t}"…` (396);
+`Copy failed for "${t}"` / `Tailor failed for "${t}"` (401); `${n} unscored jobs` (434);
+`Saved ${n} jobs.` / `Skipped ${n} jobs.` (447); `Could not update ${n} jobs` (448);
+`No cached snapshot.` (485,486); `That job no longer exists` (514); `The Feed` (633);
+`Score ${n} unscored jobs` (637); `Search titles…` (646); `Clear search` (647);
+`from "${searchName}"` (653); `Source` / `Company` / `H-1B` / `Score ≥` / `Salary` /
+`Status` / `Sort` filter pills (656–719); `No sources` (657);
+`Type to search ${n} companies…` (660); `No matches` (678); `or at least` (689);
+`at least` (699); `$K` (700); `Any` (710); `Select all shown` (732);
+`${n} shown · ${m} matching` (733); `Keyboard shortcuts` (736); `Keyboard` (742);
+`${n} selected` (756,1193); `Save` / `Skip` / `Score` / `Tailor` bulk bar (758–761);
+`Loading…` (767); `Try again` (768); `No open roles yet` (772); `No jobs match.` (775);
+`Clear filters` (775); `${n} résumé reports` (796); `Score this role` (804,1057);
+`Salary not listed` (821,873,878); `Save (s)` / `Skip (x)` / `More` (829–831);
+`Mark applied` / `Tailor résumé` / `Rescore` / `Open posting ↗` (841);
+`Ignore ${company} everywhere` (845,900); `Loading more…` (853); `Select a job.` (860);
+`Open tailored résumé` (812); `Open ↗` (882); `✦ Open tailored ↗` (883);
+`More actions` (885); `✦ Re-tailor résumé` / `Cover letter ↗` (891,894);
+`${n}% keywords` (922); `${m} of ${n} requirements met` (923); `${n} reports` (925);
+`+ Rescore` (941); `Score breakdown` (951); `/20` (963); `Keyword coverage` (977);
+`${n} matched · ${m} missing` (986); `Hide matched` / `Show matched` (987);
+`Requirement mapping` (1000); `${n} of ${m} met` (1001); `All ${n}` / `Gaps ${n}` (1006);
+`Requirement` / `Résumé match` / `Status` (1013); `ATS tip` (1035);
+`Not scored yet` (1053); `Scoring in progress` (1065); `Live posting` (1078);
+`Live` / `Cached` (1080,1081); `Loading cached snapshot…` (1086);
+`Open in new tab ↗` (1100); `View cached snapshot` (1101); `Create résumé copy` (1124);
+`${n} selected roles` (1125); `Open it ↗` (1133); `Method` (1139);
+`✦ Tailor with AI` / `⧉ Copy with tracers` (1141); `Base résumé` (1153);
+`No base résumés found.` (1154); `Cancel` (1170,1226); `Create copy` (1171);
+`${verb} against résumés` (1184); `Résumés` (1192); `No résumés available.` (1195);
+`base` (365); `Depth` (1209); `Light` / `Scores only` / `Full` / `Report + keywords` (1211);
+`Runs in the background` (1225); `Pick at least one résumé` (1227); `Run scoring` (1227);
+`just now` / `${n}h ago` / `${n}d ago` (18–20).
+
+`fine`: 14 listed + ~110 short.
+
+---
+## Summary
+
+Counts are of *strings*, not lines. "Total" is every user-visible string found in
+the file (listed rows plus the batched short/label strings). "Flagged" excludes
+`fine`.
+
+| file | total strings (approx.) | mannered | metaphor | hedge | long | unclear | flagged |
+|---|---|---|---|---|---|---|---|
+| time.js | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
+| ConfirmDialog.jsx | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
+| hooks.js | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Toast.jsx | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| WelcomeModal.jsx | 13 | 1 | 0 | 0 | 0 | 0 | 1 |
+| ToastLab.jsx | 27 | 1 | 0 | 0 | 1 | 5 | 7 |
+| LoginModal.jsx | 17 | 0 | 0 | 0 | 1 | 0 | 1 |
+| V2App.jsx | 32 | 0 | 0 | 0 | 1 | 2 | 3 |
+| Resumes.jsx | 47 | 0 | 2 | 0 | 0 | 2 | 4 |
+| ResumeSections.jsx | 62 | 0 | 1 | 0 | 1 | 3 | 5 |
+| ResumeEditor.jsx | 91 | 1 | 2 | 0 | 0 | 8 | 11 |
+| CoverLetters.jsx | 41 | 0 | 0 | 0 | 0 | 3 | 3 |
+| CoverLetterEditor.jsx | 56 | 0 | 1 | 0 | 0 | 4 | 5 |
+| Persona.jsx | 71 | 1 | 1 | 0 | 3 | 0 | 5 |
+| Applications.jsx | 95 | 0 | 3 | 0 | 2 | 6 | 11 |
+| Stats.jsx | 89 | 1 | 2 | 0 | 6 | 6 | 15 |
+| Searches.jsx | 120 | 1 | 3 | 0 | 4 | 7 | 15 |
+| Companies.jsx | 128 | 0 | 4 | 0 | 5 | 8 | 17 |
+| Settings.jsx | 193 | 0 | 6 | 0 | 9 | 22 | 37 |
+| JobFeed.jsx | 140 | 0 | 2 | 0 | 3 | 11 | 16 |
+| **total** | **~1235** | **6** | **27** | **0** | **36** | **87** | **156** |
+
+### Notes for the reviewer
+
+- **No `hedge` hits.** No "just", "simply", "a bit", "kinda" or "feel free"
+  anywhere in v2 — that class of filler is already absent.
+- **`unclear` dominates**, in two kinds: internal vocabulary leaking into the UI
+  (sweep, slug, tracers, LCA, dry run, prep bundle / prep handover / the bundle,
+  raw, DB pool, pagination debug, Hard blockers, from /persona, the last render),
+  and nominalised or ungrammatical help text, concentrated in Settings
+  ("Exclusion of the job title matches.", "Additional known sender domains check.",
+  "Your domain needs to support selected style.").
+- **Recurring metaphors** worth deciding once and applying everywhere:
+  "land / lands / landed" (Resumes 153,195; ResumeEditor 730,783; Searches 550;
+  Companies 502; JobFeed 1169; Settings 417); "live in / lives under"
+  (Searches 275; Settings 391); "draw from / drawn from" (Persona 344;
+  CoverLetterEditor 525; Companies 537); "funnel" (Applications 41; Stats 430;
+  Settings 376).
+- **Naming inconsistencies** found while collecting — not prose faults, but any
+  rewrite has to settle them:
+  - the same screen is `Jobs` in the rail (V2App.jsx:19) and `The Feed` in its
+    own header (JobFeed.jsx:633);
+  - scoring depth is `Light` in Searches / Companies / Settings but
+    "quick-scored" in JobFeed.jsx:1040;
+  - `Delete copy` appears on the base résumé menu (ResumeEditor.jsx:535);
+  - the prep export is "prep handover" (Applications.jsx:493), "prep bundle"
+    (Applications.jsx:234), "the bundle" (Applications.jsx:583) and
+    "handover bundle" (Settings.jsx:357);
+  - Settings.jsx:313 sends the user to "Custom models"; the row is called
+    `Model catalog`.
+- **Native dialogs still carrying copy** (they bypass the v2 dialog system):
+  window.confirm at Applications.jsx:123,195; Searches.jsx:467; JobFeed.jsx:339;
+  Settings.jsx:401,915. window.prompt at Settings.jsx:403,407.
+- **ToastLab.jsx** is a temporary debug route (`/v2/toasts`, not linked from the
+  rail; its own header says to delete it). Its seven flags can reasonably be
+  skipped rather than rewritten.
