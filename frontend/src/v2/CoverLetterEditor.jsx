@@ -385,7 +385,7 @@ export default function CoverLetterEditor() {
                     </div>
                     <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
                     <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
-                      style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--accent)', minWidth: 0 }} />
+                      style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--text-2)', minWidth: 0 }} />
                     {tracked && (
                       <input value={ct.stub || ''} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)"
                         onChange={(e) => update((d) => { d.header.contact_items[i].stub = e.target.value })}
