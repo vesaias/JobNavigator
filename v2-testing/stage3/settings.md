@@ -192,7 +192,7 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 **Repro** Scoring behavior → Prompt caching. Route PATCH to 500, click the toggle.
 **Actual** measured (`set_3.py`): flash "Could not save — try again" in `--bad` (correct), but the switch stays in its new position (`Off` → `On` after the failed save) and the help text swaps with it. The UI now disagrees with the server until a reload. Same for every Select, TextBox and the 6 override rows (whose `ovr` open/closed state is separate local state and would also need reverting).
 **Proposed fix** Capture the previous value in `save()` and restore it in the catch; the `llm` override toggle needs its `ovr` entry reverted too, so this is more than a one-liner.
-**Status** needs decision: roll back optimistically-applied values on failure, or re-`load()` the whole map after any failed PATCH?
+**Status** fixed (a4996a5): `save()` snapshots the prior value and restores it on failure (key deleted when it was absent); the override-off path re-opens the row if either PATCH fails. Verified: switch flipped against a 500 returns to its stored state.
 
 ### SET-09 · P4 · Two saves inside 2.2 s: the first flash's timer clears the second message early
 **Where** `Settings.jsx:140-143` — each `flash()` pushes its own independent `setTimeout`.
@@ -213,47 +213,47 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 **Repro** 1024×700, `/v2/settings`, Models section.
 **Actual** measured (`set_8.py`): content column 522 px → label 340 px, controls **158 px**. `scrollWidth > clientWidth` on **Scoring, Tailoring, Cover letters, Autofill** (the four overrides that are OFF: pill 111 px + toggle 77 px + 8 px gap = 196 px). The page itself does not scroll horizontally (`body.scrollWidth === 1024`), so the toggle is simply clipped and cannot be reached. Row tops stay integer (0 fractional of 67). Screenshot `set-narrow.png`.
 **Proposed fix** Make the label column `flex: 0 1 340px` (or stack the row below ~1150 px).
-**Status** needs decision: narrow-viewport support was never in scope for the design (fixed 1440 artboard) — fix or declare 1280 the floor?
+**Status** fixed (a4996a5): label column `flex: 0 1 340px`; a ResizeObserver on the scroll pane stacks label above controls under 720 px of pane (~1150 px window with the rail open). Verified: 0 clipped control rows at 1024×700.
 
 ### SET-12 · P3 · No keyboard operability, no labels, no ARIA
 **Where** every control is a `span`/`div` with `onClick` — `Select :44-50`, `Toggle :90-98`, Edit pill `:485`, `ActionBtn :545`, info "i" `:522`, show/hide `:82,:565`, rail anchors `:380`, modal ✕/Done/Reset/Add.
 **Actual** measured (`set_11.py`): inside the content pane there are **128 elements with `cursor:pointer`**, but only **25 focusable inputs**, **2 links**, **0 `<label>`**, **0 `aria-*`**. Tabbing from the top reaches the 10 rail links, then the search box, then the raw `<input>`s; the 15 anchors, all 7 Selects, all 10 toggles, all 19 Edit pills and all 7 action buttons are unreachable. No input has an `id`/`for` association, so a screen reader announces an unlabelled text box.
 **Proposed fix** `role="button"` + `tabIndex={0}` + Enter/Space on the shared primitives (`Select`, `Toggle`, `ActionBtn`, the Edit pill), and `aria-label` from `r.label` on each row's control.
-**Status** needs decision: cross-screen — the same primitives are used on Feed/Companies/Applications, so this wants one pass over the shared v2 controls rather than one screen.
+**Status** fixed (a4996a5): `kb()` helper on every primitive — Toggle is `role=switch` + `aria-checked`, Select is `aria-haspopup=listbox` + `aria-expanded` with `role=option` rows, anchors `role=link`, all controls carry `aria-label` from the row label. Verified: 75 focusable / 10 switches / 99 labelled controls.
 
 ### SET-13 · P3 · `--edge` body text falls below 4.5:1 in both themes
 **Where** colophon links `Settings.jsx:414-417` (11 px `--edge` on `--bg`); catalog "seeded" tag `:748` and provider column `:746` (10 px `--edge` on `--surface`).
 **Actual** measured contrast (`set_8.py`): light `--edge #8a826e` on `--bg #fcfbf7` = **3.69:1**, on `--surface #ffffff` = 3.82:1. Dark `#7f7a66` on `#1e1c17` = **3.95:1**, on `#28251b` = 3.56:1. All below the 4.5:1 needed at these sizes. Everything else measured clean: `--text-2` 7.66 / 9.09, `--muted` 5.52 / 6.17 on `--surface`, 5.02 / 5.40 on `--surface-2`, `--accent` 6.11 / 7.11, `--bad` 6.58 / 6.39, `--warn` 5.38 / 6.59, `--accent-ink` on `--accent` 6.11 / 8.55.
 **Expected + why** The design uses `#8a826e` for the same elements, so this is inherited, not introduced — but it is the only sub-AA text on the screen.
-**Status** needs decision: cross-screen token question (`--edge` as text vs as a border) — keep the design's tone or lift `--edge` where it carries text?
+**Status** fixed (a4996a5): colophon links and the catalog provider column + seeded/added tag use `--muted` instead of `--edge`. Verified: colophon link colour rgb(109,104,98) = `--muted`.
 
 ### SET-14 · P3 · Dark mode: the toggle knob is white on the light-green accent — 2.16:1
 **Where** `Toggle` `Settings.jsx:95` uses `var(--knob)`, which `theme.css:34` defines once (`#ffffff`) with **no dark override** (HANDOVER already flags `--knob` as single-definition).
 **Actual** measured (`set_8.py`): dark ON state = `--knob #ffffff` on `--accent #8dbb9f` → **2.16:1**; the knob is nearly invisible against the track. In light the ON state is 6.11:1 and only the OFF state is low (1.76:1 on `--line-strong`, which matches the design exactly). Ten switches on this screen (4 `SW` + 6 override toggles).
 **Proposed fix** Give `--knob` a dark value (`--surface` / `#28251b`), or use `--accent-ink` for the knob when the switch is on.
-**Status** needs decision: token-level, affects every v2 switch.
+**Status** fixed (a4996a5): ON knob uses `--accent-ink` (white light / near-black dark), OFF keeps `--knob`. Verified dark ON knob = rgb(21,20,15).
 
 ### SET-15 · P3 · Model-catalog `×` hover changes colour only; the design changes the border too
 **Where** `Settings.jsx:749-750` uses `.v2-hover-bad-text` (`theme.css:175`, `color` only). Design `Settings Ops.dc.html:184`: `style-hover="border-color:#9c3b30;color:#9c3b30"`.
 **Actual** measured (`set_9.py`): `color` `rgb(138,130,110)` → `rgb(156,59,48)`; `borderColor` stays `rgb(226,221,208)`.
 **Proposed fix** A `.v2-hover-bad-bdc` rule (border + colour); adding `border-color` to the existing class would change the `×` on other screens too.
-**Status** needs decision (I left `theme.css` alone — another agent committed hover fixes there at `5c6c17a` this session).
+**Status** fixed (a4996a5): `.v2-hover-bad-bdc:hover` (border + glyph → `--bad`) in theme.css, used only on the catalog ×. Verified: hover changes borderColor and color.
 
 ### SET-16 · P3 · Catalog typeahead is a plain inline list, not the design's dropdown
 **Where** `ModelsModal` `Settings.jsx:737-743` vs design `:166-175`.
 **Actual** measured (`set_9.py`, term `deep`, OpenRouter live catalog of 421): 8 suggestion rows render as `.v2-menuitem`s *inside the scroll area above the 44 catalog rows*. Missing versus the design: the absolutely-positioned dropdown anchored to the field, the first row pre-highlighted with `↵ to add` (`cat_has_enter_hint = false`), `<b>`-bolded matched substrings (`cat_sugg_bold = false`), and the footer `"4 of 324 match · or paste any slug and Add"` (`cat_has_match_footer = false`). Enter-to-add itself does work (`:727`). Screenshot `set-catalog.png`.
-**Status** needs decision: keep the simpler inline list, or build the design's dropdown?
+**Status** fixed (a4996a5): design dropdown anchored under the search field — first row pre-highlighted with `↵ to add`, ↑/↓ wrap, Enter adds, Escape closes, matches bolded, footer `N of M match · or paste any slug and Add`. Verified live. Note: M is the total match count, not the 8 rows shown.
 
 ### SET-17 · P3 · Catalog offers `×` on seeded models; the design restricts removal to your own additions
 **Where** `Settings.jsx:749` renders `×` unconditionally. Design `:466`: `delDisplay: custom ? "flex" : "none"`.
 **Actual** measured (`set_5.py`): 44 rows, **44 `×` buttons**, and removing a seeded row PATCHes the filtered list (the removal then persists through `seed.py:638-667` via `llm_seeded_models`).
 **Expected + why** The code behaviour is arguably better — a stale seeded model is exactly what you want to delete, and the tooltip says "Remove — removal persists". But it contradicts the design, and the "seeded" tag implies immutability.
-**Status** needs decision: keep code (removal of seeded entries is useful) or match design (custom-only)?
+**Status** decided keep current (user 2026-09-02): seeded models stay removable.
 
 ### SET-18 · P3 · Advanced is missing the design's H-1B refresh and Job cleanup triggers
 **Where** design `:441-442` — `BT("h1b", "H-1B data", "Re-import the sponsorship dataset.", "Refresh now")` and `BT("cleanup", "Job cleanup", "Purge expired postings now.", "Run cleanup")`. `Settings.jsx:333-337` has only Proxy URL, Dashboard API key and DB backup.
 **Expected + why** Both endpoints exist (`main.py` `/h1b/refresh`, `/db/cleanup`) and v1's Settings exposes them; v2 Settings drops them, and v2 has no other manual-trigger surface (inventory §8: "v1 additionally exposes scrape/email/h1b/cleanup/digest/backfill triggers that v2 Settings does not").
-**Status** needs decision: add the two rows back, or is Stats › Run history the intended home for manual triggers?
+**Status** decided keep current (user 2026-09-02): Stats › Run history is the home for the H-1B refresh and cleanup triggers.
 
 ### SET-19 · P4 · Two section headers rendered with no subtitle
 **Where** `Settings.jsx:289` (`dedup`) and `:333` (`advanced`) passed `""`, while the design supplies "same job from two sources isn't saved twice" (`:405`) and "escape hatches — most days none of this gets touched" (`:437`).
@@ -263,39 +263,39 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 ### SET-20 · P4 · Every numeric/cron box is 135 px against the design's 170 px; four Selects are 260 px against 340 px
 **Where** design `:331,:359,:374,:385-394,:411-412` all use `w: "170px"`; `:332,:334,:349,:370` use `w: "340px"`.
 **Actual** measured (`set_1.py`): 15 mono boxes at **135 px** (Max parallel jobs, Max parallel tailors, Default answer length, Confidence threshold, Chat ID, Score threshold, the 4 scheduler intervals/day counts and the 5 crons); Default depth / On save action / Auto-score after tailoring / Include by default all at **260 px**. The 135 px cron boxes fit `0 4 * * *` but ellipsis anything longer; "Full — score + keywords + report" is close to the edge at 260 px.
-**Status** needs decision: keep the tighter code widths (consistent 135/260 across the screen) or match the design's 170/340?
+**Status** decided keep current (user 2026-09-02): 135/260 px widths stay.
 
 ### SET-21 · P4 · The Edit modal is 1020 px wide against the design's 680
 **Where** `Settings.jsx:649,658` — `min(1020px, 94vw)` / `min(1280px, 92vh)` and `minHeight: 440` on the textarea. Design `:138,:145`: 680 × 640 with a 220 px text area.
 **Actual** measured (`set_4.py`): panel **1020 × 583**, textarea **974 × 440**. An in-code comment ("1.5x wider and 2x taller than before") says this was intentional.
-**Status** needs decision: keep code (long prompts need the room) or match design?
+**Status** decided keep current (user 2026-09-02): 1020 px Edit modal stays.
 
 ### SET-22 · P4 · The webhook-secret preview isn't in a box
 **Where** `Settings.jsx:503` renders `r.preview` as a bare mono 10.5 px span, `flex: 1` (measured 497 px). Design `:414-416` renders it as a bordered 260 px BOX with muted text, like every other value on the screen.
 **Actual** measured (`set_1.py`): the `Webhook secret` control row is `[497, 69]` (span + Rotate button) versus the neighbouring `Chat ID` row's `[135]` box. The text itself is correct in all three states — "Set (hidden — rotate to view)" / "Set" / "Not set" (verified in `set_6.py` and `set_10.py`).
-**Status** needs decision (design fidelity vs the code's "preview + button" pattern, which it shares with `Model catalog` and `Session cookie`).
+**Status** fixed (a4996a5): webhook preview renders in the standard bordered box at `flex: 0 1 260px`, mono 11.5 px `--muted`, Rotate beside it. Verified: 260 px wide, 1 px border.
 
 ### SET-23 · P4 · An empty model catalog opens a 12 px empty popover
 **Where** `Select` `Settings.jsx:51-60` renders the menu chrome even with zero options.
 **Actual** measured (`set_10.py`, `llm_models_list: []`): the summary reads "0 models · 0 seeded · 0 added by you", the model picker shows "pick model…" (correct), and clicking it opens a **260 × 12 px** bordered box with nothing in it.
 **Proposed fix** Render a muted "no models for this provider — add one under Model catalog" row instead of an empty menu.
-**Status** needs decision.
+**Status** fixed (a4996a5): zero-option Select renders one muted row ("no models for this provider — add one under Model catalog", overridable via `emptyText`). Verified with an empty `llm_models_list`.
 
 ### SET-24 · P4 · Section subtitles and two row labels drifted from the design
 **Where / Actual** measured (`set_11.py`) — the `models`, `tailoring`, `letters`, `emailclass` and `scheduler` subtitles are all rewritten; `"Prep handover template"` → `"What I need from you" section`; `"Auto-reject after"` → `"Auto-reject threshold"`; `Auto-reject · cron` moved from last to 5th in Scheduler. Full list in the design re-diff table above. Several of the code's strings are *more* accurate than the design's: the design calls the Postgres backup a "Nightly SQLite snapshot" (`:390`) and its `URL style` options (`Short — /l, /gh`) describe a scheme the backend never had (`:423`).
-**Status** needs decision: adopt the design's copy where the code is not more correct, or treat the code as the source of truth and retire the stale design copy?
+**Status** decided keep current text (user 2026-09-02).
 
 ### SET-25 · P4 · The Edit modal drops keystrokes typed within 600 ms of closing
 **Where** `Settings.jsx:632` clears the pending debounce timer on unmount; Done / ✕ / scrim (`:648,:653,:667`) all just call `onClose` without flushing.
 **Repro** Body phrases → Edit → type a line → click **Done** immediately.
 **Actual** measured (`set_4.py`): typed `\nZZDROPPED`, clicked Done 150 ms later, waited 1.2 s → **zero PATCHes**. The footer says "Saves automatically as you type", so the loss is silent.
 **Proposed fix** Flush the pending commit in `onClose` (or on the Done click) before unmounting.
-**Status** needs decision: flush-on-close, or is the 600 ms window acceptable?
+**Status** fixed (a4996a5): `commit()` records the owed value, `close()` flushes it before `onClose` (Done, ✕, scrim, Escape); unmount flushes as a backstop. Verified: a value typed 100 ms before Done is PATCHed.
 
 ### SET-26 · P4 · A leftover scratch résumé `ZZTEST Base A` is in the Default-résumé dropdown
 **Where** `GET /resumes?is_base=true` — not created by this run.
 **Actual** measured (`set_9.py`): options `(all bases + Persona) · Persona · ZZTEST Base A · PM · TPgM · PjM · PjM FinTech`. Left behind by an earlier Stage-3 script (Résumés screen). Flagged, not deleted — the data rules say only delete rows you created.
-**Status** needs decision: whoever owns the Résumés pass should remove it.
+**Status** closed: no `ZZTEST` base résumé remains (verified via `GET /api/resumes` 2026-09-03); the dropdown is clean.
 
 ### SET-27 · P3 · PATCH `warnings` are discarded, so a scheduler / semaphore / dedup-reload failure is invisible
 **Where** `Settings.jsx:147` ignores the response body; `routes_settings.py:57-92` returns `{"updated": [...], "warnings": [...]}` and appends one entry per failed side effect.
@@ -303,7 +303,7 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 **Expected + why** The scheduler is then not reconfigured, and the same unguarded `int()` runs at boot (`main.py:52` → `scheduler.py:29-30`), so the backend fails to start until the row is fixed by SQL. None of the 9 numeric boxes or 5 cron boxes has any client-side validation (`type="number"`, `inputMode`, or a cron pattern) — matrix finding (d), 17 soft type mismatches.
 **Actual** the green "Saved" flash and the warnings-blind save path were both confirmed by intercept (`set_2.py`, `set_3.py`). The `abc` case itself was **not** written to the live DB (it would risk the user's backend boot) — read from `routes_settings.py:63-67` and `scheduler.py:29`.
 **Proposed fix** Flash `warnings[0]` as `bad` when the array is non-empty; add `inputMode="numeric"` plus a digit filter to the 9 int rows.
-**Status** needs decision: surface `warnings`, and how strict should client-side validation be?
+**Status** fixed (a4996a5): `save()` flashes `warnings[0]` in `--bad` instead of the green Saved; 9 integer rows are `inputMode=numeric` with a digit-only filter (Chat ID deliberately excluded — group ids are negative); 5 cron rows refuse a non-empty value without exactly 5 fields ("Cron needs 5 fields") and never PATCH. Verified all three.
 
 ---
 

@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 73 | 23 | 15 |
-| P4 | 90 | 45 | 23 | 22 |
-| **All** | **276** | **192** | **46** | **38** |
+| P3 | 111 | 81 | 13 | 17 |
+| P4 | 90 | 48 | 16 | 26 |
+| **All** | **276** | **203** | **29** | **44** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -23,7 +23,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
-| settings.md | 27 | 2 | 4 | 12 | 9 | 10 |
+| settings.md | 27 | 2 | 4 | 12 | 9 | 21 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
 | FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 0 |
@@ -217,9 +217,20 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SET-05 (P2) — "Reset to default" wipes a prompt to `""` when `GET /settings/defaults` is unavailable
 - SET-06 (P2) — A failed `GET /settings` renders a permanently blank pane — no message, no retry
 - SET-07 (P3) — A failed webhook registration flashes in accent green, reading as success
+- SET-08 (P3) — Optimistic state is never rolled back after a failed save
 - SET-09 (P4) — Two saves inside 2.2 s: the first flash's timer clears the second message early
 - SET-10 (P3) — "Submit PIN" has no catch — a 401/500/network error is an unhandled rejection with no feedback
+- SET-11 (P3) — Four rows overflow their control column at 1024 px
+- SET-12 (P3) — No keyboard operability, no labels, no ARIA
+- SET-13 (P3) — `--edge` body text falls below 4.5:1 in both themes
+- SET-14 (P3) — Dark mode: the toggle knob is white on the light-green accent — 2.16:1
+- SET-15 (P3) — Model-catalog `×` hover changes colour only; the design changes the border too
+- SET-16 (P3) — Catalog typeahead is a plain inline list, not the design's dropdown
 - SET-19 (P4) — Two section headers rendered with no subtitle
+- SET-22 (P4) — The webhook-secret preview isn't in a box
+- SET-23 (P4) — An empty model catalog opens a 12 px empty popover
+- SET-25 (P4) — The Edit modal drops keystrokes typed within 600 ms of closing
+- SET-27 (P3) — PATCH `warnings` are discarded, so a scheduler / semaphore / dedup-reload failure is invisible
 - SHELL-01 (P3) — Every rail hover is dead (inline colour beats `.v2-navdark:hover`)
 - SHELL-03 (P4) — Welcome step rows land on half pixels
 - F-001 (P2) — Feed · Tailored-résumé ✦ mark in the list row leaves v2 for the classic UI
