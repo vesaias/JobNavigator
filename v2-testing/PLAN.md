@@ -82,3 +82,6 @@ Workflow the user settled on: they read one screen's open P3/P4 list (`P3-P4.md`
 - Still open for the user's call: Résumés (`stage3/resumes.md` + `stage3/resumes-shelf-recheck.md` RES2-01..12), Settings (`stage3/settings.md`), Shell (`stage3/shell.md` SHELL-02/04/05), plus cross-cutting F-003/F-004 in `FINDINGS.md`.
 - Data notes: DB is at the 2026-09-01 baseline plus deliberate changes (5 application histories backfilled with a `→ applied` edge, 105 `applied→applied` self-loops left in place). Scratch rows are always `ZZTEST*` and are cleaned at the end of every script.
 - Tools: `tools/h.py` (harness), `tools/console_sweep.py` (all routes × themes), `tools/lh_scan3.py` (fractional-row scan), `tools/report_gen.py` (recount + REPORT.md).
+
+## Data notes
+- 2026-09-03: stripped the 105 `applied→applied` self-loop transitions (one per application, 105 applications) on the user's call; dump taken first at `backups/pre_selfloop_strip_20260903.dump`. After: 0 self-loops of any status, Sankey 5 links, KPI 377 applications. The one application with two edges into `applied` (`034999a5…`, an `interview → applied` revert done in the UI) is a real transition and was kept.
