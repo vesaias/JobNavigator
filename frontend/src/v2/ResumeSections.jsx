@@ -117,6 +117,13 @@ export function useUndoRemove(mutate, onRemoved) {
   live.current = mutate
   return (label, remove, restore) => { mutate(remove); onRemoved?.(label, () => live.current(restore)) }
 }
+// RES2-10: the vertical rule that separates the two halves of an editor's context
+// band. The résumé band drew it as the glyph "  │  " in --line and the letter band
+// as a "·"; the design (Resumes Shelf.dc.html:158) is a 1×11 block in --edge.
+// One component so the two bands cannot drift again.
+export const BandRule = () => (
+  <span aria-hidden="true" style={{ display: 'inline-block', width: 1, height: 11, margin: '0 9px', verticalAlign: 'middle', alignSelf: 'center', background: 'var(--edge)' }} />
+)
 export const DashedAdd = ({ onClick, children, big }) => (
   <div onClick={onClick} {...kb(onClick)} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
 )
@@ -336,6 +343,8 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
     return true
   }
   const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
+  const liveRename = useRef(rename)
+  liveRename.current = rename
   const arrows = (k) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
       <span onClick={() => move(k, -1)} {...kb(() => move(k, -1))} title="Move up" className="v2-navlink">▲</span><span onClick={() => move(k, 1)} {...kb(() => move(k, 1))} title="Move down" className="v2-navlink">▼</span>
@@ -348,9 +357,12 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
         const added = baseSkills != null && !(k in baseSkills)
         const marked = changed || added
         return (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          // RES-31: the row is keyed by position, not by the category name — a
+          // debounced rename changes the name mid-edit, and a name key would
+          // remount the input and steal the caret on every commit.
+          <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {arrows(k)}
-            <input defaultValue={k} onBlur={(e) => { if (!rename(k, e.target.value)) e.target.value = k }} placeholder="Category" style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
+            <CategoryName name={k} rename={liveRename} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
@@ -367,6 +379,23 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
       {entries.length === 0 && <EmptyState note={emptyNote} what="skills" />}
       <DashedAdd onClick={() => mutate((d) => { d.skills = d.skills || {}; d.skills[`Skill ${Object.keys(d.skills).length + 1}`] = '' })}>+ Add skill row</DashedAdd>
     </div>
+  )
+}
+// RES-31: the Skills category was the one field on the screen that genuinely saved
+// on blur — everything else is a 500 ms trailing debounce. Same debounce here, with
+// the rename-collision refusal intact: a refused name snaps back to the stored one
+// (the caller's onError explains why). Blur flushes any pending rename immediately.
+function CategoryName({ name, rename }) {
+  const [draft, setDraft] = useState(name)
+  const timer = useRef(null)
+  useEffect(() => { setDraft(name) }, [name])
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const commit = (v) => { clearTimeout(timer.current); if (v !== name && !rename.current(name, v)) setDraft(name) }
+  return (
+    <input value={draft} placeholder="Category"
+      onChange={(e) => { const v = e.target.value; setDraft(v); clearTimeout(timer.current); timer.current = setTimeout(() => commit(v), 500) }}
+      onBlur={() => commit(draft)}
+      style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
   )
 }
 export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }) {

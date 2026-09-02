@@ -265,8 +265,13 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     # Embed fonts as base64 data URIs (file:// blocked by Chromium in set_content)
     fonts = _load_template_fonts(str(template_dir / "fonts"))
 
+    # RES-20: json_data may carry internal metadata under keys prefixed with "_"
+    # (_tailor_context, _score). Those are never résumé content — keep them out of
+    # the template namespace so they can never render, and so a future key can't
+    # collide with a template global.
+    content = {k: v for k, v in (json_data or {}).items() if not str(k).startswith("_")}
     html = template.render(
-        **json_data,
+        **content,
         page_format=page_format,
         fonts_base="",
         fonts=fonts,
@@ -483,12 +488,14 @@ def resume_shelf(db: Session = Depends(get_db)):
     job_ids = {c.job_id for c in copies if c.job_id}
     jobs = {}
     app_status = {}
+    app_updated = {}   # RES-29: when the application last moved — the archive date for a rejection
     if job_ids:
         for j in db.query(Job).filter(Job.id.in_(job_ids)).all():
             jobs[j.id] = j
         # application status per job (rejected → archived); most-recent wins
         for a in db.query(Application).filter(Application.job_id.in_(job_ids)).order_by(Application.updated_at.asc()).all():
             app_status[a.job_id] = a.status
+            app_updated[a.job_id] = a.updated_at
 
     STALE_DAYS = 45
     now = utcnow()
@@ -499,6 +506,14 @@ def resume_shelf(db: Session = Depends(get_db)):
             return any((e or {}).get("suggested_bullets") for e in (c.json_data or {}).get("experience", []))
         except Exception:
             return False
+
+    def _archived_at(c, reason):
+        # RES-29: a rejection is archived when the application was last moved; a
+        # stale copy is archived by its own last edit (that's what STALE_DAYS
+        # measures). Falls back to the copy's timestamp so the sort is total.
+        ts = app_updated.get(c.job_id) if reason == "rejected" else None
+        ts = ts or c.updated_at
+        return ts.isoformat() if ts else None
 
     def _archive_reason(c):
         if app_status.get(c.job_id) == "rejected":
@@ -550,6 +565,7 @@ def resume_shelf(db: Session = Depends(get_db)):
                     "company": (job.company if job else None),
                     "role": (job.title if job else None),
                     "why": reason,
+                    "archived_at": _archived_at(c, reason),
                 })
                 continue
             copies_out.append({
@@ -585,7 +601,8 @@ def resume_shelf(db: Session = Depends(get_db)):
             archived.append({"id": str(c.id), "name": c.name, "base_id": None,
                              "job_id": str(c.job_id) if c.job_id else None,
                              "company": (job.company if job else None),
-                             "role": (job.title if job else None), "why": reason})
+                             "role": (job.title if job else None), "why": reason,
+                             "archived_at": _archived_at(c, reason)})
             continue
         persona_copies_out.append({
             "id": str(c.id), "name": c.name,
@@ -604,8 +621,9 @@ def resume_shelf(db: Session = Depends(get_db)):
         "updated_at": persona_copies_out[0]["updated_at"] if persona_copies_out else None,
     }
 
-    # newest archived first
-    archived.sort(key=lambda a: a["why"] != "rejected")
+    # RES-29: this said "newest archived first" but sorted rejected-before-stale
+    # with no date involved. Sort by the archive date, newest first (undated last).
+    archived.sort(key=lambda a: (a["archived_at"] or ""), reverse=True)
     return {"bases": out, "total_copies": len(copies) - len(archived),
             "persona": persona, "archived": archived, "archived_count": len(archived)}
 
@@ -898,6 +916,13 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             if "skills" in llm_result:
                 tailored_data["skills"] = llm_result["skills"]
 
+            # RES-20: a copy tailored from a pasted description has no Job row, so the
+            # text it was written against would be lost — and with it any chance of
+            # scoring the copy. Keep it on the copy under an "_"-prefixed key, which
+            # _render_html and the section editors both ignore.
+            if not job_id and jd_text:
+                tailored_data["_tailor_context"] = {"job_description": jd_text[:6000], "source": "freeform"}
+
             name = f"{base_name} \u2192 {job_name}" if job_name else f"{base_name} (tailored)"
             tailored = Resume(
                 name=name,
@@ -1172,6 +1197,17 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
 
 # ── Score Check ────────────────────────────────────────────────────────────
 
+def _tailor_context_jd(json_data: dict) -> str:
+    """RES-20: the job description a freeform tailor was run against.
+
+    A copy tailored from a pasted JD has no Job row, so _tailor_impl stores the
+    text on the copy itself under json_data["_tailor_context"]. That is what makes
+    such a copy scoreable. Returns "" when there is none.
+    """
+    ctx = (json_data or {}).get("_tailor_context") or {}
+    return str(ctx.get("job_description") or "").strip()
+
+
 def _resume_to_score_text(json_data: dict) -> str:
     """Flatten a Resume.json_data into the plaintext form passed to the scorer.
 
@@ -1185,6 +1221,11 @@ def _resume_to_score_text(json_data: dict) -> str:
 async def _score_resume_impl(resume_id: str, depth: str):
     """Background worker: score a tailored resume against its linked job.
 
+    RES-20: a copy tailored from a pasted description has no linked job. It is
+    scored against the JD kept on the copy (json_data["_tailor_context"]) and the
+    result is stored on the copy under json_data["_score"] — the Job path below is
+    unchanged.
+
     Runs under launch_background → progress visible via /monitor/active so the
     spinner survives navigation away from /resumes.
     """
@@ -1196,14 +1237,19 @@ async def _score_resume_impl(resume_id: str, depth: str):
         if not resume:
             logger.error(f"Score: resume {resume_id} missing at execution time")
             return
-        if not resume.job_id:
-            logger.error(f"Score: resume {resume_id} has no linked job")
-            return
 
-        job = db.query(Job).filter(Job.id == resume.job_id).first()
-        if not job:
-            logger.error(f"Score: linked job {resume.job_id} not found")
-            return
+        job = None
+        jd_text = ""
+        if resume.job_id:
+            job = db.query(Job).filter(Job.id == resume.job_id).first()
+            if not job:
+                logger.error(f"Score: linked job {resume.job_id} not found")
+                return
+        else:
+            jd_text = _tailor_context_jd(resume.json_data or {})
+            if not jd_text:
+                logger.error(f"Score: resume {resume_id} has no linked job and no saved job description")
+                return
 
         resume_text = _resume_to_score_text(resume.json_data or {})
         if len(resume_text) < 50:
@@ -1211,7 +1257,14 @@ async def _score_resume_impl(resume_id: str, depth: str):
             return
 
         cv_texts = {"Tailored": resume_text}
-        result = await score_job_sync(job, cv_texts, db=db, depth=depth)
+        if job is not None:
+            result = await score_job_sync(job, cv_texts, db=db, depth=depth)
+        else:
+            # score_job_sync only reads `job` for its id (logging / LLM-cost rows)
+            # once the JD text is supplied, so a stand-in is enough here.
+            from types import SimpleNamespace
+            stand_in = SimpleNamespace(id=None, company=None, title=None, description=jd_text)
+            result = await score_job_sync(stand_in, cv_texts, db=db, depth=depth, preloaded_text=jd_text)
         if not result:
             logger.error(f"Score: scoring failed for resume {resume_id}")
             return
@@ -1220,6 +1273,20 @@ async def _score_resume_impl(resume_id: str, depth: str):
         scores = result.get("scores", result)
         if isinstance(scores, dict):
             tailored_score = scores.get("Tailored")
+
+        if job is None:
+            data = dict(resume.json_data or {})
+            entry = {"Tailored": tailored_score, "scored_at": utcnow().isoformat()}
+            if depth == "full" and result.get("_scoring_report"):
+                report = dict(result["_scoring_report"])
+                report["scored_with"] = "Tailored"
+                entry["report"] = report
+            data["_score"] = entry
+            resume.json_data = data
+            flag_modified(resume, "json_data")
+            db.commit()
+            logger.info(f"Score: resume {resume_id} (freeform JD) = {tailored_score} (depth={depth})")
+            return
 
         updated_scores = dict(job.cv_scores or {})
         if tailored_score is not None:
@@ -1261,17 +1328,20 @@ async def score_check(resume_id: str, request_body: dict = None, db: Session = D
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
-    if not resume.job_id:
-        raise HTTPException(status_code=400, detail="Resume has no linked job")
 
-    job = db.query(Job).filter(Job.id == resume.job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Linked job not found")
-    # Pre-check matches the worker's text-resolution: cv_scorer._get_job_text() falls
-    # back to cached_page_text (and even live page-fetch) when description is empty.
-    # Don't 400 jobs that scored fine via cache alone.
-    if not (job.description or "").strip() and not (job.cached_page_text or "").strip():
-        raise HTTPException(status_code=400, detail="Linked job has no description or cached page text")
+    if resume.job_id:
+        job = db.query(Job).filter(Job.id == resume.job_id).first()
+        if not job:
+            raise HTTPException(status_code=404, detail="Linked job not found")
+        # Pre-check matches the worker's text-resolution: cv_scorer._get_job_text() falls
+        # back to cached_page_text (and even live page-fetch) when description is empty.
+        # Don't 400 jobs that scored fine via cache alone.
+        if not (job.description or "").strip() and not (job.cached_page_text or "").strip():
+            raise HTTPException(status_code=400, detail="Linked job has no description or cached page text")
+    # RES-20: no Job row is fine as long as the copy kept the description it was
+    # tailored from; only a copy with neither can't be scored.
+    elif not _tailor_context_jd(resume.json_data or {}):
+        raise HTTPException(status_code=400, detail="Resume has no linked job or saved job description")
 
     if len(_resume_to_score_text(resume.json_data or {})) < 50:
         raise HTTPException(status_code=400, detail="Resume has insufficient text for scoring")
@@ -1280,14 +1350,14 @@ async def score_check(resume_id: str, request_body: dict = None, db: Session = D
     if depth not in ("light", "full"):
         depth = "light"
 
-    scope = f"{resume.job_id}:resume:{resume_id}"
+    scope = f"{resume.job_id}:resume:{resume_id}" if resume.job_id else f"resume:{resume_id}"
     try:
         run_id = launch_background(
             "score_resume",
             _score_resume_impl,
             trigger="manual",
             scope_key=scope,
-            target_job_id=_uuid.UUID(str(resume.job_id)),
+            target_job_id=_uuid.UUID(str(resume.job_id)) if resume.job_id else None,
             func_kwargs={"resume_id": resume_id, "depth": depth},
         )
         return {"run_id": run_id, "status": "running", "depth": depth, "resume_id": resume_id}
