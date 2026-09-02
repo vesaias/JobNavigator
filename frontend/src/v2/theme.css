@@ -28,7 +28,7 @@
   --shadow-pop:0 10px 30px rgba(0,0,0,.28); --shadow-toast:0 8px 24px rgba(20,19,15,.18);
   --shadow-drawer:-14px 0 40px rgba(0,0,0,.14);
   /* overlays that sit ON the dark rail/bars, so they don't flip with the theme */
-  --rail-active:rgba(255,255,255,.045); --on-rail-line:rgba(255,255,255,.42);
+  --rail-active:rgba(255,255,255,.045); --rail-hover:rgba(255,255,255,.06); --on-rail-line:rgba(255,255,255,.42);
   --on-rail-dim:rgba(255,255,255,.55); --on-rail-sep:rgba(255,255,255,.18);
   /* a switch knob and an embedded document are white in either theme */
   --knob:#ffffff; --iframe-bg:#ffffff;
@@ -133,7 +133,8 @@
 .v2-navlink { cursor:pointer; text-decoration:none; transition:background .12s,color .12s; }
 .v2-navlink:hover { background:var(--surface-2); color:var(--text); }
 .v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
-.v2-navdark:hover { color:var(--rail-ink); }
+.v2-navdark:hover { color:var(--rail-ink) !important; }   /* inline colour on every rail control beats a bare rule */
+.v2-themebtn:hover { background:var(--rail-hover) !important; }
 /* inline styles set border/background on these, so :hover must use !important to win */
 .v2-card { transition:border-color .12s,background .12s; }
 /* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other

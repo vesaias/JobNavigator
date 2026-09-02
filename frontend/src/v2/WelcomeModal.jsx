@@ -43,7 +43,7 @@ export default function WelcomeModal({ onClose }) {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, lineHeight: '18px', fontWeight: 600 }}>
                   {title}<Icon size={15} strokeWidth={1.8} style={{ color: 'var(--muted)', flex: '0 0 auto' }} />
                 </span>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>{desc}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: '17px', textWrap: 'pretty' }}>{desc}</span>
               </div>
             </div>
           ))}

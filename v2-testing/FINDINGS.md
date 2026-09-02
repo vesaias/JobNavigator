@@ -46,3 +46,11 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Actual** `POST /api/scrape/search/{id}` → measured `404` via curl. v2 swallows it (`console.error('trigger', e)`, no toast); v1 shows nothing either.
 **Proposed fix** Point `trigger_url` at `/searches/{id}/run`.
 **Status** fixed in backend; no search currently has a per-search interval so the row is absent from `/api/scheduler/jobs` — live verification deferred to Stage 3 Searches (set `run_interval_minutes` on a scratch search). The silent-failure UX in v2 Stats is logged separately under Stage 3 Stats.
+
+### F-006 · P2 · Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
+**Where** `Dockerfile.backend:37` (`CMD uvicorn backend.main:app --host 0.0.0.0 --port 8000`, no `--reload`); `HANDOVER.md` "Running things"; `CLAUDE.md` "Backend only (hot-reload via volume mount)"
+**Repro** Edit any backend `.py`, call the endpoint: old behaviour. `docker inspect` shows the CMD without `--reload`; no WatchFiles line in the logs.
+**Expected + why** Either the docs are right and the CMD carries `--reload`, or the docs say to restart. During this pass two "verified live" backend fixes (F-005 trigger_url, the Companies `create_company` aliases fix) were in fact not live until a manual restart.
+**Actual** Measured: POST `/api/companies` with `aliases` after the source fix returned `aliases: []` until `docker compose restart backend`; afterwards the same POST returned the aliases.
+**Proposed fix** Docs corrected in this pass (HANDOVER, CLAUDE.md, Stage 3 brief). Optionally add `--reload` for dev (`--reload-dir /app/backend`), but that changes prod behaviour — your call.
+**Status** docs fixed; needs decision on `--reload` in the Dockerfile.

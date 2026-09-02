@@ -18,7 +18,7 @@ Environment: stack via `docker compose` (Docker Desktop). Backend tests run in-c
 - [x] Routes (v1 + v2) listed below
 - [x] Endpoints listed (94 paths / 110 operations) → `inventory/endpoints.md`
 - [x] v2 screen inventories: feed (193 boxes) · searches (150) · companies (202) · applications (137) · resumes (292) · cover-letters (230) · settings (207)
-- [ ] v2 persona-stats inventory → `inventory/v2-persona-stats.md`
+- [~] v2 persona-stats inventory → `inventory/v2-persona-stats.md` (Persona complete; Stats through §2.4 — the Stats screen agent finishes it)
 - [x] v1 screen inventories → `inventory/v1-*.md` (3 files)
 - [ ] Settings matrix → `inventory/settings-matrix.md`
 - [x] Design boards decoded → `design/` (14 boards byte-exact + MAIN.md + github.md). Note: MAIN.md names `Resumes Shelf` canonical for Résumés while HANDOVER names `Resumes Home D`; github.md names `Applications Ops` (split inbox) canonical while MAIN.md lists Applications as open. Testing follows the HANDOVER table.
@@ -36,6 +36,8 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [x] Console sweep, 23 routes × 2 themes → `artifacts/sweep1/` (gitignored). Clean except: Feed mounts the posting iframe while the frame-check is still pending (XFO refusals logged; Stage 3 Feed item); PDF blob aborts in headless are expected
 - [ ] Commit
 
+**Backend does NOT hot-reload** (F-006): `docker compose restart backend` after every backend edit; agents ask `main` for restarts between waves.
+
 ## Stage 3 — Per screen (each: every control · empty/one/many/long/null · light+dark · hovers vs design style-hover · API-failure path · empty DB)
 - [ ] Feed
 - [ ] Searches
@@ -46,7 +48,7 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 - [ ] Persona
 - [ ] Stats
 - [ ] Settings (screen)
-- [ ] Shell (rail, counts, health line, theme toggle, collapse, overlays, toasts)
+- [x] Shell (rail, counts, health line, theme toggle, collapse, overlays, toasts) → `stage3/shell.md` (SHELL-01..06; 1 fixed hover bug, rest decisions)
 - [ ] Commit after each screen
 
 ## Stage 4 — Settings round-trip (every key: API read → type-valid write → read back → UI shows it → takes effect → restore)
