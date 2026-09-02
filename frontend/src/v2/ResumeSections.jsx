@@ -90,8 +90,18 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
 export const RemoveLink = ({ onClick, children = 'Remove' }) => (
-  <span onClick={onClick} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
+  <span onClick={onClick} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad v2-hover-bad-text">{children}</span>
 )
+// PERS-13: removals are undoable rather than confirmed — no window.confirm anywhere.
+// `mutate` closes over the data of the render that produced the toast, so
+// re-inserting through it five seconds later would work off stale state; keep the
+// live one in a ref and restore through that. `onRemoved(label, restore)` is the
+// toast host (Persona / ResumeEditor); without it a removal is simply immediate.
+export function useUndoRemove(mutate, onRemoved) {
+  const live = useRef(mutate)
+  live.current = mutate
+  return (label, remove, restore) => { mutate(remove); onRemoved?.(label, () => live.current(restore)) }
+}
 export const DashedAdd = ({ onClick, children, big }) => (
   <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
 )
@@ -142,21 +152,22 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
 
 // Renders the right section editor for a SECTION_ORDER name. Tailoring props are
 // optional — Persona passes none, so nothing renders as changed.
-export function SectionEditor({ name, data, setField, mutate, baseData, emptyNote, pageHint = true, onError }) {
+export function SectionEditor({ name, data, setField, mutate, baseData, emptyNote, pageHint = true, onError, onRemoved }) {
   switch (name) {
-    case 'Header': return <HeaderEditor data={data} setField={setField} mutate={mutate} />
+    case 'Header': return <HeaderEditor data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
     case 'Summary': return <SummaryEditor pageHint={pageHint} data={data} setField={setField} baseSummary={baseData?.summary} />
-    case 'Experience': return <ExperienceEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />
-    case 'Skills': return <SkillsEditor emptyNote={emptyNote} data={data} mutate={mutate} baseSkills={baseData?.skills} onError={onError} />
-    case 'Education': return <EducationEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
-    case 'Projects': return <ProjectsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
-    case 'Publications': return <PublicationsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
+    case 'Experience': return <ExperienceEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} onRemoved={onRemoved} />
+    case 'Skills': return <SkillsEditor emptyNote={emptyNote} data={data} mutate={mutate} baseSkills={baseData?.skills} onError={onError} onRemoved={onRemoved} />
+    case 'Education': return <EducationEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
+    case 'Projects': return <ProjectsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
+    case 'Publications': return <PublicationsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
     default: return null
   }
 }
 
-export function HeaderEditor({ data, setField, mutate }) {
+export function HeaderEditor({ data, setField, mutate, onRemoved }) {
   const items = data.header?.contact_items || []
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
   const arrows = (i) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
@@ -185,7 +196,10 @@ export function HeaderEditor({ data, setField, mutate }) {
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
               <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
               {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
-              <span onClick={() => mutate((d) => d.header.contact_items.splice(i, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+              <span onClick={() => undoRemove('Removed contact item',
+                (d) => d.header.contact_items.splice(i, 1),
+                (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })}
+                title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
               </div>
             </div>
           )
@@ -195,8 +209,9 @@ export function HeaderEditor({ data, setField, mutate }) {
     </div>
   )
 }
-export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp }) {
+export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, onRemoved }) {
   const exp = data.experience || []
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   const [open, setOpen] = useState(() => new Set([0]))   // first entry open by default
   const setBullet = (i, bi, v) => mutate((d) => { d.experience[i].bullets[bi] = v })
   const bulletMark = (i, bi, txt) => {
@@ -242,7 +257,10 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp })
                       <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
                       {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
-                      <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
+                      <span onClick={() => undoRemove('Removed bullet',
+                        (d) => d.experience[i].bullets.splice(bi, 1),
+                        (d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.splice(bi, 0, b) })}
+                        title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
                     </div>
                   )
                 })}
@@ -253,8 +271,11 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp })
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
                   </div>
                 ))}
-                <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>+ Add bullet</div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.experience.splice(i, 1))}>Remove role</RemoveLink></div>
+                {/* PERS-19: accent like every other add-control on the screen */}
+                <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add bullet</div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed role',
+                  (d) => d.experience.splice(i, 1),
+                  (d) => { d.experience = d.experience || []; d.experience.splice(i, 0, e) })}>Remove role</RemoveLink></div>
               </div>
             )}
           </div>
@@ -282,8 +303,9 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
 }
 
 // Skills: fixed-width category + value with tailoring ✦/revert/highlight when changed
-export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError }) {
+export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onRemoved }) {
   const entries = Object.entries(data.skills || {})
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   // RES-04 / PERS-03: a category name is user text, so routing the value write
   // through the dotted-path setField silently dropped every write to a category
   // containing a "." (".NET", "Node.js", "Web3.0"). Write the key directly.
@@ -307,7 +329,7 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError }) {
   )
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
-      {entries.map(([k, v]) => {
+      {entries.map(([k, v], ei) => {
         const changed = baseSkills != null && (k in baseSkills) && String(baseSkills[k] || '') !== String(v || '')
         const added = baseSkills != null && !(k in baseSkills)
         const marked = changed || added
@@ -321,7 +343,11 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError }) {
               {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
-            <span onClick={() => mutate((d) => delete d.skills[k])} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+            {/* restore rebuilds the key order so the row comes back where it was */}
+            <span onClick={() => undoRemove('Removed skill category',
+              (d) => { delete d.skills[k] },
+              (d) => { const en = Object.entries(d.skills || {}); en.splice(ei, 0, [k, v]); d.skills = Object.fromEntries(en) })}
+              title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
           </div>
         )
       })}
@@ -330,7 +356,8 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError }) {
     </div>
   )
 }
-export function EducationEditor({ emptyNote, data, setField, mutate }) {
+export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }) {
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.education || []).map((e, i) => (
@@ -343,7 +370,9 @@ export function EducationEditor({ emptyNote, data, setField, mutate }) {
             <MicroField label="Degree" value={e.degree} onChange={(v) => setField(`education.${i}.degree`, v)} />
             <MicroField label="Years" value={e.years} onChange={(v) => setField(`education.${i}.years`, v)} placeholder="2015 – 2019" mono />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.education.splice(i, 1))} /></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed education entry',
+            (d) => d.education.splice(i, 1),
+            (d) => { d.education = d.education || []; d.education.splice(i, 0, e) })} /></div>
         </div>
       ))}
       {(data.education || []).length === 0 && <EmptyState note={emptyNote} what="education" />}
@@ -351,7 +380,8 @@ export function EducationEditor({ emptyNote, data, setField, mutate }) {
     </div>
   )
 }
-export function ProjectsEditor({ emptyNote, data, setField, mutate }) {
+export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved }) {
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.projects || []).map((p, i) => (
@@ -367,12 +397,17 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate }) {
               <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
                 <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>—</span>
                 <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
-                <span onClick={() => mutate((d) => d.projects[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
+                <span onClick={() => undoRemove('Removed bullet',
+                  (d) => d.projects[i].bullets.splice(bi, 1),
+                  (d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.splice(bi, 0, b) })}
+                  title="Remove" className="v2-hover-bad v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
               </div>
             ))}
             <DashedAdd onClick={() => mutate((d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.push('') })}>+ Add bullet</DashedAdd>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.projects.splice(i, 1))}>Remove project</RemoveLink></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed project',
+            (d) => d.projects.splice(i, 1),
+            (d) => { d.projects = d.projects || []; d.projects.splice(i, 0, p) })}>Remove project</RemoveLink></div>
         </div>
       ))}
       {(data.projects || []).length === 0 && <EmptyState note={emptyNote} what="projects" />}
@@ -380,15 +415,18 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate }) {
     </div>
   )
 }
-export function PublicationsEditor({ emptyNote, data, setField, mutate }) {
+export function PublicationsEditor({ emptyNote, data, setField, mutate, onRemoved }) {
   const pubs = data.publications || []
+  const undoRemove = useUndoRemove(mutate, onRemoved)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
       {pubs.length === 0 ? <EmptyState note={emptyNote} what="publications" /> : pubs.map((p, i) => (
         <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => mutate((d) => d.publications.splice(i, 1))} /></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed publication',
+            (d) => d.publications.splice(i, 1),
+            (d) => { d.publications = d.publications || []; d.publications.splice(i, 0, p) })} /></div>
         </div>
       ))}
       <DashedAdd big onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</DashedAdd>

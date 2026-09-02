@@ -4,7 +4,7 @@ import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
-  SectionShell, SectionEditor, BulletText,
+  SectionShell, SectionEditor, BulletText, DashedAdd,
 } from './ResumeSections'
 
 // The Persona is the singleton applicant record. Two independent halves:
@@ -93,11 +93,15 @@ const labelFor = (opts, v) => (opts.find(([ov]) => ov === v) || [])[1] || v
 // PERS-07: a legacy entry can carry more than one key. Taking only the first
 // dropped the rest, and because any edit rewrites the whole bank canonically the
 // loss became permanent on the next keystroke. Expand: one pair per key.
+// PERS-14: an entry that is not an object (null, a string), an empty object, or a
+// legacy map whose only key is "" carries nothing editable — it used to render as
+// a blank card and count towards "N answers", and the next keystroke made that
+// blank row permanent. Skip them entirely. A canonical {question, answer} pair is
+// always kept, blank or not, so a row you just added still renders.
 const toPairs = (e) => {
-  if (!e || typeof e !== 'object') return [{ question: '', answer: '' }]
-  if ('question' in e || 'answer' in e) return [{ question: e.question || '', answer: e.answer || '' }]
-  const ks = Object.keys(e)
-  return ks.length ? ks.map((k) => ({ question: k, answer: String(e[k] ?? '') })) : [{ question: '', answer: '' }]
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return []
+  if ('question' in e || 'answer' in e) return [{ question: e.question == null ? '' : String(e.question), answer: e.answer == null ? '' : String(e.answer) }]
+  return Object.keys(e).filter((k) => k !== '').map((k) => ({ question: k, answer: String(e[k] ?? '') }))
 }
 
 const FIELD_LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
@@ -225,25 +229,30 @@ export default function Persona() {
   // One debounce timer per node so an autofill edit never cancels a résumé edit.
   // timers.current[key] = { timer, value } — the value is kept so a pending save
   // can be flushed on unmount/unload rather than dropped (PERS-08).
-  const saveNode = useCallback((key, value) => {
+  // `payload` (PERS-21) lets the local node hold rows the server should not: a
+  // blank Q&A pair renders while you type into it but is never PATCHed.
+  const saveNode = useCallback((key, value, payload) => {
+    const body = payload === undefined ? value : payload
     setP((prev) => (prev ? { ...prev, [key]: value } : prev))
     clearTimeout(timers.current[key]?.timer)
     const timer = setTimeout(async () => {
       delete timers.current[key]
-      try { await api.patch('/persona', { [key]: value }); flash() }
+      try { await api.patch('/persona', { [key]: body }); flash() }
       catch (e) {
         console.error(`persona ${key}`, e)
         pushToast({ kind: 'error', msg: 'Could not save your changes' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') })
       }
     }, 500)
-    timers.current[key] = { timer, value }
+    timers.current[key] = { timer, value: body }
   }, [flash, pushToast])
 
   // Spread the live node: keys with no control (preferences.preferred_locations)
   // must survive, and `undefined` clears a key rather than storing "".
+  // PERS-21: clearing a text field is the same intent as "— not answered", so an
+  // empty string drops the key too rather than persisting "".
   const write = useCallback((node, fkey, value) => {
     const next = { ...((p || {})[node] || {}) }
-    if (value === undefined) delete next[fkey]
+    if (value === undefined || value === '') delete next[fkey]
     else next[fkey] = value
     saveNode(node, next)
   }, [p, saveNode])
@@ -258,7 +267,22 @@ export default function Persona() {
     const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.entries(raw).map(([question, answer]) => ({ question, answer })) : [])
     return list.flatMap(toPairs)
   }, [p])
-  const writeQa = (list) => saveNode('qa_bank', list.map((e) => ({ question: e.question, answer: e.answer })))
+  // PERS-21: a pair with neither half filled is not an answer — the backend's own
+  // POST /persona/qa-bank rejects it with a 400. Keep it locally so the row you
+  // just added stays on screen and editable, but leave it out of the PATCH.
+  const writeQa = (list) => {
+    const rows = list.map((e) => ({ question: e.question || '', answer: e.answer || '' }))
+    saveNode('qa_bank', rows, rows.filter((e) => e.question.trim() || e.answer.trim()))
+  }
+  // the removal toast fires up to 5s later, so re-insert into the list as it is
+  // *then* rather than the one captured when the ✕ was clicked
+  const qaRef = useRef(qa)
+  qaRef.current = qa
+  const removeQa = (i) => {
+    const gone = qa[i]
+    writeQa(qa.filter((_, j) => j !== i))
+    pushToast({ kind: 'undo', msg: 'Removed answer', action: 'Undo', onAction: () => writeQa([...qaRef.current.slice(0, i), gone, ...qaRef.current.slice(i)]) })
+  }
 
   const filled = useMemo(() => {
     if (!p) return 0
@@ -314,6 +338,7 @@ export default function Persona() {
               <SectionShell key={name} name={name} count={counts[name]} open={sections.has(name)} onToggle={() => toggleSection(name)}>
                 <SectionEditor name={name} data={resume} setField={setField} mutate={mutate}
                   onError={(msg) => pushToast({ kind: 'error', msg })}
+                  onRemoved={(msg, undo) => pushToast({ kind: 'undo', msg, action: 'Undo', onAction: undo })}
                   pageHint={false} emptyNote="Tailored résumés draw from whatever you add here." />
               </SectionShell>
             ))}
@@ -354,7 +379,7 @@ export default function Persona() {
               <div onClick={() => toggleGroup('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{groups.has('qa') ? '⌄' : '›'}</span>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers — sent verbatim, worth writing well</span>
                 <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--edge)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
               </div>
               {groups.has('qa') && (
@@ -374,13 +399,12 @@ export default function Persona() {
                             onChange={(v) => writeQa(qa.map((x, j) => (j === i ? { ...x, answer: v } : x)))} />
                         </div>
                       </div>
-                      <span onClick={() => writeQa(qa.filter((_, j) => j !== i))} title="Remove answer" className="v2-hover-bad"
+                      <span onClick={() => removeQa(i)} title="Remove answer" className="v2-hover-bad v2-hover-bad-text"
                         style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
                     </div>
                   ))}
                   {qa.length === 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>No saved answers yet — the extension can add them as you apply.</span>}
-                  <span onClick={() => writeQa([...qa, { question: '', answer: '' }])} className="v2-hover-accent-text"
-                    style={{ alignSelf: 'flex-start', fontSize: 11.5, lineHeight: '19px', color: 'var(--accent)', cursor: 'pointer' }}>＋ Add answer</span>
+                  <DashedAdd onClick={() => writeQa([...qa, { question: '', answer: '' }])}>+ Add answer</DashedAdd>
                 </div>
               )}
             </div>
