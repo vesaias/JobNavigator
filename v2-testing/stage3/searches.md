@@ -98,7 +98,7 @@ The screen's predicate (`last_error ‖ downMap[id] ‖ last_run_warning`) is de
 **Repro** Any row with `search_mode='url'`; open its editor.
 **Actual** (measured on a scratch row) `Mode select value: 'keyword' | displayed: {"si":0,"shown":"Keyword (JobSpy)","opts":["keyword","levels_fyi","linkedin_personal","jobright","freehire"]}` — the DOM coerces the unmatched `value="url"` to the first option. The badge still reads `URL`, the `Direct URL` cell still renders, and the draft still holds `'url'` so a blind Save does **not** corrupt the mode; but the picker lies about the current state, and one click on it silently converts a legacy search.
 **Proposed fix** Push a disabled `['url', 'Direct URL (legacy)']` option into `MODE_OPTIONS` when `d.search_mode === 'url'`.
-**Status** closed: no `url`-mode search exists (modes in the DB: keyword, levels_fyi, linkedin_personal, jobright, extension, linkedin_extension); the backend still accepts the mode via API — removing it is a separate decision
+**Status** fixed + verified (backend restarted, 595 tests green): the legacy `url` search mode is gone — orchestrator dispatch, source mapping, validity check, the UI badge and field group; `_search_mode_is_valid` returns False and `run_search` raises for any stray row
 
 ### SRCH-12 · P3 · `toPayload` silently rewrites three fields the user just cleared
 **Where** `Searches.jsx:123` (`location: d.location || 'United States'`), `:125-127` (`parseInt(x) || default`)
@@ -106,7 +106,7 @@ The screen's predicate (`last_error ‖ downMap[id] ‖ last_run_warning`) is de
 **Actual** `{"location":"United States","hours_old":24,"results_wanted":50,"run_interval_minutes":0}` — the cleared Location came back as “United States” and both explicit zeros became 24/50, with no indication in the UI. (`run_interval_minutes: 0` is intended and survives correctly.) `location` is also sent for levels_fyi / jobright / freehire / extension searches, where it means nothing.
 The non-numeric half of the concern is moot: the fields are `type="number"`, so letters cannot be typed at all (measured).
 **Proposed fix** `?? ` instead of `||` for the numerics, and only default Location for keyword mode.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: is “0 hours old” a meaningful configuration, or is the coercion the intended guard-rail?
+**Status** fixed + verified after rebuild: `toPayload` keeps an explicit 0 (POST body `hours_old: 0`), sends null for cleared numbers (backend fields now Optional), and sends `location` only in keyword mode
 
 ### SRCH-13 · P3 · Test modal is 980px wide; the design says 880px
 **Where** `Searches.jsx:590` vs `Searches Ops.dc.html:218` (`width:880px;max-height:660px`)
@@ -127,7 +127,7 @@ Related, and **not** a defect: the inventory predicted horizontal overflow below
 ### SRCH-16 · P3 · Header rule is full-bleed and the left gutter is 24px; the design insets the rule by 30px and pads symmetrically
 **Where** `Searches.jsx:411` (`borderBottom` on `<header>`, padding `22px 30px 16px 24px`) and `:423` (body padding `14px 30px 24px 24px`) vs `Searches Ops.dc.html:52` (padding `22px 30px 16px`), `:61` (a separate divider `margin:0 30px`), `:63` (body padding `14px 30px 24px`)
 **Actual** measured `header padding: 22px 30px 16px 24px`, `border-bottom: 1px rgb(226,221,208)` spanning the full 1234px content width.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: the 24px left gutter looks like a deliberate cross-screen shell convention — confirm and close, or restore the design's inset rule?
+**Status** fixed + verified after rebuild: header padding 22/30/16 symmetric, a 1 px rule inset 30 px both sides, body gutter 30/30
 
 ### SRCH-17 · P4 · Hovers present in code that the design does not author
 **Where** `theme.css` classes applied in `Searches.jsx`
@@ -146,21 +146,21 @@ Extras the design does **not** author: `.v2-card` on the whole card (`border-col
 **Where** `Searches.jsx:479-499` vs `Searches Ops.dc.html:133-147`
 **Actual** measured: actions wrapper `width 169, margin-left -11px, gap 3px` (design `flex:0 0 148px`, gap 4px, no negative margin); Run/Test padding `0 9px` (design `0 10px`); Active pill fixed at `flex: 0 0 62px` (design `padding:0 11px`, auto width); the extension placeholder reads `extension • passive capture` right-aligned (design `passive capture`, `justify-content:flex-start`).
 The fixed-width pill is explained by an in-code comment (“so Active matches Paused and both sit on one vertical axis”) and was verified: both `Active` and `Paused` pills measure exactly `w: 62, h: 23`.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: all five read as deliberate alignment work — confirm, or restore the design metrics?
+**Status** decided 2026-09-02: keep
 
 ### SRCH-19 · P4 · `until()` has no day unit, so a two-day-out sweep reads “next scheduled run in 58h 20m”
 **Where** `Searches.jsx:16-23`
 **Actual** the real `scrape_all` next run is `2026-09-04T06:38` (interval 3500 min); the header renders `6 configs · 4 active · 1 need attention · next scheduled run in 58h 20m`. `ago()` does have a day unit (`:14`). The `m <= 0` branch also yields the odd “next scheduled run in any moment”.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: add `Xd Yh` above 24h?
+**Status** fixed + verified after rebuild: `until()` has a day unit ("next scheduled run in 2d 10h"); a due run reads "due now"
 
 ### SRCH-20 · P4 · “last run 3d ago” and “next scheduled run in …” freeze until an unrelated re-render
 **Where** `Searches.jsx:7-23`, computed at render time with no timer
 **Actual** confirmed by reading; the numbers only moved between separate page loads in my runs (58h 20m → 58h 19m → 58h 18m across three fresh loads).
-**Status** awaiting the user's call (explained in chat 2026-09-02): logged
+**Status** fixed in source: the header's relative times re-render once a minute
 ### SRCH-21 · P4 · Escape closes the ⋯ menu and the test modal, but not the edit drawer or the New-search card
 **Where** `Searches.jsx:343`
 **Actual** measured: menu open → Escape → menu count 0 ✓; document click-away → menu count 0 ✓; test modal → Escape / backdrop / ✕ all close ✓; drawer open → Escape → drawer still open (child count stays 2).
-**Status** awaiting the user's call (explained in chat 2026-09-02): logged
+**Status** fixed + verified after rebuild: Escape closes the New-search card (resetting its draft) and the edit drawer; test modal / menus as before
 ### SRCH-22 · P4 · New-card Cancel keeps the typed draft
 **Where** `Searches.jsx:435` — only `create()` success resets `newDraft` (`:366`)
 **Actual** typed `ZZTEST discarded draft` into Name → Cancel → reopen → Name is still `'ZZTEST discarded draft'`. (After a *successful* create the draft does reset correctly — measured `Name: ''`, `Hours old: '24'`.)
@@ -182,15 +182,15 @@ The fixed-width pill is explained by an in-code comment (“so Active matches Pa
 **Actual** `POST /api/searches/{Extension LI id}/run` → **202** with a `run_id`; same for `Extension`. The run is a harmless no-op — `orchestrator._search_mode_is_valid()` (`:103-121`) returns `False` for both extension modes, so `_run_search_by_id` returns before any network call or DB write — but a `JobRun` row is created and appears in Stats › Run history. `POST /{ext}/test` **is** correctly blocked (400, “Test only supports keyword, levels_fyi, linkedin_personal, jobright, and freehire searches”). DELETE was **not** exercised, per the brief.
 UI gating itself verified for both seeded rows: Run/Test/⋯ hidden, the `extension • passive capture` label present with the right tooltip, Mode rendered as a **disabled** input (`value "Extension (manual Save-to-Feed)"`, `background --surface-2`, `color --muted`, `grid-column: span 2`), no `<select>`, no Run-interval input, no Sources/Collections chips, the correct note banner, and the Active pill still live with the extension-specific tooltip (`Resume importing captured jobs` — toggled and restored).
 **Proposed fix** 404/409 on `/run` and `DELETE` when `search_mode` is an extension mode.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: add a server-side guard (backend restart required), or accept UI-only protection?
+**Status** fixed + verified live (backend, +7 tests): `POST /searches/{id}/run` and `DELETE` return 409 for the two extension searches; PATCH still allowed
 
 ### SRCH-27 · P4 · A preview row with a null `url` renders as a styled but dead link
 **Where** `Searches.jsx:640`
 **Actual** a job with `url: null` renders `<a>` with `href` absent — measured `href: null`, still painted `color: var(--text)` and clickable-looking. Same row also proved the screen survives `company: null`, `location: null`, `salary: null` (renders `—`) and a 200-character title (ellipsised, full text in `title=`).
-**Status** awaiting the user's call (explained in chat 2026-09-02): logged
+**Status** fixed + verified after rebuild: a preview row without a URL renders its title as a plain span (cursor default)
 ### SRCH-28 · P4 · The run poll tears itself down and rebuilds every 3s, and keys on any job's `scope_key`
 **Where** `Searches.jsx:328-339` — effect deps `[running, load]`, and every tick calls `setRunning` with a fresh object; `:320`/`:334` accept every `scope_key`, so a company scrape or a résumé score keeps this screen re-rendering every 3s.
-**Status** awaiting the user's call (explained in chat 2026-09-02): logged
+**Status** fixed + verified after rebuild: one stable poll interval; only `search_run` jobs count (a company scrape alone lights no spinner)
 ### SRCH-29 · P4 · No pending state on “Create search” or “Save changes”
 **Where** `Searches.jsx:436`, `:528` — a double click fires two POSTs (the backend has no duplicate-name check, `routes_searches.py:65-70`).
 **Status** fixed + verified after rebuild: Create/Save show "Creating…"/"Saving…" and ignore clicks while pending (one POST under a double click)

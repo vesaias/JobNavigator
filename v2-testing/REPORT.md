@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 69 | 26 | 16 |
-| P4 | 90 | 40 | 25 | 25 |
-| **All** | **276** | **183** | **51** | **42** |
+| P3 | 111 | 73 | 23 | 15 |
+| P4 | 90 | 45 | 23 | 22 |
+| **All** | **276** | **192** | **46** | **38** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -22,7 +22,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 36 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
-| searches.md | 29 | 0 | 6 | 11 | 12 | 14 |
+| searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 10 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
 | FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
@@ -196,10 +196,19 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SRCH-07 (P3) — Every card in the list lands on a half pixel
 - SRCH-09 (P3) — Header “N need attention” and the rail's “N sources need attention” count different things
 - SRCH-10 (P3) — The rail “Searches” badge diverges from the header count after create / duplicate / delete
+- SRCH-11 (P3) — A legacy `url`-mode search shows a Mode dropdown reading “Keyword (JobSpy)”
+- SRCH-12 (P3) — `toPayload` silently rewrites three fields the user just cleared
 - SRCH-15 (P3) — New-search card body and edit drawer paint `--bg`; the design specifies `#fdfcf9` → `--recessed`
+- SRCH-16 (P3) — Header rule is full-bleed and the left gutter is 24px; the design insets the rule by 30px and pads symmetrically
+- SRCH-19 (P4) — `until()` has no day unit, so a two-day-out sweep reads “next scheduled run in 58h 20m”
+- SRCH-20 (P4) — “last run 3d ago” and “next scheduled run in …” freeze until an unrelated re-render
+- SRCH-21 (P4) — Escape closes the ⋯ menu and the test modal, but not the edit drawer or the New-search card
 - SRCH-22 (P4) — New-card Cancel keeps the typed draft
 - SRCH-23 (P4) — No concurrency guard on Test
 - SRCH-24 (P4) — `/health/entities` and `/scheduler/jobs` are fetched once and never refreshed
+- SRCH-26 (P3) — The backend does not enforce the extension-search gating the UI applies
+- SRCH-27 (P4) — A preview row with a null `url` renders as a styled but dead link
+- SRCH-28 (P4) — The run poll tears itself down and rebuilds every 3s, and keys on any job's `scope_key`
 - SRCH-29 (P4) — No pending state on “Create search” or “Save changes”
 - SET-01 (P1) — Typing after a revealed secret mask saves `••••••<typed>` and destroys the stored secret
 - SET-02 (P2) — An unset secret renders as six bullets, identical to a set one
