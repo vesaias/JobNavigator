@@ -2,7 +2,7 @@
 
 **How to use this:** for each row, fill in **Your call** with `keep code`, `match design`, or `other: …` (short note). Nothing here changes until you decide.
 **Scope:** P3/P4 findings tagged "needs decision" in the Stage 3 reports where the deviation is about a design value, hover, copy, or layout — functional bugs (missing error handling, wrong data, dead controls) were pulled out to the excluded list at the end, even where they were P3/P4 + needs decision.
-**Row counts by screen:** Feed 14 · Searches 7 · Companies 15 · Applications 10 · Résumés 12 · Cover Letters 13 · Persona + Stats 20 · Settings 11 · Shell 7 — **109 total.**
+**Row counts by screen:** Feed 14 · Searches 7 · Companies 15 · Applications 10 · Résumés 12 · Cover Letters 13 · Persona + Stats 20 · Settings 11 · Shell 7 — **109 total** + 12 Résumés re-check rows below.
 
 ---
 
@@ -161,6 +161,26 @@
 | SHELL-05e | Collapsed warn-dot position | left:34 | left31/top8 | — | |
 
 ---
+
+
+## Résumés — re-check against the canonical `Resumes Shelf` board (12)
+
+The Stage 3 Résumés pass measured against `Resumes Home D`. Re-checked against Shelf: RES-22's headline ("design is a two-pane browser") is withdrawn, RES-13 / RES-14 / RES-09 / RES-23 are moot (Shelf does what the code does, or the fix is live), and the code's card hover (`--hover-soft` lift on an `--edge` border) is an exact match to Shelf. Full detail: `stage3/resumes-shelf-recheck.md`.
+
+| ID | Element | Design says | Code does | Agent's recommendation | Your call |
+|---|---|---|---|---|---|
+| RES2-01 | The shelf header carries a border the canonical board does … | `Resumes Shelf.dc.html:56` — `padding:22px 30px 14px;display:flex;align-items:flex-end;gap:16px` and **no bor… | measured `padding: 22px 30px 16px 24px`, `gap: 18px`, `border-bottom: 1px solid rgb(226,221,208)` (`--line`).… | drop `borderBottom`; set `paddingBottom: 14`, `gap: 16`. |  |
+| RES2-02 | The search field is inset 2 px, not 13, so its text starts … | `Resumes Shelf.dc.html:62` — `height:36px;width:300px;padding:0 13px`. The 13 px inset is what lines the plac… | measured `paddingLeft: 2px`, `paddingRight: 2px` (h36 ✓, w300 ✓, fontSize 13 ✓, border-bottom 1px `--line` ✓)… | `padding: '0 13px'`; optionally restore the example in the placeholder. |  |
+| RES2-03 | The shelf drops three of the board's affordance labels/tool… | `Resumes Shelf.dc.html`: | measured: base card `title` = `null`; no "Recent copies" span exists anywhere in the shelf DOM; chip `title` … | add the base-card `title`; add the "Recent copies" label span to both chip rows… |  |
+| RES2-04 | Card hover — the background matches the board exactly; only… | `Resumes Shelf.dc.html:744-751` (`cardHover`): `cardBg: lit ? "#f4f8f5" : "#fff"`, `cardBd: lit ? "#8a826e" :… | measured on both the Persona and a base card: `border-color rgb(226,221,208) → rgb(63,107,82)` (`--line` → `-… | none required for the background. For the border, either accept the accent as t… |  |
+| RES2-05 | Chip hover text goes to `--good`; the board darkens it past… | `Resumes Shelf.dc.html:769` — `chipFg: hovered ? "#26543c" : "#57534a"`. `#26543c` is a deliberately darker g… | measured `color rgb(87,83,74) → rgb(63,107,82)` (`--text-2` → `--good`/`--accent`). The other three propertie… | none, or add a `--accent-deep` token if the extra contrast is wanted. |  |
+| RES2-06 | Four border-only hovers in the board also lift their backgr… | all four are `border-color:#3f6b52` **only** in `Resumes Shelf.dc.html` (`:71`, `:127`, `:411`, `:412`), and … | measured on the search result row and on the archived band: `border-color rgb(226,221,208) → rgb(63,107,82)` … | give the outlined rows/pills `.v2-bd` (`theme.css:153`, border-only — it alread… |  |
+| RES2-07 | The search and archived views add a `‹ Back` control and a … | `Resumes Shelf.dc.html:67-81` — the searching branch renders exactly one label (`{{ resultLine }}`, `padding:… | measured: a `display:flex; gap:10px; padding:4px 2px` row containing `‹ Back` (12px, `--accent`, `.v2-navlink… | none if the back control is wanted (it is a genuine usability addition over a m… |  |
+| RES2-08 | The Add modal deviates from the board in width, height, typ… | `Resumes Shelf.dc.html:552-563`: `width:400px`, `padding:18px 22px`, `gap:11`, title Newsreader 18px reading … | measured: panel **420 × 234.5**, `padding: 22px`; title `New base résumé` at **19px**; an extra 12px sub-line… | if matching: 400 px, `18px 22px`, 18px title "Add résumé", input h33/`0 10px`/t… |  |
+| RES2-09 | Editor top-bar name clamps at 460 px, the board at 420 | `Resumes Shelf.dc.html:142` — `max-width:420px`. At 420 the ellipsised name leaves the status string room at … | measured `max-width: 460px` on both fixtures (rendered widths 22 px and 207.7 px, so it does not currently cl… | `maxWidth: 420`. |  |
+| RES2-10 | The copy band's lineage cluster: a text divider instead of … | `Resumes Shelf.dc.html`: | measured: the divider is the literal string `" │ "` coloured `rgb(226,221,208)` (`--line`, one step lighter t… | replace the glyph with `<span style={{width:1,height:11,background:'var(--edge)… |  |
+| RES2-11 | The ⋯ trigger is transparent, so the band tint shows throug… | `Resumes Shelf.dc.html:172` — `background: {{ menuBg }}` where `menuBg = S.menuOpen ? "#eaf1eb" : "#fff"`. Ag… | measured closed: `background rgba(0, 0, 0, 0)` (so the button reads as the `--surface-2` band), `border 1px r… | `background: headMenu ? 'var(--accent-soft)' : 'var(--surface)'`. |  |
+| RES2-12 | Section-header hover uses `--surface-2` and also changes th… | `Resumes Shelf.dc.html:212, 242, 260, 270, 306, 333, 358, 390` — every section header and every experience-en… | measured header class `v2-hover-accent`; rule `background:var(--surface-2) !important; color:var(--text) !imp… | `background: var(--bg)` and drop the colour override for these headers (or intr… |  |
 
 ## Excluded (functional, not design)
 
