@@ -56,16 +56,14 @@
   --sm-jobright-bg:#e3efee; --sm-jobright-fg:#2f6a62;
   --sm-freehire-bg:#f6eee0; --sm-freehire-fg:#8a5c22;
   --sm-extension-bg:#f1efe8; --sm-extension-fg:#57534a;
-  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea; --paper:#ffffff;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
 
   --serif:'Newsreader',Georgia,serif;
   --sans:'Public Sans',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
 
-  /* back-compat aliases for the shell + shelf (written before the token rename) */
-  --panel:var(--surface-2); --border:var(--line); --border-lt:var(--line-soft);
-  --ink:var(--text); --stone:var(--text-2); --faint:var(--muted);
-  --accent-bg:var(--accent-soft); --danger:var(--bad); --danger-bg:var(--bad-soft); --warn-bg:var(--warn-soft);
+  /* back-compat alias for --muted (written before the token rename) */
+  --faint:var(--muted);
 
   font-family:var(--sans); color:var(--text); background:var(--bg);
   -webkit-font-smoothing:antialiased; font-size:14px;
@@ -112,7 +110,7 @@
   --sm-jobright-bg:#1f3432; --sm-jobright-fg:#96c8c0;
   --sm-freehire-bg:#3a3021; --sm-freehire-fg:#d3b083;
   --sm-extension-bg:#34322c; --sm-extension-fg:#b5b0a3;
-  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --paper:#f7f4ec;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f;
   /* F-004: the light alphas vanish against #1e1c17 — dark surfaces need a higher
      alpha (and the menu a hairline) to read as lifted off the page at all. */
   --shadow-modal:0 18px 50px rgba(0,0,0,.6);

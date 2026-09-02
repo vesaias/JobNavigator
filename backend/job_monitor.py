@@ -23,6 +23,10 @@ class RunningJob:
     task: Optional[asyncio.Task] = None
     scope_key: Optional[str] = None
     target_job_id: Optional[uuid.UUID] = None
+    # The Company this run targets, when it has one (company_scrape). Carried
+    # separately from scope_key so the dashboard can match a running scrape to a
+    # row by id instead of guessing from the company name + start time.
+    company_id: Optional[str] = None
     # One-line "what this run did", shown in Stats > Run history. A tracked_run
     # body assigns it (`run.summary = ...`); a launch_background coroutine gets
     # the same effect by returning a string. Left None, the run reads as bare
@@ -64,6 +68,7 @@ def get_all_running() -> list[dict]:
             "elapsed_seconds": round((now - r.started_at).total_seconds(), 1),
             "scope_key": r.scope_key,
             "target_job_id": str(r.target_job_id) if r.target_job_id else None,
+            "company_id": str(r.company_id) if r.company_id else None,
         }
         for r in _running.values()
     ]
@@ -153,6 +158,7 @@ async def tracked_run(
     scope_key: Optional[str] = None,
     meta: Optional[dict] = None,
     target_job_id: Optional[uuid.UUID] = None,
+    company_id: Optional[str] = None,
 ):
     """Async context manager: tracks a job run in-memory + DB. Raises JobAlreadyRunningError on duplicate."""
     key = _make_key(job_type, scope_key)
@@ -172,6 +178,7 @@ async def tracked_run(
         started_at=datetime.now(timezone.utc),
         scope_key=scope_key,
         target_job_id=target_job_id,
+        company_id=company_id,
     )
     _running[key] = running_job
 
@@ -197,6 +204,7 @@ def launch_background(
     func_args: tuple = (),
     func_kwargs: Optional[dict] = None,
     target_job_id: Optional[uuid.UUID] = None,
+    company_id: Optional[str] = None,
 ) -> str:
     """Launch a coroutine as a background asyncio.Task with tracking. Returns run_id immediately.
     Raises JobAlreadyRunningError if already running."""
@@ -234,6 +242,7 @@ def launch_background(
         task=task,
         scope_key=scope_key,
         target_job_id=target_job_id,
+        company_id=company_id,
     )
 
     return str(run_id)

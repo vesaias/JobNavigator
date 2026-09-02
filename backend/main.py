@@ -680,7 +680,11 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
             db2.close()
 
     try:
-        run_id = launch_background("company_scrape", _do, trigger="manual", scope_key=company_id, meta={"company": company_name})
+        run_id = launch_background(
+            "company_scrape", _do, trigger="manual",
+            scope_key=company_id, company_id=company_id,
+            meta={"company": company_name},
+        )
         return {"run_id": run_id, "status": "running", "company": company_name}
     except JobAlreadyRunningError as e:
         logger.info("Duplicate trigger rejected for job_type=%s", e.job_type)

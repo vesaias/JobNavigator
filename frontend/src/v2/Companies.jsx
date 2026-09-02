@@ -152,8 +152,10 @@ export default function Companies() {
   useEffect(() => () => { mounted.current = false }, [])
 
   // only company_scrape runs belong on this screen; /monitor/active also carries
-  // scoring and search runs whose scope_key is a job/search id.
-  const runMap = (data) => { const m = {}; (data || []).forEach((r) => { if (r.job_type === 'company_scrape' && r.scope_key) m[r.scope_key] = true }); return m }
+  // scoring and search runs whose scope_key is a job/search id. X-01: the run now
+  // carries company_id explicitly — prefer it, and keep the scope_key reading as a
+  // fallback for runs started before the field existed.
+  const runMap = (data) => { const m = {}; (data || []).forEach((r) => { if (r.job_type !== 'company_scrape') return; const id = r.company_id || r.scope_key; if (id) m[id] = true }); return m }
   // COMP-06: health is refetched with the list, so a run that clears (or causes)
   // a failure updates the row ▲, the header count and the sort without a reload.
   const fetchHealth = useCallback(async () => {

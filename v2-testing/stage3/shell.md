@@ -43,7 +43,7 @@ Design: `Nav Rail.dc.html`, `Toasts.dc.html`, `System Overlays.dc.html` (panels 
 ### SHELL-05 · P4 · Rail values that differ from the Nav Rail board
 **Where** `theme.css:60,117`, `V2App.jsx:71`
 **Actual vs design** width transition `.32s` vs 220 ms; group-label / count / footer dim `#948d7a` (light) / `#8a8371` (dark) vs `#66604f`; health dot `--rail-accent #8dbb9f` vs `#7fae8f`; rail bg in dark `#100f0b` vs the board's "rail stays dark in both themes — it's the app's constant" (`#22211c`); collapsed warn dot at left 31 / top 8 vs `left:34`.
-**Status** needs decision: these look like deliberate consistency/contrast changes (`#66604f` on `#22211c` is ~2.6:1) — confirm, then I'll mark them as accepted.
+**Status** decided keep current (user 2026-09-03): deliberate contrast/consistency values.
 
 ### SHELL-06 · P4 · `App.jsx` and V2App keep separate copies of the theme flag
 **Where** `App.jsx:105-116` (sets `html.dark` from its own state), `V2App.jsx:52`
