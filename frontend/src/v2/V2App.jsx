@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Newspaper, Search, Building2, Send, FileUser, Mail,
@@ -54,7 +54,7 @@ export default function V2App() {
   const toggleTheme = () => setDark((v) => { const n = !v; try { localStorage.setItem('jobnavigator_dark_mode', String(n)) } catch {} return n })
   const toggleRail = () => setOpen((v) => { const n = !v; try { localStorage.setItem('jobnavigator_v2_rail', n ? 'expanded' : 'collapsed') } catch {} return n })
 
-  useEffect(() => {
+  const loadCounts = useCallback(() => {
     api.get('/jobs', { params: { status: 'new', limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, jobs: data.total }))).catch(() => {})
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setCounts((c) => ({ ...c, resumes: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
     api.get('/applications').then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
@@ -70,6 +70,8 @@ export default function V2App() {
     api.get('/monitor/history', { params: { limit: 1, job_type: 'scrape_all' } })
       .then(({ data }) => setHealth((data || [])[0] || null)).catch(() => {})
   }, [])
+  // APPS-19: screens dispatch jn:counts-changed after a create/delete so the badges follow
+  useEffect(() => { loadCounts(); window.addEventListener('jn:counts-changed', loadCounts); return () => window.removeEventListener('jn:counts-changed', loadCounts) }, [loadCounts])
 
   const failing = (warn.companies || 0) + (warn.searches || 0)
   const healthy = failing === 0 && health?.status !== 'failed'

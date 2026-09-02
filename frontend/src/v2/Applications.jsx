@@ -28,7 +28,7 @@ const fmtSalary = (lo, hi) => {
 }
 
 const srcLabel = (v) => ({
-  direct: 'a company scrape', jobright: 'Jobright.ai', levels_fyi: 'Levels.fyi',
+  direct: 'a company scrape', manual: 'the Log application form', jobright: 'Jobright.ai', levels_fyi: 'Levels.fyi',
   linkedin_personal: 'LinkedIn Personal', linkedin_extension: 'the LinkedIn extension',
   extension: 'the extension', freehire: 'freehire.me',
 }[v] || (v ? v.replace(/^jobspy_/, '').replace(/_/g, ' ') : 'the Job Feed'))
@@ -86,6 +86,7 @@ export default function Applications() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [intForm, setIntForm] = useState(false)
   const [intWhat, setIntWhat] = useState(''); const [intWhen, setIntWhen] = useState('')
+  const [intBusy, setIntBusy] = useState(false)   // APPS-11: one POST at a time
   const [intWhere, setIntWhere] = useState(''); const [intPrep, setIntPrep] = useState('')
   const [prep, setPrep] = useState(null)           // {text} | 'loading'
   const [copied, setCopied] = useState(false)
@@ -184,11 +185,13 @@ export default function Applications() {
   const remove = async (a) => {
     setMenuOpen(false)
     if (!window.confirm(`Delete the application for "${a.title}"?`)) return
-    try { await api.delete(`/applications/${a.id}`); setSel(null); load(null); pushToast({ kind: 'success', msg: 'Application deleted' }) }
+    try { await api.delete(`/applications/${a.id}`); setSel(null); load(null); pushToast({ kind: 'success', msg: 'Application deleted' }); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this application' + errSuffix(e) }) }
   }
+  const canAddInterview = !intBusy && (!!intWhat.trim() || !!intWhen)   // APPS-12: a blank form adds nothing
   const addInterview = async () => {
-    if (!d) return
+    if (!d || !canAddInterview) return
+    setIntBusy(true)
     try {
       await api.post(`/applications/${d.id}/interviews`, {
         // APPS-03: datetime-local is wall-clock in the viewer's zone; send an instant so the server's UTC store round-trips
@@ -197,9 +200,17 @@ export default function Applications() {
       })
       setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); load(d.id)
     } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not add the interview' + errSuffix(e) }) }
+    finally { setIntBusy(false) }
   }
   const delInterview = async (iv) => {
-    try { await api.delete(`/applications/interviews/${iv.id}`); load(d.id) }
+    try {
+      await api.delete(`/applications/interviews/${iv.id}`); load(d.id)
+      // APPS-13: no confirm — an undo toast re-creates the interview from the row we still hold
+      pushToast({ kind: 'undo', msg: `Removed “${iv.what || 'Interview'}”`, action: 'Undo', onAction: async () => {
+        try { await api.post(`/applications/${d.id}/interviews`, { what: iv.what, when_at: iv.when_at, where_text: iv.where_text, status: iv.status || 'scheduled', prep: iv.prep }); load(d.id) }
+        catch (e) { pushToast({ kind: 'error', msg: 'Could not restore the interview' + errSuffix(e) }) }
+      } })
+    }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not remove the interview' + errSuffix(e) }) }
   }
   const toggleInterview = async (iv) => {
@@ -377,7 +388,7 @@ export default function Applications() {
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
-      {logOpen && <LogModal onClose={() => setLogOpen(false)} onSaved={(id) => { setLogOpen(false); load(id) }} pushToast={pushToast} />}
+      {logOpen && <LogModal onClose={() => setLogOpen(false)} onSaved={(id) => { setLogOpen(false); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -455,8 +466,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
       </div>
 
       {/* body */}
-      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', gap: 24, minHeight: 0 }}>
-        <div style={{ flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 15 }}>
+      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', flexWrap: 'wrap', gap: 24, minHeight: 0 }}>
+        <div style={{ flex: '1.2 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 15 }}>
 
           {(d.last_email_received || d.last_email_snippet) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -509,7 +520,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
                   <div onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }} className="v2-bdc" style={{ height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                  <div onClick={addInterview} style={{ height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Add interview</div>
+                  <div onClick={canAddInterview ? addInterview : undefined} style={{ opacity: canAddInterview ? 1 : 0.5, cursor: canAddInterview ? 'pointer' : 'default', height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Add interview</div>
                 </div>
               </div>
             ) : (
@@ -527,7 +538,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
         </div>
 
         {/* history rail */}
-        <div style={{ flex: '0 0 250px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ flex: '1 0 250px', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 6 }}>   {/* APPS-09: wraps under the content when the pane is narrow */}
           <span style={LABEL}>History</span>
           {history.map((h, i) => (
             <div key={i} style={{ display: 'flex', gap: 10 }}>
@@ -566,7 +577,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         </div>
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Edit the closing ask in Settings → AI</span>
-          <div onClick={onClose} style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
           <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1 }}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </div>
@@ -584,7 +595,7 @@ function LogModal({ onClose, onSaved, pushToast }) {
   const [resumes, setResumes] = useState([])
   const [cv, setCv] = useState('')
   const [stage, setStage] = useState('applied')
-  const [when, setWhen] = useState(() => new Date().toISOString().slice(0, 10))
+  const [when, setWhen] = useState(() => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` })   // APPS-21: local date
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
@@ -604,13 +615,17 @@ function LogModal({ onClose, onSaved, pushToast }) {
   }
 
   const save = async () => {
-    if (!title.trim() || !company.trim() || !url.trim()) { pushToast({ kind: 'error', msg: 'URL, title and company are all required' }); return }
+    if (!title.trim() || !company.trim() || !url.trim()) {
+      pushToast({ kind: 'error', msg: !url.trim() ? 'The posting URL is required — it identifies the job' : 'Title and company are required' })
+      const first = [url, title, company].findIndex((v) => !v.trim()); document.querySelectorAll('input[placeholder]')[first]?.focus()   // APPS-17
+      return
+    }
     setBusy(true)
     try {
       const { data } = await api.post('/applications', {
         url: url.trim(), title: title.trim(), company: company.trim(),
         cv_version_used: cv || null, notes: notes.trim() || null,
-        status: stage, applied_at: when ? new Date(when).toISOString() : null,
+        status: stage, applied_at: when ? new Date(when + 'T12:00:00').toISOString() : null,   // APPS-21: local noon, never the previous UTC day
       })
       onSaved(data.id)
     } catch (e) {
