@@ -170,7 +170,7 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Repro** (`cl_14_ids_poll.py`) Intercept `/monitor/active` with a run whose `scope_key` is `cl:some-other-letter`.
 **Actual** A dashed row appears reading `Generating — a cover letter` `~30s`, and the gutter number goes `18 → 19`. When that run finishes no new letter arrives (a regenerate rewrites in place), so the count silently drops back — the list appears to have lost a letter.
 **Proposed fix** Ignore runs whose `scope_key` is not of the `cl:{resume}:{job}` shape, or have the backend tag the run kind.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (the shape test is a bit of a heuristic).
+**Status** fixed + verified after rebuild: the list only shows pending rows for pair runs (`cl:{resume}:{job}`); a regenerate (`cl:{id}`) no longer appears or bumps the count
 
 ### CL-21 · P3 · Neither screen is keyboard-operable and no control shows focus
 **Where** both files — every control is a `div`/`span` with `onClick`; no `role`, `tabIndex`, `aria-expanded`, or key handlers.
@@ -183,13 +183,13 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Repro** Real regenerate measured end to end: name/`resume_id`/`from_persona`/`json_data`/`voice`/`length` all replaced in place; `template` and `page_format` correctly preserved (`palatino`/`a4` survived); **`parent_id` before `None`, after `None`**; the previous three paragraphs are gone.
 **Expected + why** `CoverLetter.parent_id` exists for regeneration lineage (CLAUDE.md: "`parent_id` for regeneration lineage"), and the modal copy only warns "your edits to this draft are replaced" (ED:467).
 **Proposed fix** Either write `parent_id` and keep the superseded row, or drop the column from the API dict so nothing implies history is kept.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
+**Status** fixed (backend, restarted): `parent_id` removed from the API dict and the create body — nothing implies a history is kept (column left in place; user: remove history)
 
 ### CL-23 · P4 · Header/gutter counts and the archive-band count disagree while a search is typed
 **Where** `CoverLetters.jsx:216, 327` (unfiltered `letters`) vs `:347` (filtered `visible`)
 **Actual** With the query `Jane`: header `16 letters · 1 live application`, gutter `16`, band `Archived · 1 letter from rejected applications & skipped jobs`, 2 rows shown. With `Runpod`: band `Archived · 2 letters`. Also, while a query is active the band reads `hide ⌄` regardless of the stored preference, and clicking it flips the stored preference with no visible effect (verified: `v2_cl_archive_open` toggles `0`↔`1` while the rows stay visible).
 **Proposed fix** Show `N of M` in the header while filtering, and drive the band's chevron from `archOpen` with the search override made explicit.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
+**Status** fixed + verified after rebuild: header reads "N of M letters match" while searching; the archive band is inert while a query is active (title explains) and the chevron says "shown while searching"
 
 ### CL-24 · P4 · Design deviations (deliberate-looking; listed for the record)
 **Where** design `.dc.html` vs both files. Everything measured matched the design unless listed here.
@@ -205,19 +205,19 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 | ⋯ menu | View application / Open job posting / Delete (`:167-169`) | + `View job in feed` (ED:294) |
 | template control tooltip | lists every template id (`:262`) | `Cover letter template` |
 Everything else matched exactly, including: header `22px 30px 16px` + `h1` 30 px Newsreader `line-height 1`; search 280×36 with a `--line-strong` bottom rule; panel `flex 0 0 340px` + `16px 26px 20px 30px`; picker 33 px / radius 8 / `--edge`; voice chips 27 px radius 99; length segments 31 px radius 8 with `fontWeight 600` when on; Generate 36 px radius 99 on `--accent`; gutter head `13px 30px 9px`; rows `13px 15px` radius 10 (69 px tall, integer tops); pending row dashed `--accent` on `--recessed`; editor top bar `10px 24px` on `--surface` with a `--line-soft` rule; context band `9px 24px` on `--surface-2`; Regenerate pill 36 px / `0 19px`; ⋯ 36×36 (accent border + `--accent-soft` when open — measured); left column `flex 0 0 47%` = 579.97 px; cards radius 9, head `10px 14px`, body `2px 14px 14px`; inputs 32 px radius 6; contact cells 29 px; dashed adders 28 px; template/paper controls 24 px; Download 29 px / `0 15px`; modal 460 px radius 12 with `--shadow-modal`, Cancel 33 px / `0 14px`, Regenerate 33 px / `0 17px`, `~30 seconds` footer on `--bg`.
-**Status** decided 2026-09-02: keep all except (d) — the contact "Display text" cell is now 118 px in the cover-letter editor AND the résumé editor (user: both must match)
+**Status** decided 2026-09-02: keep all except (d); contact rows in the cover-letter, résumé and persona editors now split 50/50 — controls + Display text on the left half, URL + stub (+ ✕) on the right, controls and stub at their previous widths (measured 251/251 and 279/279)
 
 ### CL-25 · P4 · Escape closes the Regenerate modal mid-run while Cancel and the scrim refuse
 **Where** `CoverLetterEditor.jsx:227` vs `:462, 487`
 **Actual** Measured during a live regenerate: Cancel → modal stays (correct), scrim click → modal stays (correct), Escape → modal closes. The run still completes and the poll still reloads, but the user loses the only progress indicator except the ↻ pill spinner.
 **Proposed fix** `if (e.key === 'Escape') { onDoc(); if (!regening) setRegenOpen(false) }`.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (trivial, but "Escape always closes" may be the intended global rule).
+**Status** fixed + verified after rebuild: Escape ignores a running regenerate (ref-backed check); the modal stays until the run ends
 
 ### CL-26 · P4 · The two screens format the same timestamp differently
 **Where** `CoverLetters.jsx:7-14` vs `CoverLetterEditor.jsx:17-24`
 **Actual** List row: `edited 1d ago` in the sub-line and a bare `1d` in the right column, minimum `1m`, no "just now". Editor: `saved just now · autosaves`, then `5m ago`. Navigating list → editor on a letter saved seconds ago shows `1m` on the list and `just now` in the editor.
 **Proposed fix** One shared helper.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
+**Status** fixed + verified after rebuild: one shared helper (`v2/time.js`: `ago` / `agoShort`) — list sub-line "edited 22m ago", column "22m", editor "saved 23m ago"; "just now" / "now" under a minute on both
 
 ### CL-27 · P4 · `POST /cover-letters` returns a context-free row
 **Where** `routes_cover_letters.py:180` — `_to_dict(cl, include_json_data=True)` with no `ctx`

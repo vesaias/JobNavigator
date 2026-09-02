@@ -8,16 +8,16 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 39 | 61 | 11 |
-| P4 | 90 | 14 | 61 | 15 |
-| **All** | **276** | **127** | **122** | **27** |
+| P3 | 111 | 40 | 60 | 11 |
+| P4 | 90 | 18 | 57 | 15 |
+| **All** | **276** | **132** | **117** | **27** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
-| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 21 |
+| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 26 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -101,7 +101,12 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-17 (P3) — Rail badge `Cover Letters · N` never refreshes after a generate or a delete
 - CL-18 (P3) — Neither screen imports `Toast.jsx`; every success is silent and every failure is inline text
 - CL-19 (P3) — A failed PDF render is invisible
+- CL-20 (P3) — A Regenerate started in the editor shows on the list as an unlabelled pending row and inflates the gutter count
 - CL-21 (P3) — Neither screen is keyboard-operable and no control shows focus
+- CL-22 (P4) — Regenerate keeps no lineage — the previous draft is unrecoverable
+- CL-23 (P4) — Header/gutter counts and the archive-band count disagree while a search is typed
+- CL-25 (P4) — Escape closes the Regenerate modal mid-run while Cancel and the scrim refuse
+- CL-26 (P4) — The two screens format the same timestamp differently
 - CL-27 (P4) — `POST /cover-letters` returns a context-free row
 - CL-29 (P4) — Disabled arrows still take their hover (matches the design — logged so it is not re-found)
 - FEED-01 (P2) — The default view labels every row in the database "open roles"
