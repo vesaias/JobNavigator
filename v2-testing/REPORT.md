@@ -7,23 +7,23 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 26 | 42 | 2 |
+| P2 | 70 | 66 | 0 | 4 |
 | P3 | 111 | 14 | 94 | 3 |
 | P4 | 90 | 3 | 75 | 12 |
-| **All** | **276** | **48** | **211** | **17** |
+| **All** | **276** | **88** | **169** | **19** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| applications.md | 23 | 0 | 7 | 10 | 6 | 3 |
-| companies.md | 37 | 1 | 12 | 16 | 8 | 4 |
-| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 6 |
-| feed.md | 38 | 0 | 10 | 18 | 10 | 4 |
-| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 3 |
+| applications.md | 23 | 0 | 7 | 10 | 6 | 8 |
+| companies.md | 37 | 1 | 12 | 16 | 8 | 15 |
+| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
+| feed.md | 38 | 0 | 10 | 18 | 10 | 10 |
+| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 11 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| resumes.md | 31 | 1 | 8 | 13 | 9 | 4 |
+| resumes.md | 31 | 1 | 8 | 13 | 9 | 10 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 7 |
-| settings.md | 27 | 2 | 4 | 12 | 9 | 9 |
+| settings.md | 27 | 2 | 4 | 12 | 9 | 10 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
 | FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 0 |
@@ -36,28 +36,67 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - **SET-03** — "Save key" writes the new API key locally and refreshes the session cookie even when the PATCH failed → dashboard lockout
 
 ## Fixed in this pass (source, then verified live or on the rebuilt bundle)
+- APPS-01 (P2) — No user feedback on any of the nine mutations — 8 console-only failure paths + 1 swallowed catch
+- APPS-02 (P2) — A failed load is indistinguishable from an empty database
 - APPS-03 (P2) — Interview time is stored as UTC and rendered as local — off by the viewer's UTC offset
 - APPS-04 (P2) — `POST /applications` upserts by job — re-logging the same posting silently overwrites the earlier application
+- APPS-05 (P2) — "Copied ✓" is shown even when the clipboard write fails
+- APPS-06 (P2) — The interview draft form is screen-global, not per application
+- APPS-07 (P2) — Clicking the already-active stage, editing notes, or adding an interview bumps `updated_at` and clears the stale indicator
 - APPS-08 (P3) — Every list row lands on a fractional pixel — **fixed in source**
 - COMP-01 (P1) — Drawer `Save changes` closes before the PATCH resolves — a failed save loses the edit silently
+- COMP-02 (P2) — Drawer's `company` object is never refreshed, so the banner / tuning note / subtitle go stale while the drawer is open
+- COMP-03 (P2) — The list has no loading and no error branch — a failed `GET /companies` renders as "you have no companies matching your search"
+- COMP-04 (P2) — `Toast.jsx` is never imported — nine of eleven failure paths and every success path are silent
+- COMP-05 (P2) — `Run` uses a fixed 2600 ms timer instead of `/monitor/active`; the UI reports "done" while the scrape is still going
+- COMP-06 (P2) — `/health/entities` and `/monitor/active` are fetched once on mount and never refreshed
+- COMP-07 (P2) — `Needs attention` sort and the header count ignore `last_error`, which the row `▲`, health text and drawer banner all honour
+- COMP-08 (P2) — `Apps` is name-only while `Open`, `+7d` and `Ø Fit` are alias-summed; and the column means *all* applications
+- COMP-09 (P2) — `⋯ → View jobs in feed` is a raw `<a href>` that full-page-reloads into an *unfiltered* feed
+- COMP-10 (P2) — At 1024 px the toolbar overflows and the `Sort` control is pushed off-screen with no way to reach it
 - COMP-11 (P2) — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
+- COMP-12 (P2) — `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
+- COMP-13 (P2) — Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
 - COMP-14 (P3) — Every row lands on a half pixel (fractional `getBoundingClientRect().top`)
 - COMP-15 (P3) — The sort menu's hover never fires — an inline `background: 'transparent'` beats `.v2-menuitem:hover`
 - CL-01 (P2) — Editor autosave silently drops a patch of a different kind — the template you picked is never saved and the header says "saved"
 - CL-02 (P2) — Editor gets permanently stuck in "Regenerating…" if the post-run reload fails
 - CL-03 (P2) — Regenerate poll waits for *every* cover-letter run in the system, not this letter's
 - CL-04 (P2) — `?job=` deep-link silently loses its selection for any job outside the saved/applied window
+- CL-05 (P2) — A failed list load is rendered as "No cover letters yet"
+- CL-06 (P2) — A background generation that fails looks exactly like one that succeeded
+- CL-07 (P2) — An open Picker popover covers the other Picker's control; clicking the second control picks an option from the first
 - CL-09 (P3) — Pending row is 46.75 px tall, so every letter row below it lands on a half pixel
 - CL-10 (P3) — Editor: the `text · link · stub` hint is 15.75 px tall and pushes the Recipient and Letter cards onto half pixels
 - FEED-01 (P2) — The default view labels every row in the database "open roles"
 - FEED-02 (P3) — Every list row lands on a half pixel; 1px borders drop on alternating rows
 - FEED-03 (P2) — The filter bar does not wrap; at 1024 px the Sort control is off-screen
 - FEED-04 (P2) — Sort-menu items have a dead hover
+- FEED-05 (P2) — "Unscored jobs stay visible — this only hides low scores" is false
+- FEED-06 (P2) — "Jobs without a listed salary stay visible" is false
+- FEED-07 (P2) — Skip / Mark-applied announce success before the PATCH resolves, and stay wrong when it fails
+- FEED-08 (P2) — "Ignore {company} everywhere" is destructive with no confirm, no toast and no undo
+- FEED-09 (P2) — A bad `?job=` id silently opens a different job
+- FEED-11 (P2) — A failed job list is indistinguishable from an empty one
 - PERS-01 (P1) — A non-list `qa_bank` white-screens the whole app
 - PERS-02 (P2) — `PATCH /api/persona` silently dropped every order-only write — Skills ▲▼ did nothing
+- PERS-03 (P2) — The Skills value box is dead for any category containing a dot
+- PERS-04 (P2) — Renaming a skill category onto an existing name silently destroys that category's value
+- PERS-05 (P2) — A failed save is completely invisible
+- PERS-06 (P2) — Any load failure leaves the screen on `Loading…` forever
+- PERS-07 (P2) — A legacy multi-key `qa_bank` entry loses every key but the first, permanently
+- PERS-08 (P2) — Navigating away within 500 ms of the last keystroke drops that edit silently
 - PERS-11 (P3) — Experience entry headers are 36.75 px tall, putting five rows on a half pixel
+- STAT-01 (P2) — A refused or failed trigger is indistinguishable from a successful one
+- STAT-02 (P2) — "Best open score" renders the literal string `-Infinity`
 - RES-01 (P1) — A rejected autosave is completely silent — the status line still says "saved just now"
+- RES-02 (P2) — Skills ▲▼ reorder was never persisted — the UI showed the new order until reload, then snapped back
 - RES-03 (P2) — "Import PDF" creates **two** base résumés
+- RES-04 (P2) — A skills category containing a "." makes its value field inert
+- RES-05 (P2) — Renaming a skills category onto an existing one silently destroys a row
+- RES-06 (P2) — The "one next step" CTA can never get past "Review N changes"
+- RES-07 (P2) — A failed shelf load is rendered as "No base résumés yet"
+- RES-08 (P2) — PDF render failure leaves a stale preview with no signal
 - RES-10 (P3) — Shelf: every other card and row landed on a half pixel — **fixed**
 - RES-12 (P3) — The Template and Paper dropdown items had no hover at all — **fixed**
 - SRCH-01 (P2) — Test-modal source chips never render — the modal reads `by_source`, every backend path sends `source_breakdown`
@@ -72,6 +111,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SET-03 (P1) — "Save key" writes the new API key locally and refreshes the session cookie even when the PATCH failed → dashboard lockout
 - SET-04 (P2) — "Reset to default" on a list editor saves a one-element list containing the seed's JSON text
 - SET-05 (P2) — "Reset to default" wipes a prompt to `""` when `GET /settings/defaults` is unavailable
+- SET-06 (P2) — A failed `GET /settings` renders a permanently blank pane — no message, no retry
 - SET-07 (P3) — A failed webhook registration flashes in accent green, reading as success
 - SET-09 (P4) — Two saves inside 2.2 s: the first flash's timer clears the second message early
 - SET-10 (P3) — "Submit PIN" has no catch — a 401/500/network error is an unhandled rejection with no feedback
@@ -91,50 +131,10 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Backend: `DataError` → 404 handler for malformed ids on every route; `flag_modified` on Résumé and Persona JSON PATCHes; `create_company` persists `aliases` + `auto_scoring_depth`; per-search `trigger_url` pointed at a real endpoint.
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
-## Open P2s that need you (44)
-- APPS-01 — No user feedback on any of the nine mutations — 8 console-only failure paths + 1 swallowed catch
-- APPS-02 — A failed load is indistinguishable from an empty database
-- APPS-05 — "Copied ✓" is shown even when the clipboard write fails
-- APPS-06 — The interview draft form is screen-global, not per application
-- APPS-07 — Clicking the already-active stage, editing notes, or adding an interview bumps `updated_at` and clears the stale indicator
-- COMP-02 — Drawer's `company` object is never refreshed, so the banner / tuning note / subtitle go stale while the drawer is open
-- COMP-03 — The list has no loading and no error branch — a failed `GET /companies` renders as "you have no companies matching your search"
-- COMP-04 — `Toast.jsx` is never imported — nine of eleven failure paths and every success path are silent
-- COMP-05 — `Run` uses a fixed 2600 ms timer instead of `/monitor/active`; the UI reports "done" while the scrape is still going
-- COMP-06 — `/health/entities` and `/monitor/active` are fetched once on mount and never refreshed
-- COMP-07 — `Needs attention` sort and the header count ignore `last_error`, which the row `▲`, health text and drawer banner all honour
-- COMP-08 — `Apps` is name-only while `Open`, `+7d` and `Ø Fit` are alias-summed; and the column means *all* applications
-- COMP-09 — `⋯ → View jobs in feed` is a raw `<a href>` that full-page-reloads into an *unfiltered* feed
-- COMP-10 — At 1024 px the toolbar overflows and the `Sort` control is pushed off-screen with no way to reach it
-- COMP-12 — `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
-- COMP-13 — Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
-- CL-05 — A failed list load is rendered as "No cover letters yet"
-- CL-06 — A background generation that fails looks exactly like one that succeeded
-- CL-07 — An open Picker popover covers the other Picker's control; clicking the second control picks an option from the first
-- FEED-05 — "Unscored jobs stay visible — this only hides low scores" is false
-- FEED-06 — "Jobs without a listed salary stay visible" is false
-- FEED-07 — Skip / Mark-applied announce success before the PATCH resolves, and stay wrong when it fails
-- FEED-08 — "Ignore {company} everywhere" is destructive with no confirm, no toast and no undo
-- FEED-09 — A bad `?job=` id silently opens a different job
+## Open P2s that need you (4)
 - FEED-10 — `GET /api/jobs/{non-uuid}` returns 500 (backend)
-- FEED-11 — A failed job list is indistinguishable from an empty one
-- PERS-03 — The Skills value box is dead for any category containing a dot
-- PERS-04 — Renaming a skill category onto an existing name silently destroys that category's value
-- PERS-05 — A failed save is completely invisible
-- PERS-06 — Any load failure leaves the screen on `Loading…` forever
-- PERS-07 — A legacy multi-key `qa_bank` entry loses every key but the first, permanently
-- PERS-08 — Navigating away within 500 ms of the last keystroke drops that edit silently
-- STAT-01 — A refused or failed trigger is indistinguishable from a successful one
-- STAT-02 — "Best open score" renders the literal string `-Infinity`
 - STAT-03 — With every endpoint failing, the screen renders a plausible-looking dashboard
-- RES-02 — Skills ▲▼ reorder was never persisted — the UI showed the new order until reload, then snapped back
-- RES-04 — A skills category containing a "." makes its value field inert
-- RES-05 — Renaming a skills category onto an existing one silently destroys a row
-- RES-06 — The "one next step" CTA can never get past "Review N changes"
-- RES-07 — A failed shelf load is rendered as "No base résumés yet"
-- RES-08 — PDF render failure leaves a stale preview with no signal
 - RES-09 — A base résumé cannot be deleted anywhere in v2
-- SET-06 — A failed `GET /settings` renders a permanently blank pane — no message, no retry
 - F-006 — Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
 
 ## Decisions that close many findings at once
