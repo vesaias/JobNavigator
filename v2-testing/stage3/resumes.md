@@ -175,7 +175,7 @@ The backend half of this is now fixed: before the restart `GET /resumes/not-a-uu
 - **▲▼ and ✕ hovers**: design says colour-only (`color:#3f6b52`, `color:#9c3b30`); measured `.v2-navlink` → `color+background` and `.v2-hover-bad` → `background: --bad-soft` with the colour unchanged.
 - **Card hover** accent border + `--hover-soft` (theme.css:140-143 documents the unification) vs the design's beige.
 - **Header** h1 30 px / 24 px left gutter vs the design's 28 px / 30 px — the shell convention, identical on all nine screens (grep-verified).
-**Status** needs decision: keep code (consistency) or match design?
+**Status** decided keep current (user 2026-09-03: consistency with the other v2 screens wins over the board).
 
 ### RES-23 · P4 · `.v2-navlink:hover`'s colour rule never fires where the caller sets an inline colour
 **Where** `theme.css:133-134`; callers `Resumes.jsx:123`, `:139`, `ResumeEditor.jsx:324`, `:352`
