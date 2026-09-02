@@ -5,14 +5,7 @@ import api from '../api'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-const ago = (iso) => {
-  if (!iso) return ''
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 60) return `${Math.max(1, m)}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
+import { ago, agoShort } from './time'
 
 export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['detailed', 'Detailed']]
 
@@ -194,7 +187,7 @@ export default function CoverLetters() {
     const tick = async () => {
       try {
         const { data } = await api.get('/monitor/active')
-        const runs = (data || []).filter((r) => r.job_type === 'generate_cover_letter')
+        const runs = (data || []).filter((r) => r.job_type === 'generate_cover_letter' && /^cl:[^:]+:[^:]+$/.test(r.scope_key || ''))   // CL-20: regenerates (cl:{id}) rewrite in place
         if (dead) return
         const before = pendingRef.current
         const ids = runs.map((r) => r.run_id).join(',')
@@ -244,7 +237,9 @@ export default function CoverLetters() {
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
   const live = letters.filter((c) => c.stage && c.stage !== 'rejected').length
-  const countLine = `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${live} live application${live === 1 ? '' : 's'}`
+  const countLine = query.trim()
+    ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} live application${live === 1 ? '' : 's'}`   // CL-23
+    : `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${live} live application${live === 1 ? '' : 's'}`
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
   const voiceLabel = presets.find((p) => p.id === genVoice)?.label || genVoice
@@ -286,7 +281,7 @@ export default function CoverLetters() {
   const row = (c, arc) => {
     const bits = [c.source_name, presets.find((p) => p.id === c.voice)?.label || c.voice,
       LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
-    const sub = [...bits, `edited ${ago(c.updated_at)} ago`].join(' · ')
+    const sub = [...bits, `edited ${ago(c.updated_at)}`].join(' · ')
     return (
       <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} tabIndex={0} role="button" onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/v2/cover-letters/${c.id}`) }} className="v2-bd"
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 10, cursor: 'pointer',
@@ -299,7 +294,7 @@ export default function CoverLetters() {
           <span title={c.stage ? 'Stage of the linked application' : 'No application yet'} className={STAGE_CLASS[c.stage] || 'cc-generic'}
             style={{ flex: '0 0 auto', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.stage || 'Draft'}</span>
         )}
-        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{ago(c.updated_at)}</span>
+        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{agoShort(c.updated_at)}</span>
         <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
       </div>
     )
@@ -376,13 +371,13 @@ export default function CoverLetters() {
             {active.map((c) => row(c, false))}
 
             {archived.length > 0 && (
-              <div onClick={() => setArchOpen((v) => !v)} className="v2-archband"
+              <div onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} className="v2-archband" title={query.trim() ? 'Archived letters are shown while you search' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginTop: 6, border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
                 </span>
                 <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  {showArch ? 'hide ⌄' : 'browse ›'}
+                  {query.trim() ? 'shown while searching' : showArch ? 'hide ⌄' : 'browse ›'}
                 </span>
               </div>
             )}

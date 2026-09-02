@@ -15,14 +15,7 @@ const PAGE_FORMATS = [['letter', 'US Letter'], ['a4', 'A4']]
 const UI_KEY = 'v2_cl_sections'
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
 
-const ago = (iso) => {
-  if (!iso) return ''
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
-}
+import { ago } from './time'
 
 const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 // Contact-item cells are 1:1 with the Résumé editor's header (cellInput there)
@@ -85,6 +78,7 @@ export default function CoverLetterEditor() {
   const [rLength, setRLength] = useState('standard')
   const [err, setErr] = useState('')
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
+  const regeningRef = useRef(false)
   const [pdfErr, setPdfErr] = useState(false); const [pdfNonce, setPdfNonce] = useState(0)   // CL-19
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? false)
   const [recipOpen, setRecipOpen] = useState(() => loadUI().recipOpen ?? false)
@@ -197,6 +191,7 @@ export default function CoverLetterEditor() {
     catch (e) { console.error(e); setErr('Could not delete this letter.'); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
   }
 
+  useEffect(() => { regeningRef.current = regening }, [regening])
   const regenerate = async () => {
     if (regening || !rSource) return
     setRegening(true); setErr('')
@@ -241,7 +236,7 @@ export default function CoverLetterEditor() {
 
   useEffect(() => {
     const onDoc = () => { setMenuOpen(false); setTplOpen(false); setFmtOpen(false) }
-    const onKey = (e) => { if (e.key === 'Escape') { onDoc(); setRegenOpen(false) } }
+    const onKey = (e) => { if (e.key === 'Escape') { onDoc(); if (!regeningRef.current) setRegenOpen(false) } }   // CL-25
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
@@ -356,6 +351,7 @@ export default function CoverLetterEditor() {
                 const tracked = ct.url && !String(ct.url).startsWith('mailto:')
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* controls + text: half the row */}
                     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--muted)', fontSize: 8 }}>
                       <span onClick={() => i > 0 && update((d) => { const a = d.header.contact_items; [a[i - 1], a[i]] = [a[i], a[i - 1]] })}
                         title="Move up" className={i > 0 ? 'v2-hover-accent-text' : ''} style={{ cursor: i > 0 ? 'pointer' : 'default', opacity: i > 0 ? 1 : 0.35 }}>▲</span>
@@ -363,7 +359,9 @@ export default function CoverLetterEditor() {
                         title="Move down" className={i < arr.length - 1 ? 'v2-hover-accent-text' : ''} style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
                     </span>
                     <input value={ct.text || ''} placeholder="Display text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
-                      style={{ ...CELL, flex: '0 0 118px', minWidth: 0 }} />
+                      style={{ ...CELL, flex: 1, minWidth: 0 }} />
+                    </div>
+                    <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: the other half */}
                     <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
                       style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--accent)', minWidth: 0 }} />
                     {tracked && (
@@ -373,6 +371,7 @@ export default function CoverLetterEditor() {
                     )}
                     <span onClick={() => update((d) => { d.header.contact_items.splice(i, 1) })} title="Remove"
                       className="v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+                    </div>
                   </div>
                 )
               })}
