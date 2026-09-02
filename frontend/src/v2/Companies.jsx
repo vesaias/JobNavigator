@@ -259,7 +259,10 @@ export default function Companies() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Companies</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{countLine}</span>
+          {/* explicit integer line-height: at the inherited 1.5 this 13px line is
+              19.5px tall, so the header ends on a half pixel and every row below
+              lands on x.5 and drops its 1px border on alternating rows. */}
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div onClick={() => setAddOpen(true)} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Add company</div>
@@ -303,9 +306,11 @@ export default function Companies() {
               <div className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 8, display: 'flex', flexDirection: 'column' }}>
                 {SORT_OPTIONS.map((so) => {
                   const on = so.id === sortBy
+                  // no inline background when unselected: an inline value beats
+                  // `.v2-menuitem:hover`, which is why this menu never hovered.
                   return (
                     <div key={so.id} onClick={() => { setSortBy(so.id); setSortOpen(false) }} title={so.hint} className="v2-menuitem"
-                      style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: on ? 'var(--accent)' : 'var(--text-2)', fontWeight: on ? 500 : 400, background: on ? 'var(--accent-soft)' : 'transparent' }}>
+                      style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: on ? 'var(--accent)' : 'var(--text-2)', fontWeight: on ? 500 : 400, background: on ? 'var(--accent-soft)' : undefined }}>
                       {so.label}{on && <span style={{ marginLeft: 'auto' }}>✓</span>}
                     </div>
                   )
