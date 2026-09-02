@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -24,6 +25,15 @@ const until = (iso) => {
 const short = (u, n = 52) => {
   const s = (u || '').replace(/^https?:\/\//, '')
   return s.length > n ? s.slice(0, n) + '…' : s
+}
+// FastAPI sends `detail` as a string for HTTPException but as an ARRAY of
+// {loc,msg,type} objects for a 422 — stringifying that array gives the user
+// "[object Object]", so unpack it here.
+const errText = (e, fallback) => {
+  const d = e?.response?.data?.detail
+  if (typeof d === 'string' && d) return d
+  if (Array.isArray(d) && d.length) return d.map((x) => x?.msg || JSON.stringify(x)).join('; ')
+  return fallback
 }
 
 // mode → [badge label, badge class]. `url` is legacy: still rendered if a search
@@ -308,12 +318,21 @@ export default function Searches() {
   const [test, setTest] = useState(null)       // {name, data} | {name, error}
   const [testingId, setTestingId] = useState(null)
   const [testTab, setTestTab] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [loadErr, setLoadErr] = useState(null)
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
   const mounted = useRef(true)
   useEffect(() => () => { mounted.current = false }, [])
 
   const load = useCallback(async () => {
-    try { const { data } = await api.get('/searches'); setSearches(data) } catch (e) { console.error(e) }
-  }, [])
+    try {
+      const { data } = await api.get('/searches')
+      setSearches(data); setLoadErr(null)
+    } catch (e) {
+      console.error(e); setLoadErr(errText(e, 'Could not load your searches'))
+      pushToast({ kind: 'error', text: errText(e, 'Could not load your searches') })
+    } finally { setLoading(false) }
+  }, [pushToast])
   useEffect(() => {
     load()
     api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => {})
@@ -358,32 +377,48 @@ export default function Searches() {
   ].join(' · ')
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
+  const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', text: errText(e, fallback) }) }
   const save = async (s) => {
-    try { await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load() } catch (e) { console.error(e); window.alert('Could not save this search') }
+    try { await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load() } catch (e) { fail(e, 'Could not save this search') }
   }
   const create = async () => {
-    if (!newDraft.name.trim()) { window.alert('Name is required'); return }
+    if (!newDraft.name.trim()) { pushToast({ kind: 'error', text: 'Name is required' }); return }
     try { await api.post('/searches', toPayload(newDraft)); setNewOpen(false); setNewDraft(NEW_DRAFT); load() }
-    catch (e) { window.alert(e.response?.data?.detail || 'Could not create this search') }
+    catch (e) { fail(e, 'Could not create this search') }
   }
-  const toggleActive = async (s) => { setMenuFor(null); try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load() } catch (e) { console.error(e) } }
+  const toggleActive = async (s) => {
+    setMenuFor(null)
+    try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load() }
+    catch (e) { fail(e, `Could not ${s.active ? 'pause' : 'resume'} “${s.name}”`) }
+  }
   const runNow = async (s) => {
     if (running[s.id]) return
     setRunning((m) => ({ ...m, [s.id]: true }))
-    try { await api.post(`/searches/${s.id}/run`) } catch (e) { console.error(e); setRunning((m) => { const n = { ...m }; delete n[s.id]; return n }) }
+    try { await api.post(`/searches/${s.id}/run`) } catch (e) {
+      // 409 means the run is genuinely in flight — keep the spinner, the
+      // /monitor/active poll clears it when the run finishes.
+      if (e.response?.status === 409) { pushToast({ kind: 'progress', text: `“${s.name}” is already running` }); return }
+      fail(e, `Could not start “${s.name}”`)
+      setRunning((m) => { const n = { ...m }; delete n[s.id]; return n })
+    }
   }
   const remove = async (s) => {
     setMenuFor(null)
     if (!window.confirm(`Delete "${s.name}"?`)) return
-    try { await api.delete(`/searches/${s.id}`); load() } catch (e) { console.error(e) }
+    try { await api.delete(`/searches/${s.id}`); load() } catch (e) { fail(e, `Could not delete “${s.name}”`) }
   }
   const duplicate = async (s) => {
     setMenuFor(null)
-    try { await api.post('/searches', { ...toPayload(draftOf(s)), name: `${s.name} (copy)` }); load() } catch (e) { console.error(e) }
+    try { await api.post('/searches', { ...toPayload(draftOf(s)), name: `${s.name} (copy)` }); load() } catch (e) { fail(e, `Could not duplicate “${s.name}”`) }
   }
 
   const runTest = async (s) => {
     setMenuFor(null); setTestingId(s.id); setTestTab('all')
+    // Every preview path (jobright/freehire/linkedin_personal, and the keyword
+    // scrape-failed branch) reports failure as {"error": …} with HTTP 200.
+    // Without this the modal would render the data branch and claim
+    // "No results returned." over a real error.
+    const settle = (data) => setTest(data?.error ? { name: s.name, error: data.error } : { name: s.name, data })
     try {
       const res = await api.post(`/searches/${s.id}/test`, null, { timeout: 30000 })
       if (res.status === 202 && res.data?.run_id) {
@@ -392,15 +427,15 @@ export default function Searches() {
           if (!mounted.current) return
           try {
             const p = await api.get(`/searches/test-result/${res.data.run_id}`, { timeout: 10000 })
-            if (p.status === 200) { setTest({ name: s.name, data: p.data }); setTestingId(null); return }
+            if (p.status === 200) { settle(p.data); setTestingId(null); return }
           } catch (err) {
             if (err.response?.status === 404) { setTest({ name: s.name, error: 'Test run expired or not found' }); setTestingId(null); return }
           }
         }
         setTest({ name: s.name, error: 'Test timed out after 5 minutes — check Stats › Run History' })
-      } else setTest({ name: s.name, data: res.data })
+      } else settle(res.data)
     } catch (e) {
-      setTest({ name: s.name, error: e.response?.data?.detail || e.message })
+      setTest({ name: s.name, error: errText(e, e.message) })
     }
     if (mounted.current) setTestingId(null)
   }
@@ -462,10 +497,13 @@ export default function Searches() {
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                    {/* integer line-heights: 15.5px/11.5px text under Tailwind
+                        preflight's 1.5 gives a 67.5px card, so every other row
+                        lands on x.5 and Chrome rounds its 1px border away. */}
+                    <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: '23px', fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
-                  <span title={summary} style={{ fontSize: 11.5, color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
+                  <span title={summary} style={{ fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
                 </div>
                 {depth !== 'off' && (
                   <span title={depth === 'full'
@@ -533,7 +571,22 @@ export default function Searches() {
           )
         })}
 
-        {searches.length === 0 && !newOpen && (
+        {/* a failed GET used to fall through to "No searches yet", which reads
+            as an empty database; and the empty state flashed on every mount
+            before the first response landed. */}
+        {loading && searches.length === 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 30px', fontSize: 11.5, color: 'var(--muted)' }}>
+            <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading searches…
+          </div>
+        )}
+        {!loading && loadErr && searches.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
+            <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your searches</span>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
+            <span onClick={() => { setLoading(true); load() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+          </div>
+        )}
+        {!loading && !loadErr && searches.length === 0 && !newOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No searches yet</span>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Create one to start pulling roles into the Job Feed on a schedule.</span>
@@ -543,6 +596,7 @@ export default function Searches() {
       </div>
 
       {test && <TestModal test={test} tab={testTab} setTab={setTestTab} onClose={() => setTest(null)} />}
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
@@ -555,7 +609,10 @@ function TestModal({ test, tab, setTab, onClose }) {
   const filtered = jobs.filter((j) => !j.kept)
   const rows = tab === 'kept' ? kept : tab === 'filtered' ? filtered : jobs
   const cfg = d.config || {}
-  const bySource = d.by_source || {}
+  // the backend calls this `source_breakdown` on every preview path
+  // (routes_searches.py:391/:621, jobright.py:730, freehire.py:330,
+  // linkedin_personal.py:1123); `by_source` never existed.
+  const bySource = d.source_breakdown || d.by_source || {}
   // per-board chip colours from the design: linkedin blue, indeed plum, zip amber, google red
   const srcChip = (k) => {
     if (k === 'linkedin') return { className: 'sm-keyword' }

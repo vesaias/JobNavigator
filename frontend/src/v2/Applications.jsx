@@ -219,7 +219,9 @@ export default function Applications() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Applications</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
+          {/* integer line-height: at the inherited 1.5 this span is 19.5px, which
+              lands the whole list pane on a half pixel and every row on x.25 */}
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div onClick={() => { closeAll(); setLogOpen(true) }} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ Log application</div>
@@ -246,7 +248,7 @@ export default function Applications() {
                 const first = band === 'closed' && i === 0 && companyOpts.live.length > 0
                 return (
                   <div key={name} className="v2-menuitem" onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
-                    style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)', cursor: 'pointer', marginTop: first ? 5 : 0, borderTop: first ? '1px solid var(--line)' : 'none', paddingTop: first ? 10 : 6 }}>
+                    style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, lineHeight: '18px', color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)', cursor: 'pointer', marginTop: first ? 5 : 0, borderTop: first ? '1px solid var(--line)' : 'none', paddingTop: first ? 10 : 6 }}>
                     <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
                     <span title={band === 'closed' ? 'Every application here is rejected' : undefined} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{e.n}</span>
@@ -290,7 +292,7 @@ export default function Applications() {
             return (
               <React.Fragment key={st.id}>
                 <div onClick={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', lineHeight: '16px', cursor: 'pointer' }}>
                   <span style={{ width: 7, height: 7, flex: '0 0 7px', borderRadius: 99, background: st.dot }} />
                   <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{GROUP_LABEL[st.id]}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
