@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useToasts, ToastStack } from './Toast'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
 import './theme.css'
@@ -83,6 +84,8 @@ export default function CoverLetterEditor() {
   const [rVoice, setRVoice] = useState('')
   const [rLength, setRLength] = useState('standard')
   const [err, setErr] = useState('')
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
+  const [pdfErr, setPdfErr] = useState(false); const [pdfNonce, setPdfNonce] = useState(0)   // CL-19
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? false)
   const [recipOpen, setRecipOpen] = useState(() => loadUI().recipOpen ?? false)
   const [letterOpen, setLetterOpen] = useState(() => loadUI().letterOpen ?? true)
@@ -104,7 +107,7 @@ export default function CoverLetterEditor() {
       setRSource(d.from_persona ? 'persona' : (d.resume_id || ''))
       setRVoice(d.voice || ''); setRLength(d.length || 'standard')
       loaded.current = true
-    }).catch(() => { if (!dead) setErr('Could not load this letter.') })
+    }).catch((e) => { if (!dead) setErr(e?.response?.status === 404 ? 'This letter no longer exists.' : 'Couldn’t load this letter — try again.') })   // CL-15
     return () => { dead = true }
   }, [id])
 
@@ -135,7 +138,7 @@ export default function CoverLetterEditor() {
       const body = pendingPatch.current
       pendingPatch.current = {}
       try { await api.patch(`/cover-letters/${id}`, body); setSavedAt(new Date().toISOString()); setErr('') }
-      catch (e) { console.error(e); setErr('Could not save — your last edit is not stored.') }
+      catch (e) { console.error(e); setErr('Could not save — your last edit is not stored.'); pushToast({ kind: 'error', msg: 'Could not save — your last edit is not stored.' }) }
     }, 500)
   }, [id])
 
@@ -161,12 +164,13 @@ export default function CoverLetterEditor() {
         if (prevBlob.current) URL.revokeObjectURL(prevBlob.current)
         prevBlob.current = url
         setPdfUrl(url)
-      } catch (e) { if (e.name !== 'CanceledError') console.error(e) }
+        setPdfErr(false)
+      } catch (e) { if (e.name !== 'CanceledError') { console.error(e); setPdfErr(true) } }   // CL-19
       setPdfBusy(false)
     }, 900)
     return () => { clearTimeout(pdfTimer.current); ac.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, template, format, doc, id])
+  }, [data, template, format, doc, id, pdfNonce])
 
   const pickTemplate = (t) => { setTemplate(t); setTplOpen(false); persist({ template: t }) }
   const pickFormat = (f) => { setFormat(f); setFmtOpen(false); persist({ page_format: f }) }
@@ -183,14 +187,14 @@ export default function CoverLetterEditor() {
       a.href = url; a.download = m ? m[1] : 'CoverLetter.pdf'
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (e) { console.error(e); setErr('Could not download the PDF.') }
+    } catch (e) { console.error(e); setErr('Could not download the PDF.'); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }
   }
 
   const remove = async () => {
     setMenuOpen(false)
     if (!window.confirm(`Delete "${doc?.name}"? This cannot be undone.`)) return
-    try { await api.delete(`/cover-letters/${id}`); navigate('/v2/cover-letters') }
-    catch (e) { console.error(e); setErr('Could not delete this letter.') }
+    try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }   // CL-17
+    catch (e) { console.error(e); setErr('Could not delete this letter.'); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
   }
 
   const regenerate = async () => {
@@ -204,6 +208,7 @@ export default function CoverLetterEditor() {
     } catch (e) {
       setRegening(false)
       setErr(e?.response?.data?.detail || 'Regeneration failed')
+      pushToast({ kind: 'error', msg: e?.response?.data?.detail || 'Regeneration failed' })   // CL-14/18: visible above the modal scrim
     }
   }
 
@@ -247,7 +252,15 @@ export default function CoverLetterEditor() {
   ], [resumes, personaAvailable])
 
   if (!doc) {
-    return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>{err || 'Loading…'}</div>
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
+        <span>{err || 'Loading…'}</span>
+        {err && <span style={{ display: 'flex', gap: 14 }}>
+          <span onClick={() => navigate('/v2/cover-letters')} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>‹ Back to cover letters</span>
+          {!/no longer exists/.test(err) && <span onClick={() => window.location.reload()} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>}
+        </span>}
+      </div>
+    )
   }
 
   const paras = data.body_paragraphs || []
@@ -345,12 +358,12 @@ export default function CoverLetterEditor() {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--muted)', fontSize: 8 }}>
                       <span onClick={() => i > 0 && update((d) => { const a = d.header.contact_items; [a[i - 1], a[i]] = [a[i], a[i - 1]] })}
-                        title="Move up" className="v2-hover-accent-text" style={{ cursor: i > 0 ? 'pointer' : 'default', opacity: i > 0 ? 1 : 0.35 }}>▲</span>
+                        title="Move up" className={i > 0 ? 'v2-hover-accent-text' : ''} style={{ cursor: i > 0 ? 'pointer' : 'default', opacity: i > 0 ? 1 : 0.35 }}>▲</span>
                       <span onClick={() => i < arr.length - 1 && update((d) => { const a = d.header.contact_items; [a[i + 1], a[i]] = [a[i], a[i + 1]] })}
-                        title="Move down" className="v2-hover-accent-text" style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
+                        title="Move down" className={i < arr.length - 1 ? 'v2-hover-accent-text' : ''} style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
                     </span>
                     <input value={ct.text || ''} placeholder="Display text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
-                      style={{ ...CELL, flex: '0 0 170px', minWidth: 0 }} />
+                      style={{ ...CELL, flex: '0 0 118px', minWidth: 0 }} />
                     <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
                       style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--accent)', minWidth: 0 }} />
                     {tracked && (
@@ -400,9 +413,9 @@ export default function CoverLetterEditor() {
               <div key={i} style={{ border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px 0' }}>
                   <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--edge)' }}>¶ {i + 1}</span>
-                  <span onClick={() => i > 0 && update((d) => { const a = d.body_paragraphs; [a[i - 1], a[i]] = [a[i], a[i - 1]] })} title="Move up" className="v2-parabtn"
+                  <span onClick={() => i > 0 && update((d) => { const a = d.body_paragraphs; [a[i - 1], a[i]] = [a[i], a[i - 1]] })} title="Move up" className={i > 0 ? 'v2-parabtn' : ''}
                     style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === 0 ? 'default' : 'pointer' }}>↑</span>
-                  <span onClick={() => i < paras.length - 1 && update((d) => { const a = d.body_paragraphs; [a[i + 1], a[i]] = [a[i], a[i + 1]] })} title="Move down" className="v2-parabtn"
+                  <span onClick={() => i < paras.length - 1 && update((d) => { const a = d.body_paragraphs; [a[i + 1], a[i]] = [a[i], a[i + 1]] })} title="Move down" className={i < paras.length - 1 ? 'v2-parabtn' : ''}
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === paras.length - 1 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === paras.length - 1 ? 'default' : 'pointer' }}>↓</span>
                   <span onClick={() => update((d) => { d.body_paragraphs.splice(i, 1) })} title="Delete paragraph" className="v2-parabtn-bad"
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
@@ -428,7 +441,7 @@ export default function CoverLetterEditor() {
 
         {/* preview */}
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
-          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
+          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
             {pdfBusy && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--edge)', borderTopColor: 'transparent', borderRadius: 99 }} />}
 
@@ -462,7 +475,8 @@ export default function CoverLetterEditor() {
               )}
             </span>
 
-            <div onClick={download} className="v2-ctl" style={{ marginLeft: 'auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>↓ Download PDF</div>
+            {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed — showing the last render · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
+            <div onClick={download} className="v2-ctl" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>↓ Download PDF</div>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {pdfUrl
@@ -497,7 +511,7 @@ export default function CoverLetterEditor() {
               </div>
             </div>
             <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>~30 seconds</span>
+              {err && !regening ? <span style={{ fontSize: 11.5, color: 'var(--bad)' }}>{err}</span> : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>~30 seconds</span>}   {/* CL-14 */}
               <div onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
               <div onClick={regenerate} className="v2-ctl" style={{ height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: regening || !rSource ? 'default' : 'pointer', opacity: regening || !rSource ? 0.6 : 1 }}>
                 {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
@@ -507,6 +521,7 @@ export default function CoverLetterEditor() {
           </div>
         </div>
       )}
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
