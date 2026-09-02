@@ -107,6 +107,7 @@ export default function V2JobFeed() {
   const [jobs, setJobs] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)   // FEED-11: a failed list is not an empty one
   const [filters, setFilters] = useState(() => {
     let f = DEFAULTS
     try { const s = JSON.parse(localStorage.getItem(FILTERS_KEY)); if (s) f = { ...DEFAULTS, ...s } } catch {}
@@ -194,6 +195,7 @@ export default function V2JobFeed() {
   const selRef = useRef(sel); useEffect(() => { selRef.current = sel }, [sel])
   const detailRef = useRef(detail); useEffect(() => { detailRef.current = detail }, [detail])
   const pinnedRef = useRef(null)   // job id opened via ?job=, held until the user picks from the list
+  const deadPinRef = useRef(false) // a ?job= id that 404s: keep the panel empty instead of focusing an unrelated job (FEED-09)
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   useEffect(() => {
@@ -230,9 +232,14 @@ export default function V2JobFeed() {
       setTotal(data.total || 0)
       setOffset(n)
       setHasMore(n < (data.total || 0))
-    } catch (e) { console.error('v2 feed load failed', e) }
+      setLoadError(false)
+    } catch (e) {
+      console.error('v2 feed load failed', e)
+      setLoadError(true)
+      if (e?.response?.status !== 401) pushToast({ kind: 'error', msg: "Couldn't load jobs" })   // a 401 opens the shell's login modal instead
+    }
     setLoading(false)
-  }, [buildParams])
+  }, [buildParams, pushToast])
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
   // append next page (infinite scroll + refill after triage drains the list)
@@ -262,6 +269,7 @@ export default function V2JobFeed() {
     const list = jobsRef.current
     if (idx < 0 || idx >= list.length) return
     pinnedRef.current = null                 // picking from the list releases a ?job= pin
+    deadPinRef.current = false
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
     setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setForceFrame(false); setFrameOk(null)
@@ -278,7 +286,7 @@ export default function V2JobFeed() {
     // a ?job= permalink owns the panel until the user picks from the list — it stays
     // open even when that job isn't in the list (applied/skipped jobs are filtered
     // out of the default feed), and holds while its fetch is still in flight
-    else if (pinnedRef.current) setSel(-1)
+    else if (pinnedRef.current || deadPinRef.current) setSel(-1)
     else focusAt(Math.min(sel, jobs.length - 1))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, loading])
@@ -301,8 +309,10 @@ export default function V2JobFeed() {
   }, [filters.status, loadMore])
   const patchRemote = useCallback(async (job, changes) => {
     patchLocal(job.id, changes)
-    try { await api.patch(`/jobs/${job.id}`, changes); refreshStats() } catch (e) { console.error(e); fetchJobs() }
-  }, [patchLocal, fetchJobs, refreshStats])
+    // FEED-07: report the outcome so callers only announce success once the PATCH lands
+    try { await api.patch(`/jobs/${job.id}`, changes); refreshStats(); return true }
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Couldn't update "${job.title}"` }); fetchJobs(); return false }
+  }, [patchLocal, fetchJobs, refreshStats, pushToast])
   const watchForScore = useCallback((id) => {
     if (id && !scoreWatchRef.current.some((w) => w.id === id)) scoreWatchRef.current = [...scoreWatchRef.current, { id, until: Date.now() + 90000 }]
   }, [])
@@ -310,23 +320,27 @@ export default function V2JobFeed() {
     pushToast({ kind: 'undo', msg, action: 'Undo', onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
   }, [pushToast, fetchJobs, refreshStats])
   const saveJob = (j) => { const willSave = !j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' }) }
-  const skipJob = (j) => { showUndo(j, j.status, j.saved, `Skipped "${j.title}"`); patchRemote(j, { status: 'skip' }) }
-  const applyJob = (j) => { showUndo(j, j.status, j.saved, `Applied to "${j.title}"`); patchRemote(j, { status: 'applied' }) }
+  const skipJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'skip' })) showUndo(j, ps, pv, `Skipped "${j.title}"`) }
+  const applyJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'applied' })) showUndo(j, ps, pv, `Applied to "${j.title}"`) }
   // "Ignore {company} everywhere" — add to the global company-exclude setting
   // (matches classic ignoreCompany) and drop every job from that company now.
   const ignoreCompany = useCallback(async (job) => {
     const name = (job.company || '').trim()
+    if (!name) return                    // nothing to exclude, and nothing to hide
+    const n = jobsRef.current.filter((x) => (x.company || '').toLowerCase() === name.toLowerCase()).length
+    // FEED-08: this edits a global scraper setting, so confirm first (classic JobFeed did) and say what happened
+    if (!window.confirm(`Ignore "${name}" everywhere?\n\nThis hides ${n} job${n === 1 ? '' : 's'} here and excludes the company from every future scrape. Undo it in Settings → global company exclude.`)) return
     setJobs((prev) => prev.filter((x) => (x.company || '').toLowerCase() !== name.toLowerCase()))
     setDetail((dd) => (dd && (dd.company || '').toLowerCase() === name.toLowerCase() ? null : dd))
-    if (!name) return
     try {
       const { data: settings } = await api.get('/settings')
       const cur = Array.isArray(settings.company_exclude_global) ? settings.company_exclude_global : []
       if (!cur.some((c) => c.toLowerCase() === name.toLowerCase())) {
         await api.patch('/settings', { company_exclude_global: [...cur, name] })
       }
-    } catch (e) { console.error(e); fetchJobs() }
-  }, [fetchJobs])
+      pushToast({ kind: 'success', msg: `Ignoring "${name}" — ${n} job${n === 1 ? '' : 's'} hidden` })
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Couldn't ignore "${name}"` }); fetchJobs() }
+  }, [fetchJobs, pushToast])
   const scoreJob = useCallback((job) => {
     pendingRef.current[job.id] = { title: job.title, company: job.company }
     pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` })
@@ -484,7 +498,12 @@ export default function V2JobFeed() {
       if (pinnedRef.current !== jid) return
       setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null)
       setForceFrame(false); setFrameOk(null)
-    }).catch(() => { pinnedRef.current = null })
+    }).catch(() => {
+      if (pinnedRef.current !== jid) return
+      pinnedRef.current = null; deadPinRef.current = true   // FEED-09: don't fall through to an unrelated job
+      setSel(-1); setDetail(null)                           // the sync effect below then drops ?job= from the URL
+      pushToast({ kind: 'error', msg: 'That job no longer exists' })
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -654,7 +673,7 @@ export default function V2JobFeed() {
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
             <input type="number" value={filters.min_score} onChange={(e) => setF({ min_score: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
-          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Unscored jobs stay visible — this only hides low scores</div>
+          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides unscored jobs — they have no score to compare</div>
         </Drop>
         <Drop label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
@@ -664,7 +683,7 @@ export default function V2JobFeed() {
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
             <input type="number" placeholder="$K" value={filters.min_salary} onChange={(e) => setF({ min_salary: e.target.value })} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
           </div>
-          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Jobs without a listed salary stay visible</div>
+          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides jobs without a listed salary</div>
         </Drop>
         <Drop align="left" width={170} active open={menu === 'status'} onToggle={() => setMenu(menu === 'status' ? null : 'status')}
           trigger={(t) => {
@@ -730,6 +749,7 @@ export default function V2JobFeed() {
 
           <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column', userSelect: 'none', WebkitUserSelect: 'none' }}>
             {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+              : loadError ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Couldn't load jobs · <span onClick={fetchJobs} style={{ color: 'var(--accent)', cursor: 'pointer' }}>Try again</span></div>
               : jobs.length === 0 ? (
                   (!filters.status.length && !filters.company.length && !filters.source.length && !filters.h1b_verdict.length && filters.min_score === '' && !filters.min_salary && !dSearch && !searchId)
                     ? <div style={{ padding: '48px 40px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>   {/* F-010: first-run / nothing open */}

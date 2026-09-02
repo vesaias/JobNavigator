@@ -35,7 +35,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Expected + why** Typing should write the value, as it does for every other category (verified against `Certifications`).
 **Actual** Measured: after typing `AFTER-TYPING` the input still displays `before` and the server value is unchanged. `setField('skills.ZZTEST.Dotted')` resolves to `d.skills.ZZTEST` → `undefined` → `:36` returns silently. Realistic categories that hit this: `Node.js`, `Web3.0`, `CI/CD.`. Shared with the Résumé editor.
 **Proposed fix** Give `SkillsEditor` its own writer using `mutate` instead of the dotted-path `setField`: `onChange={(e) => mutate((d) => { d.skills[k] = e.target.value })}`. Rename/remove already use `mutate` and are unaffected. ~2 lines.
-**Status** needs decision: the component is shared with `/v2/resumes/:id`, so I did not patch it without a call on blast radius — though the fix looks contained and unambiguous.
+**Status** fixed in source (rebuild pending): `ResumeSections.jsx:283-286` — `SkillsEditor` writes `d.skills[k]` directly through a new `setVal()` (the `↩` tailoring revert too) instead of the dotted-path `setField`, which is no longer passed to this editor. Blast radius is the Skills editor only; `setField` is unchanged for every other section. Same edit as RES-04.
 
 ### PERS-04 · P2 · Renaming a skill category onto an existing name silently destroys that category's value
 **Where** `ResumeSections.jsx:279` — `rename` rebuilds the object as `ns[k === oldK ? newK : k] = v`
@@ -43,7 +43,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Actual** Measured: keys become `['Certifications','Technical','Tools','Languages']` and `Certifications` now holds `'before'` — the user's real certifications string is gone. No warning, no undo, and it PATCHes 500 ms later.
 **Expected + why** Either refuse the rename or merge. Losing real content on a typo is not acceptable for a field the tailoring prompt reads verbatim.
 **Proposed fix** Bail when `newK` already exists and differs from `oldK` (reverting the input), or suffix it.
-**Status** needs decision: refuse the collision, or merge the two values?
+**Status** fixed in source (rebuild pending): `ResumeSections.jsx:287-298` (`rename`), `:313` (`onBlur`) — **refuse**, not merge (a merge still has to discard one of the two values). `rename()` returns false on a collision, a blank name or a `DANGEROUS` key; `onBlur` reverts the uncontrolled input to the old key and a new `onError` prop — plumbed through `SectionEditor` and wired to `pushToast` at `Persona.jsx:277-278` and `ResumeEditor.jsx:409` — raises the `error` toast “… already exists — renaming onto it would erase its values.” Same edit as RES-05.
 
 ### PERS-05 · P2 · A failed save is completely invisible
 **Where** `Persona.jsx:200` — `catch (e) { console.error(\`persona ${key}\`, e) }`
@@ -51,28 +51,28 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Actual** Measured: the field keeps showing the typed value, `Saved ✓` stays `visibility: hidden`, the server still holds `Frankfurt`, and nothing on the page contains "fail" or "error". `Toast.jsx` is not imported by this screen at all. State was already applied optimistically at `:197`, so screen and server diverge silently until a reload.
 **Expected + why** HANDOVER ranks error paths #2 and says the `error` toast kind (`TTL.error = null`, never auto-dismisses) should be *"wired at every failure site, not just the two or three where it was demonstrated"*.
 **Proposed fix** Raise an `error` toast in the catch; ideally also mark the node dirty so the header can say "unsaved".
-**Status** needs decision: wire `Toast.jsx` into Persona, or accept console-only here?
+**Status** fixed (rebuild pending) — already landed earlier in this wave: `Toast.jsx` is imported, `ToastStack` is mounted, and `saveNode`'s catch raises an `error` toast carrying the backend detail (`Persona.jsx:206`). No further change in this triage.
 
 ### PERS-06 · P2 · Any load failure leaves the screen on `Loading…` forever
 **Where** `Persona.jsx:185` (`.catch(() => {})`), `:232` (`if (!p) return … Loading…`)
 **Repro** Intercept `GET /api/persona` with (a) 500 `"Persona singleton missing — restart app to re-seed"` — the real backend response at `routes_persona.py:46` — and (b) `200 null`.
 **Actual** Both render `Loading…` indefinitely: no retry, no error copy, no toast. The 500 case is the *documented* first-run/reseed failure, and the user is given no hint that restarting the app is the fix.
 **Proposed fix** Track an `err` state; render the message plus a Retry that re-issues the GET.
-**Status** needs decision — same call as PERS-05.
+**Status** fixed in source (rebuild pending): the load-failure toast landed earlier in the wave, but the `Loading…` state still stuck — confirmed in source at `Persona.jsx` (`if (!p) return … Loading…`). Added a `loadErr` flag set by the `.catch()` **and** by a `200 null` body; the placeholder now renders “Couldn’t load your persona.” + a **Try again** that re-issues the GET. The toast is kept.
 
 ### PERS-07 · P2 · A legacy multi-key `qa_bank` entry loses every key but the first, permanently
 **Where** `Persona.jsx:95` (`toPair` takes `Object.keys(e)[0]`), `:217` (`writeQa` always rewrites the whole bank canonically)
 **Repro** Serve `qa_bank: [{"ZZTEST k1":"v1","ZZTEST k2":"v2"}, …]`.
 **Actual** Measured: the card renders `ZZTEST k1 / v1` only; `k2/v2` appears nowhere. Because *any* edit to *any* entry rewrites the entire bank through `writeQa`, the next keystroke anywhere on the screen persists the lossy version. HANDOVER explicitly flags `{question: answer}` shapes as arriving from the extension.
 **Proposed fix** Flat-map legacy entries to one pair per key.
-**Status** needs decision: expand multi-key entries, or accept the loss? (The user's live bank is 18/18 canonical, so this is latent, not active.)
+**Status** fixed in source (rebuild pending): `Persona.jsx:93-101`, `:259` — `toPair` became `toPairs`, returning one pair **per key**, and the memo uses `flatMap`. Every key of a legacy multi-key entry now renders and survives the next canonical rewrite.
 
 ### PERS-08 · P2 · Navigating away within 500 ms of the last keystroke drops that edit silently
 **Where** `Persona.jsx:186` (unmount clears every pending timer), `:201` (500 ms debounce)
 **Repro** Type into `Notice period`, wait 120 ms, navigate to `/v2/stats`.
 **Actual** Measured: the server value is unchanged. No flush on unmount, no unsaved-changes guard — and the header still says "Saves automatically".
 **Proposed fix** Flush pending timers in the cleanup rather than clearing them (fire the PATCH, don't await it).
-**Status** needs decision — ~3 lines, but it changes save semantics.
+**Status** fixed in source (rebuild pending): `Persona.jsx:189-204` (`flushPending`), `:214-217` (unmount + `beforeunload`), `:226-239` (`timers.current[key] = {timer, value}`) — the unmount cleanup now **flushes** pending node PATCHes instead of clearing them, and the same flush is bound to `beforeunload`. It uses `fetch(..., {keepalive: true})` with the same cookie + `X-API-Key` as `api.js`, because an axios XHR started during `beforeunload` is aborted with the page; axios stays as the fallback. Fire-and-forget — nothing is left mounted to toast a failure.
 
 ### PERS-09 · P3 · Remove ✕ hovers to a red *background*; the design specifies a red *glyph*
 **Where** `theme.css:130` (`.v2-hover-bad:hover { background:var(--bad-soft) !important }`) used at `Persona.jsx:320` and `ResumeSections.jsx:185/237/302/348`
@@ -165,7 +165,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Expected + why** These buttons fire `/scrape/run-all`, `/db/backup`, `/db/cleanup`, `/auto-reject/run`, `/email/check-now`, `/telegram/digest`, `/h1b/refresh`. A 409 is a *routine* outcome per CLAUDE.md §Non-blocking triggers, and HANDOVER records that a `job_cleanup` trigger once deleted 81 real jobs. The user has to be able to tell "started" from "refused" from "blew up".
 **Actual** All three statuses give byte-identical UI for a fixed 4 s: button `Running` + spinner, `borderTopColor rgb(226,221,208)`, `color rgb(63,107,82)`, status cell `Running · 0s`, Next-run `now` — then a silent revert to `Run now` / `Scheduled`. The only difference is a `console.error('trigger', …)`. The 4 s window is a bare `setTimeout` in `finally` (`:163`), decoupled from what the job actually did.
 **Proposed fix** Toast the outcome (`ok` on 202, `warn` on 409 "already running", `error` otherwise) and clear `triggering` from the response rather than a timer.
-**Status** needs decision — same "no toast surface" call as PERS-05; `Toast.jsx` is not imported by Stats either.
+**Status** fixed in source (rebuild pending): `Stats.jsx:167-184` — checked the two gaps the wave's error toast left open. 409 was **not** distinguished (any failure produced the same “Could not start …”), and the 4 s revert lived in `finally`, so a refused trigger still read `Running` for 4 s. Now 202 → `progress` toast “{job} started.” plus the 4 s optimistic window; 409 → `error` toast “{job} is already running.” with `triggering` cleared immediately; any other failure → the existing error toast, also cleared immediately.
 
 ### STAT-02 · P2 · "Best open score" renders the literal string `-Infinity`
 **Where** `Stats.jsx:268`
@@ -173,7 +173,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Expected + why** `{}` is truthy so the guard passes, and `Math.max()` of an empty list is `-Infinity`. The shape is real: `routes_jobs.py:232` explicitly treats `cv_scores::text = '{}'` as unscored, so the Feed already knows these rows exist.
 **Actual** Measured: the tile reads `BEST OPEN SCORE=-InfinityZZTEST Co`.
 **Proposed fix** Build the numeric list first and fall back to `—` when it is empty.
-**Status** needs decision — trivially fixable, but a behavioural one-liner I did not want to land unilaterally.
+**Status** fixed in source (rebuild pending): `Stats.jsx:189-194`, `:294` — a `bestScore` memo builds the numeric list first and falls back to `—` when it is empty, and the company sub-label is suppressed in that case, so `cv_scores: {}` no longer renders `-InfinityZZTEST Co`.
 
 ### STAT-03 · P2 · With every endpoint failing, the screen renders a plausible-looking dashboard
 **Where** `Stats.jsx:102` / `:126-127` / `:135` / `:139` — every request `.catch()`es to `null`
@@ -181,7 +181,7 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Actual** Measured: header `Stats · No scrape recorded yet`; KPIs `—`, `0`, `—`, `—`, `—`; funnel four rows of `0` with the footnote intact; the 30-day chart drawn as a flat line with real axes; `0 jobs` schedules; `No runs yet.`; `No LLM calls in this window.`. Sixteen console errors, nothing on screen. A user cannot distinguish a dead backend from an empty database — and `New this week` shows `0` where its neighbours show `—`, because the series is always filled client-side (`:171-181`).
 **Expected + why** HANDOVER ranks error paths #2 and empty-DB #1 precisely because these two collapse into each other.
 **Proposed fix** Track a per-request failure flag and render one header-level "couldn't reach the backend — Retry" banner.
-**Status** needs decision.
+**Status** partly fixed in source (rebuild pending): `Stats.jsx:121-125`, `:291` — checked after the wave's error toast landed, and stale/plausible numbers *did* still render, because `loadCore` did `if (s) setStats(s)` and so kept the previous value on failure. The three core nodes are now assigned unconditionally, so a failure clears them and `int(null)` renders `—`; `New this week` is additionally gated on `timeline` so it shows `—` instead of the client-filled `0`. **Still open:** on a total failure the funnel bars, the 30-day chart and the schedules card still draw an empty-but-plausible shape — that is the header-level banner from the proposed fix, a layout decision rather than a contained one. **Decision needed:** add the banner, or accept the `—` tiles as the signal?
 
 ### STAT-04 · P3 · The Schedules table overflows its card below ~1100 px
 **Where** `Stats.jsx:417-419` / `:424-444` — fixed columns `250 + 132 + 140 + 132 + 110 = 764` plus `0 20px` padding, in a card with no horizontal scroll container
@@ -347,3 +347,23 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **The pattern underneath.** Neither screen imports `Toast.jsx`. Between them that accounts for PERS-05, PERS-06, STAT-01 and STAT-03 — four separate P2s with one root cause: every failure on both screens is a `console.error` at best, and both screens are optimistic, so the UI actively asserts success it has not got. One decision about giving these two screens a toast surface closes four findings.
 
 **A second pattern worth a single decision.** Three of the P2s on Persona (PERS-03 dotted-category writes, PERS-04 rename collision, PERS-02 reorder) all live in `SkillsEditor` — the one editor whose model is a plain object keyed by user-supplied strings. It is the least defensible data shape in the résumé schema and it is shared with `/v2/resumes/:id`.
+
+---
+
+## P2 triage (2026-09-02)
+
+Source-only pass over the open P2s. No rebuild, no backend restart — every fix below is **rebuild pending**.
+Files touched: `frontend/src/v2/Persona.jsx`, `Stats.jsx`, `ResumeSections.jsx`.
+Brace/paren/bracket/backtick balance of all three checked against `git show HEAD:<path>` — unchanged.
+
+| id | action | note |
+|---|---|---|
+| PERS-03 | **fixed** | Same edit as RES-04: `SkillsEditor` gets its own `setVal(k, v)` writing `d.skills[k]` through `mutate`, so a category containing a `.` writes normally. `DANGEROUS` guard kept. |
+| PERS-04 | **fixed** | Same edit as RES-05: `rename()` **refuses** the collision (chosen over merge — a merge still loses one of the two values) and returns false, `onBlur` reverts the uncontrolled input, and a new `onError` prop raises an `error` toast. Wired from both callers. |
+| PERS-05 | **status corrected** | Already fixed earlier in this wave: `Toast.jsx` is imported, `ToastStack` mounted, and `saveNode`'s catch raises an `error` toast with the backend detail (`Persona.jsx:206`). No further code change. |
+| PERS-06 | **fixed** | The load-failure toast alone left the screen on `Loading…` forever — confirmed in source (`if (!p) return … Loading…`). Added a `loadErr` state set by both the `.catch()` **and** a `200 null` body; the placeholder now renders "Couldn't load your persona." + a **Try again** that re-issues the GET. The toast stays. |
+| PERS-07 | **fixed** | `toPair` → `toPairs`, returning one pair **per key**, and the memo uses `flatMap`. A legacy multi-key entry now renders every key instead of silently dropping all but the first on the next canonical rewrite. |
+| PERS-08 | **fixed** | Pending debounced saves are flushed instead of cleared. `timers.current[key]` now holds `{timer, value}`; a `flushPending()` fires each pending node PATCH and is called from the unmount cleanup **and** from a `beforeunload` listener. `fetch(..., {keepalive: true})` with the same cookie + `X-API-Key` as `api.js`, because an axios XHR started in `beforeunload` is aborted with the page (axios remains the fallback). |
+| STAT-01 | **fixed** | 409 was **not** distinguished (any failure gave the same "Could not start …" toast) and the 4 s revert ran in `finally`, so a refused trigger still showed `Running` for 4 s. Now: 202 → `progress` toast "{job} started." + the 4 s optimistic window; 409 → `error` toast "{job} is already running." and `triggering` cleared **immediately**; anything else → the existing error toast, also cleared immediately. |
+| STAT-02 | **fixed** | `Math.max()` on an empty list is guarded: a `bestScore` memo builds the numeric list first and falls back to `—`; the company sub-label is suppressed when there is no score, so `cv_scores: {}` no longer renders `-InfinityZZTEST Co`. |
+| STAT-03 | **partly fixed** | Checked: the one error toast fired, but stale/plausible numbers still rendered, because `loadCore` did `if (s) setStats(s)` — a failed request left the previous value on screen. Now `setStats/setTimeline/setScores` are assigned unconditionally, so a failure clears the node and `int(null)` renders `—`; `New this week` is additionally gated on `timeline` so it shows `—` rather than the client-filled `0`. **Still open (deferred):** the funnel bars, the 30-day chart axes and the schedules card still draw an empty-but-plausible shape on total failure — that needs the header-level "couldn't reach the backend" banner from the proposed fix, which is a layout decision rather than a contained one. |

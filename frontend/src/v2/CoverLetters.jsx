@@ -50,6 +50,11 @@ export function Picker({ value, options, placeholder, onPick, width }) {
         </span>
         <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--muted)', marginLeft: 8 }}>▾</span>
       </div>
+      {/* CL-07: the popover physically covers the control below it, so without a
+          scrim the next click lands on an option of *this* picker. The scrim sits
+          just under the popover: clicks on the popover still work, everything else
+          just closes it. */}
+      {open && <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />}
       {open && (
         <div className="v2-scroll" style={{ ...POPOVER, width: width || '100%' }}>
           {options.length === 0 && <div style={{ padding: '7px 9px', fontSize: 12, color: 'var(--muted)' }}>Nothing to pick yet.</div>}
@@ -123,12 +128,19 @@ export default function CoverLetters() {
   const showArch = archOpen || query.trim().length > 0
   useEffect(() => { try { localStorage.setItem(ARCH_KEY, archOpen ? '1' : '0') } catch {} }, [archOpen])
   const [err, setErr] = useState('')
+  const [loadErr, setLoadErr] = useState(null)   // CL-05: failed load ≠ empty account
   const [runMeta, setRunMeta] = useState({})   // run_id -> {label, voice, length}
   const pendingRef = useRef([])
   useEffect(() => { pendingRef.current = pending }, [pending])
 
   const load = useCallback(async () => {
-    try { const { data } = await api.get('/cover-letters'); setLetters(data || []) } catch (e) { console.error(e) }
+    try {
+      const { data } = await api.get('/cover-letters')
+      setLetters(data || []); setLoadErr(null)
+    } catch (e) {
+      console.error(e)
+      setLoadErr(e?.response?.status ? `The server answered ${e.response.status}.` : (e.message || 'Network error'))
+    }
   }, [])
 
   useEffect(() => {
@@ -184,7 +196,17 @@ export default function CoverLetters() {
         const before = pendingRef.current
         const ids = runs.map((r) => r.run_id).join(',')
         if (ids !== before.map((r) => r.run_id).join(',')) setPending(runs)
-        if (before.length && before.some((b) => !runs.some((r) => r.run_id === b.run_id))) load()
+        const gone = before.filter((b) => !runs.some((r) => r.run_id === b.run_id))
+        if (gone.length) {
+          load()
+          // CL-06: a failed run leaves /monitor/active exactly like a successful
+          // one — the row just vanishes. Ask the history what actually happened.
+          try {
+            const { data: hist } = await api.get('/monitor/history', { params: { job_type: 'generate_cover_letter', limit: 20 } })
+            const bad = (hist || []).find((h) => h.status === 'failed' && gone.some((g) => g.run_id === h.id))
+            if (bad && !dead) setErr(`Generation failed${bad.error ? ' — ' + bad.error : ''}`)
+          } catch { /* the reloaded list is then the only signal */ }
+        }
       } catch { /* retry next tick */ }
     }
     tick()
@@ -360,11 +382,17 @@ export default function CoverLetters() {
             )}
             {showArch && archived.map((c) => row(c, true))}
 
-            {visible.length === 0 && pending.length === 0 && (
+            {visible.length === 0 && pending.length === 0 && (loadErr ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '34px 8px' }}>
+                <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your letters</span>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{loadErr}</span>
+                <span onClick={() => load()} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+              </div>
+            ) : (
               <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
                 {letters.length === 0 ? 'No cover letters yet — generate one on the left.' : 'Nothing matches that search.'}
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>

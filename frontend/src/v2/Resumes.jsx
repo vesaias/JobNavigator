@@ -36,6 +36,7 @@ export default function V2Resumes() {
   const [q, setQ] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [loadErr, setLoadErr] = useState(false)   // RES-07: a failed load is not an empty account
   const [inflight, setInflight] = useState([])   // [{baseId, jobId}] tailors in progress
   const inflightKeys = useRef('')
 
@@ -46,7 +47,8 @@ export default function V2Resumes() {
       setPersona(data.persona || null)
       setArchived(data.archived || [])
       setTotalCopies(data.total_copies || 0)
-    } catch (e) { console.error('shelf load failed', e) }
+      setLoadErr(false)
+    } catch (e) { console.error('shelf load failed', e); setLoadErr(true) }
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -117,6 +119,14 @@ export default function V2Resumes() {
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '6px 30px 26px 24px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: searching || showArchived ? 4 : 12 }}>
         {loading ? <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+          /* RES-07: a 500/401 used to render as "No base résumés yet", inviting the
+             user to create a résumé they already have. */
+          : loadErr ? (
+            <div style={{ padding: '20px 14px', border: '1px dashed var(--bad)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
+              <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés — the shelf request failed.</span>
+              <span onClick={() => { setLoading(true); load() }} className="v2-act" style={{ flex: '0 0 auto', height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
+            </div>
+          )
           : searching ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>

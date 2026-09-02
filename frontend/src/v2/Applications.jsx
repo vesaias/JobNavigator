@@ -75,6 +75,8 @@ export default function Applications() {
   // hold the screen back until the first fetch lands — otherwise the chrome
   // paints with "0 applications" and an empty list, then everything pops in
   const [loaded, setLoaded] = useState(false)
+  // APPS-02: a failed fetch must not read as "you have no applications"
+  const [loadErr, setLoadErr] = useState(null)
   const [sel, setSel] = useState(null)
   const [query, setQuery] = useState('')
   const [companies, setCompanies] = useState([])
@@ -97,12 +99,19 @@ export default function Applications() {
     try {
       const { data } = await api.get('/applications', { params: { limit: 2000 } })
       const list = data.applications || []
-      setApps(list)
+      setApps(list); setLoadErr(null)
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
-    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) }) }
+    } catch (e) {
+      console.error(e)
+      setLoadErr(e?.response?.status ? `The server answered ${e.response.status}.${errSuffix(e)}` : (e.message || 'Network error'))
+      pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) })
+    }
     setLoaded(true)
   }, [pushToast])
   useEffect(() => { load() }, [load])
+  // APPS-06: the interview draft belongs to the application it was opened on —
+  // carrying it to the next row posted it against the wrong application
+  useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }, [sel])
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
   useEffect(() => {
@@ -201,11 +210,23 @@ export default function Applications() {
     if (!d) return
     closeAll(); setPrep('loading'); setCopied(false)
     try { const { data } = await api.get(`/applications/${d.id}/prep`); setPrep({ text: data.text }) }
-    catch (e) { setPrep({ text: `Could not build the prep bundle: ${e.message}` }) }
+    catch (e) {
+      console.error(e)
+      setPrep({ text: `Could not build the prep bundle: ${e.message}${errSuffix(e)}`, failed: true })
+      pushToast({ kind: 'error', msg: 'Could not build the prep bundle' + errSuffix(e) })
+    }
   }
+  // APPS-05: "Copied ✓" only after the write actually resolved; nothing to copy
+  // while the bundle is still loading or after it failed
   const copyPrep = async () => {
-    try { await navigator.clipboard.writeText(prep?.text || '') } catch { /* clipboard blocked */ }
-    setCopied(true); timers.current.push(setTimeout(() => setCopied(false), 1800))
+    if (prep === 'loading' || prep?.failed) return
+    try {
+      await navigator.clipboard.writeText(prep?.text || '')
+      setCopied(true); timers.current.push(setTimeout(() => setCopied(false), 1800))
+    } catch (e) {
+      console.error(e)
+      pushToast({ kind: 'error', msg: 'Could not copy — select the text and copy it manually' })
+    }
   }
 
   // history from real status_transitions + the Gmail timestamp
@@ -331,11 +352,17 @@ export default function Applications() {
               </React.Fragment>
             )
           })}
-          {visible.length === 0 && (
+          {visible.length === 0 && (loadErr ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '34px 8px' }}>
+              <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your applications</span>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{loadErr}</span>
+              <span onClick={() => load()} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+            </div>
+          ) : (
             <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
               {apps.length === 0 ? 'No applications yet — mark a job applied in the Feed, or log one here.' : 'Nothing matches those filters.'}
             </div>
-          )}
+          ))}
         </div>
 
         {/* detail */}
@@ -415,7 +442,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             const on = d.status === s.id
             const rej = s.id === 'rejected'
             return (
-              <div key={s.id} onClick={() => onStage(s.id)} title={s.hint} className="v2-bd"
+              <div key={s.id} onClick={() => { if (!on) onStage(s.id) }} title={s.hint} className="v2-bd"
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, borderRadius: 8, fontSize: 12.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
                   border: `1px solid ${on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--line)'}`,
                   background: on ? (rej ? 'var(--bad-soft)' : 'var(--accent-soft)') : 'var(--surface)',
@@ -523,6 +550,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
 
 // ── prep modal ───────────────────────────────────────────────────────────────
 function PrepModal({ prep, company, copied, onCopy, onClose }) {
+  const busy = prep === 'loading' || prep?.failed === true
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -539,7 +567,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Edit the closing ask in Settings → AI</span>
           <div onClick={onClose} style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
-          <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+          <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1 }}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </div>
         </div>

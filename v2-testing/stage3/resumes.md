@@ -27,7 +27,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** `move()` rebuilds `d.skills` from swapped entries and calls `onData` → `persist({json_data})`, so the new order must reach the DB.
 **Actual** measured before the fix — DOM after ▼: `['Beta','Alpha']`; `GET /resumes/{id}` → `['Alpha','Beta']`; after reload the DOM was back to `['Alpha','Beta']`. Reproduced at API level with no browser: `PATCH {"Beta":"b","Alpha":"a"}` over `{"Alpha":"a","Beta":"b"}` returned 200 and read back **unchanged**; adding a key made the same PATCH stick. Cause: SQLAlchemy decides whether to emit an UPDATE by comparing old `==` new, and two dicts with the same pairs in a different order are equal in Python, so the column was never marked dirty (`resume.updated_at` was, which is why the request looked successful).
 **Proposed fix** `flag_modified(resume, "json_data")` after `setattr`.
-**Status** **fixed + verified (backend)** — after the restart: API `['Alpha','Beta','Gamma']` → PATCH reorder → `['Gamma','Alpha','Beta']` PASS, second reorder PASS; UI ▼ → DOM `['Gamma','Beta','Alpha']` = API = after reload. `name`/`template`/`page_format` PATCHes still round-trip.
+**Status** fixed + verified (backend) — after the restart: API `['Alpha','Beta','Gamma']` → PATCH reorder → `['Gamma','Alpha','Beta']` PASS, second reorder PASS; UI ▼ → DOM `['Gamma','Beta','Alpha']` = API = after reload. `name`/`template`/`page_format` PATCHes still round-trip.
 
 ### RES-03 · P2 · "Import PDF" creates **two** base résumés
 **Where** `frontend/src/v2/Resumes.jsx:253-262` (`AddModal.importPdf`) vs `backend/api/routes_resumes.py:1150-1163`
@@ -43,7 +43,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** the value is stored under the literal key `"A.B"`.
 **Actual** measured: value field left at its old text; `GET` returned `{"A.B": "Go · Python"}` — the typed "dotted" never landed. `setField` splits the path on `.`, walks `d.skills.A` (undefined), hits the `if (o && typeof o === 'object')` guard and writes nothing — while `mutate` still fires a PATCH, so the save indicator says it saved. Dots in a category are plausible (".NET", "Node.js" as a heading).
 **Proposed fix** give `SkillsEditor` a direct mutator (`mutate(d => { d.skills[k] = v })`) instead of routing through the dotted-path helper.
-**Status** needs decision: fix `SkillsEditor` only, or make `setField` accept an array path everywhere?
+**Status** fixed in source (rebuild pending): `ResumeSections.jsx:283-286` — `SkillsEditor` writes `d.skills[k]` directly via a new `setVal()` instead of the dotted-path `setField`; the `↩` revert uses it too, and `setField` is no longer passed to this editor. `setField` itself is untouched (it is still correct for every fixed-key path). Closes PERS-03.
 
 ### RES-05 · P2 · Renaming a skills category onto an existing one silently destroys a row
 **Where** `ResumeSections.jsx:279` (`rename`)
@@ -51,7 +51,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** either a rejection or a merge the user is told about.
 **Actual** measured: `{'Languages': 'Go · Python', 'Skill 2': ''}` → `{'Languages': 'Go · Python'}`. Two rows became one; the later value wins and the other is gone. No confirm, no toast, no undo.
 **Proposed fix** refuse the rename when the key already exists (revert the uncontrolled input and flash the field), or append a suffix.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): `ResumeSections.jsx:287-298` (`rename`), `:313` (`onBlur`) — `rename()` returns a boolean and refuses a collision, a blank name and a `DANGEROUS` key; `onBlur` reverts the uncontrolled input to the old key when it returns false, and a new `onError` prop (plumbed through `SectionEditor`, wired to `pushToast` in `ResumeEditor.jsx:409` and `Persona.jsx:277-278`) raises the `error` toast “… already exists — renaming onto it would erase its values.” Refusal, not merge. Closes PERS-04.
 
 ### RES-06 · P2 · The "one next step" CTA can never get past "Review N changes"
 **Where** `ResumeEditor.jsx:176` (`changes`), `:236-243` (`stage`), `:280-299` (`applyReview`)
@@ -59,7 +59,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** the design's stage machine (`Resumes Home D` `STAGES`) advances Review → Score → Cover letter → Applied; the modal's own copy says "these landed automatically".
 **Actual** measured on a 5-change copy: after "Done reviewing" the toast fired, the summary was restored, the suggested bullet was appended and `suggested_bullets` was deleted — but the sub-line went to **"4 reviewable changes"** and the CTA to **"Review 4 changes"**. `changes` is recomputed from `computeChanges(baseData, data)` on every render, so every change the user *keeps* stays a diff vs the base forever. The shelf disagrees at the same moment: its `fresh` dot clears (backend `_fresh` = "any suggested_bullets", `routes_resumes.py:495-499`), so the copy stops being flagged there while the editor still demands review.
 **Proposed fix** persist a `reviewed_at` (or a `reviewed: true` marker inside `json_data`) when "Done reviewing" runs, and gate the Review stage on it rather than on the raw diff. Keep the inline ✦ marks — they are informational.
-**Status** needs decision: store the marker in `json_data` (no migration) or add a column?
+**Status** fixed in source (rebuild pending): `ResumeEditor.jsx:68-77` (helpers), `:99` (state), `:168` (per-id load), `:254` (`stage`), `:323` (`applyReview`), `:387` (sub-line) — the acknowledgement is stored in **localStorage** (`jobnavigator_v2_resume_reviewed`, an id list capped at 300), not in `json_data`. That is the smaller of the two options: no backend change, no migration, no extra PATCH, and it is a per-user UI acknowledgement rather than résumé content — the cost is that it does not follow the user to another browser. `applyReview` marks it, `stage` and the sub-line gate on `changes.length && !reviewed`, and the inline ✦ marks stay.
 
 ### RES-07 · P2 · A failed shelf load is rendered as "No base résumés yet"
 **Where** `Resumes.jsx:42-51` (`load`), `:150-151`
@@ -67,7 +67,7 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** a 500 and an empty database are different facts; the first-run copy invites the user to create a résumé they already have.
 **Actual** measured for **both** 500 and 401: body = `'No base résumés yet. Create one to start.'`, subtitle = `'0 bases · 0 tailored copies live under their jobs'`. The only trace is `console.error('shelf load failed', e)` at `:49`. A 401 (the API key changed) is indistinguishable from an empty account — and the shelf has no `ToastStack` mounted at all, so it cannot report anything.
 **Proposed fix** keep an `err` state; render "Couldn't load your résumés." + a Retry, and mount `ToastStack` on the shelf.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): `Resumes.jsx:39`, `:50-51`, `:122-130` — `load()` sets `loadErr`; a dashed `--bad` row "Couldn’t load your résumés — the shelf request failed." + **Try again** now renders ahead of the search / archived / "No base résumés yet" branches, so a 500 or 401 can no longer read as an empty account. The `ToastStack` half was not taken: the row is already visible and permanent, and a toast would duplicate it.
 
 ### RES-08 · P2 · PDF render failure leaves a stale preview with no signal
 **Where** `ResumeEditor.jsx:261-275`, iframe at `:444`
@@ -75,14 +75,14 @@ rail badge 4 = `bases.length` 4 = rendered base cards 4; header subtitle string 
 **Expected + why** the pane is the only feedback that a template/paper change worked.
 **Actual** measured: iframe still present showing the **previous** PDF, 0 toasts, no error text anywhere on the page. `:271` is `console.error('pdf', e)`. There is also no loading state while a render is in flight (measured: nothing changes for the ~1-2 s the render takes), so a stale preview and a current one look identical.
 **Proposed fix** an error strip over the pane ("Preview failed — Retry") and a faint "rendering…" overlay while a request is open.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): `ResumeEditor.jsx:100-101`, `:288-297`, `:471-476` — a non-cancelled `/pdf` failure now revokes and clears the stale blob and raises a `pdfErr` overlay ("Preview failed — the PDF could not be rendered." + **Retry**, which bumps a `pdfNonce` in the effect deps); a successful render clears the flag. The "rendering…" in-flight overlay was **not** added — it is a separate missing state, not part of the failure signal, and is left as the open half of this finding.
 
 ### RES-09 · P2 · A base résumé cannot be deleted anywhere in v2
 **Where** `ResumeEditor.jsx:395-398` (base sub-band), `Resumes.jsx:188-223` (shelf cards have no ⋯ menu)
 **Repro** open a base résumé.
 **Actual** measured on the base editor: `.v2-act:has-text("⋯")` count **0**; the band holds only the copy count and "✦ Tailor for a job…". The shelf has no per-card menu either (inventory §1.3 "Card ⋯ menus: none exist"). The backend supports it — `DELETE /resumes/{id}` cascades to children and their tracer links (`routes_resumes.py:979-997`), and `deleteResume` even carries the base wording ("Its tailored copies will be removed too.", `:229`) that is unreachable because the only Delete lives in the copy-only menu. So a mistyped base (like the 200-char one I created) can only be removed by hand via the API.
 **Proposed fix** add a ⋯ menu to the base band with Delete (and the base branch of the existing confirm), or a per-card menu on the shelf.
-**Status** needs decision: is "bases are permanent" intentional?
+**Status** deferred: the Shelf design deliberately gives base cards no ⋯ menu (inventory §1.3 “Card ⋯ menus: none exist”), so adding Delete to the base band or the card is a design change, not an accidental gap — and it is the most destructive control on the screen, because `DELETE /resumes/{id}` cascades to every tailored copy and its tracer links. **Decision needed:** is “bases are permanent in the UI” intentional, or should the base band get a ⋯ → Delete using the existing base-wording confirm?
 
 ### RES-10 · P3 · Shelf: every other card and row landed on a half pixel — **fixed**
 **Where** `Resumes.jsx:109` (header subtitle), `:158`/`:193` (card header rows), `:128`/`:143` (result + archived rows)
@@ -288,3 +288,21 @@ Created (all `ZZTEST`-prefixed) and **all deleted**:
 **Fixes applied: 7** — 1 backend (fixed + verified live), 6 frontend (rebuild pending). **Scratch rows remaining: 0.**
 
 The headline is RES-01/RES-02: this screen writes continuously and reports success unconditionally. RES-02 was a write that never happened at all (a reorder that compared equal, so SQLAlchemy skipped the UPDATE) and RES-01 is the reason nobody would have noticed — the autosave's only failure handler is `console.error`, and because `savedAt` is left alone the status line keeps asserting "saved just now" over an edit the server rejected. RES-07 and RES-08 are the same shape one level out: a 500 on the shelf is rendered as an empty account, and a 500 on the PDF leaves the previous preview on screen. RES-06 is the one design-level bug — the "one next step" pipeline, which is the organising idea of the copy band, cannot be completed, because "reviewed" is recomputed from the diff instead of recorded. The rest are contained: two silent data-loss paths in the Skills editor (RES-04, RES-05), the duplicate row on PDF import (RES-03), and a set of geometry and hover deviations of which the two that read as accidents — half-pixel shelf rows and a dropdown hover that had never fired — are fixed.
+
+---
+
+## P2 triage (2026-09-02)
+
+Source-only pass over the open P2s. No rebuild, no backend restart — every frontend fix below is
+**rebuild pending**. Files touched: `frontend/src/v2/Resumes.jsx`, `ResumeEditor.jsx`, `ResumeSections.jsx`.
+Brace/paren/bracket/backtick balance of all three checked against `git show HEAD:<path>` — unchanged.
+
+| id | action | note |
+|---|---|---|
+| RES-02 | **status corrected** | Already fixed and verified (backend `flag_modified` in `update_resume`); the Status line just didn't read as "fixed". No code change. |
+| RES-04 | **fixed** | `SkillsEditor` no longer routes the value write through the dotted-path `setField`. It gets its own `setVal(k, v)` writing `d.skills[k]` directly via `mutate`, with a `DANGEROUS` guard kept. Fixes the `↩` revert too. Same fix closes PERS-03. |
+| RES-05 | **fixed** | `rename()` now returns a boolean and refuses a collision (and a blank/`__proto__` name); the uncontrolled Category input is reverted to the old key on refusal, and an `error` toast says why. `onError` is plumbed `SectionEditor` → `SkillsEditor` and wired to `pushToast` from both callers. Same fix closes PERS-04. |
+| RES-06 | **fixed** | "Reviewed" is now recorded, not recomputed. `localStorage` key `jobnavigator_v2_resume_reviewed` (an id list, capped at 300) rather than a `json_data` marker — **the smaller of the two**: no backend change, no migration, no extra PATCH on a screen that already writes continuously, and the state is a per-user UI acknowledgement rather than résumé content. Trade-off: it does not follow the user to another browser. `applyReview` marks it; `stage` and the sub-line gate on `changes.length && !reviewed`; the inline ✦ marks and the ⋯ → "Review changes" entry are unchanged. |
+| RES-07 | **fixed** | `load()` sets a `loadErr` flag; the shelf renders a dashed `--bad` row "Couldn't load your résumés — the shelf request failed." + a **Try again** that re-runs `load()`, ahead of the search/archived/empty branches. The `ToastStack`-on-the-shelf half of the proposed fix was **not** taken (it would duplicate the visible row). |
+| RES-08 | **fixed** | On a non-cancelled `/pdf` failure the stale blob is revoked and cleared and a `pdfErr` overlay renders "Preview failed — the PDF could not be rendered." + **Retry** (bumps a `pdfNonce` that re-arms the render effect). Success clears the flag. The "rendering…" in-flight overlay from the proposed fix was **not** taken — it is a separate state, not part of the failure signal. |
+| RES-09 | **deferred** | Needs the user's decision. The Shelf design deliberately gives base cards no ⋯ menu (inventory §1.3 "Card ⋯ menus: none exist"), so adding Delete to the base band or the shelf card contradicts the chosen design rather than repairing an accident — and the backend's cascade (`DELETE /resumes/{id}` removes every tailored copy and its tracer links) makes it the most destructive control on the screen. **Decision needed:** is "bases are permanent in the UI" intentional, or should the base band get a ⋯ → Delete with the existing base-wording confirm? |

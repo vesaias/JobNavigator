@@ -79,14 +79,18 @@ Status, row menu, head menu) does hover correctly because none of them sets an i
 excludes NULL in SQL, so the note states the opposite of the behaviour.
 **Proposed fix** either `or_(Job.best_cv_score >= n, Job.best_cv_score.is_(None))` in the backend (makes
 the note true) or change the copy to "hides unscored jobs too".
-**Status** needs decision: change the filter, or change the copy?
+**Status** fixed in source (rebuild pending): copy, not filter — note now reads “Also hides unscored
+jobs — they have no score to compare” (`JobFeed.jsx:674`). Changing `min_score` to keep NULLs would
+silently re-define the parameter for every other consumer (classic JobFeed, saved filters), which is a
+data-semantics decision, not a copy bug.
 
 ### FEED-06 · P2 · "Jobs without a listed salary stay visible" is false
 **Where** `JobFeed.jsx:665` (the note); backend `routes_jobs.py:114-117`
 **Actual** `min_salary=1000` over the same 10 rows → **2** returned; every NULL-salary row is dropped
 (`Job.salary_max >= min_salary`). Same for `max_salary` (`Job.salary_min <= …`) → 2.
 **Proposed fix** as FEED-05.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): copy — note now reads “Also hides jobs without a listed
+salary” (`JobFeed.jsx:684`). Same reasoning as FEED-05; `salary_max`/`salary_min` semantics unchanged.
 
 ### FEED-07 · P2 · Skip / Mark-applied announce success before the PATCH resolves, and stay wrong when it fails
 **Where** `JobFeed.jsx:311-312` (`skipJob` / `applyJob`), `:300` (`patchRemote`)
@@ -99,7 +103,9 @@ On the success path everything is correct (verified: PATCH fired, row removed, h
 `skip`, **Undo restores the previous status** — verified end-to-end).
 **Proposed fix** push the undo toast in the `.then`, and add `pushToast({kind:'error'})` in
 `patchRemote`'s catch.
-**Status** needs decision (two-line change, but it changes the perceived latency of triage)
+**Status** fixed in source (rebuild pending): `patchRemote` now returns success/failure and, on failure,
+pushes a sticky `error` toast (“Couldn't update …”) before the existing `fetchJobs()` revert; `skipJob`/
+`applyJob` await it and only then push the undo toast with the pre-PATCH status (`JobFeed.jsx:310-325`).
 
 ### FEED-08 · P2 · "Ignore {company} everywhere" is destructive with no confirm, no toast and no undo
 **Where** `JobFeed.jsx:315-327`; v1 had a `confirm()` at `frontend/src/components/JobFeed.jsx:804`
@@ -109,7 +115,11 @@ On the success path everything is correct (verified: PATCH fired, row removed, h
 that company on every future scrape. Nothing tells the user it happened or how to reverse it.
 (Restored to 302 during the test.)
 **Proposed fix** restore v1's confirm, or push an `undo` toast whose action PATCHes the previous array back.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): `window.confirm` naming the company, the number of rows it
+hides and where to reverse it (Settings → global company exclude), then a `success` toast with the count and
+an `error` toast + refetch on failure (`JobFeed.jsx:328-343`). The `if (!name) return` guard moved above the
+local row removal, which also kills the silent company-less deletion half of FEED-34. Undo-toast variant not
+taken: re-PATCHing the whole `company_exclude_global` array 5 s later can clobber a concurrent settings edit.
 
 ### FEED-09 · P2 · A bad `?job=` id silently opens a different job
 **Where** `JobFeed.jsx:479-485` (fetch, silent catch), `:489-498` (URL re-sync)
@@ -121,7 +131,10 @@ and the sync effect **rewrites the URL** to that unrelated job's id. Measured: U
 A shared permalink for a deleted job therefore looks like it worked.
 **Proposed fix** on the 404 keep the pin cleared but set a "That job no longer exists." state, and strip
 `?job=` rather than replacing it.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): the 404 branch clears the pin, sets a new `deadPinRef` so the
+list effect leaves the panel empty instead of focusing row 0, calls `setDetail(null)` (which drops `?job=`
+via the sync effect rather than rewriting it) and pushes an `error` toast “That job no longer exists”
+(`JobFeed.jsx:196, 271, 288, 499-506`). `focusAt` releases the dead pin when the user picks a row.
 
 ### FEED-10 · P2 · `GET /api/jobs/{non-uuid}` returns 500 (backend)
 **Where** backend `api/routes_jobs.py` — the `/{job_id}` getter compares a `str` to a `UUID` column
@@ -129,8 +142,9 @@ A shared permalink for a deleted job therefore looks like it worked.
 (psycopg2 `operator does not exist: uuid = text`). The feed swallows it silently (`:483`).
 **Proposed fix** parse the id with `uuid.UUID(job_id)` and raise 404 on `ValueError`, in `get_job`
 (and the same guard on `/{job_id}/cached-page` and `/{job_id}/frame-check`).
-**Status** needs decision — I did not edit the backend: it hot-reloads no longer (uvicorn runs without
-`--reload`) and a restart is the coordinator's call, so this could not be verified live.
+**Status** already fixed by F-007 — `backend/main.py:230-240` registers a `DataError` exception handler that
+turns `invalid input syntax for type uuid` into a 404 for every id route (not just `get_job`), and logs +
+500s anything else. No further change needed; verify at runtime after the next backend restart.
 
 ### FEED-11 · P2 · A failed job list is indistinguishable from an empty one
 **Where** `JobFeed.jsx:229` (`console.error` only), `:731` (the empty branch)
@@ -141,7 +155,9 @@ The 401 path is fine by contrast — measured: the shell's LoginModal ("Enter yo
 opens via `jn:unauthorized`.
 **Proposed fix** an `error` state next to `loading`, rendering "Couldn't load jobs — retry", plus an
 error toast.
-**Status** needs decision
+**Status** fixed in source (rebuild pending): `loadError` state set in `fetchJobs`' catch and cleared on
+success; renders a “Couldn't load jobs · **Try again**” row ahead of the empty branch (`JobFeed.jsx:109,
+233-241, 752`). The toast is suppressed on 401 so the shell's LoginModal stays the only signal there.
 
 ### FEED-12 · P3 · The row action rail's hovers are half dead
 **Where** `JobFeed.jsx:785-787`; `theme.css:126-128`
@@ -498,3 +514,18 @@ to `cv_scores = {}`. Every script after that routes `POST /api/analyze/**`, `/re
 - Fixes applied: 5, all JSX, all "fixed in source, rebuild pending".
 - Backend finding FEED-10 left unfixed on purpose (no hot-reload; restart is the coordinator's call).
 - Scratch rows remaining: **0**.
+
+## P2 triage (2026-09-02)
+
+| id | action | note |
+|---|---|---|
+| FEED-05 | fixed | Copy, not filter: note now says the Score filter also hides unscored jobs. Backend `min_score` semantics left alone — changing them would re-define the parameter for classic JobFeed too. |
+| FEED-06 | fixed | Same, for the Salary note. |
+| FEED-07 | fixed | `patchRemote` returns success + pushes a sticky `error` toast on failure; skip/apply push the undo toast only after the PATCH resolves. |
+| FEED-08 | fixed | `window.confirm` (company + row count + how to reverse), `success` toast with the count, `error` toast + refetch on failure; company-less jobs now bail before the local removal. |
+| FEED-09 | fixed | A 404 on `?job=` leaves the panel empty (new `deadPinRef` stops the auto-focus), drops `?job=` instead of rewriting it, and toasts “That job no longer exists”. |
+| FEED-10 | already fixed by F-007 | `main.py:230-240` `DataError` → 404 covers every id route; nothing left to change. |
+| FEED-11 | fixed | `loadError` state → “Couldn't load jobs · Try again” row + `error` toast (suppressed on 401, where the LoginModal already fires). |
+
+All six JSX fixes are **fixed in source, rebuild pending** — none are in the served bundle. No backend file was
+touched; the only backend change these findings needed (FEED-10) is already in `main.py`.

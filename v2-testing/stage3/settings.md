@@ -178,7 +178,7 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 **Expected + why** Other v2 screens render an error state on a failed list load. The toast taxonomy's `error` kind (`Toast.jsx`, `TTL.error = null`) exists for exactly this and is not imported here at all (inventory §2).
 **Actual, side-question from the brief** — *does a blur afterwards overwrite real values?* No: with `S === null` the component returns before rendering any control, so there is nothing to blur. The dangerous variant is SET-05 (settings load, defaults don't).
 **Proposed fix** Keep an `err` state; render a short line plus a Retry that re-runs `load()`.
-**Status** needs decision: add a load-error state here (and a skeleton for the pending case), or accept the blank pane?
+**Status** fixed in source (rebuild pending) — `Settings.jsx:129,145-150,377-393`: `load()` keeps a `loadErr`, and the `!S` early return now renders either a spinner + “Loading settings…” (request still in flight) or “Couldn’t load your settings · <detail> · Try again”, whose Retry clears the error and re-runs `load()`. The two states are no longer identical. `save()` additionally bails with a `bad` flash while `S` is null (`:171-173`), so no blur can PATCH a control’s placeholder over a stored value even if a future edit renders controls before the load lands.
 
 ### SET-07 · P3 · A failed webhook registration flashes in accent green, reading as success
 **Where** `Settings.jsx:306-311` — `flash(...)` is called with no `bad` argument on the `ok === false` branch.
@@ -379,3 +379,15 @@ All eight are **rebuild pending** — the frontend is a static Docker bundle and
 - **Design re-diff: done** (the required deliverable, table above). 15/15 sections match; 64 design rows against 68 built; **2 design rows never built** (H-1B refresh, Job cleanup — SET-18), **1 row built that the design predates** (Max parallel tailors), **2 subtitles missing** (now fixed), **21 rows differing in width**, **2 rows renamed**, **1 reordered**, and 5 section subtitles rewritten. The catalog modal diverges most (typeahead shape, seeded-row deletion, `×` hover). Several design strings are simply stale — it still calls the Postgres backup "SQLite" and offers a tracer URL scheme the backend never had.
 - **Geometry: exact.** Every number the design specifies was measured and matches. Zero fractional row tops in four render conditions.
 - **Console: clean** in both themes, at both viewports, across every interaction.
+
+---
+
+## P2 triage (2026-09-02)
+
+Triage of the open P2 findings assigned to this pass (SET-06 only; SET-02, SET-04 and SET-05 were not in scope). Frontend edit, so **rebuild pending**; no backend change, no restart.
+
+| id | action | note |
+|---|---|---|
+| SET-06 | fixed (JSX) | `loadErr` state; the `!S` early return renders a spinner + “Loading settings…” while the GET is in flight and “Couldn’t load your settings · Try again” on failure, so a hang and a hard failure are now distinguishable; `save()` also refuses to PATCH while `S` is null |
+
+Files touched: `frontend/src/v2/Settings.jsx`. Brace / paren / backtick balance checked against `git show HEAD:frontend/src/v2/Settings.jsx` — unchanged (all zero).

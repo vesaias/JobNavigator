@@ -90,11 +90,14 @@ const labelFor = (opts, v) => (opts.find(([ov]) => ov === v) || [])[1] || v
 // qa_bank holds two shapes: the canonical {question, answer} the extension writes,
 // and legacy single-key {"<question>": "<answer>"} maps. Read both, always write
 // canonical (the backend reader is tolerant, but only one shape stays supported).
-const toPair = (e) => {
-  if (!e || typeof e !== 'object') return { question: '', answer: '' }
-  if ('question' in e || 'answer' in e) return { question: e.question || '', answer: e.answer || '' }
-  const k = Object.keys(e)[0]
-  return k ? { question: k, answer: String(e[k] ?? '') } : { question: '', answer: '' }
+// PERS-07: a legacy entry can carry more than one key. Taking only the first
+// dropped the rest, and because any edit rewrites the whole bank canonically the
+// loss became permanent on the next keystroke. Expand: one pair per key.
+const toPairs = (e) => {
+  if (!e || typeof e !== 'object') return [{ question: '', answer: '' }]
+  if ('question' in e || 'answer' in e) return [{ question: e.question || '', answer: e.answer || '' }]
+  const ks = Object.keys(e)
+  return ks.length ? ks.map((k) => ({ question: k, answer: String(e[k] ?? '') })) : [{ question: '', answer: '' }]
 }
 
 const FIELD_LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
@@ -175,6 +178,7 @@ export default function Persona() {
     try { const s = JSON.parse(localStorage.getItem('jobnavigator_v2_persona_sections')); if (Array.isArray(s)) return new Set(s) } catch { /* ignore */ }
     return new Set(['Experience'])
   })
+  const [loadErr, setLoadErr] = useState(false)   // PERS-06: a failed load is not "still loading"
   const [groups, setGroups] = useState(() => {
     try { const s = JSON.parse(localStorage.getItem('jobnavigator_v2_persona_groups')); if (Array.isArray(s)) return new Set(s) } catch { /* ignore */ }
     return new Set(['contact', 'qa'])
@@ -183,11 +187,34 @@ export default function Persona() {
   const flashTimer = useRef(null)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
-  useEffect(() => {
-    api.get('/persona').then(({ data }) => setP(data))
-      .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your persona' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') }) })
-    return () => { Object.values(timers.current).forEach(clearTimeout); clearTimeout(flashTimer.current) }
+  // PERS-08: pending debounced saves used to be *cleared* on unmount, so an edit
+  // followed within 500 ms by a navigation (or a tab close) was dropped silently
+  // while the header still said "Saves automatically". Flush them instead.
+  // fetch+keepalive rather than axios, because an XHR started in `beforeunload`
+  // is aborted with the page; it carries the same cookie + X-API-Key as api.js.
+  const flushPending = useCallback(() => {
+    const pend = timers.current
+    timers.current = {}
+    Object.entries(pend).forEach(([key, e]) => {
+      clearTimeout(e.timer)
+      const headers = { 'Content-Type': 'application/json' }
+      try { const k = localStorage.getItem('jobnavigator_api_key'); if (k) headers['X-API-Key'] = k } catch { /* ignore */ }
+      try { fetch('/api/persona', { method: 'PATCH', headers, credentials: 'include', keepalive: true, body: JSON.stringify({ [key]: e.value }) }) }
+      catch { api.patch('/persona', { [key]: e.value }).catch(() => {}) }
+    })
+  }, [])
+
+  const loadPersona = useCallback(() => {
+    api.get('/persona').then(({ data }) => { if (data) { setP(data); setLoadErr(false) } else { setLoadErr(true) } })
+      .catch((e) => { console.error(e); setLoadErr(true); pushToast({ kind: 'error', msg: 'Could not load your persona' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') }) })
   }, [pushToast])
+
+  useEffect(() => { loadPersona() }, [loadPersona])
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', flushPending)
+    return () => { window.removeEventListener('beforeunload', flushPending); flushPending(); clearTimeout(flashTimer.current) }
+  }, [flushPending])
 
   const flash = useCallback(() => {
     setSaved(true)
@@ -196,16 +223,20 @@ export default function Persona() {
   }, [])
 
   // One debounce timer per node so an autofill edit never cancels a résumé edit.
+  // timers.current[key] = { timer, value } — the value is kept so a pending save
+  // can be flushed on unmount/unload rather than dropped (PERS-08).
   const saveNode = useCallback((key, value) => {
     setP((prev) => (prev ? { ...prev, [key]: value } : prev))
-    clearTimeout(timers.current[key])
-    timers.current[key] = setTimeout(async () => {
+    clearTimeout(timers.current[key]?.timer)
+    const timer = setTimeout(async () => {
+      delete timers.current[key]
       try { await api.patch('/persona', { [key]: value }); flash() }
       catch (e) {
         console.error(`persona ${key}`, e)
         pushToast({ kind: 'error', msg: 'Could not save your changes' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') })
       }
     }, 500)
+    timers.current[key] = { timer, value }
   }, [flash, pushToast])
 
   // Spread the live node: keys with no control (preferences.preferred_locations)
@@ -225,7 +256,7 @@ export default function Persona() {
   const qa = useMemo(() => {
     const raw = p?.qa_bank
     const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.entries(raw).map(([question, answer]) => ({ question, answer })) : [])
-    return list.map(toPair)
+    return list.flatMap(toPairs)
   }, [p])
   const writeQa = (list) => saveNode('qa_bank', list.map((e) => ({ question: e.question, answer: e.answer })))
 
@@ -242,9 +273,16 @@ export default function Persona() {
   const toggleSection = toggler(setSections, 'jobnavigator_v2_persona_sections')
   const toggleGroup = toggler(setGroups, 'jobnavigator_v2_persona_groups')
 
+  // PERS-06: a 500 (the documented "singleton missing — restart to re-seed") or a
+  // `200 null` used to sit on "Loading…" forever with no retry.
   if (!p) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
-      Loading…
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 13 }}>
+      {loadErr ? (
+        <>
+          <span>Couldn’t load your persona.</span>
+          <span onClick={() => { setLoadErr(false); loadPersona() }} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
+        </>
+      ) : 'Loading…'}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -275,6 +313,7 @@ export default function Persona() {
             {SECTION_ORDER.map((name) => (
               <SectionShell key={name} name={name} count={counts[name]} open={sections.has(name)} onToggle={() => toggleSection(name)}>
                 <SectionEditor name={name} data={resume} setField={setField} mutate={mutate}
+                  onError={(msg) => pushToast({ kind: 'error', msg })}
                   pageHint={false} emptyNote="Tailored résumés draw from whatever you add here." />
               </SectionShell>
             ))}

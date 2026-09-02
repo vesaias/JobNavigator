@@ -62,7 +62,7 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Repro** (`cl_05_empty.py`) Route `GET /api/cover-letters` → 500.
 **Actual** `countLine` = `0 letters · 0 live applications`, gutter `0`, body copy `No cover letters yet — generate one on the left.` — identical to a genuinely empty account. Console-only `console.error`; no toast, no retry. A user with 16 letters is told they have none and invited to generate a duplicate.
 **Proposed fix** A `loadErr` state → "Couldn't load your letters." + retry, distinct from the empty copy. (Also removes the flash of the empty copy before the first response — there is no loading state at all.)
-**Status** needs decision: add an error/loading branch here, or wait for the screen to adopt `Toast.jsx` (see CL-18) and use the non-dismissing `error` toast?
+**Status** fixed in source (rebuild pending) — `CoverLetters.jsx:131` `loadErr` state, set in `load()`’s catch (`:135-142`, cleared on every success) and rendered at `:378-387` as “Couldn’t load your letters · <status> · Try again” instead of the empty copy. Same shape as `Searches.jsx:582-587`. Adopting `Toast.jsx` across this screen (CL-18) is still open — this branch is the load path only, and the empty-copy flash before the first response is untouched (no loading state added).
 
 ### CL-06 · P2 · A background generation that fails looks exactly like one that succeeded
 **Where** `CoverLetters.jsx:173-189` (poll), `:183`
@@ -70,7 +70,7 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Expected + why** HANDOVER risk area 3: background job lifecycle. The run row leaves `/monitor/active` whether it completed or failed.
 **Actual** The dashed row disappears, `load()` runs, no new letter appears, and nothing is said. `/api/monitor/history` is never consulted. The user's only signal is "the row went away and nothing arrived". Same hole on the editor's regenerate path (ED:211-218): the poll reloads the unchanged letter and closes the modal silently.
 **Proposed fix** On disappearance, look the run up in `/api/monitor/history` and surface `status === 'failed'` + `error` inline (or as an error toast).
-**Status** needs decision: how much of `/monitor/history` should the list poll?
+**Status** fixed in source (rebuild pending) — `CoverLetters.jsx:198-208`: when one or more runs leave `/monitor/active`, the poll reloads the list *and* fetches `/monitor/history?job_type=generate_cover_letter&limit=20`; any disappeared run whose history row is `status === 'failed'` sets `err` to “Generation failed — <error>” in the generate panel (`:324`). One extra request only on the tick where a run finishes. The editor’s regenerate path (ED:207-225) is **not** covered — it polls a different scope and shows errors in the top bar (CL-14); left as a separate decision.
 
 ### CL-07 · P2 · An open Picker popover covers the other Picker's control; clicking the second control picks an option from the first
 **Where** `CoverLetters.jsx:36-69` (`Picker`), wrapper `stopPropagation` at `:46`, document-close at `:38-43`
@@ -78,7 +78,7 @@ Confirmed causally: fulfilling the list route instantly (so it lands first) make
 **Expected + why** Clicking outside a popover closes it (that is what the document listener is for; clicking the `h1` does close it — verified).
 **Actual** The wrapper's `stopPropagation` means a click inside the *other* Picker never reaches the document handler, so popover A stays open — and it physically overlaps control B (measured: résumé popover `top 200.3 → bottom 380`, job control `top 247.3`). Playwright reports the click intercepted by `<div>PM</div>`: the user aiming at "Target job" selects the résumé "PM" instead. Both popovers can also be open at once (z-index tie at 40).
 **Proposed fix** Lift the open state out of `Picker` (one `openPicker` id in the parent), or close on `mousedown` at the capture phase.
-**Status** needs decision: two-line "close others" via a shared open-id, or accept?
+**Status** fixed in source (rebuild pending) — `CoverLetters.jsx:53-58`: the open `Picker` now renders a transparent full-viewport scrim (`position:fixed; inset:0; zIndex:39`) under its popover (`zIndex:40`). A click aimed at the control the popover overlaps hits the scrim, which closes the popover and swallows the click, so it can no longer land on an option of the *other* picker; the popover’s own items stay clickable. Chosen over lifting the open state to the parent: the scrim is 2 lines, lives inside `Picker`, and also fixes the “both open at once” tie without touching either call site (`CoverLetters.jsx:322,328`, `CoverLetterEditor.jsx:487`). `Persona.jsx` has its own local `Picker` and is unaffected.
 
 ### CL-08 · P3 · `.v2-menuitem` hover is dead in every popover that sets an inline background — the two Pickers, the Template list and the Paper list
 **Where** `theme.css:148` vs `CoverLetters.jsx:60`, `CoverLetterEditor.jsx:430, 445`
@@ -265,6 +265,14 @@ Everything else matched exactly, including: header `22px 30px 16px` + `h1` 30 px
 - `frontend/src/v2/CoverLetters.jsx:334-337` — integer `lineHeight: '20px'` on the pending-row label (CL-09).
 
 None of these are verified in the browser — the frontend bundle is not rebuilt (per the brief, `docker compose build` is the wave owner's job). The five changes are all local to these two files.
+
+## P2 triage (2026-09-02)
+
+| id | action | note |
+|---|---|---|
+| CL-05 | fixed (JSX, rebuild pending) | `loadErr` state + “Couldn’t load your letters · Try again” card; no loading state added, so the empty-copy flash before the first response remains (P3-ish, logged here). |
+| CL-06 | fixed (JSX, rebuild pending) | on a run leaving `/monitor/active`, `/monitor/history` is consulted and a `failed` run surfaces its `error` in the generate panel. Editor regenerate path deliberately out of scope. |
+| CL-07 | fixed (JSX, rebuild pending) | scrim under the open popover (z 39 vs 40) — the misclick onto the other picker’s option is gone; smaller than lifting the open state to the parent. |
 
 ## Couldn't test
 

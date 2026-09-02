@@ -27,7 +27,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** The refetch updates `companies`; the drawer renders from `state.company`, which `fetchCompanies` never touches. The design's drawer reads live company state (`d = COMPANIES[S.open]`, `.dc.html:559`).
 **Actual** measured: after the refetch the **drawer banner is still absent** and the tuning note still reads `customised`, while the row behind gains `▲` and health `error · …`. Closing and reopening the drawer shows the banner. Same staleness applies to `application_count`, `last_error`, `last_run_at` and the subtitle.
 **Proposed fix** key the drawer off `companies.find(c => c.id === drawer.id)` rather than a snapshot; keep only `draft` in drawer state.
-**Status** needs decision (small refactor of the drawer's state shape)
+**Status** fixed in source (rebuild pending) — `Companies.jsx:490-496`: the drawer is now rendered from `companies.find(c => c.id === drawer.company.id)` (falling back to the snapshot if the row disappears), and `downReason` is read off the same live row. `draft` stays the only state the drawer owns.
 
 ### COMP-03 · P2 · The list has no loading and no error branch — a failed `GET /companies` renders as "you have no companies matching your search"
 **Where** `Companies.jsx:125` (`useState([])`), `:142` (`catch → console.error`), `:193` (`countLine`), `:406-412` (zero-results branch)
@@ -36,7 +36,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Actual** measured: header `0 tracked · 0 active · 0 need attention`; all four tier chips read `0`; both bulk buttons vanish; the body shows **`No companies match` / `Nothing matches "ZZTEST Alpha" in names, aliases, URLs or ATS.` / `Clear filters`** — the stale query is read back from `localStorage`, so a server outage is presented as a filter miss and `Clear filters` "fixes" nothing. No toast, no retry. Same rendering for the whole window between mount and the first response (no skeleton).
 **Actual (401)** handled correctly one level up: the shell's `LoginModal` appears (`/api key/i` matched), so 401 is not a Companies defect.
 **Proposed fix** track `loading` / `loadErr`; render a skeleton while loading and a "Couldn't load companies — Retry" panel on failure, distinct from the filter-miss copy.
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `Companies.jsx:144-145,160-165,466-486`: `loading` / `loadErr` state (the pattern already in `Searches.jsx:321,577-587`), a spinner row while the first response is outstanding, a “Couldn’t load companies · <detail> · Try again” panel on failure, and the filter-miss copy suppressed while that error shows.
 
 ### COMP-04 · P2 · `Toast.jsx` is never imported — nine of eleven failure paths and every success path are silent
 **Where** `Companies.jsx` (no `Toast` import); silent sites: `:142` list load, `:201` status pill + drawer save, `:204` bulk (per-item `.catch(() => {})`), `:209` Run, `:220` Delete, `:146-149` résumés/persona/health/monitor
@@ -44,7 +44,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** The toast system exists and is used by other v2 screens; inventory §3 legend says every "OK toast" on this screen is `none`.
 **Actual** measured `0` fixed-position elements with `z-index ≥ 70` after: a failed drawer Save, a failed status-pill PATCH (pill stayed `Active`), a successful Save, a successful Add, a successful Delete, and bulk activate/inactivate. Only the Test modal (own error variant) and the Add modal (native `window.alert`) surface anything.
 **Proposed fix** mount `useToasts()` and push `success` on Save/Add/Delete/bulk and `error` (non-dismissing) on every catch.
-**Status** needs decision: scope of toast adoption on this screen
+**Status** fixed by toast wiring (rebuild pending) — verified in source: `Companies.jsx:2` imports `useToasts`/`ToastStack`, `:146` mounts it, `:500` renders `<ToastStack>`; error toasts on list load (`:162`), `patchCompany` (`:241` — covers the status pill and the drawer Save), `bulkSet` (`:247-248`, error plus success), `runScrape` (`:259`), `deleteCompany` (`:272`) and the Add modal (`pushToast` prop, `:498`). Only `runTest` is still silent, and it has its own in-modal error variant by design.
 
 ### COMP-05 · P2 · `Run` uses a fixed 2600 ms timer instead of `/monitor/active`; the UI reports "done" while the scrape is still going
 **Where** `Companies.jsx:207-211`
@@ -52,7 +52,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** The screen already knows about `/monitor/active` (`:149`); the Résumés/Cover-Letter flows poll it for exactly this reason (CLAUDE.md, "Background score-resume").
 **Actual** measured: at t+0.4 s health = `scraping now…`, label `Running`, spinner present. At **t+3.0 s** the row reverts to `healthy · scraped never` and `Run` — while `/monitor/active` still reported the same `company_scrape` run with `elapsed_seconds: 3.0`, and it was **still running at 30 s** (the real Greenhouse scrape took ≈40 s and wrote 486 jobs). A 409 duplicate (`main.py:672-677`) is also swallowed to `console.error` while the spinner runs its full 2.6 s.
 **Proposed fix** poll `/monitor/active` (2 s) while any company has a live run; clear per company when its `scope_key` disappears, then refetch. Surface the 409 as an info toast.
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `Companies.jsx:173-186,251-262`: the 2600 ms timer is gone; a 3 s `/monitor/active` poll runs while any company is marked running and calls `fetchCompanies()` (which now also refetches health) the moment a `scope_key` disappears. The poll map is filtered to `job_type === 'company_scrape'`, so scoring and search runs no longer light up a company row. A 409 keeps the spinner and pushes a `progress` toast (“That company is already being scraped”), matching `Searches.jsx:399-401`.
 
 ### COMP-06 · P2 · `/health/entities` and `/monitor/active` are fetched once on mount and never refreshed
 **Where** `Companies.jsx:148-149`; no interval anywhere (`:27` of the inventory)
@@ -60,7 +60,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** `downMap` drives the header count, the `▲` glyph, the health text, the drawer banner and the `Needs attention` sort; `scraping` drives the health/`Running` state.
 **Actual** measured: a company whose scrape had finished still rendered `scraping now…` on a later page load because `/monitor/active` was read at mount and there is no clearing path other than the 2.6 s timer (which only fires for a run *started in this session*). Conversely, running a scrape that fixes a "down" company leaves the `▲` and the header count wrong until a manual reload; `fetchCompanies()` after Run/Save/bulk/Delete refreshes `/companies` only.
 **Proposed fix** refetch `/health/entities` alongside `/companies` in `fetchCompanies`, and poll `/monitor/active` while anything is running.
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `Companies.jsx:154-165`: `fetchHealth()` now runs at the end of every `fetchCompanies()`, so Run / Save / the status pill / bulk / Delete / the poll all refresh `downMap` together with the list. `/monitor/active` is polled while anything runs (COMP-05), and its mount read is filtered to `company_scrape`, which also clears the stale “scraping now…” seen on a later page load.
 
 ### COMP-07 · P2 · `Needs attention` sort and the header count ignore `last_error`, which the row `▲`, health text and drawer banner all honour
 **Where** sort `Companies.jsx:181`, count `:192`; row `▲` `:345`, health `:233`, drawer banner `:468`
@@ -68,7 +68,7 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Expected + why** `/health/entities` deliberately requires three bad runs (`main.py:1156-1163`); `last_error` is the *most recent* run's error (`routes_companies.py:157-183`) and was added so Health surfaces a failure "right away". The two readers must agree.
 **Actual** measured, one error run: row shows `▲` in `var(--bad)` + `error · ZZTEST boom — HTTP 503 …`, drawer shows the red banner and `needs attention` — but the header still read **`1 need attention`** (unchanged) and the row sorted to **index 61** (plain alphabetical), not to the top. After a third bad run the count went to 2 and the row jumped to index 1. So a freshly broken company is neither counted nor surfaced by the sort that exists to surface it.
 **Proposed fix** `const down = (c) => !!downMap[c.id] || !!c.last_error` for both the comparator (`:179`) and `downCount` (`:192`). (Note this then diverges from the rail badge, which reads `/health/entities` only — decide which number is canonical.)
-**Status** needs decision: promote `last_error` into the count/sort, or drop it from the row `▲`?
+**Status** fixed in source (rebuild pending) — `Companies.jsx:215-217,230`: promoted. `down = (c) => !!downMap[c.id] || !!c.last_error` now backs both the `health` comparator and `downCount`, so the header count, the sort, the row `▲`, the health text and the drawer banner all read one predicate. **It still diverges from the rail badge**, which reads `/health/entities` only — that badge is cross-screen and stays the coordinator’s call.
 
 ### COMP-08 · P2 · `Apps` is name-only while `Open`, `+7d` and `Ø Fit` are alias-summed; and the column means *all* applications
 **Where** `routes_companies.py:177` (`app_counts.get(c.name.lower()…)`) vs `:146-154` (`_aggregates` sums over `name + aliases`); header tooltip `Companies.jsx:329` "Open applications"; drawer subtitle `:432` "open application(s)"
@@ -76,21 +76,21 @@ Scripts: `comp_1.py` (geometry/tokens/contrast), `comp_2.py` (hovers/sort/filter
 **Actual** measured on real data: `Amazon` has aliases including `Prime Video & Amazon MGM Studios`; the UNION of `Application.job_id` and `Job.status='applied'` gives `amazon → 15` and `primevideo&amazonmgmstudios → 1`. The row shows **15**; alias-summed (consistent with the neighbouring columns) it is **16**. Cross-checked the other columns on a scratch company: `Open 5 +8`, `Apps 1` matched the DB exactly (`new 4 + saved 1 = 5`; 8 discovered in 7 d; 1 applied).
 Separately, `application_count` counts every application in any state, so both "Open applications" (header) and "{n} open application(s)" (drawer) are wrong words for the number.
 **Proposed fix** sum `app_counts` over `[name] + aliases` in `_aggregates`; change both labels to "Applications".
-**Status** needs decision (backend change; would move real numbers)
+**Status** fixed in source, restart pending (backend) — `routes_companies.py:149-161,178,182`: `_aggregates` now also returns `apps = sum(app_counts.get(k, 0) for k in keys)` and `application_count` is taken from it, so Apps is alias-summed exactly like Open / +7d / Ø Fit (`Amazon` moves 15 → 16). **Needs `docker compose restart backend`.** The wording half is JSX (rebuild pending): header tooltip `Companies.jsx:389` “Open applications” → “Applications recorded for this company”, drawer subtitle `:515` “{n} open application(s)” → “{n} application(s)”.
 
 ### COMP-09 · P2 · `⋯ → View jobs in feed` is a raw `<a href>` that full-page-reloads into an *unfiltered* feed
 **Where** `Companies.jsx:398`; `JobFeed.jsx` reads only `?job=` and `?search=`
 **Repro** Open the row menu, click `View jobs in feed`.
 **Actual** measured: `href = /v2/feed?company=ZZTEST%20Alpha`; the click produced **3 document navigations** (full SPA reload, losing all screen state) and landed on `/v2/feed?company=ZZTEST+Alpha&job=817d67df-…` — the Feed rewrote the query, **ignored `company`**, and auto-opened an unrelated job. The feed header read `19438 open roles`, i.e. no filter applied.
 **Proposed fix** either make `JobFeed` read `?company=` (preferred — the tooltip on `Open · 7d` already promises "in the Job Feed") or drop the menu item. Use React Router `Link` either way.
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `JobFeed.jsx:113-114` now seeds its company filter from `?company=` (fixed in the Feed pass), so the link only had to stop reloading: `Companies.jsx:458` keeps the `href` (middle-click, ⌘/ctrl-click and open-in-new-tab still work — modified clicks fall through untouched) but a plain left click `preventDefault()`s and calls `navigate('/v2/feed?company=…')`, the same shape as `Searches.jsx:544`.
 
 ### COMP-10 · P2 · At 1024 px the toolbar overflows and the `Sort` control is pushed off-screen with no way to reach it
 **Where** `Companies.jsx:270` (toolbar, no wrap / no overflow), `:296` (`marginLeft: auto` sort group)
 **Repro** 1024×700 viewport, `/v2/companies`.
 **Actual** measured: toolbar `scrollWidth 1030` vs `width 818`. Right edges relative to the container's right edge: `Make 66 active` **−65**, `Make 64 inactive` **+67**, `Sort Needs attention ▾` **+212** — i.e. the inactivate button is half clipped and the whole sort control is outside the box. `document.scrollWidth > innerWidth` is `false` (nothing scrolls), so sorting is unreachable below ≈1240 px. The row area itself does scroll (`scrollWidth 1100` in an `overflow:auto` container) so the columns survive; the sticky header scrolls with them.
 **Proposed fix** `flexWrap: 'wrap'` on the toolbar (or move the tier chips to a second line under ~1200 px).
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `Companies.jsx:328`: `flexWrap: 'wrap'` on the toolbar (the fix the Feed took). Below ≈1240 px the bulk buttons and the `marginLeft: auto` sort group drop to a second row instead of overflowing; nothing is clipped and Sort is reachable again.
 
 ### COMP-11 · P2 · The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
 **Where** `Companies.jsx:347` (`aliases.length > 1` → `+{aliases.length - 1}`)
@@ -105,14 +105,14 @@ Separately, `application_count` counts every application in any state, so both "
 **Repro** Type `999` into both, Save, read back.
 **Actual** measured round-trip: `max_pages: 999`, `scrape_interval_minutes: 999` persisted. `0` becomes `5` and `null` respectively (the `|| ` fallbacks); negatives pass through. Typing is not the only path — a paste bypasses the spinner constraints entirely, and `<input type=number>` never blocks out-of-range typing anyway.
 **Proposed fix** clamp on save: `Math.min(20, Math.max(1, parseInt(x) || 5))`.
-**Status** needs decision (a clamp changes what an existing out-of-range value saves back as)
+**Status** fixed in source (rebuild pending) — `Companies.jsx:536-540`: `max_pages: Math.min(20, Math.max(1, parseInt(x) || 5))`, the bounds the input’s own `min`/`max` declare, and `scrape_interval_minutes` now takes a positive integer or `null` (= use the global interval), which also closes the negative-value hole. An existing out-of-range value is rewritten to the bound the next time that company is saved — deliberate, and the only behaviour consistent with the control.
 
 ### COMP-13 · P2 · Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
 **Where** `Companies.jsx:224-230` (`resumeNames`), `:359` (cell), `:436` (`resumeHelp`)
 **Repro** Intercept `GET /api/resumes?is_base=true` → 500, load the screen, open a company that has `selected_resume_ids`.
 **Actual** measured: row cell reads **`Selected`** with `title="Selected"`; the drawer's help line reads **"Nothing selected, so new jobs use your default résumé from Settings."**; the résumé chips disappear entirely (no "No résumés yet" copy, inventory §4). The two statements contradict each other, and both are wrong — ids *are* selected. The same happens for real dangling ids (deleted résumés), where `resumeNames` silently drops the unresolvable ones and only falls back to `Selected` when *none* resolve.
 **Proposed fix** distinguish "not loaded" from "not selected": show `{n} selected` (and a chip placeholder) when `resumes` is empty but ids exist.
-**Status** needs decision
+**Status** fixed in source (rebuild pending) — `Companies.jsx:276-285`: `resumeNames` returns `{ids.length} selected` when no id resolves, so the cell states the count instead of the bare “Selected” and stops contradicting the drawer’s “Nothing selected”, which is now reached only when the id list is genuinely empty. The drawer’s missing chip placeholder is left alone — that is the separate “no résumés” gap in inventory §4.
 
 ### COMP-14 · P3 · Every row lands on a half pixel (fractional `getBoundingClientRect().top`)
 **Where** `Companies.jsx:262` (header subtitle)
@@ -349,3 +349,27 @@ Reversible edits to rows I did not create, all restored:
 - **Scratch rows remaining: 0.**
 
 The headline is COMP-01: the drawer's Save is fire-and-forget, so a rejected PATCH discards the user's edits with no signal of any kind — and COMP-04 explains why nothing catches it, since `Toast.jsx` is never imported and nine failure paths end in `console.error`. COMP-02, COMP-05 and COMP-06 are the same shape one level down: the screen fetches state once and then guesses (a 2.6 s timer for a 40 s scrape, a drawer snapshot that never refreshes, health and monitor data read exactly once). The design deviations are mostly consistent and deliberate-looking (unified `.v2-act` hovers, the 720 px drawer, the widened Résumés/ATS columns) and are flagged as decisions; the two that read as accidents — half-pixel rows and a hover that never fired — are fixed.
+
+---
+
+## P2 triage (2026-09-02)
+
+Second pass over the open P2 findings. Contained, single-answer fixes were applied in source; nothing here changes a data model. Frontend edits are **rebuild pending** (the bundle is built in Docker by the coordinator); the one backend edit is **restart pending** (uvicorn runs without `--reload`).
+
+| id | action | note |
+|---|---|---|
+| COMP-02 | fixed (JSX) | drawer renders from `companies.find(c => c.id === …)`, not the open-time snapshot; `downReason` reads the same live row |
+| COMP-03 | fixed (JSX) | `loading` / `loadErr` state, spinner row, “Couldn’t load companies · Try again” panel; filter-miss copy suppressed on failure (pattern copied from `Searches.jsx`) |
+| COMP-04 | fixed by toast wiring | verified in source — `useToasts`/`ToastStack` mounted; error toasts on load, patch, bulk, run, delete and add; only `runTest` stays silent (own in-modal error) |
+| COMP-05 | fixed (JSX) | 2600 ms timer replaced by a 3 s `/monitor/active` poll filtered to `job_type === 'company_scrape'`; refetch when a run disappears; 409 keeps the spinner and pushes a `progress` toast |
+| COMP-06 | fixed (JSX) | `fetchHealth()` runs at the end of every `fetchCompanies()`; the mount read of `/monitor/active` is scoped to company runs |
+| COMP-07 | fixed (JSX) | `last_error` promoted into both the `health` comparator and `downCount`; still diverges from the cross-screen rail badge (coordinator’s call) |
+| COMP-08 | fixed (backend + copy) | `_aggregates` alias-sums `app_counts`; header tooltip and drawer subtitle drop the wrong word “open”. **restart pending** — `Amazon` moves 15 → 16 |
+| COMP-09 | fixed (JSX) | plain left click `navigate()`s; `href` kept so middle-click / ⌘-click / new-tab still work |
+| COMP-10 | fixed (JSX) | `flexWrap: 'wrap'` on the toolbar |
+| COMP-12 | fixed (JSX) | clamp on save to the bounds the inputs declare (`max_pages` 1–20; interval positive-or-null) |
+| COMP-13 | fixed (JSX) | unresolvable ids render `{n} selected` instead of the bare “Selected” |
+
+**Not in this pass:** COMP-11 (alias badge off-by-one) stays open — a one-line change that silently shifts every row’s badge, so it remains a decision.
+
+Files touched: `frontend/src/v2/Companies.jsx`, `backend/api/routes_companies.py`. Brace / paren / backtick balance of both checked against `git show HEAD:<path>` — unchanged (all zero); `routes_companies.py` additionally `ast.parse`d clean.

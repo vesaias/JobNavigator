@@ -365,14 +365,23 @@ def update_application(app_id: str, updates: dict, db: Session = Depends(get_db)
         raise HTTPException(status_code=400,
                             detail=f"status must be one of {sorted(VALID_STATUSES)}")
     # Track status transitions
-    if "status" in updates and updates["status"] != app.status:
-        from backend.models.db import record_transition
-        record_transition(app, updates["status"], "ui")
-        del updates["status"]  # already set by record_transition
+    changed = False
+    if "status" in updates:
+        if updates["status"] != app.status:
+            from backend.models.db import record_transition
+            record_transition(app, updates["status"], "ui")
+            changed = True
+        # Same status = a click on the already-active stage. record_transition()
+        # already declines to log it, so treat it as a no-op here too: bumping
+        # updated_at would reset the ageing signal ("Nd" cell, "N waiting >7d")
+        # for something the user did not actually change (APPS-07).
+        del updates["status"]
     for key, value in updates.items():
         if key in allowed:
             setattr(app, key, value)
-    app.updated_at = utcnow()
+            changed = True
+    if changed:
+        app.updated_at = utcnow()
     db.commit()
     from backend.models.db import build_company_lookup
     lookup = build_company_lookup(db)

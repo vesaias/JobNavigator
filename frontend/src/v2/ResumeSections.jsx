@@ -142,12 +142,12 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
 
 // Renders the right section editor for a SECTION_ORDER name. Tailoring props are
 // optional — Persona passes none, so nothing renders as changed.
-export function SectionEditor({ name, data, setField, mutate, baseData, emptyNote, pageHint = true }) {
+export function SectionEditor({ name, data, setField, mutate, baseData, emptyNote, pageHint = true, onError }) {
   switch (name) {
     case 'Header': return <HeaderEditor data={data} setField={setField} mutate={mutate} />
     case 'Summary': return <SummaryEditor pageHint={pageHint} data={data} setField={setField} baseSummary={baseData?.summary} />
     case 'Experience': return <ExperienceEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseExp={baseData?.experience} />
-    case 'Skills': return <SkillsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} baseSkills={baseData?.skills} />
+    case 'Skills': return <SkillsEditor emptyNote={emptyNote} data={data} mutate={mutate} baseSkills={baseData?.skills} onError={onError} />
     case 'Education': return <EducationEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
     case 'Projects': return <ProjectsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
     case 'Publications': return <PublicationsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} />
@@ -278,9 +278,23 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
 }
 
 // Skills: fixed-width category + value with tailoring ✦/revert/highlight when changed
-export function SkillsEditor({ emptyNote, data, setField, mutate, baseSkills }) {
+export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError }) {
   const entries = Object.entries(data.skills || {})
-  const rename = (oldK, newK) => { if (oldK === newK || !newK.trim()) return; mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns }) }
+  // RES-04 / PERS-03: a category name is user text, so routing the value write
+  // through the dotted-path setField silently dropped every write to a category
+  // containing a "." (".NET", "Node.js", "Web3.0"). Write the key directly.
+  const setVal = (k, v) => { if (DANGEROUS.has(k)) return; mutate((d) => { d.skills = d.skills || {}; d.skills[k] = v }) }
+  // RES-05 / PERS-04: renaming onto an existing category used to overwrite that
+  // category and destroy its values with no warning and no undo. Refuse the
+  // collision (and a blank name); the caller reverts the uncontrolled input.
+  const rename = (oldK, newK) => {
+    if (oldK === newK) return true
+    if (!newK.trim()) { onError?.('A skills category needs a name.'); return false }
+    if (DANGEROUS.has(newK)) { onError?.(`“${newK}” can’t be used as a category name.`); return false }
+    if (Object.prototype.hasOwnProperty.call(data.skills || {}, newK)) { onError?.(`“${newK}” already exists — renaming onto it would erase its values.`); return false }
+    mutate((d) => { const ns = {}; for (const [k, v] of Object.entries(d.skills)) ns[k === oldK ? newK : k] = v; d.skills = ns })
+    return true
+  }
   const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
   const arrows = (k) => (
     <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
@@ -296,12 +310,12 @@ export function SkillsEditor({ emptyNote, data, setField, mutate, baseSkills }) 
         return (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {arrows(k)}
-            <input defaultValue={k} onBlur={(e) => rename(k, e.target.value)} placeholder="Category" style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
+            <input defaultValue={k} onBlur={(e) => { if (!rename(k, e.target.value)) e.target.value = k }} placeholder="Category" style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
-              <input value={v} onChange={(e) => setField(`skills.${k}`, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
+              <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
               {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
-              {changed && <span onClick={() => setField(`skills.${k}`, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
+              {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
             <span onClick={() => mutate((d) => delete d.skills[k])} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}>✕</span>
           </div>

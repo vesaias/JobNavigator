@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import './theme.css'
@@ -140,19 +141,49 @@ export default function Companies() {
   const [test, setTest] = useState(null)              // test-scrape result
   const [testingId, setTestingId] = useState(null)
   const [showShots, setShowShots] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadErr, setLoadErr] = useState(null)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
+  const navigate = useNavigate()
+  const mounted = useRef(true)
+  useEffect(() => () => { mounted.current = false }, [])
 
+  // only company_scrape runs belong on this screen; /monitor/active also carries
+  // scoring and search runs whose scope_key is a job/search id.
+  const runMap = (data) => { const m = {}; (data || []).forEach((r) => { if (r.job_type === 'company_scrape' && r.scope_key) m[r.scope_key] = true }); return m }
+  // COMP-06: health is refetched with the list, so a run that clears (or causes)
+  // a failure updates the row ▲, the header count and the sort without a reload.
+  const fetchHealth = useCallback(async () => {
+    try { const { data } = await api.get('/health/entities'); const m = {}; (data.companies || []).forEach((c) => { m[c.id] = c.reason }); setDownMap(m) }
+    catch { /* keep the last known verdict */ }
+  }, [])
   const fetchCompanies = useCallback(async () => {
-    try { const { data } = await api.get('/companies'); setCompanies(data) }
-    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not load companies' + errSuffix(e) }) }
-  }, [pushToast])
+    try { const { data } = await api.get('/companies'); setCompanies(data); setLoadErr(null) }
+    catch (e) { console.error(e); const msg = 'Could not load companies' + errSuffix(e); setLoadErr(msg); pushToast({ kind: 'error', msg }) }
+    finally { setLoading(false) }
+    fetchHealth()
+  }, [pushToast, fetchHealth])
   useEffect(() => {
     fetchCompanies()
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => {})
     api.get('/persona').then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
-    api.get('/health/entities').then(({ data }) => { const m = {}; (data.companies || []).forEach((c) => { m[c.id] = c.reason }); setDownMap(m) }).catch(() => {})
-    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setScraping(m) }).catch(() => {})
+    api.get('/monitor/active').then(({ data }) => setScraping(runMap(data))).catch(() => {})
   }, [fetchCompanies])
+
+  // COMP-05: a fixed 2.6 s timer used to declare the scrape finished; poll the
+  // real run registry instead and refresh the list once a run disappears.
+  useEffect(() => {
+    if (!Object.keys(scraping).length) return
+    const h = setInterval(async () => {
+      try {
+        const { data } = await api.get('/monitor/active')
+        if (!mounted.current) return
+        const m = runMap(data)
+        setScraping((prev) => { if (Object.keys(prev).some((k) => !m[k])) fetchCompanies(); return m })
+      } catch { /* retry on the next tick */ }
+    }, 3000)
+    return () => clearInterval(h)
+  }, [scraping, fetchCompanies])
   useEffect(() => { try { localStorage.setItem('company_filter_tiers', JSON.stringify(tiers)) } catch {} }, [tiers])
   useEffect(() => { try { localStorage.setItem('company_query', query) } catch {} }, [query])
   useEffect(() => { try { localStorage.setItem('company_sort', sortBy) } catch {} }, [sortBy])
@@ -181,7 +212,9 @@ export default function Companies() {
       const hay = [c.name, ...(c.aliases || []), ...(c.scrape_urls || []), ...Object.values(c.detected_scrape_types || {})].join(' ').toLowerCase()
       return hay.includes(q)
     })
-    const down = (c) => !!downMap[c.id]
+    // COMP-07: the row ▲, the health line and the drawer banner all treat a
+    // last_error as "needs attention"; the sort and the count must agree.
+    const down = (c) => !!downMap[c.id] || !!c.last_error
     const cmp = {
       health: (a, b) => (down(b) - down(a)) || ((b.active ? 1 : 0) - (a.active ? 1 : 0)) || a.name.localeCompare(b.name),
       name: (a, b) => a.name.localeCompare(b.name),
@@ -194,7 +227,7 @@ export default function Companies() {
   }, [companies, query, tiers, sortBy, downMap])
 
   const activeCount = companies.filter((c) => c.active).length
-  const downCount = companies.filter((c) => downMap[c.id]).length
+  const downCount = companies.filter((c) => downMap[c.id] || c.last_error).length
   const countLine = `${companies.length} tracked · ${activeCount} active · ${downCount} need attention`
   const inactiveInFilter = filtered.filter((c) => !c.active)
   const activeInFilter = filtered.filter((c) => c.active)
@@ -216,10 +249,16 @@ export default function Companies() {
     fetchCompanies()
   }
   const runScrape = async (id) => {
+    if (scraping[id]) return
     setScraping((m) => ({ ...m, [id]: true }))
     try { await api.post(`/scrape/company/${id}`) }
-    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not start the scrape' + errSuffix(e) }) }
-    setTimeout(() => { setScraping((m) => { const n = { ...m }; delete n[id]; return n }); fetchCompanies() }, 2600)
+    catch (e) {
+      // 409 means the run is genuinely in flight — keep the spinner, the
+      // /monitor/active poll clears it when the run finishes.
+      if (e.response?.status === 409) { pushToast({ kind: 'progress', msg: 'That company is already being scraped' }); return }
+      console.error(e); pushToast({ kind: 'error', msg: 'Could not start the scrape' + errSuffix(e) })
+      setScraping((m) => { const n = { ...m }; delete n[id]; return n })
+    }
   }
   const runTest = async (id) => {
     setTestingId(id); setShowShots(false)
@@ -239,7 +278,10 @@ export default function Companies() {
     if (!ids.length) return null
     const names = resumes.filter((r) => ids.includes(r.id)).map((r) => r.name)
     if (ids.includes('persona')) names.push('Persona')
-    return names.join(', ') || 'Selected'
+    // COMP-13: ids that resolve to nothing (list not loaded, or deleted résumés)
+    // must still read as a selection — "Selected" alone contradicted the drawer.
+    if (names.length) return names.join(', ')
+    return `${ids.length} selected`
   }
   const healthOf = (c) => {
     if (scraping[c.id]) return { dot: 'var(--accent)', fg: 'var(--accent)', text: 'scraping now…' }
@@ -283,7 +325,7 @@ export default function Companies() {
       </header>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <span style={{ position: 'relative', flex: '0 0 226px', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
@@ -344,7 +386,7 @@ export default function Companies() {
           <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
           <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>
           <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
-          <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Open applications">Apps</span>
+          <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Applications recorded for this company">Apps</span>
           <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>
           <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
           <span style={{ flex: '0 0 190px' }} />
@@ -413,7 +455,7 @@ export default function Companies() {
                   <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                     <span onClick={() => { setMenuId(null); openDrawer(c) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>✎</span>Edit config</span>
                     {urls.length > 0 && <span onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>↗</span>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</span>}
-                    <a href={`/v2/feed?company=${encodeURIComponent(c.name)}`} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer', textDecoration: 'none' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span>View jobs in feed</a>
+                    <a href={`/v2/feed?company=${encodeURIComponent(c.name)}`} onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/v2/feed?company=${encodeURIComponent(c.name)}`) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer', textDecoration: 'none' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span>View jobs in feed</a>
                     <span onClick={() => deleteCompany(c)} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--bad)', cursor: 'pointer', marginTop: 3, borderTop: '1px solid var(--line-soft)' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete company</span>
                   </span>
                 )}
@@ -421,7 +463,22 @@ export default function Companies() {
             </div>
           )
         })}
-        {filtered.length === 0 && (
+        {loading && companies.length === 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 28px', fontSize: 11.5, color: 'var(--muted)' }}>
+            <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading companies…
+          </div>
+        )}
+        {/* a failed GET used to fall through to the filter-miss copy, so a server
+            outage read as "nothing matches your search" and Clear filters "fixed"
+            nothing; and that copy also flashed before the first response landed. */}
+        {!loading && loadErr && companies.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
+            <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load companies</span>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
+            <span onClick={() => { setLoading(true); fetchCompanies() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+          </div>
+        )}
+        {!loading && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No companies match</span>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : 'No companies in the selected tiers.'}</span>
@@ -430,7 +487,14 @@ export default function Companies() {
         )}
       </div>
 
-      {drawer && <Drawer state={drawer} setState={setDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[drawer.company.id]} />}
+      {/* COMP-02: `drawer.company` is a snapshot from openDrawer; every refetch
+          (Save, the status pill, bulk, the /monitor poll) leaves it stale, so the
+          banner, subtitle and tuning note lied. Re-read the row by id each render
+          and keep only `draft` in drawer state. */}
+      {drawer && (() => {
+        const live = companies.find((c) => c.id === drawer.company.id) || drawer.company
+        return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} />
+      })()}
       {addOpen && <AddModal onClose={() => setAddOpen(false)} resumes={resumes} personaPopulated={personaPopulated} onCreated={fetchCompanies} pushToast={pushToast} />}
       {test && <TestModal test={test} onClose={() => setTest(null)} showShots={showShots} setShowShots={setShowShots} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
@@ -448,7 +512,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   const toggleTuning = () => setTuning((v) => { const n = !v; try { localStorage.setItem('company_tuning_open', String(n)) } catch {} return n })
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
   const toggleResume = (id) => set({ selected_resume_ids: draft.selected_resume_ids.includes(id) ? draft.selected_resume_ids.filter((x) => x !== id) : [...draft.selected_resume_ids, id] })
-  const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${draft.scrape_urls.filter(Boolean).length} career URL(s) · ${company.application_count || 0} open application(s)`
+  const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${draft.scrape_urls.filter(Boolean).length} career URL(s) · ${company.application_count || 0} application(s)`
   const lca = company.h1b_lca_count
   const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
@@ -469,9 +533,11 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
       auto_scoring_depth: draft.auto_scoring_depth,
       selected_resume_ids: draft.selected_resume_ids,
       tier: draft.tier,
-      scrape_interval_minutes: draft.scrape_interval_minutes === '' ? null : parseInt(draft.scrape_interval_minutes) || null,
+      // COMP-12: `min`/`max` on <input type=number> block neither typing nor a
+      // paste, so 999 pages / a negative interval used to round-trip to the DB.
+      scrape_interval_minutes: draft.scrape_interval_minutes === '' ? null : (parseInt(draft.scrape_interval_minutes) > 0 ? parseInt(draft.scrape_interval_minutes) : null),
       wait_for_selector: draft.wait_for_selector || null,
-      max_pages: parseInt(draft.max_pages) || 5,
+      max_pages: Math.min(20, Math.max(1, parseInt(draft.max_pages) || 5)),
       h1b_slug: draft.h1b_slug || null,
     }
     // COMP-01: wait for the PATCH; only close on success, otherwise say so and keep the edit

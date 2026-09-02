@@ -23,7 +23,7 @@ DB at start: 377 applications (30 applied · 347 rejected · 0 interview · 0 of
 | load | see APPS-02 | |
 Console shows only `AxiosError: Request failed with status code 500`.
 **Proposed fix** import `useToasts` and `push({kind:'error', …})` at each site (mirroring the other v2 screens); a `success` toast at least for delete and log-application.
-**Status** needs decision: wire the full toast taxonomy here now, or is Applications deliberately toast-free?
+**Status** fixed in source (rebuild pending) — fixed by the toast wiring: `Applications.jsx` now imports `useToasts`/`ToastStack` (`:4`, `:96`, `:381`) and pushes an `error` toast at every failure site (load `:107`, stage PATCH `:171`, notes `:179`, delete `:188`, add/delete/toggle interview `:199`/`:203`/`:207`, prep `:216`, clipboard `:228`, log-modal extract/save), plus a `success` toast on delete and a `progress` toast on the 409 duplicate. Only `GET /resumes` in the Log modal is still a silent `.catch(()=>{})` (chip list, non-blocking) — logged, not fixed.
 
 ### APPS-02 · P2 · A failed load is indistinguishable from an empty database
 **Where** `Applications.jsx:92-100` — `catch { console.error }` then `setLoaded(true)` unconditionally (`:99`); the only zero-row branch is `:322-324`.
@@ -32,7 +32,7 @@ Console shows only `AxiosError: Request failed with status code 500`.
 **Actual** measured (`load_500`): header `"0 applications · 0 in interview · 0 offer"`, four group headers all `0`, body copy **"No applications yet — mark a job applied in the Feed, or log one here."**, detail pane "Select an application.". `retry_control:false`, no word "error" anywhere. Screenshot `apps-load500-light.png`.
 On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:true`) — but the same fake empty screen sits behind it.
 **Proposed fix** add `const [err,setErr]=useState(null)`; set it in the catch; render an error card with a Retry button in the list pane instead of the empty-state copy.
-**Status** needs decision (≈20 lines, but it introduces a new state branch the design does not draw).
+**Status** fixed in source (rebuild pending) — `Applications.jsx:78-79` `loadErr` state, set in the `load()` catch (`:104-108`, cleared on `:102`), and `:355-364` renders “Couldn’t load your applications · <status> · Try again” in place of the empty-state copy when `loadErr` is set. Same shape as `Searches.jsx:582-587`.
 
 ### APPS-03 · P2 · Interview time is stored as UTC and rendered as local — off by the viewer's UTC offset
 **Where** `Applications.jsx:459` (`<input type="datetime-local">`) → `:178` sends the zone-less string verbatim → `routes_applications.py:26` `dt.replace(tzinfo=timezone.utc)` → `Applications.jsx:17-22` `toLocaleString`.
@@ -56,7 +56,7 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Expected + why** the button is the only feedback the flow has; a false confirmation loses the whole bundle silently.
 **Actual** measured (`copy_feedback`): `clipboard: "blocked: TypeError"` while the button read **"⧉ Copied ✓"** for the full 1.8 s. The button is also clickable while `prep === 'loading'` (copies `''`), and after a 500 it happily copies the error string (`prep_500_copy`).
 **Proposed fix** `setCopied(true)` only inside the `try`; in the catch show "Copy failed — select the text" (or push an error toast); guard `onClick` while `prep === 'loading'`.
-**Status** needs decision (trivially contained, but the copy for the failure state is a design call).
+**Status** fixed in source (rebuild pending) — `Applications.jsx:221-231`: `copyPrep()` returns early while `prep === 'loading'` or `prep.failed`, `setCopied(true)` moved inside the `try` after the `await`, and a clipboard rejection pushes “Could not copy — select the text and copy it manually”. `openPrep()`’s catch now marks `{failed: true}` (`:213-217`) and also pushes an error toast; `PrepModal` dims the Copy button while `busy` (`:553`, `:570`).
 
 ### APPS-06 · P2 · The interview draft form is screen-global, not per application
 **Where** state lives in the parent `Applications.jsx:82-84`; `Detail` only receives it. Nothing resets it on `sel` change.
@@ -64,7 +64,7 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Expected + why** a half-filled form belongs to the application it was opened on; posting it against another one is silent data corruption.
 **Actual** measured (`draft_leak`): after switching rows the form was still open (`form_still_open:1`) with `value:"ZZTEST draft leak"` while the detail pane showed **"Sr. Product Manager"**. `addInterview` (`:174`) posts to `d.id` — the *new* application.
 **Proposed fix** `useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }, [sel])` in `Applications`.
-**Status** needs decision: the effect is 3 lines and unambiguous, but discarding a typed draft on row-switch is a UX choice; the alternative is keying the draft by `sel`.
+**Status** fixed in source (rebuild pending) — `Applications.jsx:112-114`: `useEffect(… , [sel])` closes the form and clears `intWhat/intWhen/intWhere/intPrep` whenever the selection changes, so a draft can no longer be posted against another application. Discard-on-switch (not carry-per-row) chosen deliberately: the alternative keeps a per-id draft map alive with no UI to show it exists.
 
 ### APPS-07 · P2 · Clicking the already-active stage, editing notes, or adding an interview bumps `updated_at` and clears the stale indicator
 **Where** `routes_applications.py:377` (`app.updated_at = utcnow()` runs for every PATCH), `:473` (add interview); client `Applications.jsx:405` sends the PATCH even when `on === true` (no guard), `:44` `isStale`, `:145` `recent` sort.
@@ -72,7 +72,7 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Expected + why** the `{N}d` cell and "N waiting >7d" are the screen's only ageing signal; a no-op click must not reset them, and `db.py:242` already declines to record a transition, so the backend agrees nothing happened.
 **Actual** measured (`active_pill_bump`): row cell `20d` amber `rgb(154,91,40)` (`--warn`, tooltip "No movement for 20 days") → **`0d` muted** (tooltip "Last activity 0d ago"); `updated_at 2026-08-13 → 2026-09-02`; `status_transitions` unchanged at 6; header `26 waiting >7d → 25 waiting >7d`. The same bump happens on every notes keystroke burst and on every interview add/toggle.
 **Proposed fix** client: `onClick={() => { if (d.status !== s.id) onStage(s.id) }}` (`:405`) stops the no-op case. The notes/interview case needs a backend decision — either don't touch `updated_at` for non-status PATCHes, or introduce a separate `last_activity_at` for the ageing signal.
-**Status** needs decision: guard the active pill only (1 line, safe), or split the ageing timestamp from `updated_at` (backend, larger).
+**Status** fixed in source, restart pending (backend) — both halves of the no-op case, no new column: `routes_applications.py:368-386` PATCH now tracks a `changed` flag, drops a `status` equal to the current one (matching `db.py:242`, which already declines the transition) and only assigns `app.updated_at` when something actually changed; `Applications.jsx:445` no longer fires the PATCH for the already-active pill. **Needs `docker compose restart backend`.** Out of scope and still true: a notes edit or an interview add legitimately bumps `updated_at`, so the ageing signal still counts those as movement — splitting `last_activity_at` from `updated_at` remains a separate decision.
 
 ### APPS-08 · P3 · Every list row lands on a fractional pixel — **fixed in source**
 **Where** `Applications.jsx:222` (count line), `:293` (group header), `:249` (company popover item).
@@ -214,6 +214,16 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 - `frontend/src/v2/Applications.jsx:293` — stage-group header given `lineHeight:'16px'` (was 15.75 px → 32.75 px header, the source of every `x.25` row top).
 - `frontend/src/v2/Applications.jsx:249` — company-popover item given `lineHeight:'18px'` (92 of 122 items were fractional).
 All three are JSX → **fixed in source, rebuild pending** (unverified until the frontend image is rebuilt). Derived post-fix geometry: header 91, toolbar 45, pane top 136, first group header 142 (h 33), first row 175, rows 46+3.
+
+## P2 triage (2026-09-02)
+
+| id | action | note |
+|---|---|---|
+| APPS-01 | fixed by toast wiring | verified in source: `useToasts`/`ToastStack` mounted, `error` toast at all 8 previously console-only paths + the swallowed clipboard catch; `GET /resumes` chip list still silent (P4, non-blocking). |
+| APPS-02 | fixed (JSX, rebuild pending) | `loadErr` state + “Couldn’t load your applications · Try again” card replaces the empty-state copy; mirrors `Searches.jsx`. |
+| APPS-05 | fixed (JSX, rebuild pending) | `await` the clipboard write, “Copied ✓” only on success, error toast on failure, copy blocked while loading / after a failed prep build (button dimmed). |
+| APPS-06 | fixed (JSX, rebuild pending) | draft reset on `sel` change — a half-filled interview can no longer be filed against another application. |
+| APPS-07 | fixed (backend + JSX), **restart pending** | no-op stage PATCH no longer bumps `updated_at`; client stops sending it at all. Notes/interview bumps left as-is (separate `last_activity_at` decision). |
 
 ## Couldn't test
 - **"Building the bundle…" loading state** (`:523`) — the prep endpoint returned in <300 ms even on the first call, so the loading text never rendered long enough to sample. Verified by code inspection only.
