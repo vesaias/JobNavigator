@@ -5,6 +5,7 @@ import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+const ts = (iso) => (iso ? new Date(iso).getTime() : 0)
 const daysSince = (iso) => (iso ? Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)) : 0)
 const ago = (iso) => {
   if (!iso) return ''
@@ -40,7 +41,8 @@ const STAGES = [
   { id: 'rejected', label: 'Rejected', dot: 'var(--bad)', hint: 'Closed — kept for the Stats funnel' },
 ]
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
-const GROUP_LABEL = { applied: 'Applied', interview: 'Interview', offer: 'Offer', rejected: 'Rejected' }
+// APPS-22: legacy rows (ghosted / withdrawn) have no stage of their own — they are closed, so they list under Rejected
+const groupOf = (status) => (STAGE[status] ? status : 'rejected')
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
@@ -76,6 +78,7 @@ export default function Applications() {
   // paints with "0 applications" and an empty list, then everything pops in
   const [loaded, setLoaded] = useState(false)
   // APPS-02: a failed fetch must not read as "you have no applications"
+  const [total, setTotal] = useState(null)
   const [loadErr, setLoadErr] = useState(null)
   const [sel, setSel] = useState(null)
   const [query, setQuery] = useState('')
@@ -99,6 +102,7 @@ export default function Applications() {
   const load = useCallback(async (keep) => {
     try {
       const { data } = await api.get('/applications', { params: { limit: 2000 } })
+      setTotal(typeof data?.total === 'number' ? data.total : null)   // APPS-22: the header counts what the server has, not what fits in one page
       const list = data.applications || []
       setApps(list); setLoadErr(null)
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
@@ -115,9 +119,11 @@ export default function Applications() {
   useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }, [sel])
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
+  const logDirty = useRef(false)   // APPS-22: typed fields survive a stray Escape
+  const closeLog = () => { if (logDirty.current && !window.confirm('Discard this application? Everything typed will be lost.')) return; logDirty.current = false; setLogOpen(false) }
   useEffect(() => {
     const onDoc = () => closeAll()
-    const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); setLogOpen(false) } }
+    const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); closeLog() } }
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
@@ -126,7 +132,8 @@ export default function Applications() {
   const nInterview = apps.filter((a) => a.status === 'interview').length
   const nOffer = apps.filter((a) => a.status === 'offer').length
   const nStale = apps.filter(isStale).length
-  const countLine = `${apps.length} application${apps.length === 1 ? '' : 's'} · ${nInterview} in interview · ${nOffer} offer`
+  const shown = total ?? apps.length
+  const countLine = `${shown} application${shown === 1 ? '' : 's'} · ${nInterview} in interview · ${nOffer} offer${nOffer === 1 ? '' : 's'}${total > apps.length ? ` · showing the first ${apps.length}` : ''}`
     + (nStale ? ` · ${nStale} waiting >7d` : '')
 
   const companyOf = (a) => a.company_canonical || a.company || 'Unknown Company'
@@ -156,8 +163,8 @@ export default function Applications() {
     })
     const byName = (x, y) => (x.title || '').localeCompare(y.title || '')
     const cmp = {
-      recent: (x, y) => daysSince(x.updated_at) - daysSince(y.updated_at) || byName(x, y),
-      oldest: (x, y) => daysSince(y.updated_at) - daysSince(x.updated_at) || byName(x, y),
+      recent: (x, y) => ts(y.updated_at) - ts(x.updated_at) || byName(x, y),   // APPS-22: whole-day buckets tied every row touched today
+      oldest: (x, y) => ts(x.updated_at) - ts(y.updated_at) || byName(x, y),
       company: (x, y) => companyOf(x).localeCompare(companyOf(y)) || byName(x, y),
     }[sortBy]
     return [...out].sort(cmp)
@@ -177,10 +184,11 @@ export default function Applications() {
     const run = () => {
       setApps((p) => p.map((a) => (a.id === id ? { ...a, notes: value } : a)))
       api.patch(`/applications/${id}`, { notes: value })
+        .then(() => load(id))   // APPS-22: the row's age and the header follow the server's updated_at
         .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not save notes' + errSuffix(e) }) })
     }
     if (now) run(); else notesTimer.current = setTimeout(run, 700)
-  }, [pushToast])
+  }, [pushToast, load])
 
   const remove = async (a) => {
     setMenuOpen(false)
@@ -329,14 +337,14 @@ export default function Applications() {
         {/* list */}
         <div className="v2-scroll" style={{ flex: '0 0 472px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {STAGES.map((st) => {
-            const rows = visible.filter((a) => a.status === st.id)
+            const rows = visible.filter((a) => groupOf(a.status) === st.id)
             const shut = !!closed[st.id]
             return (
               <React.Fragment key={st.id}>
                 <div onClick={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', lineHeight: '16px', cursor: 'pointer' }}>
                   <span style={{ width: 7, height: 7, flex: '0 0 7px', borderRadius: 99, background: st.dot }} />
-                  <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{GROUP_LABEL[st.id]}</span>
+                  <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{st.label}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>{shut ? '›' : '⌄'}</span>
                 </div>
@@ -377,7 +385,7 @@ export default function Applications() {
         </div>
 
         {/* detail */}
-        {d ? <Detail d={d} history={history} menuOpen={menuOpen} setMenuOpen={setMenuOpen} closeAll={closeAll}
+        {d ? <Detail d={d} history={history} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onStage={(s) => patch(d.id, { status: s })} onNotes={(v, now) => saveNotes(d.id, v, now)}
           onDelete={() => remove(d)} navigate={navigate}
           intForm={intForm} setIntForm={setIntForm} intWhat={intWhat} setIntWhat={setIntWhat}
@@ -388,14 +396,14 @@ export default function Applications() {
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
-      {logOpen && <LogModal onClose={() => setLogOpen(false)} onSaved={(id) => { setLogOpen(false); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
+      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { setLogOpen(false); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
 
 // ── detail pane ──────────────────────────────────────────────────────────────
-function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes, onDelete, navigate,
+function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete, navigate,
                   intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen,
                   intWhere, setIntWhere, intPrep, setIntPrep,
                   addInterview, canAddInterview, delInterview, toggleInterview, openPrep }) {
@@ -420,7 +428,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>
               {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
-                style={{ color: 'var(--accent)', fontWeight: 500, cursor: d.tailored_resume_id ? 'pointer' : 'default' }}>{cv}{d.tailored_resume_id ? ' ↗' : ''}</span>
+                style={{ color: d.tailored_resume_id ? 'var(--accent)' : 'var(--text-2)', fontWeight: d.tailored_resume_id ? 500 : 400, cursor: d.tailored_resume_id ? 'pointer' : 'default' }}>{cv}{d.tailored_resume_id ? ' ↗' : ''}</span>
             </span>
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -588,7 +596,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
 }
 
 // ── log-application modal ────────────────────────────────────────────────────
-function LogModal({ onClose, onSaved, pushToast }) {
+function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
   const [company, setCompany] = useState('')
@@ -597,6 +605,7 @@ function LogModal({ onClose, onSaved, pushToast }) {
   const [stage, setStage] = useState('applied')
   const [when, setWhen] = useState(() => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` })   // APPS-21: local date
   const [notes, setNotes] = useState('')
+  useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])   // APPS-22
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
 
