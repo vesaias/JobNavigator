@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -72,6 +73,8 @@ const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em'
 const Pill = ({ children, bg, fg }) => (
   <span style={{ ...BADGE, background: bg, color: fg }}>{children}</span>
 )
+// FastAPI's `detail` is a plain string for HTTPException; append it when present.
+const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
 export default function Stats() {
   const [stats, setStats] = useState(null)
@@ -97,9 +100,11 @@ export default function Stats() {
   const pollRef = useRef(null)
   const runningRef = useRef(false)
   const qRef = useRef(null)
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const loadCore = useCallback(async () => {
-    const get = (u, params) => api.get(u, { params }).then(({ data }) => data).catch(() => null)
+    let anyFailed = false
+    const get = (u, params) => api.get(u, { params }).then(({ data }) => data).catch((e) => { console.error(u, e); anyFailed = true; return null })
     // one round, not two: the sweep and health calls used to wait on the first
     // batch for no reason
     const [s, tl, sd, bj, fl, sw, he] = await Promise.all([
@@ -119,7 +124,8 @@ export default function Stats() {
     const list = bj?.jobs || bj?.items || (Array.isArray(bj) ? bj : [])
     setBest(list[0] || null)
     setFlows(Array.isArray(fl) ? fl : [])
-  }, [])
+    if (anyFailed) pushToast({ kind: 'error', msg: 'Some stats failed to load — try Refresh' })
+  }, [pushToast])
 
   const loadLive = useCallback(async () => {
     const [j, r] = await Promise.all([
@@ -159,7 +165,8 @@ export default function Stats() {
   const trigger = async (job) => {
     if (!job.trigger_url) return
     setTriggering((p) => new Set(p).add(job.id))
-    try { await api.post(job.trigger_url); loadLive() } catch (e) { console.error('trigger', e) }
+    try { await api.post(job.trigger_url); loadLive() }
+    catch (e) { console.error('trigger', e); pushToast({ kind: 'error', msg: `Could not start ${job.name}` + errSuffix(e) }) }
     finally { setTimeout(() => setTriggering((p) => { const n = new Set(p); n.delete(job.id); return n }), 4000) }
   }
 
@@ -526,6 +533,7 @@ export default function Stats() {
           )}
         </div>
       </div>
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }

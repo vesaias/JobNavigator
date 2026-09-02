@@ -330,7 +330,7 @@ export default function Searches() {
       setSearches(data); setLoadErr(null)
     } catch (e) {
       console.error(e); setLoadErr(errText(e, 'Could not load your searches'))
-      pushToast({ kind: 'error', text: errText(e, 'Could not load your searches') })
+      pushToast({ kind: 'error', msg: errText(e, 'Could not load your searches') })
     } finally { setLoading(false) }
   }, [pushToast])
   useEffect(() => {
@@ -377,12 +377,12 @@ export default function Searches() {
   ].join(' · ')
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
-  const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', text: errText(e, fallback) }) }
+  const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
   const save = async (s) => {
     try { await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load() } catch (e) { fail(e, 'Could not save this search') }
   }
   const create = async () => {
-    if (!newDraft.name.trim()) { pushToast({ kind: 'error', text: 'Name is required' }); return }
+    if (!newDraft.name.trim()) { pushToast({ kind: 'error', msg: 'Name is required' }); return }
     try { await api.post('/searches', toPayload(newDraft)); setNewOpen(false); setNewDraft(NEW_DRAFT); load() }
     catch (e) { fail(e, 'Could not create this search') }
   }
@@ -397,7 +397,7 @@ export default function Searches() {
     try { await api.post(`/searches/${s.id}/run`) } catch (e) {
       // 409 means the run is genuinely in flight — keep the spinner, the
       // /monitor/active poll clears it when the run finishes.
-      if (e.response?.status === 409) { pushToast({ kind: 'progress', text: `“${s.name}” is already running` }); return }
+      if (e.response?.status === 409) { pushToast({ kind: 'progress', msg: `“${s.name}” is already running` }); return }
       fail(e, `Could not start “${s.name}”`)
       setRunning((m) => { const n = { ...m }; delete n[s.id]; return n })
     }

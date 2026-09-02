@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
+import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -180,11 +181,13 @@ export default function Persona() {
   })
   const timers = useRef({})
   const flashTimer = useRef(null)
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   useEffect(() => {
-    api.get('/persona').then(({ data }) => setP(data)).catch(() => {})
+    api.get('/persona').then(({ data }) => setP(data))
+      .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your persona' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') }) })
     return () => { Object.values(timers.current).forEach(clearTimeout); clearTimeout(flashTimer.current) }
-  }, [])
+  }, [pushToast])
 
   const flash = useCallback(() => {
     setSaved(true)
@@ -197,9 +200,13 @@ export default function Persona() {
     setP((prev) => (prev ? { ...prev, [key]: value } : prev))
     clearTimeout(timers.current[key])
     timers.current[key] = setTimeout(async () => {
-      try { await api.patch('/persona', { [key]: value }); flash() } catch (e) { console.error(`persona ${key}`, e) }
+      try { await api.patch('/persona', { [key]: value }); flash() }
+      catch (e) {
+        console.error(`persona ${key}`, e)
+        pushToast({ kind: 'error', msg: 'Could not save your changes' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') })
+      }
     }, 500)
-  }, [flash])
+  }, [flash, pushToast])
 
   // Spread the live node: keys with no control (preferences.preferred_locations)
   // must survive, and `undefined` clears a key rather than storing "".
@@ -235,7 +242,12 @@ export default function Persona() {
   const toggleSection = toggler(setSections, 'jobnavigator_v2_persona_sections')
   const toggleGroup = toggler(setGroups, 'jobnavigator_v2_persona_groups')
 
-  if (!p) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+  if (!p) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
+      Loading…
+      <ToastStack toasts={toasts} onClose={dismissToast} />
+    </div>
+  )
 
   const counts = sectionCounts(resume)
 
@@ -336,6 +348,7 @@ export default function Persona() {
           </div>
         </div>
       </div>
+      <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
 }
