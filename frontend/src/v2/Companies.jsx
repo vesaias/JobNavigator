@@ -198,7 +198,7 @@ export default function Companies() {
     : `Applies to all ${filtered.length} companies · jobs already found are kept`
 
   // ── actions ──
-  const patchCompany = async (id, patch) => { try { await api.patch(`/companies/${id}`, patch); fetchCompanies() } catch (e) { console.error(e) } }
+  const patchCompany = async (id, patch) => { try { await api.patch(`/companies/${id}`, patch); fetchCompanies(); return true } catch (e) { console.error(e); return false } }
   const bulkSet = async (active) => {
     const targets = active ? inactiveInFilter : activeInFilter
     await Promise.all(targets.map((c) => api.patch(`/companies/${c.id}`, { active }).catch(() => {})))
@@ -441,7 +441,11 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
   const resumeHelp = selNames.length ? `New jobs are scored against ${selNames.join(', ')}.` : 'Nothing selected, so new jobs use your default résumé from Settings.'
   const tuningNote = (downReason || company.last_error) ? 'needs attention' : (draft.scrape_interval_minutes || draft.wait_for_selector || (draft.max_pages && draft.max_pages !== 5) || draft.h1b_slug) ? 'customised' : 'using defaults'
 
-  const save = () => {
+  const [saveErr, setSaveErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const save = async () => {
+    if (saving) return
+    setSaveErr('')
     const payload = {
       name: draft.name,
       aliases: draft.aliases.split(',').map((s) => s.trim()).filter(Boolean),
@@ -456,7 +460,11 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
       max_pages: parseInt(draft.max_pages) || 5,
       h1b_slug: draft.h1b_slug || null,
     }
-    onSave(company.id, payload); setState(null)
+    // COMP-01: wait for the PATCH; only close on success, otherwise say so and keep the edit
+    setSaving(true)
+    const ok = await onSave(company.id, payload)
+    setSaving(false)
+    if (ok) setState(null); else setSaveErr('Save failed — nothing was changed. Try again.')
   }
 
   return (
@@ -567,7 +575,8 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
           {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
         </div>
-        <div onClick={save} style={{ marginLeft: 'auto', height: 32, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>Save changes</div>
+        {saveErr && <span style={{ marginLeft: 'auto', fontSize: 12, lineHeight: '16px', color: 'var(--bad)' }}>{saveErr}</span>}
+        <div onClick={save} style={{ marginLeft: saveErr ? 10 : 'auto', height: 32, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save changes'}</div>
       </div>
     </div>
   )

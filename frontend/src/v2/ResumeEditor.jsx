@@ -247,7 +247,8 @@ export default function ResumeEditor() {
     setSaving(true)
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
-      try { await api.patch(`/resumes/${id}`, patch); setSavedAt(new Date().toISOString()) } catch (e) { console.error(e) }
+      try { await api.patch(`/resumes/${id}`, patch); setSavedAt(new Date().toISOString()) }
+      catch (e) { console.error(e); setSavedAt(null); pushToast({ kind: 'error', msg: `Save failed — your last edit is not stored. ${e.response?.data?.detail || e.message || ''}`.trim() }) }   // RES-01
       setSaving(false)
     }, 500)
   }, [id])

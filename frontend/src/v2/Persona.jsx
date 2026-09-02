@@ -213,7 +213,13 @@ export default function Persona() {
   const resume = p?.resume_content && Object.keys(p.resume_content).length ? p.resume_content : EMPTY
   const { mutate, setField } = makeMutators(resume, (next) => saveNode('resume_content', next))
 
-  const qa = useMemo(() => (p?.qa_bank || []).map(toPair), [p])
+  // PERS-01: a qa_bank that is not a list (legacy {question: answer} dict, or junk
+  // from the extension) must not .map — it white-screened the whole shell.
+  const qa = useMemo(() => {
+    const raw = p?.qa_bank
+    const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.entries(raw).map(([question, answer]) => ({ question, answer })) : [])
+    return list.map(toPair)
+  }, [p])
   const writeQa = (list) => saveNode('qa_bank', list.map((e) => ({ question: e.question, answer: e.answer })))
 
   const filled = useMemo(() => {
