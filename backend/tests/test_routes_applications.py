@@ -130,3 +130,19 @@ def test_list_applications_filters_by_status(api_client, test_db):
     titles = [a.get("title") for a in apps]
     assert "PM2" in titles, f"Expected PM2 in rejected list, got titles: {titles}"
     assert "PM1" not in titles, f"PM1 should not be in rejected list, got titles: {titles}"
+
+
+def test_create_application_twice_returns_409(api_client, test_db):
+    """A second POST for the same posting must not overwrite the first (APPS-04)."""
+    _seed_first_run(test_db)
+    body = {"company": "Acme", "title": "PM", "url": "https://acme.example/jobs/1", "notes": "first"}
+    first = api_client.post("/api/applications", json=body)
+    assert first.status_code == 200
+    second = api_client.post("/api/applications", json={**body, "notes": "second", "status": "interview"})
+    assert second.status_code == 409
+    assert second.json()["detail"]["application_id"] == first.json()["id"]
+    apps = api_client.get("/api/applications").json()
+    apps = apps if isinstance(apps, list) else apps.get("items", [])
+    mine = [a for a in apps if a.get("id") == first.json()["id"]]
+    assert len(mine) == 1 and mine[0]["status"] == "applied"
+    assert mine[0].get("notes", "first") == "first"

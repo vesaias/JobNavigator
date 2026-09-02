@@ -248,7 +248,7 @@ def create_application(
     else:
         job.status = "applied"
 
-    # Upsert application — overwrite if one already exists for this job
+    # One application per job — a duplicate log is refused with 409 (APPS-04)
     from backend.models.db import record_transition
     new_status = data.status if data.status in VALID_STATUSES else "applied"
     applied_at = None
@@ -261,31 +261,29 @@ def create_application(
 
     app = db.query(Application).filter(Application.job_id == job.id).first()
     if app:
-        # go through record_transition so the move shows up in the Stats funnel
-        record_transition(app, new_status, "ui")
-        if data.cv_version_used is not None:
-            app.cv_version_used = data.cv_version_used
-        if data.notes is not None:
-            app.notes = data.notes
-        if applied_at:
-            app.applied_at = applied_at
-        app.updated_at = utcnow()
-    else:
-        app = Application(
-            job_id=job.id,
-            status=new_status,
-            cv_version_used=data.cv_version_used,
-            notes=data.notes,
-            # seed the funnel edge — extension-created rows used to have an empty
-            # history, so they never showed as an "-> applied" edge in the Sankey
-            status_transitions=[{
-                "from": None, "to": new_status,
-                "at": utcnow().isoformat(), "source": "ui",
-            }],
+        # APPS-04: a second log for the same posting used to silently overwrite the
+        # notes and reset the stage (interview -> applied, with a bogus funnel edge).
+        # Refuse and point the caller at the existing record instead.
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "An application already exists for this job", "application_id": str(app.id)},
         )
-        if applied_at:
-            app.applied_at = applied_at
-        db.add(app)
+    app = Application(
+        job_id=job.id,
+        status=new_status,
+        cv_version_used=data.cv_version_used,
+        notes=data.notes,
+        # seed the funnel edge — extension-created rows used to have an empty
+        # history, so they never showed as an "-> applied" edge in the Sankey
+        status_transitions=[{
+            "from": None, "to": new_status,
+            "at": utcnow().isoformat(), "source": "ui",
+        }],
+    )
+    if applied_at:
+        app.applied_at = applied_at
+    db.add(app)
     db.commit()
 
     # Auto-create company if it doesn't exist (only on application, not during scraping)
