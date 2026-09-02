@@ -231,7 +231,7 @@ Live DB at test time: 86 settings rows; `llm_provider = claude_code` (keyless �
 **Where** `Toggle` `Settings.jsx:95` uses `var(--knob)`, which `theme.css:34` defines once (`#ffffff`) with **no dark override** (HANDOVER already flags `--knob` as single-definition).
 **Actual** measured (`set_8.py`): dark ON state = `--knob #ffffff` on `--accent #8dbb9f` → **2.16:1**; the knob is nearly invisible against the track. In light the ON state is 6.11:1 and only the OFF state is low (1.76:1 on `--line-strong`, which matches the design exactly). Ten switches on this screen (4 `SW` + 6 override toggles).
 **Proposed fix** Give `--knob` a dark value (`--surface` / `#28251b`), or use `--accent-ink` for the knob when the switch is on.
-**Status** fixed (a4996a5): ON knob uses `--accent-ink` (white light / near-black dark), OFF keeps `--knob`. Verified dark ON knob = rgb(21,20,15).
+**Status** fixed (a4996a5): ON knob uses `--surface-2` (user's pick, 2026-09-03), OFF keeps `--knob`. Verified: light ON knob rgb(246,244,238), dark ON knob rgb(50,47,36) = `--surface-2` in each theme.
 
 ### SET-15 · P3 · Model-catalog `×` hover changes colour only; the design changes the border too
 **Where** `Settings.jsx:749-750` uses `.v2-hover-bad-text` (`theme.css:175`, `color` only). Design `Settings Ops.dc.html:184`: `style-hover="border-color:#9c3b30;color:#9c3b30"`.

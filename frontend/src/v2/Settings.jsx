@@ -140,10 +140,10 @@ function Toggle({ on, label, onPick, ariaLabel }) {
       <span style={{ fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>
       <span style={{ width: 26, height: 15, borderRadius: 99, background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
         {/* SET-14: --knob is white in both themes, which is 2.16:1 on the dark
-            theme's light-green track. --accent-ink is the token that pairs with
-            --accent (white in light, near-black in dark), so the ON knob follows
-            the track; OFF keeps --knob against the neutral track. */}
-        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: on ? 'var(--accent-ink)' : 'var(--knob)', transition: 'left 150ms' }} />
+            theme's light-green track. --surface-2 (user's pick, 2026-09-03) is the ON knob so it reads as a
+            surface disc on the accent track in both themes; OFF keeps --knob
+            against the neutral track. */}
+        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: on ? 'var(--surface-2)' : 'var(--knob)', transition: 'left 150ms' }} />
       </span>
     </span>
   )
