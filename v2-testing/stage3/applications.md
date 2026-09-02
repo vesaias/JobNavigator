@@ -86,44 +86,44 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Actual** measured (`narrow_detail`): list 472, detail 346 → body columns **`[20, 250]`** — the notes textarea is **26 px** wide, the serif title 97 px (wraps to many lines). No horizontal page overflow, so nothing signals the breakage. Screenshot `apps-narrow-detail.png`.
 **Expected + why** HANDOVER risk 8: "Narrow viewports. Almost certainly never tested." The 250 px rail is a hard floor while the list stays fixed.
 **Proposed fix** drop the history rail below the content (or hide it) under a width threshold, and/or let the list pane shrink: `flex:'0 1 472px'` + a `minWidth` on the rail's container.
-**Status** needs decision — the design has no narrow breakpoint to match.
+**Status** fixed in source: detail body wraps (`flexWrap`), content `flex: 1.2 1 320px`, history rail `flex: 1 0 250px` drops below the content when the pane is narrow
 
 ### APPS-10 · P3 · `.v2-hover-accent`'s colour half never fires (Prep modal ✕) — cross-screen
 **Where** `theme.css:129` `.v2-hover-accent:hover { background:var(--surface-2); color:var(--text); }` (no `!important`) vs the inline `color:'var(--muted)'` on `Applications.jsx:519`.
 **Expected + why** design line 226: `style-hover="background:#f3f0e8;color:#1b1a16"` — both properties. HANDOVER: "Inline styles beat class `:hover` … needs `!important` or it silently does nothing. This has bitten on five separate screens."
 **Actual** measured (`hover_prep_close`): `before {bg: rgba(0,0,0,0), color: rgb(109,104,98)}` → `after {bg: rgb(246,244,238), color: rgb(109,104,98)}` — `changed: ["backgroundColor"]` only.
 **Not fixed on purpose**: `.v2-hover-accent` is used by 15 elements across Applications, Companies (×2), JobFeed (×5), ResumeEditor, ResumeSections (×2), Searches, Settings (×2) — most with the same inline `color:var(--muted)`, so the same hover is dead everywhere. Adding `!important` to a shared class while six other agents test those screens is out of scope.
-**Status** needs decision — coordinator-level: add `!important` to `.v2-hover-accent`'s `color` once, across the wave.
+**Status** fixed: `.v2-hover-accent` colour half hardened in theme.css (cross-screen); the Prep modal Close button now carries the pill hover (`v2-bdc`) — user: "Close button has no hover"
 
 ### APPS-11 · P3 · Add-interview has no in-flight guard — a double click creates two interviews
 **Where** `Applications.jsx:174-183` (`addInterview`), button `:472` has no `disabled`/busy state (unlike the Log modal's `busy ? undefined : save` at `:636`).
 **Actual** measured (`double_submit`): two `element.click()` calls in one tick → `n: 2`, `whats: ["ZZTEST double", "ZZTEST double"]`.
 **Proposed fix** a `busy` ref/state around the POST, plus `opacity .6` + `onClick={busy?undefined:addInterview}` mirroring `:636`.
-**Status** needs decision (small, but touches the same block as APPS-06/12).
+**Status** fixed in source: `intBusy` guard around the POST; button inert while busy
 
 ### APPS-12 · P3 · A completely blank interview form creates an "Interview / Unscheduled" card
 **Where** `Applications.jsx:174-180` — `what` defaults to `'Interview'`, everything else to `null`; no client validation.
 **Actual** measured (`blank_form`): opening the form and clicking Add with nothing typed produced `{what:"Interview", when_at:null, where_text:null, prep:null}`, rendered as `Interview | SCHEDULED | ✕ | Unscheduled`.
 **Proposed fix** disable "Add interview" while `!intWhat.trim() && !intWhen`.
-**Status** needs decision.
+**Status** fixed in source: Add interview is disabled (opacity .5, no handler) until a title or a time is entered
 
 ### APPS-13 · P3 · Interview ✕ deletes with no confirm and no undo
 **Where** `Applications.jsx:184-186` / `:442`.
 **Actual** measured (`interview_delete`): before 1 → after 0, `confirms: 0`. Contrast `remove()` (`:171`) which does confirm for the application itself, and the design (line 176) which has **no ✕ at all** — the delete affordance is an addition to the design.
 **Proposed fix** `window.confirm` (matching `:171`) or an undo toast.
-**Status** needs decision.
+**Status** fixed in source: interview ✕ removes immediately and shows a 5 s undo toast that re-creates the interview (user chose undo over confirm)
 
 ### APPS-14 · P3 · A filtered-out application stays open in the detail pane with no indication
 **Where** `Applications.jsx:152` — `d` is resolved from `apps`, not `visible`.
 **Actual** measured (`filtered_out`): with the search set to `zzzz-no-match` the list read `APPLIED 0 / INTERVIEW 0 / OFFER 0 / REJECTED 0 / "Nothing matches those filters."` and `0 of 378 shown`, while the detail pane still showed **"ZZTEST Staff Engineer"** and all of its controls. Screenshot `apps-nomatch-light.png`.
 **Proposed fix** either keep it (defensible — you don't lose your place) but add a hint line, or blank the detail when `!visible.some(a => a.id === sel)`.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep — the open application stays in the detail pane when filtered out
 
 ### APPS-15 · P3 · A hand-logged application's history reads "Discovered via a company scrape"
 **Where** `Applications.jsx:29-33` maps `direct → 'a company scrape'`; `routes_applications.py:242` stamps `source="direct"` on jobs created *by the Log modal*.
 **Actual** measured (`after_save.history`): `["Moved to Interview", "Discovered via a company scrape", "Applied with unknown résumé"]` for a row created seconds earlier through the modal.
 **Proposed fix** map `direct → 'the Log application form'` in `srcLabel`, or stamp a distinct `source="manual"` in `create_application` (backend; would need a fallback for existing rows).
-**Status** needs decision.
+**Status** fixed: backend stamps `source="manual"` on jobs created by the Log modal/extension (no other backend code filters on `direct`); UI maps `manual` → "the Log application form", existing `direct` rows unchanged
 
 ### APPS-16 · P3 · Design deviations in layout and copy
 Grouped; all measured design-vs-built. Per the addendum these are decisions unless noted.
@@ -139,25 +139,25 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 | h | prep trigger label "Prep for LLM" (:463) | "Generate prep handover for AI" (`:434`) | 202.6 px wide vs a design pill of ~90 px |
 | i | interview form = 3 placeholder-only inputs, no Where (:183-187) | 4 labelled inputs incl. Where + `datetime-local` (`:451-474`) | all four at 29 px ✓ — a functional improvement (and the source of APPS-03) |
 | j | copied button fill `#2f6b4a` (:489) | `var(--good)` (`:529`) | `--good` **is** `#3f6b52` = `--accent` in light and `#8dbb9f` = `--accent` in dark, so the fill **does not change** when copied — only the label does. This one looks accidental (P4). |
-**Status** needs decision: keep code (consistency) or match design? — except (j), which is a token collision worth fixing.
+**Status** decided 2026-09-02: keep all as deliberate consistency changes
 
 ### APPS-17 · P3 · The Log modal demands a URL although its own copy says it is for off-app applications
 **Where** `Applications.jsx:566` — `if (!title || !company || !url) alert('URL, title and company are all required')`. The design's Save has no validation at all.
 **Actual** measured (`validation_alert`): `{type:'alert', msg:'URL, title and company are all required'}`. `create_application` genuinely needs a URL (it is the `external_id` seed, `routes_applications.py:232`), so this is a backend constraint surfacing as a raw `window.alert` — the only `alert()` on the whole screen.
 **Proposed fix** either accept a blank URL (synthesise `manual://{company}/{title}` for the external_id) or say so in the field label; replace `window.alert` with inline field errors.
-**Status** needs decision.
+**Status** decided: URL stays required (it seeds the dedup id); the message now says why and the first empty field is focused instead of a bare alert
 
 ### APPS-18 · P4 · "Cached" never appears for a freshly logged application until a later refetch
 **Where** page caching is a `BackgroundTask` (`routes_applications.py:314`); `onSaved` → `load(id)` (`:341`) runs immediately.
 **Actual** measured: `after_save.has_cached_btn: 0` and `has_cached_page:false`; on the next visit `cached_btn.present: 1`. The footer promises "The posting is cached on save".
 **Proposed fix** a single delayed `load()` (~5 s) after a save, or an optimistic "caching…" chip.
-**Status** needs decision.
+**Status** fixed in source: one delayed reload 5 s after a save so the Cached chip appears without a manual refresh
 
 ### APPS-19 · P4 · The rail "Applications" badge is never refreshed by this screen
 **Where** `V2App.jsx:58-71` fetches counts once on shell mount.
 **Actual** measured (`delete_application`): after deleting, the header went `378 → 377` while `rail_after` stayed **`Applications378`**. Same after logging a new one.
 **Proposed fix** a `jn:counts-changed` window event the shell listens for, dispatched after log/delete.
-**Status** needs decision (shell-level, affects every screen).
+**Status** fixed in source: Applications dispatches `jn:counts-changed` after log/delete; the shell re-reads all rail counts on that event
 
 ### APPS-20 · P4 · Selected row and hovered row are the same colour
 **Where** `:304` `background: sel === a.id ? 'var(--surface-2)' : 'transparent'` vs `theme.css:151` `.v2-arow:hover { background: var(--surface-2) !important }`.
@@ -169,7 +169,7 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 **Where** `:546` `new Date().toISOString().slice(0,10)` (UTC calendar date, not local), `:572` `new Date(when).toISOString()` (parses a date-only string as UTC midnight).
 **Actual** measured: `applied_at` came back `"2026-09-02T00:00:00+00:00"` for a row created at 11:10 UTC, so the freshly created row's history immediately reads **"Applied with PM · 11h ago"**. Near local midnight the default date is also off by a day for any non-UTC user (`date_default` and `today_local` agreed only because the test ran at 07:10 EDT).
 **Proposed fix** build the default from local parts and send `new Date(when + 'T12:00:00')` (or keep the date-only string and let the backend parse it as a date).
-**Status** needs decision.
+**Status** fixed in source: default date built from local calendar parts; sent as local noon so it never lands on the previous UTC day
 
 ### APPS-22 · P4 · Smaller items (grouped)
 - `countLine` (`:115`) never pluralises "offer" — measured header `"… · 0 offer"`; would read "2 offer".
@@ -180,12 +180,12 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 - `closeAll` is passed to `Detail` (`:330`) and destructured (`:347`) but never used; `GROUP_LABEL` (`:42`) duplicates `STAGES[].label`. Dead code.
 - Legacy statuses `ghosted`/`withdrawn` (referenced in `Stats.jsx:168`) have no group in `STAGES`, so such rows would be invisible in the list while still counted in the header. None exist today (`Counter({'rejected':347,'applied':30})`).
 - A notes save does not refresh the row: measured `age_cell_after: "20d"` after the PATCH had already reset `updated_at` server-side. The list and the "N waiting >7d" header stay stale until the next load.
-**Status** log only.
+**Status** logged — grouped smaller items, user asked for an explanation (see chat 2026-09-02)
 
 ### APPS-23 · P4 · The "Cached" link bypasses the API-key header (works only via the session cookie)
 **Where** `:376` — a plain `<a href="/api/jobs/{id}/cached-page">`, so the axios `X-API-Key` interceptor (`api.js`) does not apply.
 **Actual** measured both ways: server-side request without a key → **401 `{"detail":"API key required"}"`**; the same URL fetched from the authenticated browser → **200**. `main.py:137` sets `jn_session`, so in the real app the link works. It would 401 in a new tab for any deployment where the cookie is absent.
-**Status** log only — no live defect in this deployment.
+**Status** logged — explanation given in chat 2026-09-02; no change unless the link should be fetched through the API client
 
 ---
 

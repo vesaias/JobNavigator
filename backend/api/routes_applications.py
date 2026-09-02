@@ -239,7 +239,7 @@ def create_application(
             company=data.company,
             title=data.title,
             url=data.url,
-            source="direct",
+            source="manual",   # APPS-15: hand-logged via the Log modal / extension, not a scrape
             status="applied",
             seen=True,
         )
