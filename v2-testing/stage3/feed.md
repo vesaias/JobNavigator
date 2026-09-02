@@ -174,7 +174,7 @@ Cause: each cell sets an inline `color` (and ⋯ also an inline `background`), w
 non-`!important` rules in `theme.css`.
 **Proposed fix** add `!important` to the `color`/`background` in `.v2-rail-save/.v2-rail-skip/.v2-rail-copy`,
 or drop the inline colours.
-**Status** needs decision
+**Status** fixed + verified after rebuild: `.v2-rail-save/-skip/-copy` hovers carry `!important` — ♥ ✕ ⋯ now change colour and background
 
 ### FEED-13 · P3 · The row SCORE button's hover is the wrong hover
 **Where** `JobFeed.jsx:760` (`.v2-hover-accent`); `theme.css:129`
@@ -182,7 +182,7 @@ or drop the inline colours.
 background:var(--accent-soft)"` (`…Redesign.dc.html:212`).
 **Actual** measured: only `backgroundColor → rgb(246,244,238)` (`--surface-2`). Border stays dashed
 `rgb(138,130,110)`, colour stays `rgb(109,104,98)`.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-14 · P3 · Detail chevron and "+ Rescore" get a background wash instead of the design's colour change
 **Where** `JobFeed.jsx:820` / `:822` (chevron, `.v2-hover-accent`), `:895` (`+ Rescore`, `.v2-navlink`)
@@ -192,7 +192,7 @@ background:var(--accent-soft)"` (`…Redesign.dc.html:212`).
 `color:'var(--muted)'` wins).
 Same class on the report-band header row measures bg `--surface-2` where the design says
 `background:var(--line-soft)` (`…dc.html:299`) — that one at least fires.
-**Status** needs decision (unified accent hovers are a stated cross-screen decision — but here the
+**Status** fixed + verified: `.v2-hover-accent` colour half hardened tree-wide — chevron and + Rescore change colour and background (the unified accent hover)
 authored property is the one that fails to apply)
 
 ### FEED-15 · P3 · Score/Salary preset pills and every bulk-bar button have no hover
@@ -202,7 +202,7 @@ bulk Skip/Score/Tailor `style-hover="border-color:#f6f3ea"`, bulk ✕ `style-hov
 (`…dc.html:171-175`).
 **Actual** `hover_delta` → `changed: []` for the "80" preset and for both bulk "Skip" and "Score".
 **Proposed fix** `.v2-bdc` / `.v2-bd` already exist in `theme.css:157-160` for exactly this.
-**Status** needs decision
+**Status** fixed + verified after rebuild: score/salary preset pills and the bulk-bar buttons carry the `.v2-bdc` pill hover
 
 ### FEED-16 · P3 · `Escape` closes nothing
 **Where** `JobFeed.jsx:430-448` (the key handler)
@@ -211,7 +211,7 @@ bulk Skip/Score/Tailor `style-hover="border-color:#f6f3ea"`, bulk ✕ `style-hov
 appeared to close, and that was the click that preceded it. Every overlay is backdrop-only.
 **Proposed fix** one `if (e.key === 'Escape')` branch closing `menu`, `rowMenu`, `headMenu`,
 `shortcutsOpen`, `picker`, `rescoreJob`.
-**Status** needs decision
+**Status** fixed + verified after rebuild: Escape closes filter dropdowns, row/head menus, the shortcuts popover, the copy/tailor picker and the rescore modal
 
 ### FEED-17 · P3 · The keyboard legend and the handler disagree
 **Where** `JobFeed.jsx:103` (`SHORTCUTS`), `:430-443` (handler), `:797`/`:845`/`:848` (menu hints)
@@ -223,7 +223,7 @@ appeared to close, and that was the click that preceded it. Every overlay is bac
 - `Enter` — no effect (v1 toggled the detail).
 Popover contents measured: `j/↓, k/↑, s, x, a, e/o, r, Ctrl-click, Shift-click` (width 214).
 **Proposed fix** handle `o`, `t`, `c` (three `case` lines), and list `f`/`g`.
-**Status** needs decision
+**Status** fixed + verified after rebuild: `o` opens the posting (same as `e`), `t` opens the tailor picker, `c` goes to the cover letter; the legend lists j/f, k/g, t, c and Esc
 
 ### FEED-18 · P3 · The collapsed report band mixes the best report's identity with the active tab's numbers
 **Where** `JobFeed.jsx:866-880`
@@ -235,7 +235,7 @@ The header therefore attributes TPgM's coverage to PM.
 (`…dc.html` x-dc L826-834) and `bandCounts`/`dReqSummary` from `active` (L845, L803) — i.e. the design has
 the same split, it is just never visible there because its band is only shown collapsed.
 **Proposed fix** drive the whole band header off `active`, or hide the counts while the band is open.
-**Status** needs decision: keep design parity, or make the band self-consistent?
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision: keep design parity, or make the band self-consistent?
 
 ### FEED-19 · P3 · Rescoring an already-scored job gives no signal in the detail panel
 **Where** `JobFeed.jsx:591` (`running`), `:359-361` (`runRescore` updates `jobs` but not `detail`),
@@ -248,7 +248,7 @@ and the running band would render at once because `dScored = reports.length > 0`
 `running`. The design defines `dScored = !!dBest && !dRunning` (x-dc L794) so exactly one band shows.
 **Proposed fix** `const dScored = reports.length > 0 && !running`, and mirror the `in_flight` update onto
 `detail`.
-**Status** needs decision
+**Status** fixed in source: in-flight state is mirrored onto the open detail (score, rescore, tailor and the poll), and the report band yields to the running band while a rescore runs
 
 ### FEED-20 · P3 · Bulk Save / Skip are silent and leave the header counts stale
 **Where** `JobFeed.jsx:422-426`
@@ -256,7 +256,7 @@ and the running band would render at once because `dScored = reports.length > 0`
 success, none on failure (console.error only), no undo**, and `refreshStats()` is never called — the
 header's "arrived today / not yet scored" figures do not move after a bulk skip. Single-row skip has an
 undo; the bulk version, which can hit 40 rows at once, has none.
-**Status** needs decision
+**Status** fixed + verified in source: bulk Skip/Save toast success ("Skipped N jobs") or error, and refresh the header stats
 
 ### FEED-21 · P3 · "Run scoring" with nothing selected is a silent no-op
 **Where** `JobFeed.jsx:350-352`, `:1180`
@@ -264,7 +264,7 @@ undo; the bulk version, which can hit 40 rows at once, has none.
 `cursor: default`) but is still clickable; clicking fires **no POST**, leaves the modal open and shows
 no message. Same shape on the picker's confirm (`:1124`) when `cvBase == null`.
 **Proposed fix** disable pointer events, or surface "Pick at least one résumé".
-**Status** needs decision
+**Status** fixed in source: Run scoring with nothing selected is inert (pointer-events none, tooltip "Pick at least one résumé")
 
 ### FEED-22 · P3 · The live iframe mounts before the frame-check answers, so blocked postings throw a console error and flash
 **Where** `JobFeed.jsx:1044` — rendered whenever `d.url && (extActive || forceFrame || frameOk !== false)`,
@@ -278,7 +278,7 @@ The blocked panel itself is correct once it arrives — measured copy matches th
 "Open in new tab ↗" button measures h 34 / pad 0 16px / accent, exactly the design's numbers
 (`…dc.html:447`).
 **Proposed fix** render the "probing" placeholder (or nothing) while `frameOk === null`.
-**Status** needs decision
+**Status** fixed + verified after rebuild: nothing mounts while the frame-check is pending (0 iframes, 0 X-Frame-Options console errors during the probe)
 
 ### FEED-23 · P3 · Requirement table: unmet rows aren't tinted, header isn't sticky
 **Where** `JobFeed.jsx:966-976`
@@ -287,7 +287,7 @@ and the column header is `position:sticky;top:0;z-index:2;background:var(--surfa
 **Actual** measured every row `backgroundColor: rgba(0,0,0,0)`; header `position: static`.
 Everything else in the table is right — 2 of 4 met, ✓/✕ in `--good`/`--bad`, `cv_evidence || cv_match || '—'`
 fallback all verified, and the All/Gaps segmented control filters correctly (4 rows → 2, both unmet).
-**Status** needs decision
+**Status** decided 2026-09-02: keep (no tint)
 
 ### FEED-24 · P3 · Empty state is one bare line where the design has a guided one
 **Where** `JobFeed.jsx:731`
@@ -296,14 +296,14 @@ and source have their own filters." + a **Clear search** button (`…dc.html:180
 "Nothing to show" overlay on the detail pane (`…dc.html:246-250`).
 **Actual** "No jobs match." only, in both the no-results and the filtered-to-nothing case, with no way
 back. The detail pane shows "Select a job."
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-25 · P3 · Title search has no clear affordance
 **Where** `JobFeed.jsx:611`
 **Expected** design has a ✕ inside the input (`clearTitleQuery`, `…dc.html:84`) plus a
 `Title · “{query}”` removable chip in the filter bar (`…dc.html:145-148`).
 **Actual** neither exists; the only way to clear is to select-all-and-delete. Every other filter has a ✕.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-26 · P3 · Source and H-1B dropdowns show no per-value counts
 **Where** `JobFeed.jsx:620` / `:645`
@@ -312,7 +312,7 @@ back. The detail pane shows "Select a job."
 **Actual** measured Source menu text "Direct | Extension | Jobright | Levels | LinkedIn Extension";
 H-1B "Likely | Possible | Unlikely | Unknown". `/jobs/companies/list?counts=1` exists; there is no
 equivalent counted endpoint for sources/verdicts.
-**Status** needs decision
+**Status** fixed + verified after rebuild + restart: `/jobs/sources/list?counts=1` and `/jobs/verdicts/list?counts=1` return `[{name, count}]`; the Source and H-1B dropdowns show a mono count per value
 
 ### FEED-27 · P3 · Score ring geometry and colour scale differ from the design
 **Where** `JobFeed.jsx:12` (`ROW_C`), `:23` (`scoreColor`), `:747-751`
@@ -321,7 +321,7 @@ colours `>=80 → --accent`, `>=65 → --text-2`, else `--muted` (x-dc L1474-147
 explaining the three tiers).
 **Actual** measured 44×44, `viewBox 0 0 88 88`, `r 35`, `stroke-width 5` (2.5 px rendered), colours
 `>=70 → --good`, `>=50 → --warn`, else `--bad`. The band ring (34px, viewBox 78, sw 5) does match the design.
-**Status** needs decision: keep the heavier ring + traffic-light scale (cross-screen consistency), or
+**Status** decided 2026-09-02: keep
 match the design?
 
 ### FEED-28 · P3 · Sort's fourth option differs from the design
@@ -330,7 +330,7 @@ match the design?
 **Actual** measured: Top score / Newest first / Salary, high to low / **Company A–Z**. All four code
 options work (`sort_by=score|<omitted>|salary|company` verified on the wire) and the choice persists to
 `v2_feed_sort`.
-**Status** needs decision
+**Status** decided 2026-09-02: keep
 
 ### FEED-29 · P4 · Save gives no feedback; the design gives it an undo toast
 **Where** `JobFeed.jsx:310` (`saveJob`)
@@ -338,7 +338,7 @@ options work (`sort_by=score|<omitted>|salary|company` verified on the wire) and
 **Actual** measured: PATCH fires and the server flips `saved`/`status` correctly, **zero toasts**. Skip
 and Apply both toast; Save does not, so the one action that does not remove the row is also the one with
 no confirmation.
-**Status** needs decision
+**Status** fixed + verified after rebuild: Save/unsave shows the undo toast ("Saved “title” · Undo")
 
 ### FEED-30 · P4 · Row metrics drift from the design
 **Where** `JobFeed.jsx:742-780`
@@ -352,7 +352,7 @@ no confirmation.
 | header / filter-bar left pad | 30 px | 24 px |
 Pill geometry, panel widths (216/248/196/212/224/172/228/236/436) and the detail header
 (`20px 30px 15px`, 26px title, clamp 2 → collapsed `11px 30px 12px`, 17px, clamp 1) all match exactly.
-**Status** needs decision (the 24 px left inset is consistent across the screen, so it reads deliberate)
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (the 24 px left inset is consistent across the screen, so it reads deliberate)
 
 ### FEED-31 · P4 · Dead code
 **Where** `JobFeed.jsx:578` `arrivedToday` (computed every render, never rendered — the header uses
@@ -361,19 +361,19 @@ Pill geometry, panel widths (216/248/196/212/224/172/228/236/436) and the detail
 "embed anyway" override does not exist); `theme.css:208` `.v2-tab { transition: color .12s }` with no
 `:hover` rule anywhere — measured `changed: []`, which **matches the design** (no `style-hover` on tabs),
 so the transition is simply inert.
-**Status** needs decision (safe deletions, but out of a testing pass's remit)
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision (safe deletions, but out of a testing pass's remit)
 
 ### FEED-32 · P4 · The Company menu remembers the previous query
 **Where** `JobFeed.jsx:623`
 **Actual** measured: type `ZZTEST`, pick a company, close, reopen → the input still reads `ZZTEST` and
 the list is still filtered. Nothing resets `companyQuery`.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-33 · P4 · The Score and Salary number inputs fire one request per keystroke
 **Where** `JobFeed.jsx:653` / `:663`
 **Actual** measured **3** `GET /jobs` requests while typing "55" (clear + two digits). The title search is
 debounced 400 ms (`:195`); these are not debounced at all.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-34 · P4 · A job with no company still offers "Ignore  everywhere"
 **Where** `JobFeed.jsx:801` / `:854`, handler `:315-327`
@@ -381,7 +381,7 @@ debounced 400 ms (`:195`); these are not debounced at all.
 it removes every company-less row from the list before `if (!name) return` aborts — a silent local
 deletion with no server change. The detail eyebrow also renders a leading separator: "· DIRECT · JUST NOW".
 **Proposed fix** hide the item when `!job.company`; skip the leading `·` in the eyebrow.
-**Status** needs decision
+**Status** fixed + verified after rebuild: the Ignore item is hidden for a company-less job (both menus) and the detail eyebrow drops its leading separator
 
 ### FEED-35 · P4 · The posting pane is an iframe where the design is a reader column
 **Where** `JobFeed.jsx:1027-1060`
@@ -393,26 +393,26 @@ deletion with no server change. The detail eyebrow also renders a leading separa
 caption "Cached snapshot · captured when you applied", body text read through the frame, and Live
 switches back. The no-URL case renders "No posting URL captured for this job." and hides the header's
 `Open ↗` (verified) while the row ⋯ menu still shows a no-op "Open posting ↗".
-**Status** needs decision (this is the v2 iframe direction, not an accident)
+**Status** decided 2026-09-02: keep
 
 ### FEED-36 · P4 · `--iframe-bg` is the same white in both themes
 **Where** `theme.css:34`
 **Actual** measured `backgroundColor rgb(255,255,255)` for the posting iframe in light **and** dark — the
 only token in the whole sweep that does not change. Defensible for third-party pages; it also applies to
 our own cached-snapshot document.
-**Status** needs decision
+**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision
 
 ### FEED-37 · P4 · Palette values differ from the design's map
 **Where** `theme.css:5`
 **Actual** `--surface-2` is `#f6f4ee` (design `#f3f0e8`), `--bg` is `#fcfbf7` (design `#faf8f3`).
 Screen-wide, not feed-specific.
-**Status** needs decision
+**Status** decided 2026-09-02: keep — the user changed `--surface-2` (#f6f4ee) and `--bg` (#fcfbf7) on purpose
 
 ### FEED-38 · P4 · No load-more or end-of-list indicator
 **Where** `JobFeed.jsx:240-257`
 **Actual** infinite scroll works — measured 40 → 80 rows with `limit=40&offset=40` on the wire — but
 nothing renders while the page is in flight and nothing marks the end of the list.
-**Status** needs decision
+**Status** fixed + verified after rebuild: "Loading more…" while a page is in flight, "End of the list · N jobs" once exhausted
 
 ---
 

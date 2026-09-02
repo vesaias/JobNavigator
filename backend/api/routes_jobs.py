@@ -298,6 +298,7 @@ def list_job_companies(
 
 @router.get("/sources/list")
 def list_job_sources(
+    counts: Optional[bool] = None,
     status: Optional[str] = None,
     company: Optional[str] = None,
     h1b_verdict: Optional[str] = None,
@@ -312,17 +313,21 @@ def list_job_sources(
 ):
     """Return distinct source values from jobs matching current filters, sorted."""
     company = _expand_company_filter(db, company)
-    q = db.query(Job.source).distinct().filter(Job.source.isnot(None), Job.source != "")
+    # FEED-26: ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
+    q = (db.query(Job.source, func.count(Job.id)) if counts else db.query(Job.source).distinct()).filter(Job.source.isnot(None), Job.source != "")
     q = _apply_common_filters(q, status=status, company=company, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
                               remote=remote, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
+    if counts:
+        return [{"name": r[0], "count": r[1]} for r in q.group_by(Job.source).order_by(Job.source).all()]
     rows = q.order_by(Job.source).all()
     return [r[0] for r in rows]
 
 
 @router.get("/verdicts/list")
 def list_job_verdicts(
+    counts: Optional[bool] = None,
     status: Optional[str] = None,
     company: Optional[str] = None,
     source: Optional[str] = None,
@@ -337,11 +342,14 @@ def list_job_verdicts(
 ):
     """Return distinct h1b_verdict values from jobs matching current filters."""
     company = _expand_company_filter(db, company)
-    q = db.query(Job.h1b_verdict).distinct().filter(Job.h1b_verdict.isnot(None), Job.h1b_verdict != "")
+    # FEED-26: ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
+    q = (db.query(Job.h1b_verdict, func.count(Job.id)) if counts else db.query(Job.h1b_verdict).distinct()).filter(Job.h1b_verdict.isnot(None), Job.h1b_verdict != "")
     q = _apply_common_filters(q, status=status, company=company, source=source,
                               min_score=min_score, saved=saved, title_search=title_search,
                               remote=remote, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
+    if counts:
+        return [{"name": r[0], "count": r[1]} for r in q.group_by(Job.h1b_verdict).order_by(Job.h1b_verdict).all()]
     rows = q.order_by(Job.h1b_verdict).all()
     return [r[0] for r in rows]
 

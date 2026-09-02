@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 40 | 60 | 11 |
-| P4 | 90 | 18 | 57 | 15 |
-| **All** | **276** | **132** | **117** | **27** |
+| P3 | 111 | 50 | 47 | 14 |
+| P4 | 90 | 21 | 52 | 17 |
+| **All** | **276** | **145** | **99** | **32** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -18,7 +18,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 26 |
-| feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
+| feed.md | 38 | 0 | 10 | 18 | 10 | 24 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
@@ -120,6 +120,19 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - FEED-09 (P2) — A bad `?job=` id silently opens a different job
 - FEED-10 (P2) — `GET /api/jobs/{non-uuid}` returns 500 (backend)
 - FEED-11 (P2) — A failed job list is indistinguishable from an empty one
+- FEED-12 (P3) — The row action rail's hovers are half dead
+- FEED-14 (P3) — Detail chevron and "+ Rescore" get a background wash instead of the design's colour change
+- FEED-15 (P3) — Score/Salary preset pills and every bulk-bar button have no hover
+- FEED-16 (P3) — `Escape` closes nothing
+- FEED-17 (P3) — The keyboard legend and the handler disagree
+- FEED-19 (P3) — Rescoring an already-scored job gives no signal in the detail panel
+- FEED-20 (P3) — Bulk Save / Skip are silent and leave the header counts stale
+- FEED-21 (P3) — "Run scoring" with nothing selected is a silent no-op
+- FEED-22 (P3) — The live iframe mounts before the frame-check answers, so blocked postings throw a console error and flash
+- FEED-26 (P3) — Source and H-1B dropdowns show no per-value counts
+- FEED-29 (P4) — Save gives no feedback; the design gives it an undo toast
+- FEED-34 (P4) — A job with no company still offers "Ignore  everywhere"
+- FEED-38 (P4) — No load-more or end-of-list indicator
 - PERS-01 (P1) — A non-list `qa_bank` white-screens the whole app
 - PERS-02 (P2) — `PATCH /api/persona` silently dropped every order-only write — Skills ▲▼ did nothing
 - PERS-03 (P2) — The Skills value box is dead for any category containing a dot
