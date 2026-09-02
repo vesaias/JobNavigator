@@ -49,10 +49,10 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, mo
     if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
-  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, fontFamily: mono ? 'var(--mono)' : 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? 1.5 : undefined }
+  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, fontFamily: mono ? 'var(--mono)' : 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? '19px' : undefined }
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: flex || undefined, minWidth: 0 }}>
-      {label && <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{label}</span>}
+      {label && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>}
       {multiline
         ? <textarea value={value || ''} onChange={(e) => onChange(e.target.value)} onKeyDown={boldKey} placeholder={placeholder} rows={rows || 3} style={st} />
         : <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={st} />}
@@ -63,7 +63,7 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, mo
 // (the row supplies the border/highlight) — matches the design's static-text bullets
 // `lh` overrides the 1.5 line-height where the caller needs whole-pixel rows
 // (12.5px * 1.5 = 18.75, which puts a bordered row on a half pixel and lets
-// Chrome round its border away). Résumé bullets keep the 1.5 default.
+// Chrome round its border away). The default is now 19px so bullet rows stay on whole pixels.
 export function BulletText({ value, onChange, placeholder, bold, lh }) {
   const ref = useRef(null)
   const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }
@@ -87,10 +87,10 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
   return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1} placeholder={placeholder}
-    style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || 1.5, color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
+    style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
 export const RemoveLink = ({ onClick, children = 'Remove' }) => (
-  <span onClick={onClick} style={{ fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
+  <span onClick={onClick} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad">{children}</span>
 )
 export const DashedAdd = ({ onClick, children, big }) => (
   <div onClick={onClick} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
@@ -99,21 +99,21 @@ export const DashedAdd = ({ onClick, children, big }) => (
 // overrides it, since its resume_content is a source pool that never prints.
 export const EmptyState = ({ what, note }) => (
   <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-    <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>No {what} yet</span>
-    <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
+    <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>No {what} yet</span>
+    <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
   </div>
 )
-export const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
+export const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
 export const MenuItem = ({ icon, label, hint, onClick }) => (
   <div onClick={onClick} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
     {icon != null && <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{icon}</span>}
     <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
-    {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--faint)' }}>{hint}</span>}
+    {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>{hint}</span>}
   </div>
 )
 export const MicroField = ({ label, value, onChange, placeholder, mono }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-    <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
+    <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
     <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: mono ? 11 : 12.5, outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)' }} />
   </div>
 )
@@ -127,7 +127,7 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
         <span style={{ color: 'var(--muted)', fontSize: 10 }}>{open ? '⌄' : '›'}</span>
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-          {count != null && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>({count})</span>}
+          {count != null && <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>({count})</span>}
         </span>
         {meta}
       </div>
@@ -172,7 +172,7 @@ export function HeaderEditor({ data, setField, mutate }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span style={UPPER}>Contact items</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--faint)' }}>text · link · stub</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>text · link · stub</span>
         </div>
         {items.map((it, i) => {
           const showStub = it.url && !it.url.startsWith('mailto:')
@@ -235,18 +235,18 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp })
                   const m = bulletMark(i, bi, b)
                   return (
                     <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
-                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>{m ? '✦' : '—'}</span>
+                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
-                      {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.5 }}>↩</span>}
-                      <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
+                      {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
+                      <span onClick={() => mutate((d) => d.experience[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
                     </div>
                   )
                 })}
                 {(e.suggested_bullets || []).map((sb, k) => (
                   <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
-                    <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: 1.5 }}>✦</span>
-                    <span style={{ flex: 1, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-2)' }}>{sb}</span>
-                    <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.6 }}>suggested</span>
+                    <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
+                    <span style={{ flex: 1, fontSize: 12.5, lineHeight: '19px', color: 'var(--text-2)' }}>{sb}</span>
+                    <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
                   </div>
                 ))}
                 <div onClick={() => mutate((d) => { d.experience[i].bullets = d.experience[i].bullets || []; d.experience[i].bullets.push('') })} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>+ Add bullet</div>
@@ -268,11 +268,11 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
-        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: 1.55 }}>{changed ? '✦' : '—'}</span>
+        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{changed ? '✦' : '—'}</span>
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
-        {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: 1.55 }}>↩</span>}
+        {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
       </div>
-      <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
+      <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
     </div>
   )
 }
@@ -344,12 +344,12 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate }) {
           </div>
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`projects.${i}.description`, v)} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
+            <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
             {(p.bullets || []).map((b, bi) => (
               <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
-                <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: 1.5 }}>—</span>
+                <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>—</span>
                 <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
-                <span onClick={() => mutate((d) => d.projects[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: 1.7 }}>✕</span>
+                <span onClick={() => mutate((d) => d.projects[i].bullets.splice(bi, 1))} title="Remove" className="v2-hover-bad" style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 10, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
               </div>
             ))}
             <DashedAdd onClick={() => mutate((d) => { d.projects[i].bullets = d.projects[i].bullets || []; d.projects[i].bullets.push('') })}>+ Add bullet</DashedAdd>

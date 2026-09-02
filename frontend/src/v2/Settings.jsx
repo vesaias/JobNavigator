@@ -92,7 +92,7 @@ function TextBox({ value, onSave, width, mono, secret, placeholder }) {
         autoComplete="off"
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, color: 'var(--text)' }} />
       {secret && !!value && (
-        <span onClick={() => (shown ? setShown(false) : reveal())} style={{ fontSize: 10.5, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+        <span onClick={() => (shown ? setShown(false) : reveal())} style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
           {shown ? 'hide' : 'show'}
         </span>
       )}
@@ -103,7 +103,7 @@ function TextBox({ value, onSave, width, mono, secret, placeholder }) {
 function Toggle({ on, label, onPick }) {
   return (
     <span onClick={onPick} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: '0 0 auto' }}>
-      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</span>
+      <span style={{ fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>
       <span style={{ width: 26, height: 15, borderRadius: 99, background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
         <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: 'var(--knob)', transition: 'left 150ms' }} />
       </span>
@@ -485,7 +485,7 @@ function Row({ r, ctx }) {
                 <TextBox value={val(`${r.base}_api_key`)} onSave={(v) => save(`${r.base}_api_key`, v)} width="150px" mono secret />
               </span>
             )}
-            {!on && <span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
+            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" onPick={() => {
                 const next = !on
@@ -503,7 +503,7 @@ function Row({ r, ctx }) {
             : String(raw ?? '')
         return (
           <>
-            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview || '—'}</span>
+            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview || '—'}</span>
             <span onClick={() => setEditFor(r)} className="v2-bdc" style={{ flex: '0 0 auto', height: 26, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Edit</span>
           </>
         )
@@ -511,7 +511,7 @@ function Row({ r, ctx }) {
       case 'models':
         return (
           <>
-            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {(() => { let m = S.llm_models_list; if (typeof m === 'string') { try { m = JSON.parse(m) } catch { m = [] } } m = Array.isArray(m) ? m : []
                 const c = m.filter((x) => x.custom).length
                 return `${m.length} models · ${m.length - c} seeded · ${c} added by you` })()}
@@ -522,7 +522,7 @@ function Row({ r, ctx }) {
       case 'button':
         return (
           <>
-            {r.preview && <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</span>}
+            {r.preview && <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</span>}
             <ActionBtn label={r.btnLabel} state={trig[r.label] || ''} onClick={() => runAction(r.label, r.act)} />
           </>
         )
@@ -584,7 +584,7 @@ function ApiKeyRow({ value, save, flash }) {
         <input value={local} onChange={(e) => setLocal(e.target.value)} type={shown ? 'text' : 'password'} autoComplete="off"
           placeholder={isSet ? 'Set — type a new key to replace it' : 'No key — the dashboard is open'}
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
-        <span onClick={() => setShown((v) => !v)} style={{ fontSize: 10.5, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</span>
+        <span onClick={() => setShown((v) => !v)} style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</span>
       </span>
       <ActionBtn label="Save key" state="" onClick={async () => {
         if (!local.trim()) { flash('Type the new key first', true); return }
@@ -682,7 +682,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
           {/* 1.5x wider and 2x taller than before, capped so it never exceeds the window */}
           <textarea value={text} onChange={(e) => { setText(e.target.value); commit(e.target.value) }}
-            style={{ flex: 1, width: '100%', minHeight: 440, padding: '12px 14px', border: `1px solid ${err ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 8, background: 'var(--surface)', fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: 1.7, color: 'var(--text)', outline: 'none', resize: 'vertical' }} />
+            style={{ flex: 1, width: '100%', minHeight: 440, padding: '12px 14px', border: `1px solid ${err ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 8, background: 'var(--surface)', fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: '20px', color: 'var(--text)', outline: 'none', resize: 'vertical' }} />
         </div>
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</span>

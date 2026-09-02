@@ -19,7 +19,7 @@ export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['deta
 export const STAGE_CLASS = { applied: 'cc-smartrecruiters', interview: 'cc-workday', offer: 'cc-tier1', rejected: 'cc-generic' }
 
 const ARCH_KEY = 'v2_cl_archive_open'
-const LABEL = { fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
+const LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 const CTRL = {
   height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8,
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
@@ -271,7 +271,7 @@ export default function CoverLetters() {
           <span title={c.stage ? 'Stage of the linked application' : 'No application yet'} className={STAGE_CLASS[c.stage] || 'cc-generic'}
             style={{ flex: '0 0 auto', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.stage || 'Draft'}</span>
         )}
-        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{ago(c.updated_at)}</span>
+        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{ago(c.updated_at)}</span>
         <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
       </div>
     )
@@ -298,7 +298,7 @@ export default function CoverLetters() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={LABEL}>Your résumé</span>
             <Picker value={genResume} options={resumeOpts} placeholder="Select a résumé…" onPick={setGenResume} />
-            <span style={{ fontSize: 10.5, color: 'var(--muted)', textWrap: 'pretty' }}>Base for achievements and motivation</span>
+            <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>Base for achievements and motivation</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
