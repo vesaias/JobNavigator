@@ -142,7 +142,7 @@ def test_create_application_twice_returns_409(api_client, test_db):
     assert second.status_code == 409
     assert second.json()["detail"]["application_id"] == first.json()["id"]
     apps = api_client.get("/api/applications").json()
-    apps = apps if isinstance(apps, list) else apps.get("items", [])
+    apps = apps if isinstance(apps, list) else apps.get("applications", [])
     mine = [a for a in apps if a.get("id") == first.json()["id"]]
     assert len(mine) == 1 and mine[0]["status"] == "applied"
     assert mine[0].get("notes", "first") == "first"
