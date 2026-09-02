@@ -9,13 +9,13 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
 | P3 | 111 | 20 | 85 | 6 |
-| P4 | 90 | 6 | 72 | 12 |
-| **All** | **276** | **100** | **157** | **19** |
+| P4 | 90 | 7 | 72 | 11 |
+| **All** | **276** | **101** | **157** | **18** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| applications.md | 23 | 0 | 7 | 10 | 6 | 17 |
+| applications.md | 23 | 0 | 7 | 10 | 6 | 18 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 15 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
@@ -53,6 +53,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - APPS-18 (P4) — "Cached" never appears for a freshly logged application until a later refetch
 - APPS-19 (P4) — The rail "Applications" badge is never refreshed by this screen
 - APPS-21 (P4) — "Applied on" is a UTC date sent as UTC midnight
+- APPS-22 (P4) — Smaller items (grouped)
 - COMP-01 (P1) — Drawer `Save changes` closes before the PATCH resolves — a failed save loses the edit silently
 - COMP-02 (P2) — Drawer's `company` object is never refreshed, so the banner / tuning note / subtitle go stale while the drawer is open
 - COMP-03 (P2) — The list has no loading and no error branch — a failed `GET /companies` renders as "you have no companies matching your search"

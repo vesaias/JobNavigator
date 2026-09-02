@@ -180,12 +180,12 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 - `closeAll` is passed to `Detail` (`:330`) and destructured (`:347`) but never used; `GROUP_LABEL` (`:42`) duplicates `STAGES[].label`. Dead code.
 - Legacy statuses `ghosted`/`withdrawn` (referenced in `Stats.jsx:168`) have no group in `STAGES`, so such rows would be invisible in the list while still counted in the header. None exist today (`Counter({'rejected':347,'applied':30})`).
 - A notes save does not refresh the row: measured `age_cell_after: "20d"` after the PATCH had already reset `updated_at` server-side. The list and the "N waiting >7d" header stay stale until the next load.
-**Status** logged — grouped smaller items, user asked for an explanation (see chat 2026-09-02)
+**Status** fixed + verified after rebuild (all eight): "offers" pluralised; Recent/Oldest sort on timestamps; header reads the server total and says "showing the first N" past the 2000-row page; résumé name is plain text unless a tailored copy exists; Escape/close on a dirty Log modal asks "Discard this application?"; `closeAll` prop + `GROUP_LABEL` removed; legacy statuses (ghosted/withdrawn) list under Rejected; a notes save reloads the row so its age and the header follow
 
 ### APPS-23 · P4 · The "Cached" link bypasses the API-key header (works only via the session cookie)
 **Where** `:376` — a plain `<a href="/api/jobs/{id}/cached-page">`, so the axios `X-API-Key` interceptor (`api.js`) does not apply.
 **Actual** measured both ways: server-side request without a key → **401 `{"detail":"API key required"}"`**; the same URL fetched from the authenticated browser → **200**. `main.py:137` sets `jn_session`, so in the real app the link works. It would 401 in a new tab for any deployment where the cookie is absent.
-**Status** logged — explanation given in chat 2026-09-02; no change unless the link should be fetched through the API client
+**Status** decided 2026-09-02: ignore (works with the session cookie; only a cookie-less tab would 401)
 
 ---
 
