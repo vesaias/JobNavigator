@@ -35,6 +35,19 @@ export function Picker({ value, options, placeholder, onPick, width }) {
     document.addEventListener('click', close)
     return () => document.removeEventListener('click', close)
   }, [open])
+  // RES-15: Escape closes the popover and claims the event, so the modal this
+  // picker may be sitting in doesn't close on the same press. Registered on mount
+  // (not on open) so it runs before the modal's own handler.
+  const openRef = useRef(false)
+  openRef.current = open
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || !openRef.current) return
+      e.preventDefault(); setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
   const cur = options.find((o) => o.id === value)
   return (
     <span style={{ position: 'relative', display: 'block' }} onClick={(e) => e.stopPropagation()}>
@@ -339,9 +352,11 @@ export default function CoverLetters() {
             <LengthPicker value={genLength} onPick={setGenLength} />
           </div>
 
+          {/* RES-17: --line on --muted when disabled, like every other primary pill
+              in the three builders — a dimmed accent still reads as live. */}
           <div onClick={generate} title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}
-            style={{ height: 36, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, lineHeight: 1, fontSize: 13, fontWeight: 500, cursor: canGenerate ? 'pointer' : 'default', opacity: canGenerate ? 1 : 0.55 }}>
-            {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+            style={{ height: 36, borderRadius: 99, background: canGenerate ? 'var(--accent)' : 'var(--line)', color: canGenerate ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, lineHeight: 1, fontSize: 13, fontWeight: 500, cursor: canGenerate ? 'pointer' : 'default' }}>
+            {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
           </div>
           {err && <span style={{ fontSize: 11.5, color: 'var(--bad)', textWrap: 'pretty' }}>{err}</span>}

@@ -180,12 +180,12 @@ The backend half of this is now fixed: before the restart `GET /resumes/not-a-uu
 ### RES-23 · P4 · `.v2-navlink:hover`'s colour rule never fires where the caller sets an inline colour
 **Where** `theme.css:133-134`; callers `Resumes.jsx:123`, `:139`, `ResumeEditor.jsx:324`, `:352`
 **Actual** measured on "‹ Résumés": `color` stayed `rgb(63,107,82)` through the hover; only `background` changed. `.v2-hover-accent` was given `!important` for exactly this reason (theme.css:129 + its comment); `.v2-navlink` was not. On "based on {base} ↗" the outer span does change colour, but its two inner spans carry inline colours, so nothing visible moves either.
-**Status** needs decision: add `!important` to `.v2-navlink:hover`, or accept background-only?
+**Status** fixed earlier (5c6c17a hover hardening): `.v2-navlink:hover` now carries `!important` on both background and colour — measured on “‹ Résumés” in the Feed/Companies rounds.
 
 ### RES-24 · P4 · One localStorage key holds the section-open state for every résumé and for Persona
 **Where** `ResumeEditor.jsx:81`, `:306` — `jobnavigator_v2_resume_sections`
 **Actual** measured: opened Skills on copy A → `["Experience","Skills"]`; opened copy B → Skills already open; navigated to `/v2/persona` → same single key, and `Object.keys(localStorage).filter(k => k.includes('section'))` returned exactly `['jobnavigator_v2_resume_sections']`. So Persona and every résumé share one preference.
-**Status** needs decision (arguably the desired behaviour — noting it because the inventory flagged it as unverified)
+**Status** closed: already split — Persona uses `jobnavigator_v2_persona_sections`, Cover Letters `v2_cl_sections`, Résumés `jobnavigator_v2_resume_sections` (user 2026-09-03: split for all three).
 
 ### RES-25 · P4 · The success toast that carries "Open ↗" expires in 2.5 s
 **Where** `ResumeEditor.jsx:112`, `:142`; `Toast.jsx:21`

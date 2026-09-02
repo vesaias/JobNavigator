@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
+import ConfirmDialog from './ConfirmDialog'
+import { useEscape, setFlashToast } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
-  MenuHead, MenuItem, SectionShell, SectionEditor,
+  MenuHead, MenuItem, SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
@@ -79,7 +81,6 @@ const markReviewed = (rid) => { try { localStorage.setItem(REVIEWED_KEY, JSON.st
 export default function ResumeEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [, setSearchParams] = useSearchParams()
   const [doc, setDoc] = useState(null)
   const [data, setData] = useState(null)
   const [templates, setTemplates] = useState([])
@@ -106,6 +107,8 @@ export default function ResumeEditor() {
   const [baseCopyCount, setBaseCopyCount] = useState(null)
   const [scoring, setScoring] = useState(false)
   const [headMenu, setHeadMenu] = useState(false)
+  const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
+  const [jobErr, setJobErr] = useState(false)   // RES-20: the linked job failed to load
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
   const pendingRef = useRef([])   // [{baseId, jobId, company, since}]
@@ -114,20 +117,39 @@ export default function ResumeEditor() {
 
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
-  // background tailoring: after POST, watch for the new copy (parent+job, updated after start)
+  // Background tailoring: watch the launched run on /monitor/active by its scope
+  // key (`{base}:{job|freeform}` — routes_resumes.py:715) and report when it is gone.
+  // RES-26: the old watcher only tracked job-linked tailors, and matched on
+  // parent_id + job_id — a persona tailor has parent_id null (routes_resumes.py:776)
+  // and a freeform one has no job at all, so neither ever reported completion.
   useEffect(() => {
     const iv = setInterval(async () => {
       if (!pendingRef.current.length) return
-      try {
-        const { data } = await api.get('/resumes', { params: { is_base: false } })
-        const list = data || []
-        pendingRef.current = pendingRef.current.filter((p) => {
-          const hit = list.find((r) => String(r.parent_id) === String(p.baseId) && String(r.job_id) === String(p.jobId) && new Date(r.updated_at).getTime() >= p.since - 1000)
-          if (hit) { pushToast({ kind: 'success', msg: `Tailored copy for ${p.company} is ready.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) }); return false }
-          if (Date.now() - p.since > 120000) return false   // give up after 2m
-          return true
-        })
-      } catch {}
+      let live
+      try { const { data } = await api.get('/monitor/active'); live = (data || []).filter((r) => r.job_type === 'tailor_resume').map((r) => r.scope_key) }
+      catch { return }
+      const done = []
+      pendingRef.current = pendingRef.current.filter((p) => {
+        if (live.includes(p.scope)) { p.seen = true; return true }
+        if (Date.now() - p.since > 120000) return false            // give up after 2m
+        if (!p.seen && Date.now() - p.since < 8000) return true    // not started yet ≠ finished
+        done.push(p); return false
+      })
+      if (!done.length) return
+      let list = []
+      try { const { data } = await api.get('/resumes', { params: { is_base: false } }); list = data || [] } catch {}
+      done.forEach((p) => {
+        const since = p.since - 1000
+        const mine = list.filter((r) => new Date(r.updated_at).getTime() >= since)
+        // a job-linked run is identified by its job; a freeform one by being the
+        // newest job-less copy written since the run started
+        const hit = p.jobId
+          ? mine.find((r) => String(r.job_id) === String(p.jobId))
+          : mine.filter((r) => !r.job_id).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0]
+        const msg = p.company ? `Tailored copy for ${p.company} is ready.` : 'Tailored copy from your pasted description is ready.'
+        if (hit) pushToast({ kind: 'success', msg, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) })
+        else pushToast({ kind: 'success', msg: 'Tailoring finished.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
+      })
     }, 3000)
     return () => clearInterval(iv)
   }, [pushToast, navigate])
@@ -136,8 +158,9 @@ export default function ResumeEditor() {
     setTailorOpen(false)
     try {
       await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: jobId || undefined, job_description: jobDescription || undefined })
-      if (jobId) pendingRef.current.push({ baseId, jobId, company: company || 'the job', since: Date.now() })
-      pushToast({ kind: 'progress', msg: `Tailoring ${company ? 'for ' + company : ''}… runs in the background.` })
+      pendingRef.current.push({ scope: `${baseId}:${jobId || 'freeform'}`, jobId: jobId || null, company: company || null, since: Date.now() })
+      // RES-26: the old string interpolated an empty slot where the company goes
+      pushToast({ kind: 'progress', msg: company ? `Tailoring for ${company}… runs in the background.` : 'Tailoring from a pasted description… runs in the background.' })
     } catch (e) {
       if (e.response?.status === 409) pushToast({ kind: 'error', msg: 'Already tailoring for that job.' })
       else pushToast({ kind: 'error', msg: e.response?.data?.detail || 'Tailoring failed to start.' })
@@ -156,7 +179,7 @@ export default function ResumeEditor() {
         pushToast({ kind: 'success', msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
       } else {
         await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
-        pendingRef.current.push({ baseId, jobId: doc.job_id, company, since: Date.now() })
+        pendingRef.current.push({ scope: `${baseId}:${doc.job_id}`, jobId: doc.job_id, company, since: Date.now() })
         pushToast({ kind: 'progress', msg: `Tailoring for ${company}… runs in the background.` })
       }
     } catch (e) {
@@ -165,6 +188,20 @@ export default function ResumeEditor() {
     }
   }, [doc, jobData, pushToast, navigate])
 
+  // RES-28: each dropdown used to own a fixed backdrop, which swallowed every
+  // click — so the other trigger could never be reached and its `set*Open(false)`
+  // was dead code. Close on any click outside the two pickers instead (each picker
+  // stops its own clicks), and let Escape close them. Escape is marked handled so a
+  // modal opened over them can't be closed by the same keypress.
+  useEffect(() => {
+    if (!tplOpen && !fmtOpen) return undefined
+    const close = () => { setTplOpen(false); setFmtOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close() } }
+    document.addEventListener('click', close)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', onKey) }
+  }, [tplOpen, fmtOpen])
+
   useEffect(() => { setReviewed(readReviewed().includes(id)) }, [id])   // RES-06
 
   useEffect(() => {
@@ -172,7 +209,13 @@ export default function ResumeEditor() {
     api.get(`/resumes/${id}`).then(({ data: d }) => {
       if (!alive) return
       setDoc(d); setData(d.json_data || EMPTY); setTemplate(d.template || ''); setFormat(d.page_format || 'letter'); setSavedAt(d.updated_at)
-    }).catch(() => navigate('/v2/resumes'))
+    }).catch((e) => {
+      // RES-21: a missing/deleted/malformed id used to land on the shelf silently —
+      // indistinguishable from pressing "‹ Résumés". The stack unmounts with this
+      // screen, so the message is handed to the shelf instead of pushed here.
+      setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
+      navigate('/v2/resumes')
+    })
     api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch(() => {})
     return () => { alive = false }
   }, [id, navigate])
@@ -199,41 +242,78 @@ export default function ResumeEditor() {
   // copy job context: score/delta, tracers, cover-letter existence
   const loadJobCtx = useCallback(() => {
     if (!doc || doc.is_base || !doc.job_id) return
-    api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => setJobData(j)).catch(() => {})
+    api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => { setJobData(j); setJobErr(false) }).catch(() => setJobErr(true))
     api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => setCoverExists((data || []).length > 0)).catch(() => {})
   }, [doc])
   useEffect(() => {
-    if (!doc || doc.is_base) { setJobData(null); setTracers([]); return }
+    if (!doc || doc.is_base) { setJobData(null); setTracers([]); setJobErr(false); return }
+    if (!doc.job_id) { setJobData(null); setJobErr(false) }   // RES-20: no job to load, so no failure to report
     loadJobCtx()
     api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => setTracers(data || [])).catch(() => {})
   }, [doc, id, loadJobCtx])
 
+  // RES-20: a copy tailored from a pasted description has no Job row. The JD it was
+  // written against lives on the copy (json_data._tailor_context, routes_resumes.py)
+  // and so does its score (json_data._score) — which is what makes it scoreable.
+  const freeformJd = ((data && data._tailor_context && data._tailor_context.job_description) || '').trim()
+  const jobless = !!doc && !doc.is_base && !doc.job_id
+
   const scores = useMemo(() => {
+    if (doc && !doc.is_base && !doc.job_id) {
+      const t = data && data._score && typeof data._score.Tailored === 'number' ? Math.round(data._score.Tailored) : null
+      return { tailored: t, base: null, delta: null }
+    }
     const cs = jobData?.cv_scores || {}
     const tailored = typeof cs['Tailored'] === 'number' ? Math.round(cs['Tailored']) : null
     const others = Object.entries(cs).filter(([k, v]) => k !== 'Tailored' && typeof v === 'number').map(([, v]) => v)
     const base = others.length ? Math.round(Math.max(...others)) : null
     return { tailored, base, delta: tailored != null && base != null ? tailored - base : null }
-  }, [jobData])
+  }, [jobData, doc, data])
 
   const runScore = useCallback(async (depth) => {
-    if (!doc?.job_id) { pushToast({ kind: 'error', msg: 'This copy isn’t linked to a job to score against.' }); return }
+    if (!doc?.job_id && !freeformJd) { pushToast({ kind: 'error', msg: 'This copy has no job and no saved description to score against.' }); return }
     setHeadMenu(false); setScoring(true)
+    // RES-30: the old poll only asked "is cv_scores.Tailored a number?", so on a
+    // re-score the first tick matched the score already on the job and reported the
+    // OLD value while the run was still going. Watch the run instead (scope
+    // `{job}:resume:{resume}` — routes_resumes.py:1283) and read the score once it
+    // is gone; the base is read at that moment too, never captured in this closure.
+    const scope = doc.job_id ? `${doc.job_id}:resume:${id}` : `resume:${id}`
     try {
       await api.post(`/resumes/${id}/score-check`, { depth })
       pushToast({ kind: 'progress', msg: `Scoring (${depth}) — runs in the background.` })
-      // poll until the score lands (or ~60s)
       const t0 = Date.now()
+      let seen = false
       const iv = setInterval(async () => {
         try {
+          if (Date.now() - t0 > 180000) { clearInterval(iv); setScoring(false); return }   // a run that never ends
+          const { data: runs } = await api.get('/monitor/active')
+          const live = (runs || []).some((r) => r.job_type === 'score_resume' && r.scope_key === scope)
+          if (live) { seen = true; return }
+          if (!seen && Date.now() - t0 < 8000) return   // not started yet ≠ finished
+          clearInterval(iv); setScoring(false)
+          if (!doc.job_id) {
+            // the score of a job-less copy lands on the copy itself — merge just that
+            // key back so edits made while it ran are not overwritten
+            const { data: r } = await api.get(`/resumes/${id}`)
+            const sc0 = r?.json_data?._score?.Tailored
+            setData((prev) => ({ ...prev, _score: r?.json_data?._score }))
+            if (typeof sc0 === 'number') pushToast({ kind: 'success', msg: `Scored: ${Math.round(sc0)}` })
+            else pushToast({ kind: 'error', msg: 'Scoring finished without a score — try again.' })
+            return
+          }
           const { data: j } = await api.get(`/jobs/${doc.job_id}`)
-          const sc = j?.cv_scores?.['Tailored']
-          if (typeof sc === 'number') { setJobData(j); setScoring(false); clearInterval(iv); pushToast({ kind: 'success', msg: `Scored: ${Math.round(sc)}${scores.base != null ? ` (${sc - scores.base >= 0 ? '+' : ''}${Math.round(sc - scores.base)} vs base)` : ''}` }) }
-          else if (Date.now() - t0 > 60000) { setScoring(false); clearInterval(iv) }
-        } catch {}
+          setJobData(j)
+          const cs = j?.cv_scores || {}
+          const sc = typeof cs['Tailored'] === 'number' ? Math.round(cs['Tailored']) : null
+          const others = Object.entries(cs).filter(([k, v]) => k !== 'Tailored' && typeof v === 'number').map(([, v]) => v)
+          const b = others.length ? Math.round(Math.max(...others)) : null
+          if (sc == null) pushToast({ kind: 'error', msg: 'Scoring finished without a score — try again.' })
+          else pushToast({ kind: 'success', msg: `Scored: ${sc}${b != null ? ` (${sc - b >= 0 ? '+' : ''}${sc - b} vs base)` : ''}` })
+        } catch { if (Date.now() - t0 > 90000) { clearInterval(iv); setScoring(false) } }
       }, 3000)
     } catch (e) { setScoring(false); pushToast({ kind: 'error', msg: e.response?.status === 409 ? 'Already scoring this copy.' : (e.response?.data?.detail || 'Scoring failed to start.') }) }
-  }, [doc, id, pushToast, scores.base])
+  }, [doc, id, pushToast, freeformJd])
 
   const markApplied = useCallback(async () => {
     if (!doc?.job_id) return
@@ -241,22 +321,36 @@ export default function ResumeEditor() {
     try { await api.patch(`/jobs/${doc.job_id}`, { status: 'applied' }); loadJobCtx(); pushToast({ kind: 'success', msg: 'Marked applied.' }) } catch { pushToast({ kind: 'error', msg: 'Could not mark applied.' }) }
   }, [doc, loadJobCtx, pushToast])
 
-  const deleteResume = useCallback(async () => {
-    if (!window.confirm(`Delete “${doc.name}”?${doc.is_base ? ' Its tailored copies will be removed too.' : ''}`)) return
-    try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ kind: 'error', msg: 'Delete failed.' }) }
+  const deleteResume = useCallback(() => {
+    setHeadMenu(false)
+    setConfirm({
+      title: `Delete “${doc.name}”?`,
+      body: doc.is_base ? 'Its tailored copies will be removed too.' : undefined,
+      label: 'Delete', danger: true,
+      onConfirm: async () => {
+        setConfirm(null)
+        try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ kind: 'error', msg: 'Delete failed.' }) }
+      },
+    })
   }, [doc, id, navigate, pushToast])
 
   const goCover = () => { setHeadMenu(false); navigate(`/v2/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
 
   // the "one next step" stage for a tailored copy
+  // RES-20: the Score stage is only offered when there is something to score
+  // against — a job, or the description a freeform tailor saved. A copy with
+  // neither skips straight to the cover letter and ends there; "Mark applied"
+  // needs a job, so it is never the next step without one.
   const stage = useMemo(() => {
     if (!isCopy) return null
     if (changes.length && !reviewed) return { label: `Review ${changes.length} change${changes.length === 1 ? '' : 's'}`, act: () => setReviewOpen(true) }
-    if (scores.tailored == null) return { label: scoring ? 'Scoring…' : 'Score the result', act: () => runScore('full') }
+    const scoreable = !!doc.job_id || !!freeformJd
+    if (scoreable && scores.tailored == null) return { label: scoring ? 'Scoring…' : 'Score the result', act: () => runScore('full') }
     if (!coverExists) return { label: '✉ Write cover letter', act: goCover }
+    if (!doc.job_id) return { label: 'Ready ✓', act: null, done: true }
     if (jobData?.status !== 'applied') return { label: 'Mark applied', act: markApplied }
     return { label: 'Applied ✓', act: null, done: true }
-  }, [isCopy, changes.length, reviewed, scores.tailored, scoring, coverExists, jobData, runScore, markApplied]) // eslint-disable-line
+  }, [isCopy, doc, freeformJd, changes.length, reviewed, scores.tailored, scoring, coverExists, jobData, runScore, markApplied]) // eslint-disable-line
 
   // debounced persist
   const persist = useCallback((patch) => {
@@ -351,7 +445,7 @@ export default function ResumeEditor() {
         <span style={{ color: 'var(--line)' }}>|</span>
         <span style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
         <span title={doc.name} style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves on blur'}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</span>
       </div>
 
       {/* sub-band: base vs copy */}
@@ -368,13 +462,15 @@ export default function ResumeEditor() {
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>
-              Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
+              {jobData?.company
+                ? <>Tailored for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></>
+                : (jobless && freeformJd ? 'Tailored from a pasted description' : 'Tailored copy')}
               {doc.parent_id && (() => {
                 const baseName = (doc.name || '').split('→')[0].trim() || 'base'
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
                   <>
-                    <span style={{ color: 'var(--line)' }}>{'  │  '}</span>
+                    <BandRule />
                     <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer', position: 'relative', top: '1px' }} className="v2-navlink">
                       {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
                       <span style={{ color: 'var(--accent)' }}>based on {baseName} ↗</span>
@@ -384,7 +480,12 @@ export default function ResumeEditor() {
               })()}
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {(changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
+              {/* RES-20: "not scored yet" used to cover three different states — a
+                  copy waiting to be scored, one that can never be, and a job whose
+                  fetch failed. They read differently now. */}
+              {jobErr ? 'Couldn’t load the linked job.'
+                : jobless && !freeformJd ? 'No job or description linked, so this copy can’t be scored.'
+                  : (changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
             </span>
           </div>
@@ -456,28 +557,23 @@ export default function ResumeEditor() {
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
           <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
-            {/* template picker */}
-            <div style={{ position: 'relative' }}>
+            {/* template picker — the container swallows its own clicks so the
+                document closer below can't undo the toggle (RES-28) */}
+            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Résumé template" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {tplOpen && (
-                <>
-                  <div onClick={() => setTplOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                   <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
                     {templates.map((t) => <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : undefined }}>{t.name}</div>)}
                   </div>
-                </>
               )}
             </div>
             {/* format */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{format === 'a4' ? 'A4' : 'US Letter'}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {fmtOpen && (
-                <>
-                  <div onClick={() => setFmtOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                   <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
                     {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <div key={v} onClick={() => pickFormat(v)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === format ? 'var(--accent)' : 'var(--text-2)', background: v === format ? 'var(--accent-soft)' : undefined }}>{l}</div>)}
                   </div>
-                </>
               )}
             </div>
             <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500 }}>↓ Download PDF</a>
@@ -498,6 +594,7 @@ export default function ResumeEditor() {
         ? <RetailorModal doc={doc} job={jobData} onClose={() => setTailorOpen(false)} onRun={runRetailor} />
         : <TailorModal doc={doc} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
       {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
 
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
@@ -509,6 +606,7 @@ export default function ResumeEditor() {
 // which base to work from, and whether to run the tailoring LLM at all or just
 // take an exact copy for a fresh set of tracer links.
 function RetailorModal({ doc, job, onClose, onRun }) {
+  useEscape(onClose)   // RES-15
   const [mode, setMode] = useState('tailor')
   const [bases, setBases] = useState([])
   const [persona, setPersona] = useState(false)
@@ -519,13 +617,13 @@ function RetailorModal({ doc, job, onClose, onRun }) {
     api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
   }, [])
 
-  // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be tailored from.
-  const personaCopyable = false
+  // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be
+  // tailored from — RES-28: this was a `personaCopyable = false` constant.
   const options = [
     ...(persona ? [{ id: 'persona', name: 'Persona', note: 'your full profile' }] : []),
     ...bases.map((b) => ({ id: String(b.id), name: b.name, note: 'base résumé' })),
   ]
-  const disabled = (id) => mode === 'copy' && id === 'persona' && !personaCopyable
+  const disabled = (id) => mode === 'copy' && id === 'persona'
   const canRun = !!baseId && !disabled(baseId)
 
   const MODES = [
@@ -552,7 +650,7 @@ function RetailorModal({ doc, job, onClose, onRun }) {
                 return (
                   <div key={id} onClick={() => setMode(id)} title={hint} className="v2-act"
                     style={{ flex: 1, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
+                    <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
                     <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>{hint}</span>
                   </div>
                 )
@@ -569,8 +667,8 @@ function RetailorModal({ doc, job, onClose, onRun }) {
                   title={off ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: off ? 'default' : 'pointer', opacity: off ? 0.45 : 1 }}>
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                  <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
+                  <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</span>
                 </div>
               )
             })}
@@ -581,7 +679,8 @@ function RetailorModal({ doc, job, onClose, onRun }) {
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
+          {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
+          <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
         </div>
       </div>
     </div>
@@ -590,13 +689,16 @@ function RetailorModal({ doc, job, onClose, onRun }) {
 
 // ── tailor modal (job picker + freeform + persona) ───────────────────────────
 function TailorModal({ doc, onClose, onRun }) {
+  useEscape(onClose)   // RES-15
   const baseId = doc.id
   const [jobs, setJobs] = useState([])
   const [existing, setExisting] = useState(new Set())
   const [q, setQ] = useState('')
   const [pick, setPick] = useState(null)
   const [jd, setJd] = useState('')
-  const [personaBase, setPersonaBase] = useState(baseId === 'persona')
+  // RES-28: this read `baseId === 'persona'`, which is never true (baseId is the
+  // base's own id) — the box simply starts unticked, so say that.
+  const [personaBase, setPersonaBase] = useState(false)
 
   useEffect(() => {
     api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60 } })
@@ -641,8 +743,8 @@ function TailorModal({ doc, onClose, onRun }) {
                 <div key={j.id} onClick={() => { setPick(j.id); setJd('') }} className="v2-act" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer' }}>
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>
-                    <span style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</span>
+                    <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>
+                    <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</span>
                   </div>
                   {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)' }}>{sc}</span>}
                   {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--warn)' }}>✦ exists</span>}
@@ -659,7 +761,8 @@ function TailorModal({ doc, onClose, onRun }) {
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--edge)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
+          {/* RES-17 */}
+          <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
         </div>
       </div>
     </div>
@@ -668,6 +771,7 @@ function TailorModal({ doc, onClose, onRun }) {
 
 // ── review modal (decline-based) ─────────────────────────────────────────────
 function ReviewModal({ changes, onClose, onApply }) {
+  useEscape(onClose)   // RES-15
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
   return (
@@ -689,14 +793,16 @@ function ReviewModal({ changes, onClose, onApply }) {
             return (
               <div key={c.key} style={{ border: `1px solid ${off ? 'var(--line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: off ? 'var(--bg)' : 'var(--change-bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
-                  <span style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: off ? 'var(--surface-2)' : 'var(--accent-soft)', color: off ? 'var(--muted)' : 'var(--accent)' }}>{off ? 'declined' : 'applied'}</span>
+                  <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
+                  <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: off ? 'var(--surface-2)' : 'var(--accent-soft)', color: off ? 'var(--muted)' : 'var(--accent)' }}>{off ? 'declined' : 'applied'}</span>
                   <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{off ? 'Restore change' : 'Decline ↩'}</div>
                 </div>
-                <span style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--text-2)' }}>
                   {c.before}
                   {removed && <span style={{ background: 'var(--bad-soft)', textDecoration: 'line-through', opacity: 0.75, borderRadius: 3, padding: '0 3px' }}>{removed}</span>}
-                  {added && <span style={{ background: off ? 'var(--surface-2)' : 'var(--change-soft)', borderRadius: 3, padding: '0 3px' }}>{added || '(base text restored)'}</span>}
+                  {/* RES-28: the old `{added || '(base text restored)'}` fallback sat
+                      inside `{added && …}` and could never render. */}
+                  {added && <span style={{ background: off ? 'var(--surface-2)' : 'var(--change-soft)', borderRadius: 3, padding: '0 3px' }}>{added}</span>}
                   {c.after}
                 </span>
               </div>

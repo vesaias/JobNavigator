@@ -4,8 +4,8 @@ import './theme.css'
 // Toast taxonomy (Toasts.dc.html): one accent per meaning, so a glance from the
 // corner of your eye tells you which it is.
 //
-//   progress — quiet paper card + spinner. Ambient status, not news.       2.5s
-//   success  — green tint, solid ✓ roundel. The only green toast.         2.5s
+//   progress — quiet paper card + spinner. Ambient status, not news.         4s
+//   success  — green tint, solid ✓ roundel. The only green toast.           4s
 //   error    — red tint, ! roundel. Stays until dismissed: a failure
 //              that evaporates before you read it may as well not exist.
 //   undo     — the one dark toast. Dark means "still actionable", which
@@ -18,7 +18,10 @@ const KINDS = {
   error: { bg: 'var(--toast-bad-bg)', bd: 'var(--toast-bad-line)', fg: 'var(--toast-bad-ink)', mark: '!', markBg: 'var(--bad)' },
   undo: { bg: 'var(--rail)', bd: 'var(--rail)', fg: 'var(--rail-ink)' },
 }
-const TTL = { progress: 2500, success: 2500, undo: 5000, error: null }
+// RES-25: 2.5 s was not long enough to read a success toast, let alone act on the
+// "Open ↗" it carries. One 3–5 s band across the app: 4 s for the two that only
+// report, 5 s for undo (which asks for a decision), errors until dismissed.
+const TTL = { progress: 4000, success: 4000, undo: 5000, error: null }
 const MAX = 3
 
 export function useToasts() {

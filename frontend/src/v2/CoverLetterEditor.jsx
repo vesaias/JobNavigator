@@ -3,6 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
+import ConfirmDialog from './ConfirmDialog'
+import { useEscape } from './hooks'
+// the undo-removal helper and the band rule are shared with the résumé editors
+import { useUndoRemove, BandRule } from './ResumeSections'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -69,6 +73,7 @@ export default function CoverLetterEditor() {
   const [fmtOpen, setFmtOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [regenOpen, setRegenOpen] = useState(false)
+  const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
   const [regening, setRegening] = useState(false)
   const [presets, setPresets] = useState([])
   const [resumes, setResumes] = useState([])
@@ -78,7 +83,6 @@ export default function CoverLetterEditor() {
   const [rLength, setRLength] = useState('standard')
   const [err, setErr] = useState('')
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
-  const regeningRef = useRef(false)
   const [pdfErr, setPdfErr] = useState(false); const [pdfNonce, setPdfNonce] = useState(0)   // CL-19
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? false)
   const [recipOpen, setRecipOpen] = useState(() => loadUI().recipOpen ?? false)
@@ -145,6 +149,10 @@ export default function CoverLetterEditor() {
     })
   }
 
+  // RES-16: every other destructive edit in the three builders is undoable; the
+  // body paragraph was the one that just vanished.
+  const undoRemove = useUndoRemove(update, (msg, undo) => pushToast({ kind: 'undo', msg, action: 'Undo', onAction: undo }))
+
   // live PDF, debounced behind the save so we never render a stale draft
   useEffect(() => {
     if (!doc) return
@@ -184,14 +192,18 @@ export default function CoverLetterEditor() {
     } catch (e) { console.error(e); setErr('Could not download the PDF.'); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }
   }
 
-  const remove = async () => {
+  const remove = () => {
     setMenuOpen(false)
-    if (!window.confirm(`Delete "${doc?.name}"? This cannot be undone.`)) return
-    try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }   // CL-17
-    catch (e) { console.error(e); setErr('Could not delete this letter.'); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
+    setConfirm({
+      title: `Delete "${doc?.name}"?`, body: 'This cannot be undone.', label: 'Delete', danger: true,
+      onConfirm: async () => {
+        setConfirm(null)
+        try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }   // CL-17
+        catch (e) { console.error(e); setErr('Could not delete this letter.'); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
+      },
+    })
   }
 
-  useEffect(() => { regeningRef.current = regening }, [regening])
   const regenerate = async () => {
     if (regening || !rSource) return
     setRegening(true); setErr('')
@@ -234,12 +246,22 @@ export default function CoverLetterEditor() {
     return () => { dead = true; clearInterval(iv) }
   }, [regening, id])
 
+  // RES-15: Escape closes the modal through the shared hook. This handler keeps the
+  // menu/dropdown half (CL-25) and marks the event handled when one was actually
+  // open, so the same press can't close a dropdown and the modal behind it.
+  const openUi = useRef({ menuOpen: false, tplOpen: false, fmtOpen: false })
+  openUi.current = { menuOpen, tplOpen, fmtOpen }
   useEffect(() => {
     const onDoc = () => { setMenuOpen(false); setTplOpen(false); setFmtOpen(false) }
-    const onKey = (e) => { if (e.key === 'Escape') { onDoc(); if (!regeningRef.current) setRegenOpen(false) } }   // CL-25
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const u = openUi.current
+      if (u.menuOpen || u.tplOpen || u.fmtOpen) { e.preventDefault(); onDoc() }
+    }
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
+  useEscape(() => setRegenOpen(false), regenOpen && !regening)
 
   const sourceOpts = useMemo(() => [
     ...(personaAvailable ? [{ id: 'persona', label: 'Persona (full profile)' }] : []),
@@ -286,7 +308,7 @@ export default function CoverLetterEditor() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Written for <span style={{ color: 'var(--text)' }}>{doc.company ? `${doc.company} — ${doc.title}` : doc.name}</span>
-            {doc.source_name && <> · from <span onClick={() => doc.resume_id && navigate(`/v2/resumes/${doc.resume_id}`)}
+            {doc.source_name && <><BandRule />from <span onClick={() => doc.resume_id && navigate(`/v2/resumes/${doc.resume_id}`)}
               title={doc.resume_id ? 'Open the source résumé' : 'Written from your Persona'}
               style={{ color: 'var(--accent)', cursor: doc.resume_id ? 'pointer' : 'default' }}>{doc.source_name}{doc.resume_id ? ' ↗' : ''}</span></>}
           </span>
@@ -416,7 +438,9 @@ export default function CoverLetterEditor() {
                     style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === 0 ? 'default' : 'pointer' }}>↑</span>
                   <span onClick={() => i < paras.length - 1 && update((d) => { const a = d.body_paragraphs; [a[i + 1], a[i]] = [a[i], a[i + 1]] })} title="Move down" className={i < paras.length - 1 ? 'v2-parabtn' : ''}
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === paras.length - 1 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === paras.length - 1 ? 'default' : 'pointer' }}>↓</span>
-                  <span onClick={() => update((d) => { d.body_paragraphs.splice(i, 1) })} title="Delete paragraph" className="v2-parabtn-bad"
+                  <span onClick={() => undoRemove('Removed paragraph',
+                    (d) => { d.body_paragraphs.splice(i, 1) },
+                    (d) => { d.body_paragraphs = d.body_paragraphs || []; d.body_paragraphs.splice(i, 0, text) })} title="Delete paragraph" className="v2-parabtn-bad"
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
                 </div>
                 <textarea value={text} rows={4} onChange={(e) => update((d) => { d.body_paragraphs[i] = e.target.value })}
@@ -512,14 +536,17 @@ export default function CoverLetterEditor() {
             <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
               {err && !regening ? <span style={{ fontSize: 11.5, color: 'var(--bad)' }}>{err}</span> : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>~30 seconds</span>}   {/* CL-14 */}
               <div onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-              <div onClick={regenerate} className="v2-ctl" style={{ height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: regening || !rSource ? 'default' : 'pointer', opacity: regening || !rSource ? 0.6 : 1 }}>
-                {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent-ink)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+              {/* RES-17: a disabled primary pill is --line on --muted across the three
+                  builders — a dimmed accent still reads as the live button. */}
+              <div onClick={regenerate} className="v2-ctl" style={{ height: 33, padding: '0 17px', borderRadius: 99, background: regening || !rSource ? 'var(--line)' : 'var(--accent)', color: regening || !rSource ? 'var(--muted)' : 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: regening || !rSource ? 'default' : 'pointer' }}>
+                {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </div>
             </div>
           </div>
         </div>
       )}
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )

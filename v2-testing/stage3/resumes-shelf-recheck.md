@@ -224,14 +224,14 @@ Verdicts: **match** · **deviates** · **DCC** = deliberate-consistency-candidat
 **Expected + why** `Resumes Shelf.dc.html:56` — `padding:22px 30px 14px;display:flex;align-items:flex-end;gap:16px` and **no border**. The board lets the browse list flow straight out of the header; the only rules on the shelf are the card borders and the dashed archived band.
 **Actual** measured `padding: 22px 30px 16px 24px`, `gap: 18px`, `border-bottom: 1px solid rgb(226,221,208)` (`--line`). Header wrapper 1234 × 92.
 **Proposed fix** drop `borderBottom`; set `paddingBottom: 14`, `gap: 16`.
-**Status** needs decision: keep code (consistency — every other v2 screen header has this rule) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-02 · P3 · The search field is inset 2 px, not 13, so its text starts hard against the underline's left edge
 **Where** `Resumes.jsx:117-118`
 **Expected + why** `Resumes Shelf.dc.html:62` — `height:36px;width:300px;padding:0 13px`. The 13 px inset is what lines the placeholder up with the `+ New résumé` pill's own 18 px inset and keeps the caret off the rule's corner. The board's placeholder also carries an example: `Search bases, copies, archived… (try “plaid”)`.
 **Actual** measured `paddingLeft: 2px`, `paddingRight: 2px` (h36 ✓, w300 ✓, fontSize 13 ✓, border-bottom 1px `--line` ✓). Placeholder `Search bases, copies, archived…`.
 **Proposed fix** `padding: '0 13px'`; optionally restore the example in the placeholder.
-**Status** needs decision: keep code (consistency — the other v2 underline search fields are flush) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-03 · P3 · The shelf drops three of the board's affordance labels/tooltips
 **Where** `Resumes.jsx:193` (base card, no `title`), `:202`/`:216` (chip `title`), and the missing "Recent copies" label on both card types
@@ -248,42 +248,42 @@ Verdicts: **match** · **deviates** · **DCC** = deliberate-consistency-candidat
 **Expected + why** `Resumes Shelf.dc.html:744-751` (`cardHover`): `cardBg: lit ? "#f4f8f5" : "#fff"`, `cardBd: lit ? "#8a826e" : "#e2ddd0"` — i.e. `--hover-soft` on `--edge`. The comment in `theme.css:140-142` reads *"Résumés' design hovers its cards to a soft beige (#d4cec0) while every other clickable card/row in v2 goes to the accent — and `--edge` was stronger than that beige anyway."* `#d4cec0` does not appear anywhere in `Resumes Shelf.dc.html`, and the canonical board's hover border **is** `--edge` — the exact token the comment says it was replacing something weaker than.
 **Actual** measured on both the Persona and a base card: `border-color rgb(226,221,208) → rgb(63,107,82)` (`--line` → `--accent`), `background rgb(255,255,255) → rgb(244,248,245)`. `rgb(244,248,245)` is `#f4f8f5` — **the design's value byte for byte**.
 **Proposed fix** none required for the background. For the border, either accept the accent as the cross-screen unification (then correct the comment: the canonical Résumés hover border is `--edge` = `#8a826e`, not a `#d4cec0` beige) or revert to `border-color: var(--edge)` on `.v2-card` for this screen only.
-**Status** needs decision: keep code (consistency) or match design? — but the `theme.css:140-142` comment is factually wrong against the canonical board either way and should be corrected.
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-05 · P4 · Chip hover text goes to `--good`; the board darkens it past the accent
 **Where** `theme.css:145`
 **Expected + why** `Resumes Shelf.dc.html:769` — `chipFg: hovered ? "#26543c" : "#57534a"`. `#26543c` is a deliberately darker green than `#3f6b52`; the board pairs it with a white fill so the label still carries weight against the brightened chip.
 **Actual** measured `color rgb(87,83,74) → rgb(63,107,82)` (`--text-2` → `--good`/`--accent`). The other three properties are exact matches: `border-color → rgb(63,107,82)`, `background → rgb(255,255,255)`, `box-shadow → rgba(63,107,82,0.22) 0px 0px 0px 2px` (`--ring-accent`, the board's `0 0 0 2px rgba(63,107,82,.22)`).
 **Proposed fix** none, or add a `--accent-deep` token if the extra contrast is wanted.
-**Status** needs decision: keep code (no `#26543c` token exists) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-06 · P3 · Four border-only hovers in the board also lift their background, because they all share `.v2-act`
 **Where** `theme.css:148` (`.v2-act:hover { border-color:--accent !important; background:--hover-soft !important; }`); callers `Resumes.jsx:127` (search row), `:143` (archived row), `:221` (archived band), `:277` (Import PDF), `ResumeEditor.jsx:420`/`:432` (Template / Paper pills)
 **Expected + why** all four are `border-color:#3f6b52` **only** in `Resumes Shelf.dc.html` (`:71`, `:127`, `:411`, `:412`), and the Import PDF button is `border-color:#3f6b52; color:#3f6b52` (`:559`) — a border-and-text hover with no fill. The board draws a clear line: filled surfaces (cards) get a background lift, outlined rows and pills get a stroke.
 **Actual** measured on the search result row and on the archived band: `border-color rgb(226,221,208) → rgb(63,107,82)` **and** `background → rgb(244,248,245)`. Import PDF and the two PDF pills carry the identical class, so the same rule applies (the modal's Import button could not be hovered in the same run — the first `.v2-act` on the page sits under the scrim; the class rule is deterministic and was measured three times elsewhere). On Import PDF the design's `color` change is additionally absent.
 **Proposed fix** give the outlined rows/pills `.v2-bd` (`theme.css:153`, border-only — it already exists for exactly this case), and add `color: var(--accent)` on the Import PDF button.
-**Status** needs decision: keep code (consistency — `.v2-act` is the shared row hover across v2) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-07 · P4 · The search and archived views add a `‹ Back` control and a wrapper row the board doesn't have
 **Where** `Resumes.jsx:122-125` (search), `:137-141` (archived)
 **Expected + why** `Resumes Shelf.dc.html:67-81` — the searching branch renders exactly one label (`{{ resultLine }}`, `padding:4px 2px`) followed by the rows. Clearing the input is the exit; the archived view *is* a search (`searchArchived: () => this.setState({ query: "→" })`, `:902`), so it has no separate header or back control either. §4 of the brief counts hovers not in the design as defects, and `‹ Back` is a `.v2-navlink` with a background+colour hover.
 **Actual** measured: a `display:flex; gap:10px; padding:4px 2px` row containing `‹ Back` (12px, `--accent`, `.v2-navlink`) and then the result line; the archived view has the same row with `Archived · 296 from rejected or stale applications` as its label.
 **Proposed fix** none if the back control is wanted (it is a genuine usability addition over a modal-less design); if matching, drop the row and let the empty field be the exit.
-**Status** needs decision: keep code (usability addition) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-08 · P3 · The Add modal deviates from the board in width, height, type scale, both button labels, and two extra elements
 **Where** `Resumes.jsx:270-283`
 **Expected + why** `Resumes Shelf.dc.html:552-563`: `width:400px`, `padding:18px 22px`, `gap:11`, title Newsreader 18px reading **"Add résumé"**, one input `height:33px; padding:0 10px; border:1px solid #8a826e; border-radius:8px` with **no fill** and placeholder `e.g. Backend — Platform v5`, then a `grid-template-columns:1fr 1fr; gap:8` pair of h36 12.5px buttons labelled **"+ From scratch"** and **"↑ Import PDF"**. There is no sub-line and no Cancel row — the scrim is the cancel.
 **Actual** measured: panel **420 × 234.5**, `padding: 22px`; title `New base résumé` at **19px**; an extra 12px sub-line `Start from scratch, or import an existing PDF to parse.`; input **h38**, `padding 0 12px`, filled `--surface-2`, 13px, placeholder `Résumé name (e.g. Backend — Platform v4)`; buttons **h40**, gap 9, `Create from scratch` / `Import PDF ↑` (icon on the trailing side); an extra centred `Cancel` row. Scrim `rgba(20,19,15,0.42)` ✓, radius 12 ✓, border 1px `--line` ✓, shadow `0 18px 50px rgba(0,0,0,.28)` ✓.
 **Proposed fix** if matching: 400 px, `18px 22px`, 18px title "Add résumé", input h33/`0 10px`/transparent/12.5px, two h36 buttons `+ From scratch` / `↑ Import PDF` in a 1fr 1fr grid gap 8, drop the sub-line and Cancel.
-**Status** needs decision: keep code (the sub-line and Cancel are real affordances the board omits) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-09 · P4 · Editor top-bar name clamps at 460 px, the board at 420
 **Where** `ResumeEditor.jsx:325`
 **Expected + why** `Resumes Shelf.dc.html:142` — `max-width:420px`. At 420 the ellipsised name leaves the status string room at 1440 without the two ever meeting; 460 narrows that margin by 40 px.
 **Actual** measured `max-width: 460px` on both fixtures (rendered widths 22 px and 207.7 px, so it does not currently clamp — the deviation is latent).
 **Proposed fix** `maxWidth: 420`.
-**Status** needs decision: keep code (consistency with the other v2 title clamps) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-10 · P3 · The copy band's lineage cluster: a text divider instead of a rule, a `.v2-navlink` instead of an underline, and a hover on the back-link the board doesn't have
 **Where** `ResumeEditor.jsx:315` (back-link), `:345` (divider), `:346-351` (base link)
@@ -300,14 +300,14 @@ Verdicts: **match** · **deviates** · **DCC** = deliberate-consistency-candidat
 **Expected + why** `Resumes Shelf.dc.html:172` — `background: {{ menuBg }}` where `menuBg = S.menuOpen ? "#eaf1eb" : "#fff"`. Against the `#f3f0e8` sub-band the closed state is a white disc; the open state is `--accent-soft`. The build has the open state right and the closed state transparent.
 **Actual** measured closed: `background rgba(0, 0, 0, 0)` (so the button reads as the `--surface-2` band), `border 1px rgb(138,130,110)` (`--edge`) ✓, 36 × 36 ✓, radius 99 ✓, font-size 15 ✓, colour `--text-2` ✓.
 **Proposed fix** `background: headMenu ? 'var(--accent-soft)' : 'var(--surface)'`.
-**Status** needs decision: keep code (consistency — v2's icon buttons are transparent by default) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ### RES2-12 · P4 · Section-header hover uses `--surface-2` and also changes the text colour; the board uses `--bg` and nothing else
 **Where** `ResumeSections.jsx:126` (`className="v2-hover-accent"`), rule at `theme.css:129`
 **Expected + why** `Resumes Shelf.dc.html:212, 242, 260, 270, 306, 333, 358, 390` — every section header and every experience-entry header is `style-hover="background:#faf8f3"`. Per the brief's map `#faf8f3` → `--bg`; the board's card is `#fff`, so the hover is a *recede* toward the page ground. `.v2-hover-accent` instead lifts to `--surface-2` (`#f6f4ee`, a darker step) and forces `color: var(--text) !important`, which the design never asks for.
 **Actual** measured header class `v2-hover-accent`; rule `background:var(--surface-2) !important; color:var(--text) !important`. Also measured: section body padding `4px 14px 14px` vs the design's `2px 14px 14px` (`:218`), and the PDF-preview header gap 12 vs the design's 9 (`:409`).
 **Proposed fix** `background: var(--bg)` and drop the colour override for these headers (or introduce a `.v2-hover-recede`); `paddingTop: 2` on the section body; `gap: 9` on the PDF header.
-**Status** needs decision: keep code (consistency — `.v2-hover-accent` is shared) or match design?
+**Status** decided keep current (user 2026-09-03): consistency with the other v2 screens wins over the board here.
 
 ---
 
