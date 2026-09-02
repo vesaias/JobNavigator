@@ -161,7 +161,10 @@
 .v2-ctl { line-height:1; }
 
 /* Cover letters + Persona: card headers wash on hover, paragraph/contact buttons tint */
-.v2-clhead:hover { background:var(--bg); }
+/* PERS-10: every collapsible header in v2 washes to --surface-2 — the section and
+   role headers already do via .v2-hover-accent, so these must match rather than
+   read as a second affordance */
+.v2-clhead:hover { background:var(--surface-2); }
 /* the Q&A bank card sits on --amber-bg, so it washes to its own amber hover */
 .v2-qahead:hover { background:var(--amber-hover); }
 /* inline style sets the dashed border, so :hover needs !important to win */

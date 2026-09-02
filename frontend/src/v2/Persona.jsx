@@ -4,7 +4,7 @@ import { useToasts, ToastStack } from './Toast'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
-  SectionShell, SectionEditor, BulletText, DashedAdd,
+  SectionShell, SectionEditor, BulletText, DashedAdd, RemoveX, kb,
 } from './ResumeSections'
 
 // The Persona is the singleton applicant record. Two independent halves:
@@ -113,8 +113,10 @@ function Picker({ value, options, onChange, placeholder = '—' }) {
   const set = isSet(value)
   return (
     <div style={{ position: 'relative' }}>
-      <div onClick={() => setOpen((v) => !v)} className="v2-act v2-ctl" style={{ ...BOX, cursor: 'pointer', borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
-        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 12, color: set ? 'var(--text)' : 'var(--edge)' }}>
+      <div onClick={() => setOpen((v) => !v)} {...kb(() => setOpen((v) => !v))} aria-expanded={open} className="v2-act v2-ctl" style={{ ...BOX, cursor: 'pointer', borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
+        {/* PERS-20: --edge is a border token; as 10.5–12px text it fell under the
+            AA contrast floor in both themes. The three small texts use --muted. */}
+        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 12, color: set ? 'var(--text)' : 'var(--muted)' }}>
           {set ? labelFor(options, value) : placeholder}
         </span>
         <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--muted)' }}>▾</span>
@@ -123,9 +125,9 @@ function Picker({ value, options, onChange, placeholder = '—' }) {
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
           <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 31, minWidth: '100%', maxWidth: 280, maxHeight: 260, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-            <div onClick={() => { onChange(undefined); setOpen(false) }} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: !set ? 'var(--accent)' : 'var(--muted)', background: !set ? 'var(--accent-soft)' : 'transparent' }}>— not answered</div>
+            <div onClick={() => { onChange(undefined); setOpen(false) }} {...kb(() => { onChange(undefined); setOpen(false) })} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: !set ? 'var(--accent)' : 'var(--muted)', background: !set ? 'var(--accent-soft)' : 'transparent' }}>— not answered</div>
             {options.map(([v, l]) => (
-              <div key={String(v)} onClick={() => { onChange(v); setOpen(false) }} className="v2-menuitem"
+              <div key={String(v)} onClick={() => { onChange(v); setOpen(false) }} {...kb(() => { onChange(v); setOpen(false) })} className="v2-menuitem"
                 style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === value ? 'var(--accent)' : 'var(--text-2)', background: v === value ? 'var(--accent-soft)' : 'transparent' }}>{l}</div>
             ))}
           </div>
@@ -141,7 +143,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
     const on = !!val
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
-        <div onClick={() => write(node, fkey, !on)} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+        <div onClick={() => write(node, fkey, !on)} {...kb(() => write(node, fkey, !on), 'checkbox')} aria-checked={on} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
           <span style={{ flex: '0 0 auto', width: 15, height: 15, marginTop: 1, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-ink)', fontSize: 9, lineHeight: 1 }}>{on ? '✓' : ''}</span>
           <span style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: '18px', textWrap: 'pretty' }}>{opts.text}</span>
         </div>
@@ -304,7 +306,7 @@ export default function Persona() {
       {loadErr ? (
         <>
           <span>Couldn’t load your persona.</span>
-          <span onClick={() => { setLoadErr(false); loadPersona() }} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
+          <span onClick={() => { setLoadErr(false); loadPersona() }} {...kb(() => { setLoadErr(false); loadPersona() })} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
         </>
       ) : 'Loading…'}
       <ToastStack toasts={toasts} onClose={dismissToast} />
@@ -357,11 +359,11 @@ export default function Persona() {
               const done = n === counted.length
               return (
                 <div key={id} style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-                  <div onClick={() => toggleGroup(id)} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
+                  <div onClick={() => toggleGroup(id)} {...kb(() => toggleGroup(id))} aria-expanded={open} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{open ? '⌄' : '›'}</span>
                     <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
                     <span style={{ flex: 1, minWidth: 0 }} />
-                    <span style={{ flex: '0 0 auto', fontSize: 10.5, color: done ? 'var(--accent)' : 'var(--edge)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</span>
+                    <span style={{ flex: '0 0 auto', fontSize: 10.5, color: done ? 'var(--accent)' : 'var(--muted)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</span>
                   </div>
                   {open && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, padding: '12px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
@@ -376,11 +378,11 @@ export default function Persona() {
 
             {/* Q&A bank — the one amber card; answers go to the LLM verbatim */}
             <div style={{ border: '1px solid var(--amber-line)', borderRadius: 9, background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
-              <div onClick={() => toggleGroup('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
+              <div onClick={() => toggleGroup('qa')} {...kb(() => toggleGroup('qa'))} aria-expanded={groups.has('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{groups.has('qa') ? '⌄' : '›'}</span>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers — sent verbatim, worth writing well</span>
-                <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--edge)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</span>
+                <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
               </div>
               {groups.has('qa') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 14px 14px', borderTop: '1px solid var(--amber-line-soft)' }}>
@@ -399,8 +401,7 @@ export default function Persona() {
                             onChange={(v) => writeQa(qa.map((x, j) => (j === i ? { ...x, answer: v } : x)))} />
                         </div>
                       </div>
-                      <span onClick={() => removeQa(i)} title="Remove answer" className="v2-hover-bad v2-hover-bad-text"
-                        style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: 11, cursor: 'pointer', lineHeight: '19px' }}>✕</span>
+                      <RemoveX onClick={() => removeQa(i)} title="Remove answer" lh="19px" />
                     </div>
                   ))}
                   {qa.length === 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>No saved answers yet — the extension can add them as you apply.</span>}

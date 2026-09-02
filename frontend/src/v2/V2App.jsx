@@ -141,7 +141,8 @@ export default function V2App() {
         </a>
 
         {/* pipeline pulse — the dot yields its slot to the theme toggle when collapsed */}
-        <div onClick={() => navigate('/v2/stats')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+        {/* STAT-16: the tooltip promises Run history, the last card on the page — deep-link to it */}
+        <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
               ? <span style={{ width: 7, height: 7, borderRadius: 99, background: healthy ? 'var(--rail-accent)' : 'var(--warn)' }} />
