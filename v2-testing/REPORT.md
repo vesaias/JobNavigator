@@ -7,10 +7,10 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 67 | 0 | 3 |
+| P2 | 70 | 69 | 0 | 1 |
 | P3 | 111 | 14 | 94 | 3 |
 | P4 | 90 | 3 | 75 | 12 |
-| **All** | **276** | **89** | **169** | **18** |
+| **All** | **276** | **91** | **169** | **16** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -19,9 +19,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | companies.md | 37 | 1 | 12 | 16 | 8 | 15 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 9 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 11 |
-| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 11 |
+| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| resumes.md | 31 | 1 | 8 | 13 | 9 | 10 |
+| resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 7 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 10 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
@@ -90,6 +90,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - PERS-11 (P3) — Experience entry headers are 36.75 px tall, putting five rows on a half pixel
 - STAT-01 (P2) — A refused or failed trigger is indistinguishable from a successful one
 - STAT-02 (P2) — "Best open score" renders the literal string `-Infinity`
+- STAT-03 (P2) — With every endpoint failing, the screen renders a plausible-looking dashboard
 - RES-01 (P1) — A rejected autosave is completely silent — the status line still says "saved just now"
 - RES-02 (P2) — Skills ▲▼ reorder was never persisted — the UI showed the new order until reload, then snapped back
 - RES-03 (P2) — "Import PDF" creates **two** base résumés
@@ -98,6 +99,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - RES-06 (P2) — The "one next step" CTA can never get past "Review N changes"
 - RES-07 (P2) — A failed shelf load is rendered as "No base résumés yet"
 - RES-08 (P2) — PDF render failure leaves a stale preview with no signal
+- RES-09 (P2) — A base résumé cannot be deleted anywhere in v2
 - RES-10 (P3) — Shelf: every other card and row landed on a half pixel — **fixed**
 - RES-12 (P3) — The Template and Paper dropdown items had no hover at all — **fixed**
 - SRCH-01 (P2) — Test-modal source chips never render — the modal reads `by_source`, every backend path sends `source_breakdown`
@@ -132,9 +134,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Backend: `DataError` → 404 handler for malformed ids on every route; `flag_modified` on Résumé and Persona JSON PATCHes; `create_company` persists `aliases` + `auto_scoring_depth`; per-search `trigger_url` pointed at a real endpoint.
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
-## Open P2s that need you (3)
-- STAT-03 — With every endpoint failing, the screen renders a plausible-looking dashboard
-- RES-09 — A base résumé cannot be deleted anywhere in v2
+## Open P2s that need you (1)
 - F-006 — Backend / docs · Backend edits do not hot-reload, but HANDOVER and CLAUDE.md say they do
 
 ## Decisions that close many findings at once
