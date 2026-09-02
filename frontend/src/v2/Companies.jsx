@@ -15,7 +15,6 @@ const ago = (iso) => {
   const d = Math.floor(h / 24)
   return `${d}d ago`
 }
-const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, '')
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
 const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
@@ -99,8 +98,8 @@ function UrlEditor({ urls, onChange }) {
   )
 }
 
-const Seg = ({ opts, value, onPick, valueKey = 'id', big }) => (
-  <div style={{ display: 'flex', gap: big ? 6 : 5 }}>
+const Seg = ({ opts, value, onPick, valueKey = 'id' }) => (
+  <div style={{ display: 'flex', gap: 5 }}>
     {opts.map((o) => {
       const v = o[valueKey] !== undefined ? o[valueKey] : o.v
       const on = value === v
@@ -287,6 +286,8 @@ export default function Companies() {
     if (scraping[c.id]) return { dot: 'var(--accent)', fg: 'var(--accent)', text: 'scraping now…' }
     if (c.last_error) return { dot: 'var(--bad)', fg: 'var(--bad)', text: `error · ${c.last_error}` }
     if (downMap[c.id]) return { dot: 'var(--warn)', fg: 'var(--warn)', text: downMap[c.id] }
+    if (c.active && c.last_run_warning) return { dot: 'var(--warn)', fg: 'var(--warn)', text: `last run found nothing · ${ago(c.last_scraped_at)}` }   // COMP-19
+    if (c.active && !c.last_scraped_at) return { dot: 'var(--edge)', fg: 'var(--muted)', text: 'not scraped yet' }   // COMP-18
     if (c.active) return { dot: 'var(--good)', fg: 'var(--text-2)', text: `healthy · scraped ${ago(c.last_scraped_at)}` }
     return { dot: 'var(--edge)', fg: 'var(--muted)', text: `inactive · last run ${ago(c.last_scraped_at)}` }
   }
@@ -325,7 +326,7 @@ export default function Companies() {
       </header>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <span style={{ position: 'relative', flex: '0 0 226px', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
@@ -379,7 +380,7 @@ export default function Companies() {
       {/* rows (column header lives inside the scroll container so its width
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
           <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
@@ -650,7 +651,7 @@ function Drawer({ state, setState, resumes, personaPopulated, onSave, onDelete, 
       </div>
 
       <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
+        <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
         <div onClick={() => onTest(company.id)} className="v2-act" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
           {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
@@ -683,6 +684,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
   const toggle = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
 
   const save = async () => {
+    if (saving) return   // COMP-27
     if (!name.trim()) { pushToast({ kind: 'error', msg: 'Company name is required' }); return }
     setSaving(true)
     try {
@@ -769,7 +771,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
-          <div onClick={onClose} style={{ marginTop: 16, height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginTop: 16, height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
         </div>
       </div>
     )
@@ -780,13 +782,16 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   const found = test.total_found ?? jobs.length
   // total_found already excludes the validation-rejected rows (routes_companies.py:
   // len(all_jobs) vs len(all_rejected)), so the four numbers add up to the rows shown.
+  const passCo = typeof test.after_company_filter === 'number' ? test.after_company_filter : null
   const summary = `${kept} kept · ${found - kept} keyword-filtered · ${rejected} validation-rejected · ${found + rejected} extracted`
+    + (passCo != null && passCo !== kept ? ` · ${passCo} pass this company's filters · ${passCo - kept} removed by the global list` : '')
   const urls = test.urls_scraped || []
   const pag = test.pagination_debug || []
   const shots = test.screenshots || []
   const jobState = (j) => {
     if (j.reason?.startsWith('[Validation]')) return { tag: 'Drop', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', bg: 'var(--surface)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Validation] ', '') }
     if (j.kept) return { tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', bg: 'var(--surface)', reasonFg: 'var(--muted)', reason: j.reason || '' }
+    if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', bg: 'var(--surface)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // COMP-24: the global exclude list, not this company's filters
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', bg: 'var(--surface)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
@@ -856,7 +861,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
 
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}</span>
-          <div onClick={onClose} style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
         </div>
       </div>
     </div>
