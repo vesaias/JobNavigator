@@ -216,7 +216,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
               <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: 1, minWidth: 0 }} />
               </div>
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
-              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--accent)' }} />
+              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--text-2)' }} />
               {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
               <RemoveX onClick={() => undoRemove('Removed contact item',
                 (d) => d.header.contact_items.splice(i, 1),
@@ -363,7 +363,10 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
           <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {arrows(k)}
             <CategoryName name={k} rename={liveRename} />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: marked ? 'var(--change-bg)' : 'var(--surface-2)', borderRadius: 6 }}>
+            {/* the ✦ and the --change-soft border carry the tailoring signal here;
+                the --change-bg fill is reserved for tailored prose (experience
+                bullets and the summary), so a skills row keeps its field colour. */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
               {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
