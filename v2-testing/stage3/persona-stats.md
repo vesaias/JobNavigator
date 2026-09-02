@@ -78,13 +78,13 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Where** `theme.css:130` (`.v2-hover-bad:hover { background:var(--bad-soft) !important }`) used at `Persona.jsx:320` and `ResumeSections.jsx:185/237/302/348`
 **Expected + why** `Persona Ops.dc.html`: the bullet ✕ carries `style-hover="color:#9c3b30"` and the skill × carries `style-hover="color:#9c3b30"` — colour only, no background.
 **Actual** Measured: `backgroundColor rgba(0,0,0,0) → rgb(247,236,234)` (`--bad-soft`), `color` unchanged at `rgb(109,104,98)` (`--muted`). The glyph never turns red.
-**Status** needs decision: keep code (background wash is the v2-wide idiom) or match the design (red glyph)?
+**Status** fixed + verified after rebuild: every remove ✕ (shared editor + Q&A) tints its glyph `--bad` on hover as well as the background (consistent with the Companies ruling)
 
 ### PERS-10 · P3 · Two collapsible headers on the same screen wash to different colours, and only one matches the design
 **Where** `theme.css:129` (`.v2-hover-accent` → `--surface-2`) on `SectionShell` (RS:126) and the Experience entry header (RS:213); `theme.css:164` (`.v2-clhead` → `--bg`) on the four autofill group headers (P:278)
 **Expected + why** The design gives **every** collapsible header the same `style-hover="background:#faf8f3"` — section headers, role headers and group headers alike. `#faf8f3` maps to `--bg`.
 **Actual** Measured light: section header → `rgb(246,244,238)` = `--surface-2`; group header → `rgb(252,251,247)` = `--bg`. Side by side in one viewport they read as two different affordances.
-**Status** needs decision: keep code (`.v2-hover-accent` is shared with other screens) or align Persona's section headers onto `--bg`?
+**Status** fixed + verified after rebuild: all collapsible headers hover to `--surface-2` (`.v2-clhead` unified; Q&A card keeps its amber)
 
 ### PERS-11 · P3 · Experience entry headers are 36.75 px tall, putting five rows on a half pixel
 **Where** `ResumeSections.jsx:213`
@@ -97,65 +97,65 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 ### PERS-12 · P3 · Picker menu-item hover is dead in the served bundle
 **Where** `theme.css:149`; items at `Persona.jsx:118` / `:120`
 **Actual** Measured against the served bundle: hovering a Picker option changes nothing (`changed=[]`), because each item sets an inline `background` and the class rule had no `!important`. The design specifies `style-hover="background:#f3f0e8"` on exactly these rows.
-**Status** already fixed in source by this wave's `theme.css:149` `!important` change (logged elsewhere as FEED-04). Recorded here only as confirmation that Persona is a second site of the same root cause. Re-verify after rebuild.
+**Status** fixed + verified: `.v2-menuitem` hover hardened tree-wide
 
 ### PERS-13 · P3 · Every destructive control is one unconfirmed click and PATCHes immediately
 **Where** `Persona.jsx:320` (remove Q&A answer); `ResumeSections.jsx:185` (contact item), `:237` (bullet), `:249` (**Remove role** — an entire job with all its bullets), `:302` (skill category), `:324`/`:353`/`:369` (education / project / publication)
 **Actual** Hit accidentally and then confirmed deliberately: a single click on `Remove role` deleted a 10-bullet role, persisted 500 ms later. No confirmation, no undo, no toast. This is the user's real résumé source pool.
 **Expected + why** HANDOVER's standing constraint on destructive operations; `Remove role` alone destroys ~10 authored bullets.
-**Status** needs decision: confirm-on-remove for `Remove role` only, or an undo toast across the set?
+**Status** fixed + verified after rebuild: every destructive control removes immediately and shows a 5 s undo toast that re-inserts the item at its index (shared `useUndoRemove`; measured on a Q&A answer: qa_bank identical after undo)
 
 ### PERS-14 · P3 · Garbage `qa_bank` entries become blank editable pairs and are counted as answers
 **Where** `Persona.jsx:92-97` (`toPair`), `:301` (count)
 **Actual** Serving `qa_bank: [{q:a}, {k1,k2}, null, {}, "not-an-object"]` renders **five** cards — three completely blank — and the header reads `5 answers`. The next edit rewrites all five canonically, so the garbage becomes permanent blank rows.
-**Status** needs decision: skip unusable entries (and stop counting them), or keep the current lossy-but-visible behaviour?
+**Status** fixed + verified after rebuild: non-object / empty / junk `qa_bank` entries are skipped and not counted (5 injected entries → 2 cards)
 
 ### PERS-15 · P3 · No keyboard access and no focus styling anywhere on the screen
 **Where** every clickable control is a `span`/`div` with `onClick`, no `tabIndex`/`role`/`onKeyDown` (P:108, 116, 118, 120, 136, 278, 297, 320, 325; RS:126, 163, 185, 189, 213, 237, 248, 249, 283, 302, 307, 324, 328, 348, 351, 353, 357, 369, 372). Every `<input>`/`<textarea>` sets `outline: 'none'` with no replacement.
 **Actual** Measured on a focused input: `outlineStyle: 'none'`, `boxShadow: 'none'` — focus is completely invisible. No `aria-expanded` on the eleven toggles, no `aria-checked` on the custom checkbox.
-**Status** needs decision: is v2 taking on a keyboard/focus pass at all? (Same shape on Stats — STAT-22.)
+**Status** fixed + verified after rebuild (simple): 46 controls are Tab-reachable with roles, `aria-expanded` on 15 headers, Enter/Space activate, accent focus ring
 
 ### PERS-16 · P4 · Both column heads are missing the design's right-hand caption
 **Where** `Persona.jsx:161-168` — `ColumnHead` renders only title + "what is this?"
 **Expected + why** The design gives each column head a third element: `<span style="margin-left:auto;…">the pool tailored résumés draw from</span>` and `…>read by the extension on ATS forms</span>` — the line that explains the two-column split at a glance.
 **Actual** Measured: the head has 2 children, not 3.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep
 
 ### PERS-17 · P4 · The four autofill group headers are missing the design's subtitle
 **Where** `Persona.jsx:281` renders a bare spacer `<span style={{flex:1, minWidth:0}} />` where the design has `{{ g.sub }}`
 **Expected + why** Design subtitles: contact *"name, links, current company — writes the contact node"*; demographics *"unset by default — filled only where you choose"*; workauth *"the yes/no answers every ATS asks"*; screening *"relocation, notice, salary — writes preferences + compensation"*. The Q&A card **does** render its subtitle (P:300), so the gap is visible inside the same column.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep
 
 ### PERS-18 · P4 · `＋ Add answer` carries a hover class that can never do anything
 **Where** `Persona.jsx:325-326` — `className="v2-hover-accent-text"` on a span whose inline `color` is already `var(--accent)`
 **Actual** Measured: `changed=[]`, before and after both `rgb(63,107,82)`. The design gives this control no hover at all, so the class is dead weight either way.
-**Status** needs decision: drop the class, or give the control a real hover (e.g. `--text`)?
+**Status** fixed + verified after rebuild: `+ Add answer` is the same dashed add control as the other cards
 
 ### PERS-19 · P4 · `+ Add bullet` is muted grey while every other add-control on the screen is accent
 **Where** `ResumeSections.jsx:248` — `color: 'var(--muted)'` with `.v2-act`, versus `DashedAdd` (RS:96) at `color: 'var(--accent)'` with `.v2-dashadd`
 **Expected + why** Design: `+ Add bullet` is `color:#3f6b52` — the same accent as `+ Add experience`, `+ Add education`, `+ Add skill`.
 **Actual** Measured: `+ Add bullet` is `rgb(109,104,98)` before and after hover (`.v2-act` does not touch `color`); the sibling `DashedAdd` is `rgb(63,107,82)` throughout. Two visually different "add" affordances inside one card.
-**Status** needs decision: align `+ Add bullet` to accent + `.v2-dashadd`?
+**Status** fixed + verified after rebuild: `+ Add bullet` is accent like every other add control (résumé editor too)
 
 ### PERS-20 · P4 · `--edge` used as small text sits under the AA contrast floor
 **Where** `Persona.jsx:109` (Picker placeholder `—`), `:282` (`{n} of {N} set`), `:301` (`{n} answers`)
 **Actual** Measured light: `rgb(138,130,110)` on `rgb(255,255,255)` ≈ **3.9:1** at 10.5 px — short of the 4.5:1 needed at that size. Dark: `rgb(127,122,102)` on `rgb(40,37,27)` ≈ 4.2:1, also short. The design uses the same `#8a826e`, so this is inherited rather than introduced.
-**Status** needs decision: keep design fidelity, or lift these three to `--muted`?
+**Status** fixed + verified after rebuild: the three small `--edge` texts are `--muted` (rgb 109,104,98)
 
 ### PERS-21 · P4 · Blank Q&A pairs and empty strings are persisted
 **Where** `Persona.jsx:325` (`＋ Add answer` pushes `{question:'', answer:''}`), `:208` (only `undefined` deletes a key)
 **Actual** Measured: `＋ Add answer` PATCHes a blank pair 500 ms later (`qa_bank` 18 → 19, header `19 answers`) before a character is typed — while the backend's own `POST /persona/qa-bank` rejects blanks with a 400 (`routes_persona.py:84`). Separately, clearing a text field stores `''` rather than deleting the key (verified for `earliest_start`, `referral_source`, `desired_salary`, whose originals were absent and came back as `''`).
-**Status** needs decision: filter blanks out of `writeQa`, and/or delete on empty string?
+**Status** fixed + verified after rebuild: `+ Add answer` no longer persists a blank pair; cleared fields delete the key instead of storing ''
 
 ### PERS-22 · P4 · Q&A subtitle is truncated relative to the design
 **Where** `Persona.jsx:300` — `reusable screener answers`
 **Expected** Design: `reusable screener answers — sent verbatim, worth writing well`. The dropped half is the part that explains why the card is amber.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep the user's subtitle ("reusable screener answers")
 
 ### PERS-23 · P4 · "Saves automatically" / "saves on blur" both misdescribe a 500 ms debounce-on-change
 **Where** header copy `Persona.jsx:245`; `CLAUDE.md` §Resume + Persona System says *"saves on blur via `PATCH /api/persona`"*
 **Actual** Measured: every keystroke re-arms a 500 ms timer per node; blur is irrelevant (the uncontrolled skill Category input at RS:295 is the sole genuine commit-on-blur). Combined with PERS-08 the copy is actively misleading.
-**Status** needs decision: reword the header, fix CLAUDE.md, or both.
+**Status** fixed (docs): the screen copy "Saves automatically" was right; CLAUDE.md now says the Persona editor autosaves 500 ms after the last change
 
 ---
 
@@ -188,106 +188,106 @@ Screenshots (container `/tmp/v2t/shots/`): `stats-light`, `stats-dark`, `stats-s
 **Repro** 1024×700.
 **Actual** Measured: all 7 rows have `scrollWidth 856` against `clientWidth 756`; the document itself does not scroll (`scrollWidth === clientWidth === 1024`), so the `Run now` buttons spill past the card's right border. Run-history and activity rows are fine (their last column is `flex: 1`). Row tops stay integral.
 **Proposed fix** Wrap the schedules body in `overflow-x: auto`, or make `Job`/`Job ID` shrinkable.
-**Status** needs decision.
+**Status** fixed + verified after rebuild: the Schedules table shrinks the Job column and hides Job ID / Schedule / Next run / Status progressively (ResizeObserver); no overflow at 1024, only name + Run now at 700
 
 ### STAT-05 · P3 · Two of the four funnel bars use different tokens from the design
 **Where** `Stats.jsx:202-205`
 **Expected + why** Design funnel palette: Saved `#c9c3b4` (`--line-strong`), Applied `#8fae9b` (`--funnel-low`), Interview `#5f8a70` (`--funnel-mid`), Offer `#3f6b52` (`--accent`) — one neutral→accent ramp, the same ramp the score buckets use on the same row of the page.
 **Actual** Measured light: Saved `rgb(201,195,180)` ✓, Applied `rgb(58,90,134)` = `--stage-applied` (blue), Interview `rgb(154,91,40)` = `--warn` (orange), Offer `rgb(63,107,82)` ✓. The code comment at `:561-563` says the intent was to share the Applications stage palette.
-**Status** needs decision: keep code (stage colours shared with Applications) or match the design's ramp?
+**Status** fixed + verified after rebuild: Applied `--funnel-low`, Interview `--funnel-mid`, Offer `--accent`, Rejected `--line-strong`
 
 ### STAT-06 · P3 · The funnel is upside down, because `Saved` counts jobs and the other three count applications
 **Where** `Stats.jsx:199-212`
 **Actual** Measured against live data: `Saved 5` → 2 % bar, `Applied 377` → 100 % bar, `Interview 3` → 2 %, `Offer 0` → 0 %. Widths normalise to the widest row (`:207`), so the "funnel" renders as sliver / full bar / sliver / nothing. `Saved` is `stats.saved_jobs` (the live shortlist, 5 today) while `Applied` is every application ever (377). The footnote at `:320` says as much, but the geometry still reads as a funnel.
 **Expected + why** The design's example data (26 → 8 → 5 → 1) narrows monotonically, which is what makes the shape legible — and that only holds while the shortlist exceeds the lifetime application count.
 **Proposed fix** Drop `Saved` from the funnel, or normalise against `Applied` and label `Saved` as a separate reference row.
-**Status** needs decision.
+**Status** fixed + verified after rebuild: Saved dropped from the funnel; rows Applied → Interview → Offer → Rejected, all applications, normalised against Applied; footnote updated
 
 ### STAT-07 · P3 · The `applied` line uses `--warn` where the design *and theme.css's own comment* say `--gold` — and the series is all zeros
 **Where** `Stats.jsx:356` (legend), `:553` (`<Line stroke="var(--warn)">`), `:548` (right axis ticks)
 **Expected + why** The design draws the applied polyline in `#c9a35a` with a solid `#c9a35a` legend swatch, and `theme.css:16-18` states outright *"`--gold` doubles as the 'applied' line on the 30-day chart"*. `--warn` is `#9a5b28` in light — a brown that reads as an error colour, not a series colour.
 **Actual** Measured: stroke resolves to `rgb(154,91,40)` light / `rgb(212,160,106)` dark; the legend swatch is additionally a dashed `repeating-linear-gradient` the design does not have. Separately, `/stats/timeline` returns `applied: 0` for **every** day over the last 30 *and* the last 90 — so the second line, the second Y axis and half the legend currently render nothing. The endpoint counts jobs whose *current* status is `applied`, grouped by *discovery* date, which is structurally near-always zero.
-**Status** needs decision: (a) switch the stroke to `--gold`; (b) is the `applied` series worth keeping given the endpoint's semantics?
+**Status** fixed in source: applied line + solid legend swatch + right-axis ticks use `--stage-applied`
 
 ### STAT-08 · P3 · Activity `Type` menu-item hover is dead in the served bundle
 **Where** `theme.css:149`; items at `Stats.jsx:468`
 **Actual** Measured: hovering `Scrape` in the open menu gives `changed=[]` (`rgba(0,0,0,0)` / `rgb(87,83,74)` before and after). The design specifies `style-hover="background:#f3f0e8"` on these rows.
-**Status** already fixed in source (`theme.css:149` gained `!important` this wave). Recorded as the second confirmed site; re-verify after rebuild.
+**Status** fixed + verified: `.v2-menuitem` hover hardened tree-wide
 
 ### STAT-09 · P3 · The funnel silently falls back to the status snapshot while still claiming "ever reached"
 **Where** `Stats.jsx:204-205` (`reached.interview || st.interview || 0`), footnote `:320`
 **Repro** Intercept `/stats/sankey` with only self-loops and backward hops.
 **Actual** Measured: `Interview` drops from 3 to 0 with no indicator, while the footnote still reads *"the rest count every application that ever reached that stage"*. This is exactly the bug HANDOVER records as previously fixed (*"Stats funnel read `application_statuses`, a snapshot, and showed Interview as 0 of 377"*) — the fallback quietly reintroduces it whenever transition data is missing.
 **Note** `reached` (`:194-198`) sums over **all** flows including the backward `interview → applied` hop and the `applied → applied` self-loop, unlike `sankey` (`:217`) which filters them. Live data: `reached.applied` = 373 = 372 + 1 backward hop.
-**Status** needs decision: surface the fallback in the footnote, or drop the fallback?
+**Status** fixed in source: a row that falls back to the status snapshot shows a `snapshot` note (with explanatory title) and the footnote says so; after the STAT-19 backfill no row currently falls back
 
 ### STAT-10 · P4 · Score bucket `61-80` uses `--funnel-mid` where the design uses `--funnel-low`
 **Where** `Stats.jsx:15`
 **Actual** Measured `rgb(95,138,112)` = `--funnel-mid` (`#5f8a70`); design `#8fae9b` = `--funnel-low`. The other four buckets match exactly (`--line`, `--sand`, `--gold`, `--accent`), so the ramp is one step too dark in the middle. Bucket range keys are hyphens on both sides (`main.py:1215`), so the lookup itself is sound.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep `--funnel-mid`
 
 ### STAT-11 · P4 · The funnel rows lost the design's per-row percentage, and the card lost its subtitle
 **Where** `Stats.jsx:315` (`flex: '0 0 40px'`, count only), `:286` (no sibling note)
 **Expected** Design: `flex:0 0 56px` rendering `{{ f.count }}<span style="color:#6d6862"> {{ f.pct }}</span>` — e.g. `8 31%` — plus the card subtitle `where the 8 applications stand`.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep
 
 ### STAT-12 · P4 · `Avg / call` renders `$0.0000` for a genuinely non-zero average
 **Where** `Stats.jsx:23` (`money`), `:379`
 **Actual** Measured at `all`: Spend `$0.019`, Calls `4,573`, Avg / call `$0.0000` (true value ≈ $4.05e-6). `money` bottoms out at four decimals, so any sub-$0.0001 average reads as zero.
 **Proposed fix** Fall back to significant digits or `<$0.0001` below the four-decimal floor.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep
 
 ### STAT-13 · P4 · A long-running job reads `Running · 3671s`
 **Where** `Stats.jsx:434` uses raw seconds; `dur()` (`:37`) already formats `m s` and is used two cards down at `:501`
 **Actual** Confirmed with an intercepted `elapsed_seconds: 3671`.
-**Status** needs decision — a one-word change (`dur(j.running?.elapsed_seconds)`).
+**Status** fixed in source: running duration formatted with `dur()` (m s)
 
 ### STAT-14 · P4 · The Schedules subtitle states the timezone twice and can contradict itself
 **Where** `Stats.jsx:414` — `next runs in {TZ_SHORT}, schedules as configured (UTC)`
 **Actual** Measured in the container (TZ=UTC): `7 jobs · next runs in UTC, schedules as configured (UTC) · intervals and crons live in Settings`. Also: "Settings" is plain text, not a link (the design does not link it either).
-**Status** needs decision: suppress the second clause when `TZ_SHORT === 'UTC'`.
+**Status** decided 2026-09-02: correct as is — crons are configured in UTC, next runs shown in the viewer's zone; the doubled 'UTC' only appears when the viewer's zone is UTC
 
 ### STAT-15 · P4 · The 30-day series keys on UTC dates while the backend groups on local dates
 **Where** `Stats.jsx:176` (`d.toISOString().slice(0, 10)`) versus `main.py:1145` (`cast(Job.discovered_at, Date)`)
 **Actual** Not observable in the container (TZ=UTC) but latent: for a viewer west of UTC all 30 buckets shift by a day, which also shifts `New this week` and `peak`. Related: `when()` (`:34`) formats in `TZ` while `dayLabel()` (`:25`) passes no `timeZone`.
-**Status** needs decision — use local date parts instead of `toISOString`.
+**Status** fixed in source: the 30-day series is bucketed by local calendar date; `dayLabel()` and `when()` share the zone
 
 ### STAT-16 · P4 · Nothing on the screen is a link, including the one the rail advertises
 **Where** no `<a>`, `Link` or `navigate` anywhere in `Stats.jsx`
 **Actual** The rail's pipeline-pulse tooltip says `Click → Stats · Run history` (`V2App.jsx:84-85`) and `:142` navigates to `/v2/stats`, but Run history is the last card on a ~2400 px page — the click lands at the top, below the fold. Other dead ends: `{n} sources need attention` (`:247`, live now — Oracle) does not go to Companies; `Best open score` does not open the job (the Feed's `?job=` deep-link exists); the score buckets do not filter the Feed by `min_score`.
-**Status** needs decision — at minimum give the Run-history card an id and scroll to it from the rail.
+**Status** fixed + verified after rebuild: the rail's health line goes to `/v2/stats#runs` and the Run history card scrolls into view
 
 ### STAT-17 · P4 · Hover, column and label deviations from the design (grouped)
 **Where** `Stats.jsx:292` / `:373` / `:460` / `:417-419` / `:441`
 **Actual** Measured: (a) the Funnel/Flow pills, the LLM period pills and the `Type ▾` button all carry `.v2-bdc`, and the design gives none of the three a `style-hover` — and on the *active* pill it is a visible no-op (`changed=[]`) because border and colour are already accent; (b) the design has no Funnel/Flow toggle at all (its script comment says the funnel *"replaces the source's bar/Sankey toggle"*); (c) the code adds a `Job ID` column (132 px) and widens `Job` to 250 px where the design has `Job 190 / Schedule 150 / Next run 130`; (d) the running button reads `Running` where the design says `Running…`, in `--accent` where the design uses `#8a826e`.
 **Everything else measured matches the design exactly:** header `92 px` / `22px 30px 16px`, h1 `30px`, period pill `23 px` / `0 9px` / `10.5px`, run button `25 px` / `0 11px`, run-history columns `118/140/90/100/76/flex`, card radius `10px`, `Schedules` heading `17px` Newsreader, funnel track `--surface-2`, status dot `--funnel-low`, `how priced?` underline `--line-strong`, inactive tab `--edge`, running-button border `--line`, and `Run now` hover → border+colour accent.
-**Status** needs decision (per the addenda, most of these look like deliberate cross-screen consistency choices).
+**Status** (a) and (d) fixed + verified after rebuild: no hover on the Funnel/Flow, period and Type ▾ pills; the running Run button reads "Running…" in `--edge`. (b), (c), (e) decided keep
 
 ### STAT-18 · P4 · Both logs are silently truncated
 **Where** `Stats.jsx:127` (`limit: 30`), `:134` (`limit: 50`)
 **Actual** Measured: 30 run rows and exactly 50 activity rows against a log holding far more. No pagination, no "load more", no row click, no link to `/monitor/run/{id}`, and nothing signals the cap. The activity empty state (`No activity matches.`) is the same copy whether the log is empty or the filter excluded everything.
-**Status** needs decision.
+**Status** fixed + verified after rebuild (+ backend `offset` on `/monitor/history` and `/activity-log`, restarted): Load more on both logs (32 → 62 runs measured); activity empty state distinguishes filtered vs empty
 
 ### STAT-19 · P4 · Sankey and funnel disagree on how many applications there are
 **Where** `Stats.jsx:222` (Sankey nodes) versus `:203` (funnel `Applied`)
 **Actual** Measured live: the Sankey labels read `new (372) → applied (372) → rejected (348)` with `interview (3)`, while the funnel row says `Applied 377` and the KPI says `Applications 377`. Five applications carry no `new → applied` transition, so two views of the same quantity differ by 5 with no explanation.
 **Everything else cross-checks exactly:** `Total jobs 18,943` = `/jobs?limit=1 → total 18943`; `Saved 5` = `/jobs?status=saved → total 5` = funnel `Saved`; `Applications 377` = `/applications → total 377` = `/stats.total_applications`; bucket counts `313+1385+904+975+94 = 3671` = `scored_count`; LLM `Calls 969` = Σ`by_purpose.calls`; `7 jobs` = `len(/scheduler/jobs)`; header spend = card spend at all four periods.
-**Status** needs decision.
+**Status** fixed + verified (data): 5 applications whose history started at applied→rejected got a backfilled `→ applied` edge (source `backfill`); Sankey new→applied 377 = funnel = KPI. 105 applied→applied self-loops remain (offered to strip)
 
 ### STAT-20 · P4 · KPI tile internals differ from the design
 **Where** `Stats.jsx:270-273`
 **Actual** Measured: tile `82 px` tall, `padding 14px 20px 10px`, `gap 11px`, value `line-height 30px`; the design is `padding:14px 20px`, `gap:2px`, `line-height:1.1`, and places the sub inside the serif span after a plain space rather than at `marginLeft: 7`.
-**Status** needs decision.
+**Status** decided 2026-09-02: keep
 
 ### STAT-21 · P4 · Border tokens used as fills and as text lose their contrast in dark
 **Where** `Stats.jsx:14` (`'0-20': 'var(--line)'` as a bar fill), `:401` (`--edge` as the Cache `—`), `:454` (`--edge` as the inactive tab label)
 **Actual** Measured dark: the `0-20` bar is `rgb(62,59,50)` on card `rgb(40,37,27)` — a 22-point luminance step for a bar representing 313 jobs. In light it is `rgb(226,221,208)` on white, which reads fine. `--line` is a border token doing duty as a fill.
-**Status** needs decision: use `--line-strong` in dark, or accept it as an intended "lowest bucket recedes" effect.
+**Status** fixed + verified after rebuild: `0-20` bucket fills `--line-strong`; Cache — and the inactive tab label are `--muted`
 
 ### STAT-22 · P4 · No keyboard access on Stats either
 **Where** every control is a `span`/`div` with `onClick`, no `tabIndex`/`role`/`onKeyDown` (`Stats.jsx:251, 292, 373, 439, 454, 460, 465, 468`); no `aria-expanded` on the Type dropdown
 **Actual** The only focusable element is the company `<input>` (`:479`), which sets `outline: 'none'` with no replacement — focus is invisible. `Run now` in particular is an unlabelled `span` firing an irreversible pipeline job.
-**Status** needs decision — same call as PERS-15.
+**Status** fixed + verified after rebuild (simple): 17 Tab-reachable controls incl. `Run now` with an aria-label naming the job, `aria-expanded` on Type ▾, `aria-pressed` on pills
 
 ---
 

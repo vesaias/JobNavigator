@@ -8,9 +8,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
 | P2 | 70 | 69 | 0 | 1 |
-| P3 | 111 | 54 | 43 | 14 |
-| P4 | 90 | 24 | 47 | 19 |
-| **All** | **276** | **152** | **90** | **34** |
+| P3 | 111 | 66 | 33 | 12 |
+| P4 | 90 | 36 | 26 | 28 |
+| **All** | **276** | **176** | **59** | **41** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
@@ -19,7 +19,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 26 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 31 |
-| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 12 |
+| persona-stats.md | 45 | 1 | 10 | 13 | 21 | 36 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 11 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 7 |
@@ -148,10 +148,34 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - PERS-06 (P2) — Any load failure leaves the screen on `Loading…` forever
 - PERS-07 (P2) — A legacy multi-key `qa_bank` entry loses every key but the first, permanently
 - PERS-08 (P2) — Navigating away within 500 ms of the last keystroke drops that edit silently
+- PERS-09 (P3) — Remove ✕ hovers to a red *background*; the design specifies a red *glyph*
+- PERS-10 (P3) — Two collapsible headers on the same screen wash to different colours, and only one matches the design
 - PERS-11 (P3) — Experience entry headers are 36.75 px tall, putting five rows on a half pixel
+- PERS-12 (P3) — Picker menu-item hover is dead in the served bundle
+- PERS-13 (P3) — Every destructive control is one unconfirmed click and PATCHes immediately
+- PERS-14 (P3) — Garbage `qa_bank` entries become blank editable pairs and are counted as answers
+- PERS-15 (P3) — No keyboard access and no focus styling anywhere on the screen
+- PERS-18 (P4) — `＋ Add answer` carries a hover class that can never do anything
+- PERS-19 (P4) — `+ Add bullet` is muted grey while every other add-control on the screen is accent
+- PERS-20 (P4) — `--edge` used as small text sits under the AA contrast floor
+- PERS-21 (P4) — Blank Q&A pairs and empty strings are persisted
+- PERS-23 (P4) — "Saves automatically" / "saves on blur" both misdescribe a 500 ms debounce-on-change
 - STAT-01 (P2) — A refused or failed trigger is indistinguishable from a successful one
 - STAT-02 (P2) — "Best open score" renders the literal string `-Infinity`
 - STAT-03 (P2) — With every endpoint failing, the screen renders a plausible-looking dashboard
+- STAT-04 (P3) — The Schedules table overflows its card below ~1100 px
+- STAT-05 (P3) — Two of the four funnel bars use different tokens from the design
+- STAT-06 (P3) — The funnel is upside down, because `Saved` counts jobs and the other three count applications
+- STAT-07 (P3) — The `applied` line uses `--warn` where the design *and theme.css's own comment* say `--gold` — and the series is all zeros
+- STAT-08 (P3) — Activity `Type` menu-item hover is dead in the served bundle
+- STAT-09 (P3) — The funnel silently falls back to the status snapshot while still claiming "ever reached"
+- STAT-13 (P4) — A long-running job reads `Running · 3671s`
+- STAT-15 (P4) — The 30-day series keys on UTC dates while the backend groups on local dates
+- STAT-16 (P4) — Nothing on the screen is a link, including the one the rail advertises
+- STAT-18 (P4) — Both logs are silently truncated
+- STAT-19 (P4) — Sankey and funnel disagree on how many applications there are
+- STAT-21 (P4) — Border tokens used as fills and as text lose their contrast in dark
+- STAT-22 (P4) — No keyboard access on Stats either
 - RES-01 (P1) — A rejected autosave is completely silent — the status line still says "saved just now"
 - RES-02 (P2) — Skills ▲▼ reorder was never persisted — the UI showed the new order until reload, then snapped back
 - RES-03 (P2) — "Import PDF" creates **two** base résumés
