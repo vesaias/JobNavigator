@@ -182,7 +182,8 @@ export default function Applications() {
     if (!d) return
     try {
       await api.post(`/applications/${d.id}/interviews`, {
-        what: intWhat.trim() || 'Interview', when_at: intWhen || null,
+        // APPS-03: datetime-local is wall-clock in the viewer's zone; send an instant so the server's UTC store round-trips
+        what: intWhat.trim() || 'Interview', when_at: intWhen ? new Date(intWhen).toISOString() : null,
         where_text: intWhere.trim() || null, status: 'scheduled', prep: intPrep.trim() || null,
       })
       setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); load(d.id)
