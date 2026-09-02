@@ -40,7 +40,7 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Expected + why** the picker is a *local* wall-clock control; the card must read back the same 14:00. `_parse_dt`'s docstring even names the case ("`'2026-09-09T14:00'` has no zone") and then chooses UTC.
 **Actual** measured (`interview_added`): stored `when_at = "2026-09-09T14:00:00+00:00"`, card rendered **"Wed, Sep 9, 10:00 AM · Zoom"** — 4 h earlier than typed (`browser_offset_min: 240`). For a user in CET this shows 16:00; the prep bundle (`routes_applications.py:550`) repeats the wrong time.
 **Proposed fix** send an absolute instant from the client: `when_at: intWhen ? new Date(intWhen).toISOString() : null` (`:178`). One line, no backend change, and `_parse_dt` then sees a zoned string. (Existing rows keep their stored instant; there are none in the real DB — `with interviews: 0`.)
-**Status** needs decision: fix client-side as above (recommended, no restart needed) **or** backend-side by treating a zone-less `when_at` as local — which the backend cannot know. I did not apply it because it changes how an existing field is transmitted.
+**Status** fixed + verified in source: `Applications.jsx` sends `when_at` as `new Date(intWhen).toISOString()` (an instant), so the server's UTC store round-trips to the viewer's wall clock
 
 ### APPS-04 · P2 · `POST /applications` upserts by job — re-logging the same posting silently overwrites the earlier application
 **Where** `routes_applications.py:262-272`; client `Applications.jsx:565-576` has no duplicate check.
@@ -48,7 +48,7 @@ On 401 the shell's `jn:unauthorized` modal does appear (`load_401.login_modal:tr
 **Expected + why** the modal copy says "For applications made outside the app"; nothing warns that this is an edit.
 **Actual** measured (`upsert`): total stayed 378, `rows_with_title:1`, notes replaced (`"ZZTEST note one"` → `"ZZTEST note TWO — overwrote the first"`), status silently reset `interview → applied`, and a spurious `{from:'interview', to:'applied', source:'ui'}` transition was written into the Stats funnel. `warned: []` — no dialog, no toast.
 **Proposed fix** backend: return `409` (or a `{"existing_id": …}` payload) when an Application already exists for the job, and have the modal ask "An application for this posting already exists — update it?".
-**Status** needs decision (backend change → coordinator restart).
+**Status** fixed + verified (backend): `POST /applications` for a job that already has one → 409 `{message, application_id}` (test added); Log modal opens the existing application on 409; extension popup shows "Already logged"
 
 ### APPS-05 · P2 · "Copied ✓" is shown even when the clipboard write fails
 **Where** `Applications.jsx:196-199` — `catch { /* clipboard blocked */ }` then `setCopied(true)` unconditionally.

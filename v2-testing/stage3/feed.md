@@ -33,7 +33,7 @@ really does contain SKIPPED / IGNORED / APPLIED rows (badges render).
 header's noun is.
 **Proposed fix** either send `status=new,saved` when `filters.status` is empty (matches `patchLocal`'s
 assumption and makes the optimistic row-removal correct), or relabel to "N jobs".
-**Status** needs decision: default the feed to new+saved, or relabel the header?
+**Status** fixed + verified after rebuild (`JobFeed.jsx` buildParams sends `status=new,saved` when no Status filter; header "14 open roles")
 
 ### FEED-02 · P3 · Every list row lands on a half pixel; 1px borders drop on alternating rows
 **Where** `JobFeed.jsx:601` (header subline), `:770` (status badge), `:777` (salary row)

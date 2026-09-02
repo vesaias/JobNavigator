@@ -7,23 +7,25 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 23 | 46 | 1 |
-| P3 | 111 | 13 | 96 | 2 |
+| P2 | 70 | 26 | 42 | 2 |
+| P3 | 111 | 14 | 94 | 3 |
 | P4 | 90 | 3 | 75 | 12 |
-| **All** | **276** | **44** | **217** | **15** |
+| **All** | **276** | **48** | **211** | **17** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
-| applications.md | 23 | 0 | 7 | 10 | 6 | 1 |
+| F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
+| applications.md | 23 | 0 | 7 | 10 | 6 | 3 |
 | companies.md | 37 | 1 | 12 | 16 | 8 | 4 |
 | cover-letters.md | 29 | 0 | 7 | 14 | 8 | 6 |
-| feed.md | 38 | 0 | 10 | 18 | 10 | 3 |
+| feed.md | 38 | 0 | 10 | 18 | 10 | 4 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 3 |
+| resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
 | resumes.md | 31 | 1 | 8 | 13 | 9 | 4 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 7 |
 | settings.md | 27 | 2 | 4 | 12 | 9 | 9 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
-| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 5 |
+| FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 6 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 0 |
 
 ## The five P1s — all fixed and re-verified on the rebuilt bundle
@@ -34,6 +36,8 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - **SET-03** — "Save key" writes the new API key locally and refreshes the session cookie even when the PATCH failed → dashboard lockout
 
 ## Fixed in this pass (source, then verified live or on the rebuilt bundle)
+- APPS-03 (P2) — Interview time is stored as UTC and rendered as local — off by the viewer's UTC offset
+- APPS-04 (P2) — `POST /applications` upserts by job — re-logging the same posting silently overwrites the earlier application
 - APPS-08 (P3) — Every list row lands on a fractional pixel — **fixed in source**
 - COMP-01 (P1) — Drawer `Save changes` closes before the PATCH resolves — a failed save loses the edit silently
 - COMP-11 (P2) — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
@@ -45,6 +49,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-04 (P2) — `?job=` deep-link silently loses its selection for any job outside the saved/applied window
 - CL-09 (P3) — Pending row is 46.75 px tall, so every letter row below it lands on a half pixel
 - CL-10 (P3) — Editor: the `text · link · stub` hint is 15.75 px tall and pushes the Recipient and Letter cards onto half pixels
+- FEED-01 (P2) — The default view labels every row in the database "open roles"
 - FEED-02 (P3) — Every list row lands on a half pixel; 1px borders drop on alternating rows
 - FEED-03 (P2) — The filter bar does not wrap; at 1024 px the Sort control is off-screen
 - FEED-04 (P2) — Sort-menu items have a dead hover
@@ -78,6 +83,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - F-005 (P2) — Stats (v1 + v2) + backend · Per-search "Run" in the scheduler table posts a path that does not exist
 - F-007 (P2) — Backend · Any non-UUID id in a path returns 500 instead of 404
 - F-008 (P2) — Backend · Order-only edits to dict-shaped JSON columns were silently dropped (Résumé + Persona skills ▲▼)
+- F-010 (P3) — Feed · First-run (empty database) shows the filter-miss copy instead of a first-run state
 
 ### Cross-cutting fixes not tied to one finding id
 - Toast system mounted on Searches, Companies, Applications, Persona and Stats (every failure there was console-only); Searches' helper used `text:` instead of `msg:` (blank toasts) — fixed.
@@ -85,11 +91,9 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Backend: `DataError` → 404 handler for malformed ids on every route; `flag_modified` on Résumé and Persona JSON PATCHes; `create_company` persists `aliases` + `auto_scoring_depth`; per-search `trigger_url` pointed at a real endpoint.
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
-## Open P2s that need you (47)
+## Open P2s that need you (44)
 - APPS-01 — No user feedback on any of the nine mutations — 8 console-only failure paths + 1 swallowed catch
 - APPS-02 — A failed load is indistinguishable from an empty database
-- APPS-03 — Interview time is stored as UTC and rendered as local — off by the viewer's UTC offset
-- APPS-04 — `POST /applications` upserts by job — re-logging the same posting silently overwrites the earlier application
 - APPS-05 — "Copied ✓" is shown even when the clipboard write fails
 - APPS-06 — The interview draft form is screen-global, not per application
 - APPS-07 — Clicking the already-active stage, editing notes, or adding an interview bumps `updated_at` and clears the stale indicator
@@ -107,7 +111,6 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-05 — A failed list load is rendered as "No cover letters yet"
 - CL-06 — A background generation that fails looks exactly like one that succeeded
 - CL-07 — An open Picker popover covers the other Picker's control; clicking the second control picks an option from the first
-- FEED-01 — The default view labels every row in the database "open roles"
 - FEED-05 — "Unscored jobs stay visible — this only hides low scores" is false
 - FEED-06 — "Jobs without a listed salary stay visible" is false
 - FEED-07 — Skip / Mark-applied announce success before the PATCH resolves, and stay wrong when it fails
