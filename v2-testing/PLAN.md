@@ -20,7 +20,7 @@ Environment: stack via `docker compose` (Docker Desktop). Backend tests run in-c
 - [x] v2 screen inventories: feed (193 boxes) · searches (150) · companies (202) · applications (137) · resumes (292) · cover-letters (230) · settings (207)
 - [~] v2 persona-stats inventory → `inventory/v2-persona-stats.md` (Persona complete; Stats through §2.4 — the Stats screen agent finishes it)
 - [x] v1 screen inventories → `inventory/v1-*.md` (3 files)
-- [ ] Settings matrix → `inventory/settings-matrix.md`
+- [x] Settings matrix → `inventory/settings-matrix.md` (78 keys)
 - [x] Design boards decoded → `design/` (14 boards byte-exact + MAIN.md + github.md). Note: MAIN.md names `Resumes Shelf` canonical for Résumés while HANDOVER names `Resumes Home D`; github.md names `Applications Ops` (split inbox) canonical while MAIN.md lists Applications as open. Testing follows the HANDOVER table.
 - [x] Commit
 
@@ -31,7 +31,7 @@ Backend-served: `/health` · `/docs` · `/redoc` · `/openapi.json` · `/cv/{tok
 
 ## Stage 2 — Static sweeps
 - [x] Dead links: 46 targets checked; 2 defects → F-001 (v1 route), F-002 (`?company=` unread). `/docs` + GitHub external OK; `/api/...` hrefs rely on the `jn_session` cookie set by App.jsx startup sync
-- [ ] No-op handlers (onClick without effect, handlers never attached)
+- [x] No-op handlers — catalogued per screen in the inventories' "Suspicious" sections and verified in Stage 3 (dead code items in FEED/SRCH/COMP reports)
 - [x] Colour literals: 0 in v2 JSX. Tokens: 10 unused (F-003), 5 shadows without dark (F-004); every `var(--x)` used in JSX is defined
 - [x] Console sweep, 23 routes × 2 themes → `artifacts/sweep1/` (gitignored). Clean except: Feed mounts the posting iframe while the frame-check is still pending (XFO refusals logged; Stage 3 Feed item); PDF blob aborts in headless are expected
 - [x] Commit
