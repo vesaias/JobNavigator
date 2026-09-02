@@ -322,7 +322,7 @@ export default function ResumeEditor() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* top bar */}
       <div style={{ flex: '0 0 auto', padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span onClick={() => navigate('/v2/resumes')} style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }} className="v2-navlink">‹ Résumés</span>
+        <span onClick={() => navigate('/v2/resumes')} style={{ fontSize: 13, lineHeight: '20px', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }} className="v2-navlink">‹ Résumés</span>
         <span style={{ color: 'var(--line)' }}>|</span>
         <span style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
         <span title={doc.name} style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</span>
@@ -342,7 +342,7 @@ export default function ResumeEditor() {
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>
               Tailored{jobData?.company ? <> for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></> : ' copy'}
               {doc.parent_id && (() => {
                 const baseName = (doc.name || '').split('→')[0].trim() || 'base'
@@ -506,7 +506,7 @@ function RetailorModal({ doc, job, onClose, onRun }) {
                   <div key={id} onClick={() => setMode(id)} title={hint} className="v2-act"
                     style={{ flex: 1, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
-                    <span style={{ fontSize: 10.5, lineHeight: 1.4, color: 'var(--muted)', textWrap: 'pretty' }}>{hint}</span>
+                    <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>{hint}</span>
                   </div>
                 )
               })}

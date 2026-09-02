@@ -44,7 +44,7 @@ const GROUP_LABEL = { applied: 'Applied', interview: 'Interview', offer: 'Offer'
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
-const LABEL = { fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
+const LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
 const FIELD_LABEL = { fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
 const POPOVER = {
   position: 'absolute', top: '100%', zIndex: 40, background: 'var(--surface)',
@@ -374,12 +374,12 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               {d.short_id ? `#${d.short_id} · ` : ''}{d.company_canonical || d.company}
             </span>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1.15, textWrap: 'pretty' }}>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px', textWrap: 'pretty' }}>
               {d.title || 'Unknown Role'}
               {(d.last_email_received || d.last_email_snippet) &&
                 <span title="Reply detected in Gmail" style={{ marginLeft: 8, fontSize: 13, color: 'var(--accent)', verticalAlign: 'middle' }}>✉</span>}
             </span>
-            <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+            <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>
               {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
                 style={{ color: 'var(--accent)', fontWeight: 500, cursor: d.tailored_resume_id ? 'pointer' : 'default' }}>{cv}{d.tailored_resume_id ? ' ↗' : ''}</span>
@@ -434,7 +434,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
           {(d.last_email_received || d.last_email_snippet) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={LABEL}>Last email · Gmail detection</span>
-              <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: 1.55, color: 'var(--text-2)', textWrap: 'pretty' }}>{d.last_email_snippet ? `“${d.last_email_snippet}”` : 'A reply was detected, but no snippet was stored.'}</div>
+              <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: '19px', color: 'var(--text-2)', textWrap: 'pretty' }}>{d.last_email_snippet ? `“${d.last_email_snippet}”` : 'A reply was detected, but no snippet was stored.'}</div>
             </div>
           )}
 
@@ -495,7 +495,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
             <span style={LABEL}>Notes · autosaves</span>
             <textarea key={d.id} defaultValue={d.notes || ''} onChange={(e) => onNotes(e.target.value)}
               onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…"
-              style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
+              style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
           </div>
         </div>
 
@@ -509,12 +509,12 @@ function Detail({ d, history, menuOpen, setMenuOpen, closeAll, onStage, onNotes,
                 {i < history.length - 1 && <span style={{ width: 1, flex: 1, background: 'var(--line)' }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 12 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--text)' }}>{h.what}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{ago(h.at)}</span>
+                <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text)' }}>{h.what}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{ago(h.at)}</span>
               </div>
             </div>
           ))}
-          {history.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)' }}>No history recorded yet.</span>}
+          {history.length === 0 && <span style={{ fontSize: 12, lineHeight: '18px', color: 'var(--muted)' }}>No history recorded yet.</span>}
         </div>
       </div>
     </div>
@@ -532,7 +532,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
           <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
-          <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {prep === 'loading' ? 'Building the bundle…' : prep.text}
           </pre>
         </div>
@@ -585,7 +585,11 @@ function LogModal({ onClose, onSaved, pushToast }) {
         status: stage, applied_at: when ? new Date(when).toISOString() : null,
       })
       onSaved(data.id)
-    } catch (e) { pushToast({ kind: 'error', msg: 'Could not save this application' + errSuffix(e) }); setBusy(false) }
+    } catch (e) {
+      const existing = e.response?.status === 409 ? e.response?.data?.detail?.application_id : null
+      if (existing) { pushToast({ kind: 'progress', msg: 'Already logged — opened the existing application.' }); onSaved(existing); return }   // APPS-04
+      pushToast({ kind: 'error', msg: 'Could not save this application' + errSuffix(e) }); setBusy(false)
+    }
   }
 
   const box = { height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)', width: '100%' }
@@ -640,7 +644,7 @@ function LogModal({ onClose, onSaved, pushToast }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={FIELD_LABEL}>Notes</span>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional — referral, recruiter contact…"
-              style={{ ...box, height: 'auto', minHeight: 52, padding: '9px 10px', lineHeight: 1.5, resize: 'vertical' }} />
+              style={{ ...box, height: 'auto', minHeight: 52, padding: '9px 10px', lineHeight: '19px', resize: 'vertical' }} />
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>

@@ -337,7 +337,7 @@ export default function Companies() {
       {/* rows (column header lives inside the scroll container so its width
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
           <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
@@ -766,7 +766,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         )}
 
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-          <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
             <span style={{ flex: '0 0 30px' }}>#</span>
             <span style={{ flex: 1, minWidth: 0 }}>Title</span>
             <span style={{ flex: '0 0 62px' }}>Status</span>

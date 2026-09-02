@@ -67,8 +67,8 @@ const DEPTHS = [
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
 const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Applicant']]
 
-const MICRO = { fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
-const HELP = { fontSize: 10.5, color: 'var(--muted)' }
+const MICRO = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
+const HELP = { fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
@@ -250,7 +250,7 @@ function ConfigForm({ d, set }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>{fields}</div>
 
       {note && (
-        <div className={note[1]} style={{ padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: 1.5, textWrap: 'pretty' }}>{note[0]}</div>
+        <div className={note[1]} style={{ padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', textWrap: 'pretty' }}>{note[0]}</div>
       )}
 
       {m === 'keyword' && (
@@ -446,7 +446,7 @@ export default function Searches() {
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Searches</h1>
-          <span style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}
@@ -678,7 +678,7 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
 
             <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                 <span style={{ flex: '0 0 80px' }}>Source</span>
                 <span style={{ flex: 1.3, minWidth: 0 }}>Company</span>
                 <span style={{ flex: 2, minWidth: 0 }}>Title</span>

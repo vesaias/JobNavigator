@@ -263,7 +263,7 @@ export default function Persona() {
             Saves automatically · autofill {filled} of {ANSWERABLE} set
           </span>
         </div>
-        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
       </header>
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>

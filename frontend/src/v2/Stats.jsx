@@ -65,9 +65,9 @@ const decodeCron = (expr) => {
 
 const CARD = { border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)' }
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
-const NOTE = { fontSize: 11, color: 'var(--muted)' }
-const COL = { fontSize: 9.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
-const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5 }
+const NOTE = { fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }
+const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
+const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
 const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, lineHeight: '14px', whiteSpace: 'nowrap' }
 const Pill = ({ children, bg, fg }) => (

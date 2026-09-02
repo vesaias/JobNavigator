@@ -75,7 +75,7 @@ Entry format: `### F-NNN · P{1-4} · {screen} · {title}` then **Where** (file:
 **Where** measured after the rebuild (`artifacts/reverify_1.json`, `frac_scan` = every element 18–140 px tall and ≥280 px wide with a fractional `top`): Feed detail band (7: `h2` title 59.78 px, meta row 19.5 px), Searches cards (24: card top 105.5 — the offset originates above the list), Applications rows (37 at x.5), Cover Letters generate panel pickers (9 at x.25), Persona résumé-content editor (34: label 48.75 px, bullets 112 px).
 **Expected + why** HANDOVER convention: integer line-heights everywhere so 1 px borders never drop. Per-screen fixes landed for the specific rows measured (Companies 0, Résumés shelf 0, Settings 0, Welcome 0 — confirmed), but each screen has more text sizes at the inherited 1.5.
 **Proposed fix** One systematic pass: a small set of `.v2-t13/.v2-t12/.v2-t11` utility classes (or inline integer line-heights) for the recurring 13/12.5/12/11.5 px text, applied where `frac_scan` reports; re-measure to zero per screen. ~1–2 lines per site, but many sites.
-**Status** needs decision: do the systematic pass now (est. 40–60 edits) or accept as P3 backlog?
+**Status** systematic pass done in source, rebuild pending — 73 one-line inline integer line-heights across 10 files; full before/after table, method and the deliberate "not fixed" list in `v2-testing/stage3/F-009-linheights.md`. Re-run `/tmp/v2t/lh_scan3.py` after the rebuild to confirm `blocks_frac_top = 0` per route.
 
 ### F-010 · P3 · Feed · First-run (empty database) shows the filter-miss copy instead of a first-run state
 **Where** `frontend/src/v2/JobFeed.jsx` list empty branch; route `/v2/feed` on a freshly seeded DB (`artifacts/empty/empty_sweep.json`, `artifacts/empty/v2_feed_light.png`)
