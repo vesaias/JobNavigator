@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
+import { useEscape } from './hooks'
 import api from '../api'
 import './theme.css'
 
@@ -929,6 +930,13 @@ function ModelsModal({ S, save, onClose }) {
   }
   // R2-A-01: the styled dialog, like every other destructive confirm in v2
   const [confirm, setConfirm] = useState(null)
+  // R3-S-04: EditModal had an Escape handler and this modal did not, so the Model
+  // catalog was the one v2 modal that only closed on its scrim. Held off while the
+  // remove-confirm is up (that dialog registered its own listener later, so ours
+  // would otherwise fire first and take the whole catalog down with it); the
+  // typeahead keeps its own Escape by calling preventDefault, which useEscape
+  // honours, so the first Escape closes the dropdown and the second the modal.
+  useEscape(onClose, !confirm)
   const remove = (m) => setConfirm({
     title: `Remove “${m.model}”?`,
     body: `It disappears from every ${PROVIDER_LABEL[m.provider] || m.provider} model picker. Anything already pointed at it keeps its saved value.`,

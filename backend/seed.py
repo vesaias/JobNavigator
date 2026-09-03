@@ -268,7 +268,8 @@ DEFAULT_SETTINGS = {
         "__jvsd", "__jvst", "jobpipeline", "cmpid", "codes", "feedid",
         "partnerid", "siteid", "bid", "customredirect",
         "chnlid", "v", "ccd", "frd", "r", "a",
-        "jk",
+        # R3-A-02: "jk" deliberately absent — it is Indeed's job identity, and
+        # stripping it collapsed every Indeed posting onto one external_id.
         # Search-context noise (career page filters that leak into job hrefs):
         "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
     ]), "URL query params stripped before dedup hashing — tracking/referral noise"),
@@ -991,11 +992,42 @@ def migrate_autofill_dicts(db):
     db.commit()
 
 
+def migrate_dedup_tracking_params(db):
+    """R3-A-02: take "jk" out of an already-stored `dedup_tracking_params`.
+
+    Settings are seeded once, so dropping the entry from DEFAULT_SETTINGS does
+    nothing for an existing install — and every Indeed posting stays invisible
+    until the stored list is corrected. Idempotent, and it leaves the rest of the
+    operator's edits alone. (`_IDENTITY_PARAMS` in scraper/_shared/dedup.py is the
+    belt to this one's braces: it protects the host even if "jk" is put back.)
+    """
+    row = db.query(Setting).filter(Setting.key == "dedup_tracking_params").first()
+    if not row or not row.value:
+        return
+    try:
+        stored = json.loads(row.value)
+    except (ValueError, TypeError):
+        return
+    if not isinstance(stored, list):
+        return
+    kept = [p for p in stored if str(p).strip().lower() != "jk"]
+    if len(kept) == len(stored):
+        return
+    row.value = json.dumps(kept)
+    db.commit()
+    try:
+        from backend.scraper._shared.dedup import reload_tracking_params
+        reload_tracking_params()
+    except Exception:
+        pass   # the cache loads lazily anyway; a failed eager reload is not fatal
+
+
 def run_seeds():
     db = SessionLocal()
     try:
         run_migrations(db)
         seed_settings(db)
+        migrate_dedup_tracking_params(db)
         migrate_autofill_dicts(db)
         seed_companies(db)
         seed_h1b_slugs(db)

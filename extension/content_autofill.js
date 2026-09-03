@@ -496,12 +496,20 @@
   }
 
   // R2-H-12: max_chars is a hint to the model, not a contract — a 300-char ask
-  // came back at 346. When the field declares a maxLength, cut the text we write
-  // to it (the browser would silently truncate an <input>, and would not truncate
-  // a contenteditable at all), and say so in the counter. Trim back to a word
-  // boundary when one is close, so the cut doesn't land mid-word.
+  // came back at 346. Cut the text we write to the field (the browser would
+  // silently truncate an <input>, and would not truncate a contenteditable at
+  // all), and say so in the counter. Trim back to a word boundary when one is
+  // close, so the cut doesn't land mid-word.
+  //
+  // R3-B-04: the cap used to apply only when the field declared a maxLength —
+  // which the usual Greenhouse/Lever/Ashby <textarea> does not — so the length
+  // the user picked was ignored on exactly the fields it was picked for (600 ->
+  // 714 chars, inserted whole). The ceiling is now the picked length, tightened
+  // by the field's own hard limit when it has one. /answer applies the same trim
+  // server-side; this is what enforces it on the streamed path.
+  const capOf = (s) => (s.fieldMax ? Math.min(s.fieldMax, s.len) : s.len);
   const capForField = (s) => {
-    const hard = s.fieldMax;
+    const hard = capOf(s);
     if (!hard || s.acc.length <= hard) return s.acc;
     const cut = s.acc.slice(0, hard);
     const sp = cut.lastIndexOf(' ');
@@ -509,7 +517,7 @@
   };
   const countLabel = (s) => {
     const base = `${s.acc.length}/${s.len}`;
-    return s.fieldMax && s.acc.length > s.fieldMax ? `${base} · trimmed to ${capForField(s).length}` : base;
+    return s.acc.length > capOf(s) ? `${base} · trimmed to ${capForField(s).length}` : base;
   };
 
   const TWISTS = [
@@ -655,7 +663,7 @@
   }
   function insertDraft(s) {
     s.inserting = true;                 // guard our own input event from closing the draft
-    writeToField(s.el, capForField(s));   // R2-H-12: never write past the field's maxLength
+    writeToField(s.el, capForField(s));   // R2-H-12 / R3-B-04: never write past the picked length or the field's maxLength
     teardownSession(s.key, { reveal: true });   // affordance returns as "Redraft"
   }
 

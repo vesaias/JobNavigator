@@ -234,7 +234,16 @@ def delete_cover_letter(cl_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Cover letter not found")
     # Drop tracer links first (DB has ON DELETE CASCADE, but delete explicitly so
     # the ORM doesn't try to NULL the FK on this nullable column).
-    db.query(TracerLink).filter(TracerLink.cover_letter_id == cl.id).delete(synchronize_session=False)
+    # R3-B-03: a link shared with the résumé this letter was written from stays —
+    # release only our side of it, so the résumé keeps reporting it and its click
+    # history survives.
+    for link in db.query(TracerLink).filter(
+        TracerLink.cover_letter_id == cl.id, TracerLink.resume_id.isnot(None),
+    ).all():
+        link.cover_letter_id = None
+    db.query(TracerLink).filter(
+        TracerLink.cover_letter_id == cl.id, TracerLink.resume_id.is_(None),
+    ).delete(synchronize_session=False)
     db.delete(cl)
     db.commit()
     return {"deleted": cl_id}

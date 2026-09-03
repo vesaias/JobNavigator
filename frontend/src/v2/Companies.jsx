@@ -161,10 +161,29 @@ export default function Companies() {
   const [showShots, setShowShots] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadErr, setLoadErr] = useState(null)
+  // R3-S-01 (= R2-S-01): the row's fixed columns summed to ~1130px of container
+  // before either flexible column reached its minWidth, so at 1024 with the rail
+  // open (818px of pane) the row ran ~300px past the viewport and the page grew a
+  // horizontal scrollbar. R2-S-01 pinned the actions column so the sticky ⋯ stayed
+  // reachable, but the overflow itself remained. Shed the four lowest-value
+  // columns as the pane narrows instead — all four are visible in the edit drawer,
+  // none is a control. Same ResizeObserver shape Settings (SET-11) and the Stats
+  // scheduler table already use. Thresholds are the container width at which the
+  // column *above* it stops fitting, so each one drops exactly when it has to.
+  const tableRef = useRef(null)
+  const [tblW, setTblW] = useState(1400)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
   const navigate = useNavigate()
   const mounted = useRef(true)
   useEffect(() => () => { mounted.current = false }, [])
+
+  useEffect(() => {
+    const el = tableRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(([en]) => { const w = en?.contentRect?.width; if (typeof w === 'number') setTblW(w) })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [loading])
 
   // only company_scrape runs belong on this screen; /monitor/active also carries
   // scoring and search runs whose scope_key is a job/search id. X-01: the run now
@@ -331,6 +350,16 @@ export default function Companies() {
       wait_for_selector: c.wait_for_selector || '', max_pages: c.max_pages ?? 5,
       h1b_slug: c.h1b_slug || '', active: c.active,
   })
+  // R3-S-01: 1130 is the container width at which every column still fits; each
+  // lower number is that figure minus the columns already dropped. Below the last
+  // one the Health column also gives up 40px of its minimum, which keeps ~50px of
+  // slack at 1024 with the rail open rather than the 14px the raw arithmetic left.
+  const showResumes = tblW >= 1130
+  const showAts = tblW >= 998
+  const showFit = tblW >= 890
+  const showApps = tblW >= 842
+  const healthMin = showApps ? 210 : 170
+
   const drawerRef = useRef(null)
   useEffect(() => { drawerRef.current = drawer }, [drawer])
   const drawerDirty = (d) => !!d && JSON.stringify(d.draft) !== JSON.stringify(toDraft(d.company))
@@ -416,16 +445,16 @@ export default function Companies() {
 
       {/* rows (column header lives inside the scroll container so its width
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
-      <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+      <div ref={tableRef} className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
-          <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
-          <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
-          <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>
+          <span style={{ flex: 1.9, minWidth: healthMin }}>Health</span>
+          {showResumes && <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>}
+          {showAts && <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>}
           <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · postings found in the last 7 days — the +N counts everything the scraper discovered, including titles the filters rejected">Open · 7d</span>
-          <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Applications recorded for this company">Apps</span>
-          <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>
+          {showApps && <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Applications recorded for this company">Apps</span>}
+          {showFit && <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>}
           <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
           <span style={{ flex: '0 0 190px' }} />
         </div>
@@ -449,26 +478,26 @@ export default function Companies() {
                 <span className={tierSlug(tierKey(c))} style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
               </span>
               {/* health */}
-              <span style={{ flex: 1.9, minWidth: 210, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
+              <span style={{ flex: 1.9, minWidth: healthMin, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
                 <span title={c.last_error || downMap[c.id] || (c.active ? `Last successful run ${ago(c.last_scraped_at)}` : 'Inactive — jobs already found are kept')} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
-              <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>
+              {showResumes && <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>}
               {/* ats */}
-              <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
+              {showAts && <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
                 {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `H-1B slug · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
-              </span>
+              </span>}
               {/* open · 7d */}
               <span title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} found in the last 7 days — everything discovered, including titles the filters rejected`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)' }}>
                 {c.open_jobs || 0}<span style={{ color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)' }}> +{c.open_jobs_week || 0}</span>
               </span>
               {/* apps */}
-              <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.application_count ? 'var(--text-2)' : 'var(--muted)' }}>{c.application_count || '·'}</span>
+              {showApps && <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.application_count ? 'var(--text-2)' : 'var(--muted)' }}>{c.application_count || '·'}</span>}
               {/* fit */}
-              <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>
+              {showFit && <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>}
               {/* status */}
               <span style={{ flex: '0 0 88px', display: 'flex', justifyContent: 'center' }}>
                 <span onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }} title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'} className="v2-bd"
@@ -590,6 +619,13 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   }
 
   return (
+    <>
+      {/* R3-S-02: the drawer had no backdrop, so it was the one overlay on this
+          screen that survived a click outside it (the Add modal and both row menus
+          close). The scrim is scoped to the companies pane, matching the drawer's
+          own absolute positioning, and routes through onClose so the dirty-discard
+          confirm still fires instead of dropping unsaved edits. */}
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', zIndex: 29 }} />
     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 720, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: 'var(--shadow-drawer)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
       <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -701,6 +737,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         <div onClick={save} style={{ marginLeft: saveErr ? 10 : 'auto', height: 32, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save changes'}</div>
       </div>
     </div>
+    </>
   )
 }
 

@@ -36,21 +36,44 @@ export function useEscape(onClose, active = true) {
 // RES-32: a flex-centred modal whose panel has an odd height lands on a half
 // pixel in an even viewport (or vice versa), so every 1px border inside it is
 // drawn across two device rows and reads blurred. Measure the panel after
-// layout and pull it back onto the pixel grid with a sub-pixel margin.
+// layout and pull it back onto the pixel grid.
 //
 //   const panel = useRef(null); useSnapTop(panel)   → ref={panel} on the panel
 //
 // It runs after every render because the panel's height changes with its
 // content (a picker opening, an error line appearing), and re-runs on resize.
+//
+// RES-32 re-open: the correction used to be a `marginTop`, which does NOT move
+// the panel 1:1. Every panel this is wired to sits in a
+// `display:flex; align-items:center` wrapper, where the leftover space is split
+// above and below the child — so a margin-top of d shifts a centred child by
+// only d/2. Measured: a natural top of 151.5 asked for +0.5px and rendered at
+// 151.75, still off the grid, for odd and even panel heights alike. `translateY`
+// is a paint-time offset: exactly 1:1, no effect on the parent's layout (so the
+// centring can't react to it and re-open the gap), and it is only applied when
+// there is a fraction to correct — so a panel that already lands on the grid
+// keeps a clean `transform`, and none of these panels contains a
+// `position: fixed` descendant that a transform's containing block would
+// re-anchor (every fixed element in the v2 modals is the *wrapper*, not a child
+// of the panel).
 export function useSnapTop(ref) {
   useLayoutEffect(() => {
+    let busy = false
     const snap = () => {
       const el = ref.current
-      if (!el) return
-      el.style.marginTop = '0px'
-      const top = el.getBoundingClientRect().top
-      const delta = Math.round(top) - top
-      if (delta) el.style.marginTop = `${delta}px`
+      if (!el || busy) return
+      busy = true                       // a resize during the reflow below must not re-enter
+      try {
+        // Measure the *natural* top: clearing the transform first keeps the last
+        // correction out of the reading, otherwise each pass would snap the
+        // already-snapped position and drift.
+        el.style.transform = ''
+        const delta = (() => {
+          const top = el.getBoundingClientRect().top
+          return Math.round(top) - top
+        })()
+        el.style.transform = delta ? `translateY(${delta}px)` : ''
+      } finally { busy = false }
     }
     snap()
     window.addEventListener('resize', snap)

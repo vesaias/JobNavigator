@@ -183,12 +183,19 @@ def test_generate_persona_base_validates_content(api_client, test_db, monkeypatc
     assert resp.status_code == 202
 
 
-# ── Tracer cross-owner isolation (guards the repoint bug) ────────────────────
+# ── Tracer cross-owner sharing (R3-B-03) ────────────────────────────────────
 
-def test_tracer_repoint_clears_other_owner(test_db):
+def test_tracer_link_is_shared_by_both_owners(test_db):
     """A resume and a cover letter for the same job derive the same {short_id}{stub}
-    token. After rewriting both, the shared link must be owned by exactly one —
-    never both — so click attribution stays correct."""
+    token. The link is therefore owned by BOTH.
+
+    This used to assert the opposite — the rewrite handed the row to whoever
+    rendered last and NULLed the other FK. That made per-document attribution flip
+    on every render: /resumes/{id}/tracer-stats came back empty whenever the letter
+    had rendered more recently, and the letter's came back empty after the next
+    résumé render (measured in R3-B-03). Sharing one token for one job is the
+    deliberate design; what was wrong was modelling ownership as exclusive.
+    See backend/tests/test_tracer_shared_owner.py for the stats-level assertions."""
     import uuid
     from backend.models.db import Setting, Resume, Job, CoverLetter, TracerLink
     from backend.api.routes_resumes import _rewrite_urls_with_tracers
@@ -209,15 +216,15 @@ def test_tracer_repoint_clears_other_owner(test_db):
 
     # Rewrite resume → creates link owned by resume, token "7777l"
     _rewrite_urls_with_tracers(resume.json_data, str(resume.id), test_db)
-    # Rewrite CL → same token; must repoint to CL and clear resume_id
+    # Rewrite CL → same token; it claims the row without releasing the résumé's
     _rewrite_urls_with_tracers(cl.json_data, None, test_db, cover_letter_id=str(cl.id), job_id=cl.job_id)
 
     link = test_db.query(TracerLink).filter(TracerLink.token == "7777l").first()
     assert link is not None
-    # Exactly one owner set
-    assert (link.resume_id is None) != (link.cover_letter_id is None)
+    # one row, one token, both owners — not a hand-off
+    assert test_db.query(TracerLink).count() == 1
     assert str(link.cover_letter_id) == str(cl.id)
-    assert link.resume_id is None
+    assert str(link.resume_id) == str(resume.id)
 
 
 def test_base_resume_stub_uses_zero_prefix(test_db):

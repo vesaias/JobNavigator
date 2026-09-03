@@ -339,10 +339,14 @@ export default function Stats() {
     // — flag those rows so the footnote isn't claiming something it can't know.
     const pick = (k) => (reached[k] ? { count: reached[k], snapshot: false } : { count: st[k] || 0, snapshot: !!st[k] })
     const rows = [
-      { label: 'Applied', count: applied, snapshot: false, color: 'var(--funnel-low)' },
-      { label: 'Interview', ...pick('interview'), color: 'var(--funnel-mid)' },
-      { label: 'Offer', ...pick('offer'), color: 'var(--accent)' },
-      { label: 'Rejected', ...pick('rejected'), color: 'var(--line-strong)' },
+      // R3-U-01: one stage, one colour. These used to run on the neutral chart
+      // ramp (--funnel-low/-mid/--accent/--line-strong), so Applied was green
+      // here, blue on the Flow view's Sankey nodes and blue again on the
+      // Applications stage dots. All three now read the same --stage-* tokens.
+      { label: 'Applied', count: applied, snapshot: false, color: 'var(--stage-applied)' },
+      { label: 'Interview', ...pick('interview'), color: 'var(--stage-interview)' },
+      { label: 'Offer', ...pick('offer'), color: 'var(--stage-offer)' },
+      { label: 'Rejected', ...pick('rejected'), color: 'var(--stage-rejected)' },
     ]
     const base = Math.max(1, applied)
     return rows.map((r) => ({
@@ -509,8 +513,9 @@ export default function Stats() {
               <span style={H}>New jobs · last 30 days</span>
               <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
               {/* STAT-07: --stage-applied is the applied series everywhere else in
-                  v2 and contrasts in both modes; the swatch is solid, as designed */}
-              {[['new', 'var(--accent)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
+                  v2; the swatch is solid, as designed. R3-U-02: the legend swatches
+                  follow the strokes below, so "new" is --series-new here too. */}
+              {[['new', 'var(--series-new)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
                 <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}>
                   <span style={{ width: 14, height: 2, background: c }} />{l}
                 </span>
@@ -710,12 +715,16 @@ function Spark({ series, peak }) {
         <LineChart data={data} margin={{ top: 6, right: 4, left: -14, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
           <XAxis dataKey="label" interval={6} {...axis} />
-          <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--accent)' }} />
+          <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--series-new)' }} />
           <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--stage-applied)' }} />
           <Tooltip
             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, padding: '6px 10px' }}
             labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
-          <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+          {/* R3-U-02: "new" was --accent, a dark green that sits within 1.2:1 of
+              --stage-applied's dark blue in light mode — the two lines read as one.
+              --series-new is a warm ochre tuned per theme to keep a >=2:1 luminance
+              gap from the applied line (and the dash pattern still separates them). */}
+          <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--series-new)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
           <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--stage-applied)" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
@@ -728,9 +737,10 @@ function Spark({ series, peak }) {
 // stage palette so a stage looks the same on both screens, with the
 // "name (value)" label v1 used.
 const STAGE_FILL = {
-  new: 'var(--line-strong)', saved: 'var(--line-strong)', applied: 'var(--stage-applied)',
-  interview: 'var(--warn)', offer: 'var(--good)', rejected: 'var(--bad)',
-  ghosted: 'var(--bad)', withdrawn: 'var(--bad)',
+  new: 'var(--stage-new)', saved: 'var(--stage-new)', applied: 'var(--stage-applied)',
+  interview: 'var(--stage-interview)', offer: 'var(--stage-offer)', rejected: 'var(--stage-rejected)',
+  // APPS-22: ghosted/withdrawn have no stage of their own — they group under Rejected
+  ghosted: 'var(--stage-rejected)', withdrawn: 'var(--stage-rejected)',
 }
 function SankeyNode({ x, y, width, height, payload }) {
   return (
