@@ -520,6 +520,10 @@ END $$;""",
         # Task 11: drop the legacy cvs table — Resume + Persona is the new world.
         # Idempotent: subsequent restarts no-op once the table is gone.
         "DROP TABLE IF EXISTS cvs",
+        # R3-A-03: per-source outcome for multi-board search runs, so a source
+        # that hard-fails (ZipRecruiter 403) stops looking like one that simply
+        # found nothing. create_all() never adds columns to an existing table.
+        "ALTER TABLE scrape_log ADD COLUMN IF NOT EXISTS source_breakdown JSONB",
     ]
     for sql in migrations:
         try:

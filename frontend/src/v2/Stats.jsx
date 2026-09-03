@@ -640,7 +640,7 @@ export default function Stats() {
                     </>
                   )}
                 </span>
-                <span style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
                   <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"
                     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--text)' }} />

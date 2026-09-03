@@ -69,7 +69,7 @@ function Drop({ label, active, open, onToggle, children, width = 216, trigger, o
   return (
     <div ref={ref} style={{ position: 'relative', flex: '0 0 auto' }}>
       {trigger ? trigger(onToggle) : (
-        <div onClick={onToggle} style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer',
+        <div onClick={onToggle} className="v2-bd" style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer',
           border: `1px solid ${active ? 'var(--accent)' : 'var(--edge)'}`, background: active ? 'var(--accent-soft)' : 'var(--surface)', color: active ? 'var(--accent)' : 'var(--text-2)' }}>
           {label}
           {active && onClear
@@ -479,10 +479,32 @@ export default function V2JobFeed() {
     if (e.shiftKey && lastIdx.current != null) { const [a, b] = [lastIdx.current, i].sort((x, y) => x - y); setChecked((p) => { const n = new Set(p); for (let k = a; k <= b; k++) n.add(jobs[k].id); return n }); return }
     focusAt(i)
   }
+  // R3-A-04: restore a whole batch. The rows can have had different prior
+  // statuses, so group them and send one bulk-update per (status, saved) pair —
+  // the same endpoint the forward path used.
+  const bulkUndo = async (prev) => {
+    if (!prev.length) return
+    const groups = new Map()
+    prev.forEach((p) => {
+      const key = `${p.status}|${p.saved}`
+      if (!groups.has(key)) groups.set(key, { updates: { status: p.status, saved: p.saved }, ids: [] })
+      groups.get(key).ids.push(p.id)
+    })
+    try {
+      for (const g of groups.values()) await api.post('/jobs/bulk-update', { job_ids: g.ids, updates: g.updates })
+      fetchJobs(); refreshStats()
+      pushToast({ kind: 'success', msg: `Restored ${prev.length} job${prev.length === 1 ? '' : 's'}.` })
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not undo ${prev.length} job${prev.length === 1 ? '' : 's'}` }) }
+  }
   const bulkStatus = async (status) => {
     const ids = [...checked]; if (!ids.length) return
+    // R3-A-04: the bulk path is the one where a mis-click costs the most and was
+    // the only one with no way back. Snapshot before the write — after fetchJobs()
+    // the rows are gone from the list.
+    const idSet = new Set(ids)
+    const prev = jobs.filter((j) => idSet.has(j.id)).map((j) => ({ id: j.id, status: j.status, saved: !!j.saved }))
     const updates = status === 'saved' ? { saved: true, status: 'saved' } : { status }
-    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); setChecked(new Set()); fetchJobs(); refreshStats(); pushToast({ kind: 'success', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.` }) }   // FEED-20
+    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); setChecked(new Set()); fetchJobs(); refreshStats(); pushToast({ kind: 'undo', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.`, action: 'Undo', onAction: () => bulkUndo(prev) }) }   // FEED-20
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not update ${ids.length} job${ids.length === 1 ? '' : 's'}${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` }) }
   }
   const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
@@ -743,7 +765,7 @@ export default function V2JobFeed() {
           trigger={(t) => {
             const statusActive = !(filters.status.length === DEFAULTS.status.length && DEFAULTS.status.every((s) => filters.status.includes(s)))
             return (
-              <div onClick={t} style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+              <div onClick={t} className="v2-bd" style={{ height: 30, padding: '0 13px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
                 border: `1px solid ${statusActive ? 'var(--accent)' : 'var(--edge)'}`, background: statusActive ? 'var(--accent-soft)' : 'var(--surface)', color: statusActive ? 'var(--accent)' : 'var(--text-2)' }}>
                 Status · {filters.status.map((s) => STATUS_OPTS.find((o) => o[0] === s)?.[1]).join(', ') || 'Any'}
                 {statusActive ? <span onClick={(e) => { e.stopPropagation(); setF({ status: DEFAULTS.status }) }} style={{ opacity: 0.6 }}>✕</span> : <span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>}
@@ -754,7 +776,7 @@ export default function V2JobFeed() {
         </Drop>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto' }}>
           <Drop width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
-            trigger={(t) => <div onClick={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
+            trigger={(t) => <div onClick={t} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
             {SORT_OPTS.map(([v, label]) => (
               <div key={v} className="v2-menuitem" onClick={() => { setSortBy(v); setMenu(null); setSel(0) }} style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: sortBy === v ? 'var(--accent)' : 'var(--text-2)', fontWeight: sortBy === v ? 500 : 400, ...(sortBy === v ? { background: 'var(--accent-soft)' } : {}) }}>{label}{sortBy === v && <span style={{ marginLeft: 'auto' }}>✓</span>}</div>
             ))}

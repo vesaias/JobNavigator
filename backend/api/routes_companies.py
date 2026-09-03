@@ -437,6 +437,12 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
     # endpoint should report what would actually save — not just per-company filters.
     from backend.models.db import get_global_title_exclude
     global_exclude_kws = [kw.lower() for kw in (get_global_title_exclude(db) or [])]
+    # R3-A-01: the run also drops jobs whose *body* matches a body_exclusion_phrases
+    # entry (stored as `ignored`), which the preview never showed — "14 kept" then
+    # became "+13 new" with nothing saying why. Same pure phrase scan the run uses;
+    # no live MyVisaJobs lookup, so this stays a local, network-free check.
+    from backend.analyzer.h1b_checker import load_exclusion_phrases, scan_jd_for_h1b_flags
+    body_phrases = load_exclusion_phrases(db) or []
 
     all_jobs = []
     urls_scraped = []
@@ -550,8 +556,10 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
         #   2. Global:       title_exclude_global setting (applied at INSERT time)
         # Both are reported here so the test result matches what would actually save.
         results = []
-        after_company_count = 0  # passes per-company only
-        would_save_count = 0     # passes both per-company and global
+        after_company_count = 0   # passes per-company only
+        would_save_count = 0      # passes per-company, global AND the body scan
+        body_excluded_count = 0   # would be stored as `ignored` by the real run
+        body_unchecked_count = 0  # no description in the preview — can't say
         for j in all_jobs:
             title_lower = j["title"].lower()
             title_orig = j["title"]
@@ -566,6 +574,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                         reason = f"No match for: {include_expr}"
 
             passes_company = reason is None
+            body_excluded_by = None
+            body_checked = False
             if passes_company:
                 after_company_count += 1
                 # Run global title-exclude on the same title (case-insensitive word boundary)
@@ -576,9 +586,23 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 if global_excluded_by:
                     reason = f"[Global] Excluded by: {', '.join(global_excluded_by)}"
                 else:
-                    would_save_count += 1
+                    # Third layer: the body scan the run performs at insert time.
+                    desc = (j.get("description") or "").strip()
+                    if body_phrases and desc:
+                        body_checked = True
+                        scan = scan_jd_for_h1b_flags(desc, body_phrases)
+                        if scan["jd_flag"]:
+                            body_excluded_by = scan["matched_phrase"] or "matched"
+                            reason = f"Body exclusion: {body_excluded_by}"
+                            body_excluded_count += 1
+                    elif body_phrases:
+                        # The ATS list endpoints don't carry descriptions; the run
+                        # fetches them later. Say so instead of implying a pass.
+                        body_unchecked_count += 1
+                    if reason is None:
+                        would_save_count += 1
 
-            kept = reason is None  # would actually save (passes both filters)
+            kept = reason is None  # would actually save (passes all three layers)
 
             results.append({
                 "title": j["title"],
@@ -587,6 +611,11 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 "reason": reason,
                 "passes_company_filter": passes_company,
                 "global_excluded_by": global_excluded_by,
+                # R3-A-01: the phrase that would make the run store this as
+                # `ignored`, or null. body_checked is false when the preview had
+                # no description to scan.
+                "body_excluded_by": body_excluded_by,
+                "body_checked": body_checked,
             })
 
         # Append rejected entries at the end so user can see what was dropped
@@ -596,6 +625,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 "url": r["url"],
                 "kept": False,
                 "reason": f"[Validation] {r['reason']} (via {r['selector']})",
+                "body_excluded_by": None,
+                "body_checked": False,
             })
 
         return {
@@ -609,7 +640,11 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
             "total_found": len(all_jobs),
             "total_rejected": len(all_rejected),
             "after_company_filter": after_company_count,  # passes per-company only
-            "after_filter": would_save_count,             # passes both — what'd actually save
+            "after_filter": would_save_count,             # passes all three — what'd actually save
+            # R3-A-01 footer arithmetic: kept · title-filtered · would-be-ignored
+            "body_excluded_count": body_excluded_count,
+            "body_unchecked_count": body_unchecked_count,
+            "body_phrase_count": len(body_phrases),
             "jobs": results,
         }
     except Exception as e:

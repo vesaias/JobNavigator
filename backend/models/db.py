@@ -271,6 +271,12 @@ class ScrapeLog(Base):
     new_jobs = Column(Integer, default=0)
     error = Column(Text, nullable=True)
     is_warning = Column(Boolean, default=False)
+    # R3-A-03: per-source outcome for multi-board runs, e.g.
+    #   {"indeed": {"seen": 9, "new": 0}, "zip_recruiter": {"error": "403"}}
+    # A source that hard-fails used to be indistinguishable from one that found
+    # nothing: the run finished `completed`, is_warning False, and the summary
+    # read like a legitimate quiet day. Single-source scrapes leave this NULL.
+    source_breakdown = Column(JSON, nullable=True)
     duration_seconds = Column(Float, nullable=True)
     ran_at = Column(DateTime(timezone=True), default=utcnow)
 

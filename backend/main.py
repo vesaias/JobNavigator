@@ -389,7 +389,7 @@ async def trigger_email_check():
         started = _dt.now(_tz.utc)
         from backend.email_monitor.gmail_client import check_emails
         await check_emails()
-        return _activity_summary(started, "email", "repl") or "No new replies"
+        return _activity_summary(started, "email", "reply", "replies") or "No new replies"
 
     try:
         run_id = launch_background("email_check", _do, trigger="manual")
@@ -1180,11 +1180,22 @@ def get_failing_entities(window: int = 3):
     """Active companies + searches whose last `window` scrapes ALL errored or returned
     0 results — a likely broken/moved ATS or dead URL. Computed from ScrapeLog."""
     from backend.models.db import ScrapeLog, Company, Search
+    from backend.scraper.orchestrator import source_errors, source_label
     db = SessionLocal()
     try:
         def _reason(entity_col, entity_id):
             recent = (db.query(ScrapeLog).filter(entity_col == entity_id)
                       .order_by(ScrapeLog.ran_at.desc()).limit(window).all())
+            # R3-A-03: one configured board refusing the request is worth
+            # flagging on its own — it needs neither `window` consecutive bad
+            # runs nor a run that returned nothing overall, because the other
+            # boards can mask it entirely.
+            if recent:
+                failed = source_errors(recent[0].source_breakdown)
+                if failed:
+                    return " · ".join(
+                        f"{source_label(k)} failed ({e})" for k, e in failed
+                    ) + " on the last run"
             if len(recent) < window or not all(r.error or r.is_warning for r in recent):
                 return None
             err = next((r.error for r in recent if r.error), None)

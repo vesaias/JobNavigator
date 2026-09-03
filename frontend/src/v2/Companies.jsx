@@ -867,14 +867,30 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   // total_found already excludes the validation-rejected rows (routes_companies.py:
   // len(all_jobs) vs len(all_rejected)), so the four numbers add up to the rows shown.
   const passCo = typeof test.after_company_filter === 'number' ? test.after_company_filter : null
-  const summary = `${kept} kept · ${found - kept} keyword-filtered · ${rejected} validation-rejected · ${found + rejected} extracted`
-    + (passCo != null && passCo !== kept ? ` · ${passCo} pass this company's filters · ${passCo - kept} removed by the global list` : '')
+  // R3-A-01: the run drops a third class of job the preview never showed — a body
+  // whose text matches a body_exclusion_phrases entry, stored as `ignored`. That
+  // is why "14 kept" used to become "+13 new" with nothing saying why.
+  const bodyExcluded = test.body_excluded_count ?? 0
+  const bodyUnchecked = test.body_unchecked_count ?? 0
+  const bodyPhrases = test.body_phrase_count ?? 0
+  const summary = `${kept} kept · ${Math.max(0, found - kept - bodyExcluded)} title-filtered`
+    + (bodyExcluded ? ` · ${bodyExcluded} would be ignored (body phrases)` : '')
+    + ` · ${rejected} validation-rejected · ${found + rejected} extracted`
+    + (passCo != null && passCo !== kept ? ` · ${passCo} pass this company's filters · ${Math.max(0, passCo - kept - bodyExcluded)} removed by the global list` : '')
+    + (bodyUnchecked ? ` · ${bodyUnchecked} not body-checked (needs the description)` : '')
   const urls = test.urls_scraped || []
   const pag = test.pagination_debug || []
   const shots = test.screenshots || []
   const jobState = (j) => {
     if (j.reason?.startsWith('[Validation]')) return { tag: 'Drop', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Validation] ', '') }
-    if (j.kept) return { tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', reasonFg: 'var(--muted)', reason: j.reason || '' }
+    // R3-A-01: a body-phrase drop is stored as `ignored`, not filtered out of the
+    // feed — label it as what it becomes, with the phrase that did it.
+    if (j.body_excluded_by) return { tag: 'Ignored', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason || `Body exclusion: ${j.body_excluded_by}` }
+    if (j.kept) return {
+      tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', reasonFg: 'var(--muted)',
+      // a kept row the body scan couldn't run on is not a promise — say so
+      reason: j.reason || (bodyPhrases > 0 && j.body_checked === false ? 'body check needs the description' : ''),
+    }
     if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // COMP-24: the global exclude list, not this company's filters
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }

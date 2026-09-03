@@ -97,15 +97,21 @@ def _scrape_summary(since) -> str:
     from backend.models.db import ScrapeLog
     db = SessionLocal()
     try:
+        from backend.scraper.orchestrator import source_errors
         rows = db.query(ScrapeLog).filter(ScrapeLog.ran_at >= since).all()
         if not rows:
             return "No sources ran"
         found = sum(r.new_jobs or 0 for r in rows)
         failed = sum(1 for r in rows if r.error)
-        warned = sum(1 for r in rows if r.is_warning and not r.error)
+        # R3-A-03: a run where one configured board refused the request now sets
+        # is_warning, but it is not "empty" — say which it is.
+        bad_source = {r.id for r in rows if not r.error and source_errors(r.source_breakdown)}
+        warned = sum(1 for r in rows if r.is_warning and not r.error and r.id not in bad_source)
         parts = [f"{len(rows)} source{'' if len(rows) == 1 else 's'}", f"+{found} new"]
         if failed:
             parts.append(f"{failed} failed")
+        if bad_source:
+            parts.append(f"{len(bad_source)} with a failed board")
         if warned:
             parts.append(f"{warned} empty")
         return " - ".join(parts)
@@ -113,15 +119,22 @@ def _scrape_summary(since) -> str:
         db.close()
 
 
-def _activity_summary(since, log_type: str, noun: str) -> str:
-    """"Count the activity-log rows a run produced, e.g. "3 replies"."""
+def _activity_summary(since, log_type: str, noun: str, plural: str = None) -> str:
+    """Count the activity-log rows a run produced, e.g. "1 reply" / "3 replies".
+
+    R3-A-07: the "+s" rule alone made the email summary read "1 repl" / "2 repls",
+    because the only way to get "replies" out of it was to pass the stem. Pass an
+    explicit `plural` whenever the plural is not just the noun plus an s.
+    """
     from backend.models.db import ActivityLog
     db = SessionLocal()
     try:
         n = db.query(ActivityLog).filter(
             ActivityLog.created_at >= since, ActivityLog.type == log_type
         ).count()
-        return f"{n} {noun}{'' if n == 1 else 's'}" if n else ""
+        if not n:
+            return ""
+        return f"{n} {noun}" if n == 1 else f"{n} {plural or noun + 's'}"
     finally:
         db.close()
 
@@ -154,7 +167,7 @@ async def run_email_check():
             started = datetime.now(timezone.utc)
             from backend.email_monitor.gmail_client import check_emails
             await check_emails()
-            run.summary = _activity_summary(started, "email", "repl") or "No new replies"
+            run.summary = _activity_summary(started, "email", "reply", "replies") or "No new replies"
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 

@@ -157,8 +157,13 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
             logger.warning("Search %s finished with scrape error: %s", search_id, result.get("error"))
         # Returned string becomes JobRun.result_summary (Stats -> Run history).
         if isinstance(result, dict):
-            return (f"{search_name} - {result.get('jobs_found', 0)} seen, "
-                    f"+{result.get('new_jobs', 0)} new")
+            summary = (f"{search_name} - {result.get('jobs_found', 0)} seen, "
+                       f"+{result.get('new_jobs', 0)} new")
+            # R3-A-03: name the boards that hard-failed, so "9 seen, +0 new"
+            # can't be mistaken for a quiet day on every configured source.
+            from backend.scraper.orchestrator import describe_source_errors
+            failed = describe_source_errors(result.get("source_breakdown"))
+            return f"{summary} · {failed}" if failed else summary
         return f"{search_name} - nothing ran"
 
     from backend.job_monitor import launch_background, JobAlreadyRunningError
@@ -278,6 +283,9 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             "duration": duration,
             "raw_count": 0,
             "after_filter": 0,
+            "body_excluded_count": 0,
+            "body_unchecked_count": 0,
+            "body_phrase_count": 0,
             "source_breakdown": {},
             "company_breakdown": {},
             "include_keywords": search.title_include_keywords or [],
@@ -339,6 +347,12 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             body_phrases = json.loads(body_row.value)
         except json.JSONDecodeError:
             pass
+    # R3-A-01: the preview used to fold a body-exclusion drop into the same
+    # anonymous "filtered" bucket as a title miss, so a job the run would store
+    # as `ignored` looked kept. Record which phrase hit (and which rows could
+    # not be checked at all) so each row can say so inline.
+    body_hits = {}          # df index -> the exclusion phrase that matched
+    body_unchecked = set()  # df index -> passed the title layers, but had no description
     if body_phrases:
         from backend.analyzer.h1b_checker import scan_jd_for_h1b_flags
         for idx in jobs_df.index:
@@ -347,7 +361,10 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                 if desc and desc != "nan":
                     result = scan_jd_for_h1b_flags(desc, body_phrases)
                     if result["jd_flag"]:
+                        body_hits[idx] = result["matched_phrase"] or "matched"
                         mask[idx] = False
+                else:
+                    body_unchecked.add(idx)
 
     # Source breakdown
     source_breakdown = {}
@@ -392,11 +409,8 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                     reason = f"Company excluded (global): {company_lower}"
                 elif company_lower in search_exclude_set:
                     reason = f"Company excluded: {company_lower}"
-            if not reason and body_phrases and desc and desc != "nan":
-                from backend.analyzer.h1b_checker import scan_jd_for_h1b_flags as _scan
-                body_res = _scan(desc, body_phrases)
-                if body_res["jd_flag"]:
-                    reason = f"Body exclusion: {body_res['jd_snippet'][:80] if body_res['jd_snippet'] else 'matched'}"
+            if not reason and idx in body_hits:
+                reason = f"Body exclusion: {body_hits[idx]}"
             if not reason:
                 reason = "Filtered"
 
@@ -422,15 +436,27 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             "desc_length": len(desc) if has_desc else 0,
             "kept": kept,
             "reason": reason,
+            # R3-A-01: the phrase that would make the run store this row as
+            # `ignored`, or null. `body_checked` is false when there was no
+            # description to scan, so the preview says "needs the description"
+            # rather than quietly implying the row passed.
+            "body_excluded_by": body_hits.get(idx),
+            "body_checked": bool(body_phrases) and idx not in body_unchecked,
         })
 
     after_filter = sum(1 for j in results if j["kept"])
+    body_excluded_count = len(body_hits)
+    body_unchecked_count = len(body_unchecked)
 
     return {
         "search_name": search.name,
         "duration": duration,
         "raw_count": raw_count,
         "after_filter": after_filter,
+        # R3-A-01 footer arithmetic: kept · title/company-filtered · would-be-ignored
+        "body_excluded_count": body_excluded_count,
+        "body_unchecked_count": body_unchecked_count,
+        "body_phrase_count": len(body_phrases),
         "source_breakdown": source_breakdown,
         "company_breakdown": company_breakdown,
         "include_keywords": include_kw,
@@ -678,6 +704,17 @@ async def _test_levelsfyi_search(search, db):
     }
 
 
+def _last_source_errors(last_log) -> list:
+    """Per-board failures from a search's most recent ScrapeLog row (R3-A-03)."""
+    if last_log is None:
+        return []
+    from backend.scraper.orchestrator import source_errors, source_label
+    return [
+        {"source": key, "label": source_label(key), "error": err}
+        for key, err in source_errors(getattr(last_log, "source_breakdown", None))
+    ]
+
+
 def _search_to_dict(s: Search, last_log=None) -> dict:
     return {
         "id": str(s.id),
@@ -707,6 +744,9 @@ def _search_to_dict(s: Search, last_log=None) -> dict:
         # most recent ScrapeLog for this search (None until it has run once)
         "last_error": (last_log.error if last_log else None),
         "last_run_warning": (bool(last_log.is_warning) if last_log else False),
+        # R3-A-03: boards that hard-failed on the last run, e.g.
+        # [{"source": "zip_recruiter", "label": "ZipRecruiter", "error": "403"}]
+        "last_source_errors": _last_source_errors(last_log),
         "last_jobs_found": (last_log.jobs_found if last_log else None),
         "last_new_jobs": (last_log.new_jobs if last_log else None),
         "last_duration": (last_log.duration_seconds if last_log else None),
