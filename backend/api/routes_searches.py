@@ -309,6 +309,9 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             "duration": duration,
             "raw_count": 0,
             "after_filter": 0,
+            "after_search_filter": 0,
+            "global_excluded_count": 0,
+            "global_exclude_keyword_count": 0,
             "body_excluded_count": 0,
             "body_unchecked_count": 0,
             "body_phrase_count": 0,
@@ -364,6 +367,30 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             return nl in search_exclude_set
         excl_mask = jobs_df["company"].apply(_kw_excl)
         mask &= ~excl_mask
+
+    # Global title exclude (DS-A-02). The run merges `title_exclude_global` into
+    # the per-search exclude list before it stores anything
+    # (scraper/sources/jobspy.py:285), so a preview that skips this layer promises
+    # rows the run then files as `ignored` — "5 kept · 0 title-filtered" became
+    # "3 new, 2 filtered out". Applied *after* the per-search title and company
+    # layers and recorded separately, exactly the way the Companies preview does
+    # it (routes_companies.py:603), so each row can say which list dropped it.
+    from backend.models.db import get_global_title_exclude
+    global_exclude_kw = [kw for kw in (get_global_title_exclude(db) or []) if str(kw).strip()]
+    after_search_filter = int(mask.sum())   # passes the per-search layers only
+    global_hits = {}                        # df index -> the global keywords that matched
+    if global_exclude_kw:
+        for idx in jobs_df.index:
+            if not mask[idx]:
+                continue
+            title_text = str(jobs_df.at[idx, "title"])
+            matched_global = [
+                kw for kw in global_exclude_kw
+                if re.search(r'\b' + re.escape(str(kw)) + r'\b', title_text, re.IGNORECASE)
+            ]
+            if matched_global:
+                global_hits[idx] = matched_global
+                mask[idx] = False
 
     # Body exclusion description check (H-1B + language phrases)
     body_row = db.query(Setting).filter(Setting.key == "body_exclusion_phrases").first()
@@ -435,6 +462,10 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                     reason = f"Company excluded (global): {company_lower}"
                 elif company_lower in search_exclude_set:
                     reason = f"Company excluded: {company_lower}"
+            # DS-A-02: the global list is its own layer, named as such — a row
+            # dropped by it is not "excluded by this search's filters"
+            if not reason and idx in global_hits:
+                reason = f"[Global] Excluded by: {', '.join(global_hits[idx])}"
             if not reason and idx in body_hits:
                 reason = f"Body exclusion: {body_hits[idx]}"
             if not reason:
@@ -462,6 +493,8 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             "desc_length": len(desc) if has_desc else 0,
             "kept": kept,
             "reason": reason,
+            # DS-A-02: the global title-exclude keywords that matched, or [].
+            "global_excluded_by": global_hits.get(idx, []),
             # R3-A-01: the phrase that would make the run store this row as
             # `ignored`, or null. `body_checked` is false when there was no
             # description to scan, so the preview says "needs the description"
@@ -479,6 +512,11 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         "duration": duration,
         "raw_count": raw_count,
         "after_filter": after_filter,
+        # DS-A-02 footer arithmetic: how many survived this search's own filters,
+        # and how many of those the global list then removed.
+        "after_search_filter": after_search_filter,
+        "global_excluded_count": len(global_hits),
+        "global_exclude_keyword_count": len(global_exclude_kw),
         # R3-A-01 footer arithmetic: kept · title/company-filtered · would-be-ignored
         "body_excluded_count": body_excluded_count,
         "body_unchecked_count": body_unchecked_count,

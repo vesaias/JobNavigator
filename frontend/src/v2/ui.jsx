@@ -284,7 +284,15 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', outline: 'none',
     }
   return (
-    <span className={className} style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, flex: width ? `0 0 ${width}` : '0 1 226px', ...style }}>
+    // DS-S-11/DS-S-12: the wrapper carries a real `width`, not just a flex-basis.
+    // A flex item's *intrinsic contribution* to its parent is measured from its
+    // content, and the content here is a bare <input> whose default intrinsic
+    // width is ~178px — so a parent sized to max-content (a header's action
+    // group) budgeted 178px for a field that then laid out at its 300px basis
+    // and shoved the sibling Button past the header's overflow:hidden edge.
+    // With `width` set, the contribution equals the declared width; `0 1 auto`
+    // + minWidth:0 keeps the field (never the button) as the thing that yields.
+    <span className={className} style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, width: width || 226, flex: '0 1 auto', ...style }}>
       {!under && (
         <span aria-hidden="true" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 'var(--t-12)', color: 'var(--search-glyph)', pointerEvents: 'none' }}>⌕</span>
       )}
@@ -300,11 +308,30 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
 // role="option" rows. `options` is [[value, label], …].
 export function Select({ value, options = [], onPick, width, mono, placeholder, ariaLabel, emptyText, disabled, style, className }) {
   const [open, setOpen] = useState(false)
+  // DS-S-21/DS-S-32: Escape closes the listbox — and only the listbox, so a
+  // Select inside a modal doesn't take the modal down with it. The key listener
+  // is registered in the *capture* phase because `useEscape` (hooks.js) listens
+  // on document in the bubble phase: a parent modal registers its listener when
+  // it mounts, long before this popover opens, so mount order can't be relied on
+  // here the way it can for two components that mount together. Capture always
+  // runs first; preventDefault + stopPropagation then claim the event, the same
+  // swallow the Settings model-catalog typeahead does for its own dropdown.
+  // While the listbox is closed nothing is registered, so Escape falls through.
   useEffect(() => {
     if (!open) return undefined
     const c = () => setOpen(false)
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
+    }
     document.addEventListener('click', c)
-    return () => document.removeEventListener('click', c)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('click', c)
+      document.removeEventListener('keydown', onKey, true)
+    }
   }, [open])
   const cur = options.find((o) => String(o[0]) === String(value ?? ''))
   const toggle = () => setOpen((v) => !v)

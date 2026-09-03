@@ -315,11 +315,19 @@
    The two chart constraints hold too: --series-new keeps >=2:1 on
    --stage-applied (2.16 light / 2.05 dark) and >=3:1 on --bg (3.10 / 4.45).
 
-   Deliberately NOT re-skinned: --cc-*/--sm-* (the ATS and search-mode badge
-   hues are an identity taxonomy, not theme colour), --shadow-* (black alphas,
-   already theme-neutral — and their offsets are part of the geometry the gate
-   pins), and the on-rail overlays --rail-active/--rail-hover/--on-rail-*
-   (white alphas that work on any dark rail).
+   Deliberately NOT re-skinned: the --cc- and --sm- families (the ATS and
+   search-mode badge hues are an identity taxonomy, not theme colour), --shadow-*
+   (black alphas, already theme-neutral — and their offsets are part of the
+   geometry the gate pins), and the on-rail overlays --rail-active,
+   --rail-hover, --on-rail-* (white alphas that work on any dark rail).
+
+   DS-S-31: never glob two token families as `--cc-*` immediately followed by a
+   slash and `--sm-*` here. The star and the slash together end this comment
+   fifteen lines early; the remaining prose then reads as a selector prelude
+   that swallows the whole
+   .jn-v2[data-skin="alt"] rule below, and the browser drops it as invalid —
+   silently, because the correct bytes still ship in the built CSS. Write the
+   family names out, or separate the glob from the next `/` with a space.
 
    The two blocks MUST declare the identical set of names. `[data-skin="alt"]`
    and `.jn-v2[data-theme="dark"]` weigh the same (0,2,0), so a token that the

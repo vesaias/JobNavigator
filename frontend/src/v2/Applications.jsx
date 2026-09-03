@@ -150,7 +150,12 @@ export default function Applications() {
   // the Escape meant for the dialog. Gating it on `!confirm` hands the key to the
   // dialog's own useEscape while one is open — the same guard Settings' model
   // catalog uses for its dropdown.
-  useEscape(() => { closeAll(); setPrep(null); setEditIv(null); closeLog() }, !confirm)
+  //
+  // DS-A-03: `closeLog()` is gated on `logOpen`. Unguarded it ran on *every*
+  // Escape, so a stale dirty flag could raise the discard confirm — and its
+  // click-blocking scrim — over a screen with no form on it. The guard is the
+  // real fix; clearing the flag on save (see LogModal's onSaved) is the belt.
+  useEscape(() => { closeAll(); setPrep(null); setEditIv(null); if (logOpen) closeLog() }, !confirm)
 
   // ── derived ──
   const nInterview = apps.filter((a) => a.status === 'interview').length
@@ -477,7 +482,11 @@ export default function Applications() {
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
-      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { setLogOpen(false); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
+      {/* DS-A-03: `dropLog()`, not a bare `setLogOpen(false)` — a save leaves the
+          form submitted and unmounted, so the dirty flag has to go with it or the
+          next Escape offers to discard a form that no longer exists. The draft
+          itself is LogModal's own state and dies with the unmount. */}
+      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>

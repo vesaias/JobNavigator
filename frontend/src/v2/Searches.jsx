@@ -741,7 +741,13 @@ function TestModal({ test, tab, setTab, onClose }) {
   const nKept = d.after_filter ?? kept.length
   const nBodyExcluded = d.body_excluded_count ?? 0
   const nBodyUnchecked = d.body_unchecked_count ?? 0
-  const nTitleFiltered = Math.max(0, nRaw - nKept - nBodyExcluded)
+  // DS-A-02: the global title-exclude list is a third layer the run applies and
+  // this preview used to skip, so "5 kept · 0 title-filtered" turned into a run
+  // that filed 2 of them as `ignored`. Broken out the way Companies does it.
+  const nGlobalExcluded = d.global_excluded_count ?? 0
+  const nPassSearch = typeof d.after_search_filter === 'number' ? d.after_search_filter : null
+  const nTitleFiltered = Math.max(0, nRaw - nKept - nBodyExcluded - nGlobalExcluded)
+  const globalOut = (j) => Array.isArray(j.global_excluded_by) && j.global_excluded_by.length > 0
   // a kept row the scan couldn't run on (no description in the preview)
   const needsDesc = (j) => (d.body_phrase_count ?? 0) > 0 && j.body_checked === false && !j.body_excluded_by
   // the backend calls this `source_breakdown` on every preview path
@@ -855,7 +861,9 @@ function TestModal({ test, tab, setTab, onClose }) {
                       {/* R3-A-01: a body-phrase drop is stored as `ignored`, not
                           filtered out of the feed — label it as what it becomes. */}
                       {/* ui: keep — per-row verdict badge (Tag role), not a control */}
-                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : 'Out'}</span>
+                      {/* DS-A-02: a global-list drop reads GLOBAL, not a bare OUT —
+                          the row passed this search's own filters. */}
+                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : globalOut(j) ? 'Global' : 'Out'}</span>
                     </span>
                   </div>
                 )
@@ -873,6 +881,12 @@ function TestModal({ test, tab, setTab, onClose }) {
                   as `ignored` by the run and used to hide inside "filtered". */}
               <span>
                 <b style={{ color: 'var(--good)' }}>{nKept} kept</b> · <b style={{ color: 'var(--bad)' }}>{nTitleFiltered} title-filtered</b>
+                {/* DS-A-02: the global list gets its own term, like the Companies footer */}
+                {nGlobalExcluded > 0 && (
+                  <> · <b style={{ color: 'var(--bad)' }}>{nGlobalExcluded} removed by the global list</b>
+                    {nPassSearch != null && <span style={{ color: 'var(--muted)' }}> ({nPassSearch} pass this search’s filters)</span>}
+                  </>
+                )}
                 {nBodyExcluded > 0 && <> · <b style={{ color: 'var(--warn)' }}>{nBodyExcluded} would be ignored (body phrases)</b></>}
                 {' · '}{nRaw} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
                 {nBodyUnchecked > 0 && <span style={{ color: 'var(--muted)' }}> · {nBodyUnchecked} not body-checked (needs the description)</span>}
