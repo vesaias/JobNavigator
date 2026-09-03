@@ -6,6 +6,7 @@ Starts after the round-2 fixes land (two Opus agents in flight on 2026-09-04). O
 - Baseline dump taken in R3-0, restored in R3-4 (same procedure as round 2: stop backend, `pg_restore --clean --if-exists --no-owner`, start backend, verify counts).
 - LLM: settings already on Sonnet; no call cap this round ("use LLM as much as needed"), but every call is logged in the flow report.
 - Harness, docker commands, commit rules: as in `ROUND2-PLAN.md`.
+- Real network allowed (user 2026-09-04): search runs may run for real (JobSpy, all configured searches if useful), company scrapes on public ATS APIs, the Telegram digest trigger (one real message) and one Gmail check. LinkedIn personal and Jobright scrapes stay off (credentials/ToS).
 
 ## Stages
 - [ ] **R3-0 verify round-2 fixes** (Fable) — commit the two agents' work, restart backend, rebuild frontend, full test suite, Playwright check of every round-2 fix (COMP-11, R2-H-02/05/07/15, R2-S-04, COMP-26, R2-A-01/02, R2-H-01/03/04/09/10/12/13/14, R2-S-01/02/06, APPS-20, CL-28, RES-32, R2-A-03, SET-28), statuses updated in `round2/*.md` and `stage3/*.md`. Then a fresh baseline dump `backups/round3_baseline_<date>.dump`.
