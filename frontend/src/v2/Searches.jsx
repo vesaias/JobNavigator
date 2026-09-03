@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, IconButton, Pill } from './ui'
+import { Button, IconButton, Input, Pill, Select } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -180,20 +180,14 @@ const toPayload = (d) => {
 
 // ── small pieces ─────────────────────────────────────────────────────────────
 function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type, min, max }) {   // R2-A-02: min/max
-  const st = {
-    width: '100%', height: 31, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7,
-    background: disabled ? 'var(--surface-2)' : 'var(--surface)', color: disabled ? 'var(--muted)' : 'var(--text)',
-    fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, outline: 'none',
-  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: span ? `span ${span}` : undefined, minWidth: 0 }}>
       <span style={MICRO}>{label}</span>
       {options
-        ? <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} style={st}>
-            {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        : <input type={type || 'text'} value={value} disabled={disabled} placeholder={placeholder} min={min} max={max}
-            onChange={(e) => onChange(e.target.value)} style={st} />}
+        ? <Select value={value} options={options} onPick={onChange} disabled={disabled} mono={mono}
+            ariaLabel={label} style={{ flex: '0 0 auto', width: '100%' }} />
+        : <Input type={type || 'text'} value={value} disabled={disabled} placeholder={placeholder} min={min} max={max}
+            mono={mono} ariaLabel={label} onChange={onChange} />}
       {sub && <span style={{ ...HELP, textWrap: 'pretty' }}>{sub}</span>}
     </div>
   )
@@ -313,8 +307,9 @@ function ConfigForm({ d, set }) {
         {!ext ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={MICRO}>Run interval · min</span>
-            <input type="number" min={BOUNDS.run_interval_minutes[0]} max={BOUNDS.run_interval_minutes[1]} value={d.run_interval_minutes} onChange={(e) => set({ run_interval_minutes: e.target.value })}
-              style={{ width: 110, height: 31, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, background: 'var(--surface)', color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 11.5, outline: 'none' }} />
+            <Input type="number" min={BOUNDS.run_interval_minutes[0]} max={BOUNDS.run_interval_minutes[1]} mono
+              value={d.run_interval_minutes} onChange={(v) => set({ run_interval_minutes: v })}
+              ariaLabel="Run interval in minutes" style={{ width: 110 }} />
             <span style={HELP}>0 follows the global schedule from Settings</span>
           </div>
         ) : <div />}

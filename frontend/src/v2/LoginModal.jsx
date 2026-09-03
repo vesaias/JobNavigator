@@ -65,6 +65,9 @@ export default function LoginModal({ onSuccess }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>API key</span>
               <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 7, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* ui: keep — the API-key field is a bare input inside a v2-fieldwrap that also
+                    holds the show/hide toggle and turns --bad on an error; Input draws its own
+                    box, so it cannot render this composite */}
                 <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type={showKey ? 'text' : 'password'}
                   placeholder="jn_live_…" autoFocus autoComplete="current-password"
                   style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)' }} />
@@ -75,7 +78,7 @@ export default function LoginModal({ onSuccess }) {
               {error && <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--bad)' }}>{error}</span>}
             </div>
 
-            <Button onClick={submit} busy={loading} ariaLabel="Sign in">
+            <Button as="button" type="submit" busy={loading} ariaLabel="Sign in">
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
 

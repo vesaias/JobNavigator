@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, IconButton } from './ui'
+import { Button, IconButton, Input } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -23,15 +23,7 @@ const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || 
 import { ago } from './time'
 
 const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
-// Contact-item cells are 1:1 with the Résumé editor's header (cellInput there)
-const CELL = {
-  width: '100%', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6,
-  background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)',
-}
-const INPUT = {
-  height: 32, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 6,
-  background: 'var(--surface)', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', outline: 'none',
-}
+// Contact-item cells are 1:1 with the Résumé editor's header — both are `Input` now.
 
 // A collapsible editor card — the three sections of the letter.
 function Card({ title, note, open, onToggle, children }) {
@@ -385,7 +377,7 @@ export default function CoverLetterEditor() {
           <Card title="Header" open={headOpen} onToggle={() => setHeadOpen((v) => !v)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>
               <span style={FLABEL}>Full name</span>
-              <input value={data.header?.name || ''} onChange={(e) => update((d) => { d.header = d.header || {}; d.header.name = e.target.value })} style={INPUT} />
+              <Input value={data.header?.name || ''} onChange={(v) => update((d) => { d.header = d.header || {}; d.header.name = v })} ariaLabel="Full name" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -405,16 +397,19 @@ export default function CoverLetterEditor() {
                       <span onClick={() => i < arr.length - 1 && update((d) => { const a = d.header.contact_items; [a[i + 1], a[i]] = [a[i], a[i + 1]] })}
                         title="Move down" className={i < arr.length - 1 ? 'v2-hover-accent-text' : ''} style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
                     </span>
-                    <input value={ct.text || ''} placeholder="Display text" onChange={(e) => update((d) => { d.header.contact_items[i].text = e.target.value })}
-                      style={{ ...CELL, flex: 1, minWidth: 0 }} />
+                    <Input value={ct.text || ''} placeholder="Display text" ariaLabel="Contact item text"
+                      onChange={(v) => update((d) => { d.header.contact_items[i].text = v })}
+                      style={{ flex: 1, minWidth: 0 }} />
                     </div>
                     <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
-                    <input value={ct.url || ''} placeholder="URL (optional)" onChange={(e) => update((d) => { d.header.contact_items[i].url = e.target.value })}
-                      style={{ ...CELL, flex: 1, fontSize: 11.5, color: 'var(--text-2)', minWidth: 0 }} />
+                    <Input value={ct.url || ''} placeholder="URL (optional)" ariaLabel="Contact item URL"
+                      onChange={(v) => update((d) => { d.header.contact_items[i].url = v })}
+                      style={{ flex: 1, minWidth: 0 }} />
                     {tracked && (
-                      <input value={ct.stub || ''} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)"
-                        onChange={(e) => update((d) => { d.header.contact_items[i].stub = e.target.value })}
-                        style={{ ...CELL, flex: '0 0 34px', padding: '0 6px', fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', minWidth: 0 }} />
+                      <Input value={ct.stub || ''} placeholder="id" mono ariaLabel="Tracer link stub"
+                        title="Short stub for the tracer link id (e.g. l, w, gh)"
+                        onChange={(v) => update((d) => { d.header.contact_items[i].stub = v })}
+                        style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center', minWidth: 0 }} />
                     )}
                     <span onClick={() => update((d) => { d.header.contact_items.splice(i, 1) })} title="Remove"
                       className="v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>✕</span>
@@ -432,19 +427,19 @@ export default function CoverLetterEditor() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, paddingTop: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Company</span>
-                <input value={data.recipient?.company || ''} onChange={(e) => update((d) => { d.recipient = d.recipient || {}; d.recipient.company = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.recipient?.company || ''} onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.company = v })} ariaLabel="Company" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Date</span>
-                <input value={data.date || ''} onChange={(e) => update((d) => { d.date = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.date || ''} onChange={(v) => update((d) => { d.date = v })} ariaLabel="Date" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Hiring manager</span>
-                <input value={data.recipient?.manager || ''} placeholder="Unknown" onChange={(e) => update((d) => { d.recipient = d.recipient || {}; d.recipient.manager = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.recipient?.manager || ''} placeholder="Unknown" onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.manager = v })} ariaLabel="Hiring manager" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Address</span>
-                <input value={data.recipient?.address || ''} placeholder="—" onChange={(e) => update((d) => { d.recipient = d.recipient || {}; d.recipient.address = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.recipient?.address || ''} placeholder="—" onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.address = v })} ariaLabel="Address" style={{ minWidth: 0 }} />
               </div>
             </div>
           </Card>
@@ -453,7 +448,7 @@ export default function CoverLetterEditor() {
             open={letterOpen} onToggle={() => setLetterOpen((v) => !v)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>
               <span style={FLABEL}>Greeting</span>
-              <input value={data.greeting || ''} onChange={(e) => update((d) => { d.greeting = e.target.value })} style={INPUT} />
+              <Input value={data.greeting || ''} onChange={(v) => update((d) => { d.greeting = v })} ariaLabel="Greeting" />
             </div>
             {paras.map((text, i) => (
               <div key={i} style={{ border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
@@ -468,6 +463,8 @@ export default function CoverLetterEditor() {
                     (d) => { d.body_paragraphs = d.body_paragraphs || []; d.body_paragraphs.splice(i, 0, text) })} title="Delete paragraph" className="v2-parabtn-bad"
                     style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
                 </div>
+                {/* ui: keep — a paragraph is flowing text inside the ¶ card's own box: no
+                    border, no background, margin instead of padding, resize:none */}
                 <textarea value={text} rows={4} onChange={(e) => update((d) => { d.body_paragraphs[i] = e.target.value })}
                   style={{ margin: '4px 10px 9px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: '19px', color: 'var(--text)', outline: 'none', resize: 'none' }} />
               </div>
@@ -477,11 +474,11 @@ export default function CoverLetterEditor() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Closing</span>
-                <input value={data.closing || ''} onChange={(e) => update((d) => { d.closing = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.closing || ''} onChange={(v) => update((d) => { d.closing = v })} ariaLabel="Closing" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Signature</span>
-                <input value={data.signature || ''} onChange={(e) => update((d) => { d.signature = e.target.value })} style={{ ...INPUT, minWidth: 0 }} />
+                <Input value={data.signature || ''} onChange={(v) => update((d) => { d.signature = v })} ariaLabel="Signature" style={{ minWidth: 0 }} />
               </div>
             </div>
           </Card>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, IconButton, Pill } from './ui'
+import { Button, IconButton, Pill, Select, Textarea } from './ui'
 import api from '../api'
 import './theme.css'
 
@@ -19,12 +19,20 @@ const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code']
 // providers that need no key
 const KEYLESS = ['claude_code', 'ollama', '']
 
+// ui: keep — the box every *value* row on this screen wears. It is ui.jsx's
+// `Select` trigger, to the pixel (h32 · pad 0 10 · 1px --input-border · r6 ·
+// --search-bg · 12.5), because the rows pair a Select with a TextBox and the two
+// have to line up. The bare inputs inside it stay bare: the box is a
+// `v2-fieldwrap`, so it — not the field — carries the focus signal, and it also
+// holds the show/hide affordance. Change this only alongside `Select` in ui.jsx.
 const BOX = {
   height: 32, minWidth: 0, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 6,
   background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 7, fontSize: 12.5, color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', lineHeight: 1,
 }
-const CARET = { fontSize: 9, color: 'var(--muted)', flex: '0 0 auto' }
+// SET-23: with no options the menu chrome used to open as a bare empty box — say
+// why it is empty instead. ui.jsx's Select takes it as `emptyText`.
+const NO_MODELS = 'no models for this provider — add one under Model catalog'
 const MASK = '••••••'
 
 // SET-12: every control on this screen is a span/div with onClick, so none of
@@ -43,46 +51,6 @@ const asList = (v) => (Array.isArray(v) ? v.join('\n') : (v == null ? '' : Strin
 const asJson = (v) => {
   if (typeof v === 'string') return v
   try { return JSON.stringify(v, null, 2) } catch { return '' }
-}
-
-// A dropdown styled as the design's box + caret.
-function Select({ value, options, onPick, width, mono, placeholder, ariaLabel, emptyText }) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (!open) return
-    const c = () => setOpen(false)
-    document.addEventListener('click', c)
-    return () => document.removeEventListener('click', c)
-  }, [open])
-  const cur = options.find((o) => String(o[0]) === String(value ?? ''))
-  return (
-    <span style={{ position: 'relative', display: 'flex', flex: `0 1 ${width || '220px'}`, minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
-      <div onClick={() => setOpen((v) => !v)} {...kb(() => setOpen((v) => !v))} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open}
-        style={{ ...BOX, flex: 1, cursor: 'pointer', borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
-        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5 }}>
-          {cur ? cur[1] : (placeholder || 'Select…')}
-        </span>
-        <span style={CARET}>▾</span>
-      </div>
-      {open && (
-        <div className="v2-scroll" role="listbox" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, minWidth: '100%', maxWidth: 420, maxHeight: 320, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {/* SET-23: with no options the menu chrome used to open as a bare 12px
-              empty box — say why it's empty instead */}
-          {options.length === 0 ? (
-            <div style={{ padding: '7px 9px', fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>
-              {emptyText || 'no models for this provider — add one under Model catalog'}
-            </div>
-          ) : options.map((o) => (
-            <div key={String(o[0])} className="v2-menuitem" onClick={() => { onPick(o[0]); setOpen(false) }}
-              {...kb(() => { onPick(o[0]); setOpen(false) }, 'option')} aria-selected={String(o[0]) === String(value ?? '')}
-              style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                color: String(o[0]) === String(value ?? '') ? 'var(--accent)' : 'var(--text-2)',
-                background: String(o[0]) === String(value ?? '') ? 'var(--accent-soft)' : 'transparent' }}>{o[1]}</div>
-          ))}
-        </div>
-      )}
-    </span>
-  )
 }
 
 // Free-text box; secrets mask until revealed.
@@ -113,6 +81,8 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
     onSave(local)
   }
   return (
+    // ui: keep — the value box is a v2-fieldwrap (it carries the focus signal and
+    // the secret show/hide), and it is h32 so it lines up with the Select rows
     <span className="v2-fieldwrap" style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
       <input
         value={masked ? MASK : local}
@@ -602,7 +572,7 @@ function Row({ r, ctx }) {
         return (
           <>
             <Select value={p} options={PROVIDERS} onPick={(v) => save(r.pKey, v)} width="220px" ariaLabel={`${r.label} — provider`} />
-            <Select value={val(r.mKey)} options={modelsFor(p)} onPick={(v) => save(r.mKey, v)} width="260px" mono placeholder="pick model…" ariaLabel={`${r.label} — model`} />
+            <Select value={val(r.mKey)} options={modelsFor(p)} onPick={(v) => save(r.mKey, v)} width="260px" mono placeholder="pick model…" ariaLabel={`${r.label} — model`} emptyText={NO_MODELS} />
           </>
         )
       }
@@ -612,7 +582,7 @@ function Row({ r, ctx }) {
         return (
           <>
             {on && <Select value={p} options={PROVIDERS} onPick={(v) => save(`${r.base}_provider`, v)} width="200px" placeholder="pick provider…" ariaLabel={`${r.label} — provider`} />}
-            {on && <Select value={val(`${r.base}_model`)} options={modelsFor(p || val('llm_provider', 'claude_api'))} onPick={(v) => save(`${r.base}_model`, v)} width="260px" mono placeholder="pick model…" ariaLabel={`${r.label} — model`} />}
+            {on && <Select value={val(`${r.base}_model`)} options={modelsFor(p || val('llm_provider', 'claude_api'))} onPick={(v) => save(`${r.base}_model`, v)} width="260px" mono placeholder="pick model…" ariaLabel={`${r.label} — model`} emptyText={NO_MODELS} />}
             {on && p && !KEYLESS.includes(p) && (
               <span title="API key for this override's provider" style={{ display: 'flex', flex: '0 1 150px', minWidth: 0 }}>
                 <TextBox value={val(`${r.base}_api_key`)} onSave={(v) => save(`${r.base}_api_key`, v)} width="150px" mono secret ariaLabel={`${r.label} — API key`} />
@@ -665,6 +635,7 @@ function Row({ r, ctx }) {
             {/* SET-22: the webhook secret is a value, not a run summary, so the
                 design puts it in the same bordered box every other value uses */}
             {r.preview && (r.previewBox
+              /* ui: keep — a read-only preview box (a span, no field inside) */
               ? <span style={{ ...BOX, flex: `0 1 ${r.previewBox}`, cursor: 'default' }}>
                   <span style={{ minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</span>
                 </span>
@@ -760,6 +731,7 @@ function ApiKeyRow({ value, save, flash }) {
   const isSet = value === MASK || (value && value.length > 0)
   return (
     <>
+      {/* ui: keep — same fieldwrap composite as TextBox: bare input + show/hide */}
       <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 340px' }}>
         <input value={local} onChange={(e) => setLocal(e.target.value)} type={shown ? 'text' : 'password'} autoComplete="off"
           aria-label="Dashboard API key"
@@ -814,6 +786,7 @@ function LinkedInRow({ li, setLi, flash }) {
       </span>
       {phase === 'awaiting_pin' && (
         <>
+          {/* ui: keep — the PIN box is a 120px v2-fieldwrap on the LinkedIn status row */}
           <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 120px' }}>
             <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="6-digit PIN" inputMode="numeric" aria-label="LinkedIn sign-in PIN"
               style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
@@ -900,8 +873,8 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
           {/* 1.5x wider and 2x taller than before, capped so it never exceeds the window */}
-          <textarea value={text} onChange={(e) => { setText(e.target.value); commit(e.target.value) }} aria-label={spec.label}
-            style={{ flex: 1, width: '100%', minHeight: 440, padding: '12px 14px', border: `1px solid ${err ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 8, background: 'var(--surface)', fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: '20px', color: 'var(--text)', outline: 'none', resize: 'vertical' }} />
+          <Textarea value={text} onChange={(v) => { setText(v); commit(v) }} ariaLabel={spec.label} mono
+            style={{ flex: 1, minHeight: 440, ...(err ? { borderColor: 'var(--bad)' } : null) }} />
         </div>
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</span>
@@ -1001,6 +974,8 @@ function ModelsModal({ S, save, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
+            {/* ui: keep — typeahead composite: the input drives a suggestion listbox
+                (aria-expanded / aria-autocomplete / ↑ ↓ Esc Enter) inside the fieldwrap */}
             <span className="v2-fieldwrap" style={{ ...BOX, flex: 1, height: 31 }}>
               <input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search the model catalog"
                 aria-expanded={showSug} aria-autocomplete="list"

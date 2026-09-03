@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, IconButton, Pill } from './ui'
+import { Button, IconButton, Input, Pill, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -70,10 +70,6 @@ const ACT_BTN = {
   height: 30, padding: '0 14px', borderRadius: 99, border: '1px solid var(--edge)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
   fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap',
-}
-const inputSt = {
-  height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6,
-  background: 'var(--surface)', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--text)', outline: 'none',
 }
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
 const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
@@ -587,21 +583,21 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={FIELD_LABEL}>What</span>
-                      <input autoFocus value={ivDraft.what} onChange={(e) => setIvDraft((v) => ({ ...v, what: e.target.value }))} placeholder="e.g. System design round" style={inputSt} />
+                      <Input autoFocus value={ivDraft.what} onChange={(t) => setIvDraft((v) => ({ ...v, what: t }))} placeholder="e.g. System design round" ariaLabel="What" />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                         <span style={FIELD_LABEL}>When</span>
-                        <input type="datetime-local" value={ivDraft.when} onChange={(e) => setIvDraft((v) => ({ ...v, when: e.target.value }))} style={{ ...inputSt, minWidth: 0 }} />
+                        <Input type="datetime-local" value={ivDraft.when} onChange={(t) => setIvDraft((v) => ({ ...v, when: t }))} ariaLabel="When" style={{ minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                         <span style={FIELD_LABEL}>Where</span>
-                        <input value={ivDraft.where} onChange={(e) => setIvDraft((v) => ({ ...v, where: e.target.value }))} placeholder="Zoom · Onsite — London" style={{ ...inputSt, minWidth: 0 }} />
+                        <Input value={ivDraft.where} onChange={(t) => setIvDraft((v) => ({ ...v, where: t }))} placeholder="Zoom · Onsite — London" ariaLabel="Where" style={{ minWidth: 0 }} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={FIELD_LABEL}>Prep note · optional</span>
-                      <input value={ivDraft.prep} onChange={(e) => setIvDraft((v) => ({ ...v, prep: e.target.value }))} placeholder="Who I'm meeting, what to revise…" style={inputSt} />
+                      <Input value={ivDraft.prep} onChange={(t) => setIvDraft((v) => ({ ...v, prep: t }))} placeholder="Who I'm meeting, what to revise…" ariaLabel="Prep note" />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>Escape cancels</span>
@@ -623,21 +619,21 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid var(--accent)', borderRadius: 9, padding: '10px 12px', background: 'var(--surface)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={FIELD_LABEL}>What</span>
-                  <input value={intWhat} onChange={(e) => setIntWhat(e.target.value)} placeholder="e.g. System design round" style={inputSt} />
+                  <Input value={intWhat} onChange={setIntWhat} placeholder="e.g. System design round" ariaLabel="What" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                     <span style={FIELD_LABEL}>When</span>
-                    <input type="datetime-local" value={intWhen} onChange={(e) => setIntWhen(e.target.value)} style={{ ...inputSt, minWidth: 0 }} />
+                    <Input type="datetime-local" value={intWhen} onChange={setIntWhen} ariaLabel="When" style={{ minWidth: 0 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                     <span style={FIELD_LABEL}>Where</span>
-                    <input value={intWhere} onChange={(e) => setIntWhere(e.target.value)} placeholder="Zoom · Onsite — London" style={{ ...inputSt, minWidth: 0 }} />
+                    <Input value={intWhere} onChange={setIntWhere} placeholder="Zoom · Onsite — London" ariaLabel="Where" style={{ minWidth: 0 }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={FIELD_LABEL}>Prep note · optional</span>
-                  <input value={intPrep} onChange={(e) => setIntPrep(e.target.value)} placeholder="Who I'm meeting, what to revise…" style={inputSt} />
+                  <Input value={intPrep} onChange={setIntPrep} placeholder="Who I'm meeting, what to revise…" ariaLabel="Prep note" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
                   <Button variant="secondary" size="xs" onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }}>Cancel</Button>
@@ -652,9 +648,9 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={LABEL}>Notes · autosaves</span>
-            <textarea key={d.id} defaultValue={d.notes || ''} onChange={(e) => onNotes(e.target.value)}
-              onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…"
-              style={{ minHeight: 64, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', background: 'var(--bg)', fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
+            <Textarea key={d.id} defaultValue={d.notes || ''} onChange={(t) => onNotes(t)}
+              onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…" ariaLabel="Notes"
+              rows={3} style={{ minHeight: 64 }} />
           </div>
         </div>
 
@@ -779,7 +775,6 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
     }
   }
 
-  const box = { height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)', width: '100%' }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -790,18 +785,17 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={FIELD_LABEL}>Posting URL{reading ? ' · reading…' : ''}</span>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} onBlur={(e) => readUrl(e.target.value)}
-              placeholder="Paste the job URL — title and company are read from it"
-              style={{ ...box, fontFamily: 'var(--mono)', fontSize: 11 }} />
+            <Input value={url} onChange={setUrl} onBlur={(e) => readUrl(e.target.value)} mono
+              placeholder="Paste the job URL — title and company are read from it" ariaLabel="Posting URL" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
               <span style={FIELD_LABEL}>Title</span>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Backend Engineer" style={box} />
+              <Input value={title} onChange={setTitle} placeholder="Senior Backend Engineer" ariaLabel="Title" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
               <span style={FIELD_LABEL}>Company</span>
-              <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme" style={box} />
+              <Input value={company} onChange={setCompany} placeholder="Acme" ariaLabel="Company" />
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -825,13 +819,13 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <span style={FIELD_LABEL}>Applied on</span>
-            <input type="date" value={when} onChange={(e) => setWhen(e.target.value)} style={box} />
+            <Input type="date" value={when} onChange={setWhen} ariaLabel="Applied on" />
           </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={FIELD_LABEL}>Notes</span>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional — referral, recruiter contact…"
-              style={{ ...box, height: 'auto', minHeight: 52, padding: '9px 10px', lineHeight: '19px', resize: 'vertical' }} />
+            <Textarea value={notes} onChange={setNotes} placeholder="Optional — referral, recruiter contact…"
+              ariaLabel="Notes" rows={2} style={{ minHeight: 52 }} />
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
