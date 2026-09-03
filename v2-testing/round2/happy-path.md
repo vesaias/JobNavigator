@@ -115,7 +115,7 @@ Scripts: `hp_03_feed.py`, `hp_03b_undo.py`. **LLM #1** — job score, `POST /ana
 **Repro** Open `/v2/feed` (or any filtered variant) and do nothing.
 **Actual** Measured `'Score this role' in body === true` before any click — the detail panel is already open for row 0, so its `<iframe src={d.url}>` immediately loads the third-party posting. In this run the page pulled `https://job-boards.cdn.greenhouse.io/...` and `https://my.greenhouse.io/users/self?job_post_id=…` (401), producing 3 page errors and 6 console errors/warnings from the embedded site on a page the user never asked to open.
 **Expected** Either the detail panel starts closed, or the iframe is mounted only once the user opens the "posting" tab. Right now every Feed visit sends a request to whatever ATS happens to own the top row.
-**Status** needs decision: is auto-opening row 0 the intended design, and if so should the iframe be lazy?
+**Status** decided keep current (user 2026-09-04): the Feed opens the first job on load.
 
 **Scratch rows** carried forward: 47 ZZTEST Discord jobs, 1 auto-created Application, 1 auto-created Company (all removed in the final sweep).
 

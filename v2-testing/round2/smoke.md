@@ -578,7 +578,7 @@ Compan |  |
 **Repro** Stub the screen's main list/data GET to 500, load the route.
 **Actual** Page renders without crashing (`pageerrors=0`, non-blank `main`), but `document.body.innerText` never matches error/failed/try-again wording — i.e. no error row or toast, the screen just looks like an empty/default state. (V1 Stats is the one exception — it does show an error state.)
 **Expected** Some visible indication that the data failed to load rather than silently rendering empty, matching v2's behaviour on the same stub (all 11 v2 screens tested show `err_text=True`).
-**Status** logged, not fixed — consistent with v1 being the legacy shell; lower priority than a v2 finding would be
+**Status** decided ignore (user 2026-09-04): v1 screens are being replaced by v2.
 
 ### R2-S-06 · P4 · Résumé Editor and Cover Letter Editor have no `<h1>`/`<h2>` heading
 **Where** `frontend/src/v2/ResumeEditor.jsx:447`, `frontend/src/v2/CoverLetterEditor.jsx` — the document name is rendered as a plain `<span title={doc.name}>`, not a heading element
