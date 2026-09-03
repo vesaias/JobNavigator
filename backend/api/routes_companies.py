@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from backend.models.db import get_db, Company, Job, Application, Setting, ScrapeLog
 
 logger = logging.getLogger("jobnavigator.companies")
@@ -259,8 +260,27 @@ def delete_company(company_id: str, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
+    # R3-A-08: ScrapeLog.company_id is a plain FK with no ON DELETE in the live
+    # schema, so deleting a company that has ever been scraped raised
+    # ForeignKeyViolation and the endpoint returned a bare 500. Every scheduled
+    # scrape writes one of these rows, and since R2-H-02 every manual scrape does
+    # too — which made essentially every real company undeletable. Orphan the audit
+    # rows rather than deleting them: a run that happened still happened, and the
+    # Stats run history stays readable. (models/db.py now declares SET NULL, but
+    # there is no Alembic here, so this is what takes effect on the existing DB.)
+    db.query(ScrapeLog).filter(ScrapeLog.company_id == company.id).update(
+        {"company_id": None}, synchronize_session=False)
     db.delete(company)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        # Something else still references the row. Say so instead of a bare 500.
+        db.rollback()
+        logger.error(f"delete_company({company_id}) blocked by a foreign key: {e}")
+        raise HTTPException(
+            status_code=409,
+            detail="Could not delete this company — another record still references it",
+        ) from e
     return {"deleted": True}
 
 

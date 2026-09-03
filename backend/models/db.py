@@ -136,7 +136,10 @@ class Job(Base):
     title = Column(String, nullable=True)
     url = Column(String, nullable=True)
     source = Column(String, nullable=True)  # jobspy_linkedin | jobspy_indeed | etc.
-    search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id"), nullable=True)
+    # R3-A-08: SET NULL so deleting a search never orphans a stored job. The
+    # existing database predates this (no Alembic), so the delete handlers null
+    # these columns themselves; this is what a fresh DB gets.
+    search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id", ondelete="SET NULL"), nullable=True)
     description = Column(Text, nullable=True)
     location = Column(String, nullable=True)
     remote = Column(Boolean, nullable=True)
@@ -257,8 +260,12 @@ class ScrapeLog(Base):
     __tablename__ = "scrape_log"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id"), nullable=True)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
+    # R3-A-08: the audit trail outlives the entity it describes — a run that
+    # happened still happened. SET NULL keeps the row readable instead of
+    # blocking the delete with a ForeignKeyViolation (500). Same no-Alembic
+    # caveat as Job.search_id: the delete handlers null these explicitly.
+    search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id", ondelete="SET NULL"), nullable=True)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
     source = Column(String, nullable=True)
     jobs_found = Column(Integer, default=0)
     new_jobs = Column(Integer, default=0)
@@ -418,7 +425,10 @@ class TracerLink(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     token = Column(String(10), unique=True, nullable=False, index=True)
-    # A tracer link belongs to exactly one of a resume OR a cover letter.
+    # A tracer link belongs to a resume, a cover letter, or — when the two were
+    # written for the same job and therefore derive the same {short_id}{stub}
+    # token — to both at once (R3-B-03). Each document's /tracer-stats filters on
+    # its own FK, so shared ownership is what lets both of them report the link.
     resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="CASCADE"), nullable=True)
     cover_letter_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="CASCADE"), nullable=True)
     destination_url = Column(String, nullable=False)

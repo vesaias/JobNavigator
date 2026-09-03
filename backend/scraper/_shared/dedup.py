@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 logger = logging.getLogger("jobnavigator.dedup")
@@ -28,10 +29,46 @@ _DEFAULT_TRACKING_PARAMS = {
     "__jvsd", "__jvst", "jobpipeline", "cmpid", "codes", "feedid",
     "partnerid", "siteid", "bid", "customredirect",
     "chnlid", "v", "ccd", "frd", "r", "a",
-    "jk",
+    # R3-A-02: "jk" is gone from this list — it is Indeed's entire job identity,
+    # not tracking. _IDENTITY_PARAMS below is the real guard: it also protects an
+    # operator whose editable `dedup_tracking_params` setting still contains it.
     # Search-context noise (career page filters that leak into job hrefs):
     "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
 }
+
+# R3-A-02: a query param can be pure tracking on one board and the posting's whole
+# identity on another. Indeed's job URLs are `/viewjob?jk=<key>` — the path carries
+# nothing — so stripping `jk` collapsed every Indeed posting ever scraped onto a
+# single external_id and the pipeline silently discarded all of them (measured: 0
+# rows with source LIKE 'jobspy_%' out of 18 933). The tracking list is
+# user-editable, so removing `jk` from the seed is not enough on its own: these
+# params are kept for their host whatever that list says.
+#
+# Keys match the host and any subdomain of it, lowercased.
+_IDENTITY_PARAMS = {
+    "indeed.com": {"jk", "vjk"},
+    "glassdoor.com": {"jl", "joblistingid"},
+    "linkedin.com": {"currentjobid"},
+    "dice.com": {"jobid"},
+    "monster.com": {"jobid"},
+}
+# LinkedIn is the exception that proves the rule: on /jobs/view/<id> the identity is
+# already in the path and `currentJobId` is merely the card the user happened to be
+# on — noise, and stripping it is what makes the two URL shapes for one posting
+# converge. It is an identity only on the collection/search shapes.
+_LINKEDIN_ID_IN_PATH = re.compile(r"/jobs/view/\d+")
+
+
+def _identity_params_for(parsed) -> set:
+    """Query params that must survive normalization for this host."""
+    host = (parsed.netloc or "").lower().split(":")[0]
+    for domain, keys in _IDENTITY_PARAMS.items():
+        if host == domain or host.endswith("." + domain):
+            if domain == "linkedin.com" and _LINKEDIN_ID_IN_PATH.search(parsed.path or ""):
+                return set()
+            return keys
+    return set()
+
 
 # Module-level cache — loaded from DB on first use or reload
 _tracking_params_cache: set | None = None
@@ -87,9 +124,13 @@ def _normalize_url(url: str) -> str:
             if path.lower().endswith(suffix):
                 path = path[:-len(suffix)]
         qs = parse_qs(parsed.query, keep_blank_values=False)
-        # Remove tracking params (case-insensitive key match) + all utm_* params
+        # Remove tracking params (case-insensitive key match) + all utm_* params.
+        # R3-A-02: except the ones that ARE the posting's identity on this host —
+        # stripping those merges unrelated jobs onto one external_id.
+        keep = _identity_params_for(parsed)
         cleaned = {k: v for k, v in qs.items()
-                   if k.lower() not in params and not k.lower().startswith("utm_")}
+                   if k.lower() in keep
+                   or (k.lower() not in params and not k.lower().startswith("utm_"))}
         # Sort params for stable hashing
         new_query = urlencode(cleaned, doseq=True)
         # Remove fragment (anchors are display-only)

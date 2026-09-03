@@ -117,6 +117,13 @@ export default function ResumeEditor() {
 
   const isCopy = doc && !doc.is_base
 
+  // R3-S-03: the ⋯ head menu (base and copy) closed on its backdrop but not on
+  // Escape, while every modal reachable from it already used useEscape (RES-15).
+  // Safe to register unconditionally: every item in the menu calls
+  // setHeadMenu(false) before it opens a modal, so the menu and a modal are never
+  // open at once and the two handlers can't race for one keypress.
+  useEscape(() => setHeadMenu(false), headMenu)
+
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   // Background tailoring: watch the launched run on /monitor/active by its scope
@@ -523,7 +530,7 @@ export default function ResumeEditor() {
                   <MenuItem icon="✦" label="Re-tailor…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
                   <MenuItem icon="◎" label="Score again · light" hint="score only" onClick={() => runScore('light')} />
                   <MenuItem icon="◎" label="Score again · full" hint="with report" onClick={() => runScore('full')} />
-                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length} applied`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
+                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length} to review`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
                   <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
                   <MenuHead>Job</MenuHead>
                   <MenuItem icon="✉" label="Cover letter" hint="c" onClick={goCover} />
@@ -540,7 +547,8 @@ export default function ResumeEditor() {
         <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
           <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
           <div onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Tailor for a job…</div>
-          {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too) */}
+          {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
+              R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
           <div style={{ position: 'relative', flex: '0 0 auto', marginLeft: 8 }}>
             <div onClick={() => setHeadMenu((v) => !v)} className="v2-act" title="More" style={{ width: 36, height: 36, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
             {headMenu && (
@@ -550,7 +558,7 @@ export default function ResumeEditor() {
                   <MenuHead>This base</MenuHead>
                   <MenuItem icon="✦" label="Tailor for a job…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
                   <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete copy</div>
+                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete résumé</div>
                 </div>
               </>
             )}
@@ -815,13 +823,27 @@ function ReviewModal({ changes, onClose, onApply }) {
   useSnapTop(panel)   // RES-32
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
+  // R3-B-02: two different things were both chipped "applied". A modified summary
+  // or bullet is genuinely in json_data (and in the PDF) the moment the tailor
+  // finishes; a *suggested* bullet lives in experience[].suggested_bullets, which
+  // no resume template renders, and only reaches json_data.bullets when this modal
+  // is confirmed (applyReview). Telling the user it "landed automatically" was
+  // wrong for exactly the rows that had not landed.
+  const nSuggested = changes.filter((c) => c.kind === 'suggested').length
+  const nApplied = changes.length - nSuggested
+  const liveApplied = changes.filter((c) => c.kind !== 'suggested' && !declined[c.key]).length
+  const liveSuggested = changes.filter((c) => c.kind === 'suggested' && !declined[c.key]).length
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailoring changes — already applied</span>
-            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>These landed automatically. Decline any you don't want; the base text comes back.</span>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</span>
+            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>
+              {nSuggested
+                ? `${nApplied ? 'Applied changes are already in the document — decline any and the base text comes back. ' : ''}Suggested bullets are not in it yet: they are added when you finish reviewing.`
+                : "These landed automatically. Decline any you don't want; the base text comes back."}
+            </span>
           </div>
           <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
         </div>
@@ -829,21 +851,25 @@ function ReviewModal({ changes, onClose, onApply }) {
           {changes.length === 0 && <div style={{ padding: 20, fontSize: 12.5, color: 'var(--muted)' }}>No tailoring changes to review.</div>}
           {changes.map((c) => {
             const off = !!declined[c.key]
+            const pending = c.kind === 'suggested'   // R3-B-02: not in json_data yet
+            const live = !off
             const added = c.kind === 'modified' ? (off ? c.removed : c.added) : c.added
             const removed = c.kind === 'modified' ? (off ? c.added : c.removed) : ''
             return (
-              <div key={c.key} style={{ border: `1px solid ${off ? 'var(--line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: off ? 'var(--bg)' : 'var(--change-bg)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
-                  <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: off ? 'var(--surface-2)' : 'var(--accent-soft)', color: off ? 'var(--muted)' : 'var(--accent)' }}>{off ? 'declined' : 'applied'}</span>
-                  <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{off ? 'Restore change' : 'Decline ↩'}</div>
+                  <span title={pending ? 'Suggested — not in the document or the PDF yet; added when you finish reviewing' : off ? 'Declined — the base text is restored' : 'Already in the document and in the PDF'}
+                    style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--accent-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, color: !live ? 'var(--muted)' : pending ? 'var(--warn)' : 'var(--accent)', cursor: 'help' }}>{!live ? (pending ? 'dropped' : 'declined') : pending ? 'suggested' : 'applied'}</span>
+                  {live && pending && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>added when you finish reviewing</span>}
+                  <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{pending ? (off ? 'Keep it' : 'Drop ↩') : (off ? 'Restore change' : 'Decline ↩')}</div>
                 </div>
                 <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--text-2)' }}>
                   {c.before}
                   {removed && <span style={{ background: 'var(--bad-soft)', textDecoration: 'line-through', opacity: 0.75, borderRadius: 3, padding: '0 3px' }}>{removed}</span>}
                   {/* RES-28: the old `{added || '(base text restored)'}` fallback sat
                       inside `{added && …}` and could never render. */}
-                  {added && <span style={{ background: off ? 'var(--surface-2)' : 'var(--change-soft)', borderRadius: 3, padding: '0 3px' }}>{added}</span>}
+                  {added && <span style={{ background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--change-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, borderRadius: 3, padding: '0 3px' }}>{added}</span>}
                   {c.after}
                 </span>
               </div>
@@ -851,7 +877,11 @@ function ReviewModal({ changes, onClose, onApply }) {
           })}
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</span>
+          {/* R3-B-02: the count line separates what is already in the document from
+              what is only proposed, so "Done reviewing" says what it is about to do. */}
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{nSuggested
+            ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
+            : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</span>
           <div onClick={() => onApply(declined)} style={{ marginLeft: 'auto', height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Done reviewing</div>
         </div>
       </div>

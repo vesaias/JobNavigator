@@ -21,6 +21,32 @@ def _flatten_persona(p: Persona) -> str:
     return "\n\n".join(parts) if parts else "(empty)"
 
 
+def _trim_to_chars(text: str, max_chars: int):
+    """Cut `text` to at most `max_chars`, on a sentence or word boundary.
+
+    R3-B-04: `max_chars` reaches the model as prose ("keep it under N characters")
+    and the model treats it as a suggestion — a 120-char ask came back at 137, a
+    600-char ask at 714. The extension only capped answers for fields that declare
+    a `maxLength`, which the common ATS textarea does not, so the picked length was
+    silently ignored on exactly the fields it was picked for. Enforce it here.
+
+    Prefers the last sentence end in the budget; falls back to the last word
+    boundary, and only hard-cuts if neither exists. Returns (text, trimmed).
+    """
+    if not text or max_chars <= 0 or len(text) <= max_chars:
+        return text, False
+    cut = text[:max_chars]
+    # A sentence end is only a good cut if it isn't throwing most of the answer
+    # away — otherwise a single early "e.g." would strand the reader mid-thought.
+    end = max(cut.rfind("."), cut.rfind("!"), cut.rfind("?"))
+    if end >= int(max_chars * 0.6):
+        return cut[:end + 1].rstrip(), True
+    space = cut.rfind(" ")
+    if space > 0:
+        cut = cut[:space]
+    return cut.rstrip().rstrip(",;:-—–").rstrip(), True
+
+
 def _qa_pair(entry) -> tuple:
     """Normalise one qa_bank entry to (question, answer).
 
@@ -168,7 +194,9 @@ async def autofill_answer(body: dict):
     except Exception as e:
         logger.error(f"autofill generation failed: {e}")
         raise HTTPException(502, "autofill generation failed") from e
-    return {"answer": answer}
+    # R3-B-04: the length the user picked is a contract, not a hint.
+    answer, trimmed = _trim_to_chars(answer, max_chars)
+    return {"answer": answer, "trimmed": trimmed, "max_chars": max_chars}
 
 
 @router.post("/answer/stream")

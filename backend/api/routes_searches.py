@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from backend.models.db import get_db, Search, Setting
+from sqlalchemy.exc import IntegrityError
+from backend.models.db import get_db, Search, Setting, ScrapeLog, Job
 
 logger = logging.getLogger("jobnavigator.routes_searches")
 
@@ -108,8 +109,26 @@ def delete_search(search_id: str, db: Session = Depends(get_db)):
             detail="Built-in extension searches cannot be deleted — "
                    "pause it instead to stop importing captured jobs",
         )
+    # R3-A-08: same trap as delete_company — ScrapeLog.search_id (every run this
+    # search ever did) and Job.search_id (every job it stored) are plain FKs with
+    # no ON DELETE in the live schema, so a search that had ever run could not be
+    # deleted and the endpoint returned a bare 500. Orphan both: the jobs are kept
+    # on purpose (they carry their own company/title), and the audit rows stay
+    # readable in the run history.
+    db.query(ScrapeLog).filter(ScrapeLog.search_id == search.id).update(
+        {"search_id": None}, synchronize_session=False)
+    db.query(Job).filter(Job.search_id == search.id).update(
+        {"search_id": None}, synchronize_session=False)
     db.delete(search)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"delete_search({search_id}) blocked by a foreign key: {e}")
+        raise HTTPException(
+            status_code=409,
+            detail="Could not delete this search — another record still references it",
+        ) from e
     return {"deleted": True}
 
 

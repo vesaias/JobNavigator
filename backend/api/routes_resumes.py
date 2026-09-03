@@ -315,15 +315,19 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
         return TracerLink(**kwargs)
 
     def _repoint(link, dest_url, label):
-        # Reassign this token to the current owner, clearing the other owner so a
-        # link never ends up owned by both (a resume + a cover letter for the same
-        # job derive the same {short_id}{stub} token and would otherwise collide).
+        # R3-B-03: claim this token for the current owner *without* releasing the
+        # other one. A résumé and the cover letter written for the same job derive
+        # the same {short_id}{stub} token by design (one job, one tracked link), so
+        # the row has to be able to belong to both at once. Nulling the other side
+        # — what this used to do — meant whichever document rendered second owned
+        # the link and the other one's /tracer-stats came back empty, flipping on
+        # every render. Both FKs are nullable and the stats endpoints filter on
+        # their own FK, so shared ownership makes both documents report the same
+        # (shared) counter instead of one of them reporting nothing.
         if owner_is_cl:
             link.cover_letter_id = cover_letter_id
-            link.resume_id = None
         else:
             link.resume_id = resume_id
-            link.cover_letter_id = None
         link.destination_url = dest_url
         link.source_label = label
 
@@ -1030,14 +1034,85 @@ def delete_resume(resume_id: str, db: Session = Depends(get_db)):
     children = db.query(Resume).filter(Resume.parent_id == resume_id).all()
     child_ids = [c.id for c in children]
     all_ids = [resume.id] + child_ids
-    # Delete tracer links for this resume and all children
-    db.query(TracerLink).filter(TracerLink.resume_id.in_(all_ids)).delete(synchronize_session=False)
+    # Delete tracer links for this resume and all children. R3-B-03: a link can
+    # be shared with a cover letter (same job → same token). The letter outlives
+    # the résumé (CoverLetter.resume_id is ON DELETE SET NULL), so release our
+    # side of a shared row instead of deleting it and taking the letter's link —
+    # and its click history — with it.
+    shared = db.query(TracerLink).filter(
+        TracerLink.resume_id.in_(all_ids), TracerLink.cover_letter_id.isnot(None),
+    ).all()
+    for link in shared:
+        link.resume_id = None
+    db.query(TracerLink).filter(
+        TracerLink.resume_id.in_(all_ids), TracerLink.cover_letter_id.is_(None),
+    ).delete(synchronize_session=False)
+    # R3-B-05: the "Tailored" entries a tailored copy wrote onto its job outlive
+    # the copy. `tailored_resume_id` is derived from the surviving Resume rows so
+    # it disappears on its own, but `cv_scores["Tailored"]`, the report keyed
+    # "Tailored" and a `best_cv` pointing at it do not — leaving the Feed with a
+    # score (and a report tab) attributed to a document that no longer exists,
+    # which can still win best_cv. Drop them once the job has no tailored copy
+    # left, and recompute the best from whatever remains.
+    job_ids = {r.job_id for r in [resume, *children] if r.job_id and not r.is_base}
     for child in children:
         db.delete(child)
 
     db.delete(resume)
+    db.flush()   # so the "any tailored copy left?" query can't see the deleted rows
+    for jid in job_ids:
+        _clear_orphan_tailored_score(db, jid)
     db.commit()
     return {"deleted": True, "id": resume_id, "children_deleted": len(children)}
+
+
+def _clear_orphan_tailored_score(db: Session, job_id) -> bool:
+    """Strip a job's `Tailored` score/report once its last tailored copy is gone.
+
+    No-op while another tailored copy still points at the job — the score belongs
+    to whichever copy is current, not to the one being deleted. Returns True when
+    something was cleared (used by the tests; callers commit).
+    """
+    still_tailored = db.query(Resume.id).filter(
+        Resume.job_id == job_id, Resume.is_base == False,
+    ).first()
+    if still_tailored:
+        return False
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        return False
+
+    changed = False
+    scores = dict(job.cv_scores or {})
+    if "Tailored" in scores:
+        scores.pop("Tailored")
+        job.cv_scores = scores
+        flag_modified(job, "cv_scores")
+        changed = True
+
+    report = dict(job.scoring_report or {})
+    if "Tailored" in report:
+        report.pop("Tailored")
+        # A single-CV report is stored flat (`{summary, ..., scored_with}`) and only
+        # nested per-CV once a second one arrives. Unwrap back to the flat shape so
+        # the Feed doesn't have to special-case a one-key wrapper.
+        if len(report) == 1:
+            only_cv, only_report = next(iter(report.items()))
+            if isinstance(only_report, dict) and "summary" in only_report:
+                report = {**only_report, "scored_with": only_cv}
+        job.scoring_report = report or None
+        flag_modified(job, "scoring_report")
+        changed = True
+
+    if changed:
+        numeric = {k: v for k, v in scores.items() if isinstance(v, (int, float))}
+        if numeric:
+            job.best_cv = max(numeric, key=numeric.get)
+            job.best_cv_score = float(max(numeric.values()))
+        else:
+            job.best_cv = None
+            job.best_cv_score = None
+    return changed
 
 
 # ── Preview & PDF ───────────────────────────────────────────────────────────

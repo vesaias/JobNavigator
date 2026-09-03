@@ -403,6 +403,111 @@ def delete_application(app_id: str, db: Session = Depends(get_db)):
     return {"deleted": True}
 
 
+# ── Employer detection for the posting-URL reader (R3-A-05) ──────────────────
+# The reader used to fall back to og:site_name / hostname, which on an ATS-hosted
+# board is the *board's* brand ("Greenhouse", "Lever", "Linkedin"), not the
+# employer. That value lands in the Company field the user is about to save and
+# becomes Job.company plus the Application grouping key, and the modal's
+# "only fill empty fields" rule makes a wrong value sticky. So: derive the
+# employer from the board slug for known ATS hosts, and drop any brand-looking
+# fallback instead of guessing — an empty field the user types into beats a
+# confidently wrong one.
+
+# Squashed (lowercase, alphanumeric-only) names of job boards / aggregators that
+# must never be returned as an employer.
+_ATS_BRAND_KEYS = {
+    "greenhouse", "lever", "ashby", "ashbyhq", "workday", "myworkdayjobs",
+    "smartrecruiters", "rippling", "phenom", "talentbrew", "icims", "taleo",
+    "eightfold", "jobvite", "workable", "breezy", "breezyhr", "bamboohr",
+    "teamtailor", "recruitee", "linkedin", "indeed", "ziprecruiter",
+    "glassdoor", "monster", "dice", "wellfound", "angellist", "builtin",
+    "levelsfyi", "jobright", "jobspy",
+}
+
+# Path segments that are board chrome rather than a company slug.
+_SLUG_NOISE = {
+    "jobs", "job", "careers", "career", "embed", "api", "search", "postings",
+    "posting", "job_board", "job_app", "users", "self", "login", "signin",
+    "sessions", "en-us", "en",
+}
+
+
+def _title_slug(slug: str) -> str:
+    """'clear-street' -> 'Clear Street'. Only the first letter of each word is
+    forced, so already-cased slugs ('BoschGroup') survive intact."""
+    import re
+    words = [w for w in re.split(r"[-_+.\s]+", (slug or "").strip()) if w]
+    return " ".join(w[0].upper() + w[1:] for w in words)
+
+
+def _is_ats_brand(name) -> bool:
+    """True if a detected 'company' is really the job board's own brand (or pure
+    board chrome like 'Careers'). Used to suppress the og:site_name / hostname
+    fallbacks — see R3-A-05."""
+    import re
+    raw = (name or "").strip()
+    if not raw:
+        return False
+    n = re.sub(r"\b(jobs?|boards?|careers?|site|com|io|inc|ltd|llc|software)\b", " ", raw.lower())
+    n = re.sub(r"[^a-z0-9]+", "", n)
+    if not n:
+        return True  # "Jobs", "Careers", "Job Board" — chrome, not an employer
+    return n in _ATS_BRAND_KEYS
+
+
+def _company_from_url(url: str):
+    """Derive the employer from a known ATS board URL (slug in the path, or the
+    tenant subdomain); None for anything unrecognised so the caller can fall
+    back to page metadata. Reuses the scraper's is_* host predicates so the two
+    stay in sync rather than growing a second copy of the ATS matrix (R3-A-05)."""
+    from urllib.parse import parse_qs, urlparse
+    from backend.scraper.ats.ashby import is_ashby
+    from backend.scraper.ats.greenhouse import is_greenhouse
+    from backend.scraper.ats.lever import is_lever
+    from backend.scraper.ats.rippling import is_rippling, _parse_rippling_url
+    from backend.scraper.ats.smartrecruiters import is_smartrecruiters, _extract_company_slug
+    from backend.scraper.ats.workday import is_workday
+
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    host = (parsed.hostname or "").lower()
+    parts = [p for p in (parsed.path or "").strip("/").split("/") if p]
+
+    def _first_slug():
+        for part in parts:
+            if part.lower() not in _SLUG_NOISE:
+                return part
+        return None
+
+    slug = None
+    try:
+        if is_greenhouse(url):
+            # boards.greenhouse.io/<slug>/jobs/<id>, job-boards.greenhouse.io/<slug>/...,
+            # and the embed form boards.greenhouse.io/embed/job_board?for=<slug>.
+            slug = (parse_qs(parsed.query).get("for") or [None])[0] or _first_slug()
+        elif is_lever(url):            # jobs.lever.co/<slug>/<id>
+            slug = _first_slug()
+        elif is_ashby(url):            # jobs.ashbyhq.com/<slug>/<id>
+            slug = _first_slug()
+        elif is_smartrecruiters(url):  # jobs|careers|api.smartrecruiters.com/<slug>/...
+            slug = _extract_company_slug(url)
+        elif is_workday(url):          # <company>.wd5.myworkdayjobs.com/<site>/...
+            sub = host.split(".")[0]
+            slug = sub if sub not in ("www", "jobs", "careers") else None
+        elif is_rippling(url):         # ats.rippling.com/<slug>/jobs
+            slug, _ = _parse_rippling_url(url)
+    except Exception:  # a malformed board URL must never break the reader
+        return None
+
+    if not slug or slug.lower() in _SLUG_NOISE:
+        return None
+    return _title_slug(slug) or None
+
+
 @router.post("/extract")
 async def extract_posting(payload: ExtractRequest):
     """Read title + company off a posting URL for the Log-application modal.
@@ -450,7 +555,9 @@ async def extract_posting(payload: ExtractRequest):
                 title = og["content"]
         if not company:
             og = soup.find("meta", property="og:site_name")
-            if og and og.get("content"):
+            # R3-A-05: ATS boards set og:site_name to their own brand, so a
+            # brand-looking value is dropped and the slug layer below wins.
+            if og and og.get("content") and not _is_ats_brand(og["content"]):
                 company = og["content"]
         # 3. <title>, minus the trailing " | Company" / " at Company" tail
         if not title and soup.title and soup.title.string:
@@ -460,10 +567,18 @@ async def extract_posting(payload: ExtractRequest):
     except Exception as e:
         logger.info("extract failed for %s: %s", url, e)
 
+    # R3-A-05: known ATS board URLs carry the employer in the path/subdomain —
+    # read it there before falling back to the hostname, which on those hosts is
+    # the ATS brand.
+    if not company:
+        company = _company_from_url(url)
+
     if not company:
         host = (urlparse(url).hostname or "").replace("www.", "")
         parts = [p for p in host.split(".") if p not in ("com", "io", "co", "org", "net", "ai", "jobs", "careers")]
-        company = parts[-1].title() if parts else None
+        candidate = parts[-1].title() if parts else None
+        # Leave it empty rather than fill the Company field with a board name.
+        company = candidate if candidate and not _is_ats_brand(candidate) else None
 
     return {"title": (title or "").strip() or None, "company": (company or "").strip() or None}
 

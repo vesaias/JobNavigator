@@ -35,11 +35,16 @@ const srcLabel = (v) => ({
   extension: 'the extension', freehire: 'freehire.me',
 }[v] || (v ? v.replace(/^jobspy_/, '').replace(/_/g, ' ') : 'the Job Feed'))
 
+// R3-U-01: the dots read the shared --stage-* tokens (theme.css) rather than the
+// generic --warn/--good/--bad status hues, so a stage is the same colour here, in
+// the Stats funnel and on the Sankey nodes of the Flow view. The values are
+// unchanged — --stage-interview/-offer/-rejected were seeded from --warn/--good/
+// --bad; what moved is which screens are guaranteed to track them.
 const STAGES = [
   { id: 'applied', label: 'Applied', dot: 'var(--stage-applied)', hint: 'Waiting on a first response' },
-  { id: 'interview', label: 'Interview', dot: 'var(--warn)', hint: 'In the interview loop' },
-  { id: 'offer', label: 'Offer', dot: 'var(--good)', hint: 'Offer received' },
-  { id: 'rejected', label: 'Rejected', dot: 'var(--bad)', hint: 'Closed — kept for the Stats funnel' },
+  { id: 'interview', label: 'Interview', dot: 'var(--stage-interview)', hint: 'In the interview loop' },
+  { id: 'offer', label: 'Offer', dot: 'var(--stage-offer)', hint: 'Offer received' },
+  { id: 'rejected', label: 'Rejected', dot: 'var(--stage-rejected)', hint: 'Closed — kept for the Stats funnel' },
 ]
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
 // APPS-22: legacy rows (ghosted / withdrawn) have no stage of their own — they are closed, so they list under Rejected
