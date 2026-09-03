@@ -22,3 +22,8 @@ Starts after the round-2 fixes land (two Opus agents in flight on 2026-09-04). O
 - Fixes `8804ae3` (+ test marker `ec33983`): 14 items incl. P1 R3-A-02/R3-A-08, P2 R3-A-05/R3-B-03, RES-32 re-fix; 735 tests pass; all 14 verified live (`round3/verify.md`).
 - DB restored from `backups/round3_baseline_20260904.dump` (backend stopped during restore). Verified: companies 126 · searches 6 · applications 377 · bases 4 · cover letters 16 · jobs 18843 · 0 `ZZ*` rows · `jk` stripped from the restored `dedup_tracking_params` by the startup migration · `llm_model` claude-sonnet-5.
 - Final consolidated report: `v2-testing/REPORT-final.md` (6 open items, 156 text suggestions).
+
+## Post-round fixes (2026-09-04, after the user's decisions)
+- `406aebe` + `2946d5b` + `8985b53`: R3-A-01/03/04/06/07 fixed, R3-B-01 Title field, user-reported R3-U-03..06 (row hover, input focus, filter hovers, archived band). Verified live (`round3/verify-final.md` 8/10, then R3-A-03/R3-A-06 re-fixed and re-checked: real run shows the ZipRecruiter 403 per board; Applications renders with an interview and edits inline). 776 tests pass.
+- DB restored again from `backups/round3_baseline_20260904.dump`; counts verified (126 / 6 / 377 / 4 / 16 / 18843), 0 `ZZ*` rows.
+- Consolidated open-items report (text excluded): `v2-testing/REPORT-open.md` (Opus).

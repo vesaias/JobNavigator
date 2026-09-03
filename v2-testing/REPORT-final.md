@@ -1,5 +1,7 @@
 # v2 verification — FINAL REPORT (rounds 1–3)
 
+> Update 2026-09-04 (later): the six open items below were fixed and verified after the user's decisions (`406aebe`, `2946d5b`); R3-B-01 got the Title field only. The authoritative list of what is still open is now **`REPORT-open.md`**.
+
 Branch `v2-redesign`, 2026-09-01 → 2026-09-04. This file lists **everything still open** after three rounds, in one place, plus the text suggestions. Round detail: `REPORT.md` (round 1), `REPORT-round2.md`, `round2/*.md`, `round3/*.md`; plans `PLAN.md`, `ROUND2-PLAN.md`, `ROUND3-PLAN.md`.
 
 ## Where things stand
