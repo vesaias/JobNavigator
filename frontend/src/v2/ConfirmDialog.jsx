@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import './theme.css'
 import { useEscape, useSnapTop } from './hooks'
+import { Button } from './ui'
 
 // RES-16: the one destructive-confirm dialog for v2. Lifted out of Companies.jsx
 // (COMP-28) so the résumé and cover-letter deletes stop falling back to
@@ -17,8 +18,8 @@ export default function ConfirmDialog({ title, body, label, danger, onConfirm, o
         <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '26px' }}>{title}</span>
         {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>{body}</span>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-          <div onClick={onCancel} className="v2-bdc v2-ctl" style={{ height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={onConfirm} className="v2-ctl" style={{ height: 31, padding: '0 16px', borderRadius: 99, background: danger ? 'var(--bad)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>{label || 'Confirm'}</div>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button variant={danger ? 'danger' : 'primary'} size="sm" onClick={onConfirm}>{label || 'Confirm'}</Button>
         </div>
       </div>
     </div>
@@ -47,9 +48,9 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
           onFocus={(e) => readOnly && e.target.select()}
           style={{ height: 33, marginTop: 4, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, outline: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          {readOnly && <div onClick={copy} className="v2-bdc v2-ctl" style={{ height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: copied ? 'var(--accent)' : 'var(--text-2)', cursor: 'pointer' }}>{copied ? 'Copied ✓' : '⧉ Copy'}</div>}
-          {!readOnly && <div onClick={onCancel} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>}
-          <div onClick={() => onSubmit(v)} className="v2-ctl" style={{ marginLeft: readOnly ? 'auto' : 0, height: 31, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>{label || 'OK'}</div>
+          {readOnly && <Button variant="secondary" size="sm" onClick={copy}>{copied ? 'Copied ✓' : '⧉ Copy'}</Button>}
+          {!readOnly && <Button variant="secondary" size="sm" onClick={onCancel} style={{ marginLeft: 'auto' }}>Cancel</Button>}
+          <Button size="sm" onClick={() => onSubmit(v)} style={{ marginLeft: readOnly ? 'auto' : 0 }}>{label || 'OK'}</Button>
         </div>
       </div>
     </div>

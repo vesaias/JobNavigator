@@ -7,6 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
+import { Button, IconButton } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -339,16 +340,15 @@ export default function CoverLetterEditor() {
           </span>
           <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--muted)' }}>{voiceLen}</span>
         </div>
-        <div onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length"
-          className="v2-ctl" style={{ flex: '0 0 auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <Button onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length">
           {regening
             ? <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />
             : <span style={{ fontSize: 12 }}>↻</span>}
           Regenerate…
-        </div>
+        </Button>
         <div style={{ position: 'relative', flex: '0 0 auto' }} onClick={(e) => e.stopPropagation()}>
-          <div onClick={() => setMenuOpen((v) => !v)} title="More actions"
-            style={{ width: 36, height: 36, border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
+          <IconButton size={36} on={menuOpen} ariaExpanded={menuOpen} ariaHaspopup="menu"
+            onClick={() => setMenuOpen((v) => !v)} title="More actions">⋯</IconButton>
           {menuOpen && (
             <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', zIndex: 50, padding: 5, display: 'flex', flexDirection: 'column' }}>
               {doc.has_application && (
@@ -524,7 +524,7 @@ export default function CoverLetterEditor() {
             </span>
 
             {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed — showing the last render · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
-            <div onClick={download} className="v2-ctl" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>↓ Download PDF</div>
+            <Button size="xs" onClick={download} style={{ marginLeft: 'auto' }}>↓ Download PDF</Button>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {pdfUrl
@@ -560,13 +560,13 @@ export default function CoverLetterEditor() {
             </div>
             <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
               {err && !regening ? <span style={{ fontSize: 11.5, color: 'var(--bad)' }}>{err}</span> : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>~30 seconds</span>}   {/* CL-14 */}
-              <div onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+              <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               {/* RES-17: a disabled primary pill is --line on --muted across the three
                   builders — a dimmed accent still reads as the live button. */}
-              <div onClick={regenerate} className="v2-ctl" style={{ height: 33, padding: '0 17px', borderRadius: 99, background: regening || !rSource ? 'var(--line)' : 'var(--accent)', color: regening || !rSource ? 'var(--muted)' : 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, cursor: regening || !rSource ? 'default' : 'pointer' }}>
+              <Button size="sm" onClick={regenerate} disabled={regening || !rSource}>
                 {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
-              </div>
+              </Button>
             </div>
           </div>
         </div>

@@ -4,7 +4,8 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useFlashToast, useSnapTop } from './hooks'
-import { kb, EMPTY } from './ResumeSections'
+import { EMPTY } from './ResumeSections'
+import { Button, Pill } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -24,10 +25,7 @@ const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : '
 const PAGE = 100
 const ShowMore = ({ n, onClick }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
-    <span onClick={onClick} {...kb(onClick)} className="v2-bdc v2-ctl"
-      style={{ height: 26, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>
-      Show {n} more
-    </span>
+    <Pill size="sm" onClick={onClick}>Show {n} more</Pill>
   </div>
 )
 
@@ -155,7 +153,7 @@ export default function V2Resumes() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <input value={q} onChange={(e) => { setQ(e.target.value); setShowArchived(false) }} placeholder="Search bases, copies, archived…"
             style={{ height: 36, width: 300, padding: '0 2px', border: 'none', borderBottom: '1px solid var(--line)', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', outline: 'none' }} />
-          <div onClick={() => setAddOpen(true)} style={{ height: 36, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ New résumé</div>
+          <Button onClick={() => setAddOpen(true)}>+ New résumé</Button>
         </div>
       </div>
 
@@ -166,7 +164,7 @@ export default function V2Resumes() {
           : loadErr ? (
             <div style={{ padding: '20px 14px', border: '1px dashed var(--bad)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
               <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés — the shelf request failed.</span>
-              <span onClick={() => { setLoading(true); load() }} className="v2-act" style={{ flex: '0 0 auto', height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
+              <Pill size="sm" onClick={() => { setLoading(true); load() }}>Try again</Pill>
             </div>
           )
           : searching ? (
@@ -223,14 +221,17 @@ export default function V2Resumes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {(persona.copies?.length || 0) > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
                         {inflight.filter((f) => f.baseId === 'persona').map((f, k) => (
+                          /* ui: keep — Chip role (--bg on --line), migrates with Chip */
                           <div key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)' }}>
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /><span>tailoring…</span>
                           </div>
                         ))}
                         {(expanded.has('persona') ? (persona.copies || []) : (persona.copies || []).slice(0, 6)).map((c) => (
+                          /* ui: keep — Chip role (--bg on --line, v2-chip hover), migrates with Chip */
                           <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, 'Persona', persona.avg_fit)} className="v2-chip" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
                           </div>
                         ))}
@@ -263,16 +264,19 @@ export default function V2Resumes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {copies.length > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
                         {baseInflight.map((f, k) => (
+                          /* ui: keep — Chip role (--bg on --line), migrates with Chip */
                           <div key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', maxWidth: 250 }}>
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                             <span>tailoring…</span>
                           </div>
                         ))}
                         {(expanded.has(b.id) ? copies : copies.slice(0, 6)).map((c) => (
+                          /* ui: keep — Chip role (--bg on --line, v2-chip hover), migrates with Chip */
                           <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, b.name, b.avg_fit)} className="v2-chip"
                             style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
                           </div>
                         ))}
@@ -351,8 +355,8 @@ function AddModal({ onClose, onCreated }) {
         <div style={{ display: 'flex', gap: 9 }}>
           {/* RES-17: a disabled primary pill is --line on --muted (the design's
               disabled Tailor button); --edge as a fill reads as a second live button. */}
-          <div onClick={createScratch} style={{ flex: 1, height: 40, borderRadius: 99, background: canCreate ? 'var(--accent)' : 'var(--line)', color: canCreate ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, cursor: canCreate ? 'pointer' : 'default' }}>{busy === 'create' ? 'Creating…' : 'Create from scratch'}</div>
-          <div onClick={() => { if (!busy) fileRef.current?.click() }} className={busy ? undefined : 'v2-act'} style={{ flex: 1, height: 40, borderRadius: 99, border: '1px solid var(--edge)', color: busy ? 'var(--muted)' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: busy ? 'default' : 'pointer' }}>{busy === 'import' ? 'Parsing…' : 'Import PDF ↑'}</div>
+          <Button onClick={createScratch} disabled={!canCreate} style={{ flex: 1 }}>{busy === 'create' ? 'Creating…' : 'Create from scratch'}</Button>
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={!!busy} style={{ flex: 1 }}>{busy === 'import' ? 'Parsing…' : 'Import PDF ↑'}</Button>
           {/* RES-28: clear the input after every pick, or choosing the same PDF
               twice in one modal session fires no change event at all. */}
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}

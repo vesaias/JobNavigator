@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
+import { Button, IconButton, Pill } from './ui'
 import api from '../api'
 import './theme.css'
 
@@ -512,6 +513,7 @@ export default function Settings() {
             {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
         </div>
+        {/* ui: keep — settings search field wrapper (Input role), not a pill */}
         <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 30, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
@@ -642,7 +644,7 @@ function Row({ r, ctx }) {
         return (
           <>
             <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview || '—'}</span>
-            <span onClick={() => setEditFor(r)} {...kb(() => setEditFor(r))} aria-label={`Edit ${r.label}`} className="v2-bdc" style={{ flex: '0 0 auto', height: 26, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Edit</span>
+            <Pill size="sm" onClick={() => setEditFor(r)} ariaLabel={`Edit ${r.label}`}>Edit</Pill>
           </>
         )
       }
@@ -718,6 +720,7 @@ function Row({ r, ctx }) {
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '18px', fontWeight: 500 }}>
           {r.label}
           {r.info && (
+            // ui: keep — 15x15 italic-serif "i" glyph badge; no Pill/IconButton size is this small
             <span onClick={() => setInfo(infoOpen ? null : r.label)} {...kb(() => setInfo(infoOpen ? null : r.label))}
               aria-label={`More detail about ${r.label}`} aria-expanded={!!infoOpen} title="More detail"
               style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>
@@ -742,11 +745,10 @@ function Row({ r, ctx }) {
 function ActionBtn({ label, state, onClick, ariaLabel }) {
   const done = state === 'done'
   return (
-    <span onClick={onClick} {...kb(onClick)} aria-label={ariaLabel || label} className="v2-bd v2-ctl" style={{ flex: '0 0 auto', height: 30, padding: '0 14px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, whiteSpace: 'nowrap', cursor: 'pointer',
-      border: `1px solid ${done ? 'var(--accent)' : 'var(--edge)'}`, background: done ? 'var(--accent-soft)' : 'var(--surface)', color: done ? 'var(--accent)' : 'var(--text-2)' }}>
+    <Pill on={done} onClick={onClick} ariaLabel={ariaLabel || label}>
       {state === 'running' && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
       {state === 'running' ? 'Running…' : done ? 'Done ✓' : label}
-    </span>
+    </Pill>
   )
 }
 
@@ -894,7 +896,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{spec.label}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</span>
-          <div onClick={close} {...kb(close)} aria-label={`Close ${spec.label}`} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <IconButton onClick={close} ariaLabel={`Close ${spec.label}`} style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
           {/* 1.5x wider and 2x taller than before, capped so it never exceeds the window */}
@@ -903,8 +905,8 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
         </div>
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</span>
-          <div onClick={reset} {...kb(reset)} aria-label={`Reset ${spec.label} to default`} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Reset to default</div>
-          <div onClick={close} {...kb(close)} aria-label={`Done editing ${spec.label}`} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Done</div>
+          <Button variant="secondary" size="sm" onClick={reset} ariaLabel={`Reset ${spec.label} to default`} style={{ marginLeft: 'auto' }}>Reset to default</Button>
+          <Button size="sm" onClick={close} ariaLabel={`Done editing ${spec.label}`}>Done</Button>
         </div>
       </div>
     </div>
@@ -994,7 +996,7 @@ function ModelsModal({ S, save, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Model catalog</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>available in every model picker</span>
-          <div onClick={onClose} {...kb(onClose)} aria-label="Close the model catalog" className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <IconButton onClick={onClose} ariaLabel="Close the model catalog" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
@@ -1029,7 +1031,7 @@ function ModelsModal({ S, save, onClose }) {
               </div>
             )}
           </span>
-          <div onClick={() => add()} {...kb(() => add())} aria-label="Add this model to the catalog" className="v2-ctl" style={{ flex: '0 0 auto', height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Add</div>
+          <Button size="sm" onClick={() => add()} ariaLabel="Add this model to the catalog">Add</Button>
         </div>
         {err && <div style={{ padding: '8px 22px', fontSize: 11.5, color: 'var(--bad)' }}>{err}</div>}
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '6px 22px 14px' }}>
@@ -1040,6 +1042,7 @@ function ModelsModal({ S, save, onClose }) {
               <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</span>
               <span style={{ flex: '0 0 auto', fontSize: 10, lineHeight: '16px', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</span>
               {/* SET-15: the design turns the border --bad on hover too, not just the glyph */}
+              {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}
               <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
                 title="Remove — removal persists" className="v2-hover-bad-bdc"
                 style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import axios from 'axios'
 import { useSnapTop } from './hooks'
+import { Button } from './ui'
 import './theme.css'
 
 // Sign-in overlay (System Overlays.dc.html · 1). The design draws the resting
@@ -47,6 +48,7 @@ export default function LoginModal({ onSuccess }) {
         style={{ width: 360, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '26px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {success ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
+            {/* ui: keep — success glyph, not a control (no handler, no hover, 34px round badge) */}
             <span style={{ width: 34, height: 34, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em' }}>Signed in</span>
             <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Loading dashboard…</span>
@@ -73,11 +75,9 @@ export default function LoginModal({ onSuccess }) {
               {error && <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--bad)' }}>{error}</span>}
             </div>
 
-            <button type="submit" disabled={loading}
-              style={{ height: 38, border: 'none', borderRadius: 99, background: loading ? 'var(--edge)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 500, cursor: loading ? 'default' : 'pointer' }}>
-              {loading && <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+            <Button onClick={submit} busy={loading} ariaLabel="Sign in">
               {loading ? 'Signing in…' : 'Sign in'}
-            </button>
+            </Button>
 
             <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.55, textWrap: 'pretty' }}>
               First run with no key configured? Leave the field blank and sign in — you’ll set one in Settings › Advanced.
