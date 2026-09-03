@@ -65,7 +65,7 @@ Console clean on every pass (0/0/0/0).
 **Repro** Open any résumé → Header: the only fields are *Full name* and the contact-item rows. Open Experience: roles and bullets have `✕` and `+ Add`, but no `▲/▼`.
 **Actual** `[title="Move up"]` count inside Experience = **0**; no `Title`/headline input in Header (`header.title` exists in real résumé data — the file's own comment at `ResumeSections.jsx:9` says live résumés "carry keys these editors don't render (e.g. `header.title`)"). Contact items and skill categories *do* have `▲/▼`.
 **Expected + why** `Resumes Home D.dc.html:258` and `:344` give `▲/▼` only to contact items and skills, so the code matches the design — but a résumé editor where roles and bullets can be added and deleted yet never moved forces a delete-and-retype to change order, and `header.title` round-trips through the API and the PDF while being invisible and uneditable in v2.
-**Status** needs decision: add reorder + a header title field, or accept the design's scope.
+**Status** needs decision (matches the design; open after round 3).
 
 ### R3-B-02 · P3 · "Tailoring changes — already applied" is not true of suggested bullets
 **Where** `frontend/src/v2/ResumeEditor.jsx:822-823` (modal copy) and `:838` (the `APPLIED` chip) vs `backend/api/routes_resumes.py:930-931`, `:504-506`
@@ -134,6 +134,8 @@ Scripts `zzb_07a_cl.py`, `zzb_07b_cl.py`, `zzb_07c_regen.py`, `zzb_07d_tracer.py
    - résumé editor: **226.3 px / 276.6 px**, identical flex values. Byte-for-byte the same split. ✔
 8. Console clean; the only `requestfailed` entries are the `…/pdf` blob aborts in the preview `<iframe>`, which is the documented headless-Linux artifact (no PDF viewer), not a defect.
 
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
+
 ### R3-B-03 · P2 · A résumé and its cover letter fight over the same tracer link, so one of them always shows zero
 **Where** `backend/api/routes_resumes.py:398-401` (`_repoint` — sets the new owner and **nulls the other**) driven from `:1070` (résumé PDF) and `routes_cover_letters.py` (letter PDF); surfaced by `GET /resumes/{id}/tracer-stats` and `GET /cover-letters/{id}/tracer-stats`.
 **Repro** Tailor a base for a job, render the copy's PDF, then generate a cover letter for the same résumé+job and render its PDF. Then `GET /resumes/{copy}/tracer-stats`.
@@ -158,6 +160,8 @@ Snapshot check first: all seven persona nodes were byte-equal to the recon snaps
 | contact field | `State` `Hesse` → `Hesse ZZB` | 1.4 s | `contact.state = "Hesse ZZB"`, header flashed `Saved ✓` ✔ |
 | preference | `Screening defaults` → `Notice period` `3 months` → `3 months ZZB` | 1.4 s | `preferences.notice_period = "3 months ZZB"` ✔ |
 | resume_content | Experience → role 1 → `+ Add bullet` → typed | 1.5 s | `resume_content.experience[0].bullets` 9 → **10**, last = `ZZB persona bullet.` ✔ |
+
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### The round-2 unverified item — **adding a Q&A pair through the Persona UI works**
 Round 2 could not confirm this (`round2/happy-path.md`, Flow 7 "Couldn't verify"). Definitive result, measured:
@@ -221,6 +225,8 @@ Console clean throughout the deletes.
 **Persona restore** — `PATCH /persona` with the seven captured nodes → every node compares equal **and** the whole seven-node blob is byte-equal to the pre-flow snapshot (`persona_byte_equal: true`); `qa_bank` back to **18** entries.
 **Settings restore** — the full `GET /settings` blob diffs **empty** against the pre-flow snapshot.
 
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
+
 ### Final sweep — 0 `ZZB` rows
 
 | endpoint | rows | `ZZB` rows |
@@ -244,6 +250,8 @@ Console clean throughout the deletes.
 **Actual** `Job.tailored_resume_id` goes `null` (FK), but `cv_scores` keeps `{"PM": 40, "Tailored": 35}` and the scoring report keyed `Tailored` stays with it. The Feed's score band therefore still renders a `✦ Tailored (35)` tab and its report, while the `✦ Open tailored résumé` link and the `✦ Open tailored ↗` button are gone — a score attributed to a document that no longer exists and cannot be inspected.
 **Expected + why** Either drop the `Tailored` key (and its report) when the last tailored copy for that job is deleted, or relabel it `Tailored (deleted)` so the number isn't read as live. As it stands the number silently outlives its source and can still win `best_score`.
 **Proposed fix** In `delete_resume`, for each deleted résumé with a `job_id`, pop `Tailored` from that job's `cv_scores` / `scoring_report` when no other tailored copy remains for the job (`flag_modified` on both).
+
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### R3-B-06 · P4 · A base résumé's delete item says "Delete copy"
 **Where** `frontend/src/v2/ResumeEditor.jsx:553` (the base branch of the `⋯` menu reuses the copy branch's row from `:533`)
@@ -286,3 +294,5 @@ Console clean throughout the deletes.
 - Settings: full-blob diff **empty**; scheduler table equal to the pre-flow table.
 - Scratch rows: **0 `ZZB`** on every endpoint. Résumé shelf identical to baseline.
 - Left behind by design: `cv_scores.Tailored = 35` on job `73503701…` (see R3-B-05).
+
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).

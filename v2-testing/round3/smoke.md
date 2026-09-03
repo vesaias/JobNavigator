@@ -575,14 +575,14 @@ No modal/drawer/menu trigger found — the screen is read-only charts/tables plu
 **Repro** Load `/v2/companies` at 1024×700; measure `document.documentElement.scrollWidth` (1024, page itself doesn't scroll) vs the worst element's `getBoundingClientRect().right` (1306 this run, was 1335 in round 2 — value moved with row content but the defect shape is identical).
 **Actual** Confirmed again this round: `docScrollsPage=False`; the offending element is a `SPAN` inside a `.v2-scroll` ancestor with `overflow-x:auto` (chain: `SPAN → DIV → DIV.v2-scroll(auto) → DIV.v2-scroll(hidden) → MAIN(hidden) → DIV.jn-v2(hidden)`) — same shape as R2-S-01's "row action icon sits past the viewport edge inside a horizontally-scrollable container."
 **Expected** R2-S-01 was left as "needs decision" in round 2 (is the row deliberately horizontally-scrollable at ≤1024px, matching the Applications kanban pattern, or should content stay in view without scrolling). It was on the R3-0 fix-verification list; the behavior is unchanged, so either no decision was made yet or the decision was "leave as-is."
-**Status** needs decision (carried over from R2-S-01, unresolved)
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### R3-S-02 · P3 · Companies edit-config drawer has no backdrop — outside clicks don't close it
 **Where** `frontend/src/v2/Companies.jsx` `Drawer` component (`position:absolute; right:0; top:0; bottom:0; width:720`, no scrim sibling), `/v2/companies`
 **Repro** Click a company row to open its edit drawer, then click elsewhere on the page (outside the drawer panel).
 **Actual** Drawer stays open. Escape closes it (`Companies.jsx:214`'s `onKey` handler calls `closeDrawer()`), but there is no click-outside/backdrop element in the DOM for it, unlike the "+ Add company" modal and the row/sort menus, which all close on an outside click.
 **Expected** Unclear whether a drawer (as opposed to a centered modal) is meant to stay open on background interaction by design — some design systems deliberately keep drawers non-modal so the list stays usable underneath — or whether it should behave like every other overlay on this screen and close on outside click.
-**Status** needs decision: keep the drawer non-modal (no backdrop, Escape-only close) or add a click-outside close for consistency with the rest of the screen
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### R3-S-03 · P3 · Résumé Editor "⋯" head menu does not close on Escape
 **Where** `frontend/src/v2/ResumeEditor.jsx:517-521` (base) and `:545-549` (tailored copy) — the `headMenu` dropdown, only closed via its own `onClick={() => setHeadMenu(false)}` backdrop `div`
@@ -590,7 +590,7 @@ No modal/drawer/menu trigger found — the screen is read-only charts/tables plu
 **Actual** Menu stays open (confirmed both on the base résumé and the tailored copy). Clicking the invisible backdrop does close it. The three modals reachable from this same menu (Tailor, Re-tailor, Review changes) all call `useEscape(onClose)` (commented `// RES-15`), so Escape-to-close is clearly the established pattern elsewhere in this file — the head menu itself appears to have been missed.
 **Expected** Escape closes the menu, consistent with `useEscape` used on every modal in the same file and with the Feed/Companies/Searches/Applications row menus (all close on Escape via their screens' shared keydown handlers).
 **Proposed fix** Add an `Escape` case to `ResumeEditor.jsx`'s existing keydown surface (or a small `useEscape(() => setHeadMenu(false))` guarded by `headMenu`), mirroring `RES-15`.
-**Status** needs decision: fix (looks like an omission, not a deliberate choice) or confirm intentional
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### R3-S-04 · P4 · Settings "Model catalog" modal does not close on Escape
 **Where** `frontend/src/v2/Settings.jsx` `ModelsModal` (~line 870) — only `EditModal` (~line 789) has the `closeRef`/`onKey` Escape handler (~line 838); `ModelsModal` has no equivalent, only its `onClick={onClose}` backdrop
@@ -598,7 +598,7 @@ No modal/drawer/menu trigger found — the screen is read-only charts/tables plu
 **Actual** Modal stays open; clicking the backdrop does close it.
 **Expected** Escape closes it, consistent with `EditModal` in the same file.
 **Proposed fix** Reuse the same `document.addEventListener('keydown', ...)` pattern `EditModal` already has, scoped to `ModelsModal`.
-**Status** needs decision: fix (small, contained) or confirm intentional
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ## Fixed since round 2 (verified this round, no action needed)
 - **R2-S-02** (Résumé Editor ~3px overflow at 1024px) — now clean: `sw=1024 iw=1024 right=1024` on both the base and tailored-copy editors, both themes.

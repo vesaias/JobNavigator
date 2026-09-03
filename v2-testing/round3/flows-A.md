@@ -40,7 +40,7 @@ Scripts: `r3a_00_recon.py`, `r3a_01_company.py`, `r3a_02_test.py`, `r3a_03_run.p
 **Repro** Test-scrape a company whose board contains a posting whose *body* matches a `body_exclusion_phrases` entry, then Run the scrape and compare.
 **Actual** Test footer read `14 kept`; the run reported `14 seen, +13 new` and stored the fourteenth as `status=ignored`. The test preview only applies the two *title* layers, so a body-exclusion drop is invisible in the preview and unexplained in the run summary (`+13 new` with no "1 body-excluded"). The reason exists on the row (`h1b_jd_snippet`) but no screen shows it.
 **Expected** Either the preview says the body scan is not simulated, or the run summary breaks out the body-excluded count the way the test modal breaks out `removed by the global list`.
-**Status** needs decision.
+**Status** needs decision (open after round 3).
 
 **Verdict: ✔**
 
@@ -77,14 +77,14 @@ Scripts: `r3a_10_search.py` … `r3a_21_badge.py`. LLM calls: **0** (`auto_scori
 - Nothing anywhere reports this: the run is `completed`, `is_warning:false`, and the summary reads like a legitimate "no new jobs today".
 **Expected** An Indeed search that returns ten different jobs stores ten jobs. The dedup key must not be able to erase a posting's identity.
 **Proposed fix** Two independent guards, both cheap: (a) drop `jk` from `_DEFAULT_TRACKING_PARAMS` and from the `dedup_tracking_params` seed (and audit the other very generic entries in that list — `v`, `r`, `a`, `st`, `for`, `country`, `category`, `ss`, `bid` — each is an identity param on some board); (b) make `make_external_id` hash `company + title + canonical_url` as `CLAUDE.md` still documents it, so stripping a param can never merge two different postings. (b) alone fixes the class of bug; (a) also restores per-posting URLs.
-**Status** needs decision on the fix shape — but the defect itself is not in doubt.
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 ### R3-A-03 · P3 · A source that hard-fails (ZipRecruiter 403) is indistinguishable from a source that found nothing
 **Where** `backend/scraper/sources/jobspy.py:112-136` / `job_monitor` summary
 **Repro** Run a keyword search with `sources:["google","zip_recruiter","indeed"]`.
 **Actual** The backend log shows `JobSpy:ZipRecruiter - ZipRecruiter response status code 403` and `JobSpy:Google - initial cursor not found`, but the run finished `completed`, `is_warning:false`, summary `ZZA Search - 9 seen, +0 new`, and the ScrapeLog row records no error. Neither the Searches card nor Stats shows that one of the three configured boards refused the request.
 **Expected** A 403 from a configured source belongs in `ScrapeLog.error` / `is_warning`, the way an empty company scrape does.
-**Status** needs decision.
+**Status** needs decision (open after round 3).
 
 **Verdict: ✔ for the UI flow (create / test / run / edit / interval / pause / delete all work); ✖ for the Indeed data path (R3-A-02).**
 
@@ -135,7 +135,7 @@ Console: the only errors in the whole step are the third-party posting the detai
 **Repro** Select 3 jobs → `Skip` on the floating bar.
 **Actual** Toast is `✓ Skipped 3 jobs.` with no `Undo`. Skipping the same three one at a time gives three undoable toasts. The bulk path is the one where a mis-click costs the most (it is the only way to skip N rows at once) and it is the one that cannot be reversed from the UI — the rows leave the list and the user has to find them again through `Status · Skip`.
 **Expected** The same `· Undo` affordance, restoring the previous per-job status (the endpoint already takes a list, so undo is one more `bulk-update` with the recorded prior statuses).
-**Status** needs decision.
+**Status** needs decision (open after round 3).
 
 **Verdict: ✔**
 
@@ -227,7 +227,7 @@ Subject: the `ZZA Delivery Program Manager @ ZZA Acme Systems` application from 
 **Repro** Add an interview, then try to change its time or location.
 **Actual** The row exposes only a status toggle (`scheduled ⇄ done`) and `✕`. A rescheduled interview — the most common change there is — means deleting the row and retyping all four fields. The backend already has `PATCH /applications/interviews/{id}` and the UI already calls it for `status`.
 **Expected** Click the row (or a small ✎) to reopen the same four-field form bound to that PATCH.
-**Status** needs decision.
+**Status** needs decision (open after round 3).
 
 **Verdict: ✔**
 
@@ -270,7 +270,7 @@ Both were fired from the real UI (`/v2/stats` → Schedules → `Run now`), not 
 **Actual** `RESULT` reads `1 repl` (and `2 repls` on the two scheduled runs earlier today). The helper's own docstring says it should read `"3 replies"`.
 **Expected** `1 reply` / `2 replies`.
 **Proposed fix** Give `_activity_summary` an optional plural (`_activity_summary(since, "email", "reply", "replies")`), or pass a pre-pluralised noun.
-**Status** contained one-liner; not applied (this stage is read-only).
+**Status** needs decision (open after round 3).
 
 **Verdict: ✔ (both trigger, both complete, both report)**
 
@@ -296,7 +296,7 @@ Scripts: `r3a_95_enum.py` … `r3a_a4_sweep.py`.
 **Why it is new** In round 2 this looked healthy only because a *manual* company scrape wrote no ScrapeLog row at all (R2-H-02). Fixing R2-H-02 (commit `f75f2a1`) means every manual scrape now writes one — so **the fix made every scraped company undeletable through the UI.** Scheduled scrapes have always written these rows, so the user's real companies are affected too: `Anthropic`, `Intuit`, `Adobe`, `Mastercard` and every other row with a `playwright_*` ScrapeLog entry cannot be deleted today either. `Job.search_id` is the same shape, so a search that has stored jobs fails for the same reason even with the log rows gone.
 **Expected** Deleting a company or a search succeeds and its audit rows are either cascaded or orphaned (`ON DELETE SET NULL` keeps the history readable, which suits an audit table), exactly as jobs are deliberately kept.
 **Proposed fix** Either (a) in both delete handlers, `db.query(ScrapeLog).filter(...).update({"company_id": None})` / `{"search_id": None}` (and `Job.search_id → None` for searches) before `db.delete`, or (b) declare the relationships with `passive_deletes`/`ondelete="SET NULL"` — but note there is no Alembic here, so (a) is the only change that takes effect without a schema migration. Whatever the shape, the 500 must also become a handled error rather than a bare `Internal Server Error`.
-**Status** needs fixing in R3-3; not applied here (this stage is read-only).
+**Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
 
 **Sweep** — every list endpoint plus a direct SQL pass, matching `name` / `title` / `company` / `source_name` / `question` against the `ZZA` prefix (`r3a_a4_sweep.py`):
 
