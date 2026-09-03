@@ -9,6 +9,7 @@ sys.path.insert(0, '/tmp/v2t')
 from h import *
 
 stage = sys.argv[1] if len(sys.argv) > 1 else 'D0'
+SKIN = sys.argv[sys.argv.index('--skin') + 1] if '--skin' in sys.argv else None  # e.g. --skin alt (sets localStorage jobnavigator_skin before load)
 OUT = f'/tmp/v2t/shots/{stage}'; os.makedirs(OUT, exist_ok=True)
 CSS = "*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; } html { scroll-behavior: auto !important; }"
 
@@ -27,6 +28,7 @@ with browser() as b:
         for w, hgt in ((1440, 900), (1024, 700)):
             for r in ROUTES:
                 pg = page(b, th); pg.set_viewport_size({'width': w, 'height': hgt})
+                if SKIN: pg.add_init_script(f"localStorage.setItem('jobnavigator_skin', '{SKIN}')")
                 try: pg.clock.set_fixed_time('2026-09-04T12:00:00Z')  # freeze 'N min ago' strings
                 except Exception: pass
                 go(pg, r); pg.add_style_tag(content=CSS); pg.mouse.move(0, 0); pg.wait_for_timeout(400)
