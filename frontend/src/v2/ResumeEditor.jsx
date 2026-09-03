@@ -12,6 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   MenuHead, MenuItem, SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
+import { Button, IconButton, Pill } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -517,13 +518,14 @@ export default function ResumeEditor() {
             </span>
           </div>
           {stage && (
-            <div onClick={() => !stage.done && stage.act && stage.act()} title={stage.done ? 'Pipeline complete' : 'The one next step'} style={{ flex: '0 0 auto', height: 36, padding: '0 19px', borderRadius: 99, background: stage.done ? 'var(--accent-soft)' : 'var(--accent)', color: stage.done ? 'var(--accent)' : 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: stage.done ? 'default' : 'pointer' }}>
+            <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'Pipeline complete' : 'The one next step'}>
               {scoring && <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
               {stage.label}
-            </div>
+            </Button>
           )}
           <div style={{ position: 'relative', flex: '0 0 auto' }}>
-            <div onClick={() => setHeadMenu((v) => !v)} className="v2-act" style={{ width: 36, height: 36, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, cursor: 'pointer' }}>⋯</div>
+            <IconButton size={36} on={headMenu} ariaExpanded={headMenu} ariaHaspopup="menu"
+              onClick={() => setHeadMenu((v) => !v)} title="More">⋯</IconButton>
             {headMenu && (
               <>
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
@@ -548,11 +550,12 @@ export default function ResumeEditor() {
       ) : (
         <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
           <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
-          <div onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto', height: 36, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>✦ Tailor for a job…</div>
+          <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
               R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
           <div style={{ position: 'relative', flex: '0 0 auto', marginLeft: 8 }}>
-            <div onClick={() => setHeadMenu((v) => !v)} className="v2-act" title="More" style={{ width: 36, height: 36, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</div>
+            <IconButton size={36} on={headMenu} ariaExpanded={headMenu} ariaHaspopup="menu"
+              onClick={() => setHeadMenu((v) => !v)} title="More">⋯</IconButton>
             {headMenu && (
               <>
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
@@ -606,6 +609,7 @@ export default function ResumeEditor() {
                   </div>
               )}
             </div>
+            {/* ui: keep — native <a href target=_blank> download link; Button renders a div and would drop the anchor */}
             <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', flex: '0 0 auto', minWidth: 0, height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>↓ Download PDF</a>
           </div>
           <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--surface-2)' }}>
@@ -613,7 +617,7 @@ export default function ResumeEditor() {
             {pdfErr && !pdfUrl && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 12.5 }}>
                 <span>Preview failed — the PDF could not be rendered.</span>
-                <span onClick={() => setPdfNonce((n) => n + 1)} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Retry</span>
+                <Pill size="sm" onClick={() => setPdfNonce((n) => n + 1)}>Retry</Pill>
               </div>
             )}
           </div>
@@ -715,9 +719,9 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
             <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
             {mode === 'tailor' && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
           </div>
-          <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
-          <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
+          <Button size="sm" onClick={() => onRun({ mode, baseId })} disabled={!canRun}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</Button>
         </div>
       </div>
     </div>
@@ -813,9 +817,9 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
                 `if chain_depth and job_id`), so a freeform run says nothing */}
             {pick && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
           </div>
-          <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           {/* RES-17 */}
-          <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
+          <Button size="sm" onClick={run} disabled={!canRun}>✦ Tailor</Button>
         </div>
       </div>
     </div>
@@ -851,7 +855,7 @@ function ReviewModal({ changes, onClose, onApply }) {
                 : "These landed automatically. Decline any you don't want; the base text comes back."}
             </span>
           </div>
-          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 11, minHeight: 0 }}>
           {changes.length === 0 && <div style={{ padding: 20, fontSize: 12.5, color: 'var(--muted)' }}>No tailoring changes to review.</div>}
@@ -868,6 +872,7 @@ function ReviewModal({ changes, onClose, onApply }) {
                   <span title={pending ? 'Suggested — not in the document or the PDF yet; added when you finish reviewing' : off ? 'Declined — the base text is restored' : 'Already in the document and in the PDF'}
                     style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--accent-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, color: !live ? 'var(--muted)' : pending ? 'var(--warn)' : 'var(--accent)', cursor: 'help' }}>{!live ? (pending ? 'dropped' : 'declined') : pending ? 'suggested' : 'applied'}</span>
                   {live && pending && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>added when you finish reviewing</span>}
+                  {/* ui: keep — border+ink swing --accent/--warn with the change's state; Pill has no tinted variant */}
                   <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{pending ? (off ? 'Keep it' : 'Drop ↩') : (off ? 'Restore change' : 'Decline ↩')}</div>
                 </div>
                 <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--text-2)' }}>
@@ -888,7 +893,7 @@ function ReviewModal({ changes, onClose, onApply }) {
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{nSuggested
             ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
             : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</span>
-          <div onClick={() => onApply(declined)} style={{ marginLeft: 'auto', height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Done reviewing</div>
+          <Button size="sm" onClick={() => onApply(declined)} style={{ marginLeft: 'auto' }}>Done reviewing</Button>
         </div>
       </div>
     </div>

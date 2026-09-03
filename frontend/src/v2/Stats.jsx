@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
+import { Pill as UiPill } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -102,11 +103,10 @@ const Pill = ({ children, bg, fg }) => (
 // STAT-18: the pager both logs share.
 const LoadMore = ({ onClick, busy }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
-    <span onClick={busy ? undefined : onClick} {...kb(() => { if (!busy) onClick() })} aria-busy={!!busy} className={busy ? 'v2-ctl' : 'v2-bdc v2-ctl'}
-      style={{ height: 26, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: busy ? 'var(--muted)' : 'var(--text-2)', cursor: busy ? 'default' : 'pointer' }}>
+    <UiPill size="sm" disabled={!!busy} ariaBusy={!!busy} onClick={onClick}>
       {busy && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
       {busy ? 'Loading…' : 'Load more'}
-    </span>
+    </UiPill>
   </div>
 )
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
@@ -409,6 +409,7 @@ export default function Stats() {
       </header>
       {coreErr && (
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
+          {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
           <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
           <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
           <span onClick={refresh} {...kb(refresh)} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
@@ -448,7 +449,7 @@ export default function Stats() {
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
                   {[['bar', 'Funnel'], ['sankey', 'Flow']].map(([id, label]) => {
                     const on = flowView === id
-                    return <span key={id} onClick={() => setFlowView(id)} {...kb(() => setFlowView(id))} aria-pressed={on} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                    return <UiPill key={id} size="sm" on={on} onClick={() => setFlowView(id)}>{label}</UiPill>
                   })}
                 </span>
               )}
@@ -538,7 +539,7 @@ export default function Stats() {
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
                   const on = period === id
-                  return <span key={label} onClick={() => setPeriod(id)} {...kb(() => setPeriod(id))} aria-pressed={on} className="v2-ctl" style={{ height: 23, padding: '0 9px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 10.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</span>
+                  return <UiPill key={label} size="sm" on={on} onClick={() => setPeriod(id)}>{label}</UiPill>
                 })}
               </span>
             </div>
@@ -603,6 +604,7 @@ export default function Stats() {
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {showStatus && (running
                     ? <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                    /* ui: keep — 7px scheduler status dot (Dot role, migrates with Tag/Dot) */
                     : <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />)}
                   {showStatus && <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {running ? `Running · ${dur(j.running?.elapsed_seconds || 0)}` : j.pending ? 'Pending' : 'Scheduled'}
@@ -634,9 +636,10 @@ export default function Stats() {
             {tab === 'activity' && (
               <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>
-                  <span onClick={() => setTypeOpen((v) => !v)} {...kb(() => setTypeOpen((v) => !v))} aria-expanded={typeOpen} title="Filter the activity log by type" className="v2-ctl" style={{ height: 26, padding: '0 11px', border: `1px solid ${actType ? 'var(--accent)' : 'var(--edge)'}`, background: actType ? 'var(--accent-soft)' : 'transparent', color: actType ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, cursor: 'pointer' }}>
+                  <UiPill size="sm" on={!!actType} ariaExpanded={typeOpen} ariaHaspopup="menu"
+                    title="Filter the activity log by type" onClick={() => setTypeOpen((v) => !v)} style={{ gap: 5 }}>
                     Type{actType ? ' · 1' : ''}<span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
-                  </span>
+                  </UiPill>
                   {typeOpen && (
                     <>
                       <span onClick={() => setTypeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
@@ -650,6 +653,7 @@ export default function Stats() {
                     </>
                   )}
                 </span>
+                {/* ui: keep — search field wrapper (Input role), not a pill */}
                 <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
                   <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"

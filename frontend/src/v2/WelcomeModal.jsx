@@ -2,6 +2,7 @@ import React, { useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Settings as SettingsIcon, FileUser, Building2, Search } from 'lucide-react'
 import { useSnapTop } from './hooks'
+import { Button } from './ui'
 import './theme.css'
 
 // First-run overlay (System Overlays.dc.html · 2). The design draws the steps as
@@ -41,6 +42,7 @@ export default function WelcomeModal({ onClose }) {
           {STEPS.map(([Icon, title, desc, to], i) => (
             <div key={to} onClick={() => go(to)} className="v2-welcomestep"
               style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 2px', borderRadius: 8, cursor: 'pointer' }}>
+              {/* ui: keep — step number badge (mono numeral on --surface-2), not an icon button */}
               <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1 }}>{i + 1}</span>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, lineHeight: '18px', fontWeight: 600 }}>
@@ -53,8 +55,7 @@ export default function WelcomeModal({ onClose }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 24px', borderTop: '1px solid var(--line-soft)', background: 'var(--bg)' }}>
-          <span onClick={() => go('settings')}
-            style={{ marginLeft: 'auto', height: 30, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, lineHeight: 1, cursor: 'pointer' }}>Start with Settings →</span>
+          <Button size="xs" onClick={() => go('settings')} style={{ marginLeft: 'auto' }}>Start with Settings →</Button>
         </div>
       </div>
     </div>

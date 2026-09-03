@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
+import { Pill } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -308,7 +309,7 @@ export default function Persona() {
       {loadErr ? (
         <>
           <span>Couldn’t load your persona.</span>
-          <span onClick={() => { setLoadErr(false); loadPersona() }} {...kb(() => { setLoadErr(false); loadPersona() })} className="v2-act" style={{ height: 27, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>
+          <Pill size="sm" onClick={() => { setLoadErr(false); loadPersona() }}>Try again</Pill>
         </>
       ) : 'Loading…'}
       <ToastStack toasts={toasts} onClose={dismissToast} />

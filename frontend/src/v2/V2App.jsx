@@ -138,6 +138,7 @@ export default function V2App() {
                         in flight — an empty span, never a placeholder 0, so the
                         label doesn't shift when the number lands */}
                     {it.countKey != null && <span style={{ flex: '0 0 auto', minWidth: open ? 18 : 0, width: open ? undefined : 0, textAlign: 'right', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{count != null ? count : ''}</span>}
+                    {/* ui: keep — 5px "needs attention" rail dot, not a control */}
                     {!open && warned && <span title="Needs attention" style={{ position: 'absolute', top: 8, left: 'calc(50% + 5px)', width: 5, height: 5, borderRadius: 99, background: 'var(--warn)' }} />}
                   </>
                 )
@@ -159,6 +160,7 @@ export default function V2App() {
         <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
+              /* ui: keep — 7px scrape-health rail dot, not a control */
               ? <span style={{ width: 7, height: 7, borderRadius: 99, background: healthy ? 'var(--rail-accent)' : 'var(--warn)' }} />
               : <span onClick={(e) => { e.stopPropagation(); toggleTheme() }} title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>}
           </span>
@@ -168,6 +170,7 @@ export default function V2App() {
         <div style={{ display: 'flex', alignItems: 'center', height: 34, padding: `0 12px 0 ${padX}px`, borderTop: '1px solid var(--rail-line)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span onClick={toggleRail} title={open ? 'Collapse to icons' : 'Expand navigation'} className="v2-navdark" style={{ flex: '0 0 24px', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>{open ? '‹' : '›'}</span>
           <span onClick={toggleRail} className="v2-navdark" style={{ flex: 1, fontSize: 12, lineHeight: '18px', color: 'var(--rail-dim)', cursor: 'pointer', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>Collapse</span>
+          {/* ui: keep — rail-dark theme toggle (--rail-dim ink, v2-navdark + v2-themebtn rail hovers); IconButton reads the light-surface tokens */}
           <span onClick={toggleTheme} title={`Switch to ${dark ? 'light' : 'dark'} mode`} className="v2-navdark v2-themebtn" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: open ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>
         </div>
       </aside>

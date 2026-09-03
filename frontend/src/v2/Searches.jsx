@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
+import { Button, IconButton, Pill } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -198,9 +199,9 @@ function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, 
   )
 }
 const Chip = ({ on, label, onClick }) => (
-  <div onClick={onClick} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+  <Pill size="sm" on={on} onClick={onClick}>
     <span>{on ? '✓' : '○'}</span>{label}
-  </div>
+  </Pill>
 )
 const Check = ({ on, label, title, onClick }) => (
   <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
@@ -213,10 +214,9 @@ const DepthPills = ({ value, onPick }) => (
     {DEPTHS.map((d) => {
       const on = value === d.id
       return (
-        <div key={d.id} title={d.hint} onClick={(e) => { e.stopPropagation(); onPick(d.id) }} className="v2-bd"
-          style={{ height: 31, padding: '0 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+        <Pill key={d.id} on={on} title={d.hint} onClick={(e) => { e.stopPropagation(); onPick(d.id) }}>
           <span>{d.dots}</span>{d.label}
-        </div>
+        </Pill>
       )
     })}
   </div>
@@ -570,8 +570,7 @@ export default function Searches() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}
-            style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ New search</div>
+          <Button onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}>+ New search</Button>
         </div>
       </header>
       {/* the design draws the rule inset by 30px on both sides, not full-bleed */}
@@ -590,8 +589,8 @@ export default function Searches() {
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Runs on the next scheduled sweep once created</span>
-                <div onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                <div onClick={create} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: busy === 'new' ? 'default' : 'pointer', opacity: busy === 'new' ? .6 : 1 }}>{busy === 'new' ? 'Creating…' : 'Create search'}</div>
+                <Button variant="secondary" size="sm" onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} style={{ marginLeft: 'auto' }}>Cancel</Button>
+                <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>
             </div>
           </div>
@@ -646,16 +645,17 @@ export default function Searches() {
                   </span>
                 )}
                 {/* fixed width so Active matches Paused and both sit on one vertical axis */}
-                <span onClick={(e) => { e.stopPropagation(); toggleActive(s) }} className="v2-bd"
+                <Pill size="sm" on={s.active} onClick={(e) => { e.stopPropagation(); toggleActive(s) }}
                   title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
-                  style={{ flex: '0 0 62px', height: 23, borderRadius: 99, border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`, background: s.active ? 'var(--accent-soft)' : 'var(--surface)', color: s.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                  style={{ flex: '0 0 62px' }}>
                   {s.active ? 'Active' : 'Paused'}
-                </span>
+                </Pill>
                 {ext ? (
                   <span title="Jobs arrive from the browser extension — there is nothing to run or test"
                     style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension • passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    {/* ui: keep — 25px Run pill matched to the Test pill beside it (Test carries an opacity state the scan left unclassified) */}
                     <span onClick={() => runNow(s)} className="v2-bdc"
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
@@ -669,6 +669,7 @@ export default function Searches() {
                         {testingId === s.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
                     )}
+                    {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
                     <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
                       style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                     {menuFor === s.id && (
@@ -695,8 +696,8 @@ export default function Searches() {
                   <ConfigForm d={draft} set={(p) => setDraft((x) => ({ ...x, ...p }))} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>Changes apply from the next run</span>
-                    <div onClick={() => setEditing(null)} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                    <div onClick={() => save(s)} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: busy === s.id ? 'default' : 'pointer', opacity: busy === s.id ? .6 : 1 }}>{busy === s.id ? 'Saving…' : 'Save changes'}</div>
+                    <Button variant="secondary" size="sm" onClick={() => setEditing(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
+                    <Button size="sm" onClick={() => save(s)} busy={busy === s.id}>{busy === s.id ? 'Saving…' : 'Save changes'}</Button>
                   </div>
                 </div>
               )}
@@ -791,7 +792,7 @@ function TestModal({ test, tab, setTab, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</span>
           <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>
-          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
 
         {test.error ? (
@@ -815,7 +816,7 @@ function TestModal({ test, tab, setTab, onClose }) {
               {[['all', `All (${jobs.length})`], ['kept', `Kept (${kept.length})`], ['filtered', `Filtered (${filtered.length})`]].map(([id, label]) => {
                 const on = tab === id
                 return (
-                  <div key={id} onClick={() => setTab(id)} className="v2-bd" style={{ height: 26, padding: '0 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{label}</div>
+                  <Pill key={id} size="sm" on={on} onClick={() => setTab(id)}>{label}</Pill>
                 )
               })}
             </div>
@@ -858,6 +859,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
                       {/* R3-A-01: a body-phrase drop is stored as `ignored`, not
                           filtered out of the feed — label it as what it becomes. */}
+                      {/* ui: keep — per-row verdict badge (Tag role), not a control */}
                       <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : 'Out'}</span>
                     </span>
                   </div>
@@ -879,7 +881,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                 {' · '}{nRaw} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
                 {nBodyUnchecked > 0 && <span style={{ color: 'var(--muted)' }}> · {nBodyUnchecked} not body-checked (needs the description)</span>}
               </span>
-              <div onClick={onClose} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+              <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>
             </div>
           </>
         )}

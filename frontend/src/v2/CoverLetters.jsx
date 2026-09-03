@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
+import { Button, Pill } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -88,10 +89,7 @@ export function VoicePicker({ presets, value, onPick }) {
       {presets.map((v) => {
         const on = v.id === value
         return (
-          <div key={v.id} onClick={() => onPick(v.id)} title={v.instruction || ''} className="v2-bdc v2-ctl"
-            style={{ height: 27, padding: '0 11px', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1,
-              border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
-              color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 11.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>{v.label}</div>
+          <Pill key={v.id} size="sm" on={on} onClick={() => onPick(v.id)} title={v.instruction || ''}>{v.label}</Pill>
         )
       })}
     </div>
@@ -360,11 +358,11 @@ export default function CoverLetters() {
 
           {/* RES-17: --line on --muted when disabled, like every other primary pill
               in the three builders — a dimmed accent still reads as live. */}
-          <div onClick={generate} title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}
-            style={{ height: 36, borderRadius: 99, background: canGenerate ? 'var(--accent)' : 'var(--line)', color: canGenerate ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, lineHeight: 1, fontSize: 13, fontWeight: 500, cursor: canGenerate ? 'pointer' : 'default' }}>
+          <Button onClick={generate} disabled={!canGenerate}
+            title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}>
             {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
-          </div>
+          </Button>
           {err && <span style={{ fontSize: 11.5, color: 'var(--bad)', textWrap: 'pretty' }}>{err}</span>}
         </div>
 

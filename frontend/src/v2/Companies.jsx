@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSnapTop } from './hooks'
-import { kb } from './ResumeSections'
+import { Button, IconButton, Pill } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -92,10 +92,7 @@ const TIER_BTNS = [{ v: 1, label: '1' }, { v: 2, label: '2' }, { v: 3, label: '3
 const TEST_PAGE = 100
 const ShowMore = ({ n, onClick }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
-    <span onClick={onClick} {...kb(onClick)} className="v2-bdc v2-ctl"
-      style={{ height: 26, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>
-      Show {n} more
-    </span>
+    <Pill size="sm" onClick={onClick}>Show {n} more</Pill>
   </div>
 )
 
@@ -143,10 +140,10 @@ const ResumeChips = ({ resumes, personaPopulated, selected, toggle }) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
     {resumes.map((r) => {
       const on = selected.includes(r.id)
-      return <div key={r.id} onClick={() => toggle(r.id)} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', whiteSpace: 'nowrap' }}>{r.name}</div>
+      return <Pill key={r.id} size="sm" on={on} onClick={() => toggle(r.id)}>{r.name}</Pill>
     })}
     {personaPopulated && (() => { const on = selected.includes('persona'); return (
-      <div onClick={() => toggle('persona')} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer' }}>Persona</div>
+      <Pill size="sm" on={on} onClick={() => toggle('persona')}>Persona</Pill>
     ) })()}
   </div>
 )
@@ -415,7 +412,7 @@ export default function Companies() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div onClick={() => setAddOpen(true)} style={{ height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Add company</div>
+          <Button onClick={() => setAddOpen(true)}>+ Add company</Button>
         </div>
       </header>
 
@@ -430,19 +427,20 @@ export default function Companies() {
         {['1', '2', '3', 'none'].map((t) => {
           const on = tiers.includes(t)
           return (
-            <div key={t} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
-              title="Add/remove from filter · multi-select, remembered per browser" className="v2-bd"
-              style={{ flex: '0 0 auto', height: 30, padding: '0 13px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+            <Pill key={t} on={on} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
+              title="Add/remove from filter · multi-select, remembered per browser">
               <span>{t === 'none' ? 'Untiered' : `Tier ${t}`}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6 }}>{tierCounts[t]}</span></span>
-            </div>
+            </Pill>
           )
         })}
         <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 2px' }} />
         {inactiveInFilter.length > 0 && (
+          // ui: keep — accent-ink bulk action, paired with the --warn one below; Pill has no tinted variant
           <div onClick={() => bulkSet(true)} title={bulkHint} className="v2-act"
             style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {inactiveInFilter.length} active</div>
         )}
         {activeInFilter.length > 0 && (
+          // ui: keep — --warn ink + v2-bd-warn hover; Pill has no warn variant
           <div onClick={() => bulkSet(false)} title={bulkHint} className="v2-bd-warn"
             style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--warn)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {activeInFilter.length} inactive</div>
         )}
@@ -528,8 +526,8 @@ export default function Companies() {
               {showFit && <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>}
               {/* status */}
               <span style={{ flex: '0 0 88px', display: 'flex', justifyContent: 'center' }}>
-                <span onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }} title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'} className="v2-bd"
-                  style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${c.active ? 'var(--accent)' : 'var(--edge)'}`, background: c.active ? 'var(--accent-soft)' : 'var(--surface)', color: c.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>{c.active ? 'Active' : 'Inactive'}</span>
+                <Pill size="sm" on={c.active} onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }}
+                  title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'}>{c.active ? 'Active' : 'Inactive'}</Pill>
               </span>
               {/* actions — R2-S-01: pinned to the right edge of the scroller so the
                   ⋯ stays reachable when the row is wider than the pane at 1024px */}
@@ -546,6 +544,7 @@ export default function Companies() {
                   style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'), background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy && testingId !== c.id ? 0.5 : 1 }}>
                   {testingId === c.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </span>
+                {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
                 <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
                   style={{ width: 25, height: 25, border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                 {menuId === c.id && (
@@ -662,7 +661,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{subtitle}</span>
         </div>
-        <div onClick={onClose} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+        <IconButton onClick={onClose} title="Close" style={{ flex: '0 0 auto' }}>✕</IconButton>
       </div>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px 20px', display: 'flex', flexDirection: 'column', gap: 15, minHeight: 0 }}>
@@ -770,13 +769,14 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       </div>
 
       <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
         <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? undefined : 'v2-act'} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
           {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
         </div>
         {saveErr && <span style={{ marginLeft: 'auto', fontSize: 12, lineHeight: '16px', color: 'var(--bad)' }}>{saveErr}</span>}
-        <div onClick={save} style={{ marginLeft: saveErr ? 10 : 'auto', height: 32, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save changes'}</div>
+        <Button size="sm" onClick={save} busy={saving} style={{ marginLeft: saveErr ? 10 : 'auto' }}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </div>
     </div>
     </>
@@ -867,7 +867,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
               <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Depth</span>
               <div style={{ display: 'flex', gap: 4 }}>
                 {DEPTHS.map((d) => { const on = depth === d.id; return (
-                  <div key={d.id} onClick={() => setDepth(d.id)} title={d.hint} className="v2-bd" style={{ height: 26, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>{d.label}</div>
+                  <Pill key={d.id} size="sm" on={on} onClick={() => setDepth(d.id)} title={d.hint}>{d.label}</Pill>
                 ) })}
               </div>
             </div>
@@ -877,8 +877,8 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
         </div>
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Scrapes on the next scheduled run</span>
-          <div onClick={onClose} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={save} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save'}</div>
+          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
+          <Button size="sm" onClick={save} busy={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
       </div>
     </div>
@@ -897,7 +897,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
-          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginTop: 16, height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <Pill onClick={onClose} style={{ marginTop: 16 }}>Close</Pill>
         </div>
       </div>
     )
@@ -942,9 +942,9 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test scrape — {test.company}</span>
           {shots.length > 0 && (
-            <div onClick={() => setShowShots((v) => !v)} style={{ marginLeft: 'auto', height: 26, padding: '0 11px', border: `1px solid ${showShots ? 'var(--accent)' : 'var(--edge)'}`, background: showShots ? 'var(--accent-soft)' : 'var(--surface)', color: showShots ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>{showShots ? 'Hide' : 'Show'} screenshots</div>
+            <Pill size="sm" on={showShots} onClick={() => setShowShots((v) => !v)} style={{ marginLeft: 'auto' }}>{showShots ? 'Hide' : 'Show'} screenshots</Pill>
           )}
-          <div onClick={onClose} className="v2-hover-accent" style={{ width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer', marginLeft: shots.length ? 0 : 'auto' }}>✕</div>
+          <IconButton onClick={onClose} title="Close" style={{ marginLeft: shots.length ? 0 : 'auto' }}>✕</IconButton>
         </div>
 
         <div style={{ flex: '0 0 auto', padding: '9px 22px', background: 'var(--bg)', borderBottom: '1px solid var(--line-soft)', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1004,7 +1004,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
 
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}{jobs.length > limit ? ` · showing the first ${limit}` : ''}</span>
-          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
+          <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>
         </div>
       </div>
     </div>

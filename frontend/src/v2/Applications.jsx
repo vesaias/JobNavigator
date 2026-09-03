@@ -4,6 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
+import { Button, IconButton, Pill } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -341,12 +342,13 @@ export default function Applications() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div onClick={() => { closeAll(); setLogOpen(true) }} style={{ flex: '0 0 auto', height: 36, padding: '0 18px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>+ Log application</div>
+          <Button onClick={() => { closeAll(); setLogOpen(true) }}>+ Log application</Button>
         </div>
       </header>
 
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
+        {/* ui: keep — search field wrapper (Input role), not a pill */}
         <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
@@ -354,10 +356,10 @@ export default function Applications() {
         </div>
 
         <span style={{ position: 'relative', flex: '0 0 auto', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-          <div onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')} className="v2-bd"
-            style={{ height: 30, padding: '0 13px', border: `1px solid ${openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--edge)'}`, background: openFlt === 'company' || companies.length ? 'var(--accent-soft)' : 'var(--surface)', color: openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1, gap: 6, fontSize: 12.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+          <Pill on={openFlt === 'company' || !!companies.length} ariaExpanded={openFlt === 'company'} ariaHaspopup="menu"
+            onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')}>
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
-          </div>
+          </Pill>
           {openFlt === 'company' && (
             <div className="v2-scroll" style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, gap: 1, maxHeight: 340, overflow: 'auto' }}>
               {['live', 'closed'].map((band) => companyOpts[band].map(([name, e], i) => {
@@ -567,11 +569,10 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={LABEL}>Interviews · {ivs.length}</span>
-              <div onClick={openPrep} className="v2-bdc"
-                title="Builds one pasteable block — the role, my résumé, the posting and what to ask for — for the AI of your choice"
-                style={{ marginLeft: 'auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+              <Pill size="sm" onClick={openPrep} style={{ marginLeft: 'auto' }}
+                title="Builds one pasteable block — the role, my résumé, the posting and what to ask for — for the AI of your choice">
                 <span style={{ fontSize: 11 }}>⧉</span>Generate prep handover for AI
-              </div>
+              </Pill>
             </div>
             {ivs.map((iv) => (
               <div key={iv.id} style={{ border: `1px solid ${editIv === iv.id ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 9, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: editIv === iv.id ? 8 : 3, background: editIv === iv.id ? 'var(--surface)' : 'var(--bg)' }}>
@@ -604,8 +605,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>Escape cancels</span>
-                      <div onClick={() => setEditIv(null)} className="v2-bdc" style={{ marginLeft: 'auto', height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                      <div onClick={saveInterview} style={{ opacity: intBusy ? 0.5 : 1, height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: intBusy ? 'default' : 'pointer' }}>{intBusy ? 'Saving…' : 'Save'}</div>
+                      <Button variant="secondary" size="xs" onClick={() => setEditIv(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
+                      <Button size="xs" onClick={saveInterview} busy={intBusy}>{intBusy ? 'Saving…' : 'Save'}</Button>
                     </div>
                   </>
                 ) : (
@@ -639,8 +640,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   <input value={intPrep} onChange={(e) => setIntPrep(e.target.value)} placeholder="Who I'm meeting, what to revise…" style={inputSt} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
-                  <div onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }} className="v2-bdc" style={{ height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                  <div onClick={canAddInterview ? addInterview : undefined} style={{ opacity: canAddInterview ? 1 : 0.5, cursor: canAddInterview ? 'pointer' : 'default', height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500 }}>Add interview</div>
+                  <Button variant="secondary" size="xs" onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }}>Cancel</Button>
+                  <Button size="xs" onClick={addInterview} disabled={!canAddInterview}>Add interview</Button>
                 </div>
               </div>
             ) : (
@@ -690,7 +691,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep handover — {company}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the AI of your choice</span>
-          <div onClick={onClose} className="v2-hover-accent" style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</div>
+          <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
           <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -699,10 +700,10 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         </div>
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Edit the closing ask in Settings → AI</span>
-          <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
-          <div onClick={onCopy} style={{ height: 31, padding: '0 15px', borderRadius: 99, background: copied ? 'var(--good)' : 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
+          <Button size="sm" onClick={onCopy} busy={busy}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
-          </div>
+          </Button>
         </div>
       </div>
     </div>
@@ -808,7 +809,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {resumes.map((r) => {
                 const on = cv === r.name
-                return <div key={r.id} onClick={() => setCv(on ? '' : r.name)} className="v2-bd" style={{ height: 27, padding: '0 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>{r.name}</div>
+                return <Pill key={r.id} size="sm" on={on} onClick={() => setCv(on ? '' : r.name)}>{r.name}</Pill>
               })}
             </div>
           </div>
@@ -835,8 +836,8 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>The posting is cached on save</span>
-          <div onClick={onClose} style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-          <div onClick={busy ? undefined : save} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Save application'}</div>
+          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
+          <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
         </div>
       </div>
     </div>

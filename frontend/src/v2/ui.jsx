@@ -109,7 +109,7 @@ const BTN_LOOK = {
 }
 export function Button({
   variant = 'primary', size = 'md', disabled, busy, onClick, title, ariaLabel,
-  children, style, className,
+  ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
 }) {
   const s = BTN_SIZE[size] || BTN_SIZE.md
   const look = BTN_LOOK[variant] || BTN_LOOK.primary
@@ -117,6 +117,7 @@ export function Button({
   return (
     <div
       {...act(onClick, off)} title={title} aria-label={ariaLabel} aria-disabled={off || undefined}
+      aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
       className={cx('v2-ctl', !off && look.hover, className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -138,11 +139,15 @@ const PILL_SIZE = {
   md: { height: 31, fontSize: 'var(--t-12-5)', padding: '0 15px' },
   sm: { height: 26, fontSize: 'var(--t-11-5)', padding: '0 13px' },
 }
-export function Pill({ on, size = 'md', disabled, onClick, title, ariaLabel, children, style, className }) {
+export function Pill({
+  on, size = 'md', disabled, onClick, title, ariaLabel,
+  ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
+}) {
   const s = PILL_SIZE[size] || PILL_SIZE.md
   return (
     <div
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel}
+      aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
       className={cx('v2-ctl', !disabled && 'v2-bd', className)}
       style={{
@@ -162,7 +167,10 @@ export function Pill({ on, size = 'md', disabled, onClick, title, ariaLabel, chi
 //      7 sites — the dominant).
 // 36 = the bordered "⋯" head button (1px edge on surface, 15px, hover v2-act,
 //      accent border + accent-soft when `on`).
-export function IconButton({ size = 26, on, disabled, onClick, title, ariaLabel, children, style, className }) {
+export function IconButton({
+  size = 26, on, disabled, onClick, title, ariaLabel,
+  ariaExpanded, ariaHaspopup, children, style, className,
+}) {
   const lg = size === 36
   const look = lg
     ? {
@@ -174,6 +182,7 @@ export function IconButton({ size = 26, on, disabled, onClick, title, ariaLabel,
   return (
     <div
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
+      aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
       className={cx('v2-ctl', !disabled && (lg ? 'v2-act' : 'v2-hover-accent'), className)}
       style={{
