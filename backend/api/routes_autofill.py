@@ -110,16 +110,11 @@ async def autofill_answer(body: dict):
         persona_txt = _flatten_persona(persona) if persona else "(no persona)"
         qa_txt = _flatten_qa_bank(persona.qa_bank if persona else [])
 
-        # Resolve provider/model for logging the same way call_autofill_llm resolves
-        # them for dispatch (autofill_llm_* settings, falling back to primary llm_*).
-        def _s(key, fallback_key, default=None):
-            row = db.query(Setting).filter(Setting.key == key).first()
-            if row and (row.value or "").strip():
-                return row.value
-            fb = db.query(Setting).filter(Setting.key == fallback_key).first()
-            return fb.value if fb and fb.value else default
-        provider = _s("autofill_llm_provider", "llm_provider", "claude_api")
-        model = _s("autofill_llm_model", "llm_model", "claude-sonnet-5")
+        # Resolve provider/model for logging with the very resolver
+        # call_autofill_llm dispatches through — one source of truth (R2-H-15).
+        from backend.analyzer.llm_client import resolve_llm_config
+        _cfg = resolve_llm_config("autofill", db=db)
+        provider, model = _cfg["provider"], _cfg["model"]
     finally:
         db.close()
 
@@ -154,7 +149,7 @@ async def autofill_answer(body: dict):
         async with track_llm_call("autofill", provider, model) as tracker:
             resp = await call_autofill_llm(suffix, system, max_tokens=max_tokens,
                                            cached_prefix=cached_prefix)
-            tracker.usage = resp.get("usage", tracker.usage)
+            tracker.record(resp)
         raw = (resp.get("text") or "").strip()
         # The model returns {"answer": "..."}; extract it so any leaked reasoning /
         # preamble outside the JSON is discarded. Fall back to the raw text.

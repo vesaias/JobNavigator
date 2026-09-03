@@ -687,6 +687,24 @@ def copy_resume_for_job(body: dict, db: Session = Depends(get_db)):
     return _resume_to_dict(copy, include_json_data=True)
 
 
+def _resolve_chain_score_depth(db) -> str | None:
+    """Depth of the score chained after a job-linked tailor, or None for no chain.
+
+    Setting `tailor_auto_quick_score` (seeded default 'light') accepts:
+      'off' / 'false' / 'no' / '0'        → no chain
+      'light' / 'true' / 'yes' / '1' / '' → light chain (default)
+      'full'                              → full chain (richer report, slower/costlier)
+    """
+    chain_row = db.query(Setting).filter(Setting.key == "tailor_auto_quick_score").first()
+    raw_chain = (chain_row.value if chain_row else "light").strip().lower()
+    depth_map = {
+        "off": None, "false": None, "no": None, "0": None,
+        "true": "light", "light": "light", "yes": "light", "1": "light", "": "light",
+        "full": "full",
+    }
+    return depth_map.get(raw_chain, "light")
+
+
 @router.post("/tailor", status_code=202)
 async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     """Tailor a base resume for a specific job in the background.
@@ -694,6 +712,11 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     Returns immediately with a run_id. Progress is trackable via
     GET /api/monitor/in-flight?job_ids=<job_id>. The resulting Resume
     row appears when the job finishes (fetch via list_resumes).
+
+    The response also reports `chain_score` — the depth of the scoring run the
+    worker will launch on the new copy ('light' | 'full'), or 'off' when nothing
+    follows — so the UI can say up front that a second LLM call is coming
+    (R2-H-09). Only job-linked tailors chain; a freeform one always reports 'off'.
     """
     base_resume_id = body.get("base_resume_id")
     job_id = body.get("job_id")
@@ -746,7 +769,8 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
                 "job_description_override": job_description,
             },
         )
-        return {"run_id": run_id, "status": "running"}
+        chain_depth = _resolve_chain_score_depth(db) if job_id else None
+        return {"run_id": run_id, "status": "running", "chain_score": chain_depth or "off"}
     except JobAlreadyRunningError as e:
         return JSONResponse(
             status_code=409,
@@ -869,21 +893,16 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             from backend.analyzer.llm_client import call_cv_tailor_llm
             from backend.analyzer.llm_logger import track_llm_call
 
-            _m = db.query(Setting).filter(Setting.key == "cv_tailor_llm_model").first()
-            _model = _m.value if _m and _m.value else None
-            if not _model:
-                _m2 = db.query(Setting).filter(Setting.key == "llm_model").first()
-                _model = _m2.value if _m2 and _m2.value else "claude-sonnet-4-6"
-            _p = db.query(Setting).filter(Setting.key == "cv_tailor_llm_provider").first()
-            _provider = _p.value if _p and _p.value else None
-            if not _provider:
-                _p2 = db.query(Setting).filter(Setting.key == "llm_provider").first()
-                _provider = _p2.value if _p2 and _p2.value else "claude_api"
+            # Same resolver call_cv_tailor_llm dispatches with, so the log row
+            # can never name a model that was not called (R2-H-15).
+            from backend.analyzer.llm_client import resolve_llm_config
+            _cfg = resolve_llm_config("cv_tailor", db=db)
+            _provider, _model = _cfg["provider"], _cfg["model"]
 
             try:
                 async with track_llm_call("tailor", _provider, _model, job_id=job_id) as _tracker:
                     _resp = await call_cv_tailor_llm(prompt, system, max_tokens=3000)
-                    _tracker.usage = _resp.get("usage", _tracker.usage)
+                    _tracker.record(_resp)
                     raw = _resp["text"]
             except Exception as e:
                 logger.error(f"Tailor LLM failed for base={base_resume_id} job={job_id}: {e}")
@@ -937,18 +956,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
             db.commit()
             db.refresh(tailored)
             # Optional: chain a score against the newly tailored CV.
-            # Setting `tailor_auto_quick_score` accepts:
-            #   'off' / 'false'           → no chain
-            #   'light' / 'true' / ''     → light chain (default)
-            #   'full'                    → full chain (richer report, slower/costlier)
-            chain_row = db.query(Setting).filter(Setting.key == "tailor_auto_quick_score").first()
-            raw_chain = (chain_row.value if chain_row else "light").strip().lower()
-            depth_map = {
-                "off": None, "false": None, "no": None, "0": None,
-                "true": "light", "light": "light", "yes": "light", "1": "light", "": "light",
-                "full": "full",
-            }
-            chain_depth = depth_map.get(raw_chain, "light")
+            chain_depth = _resolve_chain_score_depth(db)
             if chain_depth and job_id:
                 try:
                     from backend.analyzer.cv_scorer import score_single_job
@@ -968,6 +976,9 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     # Non-fatal — tailor succeeded, chain is a nice-to-have
                     logger.warning(f"Tailor chain score failed to launch: {_e}")
             logger.info(f"Tailor: created resume {tailored.id} for job {job_id}")
+            # Returned string becomes JobRun.result_summary (Stats → Run history).
+            return (f"Created '{name}'"
+                    + (f" - {chain_depth} score chained" if chain_depth and job_id else ""))
         finally:
             db.close()
 
@@ -1151,14 +1162,13 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
     try:
         from backend.analyzer.llm_client import call_llm
         from backend.analyzer.llm_logger import track_llm_call
-        # Determine model for logging
-        _m = db.query(Setting).filter(Setting.key == "llm_model").first()
-        _model = _m.value if _m and _m.value else "claude-sonnet-4-6"
-        _p = db.query(Setting).filter(Setting.key == "llm_provider").first()
-        _provider = _p.value if _p and _p.value else "claude_api"
+        # Determine model for logging — the same resolver call_llm dispatches with.
+        from backend.analyzer.llm_client import resolve_llm_config
+        _cfg = resolve_llm_config("", db=db)
+        _provider, _model = _cfg["provider"], _cfg["model"]
         async with track_llm_call("pdf", _provider, _model) as _tracker:
             _resp = await call_llm(prompt=user_prompt, system=system_prompt, max_tokens=2000)
-            _tracker.usage = _resp.get("usage", _tracker.usage)
+            _tracker.record(_resp)
             raw_response = _resp["text"]
 
         # Strip markdown fences if present
@@ -1228,6 +1238,9 @@ async def _score_resume_impl(resume_id: str, depth: str):
 
     Runs under launch_background → progress visible via /monitor/active so the
     spinner survives navigation away from /resumes.
+
+    Returns a one-line summary — launch_background stores it as
+    JobRun.result_summary for Stats → Run history (R2-H-13).
     """
     from backend.analyzer.cv_scorer import score_job_sync
 
@@ -1236,7 +1249,7 @@ async def _score_resume_impl(resume_id: str, depth: str):
         resume = db.query(Resume).filter(Resume.id == resume_id).first()
         if not resume:
             logger.error(f"Score: resume {resume_id} missing at execution time")
-            return
+            return "Resume not found"
 
         job = None
         jd_text = ""
@@ -1244,17 +1257,17 @@ async def _score_resume_impl(resume_id: str, depth: str):
             job = db.query(Job).filter(Job.id == resume.job_id).first()
             if not job:
                 logger.error(f"Score: linked job {resume.job_id} not found")
-                return
+                return "Linked job not found"
         else:
             jd_text = _tailor_context_jd(resume.json_data or {})
             if not jd_text:
                 logger.error(f"Score: resume {resume_id} has no linked job and no saved job description")
-                return
+                return "No linked job or saved job description"
 
         resume_text = _resume_to_score_text(resume.json_data or {})
         if len(resume_text) < 50:
             logger.warning(f"Score: resume {resume_id} has insufficient text ({len(resume_text)} chars)")
-            return
+            return "Resume has insufficient text"
 
         cv_texts = {"Tailored": resume_text}
         if job is not None:
@@ -1267,7 +1280,7 @@ async def _score_resume_impl(resume_id: str, depth: str):
             result = await score_job_sync(stand_in, cv_texts, db=db, depth=depth, preloaded_text=jd_text)
         if not result:
             logger.error(f"Score: scoring failed for resume {resume_id}")
-            return
+            return "Scoring failed"
 
         tailored_score = None
         scores = result.get("scores", result)
@@ -1286,7 +1299,7 @@ async def _score_resume_impl(resume_id: str, depth: str):
             flag_modified(resume, "json_data")
             db.commit()
             logger.info(f"Score: resume {resume_id} (freeform JD) = {tailored_score} (depth={depth})")
-            return
+            return f"{resume.name} (pasted JD) - Tailored {tailored_score}, {depth}"
 
         updated_scores = dict(job.cv_scores or {})
         if tailored_score is not None:
@@ -1312,6 +1325,7 @@ async def _score_resume_impl(resume_id: str, depth: str):
 
         db.commit()
         logger.info(f"Score: resume {resume_id} → job {resume.job_id} = {tailored_score} (depth={depth})")
+        return f"{job.title} - Tailored {tailored_score}, {depth}"
     finally:
         db.close()
 

@@ -85,12 +85,21 @@ export default function Persona() {
     catch { return ['contact'] }
   })
   const [savedFlash, setSavedFlash] = useState('')
+  const [loadError, setLoadError] = useState('')
   const debounceTimerRef = useRef(null)
   const nodeDebounceRef = useRef({})  // per-key debounce timers for autofill nodes
 
   const fetchPersona = useCallback(async () => {
-    const { data } = await api.get('/persona')
-    setPersona(data)
+    try {
+      setLoadError('')
+      const { data } = await api.get('/persona')
+      setPersona(data)
+    } catch (e) {
+      console.error('Failed to load persona:', e)
+      // detail can be a validation-error array; only a string is renderable
+      const detail = e?.response?.data?.detail
+      setLoadError(typeof detail === 'string' ? detail : (e?.message || 'Could not load persona'))
+    }
   }, [])
 
   useEffect(() => { fetchPersona() }, [fetchPersona])
@@ -140,6 +149,16 @@ export default function Persona() {
       } catch (e) { console.error('Failed to save resume_content:', e) }
     }, 500)
   }
+
+  if (loadError && !persona) return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Persona</h1>
+      <div className="text-sm text-red-600 dark:text-red-400">
+        Failed to load persona — {loadError}{' '}
+        <button onClick={fetchPersona} className="underline hover:no-underline">Retry</button>
+      </div>
+    </div>
+  )
 
   if (!persona) return <div className="p-6 text-sm text-gray-500">Loading persona…</div>
 

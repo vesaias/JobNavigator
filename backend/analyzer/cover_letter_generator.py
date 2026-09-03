@@ -118,4 +118,10 @@ async def generate_cover_letter_body(resume_data: dict, preferences: dict, jd_te
     resp = await call_cover_letter_llm(suffix, system, max_tokens=1500, cached_prefix=cached_prefix)
     parsed = parse_cover_letter_response(resp["text"])
     parsed["_usage"] = resp.get("usage", {})
+    # What actually dispatched, for the caller's llm_call_log row (R2-H-15).
+    parsed["_llm"] = {
+        "usage": resp.get("usage", {}),
+        "provider": resp.get("provider"),
+        "model": resp.get("model"),
+    }
     return parsed

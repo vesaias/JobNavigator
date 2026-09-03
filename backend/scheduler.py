@@ -154,7 +154,7 @@ async def run_email_check():
             started = datetime.now(timezone.utc)
             from backend.email_monitor.gmail_client import check_emails
             await check_emails()
-            run.summary = _activity_summary(started, "email", "repl")
+            run.summary = _activity_summary(started, "email", "repl") or "No new replies"
     except JobAlreadyRunningError as e:
         logger.warning(f"Scheduler skipped: {e}")
 

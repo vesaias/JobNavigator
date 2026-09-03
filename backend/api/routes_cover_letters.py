@@ -374,9 +374,10 @@ async def _generate_impl(resume_id: str, job_id: str, voice: str | None, length:
     from backend.api.routes_resumes import _get_tailoring_semaphore
 
     async with _get_tailoring_semaphore():
-        await _generate_inner(resume_id, job_id, voice, length, template, page_format,
-                              resolve_voice_instruction, generate_cover_letter_body, track_llm_call,
-                              cover_letter_id=cover_letter_id)
+        # Returned string becomes JobRun.result_summary (Stats -> Run history).
+        return await _generate_inner(resume_id, job_id, voice, length, template, page_format,
+                                     resolve_voice_instruction, generate_cover_letter_body, track_llm_call,
+                                     cover_letter_id=cover_letter_id)
 
 
 async def _generate_inner(resume_id, job_id, voice, length, template, page_format,
@@ -413,17 +414,19 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         voice_id, voice_instruction = resolve_voice_instruction(db, voice)
         preferences = (persona.preferences if persona else {}) or {}
 
-        _m = db.query(Setting).filter(Setting.key == "cover_letter_llm_model").first()
-        _model = (_m.value if _m and _m.value else None) or "claude-sonnet-4-6"
-        _p = db.query(Setting).filter(Setting.key == "cover_letter_llm_provider").first()
-        _provider = (_p.value if _p and _p.value else None) or "claude_api"
+        # Log the pair call_cover_letter_llm will actually dispatch with — the
+        # same resolver, not a second fallback chain (R2-H-15).
+        from backend.analyzer.llm_client import resolve_llm_config
+        _cfg = resolve_llm_config("cover_letter", db=db)
+        _provider, _model = _cfg["provider"], _cfg["model"]
 
         async with track_llm_call("cover_letter", _provider, _model, job_id=job_id) as _tracker:
             body = await generate_cover_letter_body(
                 resume_data, preferences, job.description or "",
                 voice_instruction, length, prompt_template,
             )
-            _tracker.usage = body.pop("_usage", _tracker.usage)
+            _tracker.record(body.pop("_llm", None))
+            body.pop("_usage", None)  # superseded by _llm; keep the dict clean
 
         # Assemble json_data: header from resume, recipient/date from job/company
         header = resume_data.get("header", {})
@@ -474,5 +477,6 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         db.commit()
         db.refresh(cl)
         logger.info(f"Cover letter {cl.id} {action} for job {job_id} (voice={voice_id})")
+        return f"{action.capitalize()} letter for {job_label} ({voice_id or 'default'} voice)"
     finally:
         db.close()

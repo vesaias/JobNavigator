@@ -136,6 +136,11 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
         # the real text is already persisted on the ScrapeLog row and logged here.
         if isinstance(result, dict) and result.get("error"):
             logger.warning("Search %s finished with scrape error: %s", search_id, result.get("error"))
+        # Returned string becomes JobRun.result_summary (Stats -> Run history).
+        if isinstance(result, dict):
+            return (f"{search_name} - {result.get('jobs_found', 0)} seen, "
+                    f"+{result.get('new_jobs', 0)} new")
+        return f"{search_name} - nothing ran"
 
     from backend.job_monitor import launch_background, JobAlreadyRunningError
     try:
