@@ -55,22 +55,22 @@ export default function V2App() {
   const toggleRail = () => setOpen((v) => { const n = !v; try { localStorage.setItem('jobnavigator_v2_rail', n ? 'expanded' : 'collapsed') } catch {} return n })
 
   const loadCounts = useCallback(() => {
-    api.get('/jobs', { params: { status: 'new', limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, jobs: data.total }))).catch(() => {})
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setCounts((c) => ({ ...c, resumes: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
+    api.get('/jobs', { params: { status: 'new', limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, jobs: data.total }))).catch(() => { /* silent: a nav badge — the screen behind it owns the error state */ })
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setCounts((c) => ({ ...c, resumes: Array.isArray(data) ? data.length : undefined }))).catch(() => { /* silent: nav badge */ })
     // /applications returns {applications, total} — ask for one row and read the
     // total, so this count no longer trails the others by ~half a second
-    api.get('/applications', { params: { limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => {})
-    api.get('/companies').then(({ data }) => setCounts((c) => ({ ...c, companies: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
-    api.get('/searches').then(({ data }) => setCounts((c) => ({ ...c, searches: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
-    api.get('/cover-letters').then(({ data }) => setCounts((c) => ({ ...c, letters: Array.isArray(data) ? data.length : undefined }))).catch(() => {})
+    api.get('/applications', { params: { limit: 1 } }).then(({ data }) => setCounts((c) => ({ ...c, apps: Array.isArray(data) ? data.length : (data?.total) }))).catch(() => { /* silent: nav badge */ })
+    api.get('/companies').then(({ data }) => setCounts((c) => ({ ...c, companies: Array.isArray(data) ? data.length : undefined }))).catch(() => { /* silent: nav badge */ })
+    api.get('/searches').then(({ data }) => setCounts((c) => ({ ...c, searches: Array.isArray(data) ? data.length : undefined }))).catch(() => { /* silent: nav badge */ })
+    api.get('/cover-letters').then(({ data }) => setCounts((c) => ({ ...c, letters: Array.isArray(data) ? data.length : undefined }))).catch(() => { /* silent: nav badge */ })
     // sources needing attention — the same signal Companies/Searches badge with
     api.get('/health/entities').then(({ data }) => setWarn({
       companies: (data?.companies || []).length,
       searches: (data?.searches || []).length,
-    })).catch(() => {})
+    })).catch(() => { /* silent: nav badge */ })
     // the pipeline pulse: the last scrape sweep, however it ended
     api.get('/monitor/history', { params: { limit: 1, job_type: 'scrape_all' } })
-      .then(({ data }) => setHealth((data || [])[0] || null)).catch(() => {})
+      .then(({ data }) => setHealth((data || [])[0] || null)).catch(() => { /* silent: the rail's health line — it just stays as it was */ })
   }, [])
   // APPS-19: screens dispatch jn:counts-changed after a create/delete so the badges follow
   useEffect(() => { loadCounts(); window.addEventListener('jn:counts-changed', loadCounts); return () => window.removeEventListener('jn:counts-changed', loadCounts) }, [loadCounts])

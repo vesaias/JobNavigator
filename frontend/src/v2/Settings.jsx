@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import api from '../api'
 import './theme.css'
 
@@ -166,6 +167,17 @@ export default function Settings() {
   const [toast, setToast] = useState(null)
   const [loadErr, setLoadErr] = useState(null)   // SET-06: a failed GET /settings
   const [narrow, setNarrow] = useState(false)    // SET-11: stack rows when the pane is tight
+  // R2-A-01: the last native dialogs in v2 lived here — a confirm before rotating
+  // the webhook secret, and two prompts (reveal the new secret, ask for the public
+  // base URL). Row actions are already `async` and awaited by runAction, so the
+  // styled dialog can simply be awaited in their place.
+  const [dialog, setDialog] = useState(null)
+  const ask = useCallback((spec) => new Promise((resolve) => {
+    setDialog({ kind: 'confirm', ...spec, onConfirm: () => { setDialog(null); resolve(true) }, onCancel: () => { setDialog(null); resolve(false) } })
+  }), [])
+  const askText = useCallback((spec) => new Promise((resolve) => {
+    setDialog({ kind: 'prompt', ...spec, onSubmit: (v) => { setDialog(null); resolve(v) }, onCancel: () => { setDialog(null); resolve(null) } })
+  }), [])
   const scrollRef = useRef(null)
   const timers = useRef([])
   const flashTimer = useRef(null)
@@ -206,9 +218,9 @@ export default function Settings() {
 
   useEffect(() => {
     load()
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => {})
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
-    api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => {})
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only fills the default-résumé picker; SET-06 covers the settings load itself */ })
+    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ })
+    api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => { /* silent: the LinkedIn row reads “unknown” and its own actions report their failures */ })
   }, [load])
 
   // one timer, not one per flash: two saves inside 2.2 s used to leave the
@@ -281,7 +293,9 @@ export default function Settings() {
     if (trig[id]) return
     setTrig((t) => ({ ...t, [id]: 'running' }))
     try {
-      await fn()
+      // R2-A-01: an action that returns false was cancelled in its dialog — it
+      // must not flash "Done ✓"
+      if (await fn() === false) { setTrig((t) => ({ ...t, [id]: '' })); return }
       setTrig((t) => ({ ...t, [id]: 'done' }))
       timers.current.push(setTimeout(() => setTrig((t) => ({ ...t, [id]: '' })), 2600))
     } catch (e) {
@@ -398,15 +412,16 @@ export default function Settings() {
           preview: S.telegram_webhook_secret === MASK ? 'Set (hidden — rotate to view)' : (S.telegram_webhook_secret ? 'Set' : 'Not set'),
           info: 'Telegram sends the secret as X-Telegram-Bot-Api-Secret-Token on every webhook call; mismatched headers return 401. Rotating shows the new secret once — copy it immediately, then re-register the webhook.',
           act: async () => {
-            if (!window.confirm('Rotate the webhook secret? You must re-register the webhook afterward.')) return
+            const go = await ask({ title: 'Rotate the webhook secret?', body: 'Telegram stops accepting the old one immediately — you must re-register the webhook afterwards.', label: 'Rotate', danger: true })
+            if (!go) return false
             const { data } = await api.post('/telegram/rotate-webhook-secret')
-            window.prompt('Copy the new secret now — it will not be shown again:', data.webhook_secret || '')
+            await askText({ title: 'New webhook secret', body: 'Copy it now — it is not shown again.', value: data.webhook_secret || '', readOnly: true, mono: true, label: 'Done' })
             load()
           } },
         BT('Register webhook', 'Points Telegram at your public URL so inbound bot commands reach the backend.', 'Register…', async () => {
-          const url = window.prompt('Public base URL (https://...):')
-          if (!url) return
-          const { data } = await api.post('/telegram/register-webhook', { public_url: url })
+          const url = await askText({ title: 'Register the Telegram webhook', body: 'The public base URL Telegram should post updates to.', placeholder: 'https://your-domain.example', mono: true, label: 'Register' })
+          if (!url || !url.trim()) return false
+          const { data } = await api.post('/telegram/register-webhook', { public_url: url.trim() })
           // local failures carry `error`, Telegram's own carry `description`
           const failed = data?.ok === false
           flash(failed ? (data.description || data.error || 'Registration failed') : 'Webhook registered', failed)
@@ -544,6 +559,7 @@ export default function Settings() {
 
       {editFor && <EditModal spec={editFor} S={S} defaults={defaults} onSave={save} onClose={() => setEditFor(null)} />}
       {modelsOpen && <ModelsModal S={S} save={save} onClose={() => setModelsOpen(false)} />}
+      {dialog && (dialog.kind === 'prompt' ? <PromptDialog {...dialog} /> : <ConfirmDialog {...dialog} />)}
     </div>
   )
 }
@@ -911,10 +927,14 @@ function ModelsModal({ S, save, onClose }) {
     save('llm_models_list', [...list, { provider, model, label: `${model} (custom)`, custom: true }])
     setTerm('')
   }
-  const remove = (m) => {
-    if (!window.confirm(`Remove "${m.model}" from ${PROVIDER_LABEL[m.provider] || m.provider}?`)) return
-    save('llm_models_list', list.filter((x) => !(x.provider === m.provider && x.model === m.model)))
-  }
+  // R2-A-01: the styled dialog, like every other destructive confirm in v2
+  const [confirm, setConfirm] = useState(null)
+  const remove = (m) => setConfirm({
+    title: `Remove “${m.model}”?`,
+    body: `It disappears from every ${PROVIDER_LABEL[m.provider] || m.provider} model picker. Anything already pointed at it keeps its saved value.`,
+    label: 'Remove', danger: true,
+    onConfirm: () => { setConfirm(null); save('llm_models_list', list.filter((x) => !(x.provider === m.provider && x.model === m.model))) },
+  })
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
@@ -975,6 +995,9 @@ function ModelsModal({ S, save, onClose }) {
           ))}
         </div>
       </div>
+      {/* the catalog's own scrim closes it on any click that reaches it, so the
+          confirm's scrim has to stop short of it */}
+      {confirm && <div onClick={(e) => e.stopPropagation()}><ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} /></div>}
     </div>
   )
 }

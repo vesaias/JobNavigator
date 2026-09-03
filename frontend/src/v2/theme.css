@@ -240,3 +240,10 @@
 /* CL-21: keyboard focus is visible on every field; inline borders need !important */
 .jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--accent) !important; box-shadow:0 0 0 2px var(--ring-accent) !important; outline:none; }
 .jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--ring-accent); }
+
+/* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
+   Run/Test pills scrolled off the viewport. Pin the actions column to the right
+   edge of the scroller; the two backgrounds mirror .v2-crow's rest/hover so the
+   pinned cell never reads as a separate strip. */
+.v2-cactions { background:var(--bg); }
+.v2-crow:hover .v2-cactions { background:var(--hover-soft); }

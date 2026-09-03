@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 // Small cross-screen hooks. Kept out of Toast.jsx so a screen can take the
 // Escape handling without also pulling in the toast host.
@@ -33,6 +33,31 @@ export function useEscape(onClose, active = true) {
 // RES-21: a toast pushed immediately before navigate() dies with the screen that
 // pushed it — the ToastStack is per-screen. Hand the message to the destination
 // instead: the leaving screen stores it, the arriving screen pushes it once.
+// RES-32: a flex-centred modal whose panel has an odd height lands on a half
+// pixel in an even viewport (or vice versa), so every 1px border inside it is
+// drawn across two device rows and reads blurred. Measure the panel after
+// layout and pull it back onto the pixel grid with a sub-pixel margin.
+//
+//   const panel = useRef(null); useSnapTop(panel)   → ref={panel} on the panel
+//
+// It runs after every render because the panel's height changes with its
+// content (a picker opening, an error line appearing), and re-runs on resize.
+export function useSnapTop(ref) {
+  useLayoutEffect(() => {
+    const snap = () => {
+      const el = ref.current
+      if (!el) return
+      el.style.marginTop = '0px'
+      const top = el.getBoundingClientRect().top
+      const delta = Math.round(top) - top
+      if (delta) el.style.marginTop = `${delta}px`
+    }
+    snap()
+    window.addEventListener('resize', snap)
+    return () => window.removeEventListener('resize', snap)
+  })
+}
+
 const FLASH_KEY = 'jobnavigator_v2_flash'
 export function setFlashToast(t) {
   try { sessionStorage.setItem(FLASH_KEY, JSON.stringify(t)) } catch { /* ignore */ }

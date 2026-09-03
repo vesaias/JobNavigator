@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
+import ConfirmDialog from './ConfirmDialog'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ export default function Applications() {
   const notesTimer = useRef(null)
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(notesTimer.current) }, [])
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
+  const [confirm, setConfirm] = useState(null)   // R2-A-01 / R2-H-08: the shared destructive-confirm dialog
 
   const load = useCallback(async (keep) => {
     try {
@@ -120,7 +122,13 @@ export default function Applications() {
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
   const logDirty = useRef(false)   // APPS-22: typed fields survive a stray Escape
-  const closeLog = () => { if (logDirty.current && !window.confirm('Discard this application? Everything typed will be lost.')) return; logDirty.current = false; setLogOpen(false) }
+  // R2-A-01: the styled dialog, not the browser's. Every handler it touches is a
+  // setter or a ref, so the once-registered Escape effect below keeps working.
+  const dropLog = () => { logDirty.current = false; setLogOpen(false) }
+  const closeLog = () => {
+    if (!logDirty.current) { dropLog(); return }
+    setConfirm({ title: 'Discard this application?', body: 'Everything typed will be lost.', label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); dropLog() } })
+  }
   useEffect(() => {
     const onDoc = () => closeAll()
     const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); closeLog() } }
@@ -190,11 +198,20 @@ export default function Applications() {
     if (now) run(); else notesTimer.current = setTimeout(run, 700)
   }, [pushToast, load])
 
-  const remove = async (a) => {
+  const remove = (a) => {
     setMenuOpen(false)
-    if (!window.confirm(`Delete the application for "${a.title}"?`)) return
-    try { await api.delete(`/applications/${a.id}`); setSel(null); load(null); pushToast({ kind: 'success', msg: 'Application deleted' }); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }
-    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this application' + errSuffix(e) }) }
+    // R2-H-08: the styled dialog — deleting an application is the most
+    // destructive action on this screen and looked the least considered.
+    setConfirm({
+      title: `Delete the application for “${a.title}”?`,
+      body: 'The job goes back to Saved in the feed. This cannot be undone.',
+      label: 'Delete', danger: true,
+      onConfirm: async () => {
+        setConfirm(null)
+        try { await api.delete(`/applications/${a.id}`); setSel(null); load(null); pushToast({ kind: 'success', msg: 'Application deleted' }); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }
+        catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this application' + errSuffix(e) }) }
+      },
+    })
   }
   const canAddInterview = !intBusy && (!!intWhat.trim() || !!intWhen)   // APPS-12: a blank form adds nothing
   const addInterview = async () => {
@@ -351,9 +368,12 @@ export default function Applications() {
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
+                  // APPS-20: selected and hovered were the same fill, so the selection
+                  // vanished under the pointer. The 3px accent bar carries the
+                  // selection; the 10→7px left pad keeps the text on the same axis.
                   return (
                     <div key={a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 46px', height: 46, marginBottom: 3, padding: '0 10px', borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 46px', height: 46, marginBottom: 3, padding: sel === a.id ? '0 10px 0 7px' : '0 10px', borderLeft: sel === a.id ? '3px solid var(--accent)' : undefined, borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
                       {/* lineHeight:normal — the design is authored at the browser default;
                           Tailwind's preflight sets 1.5 on <html>, which would inflate the block */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 'normal' }}>
@@ -397,6 +417,7 @@ export default function Applications() {
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
       {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { setLogOpen(false); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -609,18 +630,33 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
 
-  useEffect(() => { api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => {}) }, [])
+  useEffect(() => { api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: APPS-01 — the résumé chips are optional; the form saves without one */ }) }, [])
+
+  // R2-H-07: `title`/`company` are captured in readUrl's closure at call time —
+  // both empty — so a response landing after the user had typed overwrote what
+  // they typed. Read the live draft off a ref instead, and drop a response whose
+  // URL is no longer the one in the field.
+  const draftRef = useRef({ title: '', company: '' })
+  draftRef.current = { title, company }
+  const urlRef = useRef('')
 
   // paste a URL → read title + company off the posting
   const readUrl = async (u) => {
-    if (!u.trim().startsWith('http')) return
+    const target = u.trim()
+    if (!target.startsWith('http')) return
+    urlRef.current = target
     setReading(true)
     try {
-      const { data } = await api.post('/applications/extract', { url: u.trim() })
-      if (data.title && !title) setTitle(data.title)
-      if (data.company && !company) setCompany(data.company)
-    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not read job details from that URL' + errSuffix(e) }) }
-    setReading(false)
+      const { data } = await api.post('/applications/extract', { url: target })
+      if (urlRef.current !== target) return                                  // a newer URL is in the field
+      if (data.title && !draftRef.current.title.trim()) setTitle(data.title)
+      if (data.company && !draftRef.current.company.trim()) setCompany(data.company)
+    } catch (e) {
+      if (urlRef.current !== target) return
+      console.error(e); pushToast({ kind: 'error', msg: 'Could not read job details from that URL' + errSuffix(e) })
+    } finally {
+      if (urlRef.current === target) setReading(false)
+    }
   }
 
   const save = async () => {

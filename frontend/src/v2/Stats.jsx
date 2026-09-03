@@ -195,7 +195,10 @@ export default function Stats() {
 
   const loadActivity = useCallback(() => {
     api.get('/activity-log', { params: { limit: ACT_PAGE, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
-      .then(({ data }) => { const rows = data || []; setActivity(rows); setActMore(rows.length >= ACT_PAGE) }).catch(() => {})
+      .then(({ data }) => { const rows = data || []; setActivity(rows); setActMore(rows.length >= ACT_PAGE) })
+      // R2-A-03: converted — the activity log is a list the user filters; a failed
+      // reload used to leave the old rows (or none) with nothing to explain them
+      .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the activity log' }) })
   }, [actType, actQuery])
 
   useEffect(() => { loadCore().finally(() => setLoading(false)); loadLive() }, [loadCore, loadLive])
@@ -223,7 +226,9 @@ export default function Stats() {
     setRefreshing(true)
     await Promise.all([loadCore(), loadLive()])
     loadActivity()
-    api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => {})
+    // R2-A-03: converted — this one is behind the Refresh button, so a failure
+    // that leaves the old figures on screen has to say so
+    api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not refresh the LLM costs' }) })
     setRefreshing(false)
   }
 

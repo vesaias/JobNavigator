@@ -5,6 +5,8 @@ import { useToasts, ToastStack } from './Toast'
 // RES-16: this dialog started here (COMP-28) and now serves the résumé and
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
+import { useSnapTop } from './hooks'
+import { kb } from './ResumeSections'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -73,6 +75,19 @@ const DEPTHS = [
   { id: 'full', label: 'Full', hint: 'Full report with keywords and requirements' },
 ]
 const TIER_BTNS = [{ v: 1, label: '1' }, { v: 2, label: '2' }, { v: 3, label: '3' }, { v: null, label: 'None' }]
+
+// COMP-26: a Playwright board can return ~600 rows and the modal rendered every
+// one of them in a single pass. Page them client-side with the pager the
+// résumé shelf and the Stats logs already use.
+const TEST_PAGE = 100
+const ShowMore = ({ n, onClick }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
+    <span onClick={onClick} {...kb(onClick)} className="v2-bdc v2-ctl"
+      style={{ height: 26, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>
+      Show {n} more
+    </span>
+  </div>
+)
 
 const inputBox = { width: '100%', minHeight: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
 const monoBox = { ...inputBox, fontFamily: 'var(--mono)', fontSize: 10.5 }
@@ -170,9 +185,9 @@ export default function Companies() {
   }, [pushToast, fetchHealth])
   useEffect(() => {
     fetchCompanies()
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => {})
-    api.get('/persona').then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
-    api.get('/monitor/active').then(({ data }) => setScraping(runMap(data))).catch(() => {})
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => { /* silent: the résumé chips are decoration on this screen; the list load has its own error state */ })
+    api.get('/persona').then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: one optional chip — absent Persona simply isn't offered */ })
+    api.get('/monitor/active').then(({ data }) => setScraping(runMap(data))).catch(() => { /* silent: poller — the 3s tick below retries, a toast per tick would be worse */ })
   }, [fetchCompanies])
 
   // COMP-05: a fixed 2.6 s timer used to declare the scrape finished; poll the
@@ -265,7 +280,11 @@ export default function Companies() {
       setScraping((m) => { const n = { ...m }; delete n[id]; return n })
     }
   }
+  // COMP-26: one test at a time (the same rule as Searches' SRCH-23) — the POST
+  // is synchronous and can take tens of seconds on a Playwright board, and a
+  // second click used to start a parallel run and race its result into the modal.
   const runTest = async (id) => {
+    if (testingId) return
     setTestingId(id); setShowShots(false)
     try { const { data } = await api.post(`/companies/${id}/test-scrape`); setTest(data) }
     catch (e) { setTest({ error: e.response?.data?.detail || e.message }) }
@@ -298,6 +317,7 @@ export default function Companies() {
     return { dot: 'var(--edge)', fg: 'var(--muted)', text: `inactive · last run ${ago(c.last_scraped_at)}` }
   }
   const fitColor = (f) => (f == null ? 'var(--muted)' : f >= 80 ? 'var(--good)' : f >= 65 ? 'var(--text-2)' : 'var(--warn)')
+  const testBusy = !!testingId   // COMP-26: a running test locks every other Test/Run pill
 
   const clearFilters = () => { setQuery(''); setTiers([]) }
   const toDraft = (c) => ({
@@ -403,7 +423,7 @@ export default function Companies() {
           <span style={{ flex: 1.9, minWidth: 210 }}>Health</span>
           <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>
           <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>
-          <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · new in the last 7 days">Open · 7d</span>
+          <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · postings found in the last 7 days — the +N counts everything the scraper discovered, including titles the filters rejected">Open · 7d</span>
           <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Applications recorded for this company">Apps</span>
           <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>
           <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
@@ -422,7 +442,7 @@ export default function Companies() {
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {(c.last_error || downMap[c.id]) && <span title={`Needs attention — ${c.last_error || downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
                 <span title={c.h1b_lca_count ? `${c.name} · ${c.h1b_lca_count} H-1B filings on record${c.h1b_approval_rate ? `, ${c.h1b_approval_rate}% approved` : ''} — feeds the verdict on each job` : c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-                {aliases.length > 1 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length - 1}</span>}
+                {aliases.length > 0 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length}</span>}
               </span>
               {/* tier */}
               <span style={{ flex: '0 0 62px' }}>
@@ -442,7 +462,7 @@ export default function Companies() {
                 {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
               </span>
               {/* open · 7d */}
-              <span title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} new in the last 7 days`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)' }}>
+              <span title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} found in the last 7 days — everything discovered, including titles the filters rejected`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)' }}>
                 {c.open_jobs || 0}<span style={{ color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)' }}> +{c.open_jobs_week || 0}</span>
               </span>
               {/* apps */}
@@ -454,18 +474,20 @@ export default function Companies() {
                 <span onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }} title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'} className="v2-bd"
                   style={{ height: 23, padding: '0 11px', borderRadius: 99, border: `1px solid ${c.active ? 'var(--accent)' : 'var(--edge)'}`, background: c.active ? 'var(--accent-soft)' : 'var(--surface)', color: c.active ? 'var(--accent)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>{c.active ? 'Active' : 'Inactive'}</span>
               </span>
-              {/* actions */}
-              <span style={{ flex: '0 0 190px', display: 'flex', justifyContent: 'flex-end', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                <span onClick={() => runScrape(c.id)} title="Scrape this company now" className="v2-act"
-                  style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+              {/* actions — R2-S-01: pinned to the right edge of the scroller so the
+                  ⋯ stays reachable when the row is wider than the pane at 1024px */}
+              <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8 }} onClick={(e) => e.stopPropagation()}>
+                <span onClick={testBusy ? undefined : () => runScrape(c.id)} title={testBusy ? 'A test is already running' : 'Scrape this company now'} className={testBusy ? undefined : 'v2-act'}
+                  style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.5 : 1 }}>
                   {scraping[c.id]
                     ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                     : <span style={{ fontSize: 11 }}>↻</span>}
                   {scraping[c.id] ? 'Running' : 'Run'}
                 </span>
-                <span onClick={() => runTest(c.id)} title="Dry run — shows what would be kept, writes nothing" className="v2-act"
-                  style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                  {testingId === c.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
+                {/* COMP-26: the running test names itself; every other pill goes quiet */}
+                <span onClick={testBusy ? undefined : () => runTest(c.id)} title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Dry run — shows what would be kept, writes nothing'} className={testBusy ? undefined : 'v2-act'}
+                  style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'), background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy && testingId !== c.id ? 0.5 : 1 }}>
+                  {testingId === c.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </span>
                 <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
                   style={{ width: 25, height: 25, border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
@@ -671,7 +693,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
 
       <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
-        <div onClick={() => onTest(company.id)} className="v2-act" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+        <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? undefined : 'v2-act'} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
           {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
         </div>
@@ -684,6 +706,8 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
 
 // ── add modal ─────────────────────────────────────────────────────────────────
 function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) {
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
   const [aliases, setAliases] = useState('')
@@ -723,7 +747,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Add company</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Paste a careers URL — the ATS is read from it.</span>
@@ -784,10 +808,14 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
 
 // ── test scrape modal ─────────────────────────────────────────────────────────
 function TestModal({ test, onClose, showShots, setShowShots }) {
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
+  const [limit, setLimit] = useState(TEST_PAGE)   // COMP-26
+  useEffect(() => { setLimit(TEST_PAGE) }, [test])   // a fresh run starts at page 1
   if (test.error) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
+        <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
           <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginTop: 16, height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
@@ -815,7 +843,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test scrape — {test.company}</span>
           {shots.length > 0 && (
@@ -863,7 +891,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
             <span style={{ flex: '0 0 260px' }}>Reason</span>
             <span style={{ flex: '0 0 40px', textAlign: 'right' }}>Link</span>
           </div>
-          {jobs.map((j, i) => {
+          {jobs.slice(0, limit).map((j, i) => {
             const st = jobState(j)
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 22px', borderBottom: '1px solid var(--line-soft)' }}>
@@ -875,11 +903,12 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
               </div>
             )
           })}
+          {jobs.length > limit && <ShowMore n={Math.min(TEST_PAGE, jobs.length - limit)} onClick={() => setLimit((n) => n + TEST_PAGE)} />}
           {jobs.length === 0 && <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', fontSize: 12.5 }}>No job links found on this page.</div>}
         </div>
 
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}{jobs.length > limit ? ` · showing the first ${limit}` : ''}</span>
           <div onClick={onClose} className="v2-bdc v2-ctl" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
         </div>
       </div>

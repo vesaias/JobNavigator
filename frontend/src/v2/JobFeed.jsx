@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMe
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
+import ConfirmDialog from './ConfirmDialog'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -126,6 +127,7 @@ export default function V2JobFeed() {
 
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
+  const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? true)
   const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
   const [reportTab, setReportTab] = useState(0)   // per-job: reports differ per résumé, so this resets
@@ -206,13 +208,13 @@ export default function V2JobFeed() {
   const numTimer = useRef(null)
   const setNum = (key, v) => { setNumDraft((p) => ({ ...p, [key]: v })); clearTimeout(numTimer.current); numTimer.current = setTimeout(() => setF({ [key]: v }), 400) }
   useEffect(() => {
-    api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => {})
-    api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => {})   // FEED-26
-    api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => {})
-    api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => {})
-    api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {})
+    api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => { /* silent: a filter facet — the list itself has FEED-11's error state */ })
+    api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ })   // FEED-26
+    api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ })
+    api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only names the résumés in the score modal; scoring reports its own failures */ })
+    api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; refreshStats re-runs them after every action */ })
   }, [])
-  const refreshStats = useCallback(() => { api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => {}) }, [])
+  const refreshStats = useCallback(() => { api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [])
 
   const buildParams = useCallback((off) => {
     const p = { limit: PAGE, offset: off }
@@ -280,7 +282,7 @@ export default function V2JobFeed() {
     setSel(idx); lastIdx.current = idx
     const j = list[idx]
     setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(null)
-    api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => {})
+    api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => { /* silent: a background refresh of an already-rendered panel — the row data stays */ })
   }, [])
   useEffect(() => {
     if (loading) return
@@ -316,27 +318,63 @@ export default function V2JobFeed() {
   }, [filters.status, loadMore])
   const patchRemote = useCallback(async (job, changes) => {
     patchLocal(job.id, changes)
-    // FEED-07: report the outcome so callers only announce success once the PATCH lands
-    try { await api.patch(`/jobs/${job.id}`, changes); refreshStats(); return true }
+    // FEED-07: report the outcome so callers only announce success once the PATCH
+    // lands. R2-H-05: the body is handed back too — an "applied" PATCH reports the
+    // Application/Company it created, which Undo needs.
+    try { const { data } = await api.patch(`/jobs/${job.id}`, changes); refreshStats(); return data || true }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Couldn't update "${job.title}"` }); fetchJobs(); return false }
   }, [patchLocal, fetchJobs, refreshStats, pushToast])
   const watchForScore = useCallback((id) => {
     if (id && !scoreWatchRef.current.some((w) => w.id === id)) scoreWatchRef.current = [...scoreWatchRef.current, { id, until: Date.now() + 90000 }]
   }, [])
-  const showUndo = useCallback((job, prevStatus, prevSaved, msg) => {
-    pushToast({ kind: 'undo', msg, action: 'Undo', onAction: async () => { try { await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved }); fetchJobs(); refreshStats() } catch (e) { console.error(e) } } })
+  // R2-H-05: "Applied" is compound — the PATCH also creates an Application and,
+  // for an unknown company, a Company row. `created` carries the ids the backend
+  // reports for exactly those two, so Undo takes them back out; a job that already
+  // had an application (or a known company) reports nothing and nothing is deleted.
+  const showUndo = useCallback((job, prevStatus, prevSaved, msg, created) => {
+    pushToast({ kind: 'undo', msg, action: 'Undo', onAction: async () => {
+      try {
+        // the application first: DELETE releases its job back to `saved`, so the
+        // status PATCH has to be the last word on the job's status
+        if (created?.appId) await api.delete(`/applications/${created.appId}`)
+        if (created?.coId) await api.delete(`/companies/${created.coId}`)
+        await api.patch(`/jobs/${job.id}`, { status: prevStatus, saved: prevSaved })
+        fetchJobs(); refreshStats()
+        if (created?.appId || created?.coId) {
+          pushToast({ kind: 'success', msg: 'Application removed' })
+          window.dispatchEvent(new CustomEvent('jn:counts-changed'))
+        }
+      } catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Couldn't undo that — "${job.title}" is unchanged` }); fetchJobs() }
+    } })
   }, [pushToast, fetchJobs, refreshStats])
   const saveJob = async (j) => { const willSave = !j.saved, ps = j.status, pv = j.saved; if (willSave && scoredCount(j) === 0) watchForScore(j.id); if (await patchRemote(j, { saved: willSave, status: willSave ? 'saved' : 'new' })) showUndo(j, ps, pv, `${willSave ? 'Saved' : 'Unsaved'} "${j.title}"`) }   // FEED-29
   const skipJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'skip' })) showUndo(j, ps, pv, `Skipped "${j.title}"`) }
-  const applyJob = async (j) => { const ps = j.status, pv = j.saved; if (await patchRemote(j, { status: 'applied' })) showUndo(j, ps, pv, `Applied to "${j.title}"`) }
+  const applyJob = async (j) => {
+    const ps = j.status, pv = j.saved
+    const res = await patchRemote(j, { status: 'applied' })
+    if (!res) return
+    // R2-H-05: only ids this very PATCH created — never a pre-existing row
+    const created = { appId: res.created_application_id || null, coId: res.created_company_id || null }
+    if (created.appId || created.coId) window.dispatchEvent(new CustomEvent('jn:counts-changed'))
+    showUndo(j, ps, pv, `Applied to "${j.title}"`, created)
+  }
   // "Ignore {company} everywhere" — add to the global company-exclude setting
   // (matches classic ignoreCompany) and drop every job from that company now.
   const ignoreCompany = useCallback(async (job) => {
     const name = (job.company || '').trim()
     if (!name) return                    // nothing to exclude, and nothing to hide
     const n = jobsRef.current.filter((x) => (x.company || '').toLowerCase() === name.toLowerCase()).length
-    // FEED-08: this edits a global scraper setting, so confirm first (classic JobFeed did) and say what happened
-    if (!window.confirm(`Ignore "${name}" everywhere?\n\nThis hides ${n} job${n === 1 ? '' : 's'} here and excludes the company from every future scrape. Undo it in Settings → global company exclude.`)) return
+    // FEED-08: this edits a global scraper setting, so confirm first (classic
+    // JobFeed did) and say what happened. R2-A-01: the styled dialog, not the
+    // browser's — every other destructive confirm in v2 is this one.
+    setConfirm({
+      title: `Ignore “${name}” everywhere?`,
+      body: `This hides ${n} job${n === 1 ? '' : 's'} here and excludes the company from every future scrape. Undo it in Settings → global company exclude.`,
+      label: 'Ignore everywhere', danger: true,
+      onConfirm: () => { setConfirm(null); doIgnoreCompany(name, n) },
+    })
+  }, [])
+  const doIgnoreCompany = useCallback(async (name, n) => {
     setJobs((prev) => prev.filter((x) => (x.company || '').toLowerCase() !== name.toLowerCase()))
     setDetail((dd) => (dd && (dd.company || '').toLowerCase() === name.toLowerCase() ? null : dd))
     try {
@@ -496,7 +534,7 @@ export default function V2JobFeed() {
   }, [detail, viewCached, extActive, frameOk])
 
   // persona availability (adds a "Persona" option to score/tailor)
-  useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {}) }, [])
+  useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in the score modal */ }) }, [])
 
   // ?job=<id> is the job permalink — open that job's detail. The param is kept in
   // the URL (and re-synced below) so the link survives a refresh or a copy-paste.
@@ -1229,6 +1267,8 @@ export default function V2JobFeed() {
           </div>
         </div>
       )}
+
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
 
       {/* toasts (progress + undo) */}
       <ToastStack toasts={toasts} onClose={dismissToast} />

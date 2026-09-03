@@ -206,7 +206,9 @@ export default function Persona() {
       const headers = { 'Content-Type': 'application/json' }
       try { const k = localStorage.getItem('jobnavigator_api_key'); if (k) headers['X-API-Key'] = k } catch { /* ignore */ }
       try { fetch('/api/persona', { method: 'PATCH', headers, credentials: 'include', keepalive: true, body: JSON.stringify({ [key]: e.value }) }) }
-      catch { api.patch('/persona', { [key]: e.value }).catch(() => {}) }
+      // silent: this is the last-chance flush on unmount/beforeunload — the screen
+      // is going away, so there is nowhere to show a toast. PERS-08.
+      catch { api.patch('/persona', { [key]: e.value }).catch(() => { /* silent: see above — nowhere left to report to */ }) }
     })
   }, [])
 
