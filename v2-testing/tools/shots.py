@@ -34,7 +34,7 @@ with browser() as b:
                 go(pg, r); pg.add_style_tag(content=CSS); pg.mouse.move(0, 0); pg.wait_for_timeout(400)
                 name = r.strip('/').replace('/', '_')[:60] + f'__{th}__{w}.png'
                 pg.screenshot(path=f'{OUT}/{name}', full_page=False)
-                txt = pg.evaluate("(document.querySelector('.jn-v2 main')||{innerText:''}).innerText.length")
+                txt = pg.evaluate("(document.querySelector('.jn-v2 main')||document.body).innerText.length")
                 index[name] = {'route': r, 'theme': th, 'width': w, 'errors': pg.jn_log['pageerrors'][:1], 'main_text': txt}
                 pg.context.close()
 json.dump(index, open(f'{OUT}/index.json', 'w'), indent=1)
