@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, IconButton, Input, Pill, Select } from './ui'
+import { Button, Card, IconButton, Input, Pill, Select } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -199,6 +199,7 @@ const Chip = ({ on, label, onClick }) => (
 )
 const Check = ({ on, label, title, onClick }) => (
   <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
+    {/* ui: keep — checkbox indicator, not a card */}
     <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
     {label}
   </div>
@@ -575,12 +576,12 @@ export default function Searches() {
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* new search card */}
         {newOpen && (
-          <div style={{ border: '1px solid var(--accent)', borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+          <Card style={{ padding: 0, borderColor: 'var(--accent)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em' }}>New search</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>pick a mode — the fields below follow it</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Runs on the next scheduled sweep once created</span>
@@ -588,7 +589,7 @@ export default function Searches() {
                 <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* cards */}
@@ -609,8 +610,8 @@ export default function Searches() {
                expanded editor shouldn't wash under the cursor — and a warned card
                keeps its amber edge (.v2-bd-warn comes later in theme.css, so its
                border-color wins over .v2-card's accent). */
-            <div key={s.id} className={isOpen ? undefined : warn ? 'v2-card v2-bd-warn' : 'v2-card'}
-              style={{ border: `1px solid ${warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+            <Card key={s.id} className={isOpen ? undefined : warn ? 'v2-card v2-bd-warn' : 'v2-card'}
+              style={{ padding: 0, borderColor: warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : undefined, display: 'flex', flexDirection: 'column' }}>
               {/* summary row */}
               <div onClick={() => openEdit(s)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', cursor: 'pointer' }}>
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
@@ -657,6 +658,7 @@ export default function Searches() {
                       {spin ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </span>
+                    {/* ui: keep — 25px Run/Test pills sized to their row siblings; Pill sm is 26 */}
                     {TESTABLE.includes(s.search_mode) && (
                       <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
                         title={testBlocked ? 'A test is already running' : 'Dry run — previews results and per-job filter reasons, saves nothing'}
@@ -687,7 +689,7 @@ export default function Searches() {
 
               {/* inline edit form */}
               {isOpen && draft && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', borderTop: '1px solid var(--line-soft)', background: 'var(--recessed)', borderBottomLeftRadius: 9, borderBottomRightRadius: 9 }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', borderTop: '1px solid var(--line-soft)', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }} onClick={(e) => e.stopPropagation()}>
                   <ConfigForm d={draft} set={(p) => setDraft((x) => ({ ...x, ...p }))} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>Changes apply from the next run</span>
@@ -696,7 +698,7 @@ export default function Searches() {
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           )
         })}
 

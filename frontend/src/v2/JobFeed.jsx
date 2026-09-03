@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Input, Pill, SearchInput } from './ui'
+import { Button, Card, Input, Pill, Row, SearchInput } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -871,9 +871,13 @@ export default function V2JobFeed() {
                 const isIgnored = j.status === 'ignored'
                 const on = checked.has(j.id)
                 const visa = H1B[j.h1b_verdict]
+                // the Feed row is a 64px two-column row: the box (radius, divider,
+                // hover, cursor) comes from Row, the layout (auto height, stretch,
+                // no gap, inner padding) is the caller's. `on` is the bulk-select
+                // tint, which has no Row state of its own.
                 return (
-                  <div key={j.id} data-row={i} className="v2-row" onClick={(e) => rowClick(e, i, j)}
-                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', borderRadius: 8, backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
+                  <Row key={j.id} data-row={i} divider onClick={(e) => rowClick(e, i, j)}
+                    style={{ flex: '0 0 auto', height: 'auto', alignItems: 'stretch', gap: 0, padding: 0, backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '10px 12px', opacity: isIgnored ? 0.55 : 1 }}>
                       {/* ring */}
                       <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>
@@ -940,7 +944,7 @@ export default function V2JobFeed() {
                         </>
                       )}
                     </div>
-                  </div>
+                  </Row>
                 )
               })}
             {loadingMore && <div style={{ padding: '14px 0', textAlign: 'center', fontSize: 11.5, color: 'var(--muted)' }}>Loading more…</div>}   {/* FEED-38 */}
@@ -1128,10 +1132,10 @@ export default function V2JobFeed() {
                           </div>
                         )}
                         {rpt?.ats_tip && (
-                          <div style={{ display: 'flex', gap: 11, padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface-2)' }}>
+                          <Card style={{ display: 'flex', gap: 11, padding: '12px 14px', background: 'var(--surface-2)' }}>
                             <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', paddingTop: 2 }}>ATS tip</span>
                             <span style={{ flex: 1, fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>{rpt.ats_tip}</span>
-                          </div>
+                          </Card>
                         )}
                         {(d.fit_gaps || []).length > 0 && !reqRows.length && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_gaps || []).map((g, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--bad)' }}>✕</span><span>{g}</span></div>)}</div>}
                         {!rpt && !(d.fit_gaps || []).length && !(d.fit_strengths || []).length && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>This report was quick-scored — rescore at full depth for the keyword and requirement breakdown.</span>}
@@ -1145,6 +1149,7 @@ export default function V2JobFeed() {
               {!dScored && !running && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
+                  {/* ui: keep — dashed 34px "no score" badge filling the ring slot, not an add-line */}
                   <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
                   <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Not scored yet</span>
@@ -1173,6 +1178,7 @@ export default function V2JobFeed() {
                     {dCached && (
                       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                         <span style={{ fontSize: 12, color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>{viewCached ? 'Cached snapshot · captured when you applied' : 'Live posting'}</span>
+                        {/* ui: keep — a two-cell segmented toggle track (r99, 2px inset), not a card */}
                         <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 99, padding: 2, gap: 2 }}>
                           <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
                           <div onClick={() => setViewCached(true)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: viewCached ? 'var(--accent-soft)' : 'transparent', color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>Cached</div>
@@ -1190,6 +1196,7 @@ export default function V2JobFeed() {
                       /* frame-blocked — canonical design panel */
                       <div style={{ flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 30px', minHeight: 0 }}>
                         <div style={{ maxWidth: '44ch', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 11, textAlign: 'center' }}>
+                          {/* ui: keep — dashed 44px warning glyph, not an add-line */}
                           <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
                           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>This posting refuses to be framed</span>
                           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} sends X-Frame-Options, so the live page cannot render here. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.'}</span>

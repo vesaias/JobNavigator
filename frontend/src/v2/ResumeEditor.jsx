@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   MenuHead, MenuItem, SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Button, IconButton, Input, Pill, Textarea } from './ui'
+import { Band, Button, IconButton, Input, Pill, Textarea } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -710,7 +710,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
                 </div>
               )
             })}
-            {options.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No base résumés yet.</div>}
+            {options.length === 0 && <Band interactive={false} style={{ padding: 12, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No base résumés yet.</Band>}
           </div>
         </div>
 
@@ -803,7 +803,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
                 </div>
               )
             })}
-            {list.length === 0 && <div style={{ padding: 12, border: '1px dashed var(--edge)', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No jobs match — paste a description below instead.</div>}
+            {list.length === 0 && <Band interactive={false} style={{ padding: 12, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No jobs match — paste a description below instead.</Band>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>…or a freeform job description</span>
@@ -871,6 +871,8 @@ function ReviewModal({ changes, onClose, onApply }) {
               <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
+                  {/* ui: keep — a state badge whose dashed --warn-line edge marks a
+                      suggestion; not a dashed add-line */}
                   <span title={pending ? 'Suggested — not in the document or the PDF yet; added when you finish reviewing' : off ? 'Declined — the base text is restored' : 'Already in the document and in the PDF'}
                     style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--accent-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, color: !live ? 'var(--muted)' : pending ? 'var(--warn)' : 'var(--accent)', cursor: 'help' }}>{!live ? (pending ? 'dropped' : 'declined') : pending ? 'suggested' : 'applied'}</span>
                   {live && pending && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>added when you finish reviewing</span>}
@@ -882,6 +884,7 @@ function ReviewModal({ changes, onClose, onApply }) {
                   {removed && <span style={{ background: 'var(--bad-soft)', textDecoration: 'line-through', opacity: 0.75, borderRadius: 3, padding: '0 3px' }}>{removed}</span>}
                   {/* RES-28: the old `{added || '(base text restored)'}` fallback sat
                       inside `{added && …}` and could never render. */}
+                  {/* ui: keep — inline diff highlight on a run of text (r3), not a band */}
                   {added && <span style={{ background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--change-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, borderRadius: 3, padding: '0 3px' }}>{added}</span>}
                   {c.after}
                 </span>

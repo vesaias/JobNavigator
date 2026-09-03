@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useFlashToast, useSnapTop } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Button, Input, Pill, SearchInput } from './ui'
+import { Band, Button, Card, Input, Pill, SearchInput } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -162,10 +162,10 @@ export default function V2Resumes() {
           /* RES-07: a 500/401 used to render as "No base résumés yet", inviting the
              user to create a résumé they already have. */
           : loadErr ? (
-            <div style={{ padding: '20px 14px', border: '1px dashed var(--bad)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
+            <Band interactive={false} style={{ padding: '20px 14px', borderColor: 'var(--bad)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
               <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés — the shelf request failed.</span>
               <Pill size="sm" onClick={() => { setLoading(true); load() }}>Try again</Pill>
-            </div>
+            </Band>
           )
           : searching ? (
             <>
@@ -173,14 +173,14 @@ export default function V2Resumes() {
                 <span onClick={() => setQ('')} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
                 <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</span>
               </div>
-              {results.length === 0 ? <div style={{ padding: '20px 14px', border: '1px dashed var(--line)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</div>
+              {results.length === 0 ? <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</Band>
                 : results.slice(0, resLimit).map((r, i) => (
-                  <div key={`${r.kind}-${r.id}-${i}`} className="v2-act" onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', lineHeight: '20px' }}>
+                  <Card key={`${r.kind}-${r.id}-${i}`} onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
                     {r.note && <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{r.note}</span>}
                     {r.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(r.score) }}>{r.score}</span>}
-                  </div>
+                  </Card>
                 ))}
               {results.length > resLimit && <ShowMore n={Math.min(PAGE, results.length - resLimit)} onClick={() => setResLimit((n) => n + PAGE)} />}
             </>
@@ -190,13 +190,13 @@ export default function V2Resumes() {
                 <span onClick={() => setShowArchived(false)} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
                 <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Archived · {archived.length} from rejected or stale applications</span>
               </div>
-              {archived.length === 0 && <div style={{ padding: '20px 14px', border: '1px dashed var(--line)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)' }}>Nothing archived yet — copies land here when their application is rejected or goes stale.</div>}
+              {archived.length === 0 && <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing archived yet — copies land here when their application is rejected or goes stale.</Band>}
               {archived.slice(0, archLimit).map((c) => (
-                <div key={c.id} className="v2-act" onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', lineHeight: '20px' }}>
+                <Card key={c.id} onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
                   <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{copyLabel(c)}</span>
                   <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{c.why}</span>
-                </div>
+                </Card>
               ))}
               {archived.length > archLimit && <ShowMore n={Math.min(PAGE, archived.length - archLimit)} onClick={() => setArchLimit((n) => n + PAGE)} />}
             </>
@@ -207,7 +207,7 @@ export default function V2Resumes() {
               {persona && (
                 <>
                   <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Profile</span>
-                  <div className="v2-card" onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
+                  <Card onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
                       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
@@ -242,7 +242,7 @@ export default function V2Resumes() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </Card>
                   <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Résumés</span>
                 </>
               )}
@@ -250,7 +250,7 @@ export default function V2Resumes() {
                 const copies = b.copies || []
                 const baseInflight = inflight.filter((f) => String(f.baseId) === String(b.id))
                 return (
-                  <div key={b.id} className="v2-card" onClick={() => openResume(b.id)} title={`Open ${b.name} — the base résumé`} style={{ border: '1px solid var(--line)', borderRadius: 11, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
+                  <Card key={b.id} onClick={() => openResume(b.id)} title={`Open ${b.name} — the base résumé`} style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
                       <span title={b.name} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
                       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</span>
@@ -287,14 +287,14 @@ export default function V2Resumes() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 )
               })}
               {archived.length > 0 && (
-                <div onClick={() => setShowArchived(true)} className="v2-act" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
+                <Band onClick={() => setShowArchived(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 12, color: 'var(--muted)' }}>Archived · {archived.length} cop{archived.length === 1 ? 'y' : 'ies'} from rejected or stale applications</span>
                   <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)' }}>browse ›</span>
-                </div>
+                </Band>
               )}
             </>
           )}

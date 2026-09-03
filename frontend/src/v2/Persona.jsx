@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Input, Pill, Select } from './ui'
+import { Card, Input, Pill, Select } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -129,6 +129,8 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
         <div onClick={() => write(node, fkey, !on)} {...kb(() => write(node, fkey, !on), 'checkbox')} aria-checked={on} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+          {/* ui: keep — checkbox indicator, not a card (the scan's card-static
+              signature catches any bordered, rounded, filled box) */}
           <span style={{ flex: '0 0 auto', width: 15, height: 15, marginTop: 1, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-ink)', fontSize: 9, lineHeight: 1 }}>{on ? '✓' : ''}</span>
           <span style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: '18px', textWrap: 'pretty' }}>{opts.text}</span>
         </div>
@@ -342,7 +344,7 @@ export default function Persona() {
               const n = counted.filter((f) => isSet((p[f[0]] || {})[f[1]])).length
               const done = n === counted.length
               return (
-                <div key={id} style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+                <Card key={id} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                   <div onClick={() => toggleGroup(id)} {...kb(() => toggleGroup(id))} aria-expanded={open} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{open ? '⌄' : '›'}</span>
                     <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
@@ -356,11 +358,16 @@ export default function Persona() {
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               )
             })}
 
             {/* Q&A bank — the one amber card; answers go to the LLM verbatim */}
+            {/* ui: keep — the only amber-tinted card in v2 (theme.css pins the tint):
+                its answers reach the LLM verbatim, so the design sets it apart from
+                the neutral groups above. Card renders --card-bg/--card-border and has
+                no tone variant; overriding both inline would put two colours back in
+                a screen, which is exactly what the pass removes. */}
             <div style={{ border: '1px solid var(--amber-line)', borderRadius: 9, background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
               <div onClick={() => toggleGroup('qa')} {...kb(() => toggleGroup('qa'))} aria-expanded={groups.has('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{groups.has('qa') ? '⌄' : '›'}</span>
@@ -370,6 +377,8 @@ export default function Persona() {
               </div>
               {groups.has('qa') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 14px 14px', borderTop: '1px solid var(--amber-line-soft)' }}>
+                  {/* ui: keep — a row inside the amber card, tinted to it
+                      (--amber-line-soft); a Card here would reintroduce --line */}
                   {qa.map((e, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: '1px solid var(--amber-line-soft)', borderRadius: 7, background: 'var(--surface)' }}>
                       {/* each BulletText needs a ROW flex parent: its flex:1 sizes the
