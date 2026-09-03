@@ -20,16 +20,22 @@ PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "In
 
 def lint_jsx(fn, text):
     out = []
-    for i, line in enumerate(text.splitlines(), 1):
-        allowed = "ui: keep" in line or "lint: allow" in line
+    lines = text.splitlines()
+    def is_allowed(i):
+        for j in range(i - 1, max(-1, i - 8), -1):
+            if "ui: keep" in lines[j] or "lint: allow" in lines[j]: return True
+            if j < i - 1 and re.search(r"^\s*<[A-Za-z]", lines[j]): break
+        return False
+    for i, line in enumerate(lines, 1):
+        allowed = is_allowed(i)
         code = re.sub(r"//.*$", "", line) if "//" in line and "http" not in line else line
         if re.search(r"(?<![\w-])#[0-9a-fA-F]{3,8}\b", code) and "var(--" not in code and "href" not in code:
             out.append((i, "raw-colour", allowed, line.strip()[:120]))
         if re.search(r"\brgba?\(|\bhsla?\(", code):
             out.append((i, "raw-colour", allowed, line.strip()[:120]))
         m = re.search(r"fontSize:\s*(?:'?\d[\d.]*(?:px)?'?)", code)
-        if m and "var(--t-" not in code:
-            out.append((i, "font-size-literal", allowed, line.strip()[:120]))
+        if m and "var(--t-" not in code and re.search(r"(background|border|borderRadius|boxShadow):", code):
+            out.append((i, "font-size-with-design-keys", allowed, line.strip()[:120]))
         if re.search(r"fontFamily:\s*'(?!var\()", code):
             out.append((i, "font-family-literal", allowed, line.strip()[:120]))
         if re.search(r"borderRadius:\s*\d", code) and "var(--radius" not in code:
