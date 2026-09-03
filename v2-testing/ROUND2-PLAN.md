@@ -14,7 +14,7 @@ Resume rule: continue from the first unticked box. Each stage writes its own fil
 - [x] **R0 baseline** — dump taken, settings read, tree clean at `1fd6152`.
 - [x] **R1 audit** (Opus) → `round2/audit.md`. Reconcile every finding file (`stage3/*.md`, `FINDINGS.md`, `stage5/cross-cutting.md`, `stage4/settings-roundtrip.md`) against the code at HEAD: every `fixed` status names a commit whose diff actually contains the change; every `decided keep` has a user decision recorded; anything `logged` without a decision is listed; items mentioned in chat but never filed are filed. Also the four open decisions (RES-32, APPS-20, COMP-26, CL-28).
 - [x] **R2 smoke** (Sonnet) → `round2/smoke.md`. No LLM calls, read-only. Every v2 route and every v1 route: loads, zero console/page errors, both themes, 1440×900 and 1024×700, rail counts present, primary controls present and enabled, deep links (`?job=`, `?company=`, `#runs`, `/v2/resumes/{id}`, `/v2/cover-letters/{id}`), API-failure path per screen (stub one GET with 500 → error row/toast, no white screen), keyboard (Escape closes every open modal/drawer/menu; Tab reaches the first three controls).
-- [ ] **R3 happy path** (Opus) → `round2/happy-path.md`. Real end-to-end flows with the DB, ≤20 LLM calls, all scratch rows prefixed `ZZTEST` and deleted at the end:
+- [x] **R3 happy path** (Opus) → `round2/happy-path.md`. Real end-to-end flows with the DB, ≤20 LLM calls, all scratch rows prefixed `ZZTEST` and deleted at the end:
   1. Search: create keyword search → Test (real JobSpy/Indeed is not public-API — stub) → edit → run interval → delete.
   2. Company: add with a public Greenhouse URL (Anthropic exists — use a second public board, e.g. `boards.greenhouse.io/…`) → Test scrape (real) → Run scrape (real) → jobs appear in Feed with the company → delete company.
   3. Feed: filter → open detail → Score (real LLM, 1 call) → Save → Applied → Application auto-created + company auto-created → undo toast path.
@@ -27,4 +27,8 @@ Resume rule: continue from the first unticked box. Each stage writes its own fil
   10. Extension endpoints via API: `POST /applications` from the popup shape, `POST /jobs/linkedin-import` with an empty list (no Voyager call), `POST /persona/qa-bank`.
 - [x] **R4 text candidates** (Opus) → `round2/text-candidates.md`. Every user-facing string in `frontend/src/v2/*.jsx` longer than ~6 words (toasts, empty states, helper/sub-lines, tooltips, modal copy, settings help/info) listed as `file:line | current text | flag` where flag ∈ {mannered, metaphor, hedge, long, fine}. No rewrites.
 - [x] **R4b text suggestions** (Fable) → `round2/text-suggestions.md`. Plain rewrites for every flagged line; prompt: "Avoid mannered prose, say things plainly. No metaphors or figures of speech." Suggestions only — nothing applied.
-- [ ] **R5 close** — `v2-testing/REPORT-round2.md` (open items, considerations, text suggestions), restore DB from the baseline dump, confirm ZZTEST rows gone, commit.
+- [x] **R5 close** — `v2-testing/REPORT-round2.md` (open items, considerations, text suggestions), restore DB from the baseline dump, confirm ZZTEST rows gone, commit.
+
+## R5 log (2026-09-04)
+- DB restored from `backups/round2_baseline_20260903.dump` (backend stopped during `pg_restore --clean`, restarted after). Verified: companies 126 · searches 6 · applications 377 · bases 4 · cover letters 16 · jobs 19016 · `scrape_interval_minutes` 3500 · `llm_model` claude-sonnet-5 · 0 `ZZTEST` rows on every list.
+- Report: `v2-testing/REPORT-round2.md`.
