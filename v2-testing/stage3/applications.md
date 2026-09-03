@@ -163,7 +163,7 @@ Grouped; all measured design-vs-built. Per the addendum these are decisions unle
 **Where** `:304` `background: sel === a.id ? 'var(--surface-2)' : 'transparent'` vs `theme.css:151` `.v2-arow:hover { background: var(--surface-2) !important }`.
 **Actual** measured: hovering an unselected row → `rgb(246,244,238)`; the selected row's background → `rgb(246,244,238)`. Identical.
 **Note** the design has the same collision (`style-hover="background:#f3f0e8"` at :100, `bg: i===S.sel ? "#f3f0e8"` at :435), so this is inherited, not introduced.
-**Status** needs decision: keep design parity, or give the selected row a left accent bar / `--hover-soft` for hover.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### APPS-21 · P4 · "Applied on" is a UTC date sent as UTC midnight
 **Where** `:546` `new Date().toISOString().slice(0,10)` (UTC calendar date, not local), `:572` `new Date(when).toISOString()` (parses a date-only string as UTC midnight).

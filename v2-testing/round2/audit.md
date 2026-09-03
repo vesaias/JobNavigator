@@ -554,6 +554,8 @@ asks 'Discard this application?'") describes one of them approvingly.
 native confirms are acceptable outside Companies/Résumés/Cover Letters — but the two
 should not silently coexist.
 
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
+
 ### R2-A-02 · P4 · Searches' numeric payload has none of the clamping COMP-12 added to Companies
 
 **Where** `Searches.jsx:144` — `max_pages: parseInt(d.max_pages) || 50`,
@@ -571,6 +573,8 @@ advertises a range nothing enforces on either side of the wire.
 **Proposed** route `max_pages`, `min_fit_score` and `results_wanted` through the same
 clamp-to-declared-bounds treatment as COMP-12, and put the `min`/`max` on the inputs so
 the label and the control agree.
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-A-03 · P4 · 48 silent `.catch(() => {})` in `frontend/src/v2` after a pass whose headline fix was "toasts on every failure path"
 
@@ -602,3 +606,5 @@ whole category instead of re-finding it screen by screen next round.
 | Decided-keep / closed, attributed | 58 |
 | Genuinely needing your decision | 4 filed (APPS-20, COMP-26, CL-28, RES-32) + COMP-11 + the stage4 settings observation = **6** |
 | New defects filed here | 3 (R2-A-01..03) |
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).

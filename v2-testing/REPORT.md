@@ -7,23 +7,23 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 | Severity | Total | Fixed | Needs your decision | Logged only |
 |---|---|---|---|---|
 | P1 | 5 | 5 | 0 | 0 |
-| P2 | 70 | 69 | 1 | 0 |
-| P3 | 111 | 94 | 1 | 0 |
-| P4 | 92 | 61 | 4 | 0 |
-| **All** | **278** | **229** | **6** | **0** |
+| P2 | 70 | 70 | 0 | 0 |
+| P3 | 111 | 95 | 0 | 0 |
+| P4 | 92 | 65 | 0 | 0 |
+| **All** | **278** | **235** | **0** | **0** |
 
 | Area | Findings | P1 | P2 | P3 | P4 | fixed |
 |---|---|---|---|---|---|---|
 | F-009-linheights.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| applications.md | 23 | 0 | 7 | 10 | 6 | 19 |
-| companies.md | 37 | 1 | 12 | 16 | 8 | 29 |
-| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 27 |
+| applications.md | 23 | 0 | 7 | 10 | 6 | 20 |
+| companies.md | 37 | 1 | 12 | 16 | 8 | 31 |
+| cover-letters.md | 29 | 0 | 7 | 14 | 8 | 28 |
 | feed.md | 38 | 0 | 10 | 18 | 10 | 31 |
 | persona-stats.md | 45 | 1 | 10 | 13 | 21 | 37 |
 | resumes-shelf-recheck.md | 0 | 0 | 0 | 0 | 0 | 0 |
-| resumes.md | 32 | 1 | 8 | 13 | 10 | 29 |
+| resumes.md | 32 | 1 | 8 | 13 | 10 | 30 |
 | searches.md | 29 | 0 | 6 | 11 | 12 | 23 |
-| settings.md | 28 | 2 | 4 | 12 | 10 | 21 |
+| settings.md | 28 | 2 | 4 | 12 | 10 | 22 |
 | shell.md | 6 | 0 | 0 | 2 | 4 | 2 |
 | FINDINGS.md | 10 | 0 | 6 | 2 | 2 | 10 |
 | cross-cutting.md | 1 | 0 | 0 | 0 | 1 | 1 |
@@ -53,6 +53,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - APPS-17 (P3) — The Log modal demands a URL although its own copy says it is for off-app applications
 - APPS-18 (P4) — "Cached" never appears for a freshly logged application until a later refetch
 - APPS-19 (P4) — The rail "Applications" badge is never refreshed by this screen
+- APPS-20 (P4) — Selected row and hovered row are the same colour
 - APPS-21 (P4) — "Applied on" is a UTC date sent as UTC midnight
 - APPS-22 (P4) — Smaller items (grouped)
 - COMP-01 (P1) — Drawer `Save changes` closes before the PATCH resolves — a failed save loses the edit silently
@@ -65,6 +66,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - COMP-08 (P2) — `Apps` is name-only while `Open`, `+7d` and `Ø Fit` are alias-summed; and the column means *all* applications
 - COMP-09 (P2) — `⋯ → View jobs in feed` is a raw `<a href>` that full-page-reloads into an *unfiltered* feed
 - COMP-10 (P2) — At 1024 px the toolbar overflows and the `Sort` control is pushed off-screen with no way to reach it
+- COMP-11 (P2) — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
 - COMP-12 (P2) — `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
 - COMP-13 (P2) — Résumés cell claims "Selected" while the drawer says "Nothing selected" when the résumé list is unavailable or the ids dangle
 - COMP-14 (P3) — Every row lands on a half pixel (fractional `getBoundingClientRect().top`)
@@ -76,6 +78,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - COMP-23 (P3) — The test modal computes per-state row tints and never applies them
 - COMP-24 (P3) — Globally-excluded rows are indistinguishable from per-company exclusions, and the two "after filter" numbers are never shown
 - COMP-25 (P3) — The column-header rule is in the wrong place and the wrong weight
+- COMP-26 (P3) — No in-progress state for the test scrape, and the result table renders every row
 - COMP-27 (P3) — Add-modal `Save` stays live while `saving` — a double click double-POSTs
 - COMP-28 (P3) — Native `confirm`/`alert` on a screen with no other native dialogs
 - COMP-29 (P3) — No first-run empty state, and the tier-empty copy doesn't name the tiers
@@ -110,6 +113,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - CL-25 (P4) — Escape closes the Regenerate modal mid-run while Cancel and the scrim refuse
 - CL-26 (P4) — The two screens format the same timestamp differently
 - CL-27 (P4) — `POST /cover-letters` returns a context-free row
+- CL-28 (P4) — One shared `err` slot in the editor, cleared only by a successful save
 - CL-29 (P4) — Disabled arrows still take their hover (matches the design — logged so it is not re-found)
 - FEED-01 (P2) — The default view labels every row in the database "open roles"
 - FEED-02 (P3) — Every list row lands on a half pixel; 1px borders drop on alternating rows
@@ -208,6 +212,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - RES-29 (P4) — Archived view has no empty branch; the archived sort comment is wrong
 - RES-30 (P4) — The score poll resolves on any numeric `Tailored`, so a re-score reports the old number
 - RES-31 (P4) — "autosaves on blur" is wrong — saving is per keystroke, debounced 500 ms
+- RES-32 (P4) — Centred modals land on a half pixel whenever the panel height is odd
 - SRCH-01 (P2) — Test-modal source chips never render — the modal reads `by_source`, every backend path sends `source_breakdown`
 - SRCH-02 (P2) — A preview that fails with HTTP 200 + `{"error": …}` is rendered as “No results returned.”
 - SRCH-03 (P2) — A 422 from `POST /searches` alerts “[object Object]”
@@ -252,6 +257,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - SET-23 (P4) — An empty model catalog opens a 12 px empty popover
 - SET-25 (P4) — The Edit modal drops keystrokes typed within 600 ms of closing
 - SET-27 (P3) — PATCH `warnings` are discarded, so a scheduler / semaphore / dedup-reload failure is invisible
+- SET-28 (P4) — POST /settings accepts an unknown key (no allow-list)
 - SHELL-01 (P3) — Every rail hover is dead (inline colour beats `.v2-navdark:hover`)
 - SHELL-03 (P4) — Welcome step rows land on half pixels
 - F-001 (P2) — Feed · Tailored-résumé ✦ mark in the list row leaves v2 for the classic UI
@@ -272,8 +278,7 @@ Branch `v2-redesign`, 2026-09-01 → 2026-09-02. State files: `PLAN.md` (stages)
 - Backend: `DataError` → 404 handler for malformed ids on every route; `flag_modified` on Résumé and Persona JSON PATCHes; `create_company` persists `aliases` + `auto_scoring_depth`; per-search `trigger_url` pointed at a real endpoint.
 - Docs: HANDOVER and CLAUDE.md said the backend hot-reloads — it does not (no `--reload`); corrected.
 
-## Open P2s that need you (1)
-- COMP-11 — The alias badge under-reports by one, and a company with exactly one alias shows no badge at all
+## Open P2s that need you (0)
 
 ## Decisions that close many findings at once
 1. **Half-pixel rows (F-009)** — a systematic line-height pass (~40–60 one-line edits) or accept as backlog. Closes the FEED-02 residue, SRCH-07, APPS-08, CL-09/10, PERS-11.

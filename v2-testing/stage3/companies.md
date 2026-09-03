@@ -98,7 +98,7 @@ Separately, `application_count` counts every application in any state, so both "
 **Expected + why** The design assumed `aliases[0]` is the company's own name (`.dc.html:640`, `aliasHint` uses `c.aliases.slice(1)`, and its fixtures store `aliases: ["Stripe", "Stripe Inc."]`). The real DB stores aliases as **additional** names only: `Microsoft → ["Microsoft AI"]`, `Amazon → ["Amazon Music","AWS", …]` (6). `find_company_by_name` checks name *then* aliases, confirming they are extra.
 **Actual** measured: Microsoft (1 alias) renders **no badge**; a scratch company with 2 aliases renders **`+1`**; Amazon (6) renders `+5`. The tooltip, meanwhile, lists **all** aliases (`aliases.join(', ')`), so badge and tooltip disagree.
 **Proposed fix** `aliases.length > 0` → `+{aliases.length}`, tooltip unchanged.
-**Status** needs decision — not fixed (scored as fixed until the R1 audit): `aliases.length > 0` → `+{aliases.length}` is a one-line change; one-line change but it silently shifts every row, so: needs decision.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### COMP-12 · P2 · `Pages to read` and `Scrape interval` accept any integer — the `min`/`max` are HTML-only
 **Where** `Companies.jsx:545` (`min={1} max={20}`), save `:451` (`parseInt(draft.max_pages) || 5`), `:449` (`parseInt || null`)
@@ -219,7 +219,7 @@ A 200-character company name ellipsises correctly (cell 142 px, `scrollWidth` 12
 ### COMP-26 · P3 · No in-progress state for the test scrape, and the result table renders every row
 **Where** `Companies.jsx:388` (row spinner), `:561` (footer spinner); no overlay
 **Actual** measured: while the synchronous `POST /companies/{id}/test-scrape` runs, the only feedback is a 9 px spinner in the `Test` pill — no overlay, no dimming, and the rest of the screen stays fully interactive (a second click re-enters `runTest`). This board answered in 1.6 s via the Greenhouse API; a Playwright board with `max_pages` up to 20 takes tens of seconds. The result modal then rendered **577 rows** unvirtualised in one pass (row tops are all integers, so no half-pixel problem there).
-**Status** needs decision
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### COMP-27 · P3 · Add-modal `Save` stays live while `saving` — a double click double-POSTs
 **Where** `Companies.jsx:591-604` (no re-entry guard), `:660` (only `cursor`/`opacity` change)

@@ -233,7 +233,7 @@ The backend half of this is now fixed: before the restart `GET /resumes/not-a-uu
 **Where** every `position: fixed; inset: 0; display: flex; align-items: center` wrapper — `ResumeEditor.jsx` (Tailor, Re-tailor, Review), `Resumes.jsx` (Add), `Companies.jsx` (3), `ConfirmDialog.jsx`
 **Actual** measured after RES-11: the Tailor panel is 597 px tall (all leaves integer), so in a 700 px viewport its top is 51.5 and all 82 row tops end in .5. Any odd panel height in an even viewport (or vice versa) does this.
 **Proposed fix** snap the panel: a tiny hook that reads the rect top after layout and applies `marginTop: round(top) - top` (re-run on resize), or a shared `Modal` wrapper doing the same. Cosmetic (blurred 1 px borders inside modals).
-**Status** needs decision
+**Status** fixed (8804ae3): `useSnapTop` now snaps with `transform: translateY` (the margin version moved a flex-centred panel by half the delta — caught by `round2/verify.md`); live re-check in `round3/verify.md`.
 
 ## What was verified working (measured, no finding)
 

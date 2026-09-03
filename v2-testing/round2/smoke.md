@@ -548,7 +548,7 @@ Compan |  |
 **Repro** Load `/v2/companies` at 1024×700 (either theme), inspect the row's `⋯` control.
 **Actual** `getBoundingClientRect().right = 1335` against `innerWidth = 1024`; `document.documentElement.scrollWidth == innerWidth` (page itself doesn't scroll) — the element sits inside a `DIV` with `overflow-x: auto`.
 **Expected** Unclear whether the row is meant to be horizontally scrollable at this width (by-design, matching the Application Board kanban pattern) or the `⋯` action should stay pinned in view.
-**Status** needs decision: is the Companies row deliberately horizontally-scrollable at ≤1024px, or should the more-actions control stay reachable without scrolling?
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-S-02 · P4 · Résumé Editor overflows by ~3px at 1024px width
 **Where** `frontend/src/v2/ResumeEditor.jsx`, `/v2/resumes/{id}` (both a base and a tailored copy reproduce it)
@@ -556,14 +556,14 @@ Compan |  |
 **Actual** `document.documentElement.scrollWidth = 1027` vs `innerWidth = 1024` (page-level overflow, not a contained-scroll false positive — no `overflow-x:auto` ancestor found). Offending element is an `<a>` with no class.
 **Expected** No horizontal scroll at 1024px.
 **Proposed fix** Track down the unstyled `<a>` (likely a link inside the header/breadcrumb row) and constrain its width or add `min-width: 0`/`flex-wrap`.
-**Status** logged, not fixed (small, 3px, not investigated further under this pass's budget)
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-S-03 · P4 · Several v1 screens overflow horizontally at 1024px (Resume Builder, Persona, Stats)
 **Where** `frontend/src/components/ResumeBuilder.jsx`, `Persona.jsx`, `Stats.jsx`; routes `/resumes`, `/persona`, `/stats`
 **Repro** Load each at 1024×700, either theme.
 **Actual** `document.documentElement.scrollWidth` = 1150 / 1050 / 1171 respectively vs `innerWidth = 1024`.
 **Expected** N/A — the classic (v1) shell was never built responsive below its original desktop target width; this is a known characteristic of the screen being replaced, not a regression. Noted for completeness since the check was in scope.
-**Status** logged, not fixed — v1 is being retired by the redesign
+**Status** decided ignore (user 2026-09-04, with R2-S-05): v1 screens are being replaced.
 
 ### R2-S-04 · P2 · V1 Persona has no error handling for a failed `GET /api/persona`
 **Where** `frontend/src/components/Persona.jsx:92` — `const { data } = await api.get('/persona')` inside `fetchPersona`, no try/catch, called directly from a `useEffect`
@@ -571,7 +571,7 @@ Compan |  |
 **Actual** Unhandled promise rejection: pageerror `"Request failed with status code 500"`; no error banner or empty-state message — the persona sections just never render (only unrelated shell banner text is visible).
 **Expected** A caught failure with a visible error state, matching the v2 Persona screen's behaviour (`err_text=True` on the same stub).
 **Proposed fix** Wrap the `api.get('/persona')` call in try/catch and set an error/loading-failed state, mirroring v2 `Persona.jsx`'s `loadErr` handling.
-**Status** logged, not fixed
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-S-05 · P3 · Most v1 screens show no visible error state on a failed list/data GET
 **Where** `frontend/src/components/{JobFeed,ApplicationBoard,CompanyManager,SearchManager,ResumeBuilder,CoverLetterBuilder,Settings}.jsx` — routes `/`, `/applications`, `/companies`, `/searches`, `/resumes`, `/cover-letters`, `/settings`
@@ -585,7 +585,7 @@ Compan |  |
 **Repro** Load `/v2/resumes/{id}` or `/v2/cover-letters/{id}`, run `document.querySelector('h1')` / `h2`.
 **Actual** Neither exists on these two screens; every other v2 screen has an `<h1>`.
 **Expected** Unclear if intentional (design may treat the editor's identity differently from list screens) — flagging for accessibility (screen reader page-structure navigation).
-**Status** needs decision: add a heading element (visually hidden or matching current styling) or confirm this is deliberate
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ## Couldn't test
 - Exact per-screen "3-5 named primary controls" as a curated list — used an automatic top-of-screen clickable-element probe instead (see Methodology notes). Stage 3's per-screen inventories are the authoritative source for exact control names.

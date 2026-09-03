@@ -344,7 +344,7 @@ Measured, all as specified — full data in the scripts.
 ### SET-28 · P4 · POST /settings accepts an unknown key (no allow-list)
 **Where** `backend/api/routes_settings.py:51-54` (filed from the stage-4 round-trip observation by the R1 audit)
 **Actual** the UI cannot produce one, but the API writes any key it is handed.
-**Status** needs decision — reject unknown keys with 400, or keep the open write path.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ## Fixed in source
 

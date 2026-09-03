@@ -65,19 +65,23 @@ Board used: `https://job-boards.greenhouse.io/discord` — public Greenhouse API
 **Expected** The audit trail is per-company (`ScrapeLog.company_id` is documented as exactly that). Health signals derived from ScrapeLog (`is_warning` = 0 results, `/health/entities`) therefore never see a manual run, and a manual run that returns nothing raises no warning.
 **Proposed fix** Write the same `ScrapeLog` row inside the manual `_do()` (or factor the logging out of `scrape_career_pages` into `scrape_single_career_page`).
 
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
+
 ### R2-H-03 · P3 · Add-company modal defaults auto-scoring to Light; New-search defaults to Off
 **Where** `frontend/src/v2/Companies.jsx` (Add-company modal, `Depth` pills) vs `frontend/src/v2/Searches.jsx:130` (`NEW_DRAFT`)
 **Repro** `+ Add company` → read the Depth pills before touching anything; then `+ New search` → read Auto-scoring.
 **Actual** Measured the pills' computed `font-weight`: `Off 400 / Light 600 / Full 400` — Light is preselected, and the created row came back `auto_scoring_depth: "light"`. A search created the same way comes back `"off"`.
 **Expected** One default across the two creation flows. Light means every newly scraped job for that company goes to the LLM, which is a cost decision the user is making without noticing.
-**Status** needs decision: make the company default `off` to match Searches, or make Searches default `light` to match Companies?
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-H-04 · P4 · Companies "+N" column counts filter-rejected postings
 **Where** `backend/api/routes_companies.py:132` (`week_by_key`), rendered at `frontend/src/v2/Companies.jsx:445`
 **Repro** After the ZZTEST run the row read `3 +47`; tooltip: "3 open roles from ZZTEST Discord in the Job Feed · 47 new in the last 7 days".
 **Actual** `open_jobs_week` counts every `Job` row discovered in 7 days regardless of status, so the 44 postings the company's own `title_include_expr` rejected (stored as `status=ignored` purely for dedup) are counted as "new".
 **Expected** "new in the last 7 days" reading 47 when 44 of them were rejected by this company's own filter and can never appear in the feed overstates yield by 15×.
-**Status** needs decision: the comment at `routes_companies.py:131` says this is deliberate ("recent scraper yield, not just what's still unactioned") — keep, or exclude `ignored`?
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 **Scratch rows** created 1 company (deleted) + 47 jobs (kept deliberately — Flow 3 uses them; deleted in the final sweep).
 
@@ -115,7 +119,7 @@ Scripts: `hp_03_feed.py`, `hp_03b_undo.py`. **LLM #1** — job score, `POST /ana
 **Repro** Open `/v2/feed` (or any filtered variant) and do nothing.
 **Actual** Measured `'Score this role' in body === true` before any click — the detail panel is already open for row 0, so its `<iframe src={d.url}>` immediately loads the third-party posting. In this run the page pulled `https://job-boards.cdn.greenhouse.io/...` and `https://my.greenhouse.io/users/self?job_post_id=…` (401), producing 3 page errors and 6 console errors/warnings from the embedded site on a page the user never asked to open.
 **Expected** Either the detail panel starts closed, or the iframe is mounted only once the user opens the "posting" tab. Right now every Feed visit sends a request to whatever ATS happens to own the top row.
-**Status** decided keep current (user 2026-09-04): the Feed opens the first job on load.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 **Scratch rows** carried forward: 47 ZZTEST Discord jobs, 1 auto-created Application, 1 auto-created Company (all removed in the final sweep).
 
@@ -154,7 +158,7 @@ Scripts: `hp_04_apps.py`, `hp_04b_apps.py`. LLM calls: 0.
 **Repro** Delete an application vs. delete a company.
 **Actual** Companies (COMP-28) and Résumés/Cover Letters (RES-16) were moved to the styled `ConfirmDialog`, whose own header comment calls it "the one destructive-confirm dialog for v2 … so the résumé and cover-letter deletes stop falling back to window.confirm". Applications, Searches and the Feed's "Ignore … everywhere" still raise a native browser dialog.
 **Expected** One confirm surface across v2.
-**Status** needs decision: finish the migration, or accept three screens on the native dialog?
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 **Scratch rows** created 1 application (deleted), 1 job `ZZTEST Program Manager` (kept for the final sweep), 1 auto-created Company `Example` (no ZZTEST prefix — noted for cleanup).
 
@@ -195,12 +199,14 @@ Scripts: `hp_05a_resume.py`, `hp_05b_tailor.py`, `hp_05c_freeform.py`, `hp_05d_v
 
 Console clean on every résumé screen (0 errors, 0 page errors).
 
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
+
 ### R2-H-09 · P3 · A job-linked tailor silently spends a second LLM call
 **Where** `backend/api/routes_resumes.py:939-969` (`tailor_auto_quick_score` — seeded default `light`, **set to `full` in this database**)
 **Repro** Tailor any base for a job and watch `/api/monitor/active`.
 **Actual** Two runs appear: `tailor_resume`, then `analyze_job` with `scope_key = "{job}:tailored:{copy}"`. Nothing in the tailor modal, the toast, or the ⋯ menu says a scoring call will follow, and the setting that controls it (`tailor_auto_quick_score`) is not exposed anywhere in v2 Settings (only `on_save_action` is).
 **Expected** Either the modal says "scores the result too", or the setting is surfaced next to `On save action`, which is the same class of decision.
-**Status** needs decision — behaviour is deliberate in the backend, but it is invisible and unconfigurable from the UI.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-H-10 · P4 · A freeform copy's "based on" link shows the copy's own name
 **Where** `frontend/src/v2/ResumeEditor.jsx:472` — `const baseName = (doc.name || '').split('→')[0].trim() || 'base'`
@@ -208,6 +214,8 @@ Console clean on every résumé screen (0 errors, 0 page errors).
 **Actual** Freeform copies are named `<base> (tailored)` (no `→`), so the split returns the whole name and the band reads `based on ZZTEST Base PM (tailored) ↗` — the link points at the base but is labelled with the copy.
 **Expected** `based on ZZTEST Base PM ↗`.
 **Proposed fix** Resolve the parent's name from `parent_id` (the shelf list is already fetched) instead of parsing the copy's own name; keep the split only as a fallback.
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-H-11 · P4 · The freeform tailor's completion toast did not fire
 **Where** `frontend/src/v2/ResumeEditor.jsx:124-152` (the `pendingRef` watcher)
@@ -301,6 +309,8 @@ Scripts: `hp_06_cl.py` (first attempt — picker mismatch, see below), `hp_06pro
 6. **Regenerate** — modal `Regenerate letter / Rewrites the whole letter for ZZTEST Discord — your edits to this draft are replaced.` with FROM RÉSUMÉ / VOICE / LENGTH and a `~30 seconds` estimate. Picked `Warm & personable` → `Regenerate` → second `POST /cover-letters/generate`, 10.3 s, `completed`. Read back: `voice = "warm"`, still 3 paragraphs, a genuinely different opening, **and the manual edit is gone** — which is exactly what the modal warned. Letter count stayed 17 (rewritten in place, no duplicate row), matching the `cover_letter_id` path in the backend.
 - Console clean throughout.
 
+**Status** closed: did not reproduce in round 3 (flows-B step 5, toast fired).
+
 ### R2-H-14 · P3 · The Regenerate modal shows "Select a source…" for a letter written from a tailored copy
 **Where** `frontend/src/v2/CoverLetterEditor.jsx:105` (`setRSource(d.resume_id)`) vs `:266` (`sourceOpts` = `is_base=true` résumés + Persona)
 **Repro** Generate a letter from a tailored copy (the Résumé-editor entry point does exactly this), open it, click `Regenerate…`.
@@ -314,6 +324,8 @@ Scripts: `hp_06_cl.py` (first attempt — picker mismatch, see below), `hp_06pro
 
 ---
 ## Cross-cutting finding
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### R2-H-15 · P2 · Cover-letter LLM calls are logged against the wrong provider and model
 **Where** `backend/api/routes_cover_letters.py:416-421` vs `backend/analyzer/llm_client.py:138-146`
@@ -375,3 +387,5 @@ Cleanup route: cover letters → résumé copies → bases → applications → 
 **Findings by severity:** P2 ×5 (R2-H-02, 05, 07, 15 — plus R2-H-02's health-signal consequence), P3 ×5 (R2-H-03, 06, 08, 09, 14), P4 ×5 (R2-H-01, 04, 10, 11, 12, 13).
 
 **Environment notes:** all ten flows ran clean in the console — the only browser errors in the whole pass came from the third-party job posting the Feed loads in its detail-panel `<iframe>` (`job-boards.cdn.greenhouse.io` React hydration warnings and a 401 from `my.greenhouse.io/users/self`), which is R2-H-06's side effect rather than a fault in the app.
+
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).

@@ -229,7 +229,7 @@ Everything else matched exactly, including: header `22px 30px 16px` + `h1` 30 px
 **Where** `CoverLetterEditor.jsx:259-260`; set at `:106, 131, 179, 186, 199`
 **Actual** Verified with a download 500: `Could not download the PDF.` sits in the top bar indefinitely (a download failure never triggers a save), and it is only cleared by the next successful `PATCH` or by starting a regenerate (`:191`). The string is unbounded and has no ellipsis, so a long backend detail pushes the letter name out of the bar.
 **Proposed fix** Per-action messages, or clear on a timer for the non-save ones.
-**Status** awaiting the user's call (explained in chat 2026-09-02): needs decision.
+**Status** fixed (69d36b1/f75f2a1), verified live 2026-09-04 (`round2/verify.md`).
 
 ### CL-29 · P4 · Disabled arrows still take their hover (matches the design — logged so it is not re-found)
 **Where** contact ▲▼ (ED:334, 336, `.v2-hover-accent-text`) and paragraph ↑↓ (ED:389, 391, `.v2-parabtn`)
