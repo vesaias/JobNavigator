@@ -120,7 +120,9 @@ def _finish_job_run(run_id: uuid.UUID, status: str, result_summary: Optional[str
             now = datetime.now(timezone.utc)
             run.status = status
             run.finished_at = now
-            run.duration_seconds = round((now - run.started_at).total_seconds(), 1)
+            # SQLite (tests) hands back naive datetimes; treat them as UTC
+            started = run.started_at if run.started_at.tzinfo else run.started_at.replace(tzinfo=timezone.utc)
+            run.duration_seconds = round((now - started).total_seconds(), 1)
             run.result_summary = result_summary
             run.error = error
             db.commit()
