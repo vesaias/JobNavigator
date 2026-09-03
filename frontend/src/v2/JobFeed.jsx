@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
+import { useEscape, useSnapTop } from './hooks'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -169,6 +170,11 @@ export default function V2JobFeed() {
   const lastIdx = useRef(null)
 
   const [personaAvailable, setPersonaAvailable] = useState(false)
+  // OPEN-10: the one-click SCORE pill used to post ?depth=full unconditionally,
+  // so the first thing a new user clicks always spends the expensive call. The
+  // Light/Full choice behind `r` / ⋯ → Rescore is unchanged; this is only the
+  // default the no-choice paths use. Light until Settings says otherwise.
+  const [defaultDepth, setDefaultDepth] = useState('light')
   const [watchExtra, setWatchExtra] = useState([])   // ids of jobs pruned from view but still processing
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(true)
@@ -178,6 +184,12 @@ export default function V2JobFeed() {
   const [rescoreOpts, setRescoreOpts] = useState([])
   const [rescoreSel, setRescoreSel] = useState([])
   const [rescoreDepth, setRescoreDepth] = useState('full')
+  // RES-32: both are flex-centred `position:fixed` panels — the shape the
+  // half-pixel blur lives in. Own ref each, since either can be the open one.
+  const pickerPanel = useRef(null)
+  useSnapTop(pickerPanel)
+  const rescorePanel = useRef(null)
+  useSnapTop(rescorePanel)
   const scoreWatchRef = useRef([])
   const pendingRef = useRef({})   // {jobId:{title,company}} → completion toast
   const seenActiveRef = useRef(new Set())   // jobs confirmed in-flight (avoids first-tick false completion)
@@ -389,15 +401,17 @@ export default function V2JobFeed() {
   const scoreJob = useCallback((job) => {
     pendingRef.current[job.id] = { title: job.title, company: job.company }
     pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` })
-    api.post(`/analyze/${job.id}?depth=full`, {}).then(() => {
+    api.post(`/analyze/${job.id}?depth=${defaultDepth}`, {}).then(() => {
       setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'analyze_job'])] } : cur))
       setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
     }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
-  }, [pushToast])
+  }, [pushToast, defaultDepth])
 
   // rescoreJob holds { label, jobs:[...] } — one job or a bulk set
   const loadRescoreOpts = useCallback(async () => {
-    setRescoreDepth('full')
+    // OPEN-10: the modal used to open on Full whatever Settings said. Both
+    // options are still there and still switchable — only the preselection moved.
+    setRescoreDepth(defaultDepth)
     try {
       const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
       const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name, note: 'base' }))
@@ -405,8 +419,13 @@ export default function V2JobFeed() {
       setRescoreOpts(opts)
       const def = st.data?.default_resume_id
       setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
-    } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]) }
-  }, [personaAvailable])
+      const depth = st.data?.scoring_default_depth === 'full' ? 'full' : 'light'
+      setDefaultDepth(depth)
+      setRescoreDepth(depth)
+    // OPEN-05: this list IS the modal — the user opened it to choose résumés, and
+    // an empty body with a dead Score button explained nothing.
+    } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]); pushToast({ kind: 'error', msg: 'Could not load your résumés — nothing to score against.' }) }
+  }, [personaAvailable, defaultDepth, pushToast])
   const openRescore = useCallback((job) => { setRescoreJob({ verb: scoredCount(job) > 0 ? 'Rescore' : 'Score', title: job.title, company: job.company, jobs: [job] }); loadRescoreOpts() }, [loadRescoreOpts])
   const runRescore = useCallback(async () => {
     const target = rescoreJob
@@ -509,10 +528,18 @@ export default function V2JobFeed() {
   }
   const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
 
+  // OPEN-08: Escape used to be the first branch of the big window handler below,
+  // which never looked at `defaultPrevented` — so with a ConfirmDialog open the
+  // Feed also closed its own overlays behind it. It now goes through the shared
+  // hook, gated on `!confirm` so a dialog's own useEscape owns the key while one
+  // is open. Everything else is unchanged, including FEED-16: no INPUT guard
+  // here, so Escape still works from inside a filter menu's search box.
+  useEscape(() => { setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null) }, !confirm)
+
   // keyboard
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') { setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null); return }   // FEED-16: also from inside a menu's search box
+      if (e.key === 'Escape') return   // OPEN-08: owned by the useEscape above
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       if (e.ctrlKey || e.metaKey || e.altKey) return  // let browser shortcuts (Ctrl+Shift+R etc.) through
       const list = jobsRef.current, idx = selRef.current, job = list[idx]
@@ -557,6 +584,9 @@ export default function V2JobFeed() {
 
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in the score modal */ }) }, [])
+  // OPEN-10: `scoring_default_depth` is the setting the scorer itself falls back
+  // to; the Feed's one-click path now reads the same value instead of forcing full.
+  useEffect(() => { api.get('/settings').then(({ data }) => setDefaultDepth(data?.scoring_default_depth === 'full' ? 'full' : 'light')).catch(() => { /* silent: the light default already applies */ }) }, [])
 
   // ?job=<id> is the job permalink — open that job's detail. The param is kept in
   // the URL (and re-synced below) so the link survives a refresh or a copy-paste.
@@ -861,7 +891,7 @@ export default function V2JobFeed() {
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent)' }}>···</div>
                           </>
                         ) : (
-                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title="Score this role" style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
+                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
                         )}
                         {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 99, background: 'var(--accent)', border: '2px solid var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
                       </div>
@@ -1178,7 +1208,7 @@ export default function V2JobFeed() {
         const existing = single?.tailored_resume_id
         return (
           <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div ref={pickerPanel} onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* header */}
               <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
                 <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Create résumé copy</span>
@@ -1238,7 +1268,7 @@ export default function V2JobFeed() {
       {/* rescore modal — pick résumés + depth */}
       {rescoreJob && (
         <div onClick={() => setRescoreJob(null)} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div ref={rescorePanel} onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* header */}
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
               <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>{rescoreJob.verb} against résumés</span>

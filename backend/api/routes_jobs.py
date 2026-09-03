@@ -399,7 +399,13 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
             _hd = await resolve_company_h1b(db, existing.company or "", allow_live=False)
             apply_salary_to_job(existing, (_hd or {}).get("median_salary"))
         db.commit()
-        return {"id": str(existing.id), "company": existing.company, "title": existing.title, "new": False}
+        # OPEN-12: `saved` is the field the extension reads — a row sitting at
+        # `ignored` never reaches the feed, and re-saving it will not change that.
+        out = {"id": str(existing.id), "company": existing.company, "title": existing.title,
+               "new": False, "saved": existing.status != "ignored", "status": existing.status}
+        if existing.status == "ignored":
+            out["reason"] = "already saved earlier and filtered out then — it stays out of the feed"
+        return out
 
     # Link to the hardcoded "Extension" search (manual Save-to-Job-Feed flow).
     # The "Extension LI" search (search_mode=linkedin_extension) is reserved for the
@@ -411,7 +417,12 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     # title-exclude matched case-insensitively, AND merged with global title-exclude phrases.
     # Rejected jobs are still saved as 'ignored' so the dedup keys stick — this prevents
     # the user from re-saving the same rejected job over and over.
+    # OPEN-12: the filters used to run silently — the job was stored `ignored`,
+    # never appeared in the feed, and the person who saved it was told nothing.
+    # `reject_message` is the sentence the extension shows; `filter_reject_reason`
+    # stays the operator-facing log line.
     filter_reject_reason = None
+    reject_message = None
     if ext_search is not None:
         from backend.models.db import get_global_title_exclude
         title_lower = title.lower()
@@ -419,15 +430,19 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
         exclude_kw = list(set((ext_search.title_exclude_keywords or []) + get_global_title_exclude(db)))
         if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
             filter_reject_reason = f"title-include miss: needed any of {include_kw}"
+            reject_message = ("title matches none of the required keywords ("
+                              + ", ".join(include_kw) + ")")
         if not filter_reject_reason and exclude_kw:
             matched = [kw for kw in exclude_kw if _re.search(r'\b' + _re.escape(kw) + r'\b', title, _re.IGNORECASE)]
             if matched:
                 filter_reject_reason = f"title-exclude hit: {', '.join(matched)}"
+                reject_message = "title excluded by " + ", ".join(f"'{kw}'" for kw in matched)
         if not filter_reject_reason:
             company_lower = company.lower()
             for excl in (ext_search.company_exclude or []):
                 if excl and excl.lower() == company_lower:
                     filter_reject_reason = f"company-exclude: {excl}"
+                    reject_message = f"company excluded by '{excl}'"
                     break
 
     job = Job(
@@ -460,6 +475,7 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
         _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
         logger.info(f"save-from-extension: skipping (body exclusion) — '{title}' @ '{company}' — phrase: {_phrase!r}")
         job.status = "ignored"
+        reject_message = f"description matched the excluded phrase '{_phrase}'"
 
     db.add(job)
     db.commit()
@@ -487,14 +503,20 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
         except Exception as e:
             logger.warning(f"save-from-extension: auto-score launch failed for {job.id}: {e}")
 
-    return {
+    out = {
         "id": str(job.id),
         "company": job.company,
         "title": job.title,
         "new": True,
+        # OPEN-12: the row is always written (the dedup keys have to stick), but
+        # `saved` says whether it actually reached the feed.
+        "saved": job.status == "new",
         "status": job.status,
         "h1b_jd_flag": bool(job.h1b_jd_flag),
     }
+    if job.status == "ignored":
+        out["reason"] = reject_message or "filtered out by your Extension search rules"
+    return out
 
 
 @router.post("/bulk-update")

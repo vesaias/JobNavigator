@@ -156,15 +156,12 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
         if isinstance(result, dict) and result.get("error"):
             logger.warning("Search %s finished with scrape error: %s", search_id, result.get("error"))
         # Returned string becomes JobRun.result_summary (Stats -> Run history).
-        if isinstance(result, dict):
-            summary = (f"{search_name} - {result.get('jobs_found', 0)} seen, "
-                       f"+{result.get('new_jobs', 0)} new")
-            # R3-A-03: name the boards that hard-failed, so "9 seen, +0 new"
-            # can't be mistaken for a quiet day on every configured source.
-            from backend.scraper.orchestrator import describe_source_errors
-            failed = describe_source_errors(result.get("source_breakdown"))
-            return f"{summary} · {failed}" if failed else summary
-        return f"{search_name} - nothing ran"
+        # OPEN-03: built from the ScrapeLog row the run just wrote, so the line
+        # and the audit row can never carry different numbers — and the postings
+        # the title filters rejected (still stored as `ignored`, which is why a
+        # run could leave more rows than "N seen") are named.
+        from backend.scraper.orchestrator import summarize_search_run
+        return summarize_search_run(search_name, result)
 
     from backend.job_monitor import launch_background, JobAlreadyRunningError
     try:

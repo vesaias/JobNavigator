@@ -135,6 +135,7 @@ export default function Stats() {
   const [typeOpen, setTypeOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [coreErr, setCoreErr] = useState(false)   // STAT-03: any core stats request failed
+  const [schedErr, setSchedErr] = useState(false) // OPEN-06: /scheduler/jobs failed
   const [triggering, setTriggering] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
@@ -184,7 +185,12 @@ export default function Stats() {
       api.get('/scheduler/jobs').then(({ data }) => data).catch(() => null),
       api.get('/monitor/history', { params: { limit: RUN_PAGE } }).then(({ data }) => data).catch(() => null),
     ])
-    if (j) { setJobs(j); runningRef.current = j.some((x) => x.running) }
+    // OPEN-06: STAT-03 gave the funnel and the 30-day card an explicit failure
+    // state but left this one drawing an empty-but-plausible table — "0 jobs" and
+    // no rows reads exactly like a correctly configured, idle scheduler. Same
+    // treatment: drop the stale rows and say the request failed.
+    if (j) { setJobs(j); setSchedErr(false); runningRef.current = j.some((x) => x.running) }
+    else { setJobs([]); setSchedErr(true); runningRef.current = false }
     // the poll only ever re-reads the first page, so rows fetched by Load more sit
     // past it and have to survive the refresh
     if (r) {
@@ -573,8 +579,11 @@ export default function Stats() {
         <div ref={schedRef} style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <span style={H}>Schedules</span>
-            <span style={NOTE}>{jobs.length} job{jobs.length === 1 ? '' : 's'} · next runs in {TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings</span>
+            <span style={NOTE}>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</span>
           </div>
+          {schedErr ? (
+            <div style={{ padding: '26px 20px 30px', borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div>
+          ) : (<>
           <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
             <span style={{ flex: '0 1 250px', minWidth: 0 }}>Job</span>
             {showId && <span style={{ flex: '0 0 132px' }}>Job ID</span>}
@@ -612,6 +621,7 @@ export default function Stats() {
               </div>
             )
           })}
+          </>)}
         </div>
 
         {/* run history / activity log */}

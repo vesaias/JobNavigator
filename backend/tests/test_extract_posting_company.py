@@ -179,3 +179,54 @@ async def test_extract_posting_keeps_jsonld_hiring_organization(_offline_fetch):
     out = await extract_posting(ExtractRequest(
         url="https://job-boards.greenhouse.io/vercel/jobs/6163585004"))
     assert out == {"title": "SOX Manager", "company": "Vercel Inc."}
+
+
+# ── OPEN-04: HTML entities in the extracted fields ───────────────────────────
+# The R3-A-05 fix returned the right employer, but the LinkedIn path still handed
+# the Log-application modal a raw "&amp;" in the title. JSON-LD lives inside a
+# <script>, whose contents BeautifulSoup hands back as raw text — nothing there
+# decodes an entity, and json.loads has no reason to.
+
+@pytest.mark.parametrize("raw,expected", [
+    ("AI Strategy &amp; Health Plan Tech", "AI Strategy & Health Plan Tech"),
+    ("R&amp;D Lead &mdash; Remote", "R&D Lead — Remote"),
+    ("Caf&eacute; Manager", "Café Manager"),
+    ("Double &amp;amp; encoded", "Double & encoded"),
+    ("Nothing to decode", "Nothing to decode"),
+    ("", ""),
+    (None, None),
+])
+def test_decode_entities(raw, expected):
+    from backend.api.routes_applications import _decode_entities
+    assert _decode_entities(raw) == expected
+
+
+@pytest.mark.asyncio
+async def test_extract_posting_decodes_entities_in_a_jsonld_title(_offline_fetch):
+    """The exact round-3 case: LinkedIn's JSON-LD title carries `&amp;`."""
+    from backend.api.routes_applications import ExtractRequest, extract_posting
+    _offline_fetch("""
+    <html><head>
+    <script type="application/ld+json">
+    {"@type":"JobPosting",
+     "title":"Lead Technical Product Manager - AI Strategy &amp; Health Plan Tech - Remote Kansas",
+     "hiringOrganization":{"@type":"Organization","name":"Optum &amp; Co"}}
+    </script></head><body></body></html>
+    """)
+    out = await extract_posting(ExtractRequest(
+        url="https://www.linkedin.com/jobs/view/4460587357"))
+    assert out["title"] == ("Lead Technical Product Manager - AI Strategy & "
+                            "Health Plan Tech - Remote Kansas")
+    assert out["company"] == "Optum & Co"
+
+
+@pytest.mark.asyncio
+async def test_extract_posting_decodes_entities_in_an_og_title(_offline_fetch):
+    from backend.api.routes_applications import ExtractRequest, extract_posting
+    _offline_fetch("""
+    <html><head><meta property="og:title" content="Research &amp;amp; Insights Manager">
+    </head><body></body></html>
+    """)
+    out = await extract_posting(ExtractRequest(
+        url="https://job-boards.greenhouse.io/duolingo/jobs/1"))
+    assert out["title"] == "Research & Insights Manager"

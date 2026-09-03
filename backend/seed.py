@@ -33,6 +33,9 @@ DEFAULT_SETTINGS = {
     "jobright_email": ("", "Jobright.ai account email"),
     "jobright_password": ("", "Jobright.ai account password"),
     "jobright_session_id": ("", "Jobright.ai session cookie (auto-managed, 60-day expiry)"),
+    # OPEN-16: the cookie itself is write-only to the UI (redacted on GET), so the
+    # Accounts tab needs a plain timestamp to say how long it is still good for.
+    "jobright_session_obtained_at": ("", "UTC ISO timestamp of the last successful Jobright login. Read-only; set by the scraper."),
     "reject_cron": ("0 4 * * *", "Auto-reject cron (min hour day month dow). Empty = disabled"),
     "backup_cron": ("0 3 * * *", "Backup cron schedule (min hour day month dow). Empty = disabled"),
     "scoring_rubric": ("Score each resume using these criteria (each 0-20, sum to 0-100):\n1. SKILLS MATCH (weight: 20): How many required technical skills/tools does the candidate have?\n2. EXPERIENCE LEVEL (weight: 20): Does seniority/years match? (entry-level resume for senior role = low)\n3. DOMAIN FIT (weight: 20): Has the candidate worked in the same industry/domain?\n4. ROLE ALIGNMENT (weight: 20): Does the candidate's career trajectory match this role type?\n5. REQUIREMENTS MET (weight: 20): Does the candidate meet stated requirements (education, certs, clearance)?\n\nUse the FULL 0-100 range. 90+ = perfect match. 50-70 = decent with gaps. Below 30 = poor match.\nAvoid clustering scores — differentiate meaningfully between resumes and jobs.", "Editable resume scoring rubric"),
@@ -327,6 +330,119 @@ def is_known_setting(key: str) -> bool:
 def unknown_setting_keys(keys) -> list:
     """The subset of `keys` no reader in the codebase would ever look at."""
     return [k for k in keys if not is_known_setting(k)]
+
+
+# ── Value validation (OPEN-01) ──────────────────────────────────────────────
+# SET-27 added a digit filter and a cron guard to the Settings screen, but the
+# API accepted anything: a non-numeric interval was written happily and then blew
+# up in configure_scheduler(), i.e. the backend could no longer start. The three
+# value shapes the app actually parses are validated here, next to the defaults
+# they are derived from.
+
+def _int_setting_keys() -> set:
+    """Every seeded key whose default is a plain integer.
+
+    Derived rather than listed so a new numeric default can't be added without
+    picking up the guard. Matches the nine rows Settings.jsx marks `int: true`
+    (scoring_max_concurrent, tailoring_max_concurrent, autofill_default_length,
+    email_llm_confidence_threshold, scrape_interval_minutes,
+    email_check_interval_minutes, job_archive_after_days, auto_reject_after_days,
+    fit_score_threshold).
+    """
+    keys = set()
+    for key, (value, _desc) in DEFAULT_SETTINGS.items():
+        if not isinstance(value, str):
+            continue
+        try:
+            int(value)
+        except (TypeError, ValueError):
+            continue
+        keys.add(key)
+    return keys
+
+
+INT_SETTING_KEYS = _int_setting_keys()
+
+# Providers the LLM dispatcher knows how to call. "" means "inherit the primary
+# llm_provider", which every per-feature prefix does.
+_LLM_PROVIDERS = {"", "claude_api", "claude_code", "openai", "ollama", "openrouter"}
+
+# Depth words. `tailor_auto_quick_score` also honours legacy boolean spellings
+# (see routes_resumes._resolve_chain_score_depth).
+_DEPTHS = {"light", "full"}
+
+ENUM_SETTING_VALUES = {
+    "llm_provider": _LLM_PROVIDERS,
+    "llm_fallback_provider": _LLM_PROVIDERS,
+    "scoring_llm_provider": _LLM_PROVIDERS,
+    "email_llm_provider": _LLM_PROVIDERS,
+    "cv_tailor_llm_provider": _LLM_PROVIDERS,
+    "cover_letter_llm_provider": _LLM_PROVIDERS,
+    "autofill_llm_provider": _LLM_PROVIDERS,
+    "scoring_default_depth": _DEPTHS,
+    "on_save_action": {"off"} | _DEPTHS,
+    "tailor_auto_quick_score": {"off", "false", "no", "0", "true", "yes", "1", ""} | _DEPTHS,
+    "tracer_links_url_style": {"path", "param", "path_jobid", "param_jobid"},
+}
+
+
+def _cron_error(value: str) -> str | None:
+    """None if `value` is a usable 5-field cron expression (empty = disabled)."""
+    expr = (value or "").strip()
+    if not expr:
+        return None                      # empty disables the job — always allowed
+    if len(expr.split()) != 5:
+        return "needs exactly 5 whitespace-separated fields (min hour day month dow)"
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+    except ImportError:                  # pragma: no cover - apscheduler always present in the app
+        return None
+    try:
+        CronTrigger.from_crontab(expr)
+    except (ValueError, KeyError) as e:
+        return f"not a valid cron expression ({e})"
+    return None
+
+
+def invalid_setting_values(updates: dict) -> list:
+    """Human-readable complaints for every value the app could not parse back.
+
+    One entry per offending key so PATCH can reject the whole request with a
+    single 400 listing all of them, the way the unknown-key guard already does.
+    """
+    problems = []
+    for key, value in sorted(updates.items()):
+        if key in INT_SETTING_KEYS:
+            ok = False
+            if isinstance(value, bool):
+                ok = False               # True/False are ints in Python; not here
+            elif isinstance(value, int):
+                ok = True
+            elif isinstance(value, str):
+                try:
+                    int(value.strip())
+                    ok = True
+                except (TypeError, ValueError):
+                    ok = False
+            if not ok:
+                problems.append(f"{key}: must be a whole number (got {value!r})")
+            elif int(str(value).strip()) < 0:
+                problems.append(f"{key}: must not be negative (got {value!r})")
+            continue
+        if key.endswith("_cron"):
+            if not isinstance(value, str):
+                problems.append(f"{key}: must be a cron string (got {value!r})")
+                continue
+            err = _cron_error(value)
+            if err:
+                problems.append(f"{key}: {err}")
+            continue
+        allowed = ENUM_SETTING_VALUES.get(key)
+        if allowed is not None:
+            if not isinstance(value, str) or value.strip().lower() not in allowed:
+                shown = ", ".join(sorted(v for v in allowed if v)) or "(empty)"
+                problems.append(f"{key}: must be one of {shown} (got {value!r})")
+    return problems
 
 
 SEED_COMPANIES = [

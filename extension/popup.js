@@ -118,7 +118,7 @@ function _extractDescFn() {
 // ---- state ----
 const state = {
   screen: 'capture', url: '', host: '', path: '',
-  send: 'idle', applied: 'idle', lastError: '',
+  send: 'idle', applied: 'idle', lastError: '', filterReason: '',
   li: false, af: false, atsMode: 'off', len: 250, captured: 0,
   theme: 'system',
   liInfo: false, afInfo: false, charsOpen: false, urlOpen: false,
@@ -148,8 +148,9 @@ function render() {
   $('chipDetected').classList.toggle('hide', !detected);
   $('chipNot').classList.toggle('hide', detected);
 
-  // send states
-  $('btnSend').classList.toggle('hide', state.send !== 'idle');
+  // send states — 'filtered' is a 200 the server refused to feed (OPEN-12), so
+  // the primary button stays available rather than leaving the popup stuck.
+  $('btnSend').classList.toggle('hide', state.send !== 'idle' && state.send !== 'filtered');
   $('btnSending').classList.toggle('hide', state.send !== 'sending');
   $('btnSent').classList.toggle('hide', state.send !== 'sent');
   $('btnRetry').classList.toggle('hide', state.send !== 'error');
@@ -164,9 +165,17 @@ function render() {
   else ab.innerHTML = 'Save as applied';
 
   // error card (send or applied) — text depends on which action failed
-  const showErr = state.send === 'error' || state.applied === 'error';
+  // OPEN-12: it also carries the "saved but filtered out" case, which used to be
+  // completely silent — the job went to the DB as `ignored` and never showed up.
+  const showErr = state.send === 'error' || state.applied === 'error' || state.send === 'filtered';
   $('errCard').classList.toggle('hide', !showErr);
-  if (showErr) $('errHd').textContent = state.lastError === 'applied' ? "Couldn't reach the Application Board" : "Couldn't reach the Job Feed";
+  if (state.send === 'filtered') {
+    $('errHd').textContent = 'Not added to the job feed';
+    $('errBo').textContent = `${state.filterReason || 'Filtered out by your Extension search rules'}. Edit the rules in Searches › Extension.`;
+  } else if (showErr) {
+    $('errHd').textContent = state.lastError === 'applied' ? "Couldn't reach the Application Board" : "Couldn't reach the Job Feed";
+    $('errBo').textContent = 'Not saved. Check your connection, then retry.';
+  }
 
   // captured strip + LinkedIn count
   $('capturedStrip').classList.toggle('hide', state.captured <= 0);
@@ -210,6 +219,15 @@ async function doSend() {
       body: JSON.stringify({ title, company, url, description }),
     });
     if (!resp.ok) throw new Error(String(resp.status));
+    // OPEN-12: a 200 does not mean it reached the feed — the Extension search's
+    // title/company filters (merged with the global title-exclude list) store the
+    // job as `ignored` so the dedup keys stick. The server now says so; say it too.
+    const data = await resp.json().catch(() => ({}));
+    if (data && data.saved === false) {
+      state.send = 'filtered'; state.filterReason = data.reason || ''; render();
+      return;
+    }
+    state.filterReason = '';
     state.send = 'sent'; render();
     clearTimeout(_sendT); _sendT = setTimeout(() => { state.send = 'idle'; render(); }, 1800);
   } catch { state.send = 'error'; state.lastError = 'send'; render(); }

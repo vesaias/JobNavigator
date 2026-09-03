@@ -225,7 +225,9 @@ export default function ResumeEditor() {
       setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
       navigate('/v2/resumes')
     })
-    api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch(() => { /* silent: the picker falls back to the stored template id as its label */ })
+    // OPEN-05: converted — the Layout picker has no options without this, and
+    // the user is looking at the editor they just opened.
+    api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) })
     return () => { alive = false }
   }, [id, navigate])
 
@@ -619,8 +621,8 @@ export default function ResumeEditor() {
       </div>
 
       {tailorOpen && (isCopy
-        ? <RetailorModal doc={doc} job={jobData} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runRetailor} />
-        : <TailorModal doc={doc} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
+        ? <RetailorModal doc={doc} job={jobData} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runRetailor} pushToast={pushToast} />
+        : <TailorModal doc={doc} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runTailor} pushToast={pushToast} />)}
       {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
 
@@ -633,7 +635,7 @@ export default function ResumeEditor() {
 // The job is already decided — we are on that job's résumé. What is open is
 // which base to work from, and whether to run the tailoring LLM at all or just
 // take an exact copy for a fresh set of tracer links.
-function RetailorModal({ doc, job, chain, onClose, onRun }) {
+function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   useEscape(onClose)   // RES-15
   const panel = useRef(null)
   useSnapTop(panel)   // RES-32
@@ -643,9 +645,11 @@ function RetailorModal({ doc, job, chain, onClose, onRun }) {
   const [baseId, setBaseId] = useState(doc.parent_id || 'persona')
 
   useEffect(() => {
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch(() => { /* silent: the modal renders “No base résumés yet.” and Re-tailor stays disabled */ })
-    api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional row in the base list */ })
-  }, [])
+    // OPEN-05: converted — the user opened this modal to pick a source, and an
+    // empty list with a disabled button says nothing about why.
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your base résumés — there is nothing to re-tailor from.' }) })
+    api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
+  }, [pushToast])
 
   // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be
   // tailored from — RES-28: this was a `personaCopyable = false` constant.
@@ -728,7 +732,7 @@ const chainNote = (chain) => (chain
   : 'Scoring after tailoring is off')
 
 // ── tailor modal (job picker + freeform + persona) ───────────────────────────
-function TailorModal({ doc, chain, onClose, onRun }) {
+function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   useEscape(onClose)   // RES-15
   const panel = useRef(null)
   useSnapTop(panel)   // RES-32
@@ -744,10 +748,12 @@ function TailorModal({ doc, chain, onClose, onRun }) {
 
   useEffect(() => {
     api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60 } })
-      .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch(() => { /* silent: the empty list already points at the freeform box, which is the working path */ })
+      // OPEN-05: converted — this is the modal's own job list; empty with no
+      // explanation reads as "you have no saved jobs", which may not be true.
+      .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your jobs — paste a description instead.' }) })
     api.get('/resumes', { params: { is_base: false } })
       .then(({ data }) => setExisting(new Set((data || []).filter((r) => String(r.parent_id) === String(baseId)).map((r) => String(r.job_id))))).catch(() => { /* silent: drives only the “✦ exists” hint on a row */ })
-  }, [baseId])
+  }, [baseId, pushToast])
 
   const baseName = (r) => (typeof r === 'string' ? r : r?.name)
   const jobScore = (j) => {

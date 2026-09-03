@@ -43,14 +43,30 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     handful written at runtime (seed.RUNTIME_SETTING_KEYS). A typo used to create
     a brand-new Setting row nothing ever reads (SET-28), so unknown keys are now
     rejected as a group with 400.
+
+    Values are checked too (OPEN-01): integer keys must be whole and non-negative,
+    `*_cron` keys must be empty or a 5-field expression APScheduler can parse, and
+    enum keys must name a value their reader understands. A bad interval used to
+    be written happily and then raise inside configure_scheduler() — after which
+    the backend could not start.
     """
-    from backend.seed import unknown_setting_keys
+    from backend.seed import invalid_setting_values, unknown_setting_keys
 
     unknown = unknown_setting_keys(updates.keys())
     if unknown:
         raise HTTPException(
             status_code=400,
             detail=f"Unknown setting: {', '.join(sorted(unknown))}",
+        )
+
+    # The redacted placeholder is never a real value — it is skipped below too.
+    checkable = {k: v for k, v in updates.items()
+                 if not (isinstance(v, str) and v == "•" * 6)}
+    problems = invalid_setting_values(checkable)
+    if problems:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid setting value — " + "; ".join(problems),
         )
 
     warnings: list[str] = []

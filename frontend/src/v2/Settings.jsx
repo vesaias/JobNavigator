@@ -219,7 +219,9 @@ export default function Settings() {
 
   useEffect(() => {
     load()
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only fills the default-résumé picker; SET-06 covers the settings load itself */ })
+    // OPEN-05: converted — this is the Default résumé picker's entire option
+    // list. Empty, it looks like a setting with nothing to choose.
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) })
     api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ })
     api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => { /* silent: the LinkedIn row reads “unknown” and its own actions report their failures */ })
   }, [load])
@@ -255,7 +257,10 @@ export default function Settings() {
       // SET-08: the optimistic value stayed on screen after a failed PATCH, so
       // the UI disagreed with the server until a reload — put the old one back
       setS((p) => { const n = { ...p }; if (prev === undefined) delete n[key]; else n[key] = prev; return n })
-      flash('Could not save — try again', true)
+      // OPEN-01: the server now validates int / cron / enum values and says which
+      // key it refused and why — show that instead of a generic failure.
+      const detail = e?.response?.status === 400 ? e?.response?.data?.detail : null
+      flash(typeof detail === 'string' && detail ? detail : 'Could not save — try again', true)
       return false
     }
   }, [S])
@@ -288,6 +293,10 @@ export default function Settings() {
   const SW = (label, help, offHelp, key, o = {}) => ({ kind: 'switch', label, help, offHelp, key, ...o })
   const E = (label, help, key, o = {}) => ({ kind: 'edit', label, help, key, ...o })
   const BT = (label, help, btnLabel, act, o = {}) => ({ kind: 'button', label, help, btnLabel, act, ...o })
+  // OPEN-16: a value the app writes and the user may only look at (and clear).
+  // `key` is redacted by GET /settings, so all the row can show is "set / not set"
+  // plus how long it is still good for, from `sinceKey` + `days`.
+  const RO = (label, help, key, o = {}) => ({ kind: 'readonly', label, help, key, ...o })
   const LLM = (label, help, base, o = {}) => ({ kind: 'llm', label, help, base, ...o })
 
   const runAction = async (id, fn) => {
@@ -439,6 +448,11 @@ export default function Settings() {
       ['jobright', '', 'Jobright.ai', 'credentials for the Jobright search mode', [
         B('Email', 'Your Jobright account.', 'jobright_email', { w: '260px' }),
         B('Password', 'Stored locally.', 'jobright_password', { secret: true, w: '260px' }),
+        RO('Session', 'Signed in automatically the first time a Jobright search runs.', 'jobright_session_id',
+          { sinceKey: 'jobright_session_obtained_at', days: 60, clearLabel: 'Sign out',
+            clearKeys: ['jobright_session_id', 'jobright_session_obtained_at'],
+            emptyText: 'Not signed in — the next Jobright run signs in for you.',
+            info: 'Jobright hands out a 60-day cookie. The scraper stores it, reuses it across restarts and renews it on its own when it expires or is rejected; nothing here needs doing unless you want to force a fresh sign-in.' }),
       ]],
       ['linkedin', '', 'LinkedIn', "personal scraping + the extension's separate mock account", [
         B('Personal email', 'Used by LinkedIn Personal collections.', 'linkedin_email', { w: '260px' }),
@@ -658,6 +672,36 @@ function Row({ r, ctx }) {
         )
       case 'apikey':
         return <ApiKeyRow value={val('dashboard_api_key')} save={save} flash={flash} />
+      case 'readonly': {
+        const set = !!val(r.key)
+        if (!set) return <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--muted)' }}>{r.emptyText || 'Not set'}</span>
+        const since = val(r.sinceKey)
+        const until = (() => {
+          if (!since || !r.days) return null
+          const t = new Date(since).getTime()
+          if (Number.isNaN(t)) return null
+          return new Date(t + r.days * 86400000)
+        })()
+        const expired = until && until.getTime() < Date.now()
+        return (
+          <>
+            <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text-2)' }}>{'•'.repeat(6)}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: expired ? 'var(--warn)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {until
+                ? (expired ? `expired ${until.toLocaleDateString()} — renewed on the next run`
+                  : `session valid until ${until.toLocaleDateString()}`)
+                : 'session stored — expiry unknown'}
+            </span>
+            {r.clearLabel && (
+              <ActionBtn label={r.clearLabel} state="" onClick={async () => {
+                const ok = await save(r.key, '')
+                for (const k of (r.clearKeys || []).filter((k) => k !== r.key)) await save(k, '')
+                if (ok) flash('Signed out')
+              }} />
+            )}
+          </>
+        )
+      }
       case 'linkedin':
         return <LinkedInRow li={li} setLi={setLi} flash={flash} />
       default:

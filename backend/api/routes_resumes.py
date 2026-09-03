@@ -1119,12 +1119,20 @@ def _clear_orphan_tailored_score(db: Session, job_id) -> bool:
 
 @router.get("/{resume_id}/preview")
 def preview_resume(resume_id: str, db: Session = Depends(get_db)):
-    """Render resume as HTML and return it for preview."""
+    """Render resume as HTML and return it for preview.
+
+    OPEN-13: this used to hand back the *un-rewritten* document while /pdf
+    rewrote the contact links into tracked ones, so the two endpoints disagreed
+    about what the résumé says. `_rewrite_urls_with_tracers` reuses an existing
+    link per (owner, destination) and only mints one when there is none, so
+    previewing costs nothing extra and the PDF rendered afterwards carries the
+    same tokens.
+    """
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    json_data = resume.json_data or {}
+    json_data = _rewrite_urls_with_tracers(resume.json_data or {}, str(resume.id), db)
     html = _render_html(json_data, resume.template, resume.page_format)
     return HTMLResponse(content=html)
 
