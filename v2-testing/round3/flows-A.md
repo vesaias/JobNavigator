@@ -84,7 +84,7 @@ Scripts: `r3a_10_search.py` … `r3a_21_badge.py`. LLM calls: **0** (`auto_scori
 **Repro** Run a keyword search with `sources:["google","zip_recruiter","indeed"]`.
 **Actual** The backend log shows `JobSpy:ZipRecruiter - ZipRecruiter response status code 403` and `JobSpy:Google - initial cursor not found`, but the run finished `completed`, `is_warning:false`, summary `ZZA Search - 9 seen, +0 new`, and the ScrapeLog row records no error. Neither the Searches card nor Stats shows that one of the three configured boards refused the request.
 **Expected** A 403 from a configured source belongs in `ScrapeLog.error` / `is_warning`, the way an empty company scrape does.
-**Status** needs fix (406aebe capture was a no-op: JobSpy loggers set propagate=False; `/scrape-log` did not serialize `source_breakdown`) — re-fix in progress 2026-09-04.
+**Status** fixed (406aebe + 2946d5b: capture attached to the non-propagating `JobSpy:<Board>` loggers, `/scrape-log` serializes `source_breakdown`), verified live 2026-09-04: real run → `{"indeed": {seen 4, new 4}, "zip_recruiter": {error "403"}}`, `is_warning` true, summary "… · zip_recruiter: 403", `last_source_errors` on the search, listed by `/health/entities`.
 
 **Verdict: ✔ for the UI flow (create / test / run / edit / interval / pause / delete all work); ✖ for the Indeed data path (R3-A-02).**
 
@@ -227,7 +227,7 @@ Subject: the `ZZA Delivery Program Manager @ ZZA Acme Systems` application from 
 **Repro** Add an interview, then try to change its time or location.
 **Actual** The row exposes only a status toggle (`scheduled ⇄ done`) and `✕`. A rescheduled interview — the most common change there is — means deleting the row and retyping all four fields. The backend already has `PATCH /applications/interviews/{id}` and the UI already calls it for `status`.
 **Expected** Click the row (or a small ✎) to reopen the same four-field form bound to that PATCH.
-**Status** needs fix (406aebe introduced a P1 regression: Applications page blank when any application has an interview — child `Detail` references parent state) — re-fix in progress 2026-09-04.
+**Status** fixed (406aebe + 2946d5b: interview-edit state passed into `Detail`; the blank-page regression is gone), verified live 2026-09-04: page renders with an interview row, click opens the inline form with Save, Escape cancels.
 
 **Verdict: ✔**
 
