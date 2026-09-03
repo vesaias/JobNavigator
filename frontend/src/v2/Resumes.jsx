@@ -173,7 +173,7 @@ export default function V2Resumes() {
                 : results.slice(0, resLimit).map((r, i) => (
                   <Card key={`${r.kind}-${r.id}-${i}`} onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
                     {/* ui: keep — uppercase kind badge (bg + r99): the Tag role, not Label */}
-                    <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
+                    <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
                     {r.note && <Helper style={{ flex: '0 0 auto' }}>{r.note}</Helper>}
                     {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
@@ -192,7 +192,7 @@ export default function V2Resumes() {
               {archived.slice(0, archLimit).map((c) => (
                 <Card key={c.id} onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
                   {/* ui: keep — uppercase "archived" badge (bg + r99): the Tag role, not Label */}
-                  <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
+                  <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{copyLabel(c)}</span>
                   <Helper style={{ flex: '0 0 auto' }}>{c.why}</Helper>
                 </Card>
@@ -232,7 +232,7 @@ export default function V2Resumes() {
                             {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
-                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
+                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                           </Chip>
                         ))}
                         {(persona.copies?.length || 0) > 6 && (
@@ -278,7 +278,7 @@ export default function V2Resumes() {
                             {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
-                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
+                            {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                           </Chip>
                         ))}
                         {copies.length > 6 && (

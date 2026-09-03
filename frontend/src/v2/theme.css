@@ -85,11 +85,17 @@
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  /* radii */
-  --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
-  --radius-modal:12px; --radius-control:99px;
+  /* radii — the whole scale, smallest first. --radius-mark is the inline diff
+     highlight drawn behind running text; --radius-inline the inline mono chip and
+     the 14-16px tick box; --radius-mini the 17-22px square control (checkbox,
+     paragraph button, funnel bar); --radius-cell the pick cell / small panel that
+     sits one step between the row and the card (segmented cells, the chart
+     tooltip, a note block). */
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
+  --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
+  --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
   /* buttons */
-  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-primary-bg-hover:var(--accent);
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink);
   --btn-primary-disabled-bg:var(--line); --btn-primary-disabled-ink:var(--muted);
   --btn-danger-bg:var(--bad); --btn-danger-ink:var(--accent-ink);
   --btn-secondary-bg:var(--surface); --btn-secondary-ink:var(--text-2); --btn-secondary-border:var(--edge);
@@ -116,7 +122,7 @@
   --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
   --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
-  --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
+  --menu-item-danger-ink:var(--bad); --menu-item-sep:var(--line-soft);
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
   --scrim-bg:var(--scrim);
@@ -223,11 +229,17 @@
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  /* radii */
-  --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
-  --radius-modal:12px; --radius-control:99px;
+  /* radii — the whole scale, smallest first. --radius-mark is the inline diff
+     highlight drawn behind running text; --radius-inline the inline mono chip and
+     the 14-16px tick box; --radius-mini the 17-22px square control (checkbox,
+     paragraph button, funnel bar); --radius-cell the pick cell / small panel that
+     sits one step between the row and the card (segmented cells, the chart
+     tooltip, a note block). */
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
+  --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
+  --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
   /* buttons */
-  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-primary-bg-hover:var(--accent);
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink);
   --btn-primary-disabled-bg:var(--line); --btn-primary-disabled-ink:var(--muted);
   --btn-danger-bg:var(--bad); --btn-danger-ink:var(--accent-ink);
   --btn-secondary-bg:var(--surface); --btn-secondary-ink:var(--text-2); --btn-secondary-border:var(--edge);
@@ -254,7 +266,7 @@
   --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
   --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
-  --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
+  --menu-item-danger-ink:var(--bad); --menu-item-sep:var(--line-soft);
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
   --scrim-bg:var(--scrim);

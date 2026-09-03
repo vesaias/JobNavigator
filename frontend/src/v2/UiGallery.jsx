@@ -4,6 +4,7 @@ import {
   Button, Pill, IconButton, Input, Textarea, SearchInput, Select, Row, Card, Band,
   DashedAdd, Menu, MenuHead, MenuItem, SectionHead, Chip, Tag, Dot, Link, NavLink,
   ModalPanel, Drawer, HeaderRow, Label, Helper, Heading, PageTitle, Spinner, ShowMore,
+  RemoveLink, RemoveX, MoveArrows,
 } from './ui'
 
 // The primitive gallery at /v2/ui — the page the D3 style crawl checks against
@@ -263,6 +264,17 @@ export default function UiGallery() {
           <S label="link · href"><Link href="https://example.com" target="_blank">Open the posting ↗</Link></S>
           <S label="navlink"><NavLink onClick={() => {}}>‹ All résumés</NavLink></S>
           <S label="navlink · padded"><NavLink pad="7px 8px" onClick={() => {}}>Skills</NavLink></S>
+        </Role>
+
+        <Role name="RemoveLink · RemoveX · MoveArrows" canonical="muted at rest; remove swings to --hover-bad-*, arrows wash like a NavLink"
+          tokens="--helper-ink · --hover-bad-bg/-ink · --navlink-hover-bg/-hover-ink · --t-11-5 · hover: v2-hover-bad, v2-hover-bad-text, v2-navlink"
+          note="The three affordances a list row carries. They lived in ResumeSections.jsx until D5; moving them here gave the ▲▼ pair, written out three times, one definition and one hover.">
+          <S label="remove link"><RemoveLink onClick={() => {}}>Remove role</RemoveLink></S>
+          <S label="remove ✕"><RemoveX onClick={() => {}} /></S>
+          <S label="remove ✕ · size 10"><RemoveX size={10} lh="19px" onClick={() => {}} /></S>
+          <S label="arrows"><MoveArrows onUp={() => {}} onDown={() => {}} /></S>
+          <S label="arrows · first row"><MoveArrows upOff onUp={() => {}} onDown={() => {}} /></S>
+          <S label="arrows · last row"><MoveArrows downOff onUp={() => {}} onDown={() => {}} /></S>
         </Role>
 
         <Role name="HeaderRow" canonical="modal 16 22 13 · screen 22 30 16 · compact 15 22 12, --head-line beneath"

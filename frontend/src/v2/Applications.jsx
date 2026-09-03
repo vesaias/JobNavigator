@@ -61,8 +61,10 @@ const POPOVER = { position: 'absolute', top: '100%', zIndex: 40 }
 // line box stops centring in the pill and the label rides ~1px high, and under
 // `normal` a fallback-font glyph (the ↗) drags it 1px the other way. Because the
 // height is fixed, this cannot affect any surrounding layout.
+// ui: keep — the detail header's own action pill (h30 · 13 · pad 0 14), shared by
+// the two anchors and the ⋯ beside them; Pill md is 31/12.5/pad 0 15.
 const ACT_BTN = {
-  height: 30, padding: '0 14px', borderRadius: 99, border: '1px solid var(--edge)',
+  height: 30, padding: '0 14px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
   fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap',
 }
@@ -343,7 +345,7 @@ export default function Applications() {
       <HeaderRow pad="0 30px 14px 24px" align="center" style={{ gap: 8 }}>
         {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks
             ui.jsx's boxed SearchInput so the two read as one control */}
-        <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
           {/* ui: keep — the search field's own ⌕ glyph, on the control's icon scale
               (like the ▾ carets), not a helper sub-line */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
@@ -367,7 +369,7 @@ export default function Applications() {
                     onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
                     style={{ ...(band === 'closed' ? { color: 'var(--muted)' } : null), ...(first ? { marginTop: 5, paddingTop: 10 } : null) }}
                     icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-                      <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>}>
+                      <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>}>
                     {name}
                   </MenuItem>
                 )
@@ -518,6 +520,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             </span>
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            {/* ui: keep — the three header actions are ACT_BTN pills; two of them are real
+                anchors so ⌘/middle-click still opens the posting, and Button/Pill render a div. */}
             {d.has_cached_page && <a href={`/api/jobs/${d.job_id}/cached-page`} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Snapshot of the posting from application day"
               style={{ ...ACT_BTN, textDecoration: 'none' }}>Cached</a>}
             {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Open the live posting"
@@ -545,12 +549,12 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               /* ui: keep — a segmented stage stepper, not a card: equal-flex cells
                  tinted per stage (accent / bad) when current */
               <div key={s.id} onClick={() => { if (!on) onStage(s.id) }} title={s.hint} className="v2-bd"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, borderRadius: 8, fontSize: 12.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, borderRadius: 'var(--radius-cell)', fontSize: 12.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
                   border: `1px solid ${on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--line)'}`,
                   background: on ? (rej ? 'var(--bad-soft)' : 'var(--accent-soft)') : 'var(--surface)',
                   color: on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--text-2)' }}>
                 {/* ui: keep — the stage stepper's own dot, part of the segmented control */}
-                <span style={{ width: 7, height: 7, borderRadius: 99, background: s.dot }} />{s.label}
+                <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: s.dot }} />{s.label}
               </div>
             )
           })}
@@ -584,8 +588,10 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   <span onClick={() => (editIv === iv.id ? setEditIv(null) : openIvEdit(iv))} title={editIv === iv.id ? 'Close without saving' : 'Edit this interview'} style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>{iv.what}</span>
                   {/* ui: keep — an uppercase status badge with a background + r99: the
                       `Tag` role (D4d), not a Label */}
-                  <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
-                  <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
+                  <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
+                  {/* ui: keep — a ✕ with a padded, rounded hover target so the --hover-bad
+                      wash reads as a box on the interview row; RemoveX draws no box */}
+                  <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 'var(--radius-inline)' }}>✕</span>
                 </div>
                 {editIv === iv.id ? (
                   <>
@@ -826,7 +832,9 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
             <div style={{ display: 'flex', gap: 5 }}>
               {['applied', 'interview', 'offer'].map((id) => {
                 const on = stage === id
-                return <div key={id} onClick={() => setStage(id)} className="v2-bd" style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{STAGE[id].label}</div>
+                // ui: keep — a segmented stage cell (equal flex, h33, accent-soft when picked),
+                // the same control as the stepper above; Pill is r99 and Card has no on-state.
+                return <div key={id} onClick={() => setStage(id)} className="v2-bd" style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-cell)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{STAGE[id].label}</div>
               })}
             </div>
           </div>

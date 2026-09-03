@@ -61,7 +61,7 @@ function Toast({ t, onClose }) {
     // dialog role) and not a Surface (four tinted grounds, its own r9 + shadow).
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
-      background: k.bg, border: `1px solid ${k.bd}`, borderRadius: 9, color: k.fg,
+      background: k.bg, border: `1px solid ${k.bd}`, borderRadius: 'var(--radius-card)', color: k.fg,
       boxShadow: 'var(--shadow-toast)',
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(10px)',
       transition: 'opacity 250ms ease, transform 250ms ease',
@@ -69,7 +69,7 @@ function Toast({ t, onClose }) {
       {k.spin && <Spinner size={11} color="currentColor" />}
       {/* ui: keep — a 16px filled glyph badge (✓ / ✕ on the toast tint), not a status dot: Dot draws a bare tone disc with no glyph */}
       {k.mark && (
-        <span style={{ flex: '0 0 auto', width: 16, height: 16, borderRadius: 99, background: k.markBg, color: 'var(--accent-ink)', fontSize: 9.5, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{k.mark}</span>
+        <span style={{ flex: '0 0 auto', width: 16, height: 16, borderRadius: 'var(--radius-control)', background: k.markBg, color: 'var(--accent-ink)', fontSize: 9.5, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{k.mark}</span>
       )}
       <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: 1.45 }}>{t.msg}</span>
       {label && (

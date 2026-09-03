@@ -654,6 +654,44 @@ export function NavLink({ pad, onClick, title, ariaLabel, children, style, class
   )
 }
 
+// ── RemoveLink / RemoveX / MoveArrows ───────────────────────────────────────
+// The three row affordances every list editor carries. They were written once in
+// `ResumeSections.jsx` (RemoveLink/RemoveX) and hand-copied twice more there and
+// once in the cover-letter editor (the ▲▼ pair); D5 moves them here so the role
+// has one definition and one hover, and re-exports the two old names from
+// `ResumeSections.jsx` so existing imports are untouched.
+//
+// RemoveLink is the worded form ("Remove role") that closes a card; RemoveX the
+// glyph a single row carries. Both are muted at rest and swing to --hover-bad-*
+// on hover (`v2-hover-bad` washes the box, `v2-hover-bad-text` the ink).
+export const RemoveLink = ({ onClick, children = 'Remove' }) => (
+  <span {...act(onClick, false)} className="v2-hover-bad v2-hover-bad-text"
+    style={{ fontSize: 'var(--t-11-5)', lineHeight: '17px', color: 'var(--helper-ink)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{children}</span>
+)
+export const RemoveX = ({ onClick, title = 'Remove', size = 11, lh }) => (
+  <span {...act(onClick, false)} title={title} aria-label={title} className="v2-hover-bad v2-hover-bad-text"
+    style={{ flex: '0 0 auto', color: 'var(--helper-ink)', fontSize: size, cursor: 'pointer', lineHeight: lh }}>✕</span>
+)
+// The reorder pair: an 8px ▲▼ column at --helper-ink, each arrow a `v2-navlink`.
+// `upOff` / `downOff` dim an end of the list to 0.35 and take the hover and the
+// pointer away — the cover-letter editor's contact rows need that, the résumé's
+// never do, and before this both drew their own pair with different hovers.
+export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
+  const arrow = (fn, off, title, glyph) => (
+    <span {...act(fn, off)} title={title} className={off ? undefined : 'v2-navlink'}
+      style={{ opacity: off ? 0.35 : 1, cursor: off ? 'default' : 'pointer' }}>{glyph}</span>
+  )
+  return (
+    <span className={className} style={{
+      flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1,
+      color: 'var(--helper-ink)', fontSize: 8, ...style,
+    }}>
+      {arrow(onUp, upOff, 'Move up', '▲')}
+      {arrow(onDown, downOff, 'Move down', '▼')}
+    </span>
+  )
+}
+
 // ── ModalPanel / Drawer ─────────────────────────────────────────────────────
 // ModalPanel canonical: surface · 1px --modal-border · r12 · --modal-shadow,
 // on a --scrim-bg scrim. Escape closes (useEscape, RES-15) and the panel is
@@ -847,17 +885,21 @@ const HEADING_SIZE = {
 // D4e left its sites inline because collapsing the two families is a design
 // decision; D4f names the family instead of collapsing it (allowed sizes
 // **15 · 15.5 · 16 · 17 · 18 · 19**, exactly the sizes already drawn).
-// It deliberately declares **no line-height**: every one of these titles sits in
-// a content-driven card box whose height is its own line box, so a whole-pixel
-// step here would move each card. The three sites that need one (a card with an
-// integer height to hold) pass it in `style`, with the reason at the call site.
+// Its line-height is **pinned to a whole pixel per size** (D5, per the user's
+// consistency rule in D1-D2 §"Heading strong line-heights"). Left unset these
+// titles inherited preflight's 1.5, so 15/15.5/17/19 landed on 22.5/23.25/25.5/28.5
+// and every card that holds one measured x.5 — the height Chrome rounds a 1px
+// border away from. 19 takes 26 so the two 19s (400- and 500-weight) share a box.
+// A card that has to hold a *different* integer height still passes its own
+// line-height in `style`, with the reason at the call site: the cover-letter row
+// (22) and the Feed's two-line title block (1.15) are the two that do.
 const HEADING_STRONG = {
-  15: { fontSize: 'var(--t-15)', letterSpacing: '-.01em' },
-  15.5: { fontSize: 'var(--t-15-5)', letterSpacing: '-.01em' },
-  16: { fontSize: 'var(--t-16)', letterSpacing: '-.01em' },
-  17: { fontSize: 'var(--t-17)', letterSpacing: '-.015em' },
-  18: { fontSize: 'var(--t-18)', letterSpacing: '-.015em' },
-  19: { fontSize: 'var(--t-19)', letterSpacing: '-.015em' },
+  15: { fontSize: 'var(--t-15)', lineHeight: '22px', letterSpacing: '-.01em' },
+  15.5: { fontSize: 'var(--t-15-5)', lineHeight: '23px', letterSpacing: '-.01em' },
+  16: { fontSize: 'var(--t-16)', lineHeight: '24px', letterSpacing: '-.01em' },
+  17: { fontSize: 'var(--t-17)', lineHeight: '25px', letterSpacing: '-.015em' },
+  18: { fontSize: 'var(--t-18)', lineHeight: '27px', letterSpacing: '-.015em' },
+  19: { fontSize: 'var(--t-19)', lineHeight: '26px', letterSpacing: '-.015em' },
 }
 export function Heading({ size, strong, id, title, children, style, className }) {
   const look = strong

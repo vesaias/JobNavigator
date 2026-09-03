@@ -50,7 +50,7 @@ export default function LoginModal({ onSuccess }) {
       {success ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
           {/* ui: keep — success glyph, not a control (no handler, no hover, 34px round badge) */}
-          <span style={{ width: 34, height: 34, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>
+          <span style={{ width: 34, height: 34, borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>
           <Heading size={19}>Signed in</Heading>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Loading dashboard…</span>
         </div>
@@ -66,7 +66,7 @@ export default function LoginModal({ onSuccess }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>API key</Label>
-            <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 7, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 'var(--radius-row)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
               {/* ui: keep — the API-key field is a bare input inside a v2-fieldwrap that also
                   holds the show/hide toggle and turns --bad on an error; Input draws its own
                   box, so it cannot render this composite */}

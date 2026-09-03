@@ -6,7 +6,7 @@ import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './Cover
 import ConfirmDialog from './ConfirmDialog'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, NavLink, SectionHead, Spinner, Surface } from './ui'
+import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -311,10 +311,10 @@ export default function CoverLetterEditor() {
         <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
-          style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99 }}>{badge}</span>
+          style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)' }}>{badge}</span>
         {/* R2-S-06: every other v2 screen names itself with an h1; visually this
             is the same span it always was (margin and font reset inline). */}
-        <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>
+        <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>
         <Helper title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(saveErr ? { color: 'var(--bad)' } : null) }}>
           {saveErr || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
         </Helper>
@@ -378,12 +378,9 @@ export default function CoverLetterEditor() {
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ flex: '45 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* controls + text: 45 % of the row */}
-                    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--muted)', fontSize: 8 }}>
-                      <span onClick={() => i > 0 && update((d) => { const a = d.header.contact_items; [a[i - 1], a[i]] = [a[i], a[i - 1]] })}
-                        title="Move up" className={i > 0 ? 'v2-hover-accent-text' : ''} style={{ cursor: i > 0 ? 'pointer' : 'default', opacity: i > 0 ? 1 : 0.35 }}>▲</span>
-                      <span onClick={() => i < arr.length - 1 && update((d) => { const a = d.header.contact_items; [a[i + 1], a[i]] = [a[i], a[i + 1]] })}
-                        title="Move down" className={i < arr.length - 1 ? 'v2-hover-accent-text' : ''} style={{ cursor: i < arr.length - 1 ? 'pointer' : 'default', opacity: i < arr.length - 1 ? 1 : 0.35 }}>▼</span>
-                    </span>
+                    <MoveArrows upOff={i === 0} downOff={i === arr.length - 1}
+                      onUp={() => update((d) => { const a = d.header.contact_items; [a[i - 1], a[i]] = [a[i], a[i - 1]] })}
+                      onDown={() => update((d) => { const a = d.header.contact_items; [a[i + 1], a[i]] = [a[i], a[i + 1]] })} />
                     <Input value={ct.text || ''} placeholder="Display text" ariaLabel="Contact item text"
                       onChange={(v) => update((d) => { d.header.contact_items[i].text = v })}
                       style={{ flex: 1, minWidth: 0 }} />
@@ -398,8 +395,7 @@ export default function CoverLetterEditor() {
                         onChange={(v) => update((d) => { d.header.contact_items[i].stub = v })}
                         style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center', minWidth: 0 }} />
                     )}
-                    <span onClick={() => update((d) => { d.header.contact_items.splice(i, 1) })} title="Remove"
-                      className="v2-hover-bad-text" style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>✕</span>
+                    <RemoveX onClick={() => update((d) => { d.header.contact_items.splice(i, 1) })} />
                     </div>
                   </div>
                 )
@@ -442,13 +438,13 @@ export default function CoverLetterEditor() {
                   {/* ui: keep — the ¶ ordinal is drawn in --edge, a dimmer ink than --label-ink, at .1em */}
                   <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--edge)' }}>¶ {i + 1}</span>
                   <span onClick={() => i > 0 && update((d) => { const a = d.body_paragraphs; [a[i - 1], a[i]] = [a[i], a[i - 1]] })} title="Move up" className={i > 0 ? 'v2-parabtn' : ''}
-                    style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === 0 ? 'default' : 'pointer' }}>↑</span>
+                    style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: 'var(--radius-mini)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === 0 ? 'default' : 'pointer' }}>↑</span>
                   <span onClick={() => i < paras.length - 1 && update((d) => { const a = d.body_paragraphs; [a[i + 1], a[i]] = [a[i], a[i + 1]] })} title="Move down" className={i < paras.length - 1 ? 'v2-parabtn' : ''}
-                    style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === paras.length - 1 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === paras.length - 1 ? 'default' : 'pointer' }}>↓</span>
+                    style={{ width: 20, height: 20, borderRadius: 'var(--radius-mini)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === paras.length - 1 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === paras.length - 1 ? 'default' : 'pointer' }}>↓</span>
                   <span onClick={() => undoRemove('Removed paragraph',
                     (d) => { d.body_paragraphs.splice(i, 1) },
                     (d) => { d.body_paragraphs = d.body_paragraphs || []; d.body_paragraphs.splice(i, 0, text) })} title="Delete paragraph" className="v2-parabtn-bad"
-                    style={{ width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
+                    style={{ width: 20, height: 20, borderRadius: 'var(--radius-mini)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
                 </div>
                 {/* ui: keep — a paragraph is flowing text inside the ¶ card's own box: no
                     border, no background, margin instead of padding, resize:none */}
@@ -477,8 +473,9 @@ export default function CoverLetterEditor() {
             {pdfBusy && <Spinner size={10} color="var(--edge)" />}
 
             <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+              {/* ui: keep — a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32 */}
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Cover letter template" className="v2-bd v2-ctl"
-                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
+                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
                 <span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {tplOpen && (
@@ -492,8 +489,9 @@ export default function CoverLetterEditor() {
             </span>
 
             <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+              {/* ui: keep — the paper-size twin of the template trigger above */}
               <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size — US Letter or A4" className="v2-bd v2-ctl"
-                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
+                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
                 <span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{fmtLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {fmtOpen && (

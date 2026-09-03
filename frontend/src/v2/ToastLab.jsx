@@ -30,19 +30,19 @@ export default function ToastLab() {
         </div>
         {/* D3: the primitive gallery is the other rail-less lab page; neither is in
             the rail, so they link to each other rather than being unreachable. */}
-        <a href="/v2/ui" className="v2-navlink v2-ctl" style={{ marginLeft: 'auto', height: 32, padding: '0 12px', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--accent)' }}>Primitives ›</a>
-        <div onClick={toggle} className="v2-act v2-ctl" style={{ height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+        <a href="/v2/ui" className="v2-navlink v2-ctl" style={{ marginLeft: 'auto', height: 32, padding: '0 12px', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--accent)' }}>Primitives ›</a>
+        <div onClick={toggle} className="v2-act v2-ctl" style={{ height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
           ◐ {dark ? 'Dark' : 'Light'}
         </div>
       </header>
 
       <div style={{ flex: 1, padding: '18px 30px 30px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
-        <div style={{ border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-menu)', background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }}>Fire one</span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {SAMPLES.map(([kind, msg, action, note], i) => (
               <div key={i} onClick={() => push({ kind, msg, action, onAction: () => {} })} title={note} className="v2-bdc v2-ctl"
-                style={{ height: 30, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
+                style={{ height: 30, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
                 <span style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>{kind}</span>
                 {msg.length > 34 ? `${msg.slice(0, 34)}…` : msg}
               </div>
@@ -50,14 +50,14 @@ export default function ToastLab() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <div onClick={() => SAMPLES.forEach(([kind, msg, action], i) => setTimeout(() => push({ kind, msg, action, onAction: () => {} }), i * 350))}
-              className="v2-ctl" style={{ height: 30, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Fire all (watch the 3-toast cap)</div>
+              className="v2-ctl" style={{ height: 30, padding: '0 15px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Fire all (watch the 3-toast cap)</div>
             <div onClick={() => toasts.forEach((t) => dismiss(t.id))} className="v2-act v2-ctl"
-              style={{ height: 30, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Clear</div>
+              style={{ height: 30, padding: '0 13px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Clear</div>
             <span style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted)' }}>{toasts.length} showing</span>
           </div>
         </div>
 
-        <div style={{ border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-menu)', background: 'var(--surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }}>Rules</span>
           {[
             'progress — paper card, ink text, spinner. Ambient status, not news. 2.5s.',

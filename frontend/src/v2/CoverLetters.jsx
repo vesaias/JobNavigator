@@ -15,7 +15,7 @@ export const STAGE_CLASS = { applied: 'cc-smartrecruiters', interview: 'cc-workd
 
 const ARCH_KEY = 'v2_cl_archive_open'
 const CTRL = {
-  height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8,
+  height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-cell)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
   justifyContent: 'space-between', fontSize: 12.5, cursor: 'pointer', color: 'var(--text)',
 }
@@ -70,7 +70,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
               row, and this Picker is already a documented keep for the same reason */}
           {options.map((o) => (
             <div key={o.id} className="v2-menuitem" onClick={() => { onPick(o.id); setOpen(false) }}
-              style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', minWidth: 0,
+              style={{ padding: '7px 9px', borderRadius: 'var(--radius-field)', fontSize: 12.5, cursor: 'pointer', minWidth: 0,
                 color: o.id === value ? 'var(--accent)' : 'var(--text-2)', fontWeight: o.id === value ? 500 : 400,
                 background: o.id === value ? 'var(--accent-soft)' : 'transparent' }}>
               <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</div>
@@ -107,7 +107,7 @@ export function LengthPicker({ value, onPick }) {
           /* ui: keep — a segmented control, not a card: three equal-flex cells
              that share one border run and swing to accent-soft when picked */
           <div key={id} onClick={() => onPick(id)} className="v2-bdc v2-ctl"
-            style={{ flex: 1, height: 31, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+            style={{ flex: 1, height: 31, borderRadius: 'var(--radius-cell)', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
               color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{name}</div>
         )
