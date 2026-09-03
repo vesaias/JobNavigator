@@ -148,6 +148,49 @@ Playwright runs inside the backend container: hit `http://caddy/v2/...`, API key
 
 ---
 
+## Primitive layer (`ui.jsx`, `/v2/ui`)
+
+`frontend/src/v2/ui.jsx` is the one place a v2 control is *drawn*. It exports a
+component per role — `Button`, `Pill`, `IconButton`, `Input`, `Textarea`,
+`SearchInput`, `Select`, `Row`, `Card`, `Band`, `DashedAdd`, `Menu`/`MenuHead`/
+`MenuItem`, `SectionHead`, `Chip`, `Tag`, `Dot`, `Link`/`NavLink`, `ModalPanel`,
+`Drawer`, `HeaderRow`, `Label`, `Helper`, `Heading`, `PageTitle`, `Spinner`,
+`ShowMore` — each rendering the **canonical signature** for that role: the
+dominant signature the D1 scan found, as approved in
+`v2-testing/round-design/D1-D2.md` §"D2 decision". Swapping a dominant-signature
+call site for its primitive is meant to change nothing on screen; every other
+signature either becomes the canonical one (a drift fix, listed in that step's
+`expected-<step>.md`) or is added as a *named variant* of the primitive — never
+as an inline exception at the call site.
+
+Colour, radius, shadow, font family and font size come only from the **semantic
+token layer** added to `theme.css` (`--btn-primary-bg`, `--pill-on-border`,
+`--input-border-focus`, `--row-hover`, `--card-bg-hover`, `--menu-shadow`,
+`--modal-bg`, `--tag-*-bg/-ink`, `--dot-*`, `--font-body/-display/-mono`,
+`--t-9 … --t-30`, `--radius-field/-row/-card/-menu/-modal/-control`, …). Each
+semantic token points at a palette token, and the block is repeated verbatim in
+the dark selector — identical by construction today, so that a future skin can
+re-point a semantic name at a *different* palette token per theme. **Change one
+block, change both.** Hover and focus still ride the existing class mechanism
+(`v2-bd`, `v2-bdc`, `v2-act`, `v2-row`, `v2-menuitem`, `v2-chip`, `v2-dashadd`,
+`v2-hover-accent`, …); those rules now read the semantic names at unchanged
+computed values.
+
+**Never inline a colour, radius, shadow, font family or font size in a screen.**
+`theme.css` and `ui.jsx` are the only two files allowed a literal; D5's
+`tools/stylelint.py` enforces it. Interactive primitives are keyboard-operable
+through `kb()` (tab stop, role, Enter/Space) and carry the right `aria-*`;
+line-heights are whole pixels, and fixed-height flex controls carry `v2-ctl`.
+
+`/v2/ui` (`UiGallery.jsx`, registered in `App.jsx` next to `/v2/toasts`) renders
+every primitive in every variant and state in both themes, with the role name and
+the semantic tokens printed under each block. It is rail-less on purpose: the
+style crawl measures that page against the spec, so nothing but `ui.jsx` should
+be on it. Add a primitive → add it to the gallery in the same pass.
+
+As of D3 **no screen has been migrated yet** — the layer and the gallery exist;
+the call sites are still inline. D4 replaces them one role at a time.
+
 ## Conventions that took several rounds to settle
 
 **Read the `.dc.html` markup in full — never a screenshot, never a subagent's

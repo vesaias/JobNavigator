@@ -71,6 +71,76 @@
   --sm-extension-bg:#f1efe8; --sm-extension-fg:#57534a;
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
 
+
+  /* -- Semantic layer (design pass D2) ---------------------------------------
+     Every primitive in ui.jsx reads ONLY these names; none of them holds a
+     literal. Each points at a palette token above, so a new skin stays a
+     wholesale replacement of the palette block and nothing else. The block is
+     repeated verbatim in the dark selector below: identical by construction
+     today, but the duplication is what lets a future skin re-point a semantic
+     token at a *different* palette token per theme. Change one, change both. */
+  /* type */
+  --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
+  --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-16:16px;
+  --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  /* radii */
+  --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
+  --radius-modal:12px; --radius-control:99px;
+  /* buttons */
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-primary-bg-hover:var(--accent);
+  --btn-primary-disabled-bg:var(--line); --btn-primary-disabled-ink:var(--muted);
+  --btn-danger-bg:var(--bad); --btn-danger-ink:var(--accent-ink);
+  --btn-secondary-bg:var(--surface); --btn-secondary-ink:var(--text-2); --btn-secondary-border:var(--edge);
+  --btn-secondary-disabled-ink:var(--muted); --btn-secondary-disabled-border:var(--line);
+  --btn-ghost-ink:var(--text-2);
+  /* pills + icon buttons */
+  --pill-bg:var(--surface); --pill-ink:var(--text-2); --pill-border:var(--edge);
+  --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent);
+  --pill-border-hover:var(--accent); --pill-ink-hover:var(--accent);
+  --icon-btn-ink:var(--muted);
+  /* fields */
+  --input-bg:var(--surface-2); --input-border:var(--edge); --input-border-focus:var(--accent);
+  --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
+  --search-bg:var(--surface); --search-glyph:var(--muted);
+  /* rows */
+  --row-hover:var(--surface-2); --row-selected:var(--surface-2); --row-selected-mark:var(--accent);
+  --row-line:var(--line-soft);
+  /* cards, bands, dashed adds */
+  --card-bg:var(--surface); --card-border:var(--line); --card-border-hover:var(--accent); --card-bg-hover:var(--hover-soft);
+  --band-border:var(--line);
+  --dashadd-ink:var(--accent); --dashadd-border:var(--edge);
+  --dashadd-ink-hover:var(--accent); --dashadd-border-hover:var(--accent); --dashadd-bg-hover:var(--hover-soft);
+  /* menus */
+  --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
+  --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
+  --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
+  /* modal + drawer */
+  --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
+  --scrim-bg:var(--scrim);
+  --drawer-bg:var(--surface); --drawer-border:var(--line); --drawer-shadow:var(--shadow-drawer);
+  /* chips, tags, dots */
+  --chip-bg:var(--bg); --chip-ink:var(--text-2); --chip-border:var(--line);
+  --chip-bg-hover:var(--surface); --chip-ink-hover:var(--good); --chip-border-hover:var(--accent); --chip-ring-hover:var(--ring-accent);
+  --tag-neutral-bg:var(--surface-2); --tag-neutral-ink:var(--text-2);
+  --tag-accent-bg:var(--accent-soft); --tag-accent-ink:var(--accent);
+  --tag-good-bg:var(--accent-soft); --tag-good-ink:var(--good);
+  --tag-warn-bg:var(--warn-soft); --tag-warn-ink:var(--warn);
+  --tag-bad-bg:var(--bad-soft); --tag-bad-ink:var(--bad);
+  --dot-neutral:var(--muted); --dot-accent:var(--accent); --dot-good:var(--good);
+  --dot-warn:var(--warn); --dot-bad:var(--bad);
+  /* links + text roles */
+  --link-ink:var(--accent); --link-ink-hover:var(--accent);
+  --navlink-ink:var(--accent); --navlink-hover-bg:var(--surface-2); --navlink-hover-ink:var(--text);
+  --anchor-ink-hover:var(--text);
+  --label-ink:var(--muted); --helper-ink:var(--muted); --heading-ink:var(--text);
+  /* structure + state */
+  --head-line:var(--line); --head-line-soft:var(--line-soft);
+  --section-head-ink:var(--muted);
+  --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
+  --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
+  --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+
   --serif:'Newsreader',Georgia,serif;
   --sans:'Public Sans',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -136,23 +206,92 @@
   --shadow-pop:0 10px 30px rgba(0,0,0,.6);
   --shadow-toast:0 8px 24px rgba(0,0,0,.5);
   --shadow-drawer:-14px 0 40px rgba(0,0,0,.45);
+
+  /* -- Semantic layer (design pass D2) ---------------------------------------
+     Every primitive in ui.jsx reads ONLY these names; none of them holds a
+     literal. Each points at a palette token above, so a new skin stays a
+     wholesale replacement of the palette block and nothing else. The block is
+     repeated verbatim in the dark selector below: identical by construction
+     today, but the duplication is what lets a future skin re-point a semantic
+     token at a *different* palette token per theme. Change one, change both. */
+  /* type */
+  --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
+  --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-16:16px;
+  --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  /* radii */
+  --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
+  --radius-modal:12px; --radius-control:99px;
+  /* buttons */
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-primary-bg-hover:var(--accent);
+  --btn-primary-disabled-bg:var(--line); --btn-primary-disabled-ink:var(--muted);
+  --btn-danger-bg:var(--bad); --btn-danger-ink:var(--accent-ink);
+  --btn-secondary-bg:var(--surface); --btn-secondary-ink:var(--text-2); --btn-secondary-border:var(--edge);
+  --btn-secondary-disabled-ink:var(--muted); --btn-secondary-disabled-border:var(--line);
+  --btn-ghost-ink:var(--text-2);
+  /* pills + icon buttons */
+  --pill-bg:var(--surface); --pill-ink:var(--text-2); --pill-border:var(--edge);
+  --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent);
+  --pill-border-hover:var(--accent); --pill-ink-hover:var(--accent);
+  --icon-btn-ink:var(--muted);
+  /* fields */
+  --input-bg:var(--surface-2); --input-border:var(--edge); --input-border-focus:var(--accent);
+  --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
+  --search-bg:var(--surface); --search-glyph:var(--muted);
+  /* rows */
+  --row-hover:var(--surface-2); --row-selected:var(--surface-2); --row-selected-mark:var(--accent);
+  --row-line:var(--line-soft);
+  /* cards, bands, dashed adds */
+  --card-bg:var(--surface); --card-border:var(--line); --card-border-hover:var(--accent); --card-bg-hover:var(--hover-soft);
+  --band-border:var(--line);
+  --dashadd-ink:var(--accent); --dashadd-border:var(--edge);
+  --dashadd-ink-hover:var(--accent); --dashadd-border-hover:var(--accent); --dashadd-bg-hover:var(--hover-soft);
+  /* menus */
+  --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
+  --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
+  --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
+  /* modal + drawer */
+  --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
+  --scrim-bg:var(--scrim);
+  --drawer-bg:var(--surface); --drawer-border:var(--line); --drawer-shadow:var(--shadow-drawer);
+  /* chips, tags, dots */
+  --chip-bg:var(--bg); --chip-ink:var(--text-2); --chip-border:var(--line);
+  --chip-bg-hover:var(--surface); --chip-ink-hover:var(--good); --chip-border-hover:var(--accent); --chip-ring-hover:var(--ring-accent);
+  --tag-neutral-bg:var(--surface-2); --tag-neutral-ink:var(--text-2);
+  --tag-accent-bg:var(--accent-soft); --tag-accent-ink:var(--accent);
+  --tag-good-bg:var(--accent-soft); --tag-good-ink:var(--good);
+  --tag-warn-bg:var(--warn-soft); --tag-warn-ink:var(--warn);
+  --tag-bad-bg:var(--bad-soft); --tag-bad-ink:var(--bad);
+  --dot-neutral:var(--muted); --dot-accent:var(--accent); --dot-good:var(--good);
+  --dot-warn:var(--warn); --dot-bad:var(--bad);
+  /* links + text roles */
+  --link-ink:var(--accent); --link-ink-hover:var(--accent);
+  --navlink-ink:var(--accent); --navlink-hover-bg:var(--surface-2); --navlink-hover-ink:var(--text);
+  --anchor-ink-hover:var(--text);
+  --label-ink:var(--muted); --helper-ink:var(--muted); --heading-ink:var(--text);
+  /* structure + state */
+  --head-line:var(--line); --head-line-soft:var(--line-soft);
+  --section-head-ink:var(--muted);
+  --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
+  --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
+  --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 }
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
 .jn-v2 a { color:var(--accent); text-decoration:none; }
 .jn-v2 a:hover { color:var(--text); }
 
 /* interactive (inline styles can't do :hover) */
-.v2-row:hover { background:var(--surface-2) !important; }
+.v2-row:hover { background:var(--row-hover) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
 .v2-rail-copy:hover { background:var(--line-soft) !important; color:var(--text) !important; }   /* the cells set inline colour (FEED-12) */
 .v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
-.v2-hover-accent:hover { background:var(--surface-2) !important; color:var(--text) !important; }   /* callers set inline colour (APPS-10) */
-.v2-hover-bad:hover { background:var(--bad-soft) !important; }
+.v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour (APPS-10) */
+.v2-hover-bad:hover { background:var(--hover-bad-bg) !important; }
 .v2-x:hover { background:var(--line); color:var(--text); }
 .v2-pill { cursor:pointer; }
 .v2-navlink { cursor:pointer; text-decoration:none; transition:background .12s,color .12s; }
-.v2-navlink:hover { background:var(--surface-2) !important; color:var(--text) !important; }
+.v2-navlink:hover { background:var(--navlink-hover-bg) !important; color:var(--navlink-hover-ink) !important; }
 .v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
 .v2-navdark:hover { color:var(--rail-ink) !important; }   /* inline colour on every rail control beats a bare rule */
 .v2-themebtn:hover { background:var(--rail-hover) !important; }
@@ -161,23 +300,23 @@
 /* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other
    clickable card/row in v2 goes to the accent — and --edge was stronger than
    that beige anyway. Unified on the accent; the background lift is unchanged. */
-.v2-card:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
+.v2-card:hover { border-color:var(--card-border-hover) !important; background:var(--card-bg-hover) !important; }
 .v2-chip { transition:border-color .12s,background .12s,box-shadow .12s,color .12s; }
-.v2-chip:hover { border-color:var(--accent) !important; background:var(--surface) !important; color:var(--good) !important; box-shadow:0 0 0 2px var(--ring-accent) !important; }
+.v2-chip:hover { border-color:var(--chip-border-hover) !important; background:var(--chip-bg-hover) !important; color:var(--chip-ink-hover) !important; box-shadow:0 0 0 2px var(--chip-ring-hover) !important; }
 .v2-dashadd { transition:border-color .12s,background .12s; }
-.v2-dashadd:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; color:var(--accent) !important; }
-.v2-act:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
-.v2-menuitem:hover { background:var(--surface-2) !important; }   /* menu items carry inline backgrounds (FEED-04, COMP) */
+.v2-dashadd:hover { border-color:var(--dashadd-border-hover) !important; background:var(--dashadd-bg-hover) !important; color:var(--dashadd-ink-hover) !important; }
+.v2-act:hover { border-color:var(--card-border-hover) !important; background:var(--card-bg-hover) !important; }
+.v2-menuitem:hover { background:var(--menu-item-hover) !important; }   /* menu items carry inline backgrounds (FEED-04, COMP) */
 /* Flat list rows all hover to --surface-2: the Feed (.v2-row) and Applications
    (.v2-arow) already did, Companies used the accent wash. Bordered cards/pills
    (.v2-card, .v2-act, .v2-dashadd) keep --hover-soft deliberately. */
-.v2-crow:hover { background:var(--surface-2) !important; }
-.v2-arow:hover { background:var(--surface-2) !important; }
+.v2-crow:hover { background:var(--row-hover) !important; }
+.v2-arow:hover { background:var(--row-hover) !important; }
 /* border-only hovers for pills that already carry their own fill */
-.v2-bd:hover { border-color:var(--accent) !important; }
+.v2-bd:hover { border-color:var(--pill-border-hover) !important; }
 .v2-bd-warn:hover { border-color:var(--warn) !important; }
 /* border + text turn accent, no background wash (the design's pill hover) */
-.v2-bdc:hover { border-color:var(--accent) !important; color:var(--accent) !important; }
+.v2-bdc:hover { border-color:var(--pill-border-hover) !important; color:var(--pill-ink-hover) !important; }
 
 /* Controls only: at the inherited 1.5 a fixed-height control's label rides
    high, and a fallback-font glyph in the label (↗ ▾ ›) drags it further.
@@ -188,23 +327,23 @@
 /* PERS-10: every collapsible header in v2 washes to --surface-2 — the section and
    role headers already do via .v2-hover-accent, so these must match rather than
    read as a second affordance */
-.v2-clhead:hover { background:var(--surface-2); }
+.v2-clhead:hover { background:var(--hover-wash-bg); }
 /* the Q&A bank card sits on --amber-bg, so it washes to its own amber hover */
 .v2-qahead:hover { background:var(--amber-hover); }
-.v2-anchor:hover { color:var(--text) !important; }
-.v2-parabtn:hover { background:var(--surface-2); }
-.v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
+.v2-anchor:hover { color:var(--anchor-ink-hover) !important; }
+.v2-parabtn:hover { background:var(--hover-wash-bg); }
+.v2-parabtn-bad:hover { background:var(--hover-bad-bg); color:var(--hover-bad-ink) !important; }
 /* every caller sets an inline colour, which beats a bare class rule — the
    sibling --bad rule already knew this */
-.v2-hover-accent-text:hover { color:var(--accent) !important; }
-.v2-hover-bad-text:hover { color:var(--bad) !important; }
+.v2-hover-accent-text:hover { color:var(--link-ink-hover) !important; }
+.v2-hover-bad-text:hover { color:var(--hover-bad-ink) !important; }
 /* SET-15: the model-catalog × turns border AND glyph --bad, per the design's
    `border-color:#9c3b30;color:#9c3b30`. Kept separate from -bad-text so the ×
    on the other screens keeps its colour-only hover. */
-.v2-hover-bad-bdc:hover { border-color:var(--bad) !important; color:var(--bad) !important; }
+.v2-hover-bad-bdc:hover { border-color:var(--hover-bad-ink) !important; color:var(--hover-bad-ink) !important; }
 /* welcome steps are links in v1 and stay links here, so they need an affordance */
 .v2-welcomestep { transition:background .12s; }
-.v2-welcomestep:hover { background:var(--surface-2); }
+.v2-welcomestep:hover { background:var(--hover-wash-bg); }
 
 /* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
    light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
@@ -254,7 +393,7 @@
 @keyframes v2-spin { to { transform:rotate(360deg); } }
 .v2-spin { animation:v2-spin .9s linear infinite; }
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
-.jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--muted) !important; opacity:1; }
+.jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--input-placeholder) !important; opacity:1; }
 .jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }
 /* CL-21: keyboard focus is visible on every field; inline borders need !important.
    The 2px ring is gone: browsers apply :focus-visible to text inputs on *mouse*
@@ -262,13 +401,13 @@
    (Applications, Settings, Resumes, Cover Letters) it floated around nothing.
    A field now signals focus the way it draws itself at rest: a bordered box turns
    its border accent, an underline input turns its underline accent. */
-.jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--accent) !important; outline:none; }
+.jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--input-border-focus) !important; outline:none; }
 /* A bare input inside a bordered wrapper has no border of its own, so the wrapper
    carries the signal instead. */
-.jn-v2 .v2-fieldwrap:focus-within { border-color:var(--accent) !important; }
+.jn-v2 .v2-fieldwrap:focus-within { border-color:var(--input-border-focus) !important; }
 /* Keyboard-only ring on non-input controls — :focus-visible never fires on these
    from a mouse click, so this one stays as it was. */
-.jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--ring-accent); }
+.jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--focus-ring); }
 
 /* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
    Run/Test pills scrolled off the viewport. Pin the actions column to the right
@@ -276,4 +415,4 @@
    pinned cell never reads as a separate strip — including the --surface-2 the
    row now hovers to. */
 .v2-cactions { background:var(--bg); }
-.v2-crow:hover .v2-cactions { background:var(--surface-2); }
+.v2-crow:hover .v2-cactions { background:var(--row-hover); }
