@@ -5,6 +5,7 @@ import {
   Fingerprint, ChartLine, Settings as SettingsIcon,
 } from 'lucide-react'
 import api from '../api'
+import { useTheme, themeAttrs, themeTitle, MODE_ICON } from './theme'
 import './theme.css'
 
 // Canonical v2 shell (Nav Rail.dc.html): dark grouped rail, 206 ⇄ 50px.
@@ -49,9 +50,11 @@ export default function V2App() {
   const [counts, setCounts] = useState({})
   const [warn, setWarn] = useState({})
   const [health, setHealth] = useState(null)
-  const [dark, setDark] = useState(() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })
-
-  const toggleTheme = () => setDark((v) => { const n = !v; try { localStorage.setItem('jobnavigator_dark_mode', String(n)) } catch {} return n })
+  // One store for both axes (theme.js) — the rail, the two global overlays and
+  // the classic shell all read it, so a click here moves every one of them
+  // without a reload (SHELL-02 / SHELL-06).
+  const theme = useTheme()
+  const themeTip = themeTitle(theme.mode)
   const toggleRail = () => setOpen((v) => { const n = !v; try { localStorage.setItem('jobnavigator_v2_rail', n ? 'expanded' : 'collapsed') } catch {} return n })
 
   const loadCounts = useCallback(() => {
@@ -98,7 +101,7 @@ export default function V2App() {
   const W = open ? 206 : 50
   const padX = open ? 20 : 13
   return (
-    <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div className="jn-v2" {...themeAttrs(theme)} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
       <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .32s ease', overflow: 'hidden' }}>
         <div style={{ height: 64, flex: '0 0 auto', position: 'relative', display: 'flex', alignItems: 'center', padding: `0 ${padX}px`, color: 'var(--rail-ink)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>JobNavigator</span>
@@ -164,7 +167,9 @@ export default function V2App() {
             {open
               /* ui: keep — 7px scrape-health rail dot, not a control */
               ? <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: healthy ? 'var(--rail-accent)' : 'var(--warn)' }} />
-              : <span onClick={(e) => { e.stopPropagation(); toggleTheme() }} title={`Switch to ${dark ? 'light' : 'dark'} mode`} style={{ fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>}
+              /* the ◐ cycles Light -> Dark -> System; the glyph names the mode
+                 it is in, the tooltip spells it out (Nav Rail spec) */
+              : <span onClick={(e) => { e.stopPropagation(); theme.cycle() }} title={themeTip} style={{ fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>{MODE_ICON[theme.mode]}</span>}
           </span>
           <span style={{ fontSize: 11.5, lineHeight: '18px', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s', overflow: 'hidden', textOverflow: 'ellipsis' }}>{healthText}</span>
         </div>
@@ -173,7 +178,7 @@ export default function V2App() {
           <span onClick={toggleRail} title={open ? 'Collapse to icons' : 'Expand navigation'} className="v2-navdark" style={{ flex: '0 0 24px', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>{open ? '‹' : '›'}</span>
           <span onClick={toggleRail} className="v2-navdark" style={{ flex: 1, fontSize: 12, lineHeight: '18px', color: 'var(--rail-dim)', cursor: 'pointer', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>Collapse</span>
           {/* ui: keep — rail-dark theme toggle (--rail-dim ink, v2-navdark + v2-themebtn rail hovers); IconButton reads the light-surface tokens */}
-          <span onClick={toggleTheme} title={`Switch to ${dark ? 'light' : 'dark'} mode`} className="v2-navdark v2-themebtn" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 'var(--radius-control)', display: open ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>◐</span>
+          <span onClick={theme.cycle} title={themeTip} className="v2-navdark v2-themebtn" style={{ flex: '0 0 auto', width: 26, height: 26, borderRadius: 'var(--radius-control)', display: open ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>{MODE_ICON[theme.mode]}</span>
         </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

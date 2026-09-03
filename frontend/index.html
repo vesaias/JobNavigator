@@ -12,6 +12,43 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..600&family=Public+Sans:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <title>JobNavigator Dashboard</title>
+    <!-- No-flash boot. Runs before the bundle, so the first painted frame is
+         already the right ground colour instead of white-then-dark.
+         <html> is the boot host for the two theme attributes (and for the
+         classic shell's `.dark` class); frontend/src/v2/theme.js re-stamps the
+         same three the moment React mounts and on every change after that, and
+         each .jn-v2 root mirrors them so theme.css keeps selecting on the root
+         itself. Keep the logic here in step with readMode()/readSkin() there. -->
+    <script>
+      (function () {
+        try {
+          var d = document.documentElement, s = window.localStorage;
+          var m = s.getItem('jobnavigator_theme');
+          if (m !== 'light' && m !== 'dark' && m !== 'system') {
+            /* one-time migration off the pre-D6 boolean */
+            m = s.getItem('jobnavigator_dark_mode') === 'true' ? 'dark' : 'light';
+            s.setItem('jobnavigator_theme', m);
+          }
+          var r = m === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : m;
+          d.setAttribute('data-theme', r);
+          d.setAttribute('data-skin', s.getItem('jobnavigator_skin') === 'alt' ? 'alt' : 'default');
+          d.classList.toggle('dark', r === 'dark');
+        } catch (e) { /* private mode / storage blocked: the default light theme paints */ }
+      })();
+    </script>
+    <!-- The only place a palette value is written outside theme.css: the four
+         --bg values, so the pre-mount ground matches. `:root[...]` is (0,2,0),
+         which beats index.css's `html.dark` (0,1,1) deterministically whatever
+         order Vite emits the stylesheets in; both shells cover the viewport with
+         their own ground, so this is only ever visible before React mounts. -->
+    <style>
+      :root[data-theme="light"] { background: #fcfbf7 }
+      :root[data-theme="dark"] { background: #1e1c17 }
+      :root[data-skin="alt"][data-theme="light"] { background: #f7f8fa }
+      :root[data-skin="alt"][data-theme="dark"] { background: #161a21 }
+    </style>
   </head>
   <body>
     <div id="root"></div>

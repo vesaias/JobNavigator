@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import './theme.css'
+import { useTheme, themeAttrs, MODE_ICON, MODE_LABEL } from './theme'
 import { useToasts, ToastStack } from './Toast'
 
 // TEMPORARY debug page at /v2/toasts — fire every toast kind and check it in
@@ -18,11 +19,11 @@ const SAMPLES = [
 
 export default function ToastLab() {
   const { toasts, push, dismiss } = useToasts()
-  const [dark, setDark] = useState(() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })
-  const toggle = () => setDark((v) => { const n = !v; try { localStorage.setItem('jobnavigator_dark_mode', String(n)) } catch {} return n })
+  // the app's own theme store — no second copy of the flag lives here (SHELL-02)
+  const theme = useTheme()
 
   return (
-    <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} style={{ flex: 1, minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
+    <div className="jn-v2" {...themeAttrs(theme)} style={{ flex: 1, minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Toast lab</h1>
@@ -31,8 +32,8 @@ export default function ToastLab() {
         {/* D3: the primitive gallery is the other rail-less lab page; neither is in
             the rail, so they link to each other rather than being unreachable. */}
         <a href="/v2/ui" className="v2-navlink v2-ctl" style={{ marginLeft: 'auto', height: 32, padding: '0 12px', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--accent)' }}>Primitives ›</a>
-        <div onClick={toggle} className="v2-act v2-ctl" style={{ height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
-          ◐ {dark ? 'Dark' : 'Light'}
+        <div onClick={theme.cycle} title={`Theme: ${MODE_LABEL[theme.mode]} — click to switch`} className="v2-act v2-ctl" style={{ height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+          {MODE_ICON[theme.mode]} {MODE_LABEL[theme.mode]}
         </div>
       </header>
 

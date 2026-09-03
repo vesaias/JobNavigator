@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import './theme.css'
+import { useTheme, themeAttrs, MODES, SKINS, MODE_ICON, MODE_LABEL } from './theme'
 import {
   Button, Pill, IconButton, Input, Textarea, SearchInput, Select, Row, Card, Band,
   DashedAdd, Menu, MenuHead, MenuItem, SectionHead, Chip, Tag, Dot, Link, NavLink,
@@ -11,8 +12,10 @@ import {
 // the canonical spec (`v2-testing/round-design/D1-D2.md`). Every primitive in
 // every variant and state, in both themes, with the role name and the semantic
 // tokens it reads printed under each block. It is deliberately rail-less (like
-// ToastLab) so nothing but the primitives is on screen; the theme toggle is the
-// app's own — the same `jobnavigator_dark_mode` flag the rail writes.
+// ToastLab) so nothing but the primitives is on screen. The switcher at the top
+// is the app's own store (theme.js): mode x skin, so every primitive below can be
+// read in all four combinations without leaving the page — the D6 proof that a
+// skin moves colour and type and never geometry.
 //
 // Adding a primitive to ui.jsx? Add it here in the same pass, or the crawl has
 // nothing to measure.
@@ -46,12 +49,7 @@ function S({ label, children, w }) {
 }
 
 export default function UiGallery() {
-  const [dark, setDark] = useState(() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })
-  const toggle = () => setDark((v) => {
-    const n = !v
-    try { localStorage.setItem('jobnavigator_dark_mode', String(n)) } catch { /* private mode */ }
-    return n
-  })
+  const theme = useTheme()
 
   const [text, setText] = useState('Senior Platform Engineer')
   const [area, setArea] = useState('Two lines of body copy so the 19px line-height is visible.\nSecond line.')
@@ -66,7 +64,7 @@ export default function UiGallery() {
   const [busy, setBusy] = useState(false)
 
   return (
-    <div className="jn-v2" data-theme={dark ? 'dark' : 'light'}
+    <div className="jn-v2" {...themeAttrs(theme)}
       style={{ flex: 1, minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
 
       <HeaderRow variant="screen" align="flex-end">
@@ -77,9 +75,26 @@ export default function UiGallery() {
             {' '}<code style={{ fontFamily: 'var(--font-mono)' }}>v2-testing/round-design/D1-D2.md</code>.
           </Helper>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* skin x mode switcher — two Pill groups, so all four combinations are one
+            click apart and both axes show their state without opening anything */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <NavLink onClick={() => { window.location.href = '/v2/toasts' }}>Toast lab ›</NavLink>
-          <Button variant="secondary" size="sm" onClick={toggle} ariaLabel="Toggle theme">◐ {dark ? 'Dark' : 'Light'}</Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Label>Skin</Label>
+            {SKINS.map((s) => (
+              <Pill key={s} size="sm" on={theme.skin === s} onClick={() => theme.setSkin(s)} ariaLabel={`Skin: ${s}`}>{s}</Pill>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Label>Theme</Label>
+            {MODES.map((m) => (
+              <Pill key={m} size="sm" on={theme.mode === m} onClick={() => theme.setMode(m)}
+                ariaLabel={`Theme: ${MODE_LABEL[m]}`}
+                title={m === 'system' ? `System — currently ${theme.resolved}` : undefined}>
+                {MODE_ICON[m]} {MODE_LABEL[m]}
+              </Pill>
+            ))}
+          </div>
         </div>
       </HeaderRow>
 

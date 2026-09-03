@@ -29,6 +29,7 @@ import V2Stats from './v2/Stats'
 import V2ToastLab from './v2/ToastLab'   // TEMP: /v2/toasts debug page
 import V2UiGallery from './v2/UiGallery'   // /v2/ui — the primitive gallery (design pass D3)
 import axios from 'axios'
+import { useTheme } from './v2/theme'
 import { TitleSync } from './useTitle'
 
 const NAV_ITEMS = [
@@ -104,18 +105,17 @@ function ClassicShell({ darkMode, setDarkMode }) {
 }
 
 function App() {
-  const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false }
-  })
+  // The classic shell no longer keeps its own copy of the flag. One store
+  // (src/v2/theme.js) owns light|dark|system, resolves `system` against
+  // prefers-color-scheme, and stamps `html.dark` itself — so flipping the theme
+  // from the v2 rail moves this shell too, with no reload (SHELL-02 / SHELL-06).
+  const { resolved, setMode } = useTheme()
+  const darkMode = resolved === 'dark'
+  const setDarkMode = (v) => setMode(v ? 'dark' : 'light')
   const [showLogin, setShowLogin] = useState(false)
   const [showWelcome, setShowWelcome] = useState(() => {
     try { return sessionStorage.getItem('jn:welcome') === '1' } catch { return false }
   })
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode)
-    localStorage.setItem('jobnavigator_dark_mode', String(darkMode))
-  }, [darkMode])
 
   // Handle ?cv= query param tracer links — redirect to /cv/{token} on backend
   useEffect(() => {

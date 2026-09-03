@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
 import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Textarea } from './ui'
+import { useTheme, MODE_OPTIONS, SKIN_OPTIONS } from './theme'
 import api from '../api'
 import './theme.css'
 
@@ -133,7 +134,9 @@ export default function Settings() {
   const [resumes, setResumes] = useState([])
   const [personaAvailable, setPersonaAvailable] = useState(false)
   const [query, setQuery] = useState('')
-  const [active, setActive] = useState('models')
+  // the anchor rail highlights where the scroller is parked, and it opens at the
+  // top — which is now Appearance, the first section
+  const [active, setActive] = useState('appearance')
   const [info, setInfo] = useState(null)      // which row's info panel is open
   const [ovr, setOvr] = useState({})          // which override rows are expanded
   const [trig, setTrig] = useState({})        // action button states
@@ -306,6 +309,13 @@ export default function Settings() {
     if (curVoice && !voiceOpts.some((o) => o[0] === curVoice)) voiceOpts.push([curVoice, `${curVoice} — not in presets`])
 
     return [
+      // The one group that isn't a DB setting: both rows live in this browser's
+      // localStorage (theme.js), so they take no `key` and never PATCH /settings.
+      // They sit first because they change what every screen below looks like.
+      ['appearance', 'GENERAL', 'Appearance', 'theme and skin — remembered in this browser, not in the database', [
+        { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
+        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in both.' },
+      ]],
       ['models', 'AI', 'Models', 'each individual prompt can be run against different model, if needed', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model',
@@ -580,6 +590,14 @@ function Row({ r, ctx }) {
           ariaLabel={r.label} int={r.int} cron={r.cron} onInvalid={(m) => flash(m, true)} />
       case 'select':
         return <Select value={val(r.key, r.dflt)} options={r.options} onPick={(v) => save(r.key, v)} width={r.w} ariaLabel={r.label} />
+      // Local-only rows: the theme store is the value, so these two read and
+      // write it directly instead of going through `save` (there is nothing on
+      // the server to save) — hence their own components, which can hold the
+      // subscription without dragging it into the sections useMemo.
+      case 'theme':
+        return <ThemeRow label={r.label} />
+      case 'skin':
+        return <SkinRow label={r.label} />
       case 'switch': {
         const on = isOn(r.key, r.dflt)
         return <Toggle on={on} label={on ? 'On' : 'Off'} onPick={() => save(r.key, on ? 'false' : 'true')} ariaLabel={r.label} />
@@ -739,6 +757,21 @@ function Row({ r, ctx }) {
       <div style={{ flex: narrow ? '0 0 auto' : 1, minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: narrow ? 'wrap' : 'nowrap', gap: 8 }}>{right}</div>
     </div>
   )
+}
+
+// ── appearance rows (localStorage, not settings) ─────────────────────────────
+function ThemeRow({ label }) {
+  const { mode, resolved, setMode } = useTheme()
+  return (
+    <>
+      <Select value={mode} options={MODE_OPTIONS} onPick={setMode} width="260px" ariaLabel={label} />
+      {mode === 'system' && <Helper>following your OS — currently {resolved}</Helper>}
+    </>
+  )
+}
+function SkinRow({ label }) {
+  const { skin, setSkin } = useTheme()
+  return <Select value={skin} options={SKIN_OPTIONS} onPick={setSkin} width="260px" ariaLabel={label} />
 }
 
 function ActionBtn({ label, state, onClick, ariaLabel }) {
