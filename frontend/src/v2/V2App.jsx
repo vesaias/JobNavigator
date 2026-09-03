@@ -110,6 +110,8 @@ export default function V2App() {
             <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                 <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{g.label}</span>
+                {/* ui: keep — a rail hairline on --rail-line; Rule reads the --head-line
+                    pair, which is the light-surface rule, not the dark rail's */}
                 <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .2s', pointerEvents: 'none' }} />
               </div>
               {g.items.map((it) => {

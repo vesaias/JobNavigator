@@ -4,7 +4,7 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, setFlashToast, useSnapTop } from './hooks'
+import { useEscape, setFlashToast } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, Heading, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, NavLink, Pill, Spinner, Textarea } from './ui'
+import { Band, Button, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, Spinner, Surface, Textarea } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -462,7 +462,7 @@ export default function ResumeEditor() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* top bar */}
-      <div style={{ flex: '0 0 auto', padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         {/* ui: keep — Tag role (D4d): an uppercase badge with a background and r99, not a Label */}
@@ -471,11 +471,11 @@ export default function ResumeEditor() {
             is the same span it always was (margin and font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>
         <Helper style={{ marginLeft: 'auto' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</Helper>
-      </div>
+      </HeaderRow>
 
       {/* sub-band: base vs copy */}
       {isCopy ? (
-        <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13 }}>
+        <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13 }}>
           {scores.tailored != null && (
             <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px' }}>
               <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
@@ -537,7 +537,7 @@ export default function ResumeEditor() {
                   <MenuItem icon="◎" hint="score only" onClick={() => runScore('light')}>Score again · light</MenuItem>
                   <MenuItem icon="◎" hint="with report" onClick={() => runScore('full')}>Score again · full</MenuItem>
                   {changes.length > 0 && <MenuItem icon="≋" hint={`${changes.length} to review`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }}>Review changes</MenuItem>}
-                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
+                  <Rule style={{ margin: '4px 8px' }} />
                   <MenuHead>Job</MenuHead>
                   <MenuItem icon="✉" hint="c" onClick={goCover}>Cover letter</MenuItem>
                   {doc.job_id && <MenuItem icon="↗" hint="e" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
@@ -547,9 +547,9 @@ export default function ResumeEditor() {
               </>
             )}
           </div>
-        </div>
+        </HeaderRow>
       ) : (
-        <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
+        <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
           <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
           <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
@@ -568,7 +568,7 @@ export default function ResumeEditor() {
               </>
             )}
           </div>
-        </div>
+        </HeaderRow>
       )}
 
       {/* two-pane */}
@@ -585,10 +585,10 @@ export default function ResumeEditor() {
         </section>
 
         {/* right: PDF preview */}
-        <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
+        <Surface as="section" radius="none" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {/* R2-S-02: wraps rather than overflowing, like the cover-letter
               editor's identical toolbar */}
-          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
+          <HeaderRow pad="8px 20px" align="center" style={{ flexWrap: 'wrap', rowGap: 6 }}>
             <Label>PDF preview</Label>
             {/* template picker — the container swallows its own clicks so the
                 document closer below can't undo the toggle (RES-28) */}
@@ -612,8 +612,8 @@ export default function ResumeEditor() {
             </div>
             {/* ui: keep — native <a href target=_blank> download link; Button renders a div and would drop the anchor */}
             <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', flex: '0 0 auto', minWidth: 0, height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>↓ Download PDF</a>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--surface-2)' }}>
+          </HeaderRow>
+          <Surface radius="none" style={{ flex: 1, minHeight: 0, position: 'relative' }}>
             {pdfUrl && <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />}
             {pdfErr && !pdfUrl && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 12.5 }}>
@@ -621,8 +621,8 @@ export default function ResumeEditor() {
                 <Pill size="sm" onClick={() => setPdfNonce((n) => n + 1)}>Retry</Pill>
               </div>
             )}
-          </div>
-        </section>
+          </Surface>
+        </Surface>
       </div>
 
       {tailorOpen && (isCopy
@@ -641,9 +641,6 @@ export default function ResumeEditor() {
 // which base to work from, and whether to run the tailoring LLM at all or just
 // take an exact copy for a fresh set of tracer links.
 function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
-  useEscape(onClose)   // RES-15
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   const [mode, setMode] = useState('tailor')
   const [bases, setBases] = useState([])
   const [persona, setPersona] = useState(false)
@@ -671,14 +668,13 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   ]
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <ModalPanel width={480} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
+        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
           <Heading>Re-tailor for this job</Heading>
           <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy
           </Helper>
-        </div>
+        </HeaderRow>
 
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 13, maxHeight: 460, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -725,8 +721,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
           {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
           <Button size="sm" onClick={() => onRun({ mode, baseId })} disabled={!canRun}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
 
@@ -739,9 +734,6 @@ const chainNote = (chain) => (chain
 
 // ── tailor modal (job picker + freeform + persona) ───────────────────────────
 function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
-  useEscape(onClose)   // RES-15
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   const baseId = doc.id
   const [jobs, setJobs] = useState([])
   const [existing, setExisting] = useState(new Set())
@@ -777,12 +769,11 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   const run = () => onRun({ baseId: personaBase ? 'persona' : baseId, jobId: pick, jobDescription: pick ? '' : jd.trim(), company: chosen?.company })
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <ModalPanel width={480} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
+        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
           <Heading>Tailor {doc.name} for a job</Heading>
           <Helper>Changes land automatically — you review and decline afterwards.</Helper>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
             <input type="checkbox" checked={personaBase} onChange={(e) => setPersonaBase(e.target.checked)} />
@@ -827,16 +818,12 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
           {/* RES-17 */}
           <Button size="sm" onClick={run} disabled={!canRun}>✦ Tailor</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
 
 // ── review modal (decline-based) ─────────────────────────────────────────────
 function ReviewModal({ changes, onClose, onApply }) {
-  useEscape(onClose)   // RES-15
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
   // R3-B-02: two different things were both chipped "applied". A modified summary
@@ -850,9 +837,8 @@ function ReviewModal({ changes, onClose, onApply }) {
   const liveApplied = changes.filter((c) => c.kind !== 'suggested' && !declined[c.key]).length
   const liveSuggested = changes.filter((c) => c.kind === 'suggested' && !declined[c.key]).length
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <ModalPanel width="min(920px, 94vw)" onClose={onClose} zIndex={60} style={{ height: 'min(760px, 90vh)', overflow: 'hidden' }}>
+        <HeaderRow align="center" style={{ gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Heading>{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</Heading>
             <Helper>
@@ -862,7 +848,7 @@ function ReviewModal({ changes, onClose, onApply }) {
             </Helper>
           </div>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 11, minHeight: 0 }}>
           {changes.length === 0 && <div style={{ padding: 20, fontSize: 12.5, color: 'var(--muted)' }}>No tailoring changes to review.</div>}
           {changes.map((c) => {
@@ -896,6 +882,8 @@ function ReviewModal({ changes, onClose, onApply }) {
             )
           })}
         </div>
+        {/* ui: keep — a modal *footer* bar: its rule is on top and its ground is
+            the recessed tint; HeaderRow draws its rule beneath */}
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9 }}>
           {/* R3-B-02: the count line separates what is already in the document from
               what is only proposed, so "Done reviewing" says what it is about to do. */}
@@ -904,7 +892,6 @@ function ReviewModal({ changes, onClose, onApply }) {
             : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</Helper>
           <Button size="sm" onClick={() => onApply(declined)} style={{ marginLeft: 'auto' }}>Done reviewing</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }

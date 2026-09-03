@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, Card, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Select, Spinner } from './ui'
+import { Button, Card, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -557,7 +557,7 @@ export default function Searches() {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header */}
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <HeaderRow as="header" variant="screen" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Searches</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
@@ -565,20 +565,19 @@ export default function Searches() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}>+ New search</Button>
         </div>
-      </header>
+      </HeaderRow>
       {/* the design draws the rule inset by 30px on both sides, not full-bleed */}
-      <div style={{ flex: '0 0 auto', height: 1, margin: '0 30px', background: 'var(--line)' }} />
+      <Rule tone="line" style={{ flex: '0 0 auto', margin: '0 30px' }} />
 
       {/* body */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 30px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* new search card */}
         {newOpen && (
           <Card style={{ padding: 0, borderColor: 'var(--accent)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* ui: keep — serif 15.5/500/-.01em card title: v2's second serif family (card + column titles), not the 18/19 Heading scale */}
-              <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em' }}>New search</span>
+            <HeaderRow pad="11px 16px" soft align="center" style={{ gap: 10 }}>
+              <Heading strong size={15.5}>New search</Heading>
               <Helper>pick a mode — the fields below follow it</Helper>
-            </div>
+            </HeaderRow>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
@@ -618,8 +617,7 @@ export default function Searches() {
                     {/* integer line-heights: 15.5px/11.5px text under Tailwind
                         preflight's 1.5 gives a 67.5px card, so every other row
                         lands on x.5 and Chrome rounds its 1px border away. */}
-                    {/* ui: keep — serif 15.5/500/-.01em card title (the card-title serif family) with a load-bearing 23px line-height, not the 18/19 Heading scale */}
-                    <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: '23px', fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                    <Heading strong size={15.5} style={{ lineHeight: '23px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -781,19 +779,20 @@ function TestModal({ test, tab, setTab, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 980, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    // was a hand-written panel with neither Escape nor the pixel snap; ModalPanel
+    // brings both (RES-15 / RES-32) — the scrim click already closed it.
+    <ModalPanel width={980} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
+        <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading size={18} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
           <Helper style={{ flex: '0 0 auto' }}>dry run · nothing saved</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
-        </div>
+        </HeaderRow>
 
         {test.error ? (
           <div style={{ padding: 22, fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
         ) : (
           <>
-            <div style={{ flex: '0 0 auto', padding: '9px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-2)' }}>
+            <HeaderRow pad="9px 22px" soft bg="page" align="center" style={{ flexWrap: 'wrap', fontSize: 11, color: 'var(--text-2)' }}>
               {cfg.search_term && cfg.mode !== 'jobright' && cfg.mode !== 'freehire' && (
                 <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>“{cfg.search_term}”</span></span>
               )}
@@ -807,20 +806,19 @@ function TestModal({ test, tab, setTab, onClose }) {
                   return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 99, ...(c.style || {}) }}>{k} {v}</span>
                 })}
               </span>
-            </div>
+            </HeaderRow>
 
-            <div style={{ flex: '0 0 auto', padding: '9px 22px', borderBottom: '1px solid var(--line-soft)', display: 'flex', gap: 6 }}>
+            <HeaderRow pad="9px 22px" soft style={{ gap: 6 }}>
               {[['all', `All (${jobs.length})`], ['kept', `Kept (${kept.length})`], ['filtered', `Filtered (${filtered.length})`]].map(([id, label]) => {
                 const on = tab === id
                 return (
                   <Pill key={id} size="sm" on={on} onClick={() => setTab(id)}>{label}</Pill>
                 )
               })}
-            </div>
+            </HeaderRow>
 
             <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-              {/* ui: keep — TableHead role (height + borderBottom + background), and its 9.5/.11em is the table-head signature, not Label's 10/.13em */}
-              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+              <TableHead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
                 <span style={{ flex: '0 0 80px' }}>Source</span>
                 <span style={{ flex: 1.3, minWidth: 0 }}>Company</span>
                 <span style={{ flex: 2, minWidth: 0 }}>Title</span>
@@ -828,7 +826,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                 <span style={{ flex: '0 0 120px', textAlign: 'right' }}>Salary</span>
                 <span style={{ flex: '0 0 44px', textAlign: 'center' }} title="Description scraped">Desc</span>
                 <span style={{ flex: '0 0 66px', textAlign: 'right' }}>Status</span>
-              </div>
+              </TableHead>
               {rows.map((j, i) => {
                 const ok = !!j.kept
                 const hasDesc = !!(j.desc_length || j.description_length || j.has_description)
@@ -870,6 +868,7 @@ function TestModal({ test, tab, setTab, onClose }) {
               )}
             </div>
 
+            {/* ui: keep — a modal footer bar: its rule is on top */}
             <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9, fontSize: 11.5, color: 'var(--text-2)' }}>
               {/* R3-A-01: three buckets, not two — a body-phrase drop is stored
                   as `ignored` by the run and used to hide inside "filtered". */}
@@ -883,7 +882,6 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </ModalPanel>
   )
 }

@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
-import { useEscape, useFlashToast, useSnapTop } from './hooks'
+import { useFlashToast } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Band, Button, Card, Chip, Heading, Helper, Input, Label, Link, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
+import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -141,7 +141,7 @@ export default function V2Resumes() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* header */}
-      <div style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow pad="22px 30px 16px 24px" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Résumés</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
@@ -151,7 +151,7 @@ export default function V2Resumes() {
             placeholder="Search bases, copies, archived…" ariaLabel="Search résumés" />
           <Button onClick={() => setAddOpen(true)}>+ New résumé</Button>
         </div>
-      </div>
+      </HeaderRow>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '6px 30px 26px 24px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: searching || showArchived ? 4 : 12 }}>
         {loading ? <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
@@ -208,8 +208,7 @@ export default function V2Resumes() {
                   <Label style={{ padding: '4px 2px 0' }}>Profile</Label>
                   <Card onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
-                      {/* ui: keep — serif 19/500/-.015em card title: the 500-weight card-title family, not the Heading scale */}
-                      <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
+                      <Heading strong size={19}>Persona</Heading>
                       <Helper>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</Helper>
                       {persona.avg_fit != null && (
                         /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
@@ -253,8 +252,7 @@ export default function V2Resumes() {
                 return (
                   <Card key={b.id} onClick={() => openResume(b.id)} title={`Open ${b.name} — the base résumé`} style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
-                      {/* ui: keep — serif 19/500/-.015em card title: the 500-weight card-title family, not the Heading scale */}
-                      <span title={b.name} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
+                      <Heading strong size={19} title={b.name} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</Heading>
                       <Helper>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</Helper>
                       {b.avg_fit != null && (
                         /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
@@ -316,9 +314,6 @@ function AddModal({ onClose, onCreated }) {
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
   const fileRef = useRef(null)
-  useEscape(onClose)   // RES-15
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
 
   const createScratch = async () => {
     if (!name.trim() || busy) return
@@ -347,8 +342,9 @@ function AddModal({ onClose, onCreated }) {
   const canCreate = !!name.trim() && !busy
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
+    // zIndex 60 kept: this modal opens from the Résumés shelf, under the app's
+    // ConfirmDialog (70) and the toast stack (80).
+    <ModalPanel width={420} onClose={onClose} zIndex={60} style={{ padding: 22 }}>
         <Heading size={19} style={{ display: 'block', marginBottom: 4 }}>New base résumé</Heading>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
         <Input autoFocus value={name} onChange={setName} placeholder="Résumé name (e.g. Backend — Platform v4)"
@@ -367,7 +363,6 @@ function AddModal({ onClose, onCreated }) {
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; importPdf(f) }} />
         </div>
         <div onClick={onClose} style={{ marginTop: 14, textAlign: 'center', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }

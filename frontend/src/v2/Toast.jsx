@@ -54,6 +54,11 @@ function Toast({ t, onClose }) {
   const k = KINDS[t.kind] || KINDS.progress
   const label = t.action || t.actionLabel
   return (
+    // ui: keep — this *is* the toast primitive. D1-D2 files `toast` as "already
+    // single" (one site, one signature) and D4f names no `Toast` in ui.jsx, so the
+    // card stays where its taxonomy, TTL table and stack live rather than being
+    // relocated object-for-object. It is not a ModalPanel (no scrim, no Escape, no
+    // dialog role) and not a Surface (four tinted grounds, its own r9 + shadow).
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
       background: k.bg, border: `1px solid ${k.bd}`, borderRadius: 9, color: k.fg,
@@ -78,6 +83,9 @@ function Toast({ t, onClose }) {
   )
 }
 
+// ui: keep — the stack container carries no design keys at all (fixed corner,
+// z 80 above every modal, column, gap 8): pure layout, nothing for a primitive
+// to own. z-index 80 is what puts a toast over an open modal (70) and drawer (30).
 export function ToastStack({ toasts, onClose }) {
   return (
     <div style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
