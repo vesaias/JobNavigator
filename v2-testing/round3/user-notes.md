@@ -13,3 +13,15 @@
 **Expected** the Applied series uses the Applied stage colour (same token as R3-U-01) and New uses a clearly distinct one; legend matches.
 **Proposed fix** assign `stroke: var(--stage-applied)` to Applied and `var(--accent)`/`--text-2` to New (or vice versa), check contrast between the two strokes in both themes (ΔE or simple luminance gap), and measure.
 **Status** fixed (8804ae3), verified live 2026-09-04 (`round3/verify.md`).
+
+### R3-U-03 · P3 · Companies rows hover to the green wash while Feed and Applications rows hover to `--surface-2`
+**Status** fixed (406aebe): `.v2-crow:hover` and the pinned actions cell on `--surface-2`; verified equal to Feed/Applications row hover (`round3/verify-final.md`).
+
+### R3-U-04 · P3 · Focus ring rectangle on every input on mouse click; flat search inputs show a floating rectangle
+**Status** fixed (406aebe): input focus is the app's own accent border/underline, no box-shadow; bare inputs signal on their `v2-fieldwrap` wrapper; keyboard ring kept on non-input controls. Verified on 9 inputs (`round3/verify-final.md`).
+
+### R3-U-05 · P4 · Feed and Applications header filter buttons have no hover
+**Status** fixed (406aebe): `v2-bd` on the dropdown triggers, `v2-hover-accent-text` on Sort, `v2-hover-accent` on stage group headers; verified (`round3/verify-final.md`).
+
+### R3-U-06 · P4 · Cover Letters "Archived" band hovers differently from the Résumés band
+**Status** fixed (406aebe): both bands use `.v2-act`; computed styles byte-identical at rest and on hover (`round3/verify-final.md`).

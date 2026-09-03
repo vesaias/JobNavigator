@@ -65,7 +65,7 @@ Console clean on every pass (0/0/0/0).
 **Repro** Open any résumé → Header: the only fields are *Full name* and the contact-item rows. Open Experience: roles and bullets have `✕` and `+ Add`, but no `▲/▼`.
 **Actual** `[title="Move up"]` count inside Experience = **0**; no `Title`/headline input in Header (`header.title` exists in real résumé data — the file's own comment at `ResumeSections.jsx:9` says live résumés "carry keys these editors don't render (e.g. `header.title`)"). Contact items and skill categories *do* have `▲/▼`.
 **Expected + why** `Resumes Home D.dc.html:258` and `:344` give `▲/▼` only to contact items and skills, so the code matches the design — but a résumé editor where roles and bullets can be added and deleted yet never moved forces a delete-and-retype to change order, and `header.title` round-trips through the API and the PDF while being invisible and uneditable in v2.
-**Status** decided (user 2026-09-04): add the header Title field (rendered by garamond_alt / palatino / traditional); no reorder in Experience — keep as designed. Title field in the final fix batch.
+**Status** fixed (406aebe): header Title field, rendered by all 8 templates; verified live incl. PDF text (`round3/verify-final.md`). Reorder kept as designed (user).
 
 ### R3-B-02 · P3 · "Tailoring changes — already applied" is not true of suggested bullets
 **Where** `frontend/src/v2/ResumeEditor.jsx:822-823` (modal copy) and `:838` (the `APPLIED` chip) vs `backend/api/routes_resumes.py:930-931`, `:504-506`

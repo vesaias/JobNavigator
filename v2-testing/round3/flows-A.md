@@ -40,7 +40,7 @@ Scripts: `r3a_00_recon.py`, `r3a_01_company.py`, `r3a_02_test.py`, `r3a_03_run.p
 **Repro** Test-scrape a company whose board contains a posting whose *body* matches a `body_exclusion_phrases` entry, then Run the scrape and compare.
 **Actual** Test footer read `14 kept`; the run reported `14 seen, +13 new` and stored the fourteenth as `status=ignored`. The test preview only applies the two *title* layers, so a body-exclusion drop is invisible in the preview and unexplained in the run summary (`+13 new` with no "1 body-excluded"). The reason exists on the row (`h1b_jd_snippet`) but no screen shows it.
 **Expected** Either the preview says the body scan is not simulated, or the run summary breaks out the body-excluded count the way the test modal breaks out `removed by the global list`.
-**Status** needs decision (open after round 3).
+**Status** fixed (406aebe), verified live 2026-09-04 (`round3/verify-final.md`).
 
 **Verdict: ✔**
 
@@ -84,7 +84,7 @@ Scripts: `r3a_10_search.py` … `r3a_21_badge.py`. LLM calls: **0** (`auto_scori
 **Repro** Run a keyword search with `sources:["google","zip_recruiter","indeed"]`.
 **Actual** The backend log shows `JobSpy:ZipRecruiter - ZipRecruiter response status code 403` and `JobSpy:Google - initial cursor not found`, but the run finished `completed`, `is_warning:false`, summary `ZZA Search - 9 seen, +0 new`, and the ScrapeLog row records no error. Neither the Searches card nor Stats shows that one of the three configured boards refused the request.
 **Expected** A 403 from a configured source belongs in `ScrapeLog.error` / `is_warning`, the way an empty company scrape does.
-**Status** needs decision (open after round 3).
+**Status** needs fix (406aebe capture was a no-op: JobSpy loggers set propagate=False; `/scrape-log` did not serialize `source_breakdown`) — re-fix in progress 2026-09-04.
 
 **Verdict: ✔ for the UI flow (create / test / run / edit / interval / pause / delete all work); ✖ for the Indeed data path (R3-A-02).**
 
@@ -135,7 +135,7 @@ Console: the only errors in the whole step are the third-party posting the detai
 **Repro** Select 3 jobs → `Skip` on the floating bar.
 **Actual** Toast is `✓ Skipped 3 jobs.` with no `Undo`. Skipping the same three one at a time gives three undoable toasts. The bulk path is the one where a mis-click costs the most (it is the only way to skip N rows at once) and it is the one that cannot be reversed from the UI — the rows leave the list and the user has to find them again through `Status · Skip`.
 **Expected** The same `· Undo` affordance, restoring the previous per-job status (the endpoint already takes a list, so undo is one more `bulk-update` with the recorded prior statuses).
-**Status** needs decision (open after round 3).
+**Status** fixed (406aebe), verified live 2026-09-04 (`round3/verify-final.md`).
 
 **Verdict: ✔**
 
@@ -227,7 +227,7 @@ Subject: the `ZZA Delivery Program Manager @ ZZA Acme Systems` application from 
 **Repro** Add an interview, then try to change its time or location.
 **Actual** The row exposes only a status toggle (`scheduled ⇄ done`) and `✕`. A rescheduled interview — the most common change there is — means deleting the row and retyping all four fields. The backend already has `PATCH /applications/interviews/{id}` and the UI already calls it for `status`.
 **Expected** Click the row (or a small ✎) to reopen the same four-field form bound to that PATCH.
-**Status** needs decision (open after round 3).
+**Status** needs fix (406aebe introduced a P1 regression: Applications page blank when any application has an interview — child `Detail` references parent state) — re-fix in progress 2026-09-04.
 
 **Verdict: ✔**
 
@@ -270,7 +270,7 @@ Both were fired from the real UI (`/v2/stats` → Schedules → `Run now`), not 
 **Actual** `RESULT` reads `1 repl` (and `2 repls` on the two scheduled runs earlier today). The helper's own docstring says it should read `"3 replies"`.
 **Expected** `1 reply` / `2 replies`.
 **Proposed fix** Give `_activity_summary` an optional plural (`_activity_summary(since, "email", "reply", "replies")`), or pass a pre-pluralised noun.
-**Status** needs decision (open after round 3).
+**Status** fixed (406aebe), verified live 2026-09-04 (`round3/verify-final.md`).
 
 **Verdict: ✔ (both trigger, both complete, both report)**
 
