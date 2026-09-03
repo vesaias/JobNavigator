@@ -32,7 +32,9 @@ with browser() as b:
                 go(pg, r); pg.add_style_tag(content=CSS); pg.mouse.move(0, 0); pg.wait_for_timeout(400)
                 name = r.strip('/').replace('/', '_')[:60] + f'__{th}__{w}.png'
                 pg.screenshot(path=f'{OUT}/{name}', full_page=False)
-                index[name] = {'route': r, 'theme': th, 'width': w, 'errors': pg.jn_log['pageerrors'][:1]}
+                txt = pg.evaluate("(document.querySelector('.jn-v2 main')||{innerText:''}).innerText.length")
+                index[name] = {'route': r, 'theme': th, 'width': w, 'errors': pg.jn_log['pageerrors'][:1], 'main_text': txt}
                 pg.context.close()
 json.dump(index, open(f'{OUT}/index.json', 'w'), indent=1)
-print(f'{len(index)} screenshots → {OUT}')
+bad = [(n, v['errors'], v['main_text']) for n, v in index.items() if v['errors'] or v['main_text'] < 40]
+print(f'{len(index)} screenshots → {OUT}' + (f' · BLANK/ERROR routes: {bad}' if bad else ' · all routes rendered'))
