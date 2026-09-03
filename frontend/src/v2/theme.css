@@ -1,6 +1,11 @@
 /* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
-   Scoped to .jn-v2 so it never touches the classic UI. Light + dark; the root
-   gets data-theme="dark" from V2App (mirrors the global jobnavigator_dark_mode). */
+   Scoped to .jn-v2 so it never touches the classic UI. Light + dark + an `alt`
+   skin (D6). Every .jn-v2 root carries `data-theme` (light|dark, the *resolved*
+   mode — `system` follows prefers-color-scheme) and `data-skin` (default|alt),
+   both from the single store in theme.js; <html> carries a boot copy of the same
+   two attributes, stamped by the inline script in index.html before React mounts
+   so the page ground never flashes. The palette selectors below stay on the
+   .jn-v2 root itself — <html> is the boot copy, not a second source of truth. */
 .jn-v2 {
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
   --text:#1b1a16; --text-2:#57534a; --muted:#6d6862; --ink-2:#302d26; --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
@@ -294,6 +299,79 @@
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 }
+/* -- Skin: alt (design pass D6) ---------------------------------------------
+   The proof that the semantic layer is a layer. Two blocks, one per theme,
+   holding ONLY palette tokens and the three font stacks — no semantic token, no
+   --radius-*, no --t-*. Every primitive keeps reading the same semantic names,
+   so switching data-skin may change colour and font family and nothing else:
+   sizes, padding, radii, line-heights, border widths and shadow offsets are
+   untouched by construction (the gate is v2-testing/round-design/expected-D6.md).
+
+   Palette: cool slate ground, indigo accent, Georgia/Inter stacks (system
+   fallbacks only — no webfont is loaded, so a skin switch costs no request).
+   Contrast was matched to the default, not merely to AA. On --surface:
+   light --text 17.4 (default 17.4), --text-2 7.6 (7.7), --muted 5.6 (5.5),
+   --accent 7.0 (6.1); dark 11.4 (10.6) / 9.8 (9.1) / 6.2 (6.2) / 7.2 (7.1).
+   The two chart constraints hold too: --series-new keeps >=2:1 on
+   --stage-applied (2.16 light / 2.05 dark) and >=3:1 on --bg (3.10 / 4.45).
+
+   Deliberately NOT re-skinned: --cc-*/--sm-* (the ATS and search-mode badge
+   hues are an identity taxonomy, not theme colour), --shadow-* (black alphas,
+   already theme-neutral — and their offsets are part of the geometry the gate
+   pins), and the on-rail overlays --rail-active/--rail-hover/--on-rail-*
+   (white alphas that work on any dark rail).
+
+   The two blocks MUST declare the identical set of names. `[data-skin="alt"]`
+   and `.jn-v2[data-theme="dark"]` weigh the same (0,2,0), so a token that the
+   light skin block sets and the dark one forgets would beat the default dark
+   value and leak a light colour into the dark skin. */
+.jn-v2[data-skin="alt"] {
+  --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
+  --line-strong:#c3cad6; --edge:#7c8698; --track:#828c9e;
+  --text:#161a21; --text-2:#4b5468; --muted:#5f6878; --ink-2:#2a3140;
+  --accent:#3f52a8; --accent-ink:#ffffff; --accent-soft:#e6e9f7;
+  --good:#26694c; --warn:#8f5a10; --warn-soft:#f6efe2; --warn-line:#c99a55;
+  --bad:#a33334; --bad-soft:#f9eaea; --bad-faint:#fdf5f5;
+  --change-soft:#cfd8f0; --change-bg:#fafbfd; --hover-soft:#f2f5fb;
+  --ring-accent:rgba(63,82,168,.22); --scrim:rgba(17,20,27,.46); --recessed:#fafbfd;
+  /* the default's stage blue would collide with an indigo accent, so applied
+     moves to teal and the rest ride the status colours they already name */
+  --stage-applied:#1b5f78; --stage-interview:#8f5a10; --stage-offer:#26694c;
+  --stage-rejected:#a33334; --stage-new:#c3cad6;
+  --series-new:#bd8226;
+  --amber-bg:#fdfaf1; --amber-line:#d9cca6; --amber-line-soft:#eee7d2; --amber-hover:#f8f3e6;
+  --sand:#c9cfdc; --gold:#c08b3a; --funnel-low:#8fa0cf; --funnel-mid:#5b6fb8;
+  --toast-ok-bg:#eaf2ec; --toast-ok-line:#8fb59f; --toast-ok-ink:#26694c;
+  --toast-bad-bg:#faecec; --toast-bad-line:#d19a9a; --toast-bad-ink:#8f2c2d;
+  --rail:#171a21; --rail-text:#9aa1af; --rail-dim:#868d9c; --rail-accent:#8f9fe0;
+  --rail-line:#252932; --rail-ink:#f2f4f8;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:'Inter','Source Sans 3','Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="alt"][data-theme="dark"] {
+  --bg:#161a21; --surface:#1d222b; --surface-2:#262c37; --line:#343b47; --line-soft:#232830;
+  --line-strong:#454d5b; --edge:#737d8f; --track:#7d8798;
+  --text:#d6dae2; --text-2:#c6cbd5; --muted:#9aa2b0; --ink-2:#ced3dc;
+  --accent:#9aabee; --accent-ink:#12151b; --accent-soft:#232a3d;
+  --good:#8fc4a5; --warn:#d3a469; --warn-soft:#2a2318; --warn-line:#6a5738;
+  --bad:#e09a92; --bad-soft:#2b1b1a; --bad-faint:#241a1a;
+  --change-soft:#334066; --change-bg:#1e2430; --hover-soft:#242a35;
+  --ring-accent:rgba(154,171,238,.24); --scrim:rgba(0,0,0,.58); --recessed:#1a1f27;
+  --stage-applied:#8fc3d8; --stage-interview:#d3a469; --stage-offer:#8fc4a5;
+  --stage-rejected:#e09a92; --stage-new:#454d5b;
+  --series-new:#a9772a;
+  --amber-bg:#282318; --amber-line:#483f28; --amber-line-soft:#372f1e; --amber-hover:#312b1c;
+  --sand:#5f6675; --gold:#c9a35a; --funnel-low:#5b6fb8; --funnel-mid:#8fa0cf;
+  --toast-ok-bg:#1f2c26; --toast-ok-line:#3f6b52; --toast-ok-ink:#8fc4a5;
+  --toast-bad-bg:#2c1d1c; --toast-bad-line:#7a3a36; --toast-bad-ink:#e09a92;
+  --rail:#0e1116; --rail-text:#8d94a2; --rail-dim:#828997; --rail-accent:#9aabee;
+  --rail-line:#20242c; --rail-ink:#f2f4f8;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:'Inter','Source Sans 3','Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
+}
+
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
 .jn-v2 a { color:var(--accent); text-decoration:none; }
 .jn-v2 a:hover { color:var(--text); }

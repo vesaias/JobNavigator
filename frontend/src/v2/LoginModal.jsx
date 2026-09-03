@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import axios from 'axios'
 import { Button, Heading, Helper, Label, ModalPanel } from './ui'
+import { useTheme, themeAttrs } from './theme'
 import './theme.css'
 
 // Sign-in overlay (System Overlays.dc.html · 1). The design draws the resting
@@ -12,7 +13,9 @@ export default function LoginModal({ onSuccess }) {
   const [error, setError] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [success, setSuccess] = useState(false)
-  const dark = (() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })()
+  // this overlay mounts outside the v2 shell, so it carries the theme itself —
+  // from the shared store, not a private read of the flag (SHELL-02)
+  const theme = useTheme()
 
   const submit = async (e) => {
     e.preventDefault()
@@ -45,7 +48,7 @@ export default function LoginModal({ onSuccess }) {
     // behind this overlay to go back to, so it takes no Escape/scrim dismissal —
     // the same as before.
     <ModalPanel as="form" onSubmit={submit} width={360} zIndex={9999}
-      scrimProps={{ className: 'jn-v2', 'data-theme': dark ? 'dark' : 'light' }}
+      scrimProps={{ className: 'jn-v2', ...themeAttrs(theme) }}
       style={{ padding: '26px 26px 22px', gap: 14 }}>
       {success ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
