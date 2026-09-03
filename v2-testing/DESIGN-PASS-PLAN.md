@@ -27,3 +27,4 @@ D3 ≈ 400 k · D4 six runs ≈ 6 × 250 k · D5 ≈ 150 k · D6 ≈ 400 k · fi
 ## Log
 - D0 (2026-09-04): dump `backups/design_baseline_20260904.dump`; 52 shots + 5 689 crawled elements at HEAD `4f3a5f5` (pre-D3 bundle), copied to `artifacts/design/D0/`. Clock frozen in both tools. Noise floor from a repeat run: 5 of 52 shots differ by 1–27 px (anti-aliasing in the PDF preview iframe and one chart pixel) → a route diff above ~50 px is real.
 - D3 `b346670` vs D0: zero design diffs. Only the Stats LLM-cost table (30-day window rolls with real time) and the toast-lab gallery link changed; both now masked in `shotdiff.py`. Style crawl ±1 rgb hover noise came from transitions mid-sample → transitions now disabled in the crawl too.
+- D4a: Opus returned 529 Overloaded three times before writing anything (2026-09-04 evening). Switched D4a to Sonnet in two halves: D4a-1 Button/IconButton, D4a-2 Pill. The pixel/style gate is the safety net either way.
