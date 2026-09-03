@@ -28,7 +28,10 @@ export default function ToastLab() {
           <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Toast lab</h1>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>Temporary — fire each kind, check both themes, then delete this page.</span>
         </div>
-        <div onClick={toggle} className="v2-act v2-ctl" style={{ marginLeft: 'auto', height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+        {/* D3: the primitive gallery is the other rail-less lab page; neither is in
+            the rail, so they link to each other rather than being unreachable. */}
+        <a href="/v2/ui" className="v2-navlink v2-ctl" style={{ marginLeft: 'auto', height: 32, padding: '0 12px', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--accent)' }}>Primitives ›</a>
+        <div onClick={toggle} className="v2-act v2-ctl" style={{ height: 32, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
           ◐ {dark ? 'Dark' : 'Light'}
         </div>
       </header>

@@ -27,6 +27,7 @@ import V2Settings from './v2/Settings'
 import V2Persona from './v2/Persona'
 import V2Stats from './v2/Stats'
 import V2ToastLab from './v2/ToastLab'   // TEMP: /v2/toasts debug page
+import V2UiGallery from './v2/UiGallery'   // /v2/ui — the primitive gallery (design pass D3)
 import axios from 'axios'
 import { TitleSync } from './useTitle'
 
@@ -167,6 +168,10 @@ function App() {
 
         {/* TEMP: toast taxonomy lab — delete with v2/ToastLab.jsx */}
         <Route path="/v2/toasts" element={<V2ToastLab />} />
+
+        {/* Primitive gallery (design pass D3) — rail-less, outside the v2 shell so
+            nothing but ui.jsx is on screen for the style crawl. */}
+        <Route path="/v2/ui" element={<V2UiGallery />} />
 
         {/* classic shell */}
         <Route element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>
