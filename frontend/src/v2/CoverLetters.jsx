@@ -389,7 +389,7 @@ export default function CoverLetters() {
             {active.map((c) => row(c, false))}
 
             {archived.length > 0 && (
-              <div onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} className="v2-archband" title={query.trim() ? 'Archived letters are shown while you search' : undefined}
+              <div onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} className="v2-act" title={query.trim() ? 'Archived letters are shown while you search' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginTop: 6, border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs

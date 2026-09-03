@@ -432,8 +432,17 @@ export default function Searches() {
   }, [test, editing, newOpen])
 
   const nActive = searches.filter((s) => s.active).length
-  // an error wins; then health's 3-run verdict; then a single clean-but-empty run
-  const warnOf = (s) => s.last_error || downMap[s.id]
+  // R3-A-03: a board that hard-failed on the last run is the most specific thing
+  // we can say, so it outranks the generic verdicts below — "9 seen, +0 new"
+  // otherwise reads like a quiet day on every configured source.
+  const sourceWarnOf = (s) => {
+    const errs = s.last_source_errors || []
+    if (!errs.length) return null
+    return `${errs.map((e) => `${e.label || e.source} failed (${e.error})`).join(' · ')} on the last run`
+  }
+  // a failed source wins; then an error; then health's 3-run verdict; then a
+  // single clean-but-empty run
+  const warnOf = (s) => sourceWarnOf(s) || s.last_error || downMap[s.id]
     || (s.last_run_warning ? 'Last run finished cleanly but returned no jobs' : null)
   // SRCH-09: the header count uses health's verdict alone — the same source as
   // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
@@ -703,6 +712,15 @@ function TestModal({ test, tab, setTab, onClose }) {
   const filtered = jobs.filter((j) => !j.kept)
   const rows = tab === 'kept' ? kept : tab === 'filtered' ? filtered : jobs
   const cfg = d.config || {}
+  // R3-A-01 footer arithmetic. `body_excluded_count` is the number the run would
+  // store as `ignored`; the rest of the drops are the two title/company layers.
+  const nRaw = d.raw_count ?? jobs.length
+  const nKept = d.after_filter ?? kept.length
+  const nBodyExcluded = d.body_excluded_count ?? 0
+  const nBodyUnchecked = d.body_unchecked_count ?? 0
+  const nTitleFiltered = Math.max(0, nRaw - nKept - nBodyExcluded)
+  // a kept row the scan couldn't run on (no description in the preview)
+  const needsDesc = (j) => (d.body_phrase_count ?? 0) > 0 && j.body_checked === false && !j.body_excluded_by
   // the backend calls this `source_breakdown` on every preview path
   // (routes_searches.py:391/:621, jobright.py:730, freehire.py:330,
   // linkedin_personal.py:1123); `by_source` never existed.
@@ -798,12 +816,18 @@ function TestModal({ test, tab, setTab, onClose }) {
                         ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</a>
                         : <span title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'default' }}>{j.title}</span>}
                       {j.reason && <span title={j.reason} style={{ minWidth: 0, fontSize: 11, lineHeight: '15px', color: ok ? 'var(--muted)' : 'var(--bad)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.reason}</span>}
+                      {/* R3-A-01: a kept row the body scan could not run on is not
+                          a promise — say which check is missing rather than let
+                          the run turn it into an `ignored` row unexplained. */}
+                      {ok && needsDesc(j) && <span title="The run scans the description for body_exclusion_phrases; this preview didn’t have one" style={{ minWidth: 0, fontSize: 11, lineHeight: '15px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>body check needs the description</span>}
                     </span>
                     <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
                     <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
-                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : 'Out'}</span>
+                      {/* R3-A-01: a body-phrase drop is stored as `ignored`, not
+                          filtered out of the feed — label it as what it becomes. */}
+                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : 'Out'}</span>
                     </span>
                   </div>
                 )
@@ -816,8 +840,13 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
 
             <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9, fontSize: 11.5, color: 'var(--text-2)' }}>
+              {/* R3-A-01: three buckets, not two — a body-phrase drop is stored
+                  as `ignored` by the run and used to hide inside "filtered". */}
               <span>
-                <b style={{ color: 'var(--good)' }}>{d.after_filter ?? kept.length} kept</b> · <b style={{ color: 'var(--bad)' }}>{(d.raw_count ?? jobs.length) - (d.after_filter ?? kept.length)} filtered</b> · {d.raw_count ?? jobs.length} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
+                <b style={{ color: 'var(--good)' }}>{nKept} kept</b> · <b style={{ color: 'var(--bad)' }}>{nTitleFiltered} title-filtered</b>
+                {nBodyExcluded > 0 && <> · <b style={{ color: 'var(--warn)' }}>{nBodyExcluded} would be ignored (body phrases)</b></>}
+                {' · '}{nRaw} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
+                {nBodyUnchecked > 0 && <span style={{ color: 'var(--muted)' }}> · {nBodyUnchecked} not body-checked (needs the description)</span>}
               </span>
               <div onClick={onClose} className="v2-bdc" style={{ marginLeft: 'auto', height: 31, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>Close</div>
             </div>

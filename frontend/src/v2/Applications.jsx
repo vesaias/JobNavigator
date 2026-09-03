@@ -97,6 +97,11 @@ export default function Applications() {
   const [intWhat, setIntWhat] = useState(''); const [intWhen, setIntWhen] = useState('')
   const [intBusy, setIntBusy] = useState(false)   // APPS-11: one POST at a time
   const [intWhere, setIntWhere] = useState(''); const [intPrep, setIntPrep] = useState('')
+  // R3-A-06: an interview row could only be deleted and retyped. A reschedule is
+  // the most common change there is, and the PATCH the status chip already uses
+  // takes every field — so the row reopens into the same four-field form.
+  const [editIv, setEditIv] = useState(null)      // interview id being edited
+  const [ivDraft, setIvDraft] = useState({ what: '', when: '', where: '', prep: '' })
   const [prep, setPrep] = useState(null)           // {text} | 'loading'
   const [copied, setCopied] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
@@ -123,7 +128,7 @@ export default function Applications() {
   useEffect(() => { load() }, [load])
   // APPS-06: the interview draft belongs to the application it was opened on —
   // carrying it to the next row posted it against the wrong application
-  useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }, [sel])
+  useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); setEditIv(null) }, [sel])
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
   const logDirty = useRef(false)   // APPS-22: typed fields survive a stray Escape
@@ -136,7 +141,7 @@ export default function Applications() {
   }
   useEffect(() => {
     const onDoc = () => closeAll()
-    const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); closeLog() } }
+    const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); setEditIv(null); closeLog() } }   // R3-A-06: Escape cancels the interview edit
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
@@ -243,6 +248,34 @@ export default function Applications() {
     }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not remove the interview' + errSuffix(e) }) }
   }
+  // R3-A-06: ISO instant → the wall-clock string <input type="datetime-local">
+  // wants, in the viewer's own zone — the mirror of what addInterview sends.
+  const toLocalInput = (iso) => {
+    if (!iso) return ''
+    const dt = new Date(iso)
+    if (Number.isNaN(dt.getTime())) return ''
+    const p = (n) => String(n).padStart(2, '0')
+    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`
+  }
+  const openIvEdit = (iv) => {
+    setIntForm(false)
+    setEditIv(iv.id)
+    setIvDraft({ what: iv.what || '', when: toLocalInput(iv.when_at), where: iv.where_text || '', prep: iv.prep || '' })
+  }
+  const saveInterview = async () => {
+    if (!d || !editIv || intBusy) return
+    setIntBusy(true)
+    try {
+      await api.patch(`/applications/interviews/${editIv}`, {
+        what: ivDraft.what.trim() || 'Interview',
+        when_at: ivDraft.when ? new Date(ivDraft.when).toISOString() : null,
+        where_text: ivDraft.where.trim() || null,
+        prep: ivDraft.prep.trim() || null,
+      })
+      setEditIv(null); load(d.id)
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save the interview' + errSuffix(e) }) }
+    finally { setIntBusy(false) }
+  }
   const toggleInterview = async (iv) => {
     try { await api.patch(`/applications/interviews/${iv.id}`, { status: iv.status === 'done' ? 'scheduled' : 'done' }); load(d.id) }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not update the interview' + errSuffix(e) }) }
@@ -302,14 +335,14 @@ export default function Applications() {
 
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
-        <div style={{ flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
         </div>
 
         <span style={{ position: 'relative', flex: '0 0 auto', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-          <div onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')}
+          <div onClick={() => setOpenFlt(openFlt === 'company' ? null : 'company')} className="v2-bd"
             style={{ height: 30, padding: '0 13px', border: `1px solid ${openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--edge)'}`, background: openFlt === 'company' || companies.length ? 'var(--accent-soft)' : 'var(--surface)', color: openFlt === 'company' || companies.length ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', lineHeight: 1, gap: 6, fontSize: 12.5, whiteSpace: 'nowrap', cursor: 'pointer' }}>
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
           </div>
@@ -334,7 +367,7 @@ export default function Applications() {
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {visible.length !== apps.length && <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{visible.length} of {apps.length} shown</span>}
           <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-            <div onClick={() => setOpenFlt(openFlt === 'sort' ? null : 'sort')} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
+            <div onClick={() => setOpenFlt(openFlt === 'sort' ? null : 'sort')} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {openFlt === 'sort' && (
@@ -363,8 +396,11 @@ export default function Applications() {
             const shut = !!closed[st.id]
             return (
               <React.Fragment key={st.id}>
-                <div onClick={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', lineHeight: '16px', cursor: 'pointer' }}>
+                {/* every collapsible header in v2 washes to --surface-2 on hover
+                    (theme.css .v2-hover-accent) — the stage bands were the last
+                    ones with no hover at all */}
+                <div onClick={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))} className="v2-hover-accent"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', borderRadius: 7, lineHeight: '16px', cursor: 'pointer' }}>
                   <span style={{ width: 7, height: 7, flex: '0 0 7px', borderRadius: 99, background: st.dot }} />
                   <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{st.label}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
@@ -520,16 +556,48 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               </div>
             </div>
             {ivs.map((iv) => (
-              <div key={iv.id} style={{ border: '1px solid var(--line)', borderRadius: 9, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 3, background: 'var(--bg)' }}>
+              <div key={iv.id} style={{ border: `1px solid ${editIv === iv.id ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 9, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: editIv === iv.id ? 8 : 3, background: editIv === iv.id ? 'var(--surface)' : 'var(--bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{iv.what}</span>
+                  {/* R3-A-06: the row text opens the editor; the status chip and ✕
+                      keep the behaviour they had, so nothing that worked moved. */}
+                  <span onClick={() => (editIv === iv.id ? setEditIv(null) : openIvEdit(iv))} title={editIv === iv.id ? 'Close without saving' : 'Edit this interview'} style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>{iv.what}</span>
                   <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
                   <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
                 </div>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>
-                  {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
-                </span>
-                {iv.prep && <span style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)', textWrap: 'pretty' }}>{iv.prep}</span>}
+                {editIv === iv.id ? (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={FIELD_LABEL}>What</span>
+                      <input autoFocus value={ivDraft.what} onChange={(e) => setIvDraft((v) => ({ ...v, what: e.target.value }))} placeholder="e.g. System design round" style={inputSt} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                        <span style={FIELD_LABEL}>When</span>
+                        <input type="datetime-local" value={ivDraft.when} onChange={(e) => setIvDraft((v) => ({ ...v, when: e.target.value }))} style={{ ...inputSt, minWidth: 0 }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                        <span style={FIELD_LABEL}>Where</span>
+                        <input value={ivDraft.where} onChange={(e) => setIvDraft((v) => ({ ...v, where: e.target.value }))} placeholder="Zoom · Onsite — London" style={{ ...inputSt, minWidth: 0 }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={FIELD_LABEL}>Prep note · optional</span>
+                      <input value={ivDraft.prep} onChange={(e) => setIvDraft((v) => ({ ...v, prep: e.target.value }))} placeholder="Who I'm meeting, what to revise…" style={inputSt} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>Escape cancels</span>
+                      <div onClick={() => setEditIv(null)} className="v2-bdc" style={{ marginLeft: 'auto', height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
+                      <div onClick={saveInterview} style={{ opacity: intBusy ? 0.5 : 1, height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: intBusy ? 'default' : 'pointer' }}>{intBusy ? 'Saving…' : 'Save'}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span onClick={() => openIvEdit(iv)} title="Edit this interview" style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', cursor: 'pointer' }}>
+                      {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
+                    </span>
+                    {iv.prep && <span onClick={() => openIvEdit(iv)} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)', textWrap: 'pretty', cursor: 'pointer' }}>{iv.prep}</span>}
+                  </>
+                )}
               </div>
             ))}
             {intForm ? (

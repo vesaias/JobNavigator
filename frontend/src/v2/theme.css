@@ -168,7 +168,10 @@
 .v2-dashadd:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; color:var(--accent) !important; }
 .v2-act:hover { border-color:var(--accent) !important; background:var(--hover-soft) !important; }
 .v2-menuitem:hover { background:var(--surface-2) !important; }   /* menu items carry inline backgrounds (FEED-04, COMP) */
-.v2-crow:hover { background:var(--hover-soft); }
+/* Flat list rows all hover to --surface-2: the Feed (.v2-row) and Applications
+   (.v2-arow) already did, Companies used the accent wash. Bordered cards/pills
+   (.v2-card, .v2-act, .v2-dashadd) keep --hover-soft deliberately. */
+.v2-crow:hover { background:var(--surface-2) !important; }
 .v2-arow:hover { background:var(--surface-2) !important; }
 /* border-only hovers for pills that already carry their own fill */
 .v2-bd:hover { border-color:var(--accent) !important; }
@@ -188,8 +191,6 @@
 .v2-clhead:hover { background:var(--surface-2); }
 /* the Q&A bank card sits on --amber-bg, so it washes to its own amber hover */
 .v2-qahead:hover { background:var(--amber-hover); }
-/* inline style sets the dashed border, so :hover needs !important to win */
-.v2-archband:hover { border-color:var(--edge) !important; }
 .v2-anchor:hover { color:var(--text) !important; }
 .v2-parabtn:hover { background:var(--surface-2); }
 .v2-parabtn-bad:hover { background:var(--bad-soft); color:var(--bad) !important; }
@@ -255,13 +256,24 @@
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
 .jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--muted) !important; opacity:1; }
 .jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }
-/* CL-21: keyboard focus is visible on every field; inline borders need !important */
-.jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--accent) !important; box-shadow:0 0 0 2px var(--ring-accent) !important; outline:none; }
+/* CL-21: keyboard focus is visible on every field; inline borders need !important.
+   The 2px ring is gone: browsers apply :focus-visible to text inputs on *mouse*
+   focus too, so every click drew a rectangle — and on the borderless inputs
+   (Applications, Settings, Resumes, Cover Letters) it floated around nothing.
+   A field now signals focus the way it draws itself at rest: a bordered box turns
+   its border accent, an underline input turns its underline accent. */
+.jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--accent) !important; outline:none; }
+/* A bare input inside a bordered wrapper has no border of its own, so the wrapper
+   carries the signal instead. */
+.jn-v2 .v2-fieldwrap:focus-within { border-color:var(--accent) !important; }
+/* Keyboard-only ring on non-input controls — :focus-visible never fires on these
+   from a mouse click, so this one stays as it was. */
 .jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--ring-accent); }
 
 /* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
    Run/Test pills scrolled off the viewport. Pin the actions column to the right
    edge of the scroller; the two backgrounds mirror .v2-crow's rest/hover so the
-   pinned cell never reads as a separate strip. */
+   pinned cell never reads as a separate strip — including the --surface-2 the
+   row now hovers to. */
 .v2-cactions { background:var(--bg); }
-.v2-crow:hover .v2-cactions { background:var(--hover-soft); }
+.v2-crow:hover .v2-cactions { background:var(--surface-2); }

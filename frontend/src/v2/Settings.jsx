@@ -112,7 +112,7 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
     onSave(local)
   }
   return (
-    <span style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
+    <span className="v2-fieldwrap" style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
       <input
         value={masked ? MASK : local}
         // SET-27: the integer rows feed unguarded int() calls in the backend, so
@@ -498,7 +498,7 @@ export default function Settings() {
             {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
         </div>
-        <div style={{ marginLeft: 'auto', flex: '0 0 auto', height: 30, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 30, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -714,7 +714,7 @@ function ApiKeyRow({ value, save, flash }) {
   const isSet = value === MASK || (value && value.length > 0)
   return (
     <>
-      <span style={{ ...BOX, flex: '0 1 340px' }}>
+      <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 340px' }}>
         <input value={local} onChange={(e) => setLocal(e.target.value)} type={shown ? 'text' : 'password'} autoComplete="off"
           aria-label="Dashboard API key"
           placeholder={isSet ? 'Set — type a new key to replace it' : 'No key — the dashboard is open'}
@@ -768,7 +768,7 @@ function LinkedInRow({ li, setLi, flash }) {
       </span>
       {phase === 'awaiting_pin' && (
         <>
-          <span style={{ ...BOX, flex: '0 1 120px' }}>
+          <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 120px' }}>
             <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="6-digit PIN" inputMode="numeric" aria-label="LinkedIn sign-in PIN"
               style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
           </span>
@@ -955,7 +955,7 @@ function ModelsModal({ S, save, onClose }) {
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
-            <span style={{ ...BOX, flex: 1, height: 31 }}>
+            <span className="v2-fieldwrap" style={{ ...BOX, flex: 1, height: 31 }}>
               <input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search the model catalog"
                 aria-expanded={showSug} aria-autocomplete="list"
                 onKeyDown={(e) => {

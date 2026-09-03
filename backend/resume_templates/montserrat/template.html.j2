@@ -46,6 +46,13 @@ html, body {
   margin-bottom: 4pt;
 }
 
+.header .title-line {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10pt;
+  color: #444;
+  margin-bottom: 4pt;
+}
+
 .header .contact {
   font-size: 9pt;
   color: #444;
@@ -183,6 +190,8 @@ ul.bullets li {
   {% if header %}
   <div class="header">
     <h1>{{ header.name }}</h1>
+    {# R3-B-01: optional headline. Absent when empty, so nothing shifts. #}
+    {% if header.title %}<div class="title-line">{{ header.title }}</div>{% endif %}
     <div class="contact">
       {% set contact_parts = [] %}
       {% for item in (header.contact_items or []) %}

@@ -154,7 +154,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
       <span style={FIELD_LABEL} title={label}>{label}</span>
       {kind === 'text' ? (
-        <div style={BOX}>
+        <div className="v2-fieldwrap" style={BOX}>
           <input value={val ?? ''} onChange={(e) => write(node, fkey, e.target.value)}
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text)', fontFamily: 'var(--sans)' }} />
         </div>

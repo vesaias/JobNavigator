@@ -7,7 +7,7 @@
 // optional, so Persona simply omits them and no ✦ marks render.
 //
 // Real data is looser than the EMPTY skeleton: live résumés carry keys these
-// editors don't render (e.g. header.title) and omit whole sections. Every mutation
+// editors don't render, and omit whole sections. Every mutation
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
@@ -201,6 +201,13 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <span style={UPPER}>Full name</span>
         <input value={data.header?.name || ''} onChange={(e) => setField('header.name', e.target.value)} style={{ ...cellInput, height: 32, fontSize: 13 }} />
+      </div>
+      {/* R3-B-01: header.title round-trips through the API and prints in the
+          templates, but had no editor — it was invisible and uneditable in v2.
+          Optional: an empty value renders nothing at all in the PDF. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <span style={UPPER}>Title</span>
+        <input value={data.header?.title || ''} onChange={(e) => setField('header.title', e.target.value)} placeholder="Headline, e.g. Senior Product Manager" style={{ ...cellInput, height: 32, fontSize: 13 }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

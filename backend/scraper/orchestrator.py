@@ -84,6 +84,45 @@ def _get_setting_value(db, key: str, default: str = "") -> str:
     return row.value if row else default
 
 
+# ── Per-source outcome helpers (R3-A-03) ────────────────────────────────────
+# A multi-board search stores {"indeed": {"seen": 9, "new": 0},
+# "zip_recruiter": {"seen": 0, "new": 0, "error": "403"}} on its ScrapeLog row.
+# These three helpers are the only readers — the API, the health endpoint and
+# the run summary all go through them so the wording stays in one place.
+
+SOURCE_LABELS = {
+    "indeed": "Indeed",
+    "linkedin": "LinkedIn",
+    "zip_recruiter": "ZipRecruiter",
+    "google": "Google",
+    "glassdoor": "Glassdoor",
+    "bayt": "Bayt",
+    "naukri": "Naukri",
+    "bdjobs": "BDJobs",
+}
+
+
+def source_label(key: str) -> str:
+    """"zip_recruiter" -> "ZipRecruiter"; unknown boards keep their raw key."""
+    return SOURCE_LABELS.get(str(key or "").lower(), str(key or ""))
+
+
+def source_errors(breakdown) -> list:
+    """[(source_key, error), ...] for every board that reported a failure."""
+    if not isinstance(breakdown, dict):
+        return []
+    out = []
+    for key, val in breakdown.items():
+        if isinstance(val, dict) and val.get("error"):
+            out.append((str(key), str(val["error"])))
+    return out
+
+
+def describe_source_errors(breakdown) -> str:
+    """"zip_recruiter: 403 · google: initial cursor not found" (empty when clean)."""
+    return " · ".join(f"{key}: {err}" for key, err in source_errors(breakdown))
+
+
 def _source_for_search(search: Search) -> str:
     """Source string used for ScrapeLog.source — matches old jobspy_scraper behavior."""
     source_map = {
@@ -182,17 +221,30 @@ async def run_all(force: bool = False):
             # Log the scrape. A clean run that found nothing is a warning (same rule
             # company scrapes use) so /health/entities can flag a search that has
             # quietly stopped returning results.
+            breakdown = result.get("source_breakdown") or None
+            failed_sources = source_errors(breakdown)
             log = ScrapeLog(
                 search_id=search.id,
                 source=_source_for_search(search),
                 jobs_found=result.get("jobs_found", 0),
                 new_jobs=result.get("new_jobs", 0),
                 error=result.get("error"),
-                is_warning=(result.get("jobs_found", 0) == 0 and not result.get("error")),
+                # R3-A-03: a board that refused the request is a warning even
+                # when the other boards returned rows.
+                is_warning=bool(
+                    failed_sources
+                    or (result.get("jobs_found", 0) == 0 and not result.get("error"))
+                ),
+                source_breakdown=breakdown,
                 duration_seconds=result.get("duration", 0),
             )
             db.add(log)
             db.commit()
+
+            if failed_sources:
+                logger.warning(
+                    f"Search '{search.name}': {describe_source_errors(breakdown)}"
+                )
 
             logger.info(
                 f"Search '{search.name}': found={result.get('jobs_found', 0)}, "
@@ -265,17 +317,28 @@ async def _run_search_by_id(search_id: str, auto_score: Optional[bool] = None) -
             # Unknown mode — match old behavior (silent return)
             return
 
+        breakdown = result.get("source_breakdown") or None
+        failed_sources = source_errors(breakdown)
         log = ScrapeLog(
             search_id=search.id,
             source=_source_for_search(search),
             jobs_found=result.get("jobs_found", 0),
             new_jobs=result.get("new_jobs", 0),
             error=result.get("error"),
-            is_warning=(result.get("jobs_found", 0) == 0 and not result.get("error")),
+            # R3-A-03: a board that refused the request is a warning even when
+            # the other boards returned rows.
+            is_warning=bool(
+                failed_sources
+                or (result.get("jobs_found", 0) == 0 and not result.get("error"))
+            ),
+            source_breakdown=breakdown,
             duration_seconds=result.get("duration", 0),
         )
         db.add(log)
         db.commit()
+
+        if failed_sources:
+            logger.warning(f"Search '{search.name}': {describe_source_errors(breakdown)}")
 
         if should_score and result and result.get("new_jobs", 0) > 0:
             from backend.analyzer.cv_scorer import analyze_unscored_jobs

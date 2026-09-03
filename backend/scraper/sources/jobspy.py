@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
@@ -64,6 +65,95 @@ def _apply_h1b_inline(job, db=None, company_lookup=None, phrases=None, loop=None
         logger.warning(f"_apply_h1b_inline failed for job {getattr(job, 'id', '?')}: {e}")
 
 
+# ── Per-source outcome (R3-A-03) ─────────────────────────────────────────────
+# jobspy runs every configured board inside a single scrape_jobs() call and
+# swallows per-board failures into its own loggers ("JobSpy:ZipRecruiter - …
+# response status code 403"). Nothing about them reaches the return value, so a
+# board that hard-failed used to be indistinguishable from one that legitimately
+# found nothing: the run finished `completed`, is_warning False, and the summary
+# read "9 seen, +0 new". Capture those records for the duration of the call.
+
+_JOBSPY_SITE_KEYS = {
+    "linkedin": "linkedin",
+    "indeed": "indeed",
+    "ziprecruiter": "zip_recruiter",
+    "google": "google",
+    "glassdoor": "glassdoor",
+    "bayt": "bayt",
+    "naukri": "naukri",
+    "bdjobs": "bdjobs",
+}
+
+
+def _site_key(logger_name: str):
+    """"JobSpy:ZipRecruiter" -> "zip_recruiter". None for non-site loggers.
+
+    jobspy names its per-board loggers with a colon, so they are top-level
+    loggers rather than children of a "JobSpy" parent — the handler has to sit
+    on the root logger and filter by name.
+    """
+    name = str(logger_name or "")
+    if ":" not in name:
+        return None
+    suffix = name.split(":", 1)[1].strip()
+    if not suffix:
+        return None
+    flat = suffix.lower().replace("_", "").replace("-", "")
+    return _JOBSPY_SITE_KEYS.get(flat, suffix.lower())
+
+
+def _condense_error(msg: str) -> str:
+    """"ZipRecruiter response status code 403" -> "403"; anything else trimmed."""
+    text = " ".join(str(msg).split())
+    m = re.search(r"\b([45]\d\d)\b", text)
+    if m:
+        return m.group(1)
+    return text[:120]
+
+
+class _SourceLogCapture(logging.Handler):
+    """Keeps the first WARNING+ record each JobSpy board logger emits."""
+
+    def __init__(self):
+        super().__init__(level=logging.WARNING)
+        self.errors = {}
+
+    def emit(self, record):
+        try:
+            if not str(record.name).startswith("JobSpy"):
+                return
+            key = _site_key(record.name)
+            if not key or key in self.errors:
+                return
+            self.errors[key] = _condense_error(record.getMessage())
+        except Exception:  # a logging handler must never break the scrape
+            pass
+
+
+@contextmanager
+def _capture_source_errors():
+    """Attach the capture handler to the root logger for one scrape_jobs() call.
+
+    Deliberately does not touch any logger's level: these records already reach
+    the backend log, and lowering a level mid-run would leak into every other
+    request sharing the process.
+    """
+    handler = _SourceLogCapture()
+    root = logging.getLogger()
+    root.addHandler(handler)
+    try:
+        yield handler
+    finally:
+        root.removeHandler(handler)
+
+
+def _merge_source_errors(breakdown: dict, errors: dict) -> dict:
+    """Fold captured per-board errors into the seen/new breakdown."""
+    for key, err in (errors or {}).items():
+        breakdown.setdefault(key, {"seen": 0, "new": 0})["error"] = err
+    return breakdown
+
+
 def get_setting_value(db: Session, key: str, default: str = "") -> str:
     """Read a single Setting row's value by key, returning ``default`` if not set."""
     row = db.query(Setting).filter(Setting.key == key).first()
@@ -102,6 +192,10 @@ def apply_company_filter(jobs_df, company_filter: list):
 def _run_sync(search, proxy_url: str = None) -> dict:
     """Execute a single JobSpy search and return results dict."""
     start_time = time.time()
+    # R3-A-03: one entry per configured board, so a 403 is visible next to the
+    # boards that worked. Seeded here (not after the call) so the failure paths
+    # below can still say which boards were asked for.
+    breakdown = {}
 
     try:
         from jobspy import scrape_jobs
@@ -109,7 +203,9 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         # Build source list — filter out 'direct' which is Playwright
         sources = [s for s in (search.sources or []) if s != "direct"]
         if not sources:
-            return {"jobs_found": 0, "new_jobs": 0, "error": "No JobSpy sources configured"}
+            return {"jobs_found": 0, "new_jobs": 0, "error": "No JobSpy sources configured",
+                    "source_breakdown": {}}
+        breakdown = {s: {"seen": 0, "new": 0} for s in sources}
 
         kwargs = {
             "site_name": sources,
@@ -129,11 +225,14 @@ def _run_sync(search, proxy_url: str = None) -> dict:
             kwargs["proxies"] = [proxy_url]
 
         logger.info(f"Running JobSpy search: {search.name} — term='{search.search_term}', sources={sources}")
-        jobs_df = scrape_jobs(**kwargs)
+        with _capture_source_errors() as capture:
+            jobs_df = scrape_jobs(**kwargs)
+        _merge_source_errors(breakdown, capture.errors)
 
         if jobs_df is None or jobs_df.empty:
             duration = time.time() - start_time
-            return {"jobs_found": 0, "new_jobs": 0, "error": None, "duration": duration}
+            return {"jobs_found": 0, "new_jobs": 0, "error": None, "duration": duration,
+                    "source_breakdown": breakdown}
 
         # Apply filters (merge global title exclude with per-search)
         db_excl = SessionLocal()
@@ -172,6 +271,12 @@ def _run_sync(search, proxy_url: str = None) -> dict:
             db_excl.close()
 
         jobs_found = len(jobs_df)
+
+        # Per-board `seen` counted after filtering, so sum(seen) == jobs_found.
+        if jobs_df is not None and not jobs_df.empty and "site" in jobs_df.columns:
+            for site_name, count in jobs_df["site"].value_counts().items():
+                key = str(site_name).lower()
+                breakdown.setdefault(key, {"seen": 0, "new": 0})["seen"] = int(count)
 
         # Save to DB, dedup via external_id
         db = SessionLocal()
@@ -263,6 +368,7 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                         db.add(job)
                         db.flush()
                     new_jobs += 1
+                    breakdown.setdefault(site or "unknown", {"seen": 0, "new": 0})["new"] += 1
                     existing_ids.add(ext_id)
                 except IntegrityError:
                     logger.debug(f"Duplicate external_id for '{title}' at {company}, skipping")
@@ -326,7 +432,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         from backend.activity import log_activity
         log_activity("scrape", f"JobSpy search '{search.name}': {new_jobs} new / {jobs_found} found in {duration:.1f}s")
 
-        return {"jobs_found": jobs_found, "new_jobs": new_jobs, "error": None, "duration": duration}
+        return {"jobs_found": jobs_found, "new_jobs": new_jobs, "error": None, "duration": duration,
+                "source_breakdown": breakdown}
 
     except Exception as e:
         duration = time.time() - start_time
@@ -335,7 +442,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         from backend.activity import log_activity
         log_activity("scrape", f"JobSpy search '{search.name}' failed: {e}")
 
-        return {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": duration}
+        return {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": duration,
+                "source_breakdown": breakdown}
 
 
 async def run(search, proxy_url: str = None) -> dict:

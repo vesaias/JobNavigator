@@ -59,7 +59,7 @@ export default function LoginModal({ onSuccess }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>API key</span>
-              <div style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 7, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 7, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type={showKey ? 'text' : 'password'}
                   placeholder="jn_live_…" autoFocus autoComplete="current-password"
                   style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)' }} />
