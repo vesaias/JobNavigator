@@ -442,12 +442,24 @@ export default function Searches() {
   }
   // a failed source wins; then an error; then health's 3-run verdict; then a
   // single clean-but-empty run
-  const warnOf = (s) => sourceWarnOf(s) || s.last_error || downMap[s.id]
+  const warnTextOf = (s) => sourceWarnOf(s) || s.last_error || downMap[s.id]
     || (s.last_run_warning ? 'Last run finished cleanly but returned no jobs' : null)
+  // A paused search is not an open problem: it was switched off deliberately, so
+  // its last-run state stays on the card as history — muted, labelled “paused” —
+  // rather than driving the ▲, the amber edge, the header count and the rail dot.
+  // Same for a warning the operator acknowledged, until a newer run fails
+  // (the backend re-raises it by itself; `warning_acknowledged` says which).
+  const warnMuted = (s) => !s.active || !!s.warning_acknowledged
+  const warnOf = (s) => { const t = warnTextOf(s); return t && !warnMuted(s) ? t : null }
+  const mutedWarnOf = (s) => {
+    const t = warnTextOf(s)
+    if (!t || !warnMuted(s)) return null
+    return `${t} · ${s.active ? `acknowledged ${ago(s.warning_acknowledged_at)}` : 'paused'}`
+  }
   // SRCH-09: the header count uses health's verdict alone — the same source as
   // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
   // the broader warnOf() predicate.
-  const nWarn = searches.filter((s) => downMap[s.id]).length
+  const nWarn = searches.filter((s) => s.active && downMap[s.id]).length
   const countLine = useMemo(() => {
     const nxt = until(nextRun)
     return [
@@ -479,8 +491,19 @@ export default function Searches() {
   }
   const toggleActive = async (s) => {
     setMenuFor(null)
-    try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load(); loadAux() }
+    // pausing/resuming changes what /health/entities counts, so the rail dot is
+    // re-read too — loadAux() alone only updates this screen's own badge.
+    try { await api.patch(`/searches/${s.id}`, { active: !s.active }); load(); loadAux(); bumpCounts() }
     catch (e) { fail(e, `Could not ${s.active ? 'pause' : 'resume'} “${s.name}”`) }
+  }
+  // “I have seen this, stop shouting” — the warning stays on the card, muted,
+  // and /health/entities re-raises it by itself once a newer run fails.
+  const acknowledge = async (s) => {
+    try {
+      await api.post(`/searches/${s.id}/acknowledge`)
+      load(); loadAux(); bumpCounts()
+      pushToast({ kind: 'success', msg: `“${s.name}” acknowledged — it stops counting until a later run fails` })
+    } catch (e) { fail(e, `Could not acknowledge “${s.name}”`) }
   }
   const runNow = async (s) => {
     if (running[s.id]) return
@@ -584,7 +607,8 @@ export default function Searches() {
           const dep = DEPTHS.find((x) => x.id === depth)
           const isOpen = editing === s.id
           const testBlocked = !!testingId && testingId !== s.id   // SRCH-23
-          const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || summaryOf(s))
+          const mutedWarn = mutedWarnOf(s)
+          const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || mutedWarn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
             /* same card hover as Résumés and Cover Letters. Not while open — the
@@ -604,7 +628,14 @@ export default function Searches() {
                     <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: '23px', fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
-                  <span title={summary} style={{ fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                    <span title={summary} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
+                    {warn && !ext && (
+                      <span onClick={(e) => { e.stopPropagation(); acknowledge(s) }} className="v2-hover-accent-text"
+                        title="Stop counting this search as needing attention. The warning stays here; a run that fails after this raises it again."
+                        style={{ flex: '0 0 auto', fontSize: 11, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
+                    )}
+                  </div>
                 </div>
                 {depth !== 'off' && (
                   <span title={depth === 'full'

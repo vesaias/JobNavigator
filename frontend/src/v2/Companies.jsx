@@ -20,6 +20,16 @@ const ago = (iso) => {
   const d = Math.floor(h / 24)
   return `${d}d ago`
 }
+
+// A paused company is not an open problem: it was switched off deliberately, so
+// its last-run state stays on the row as history — muted, labelled "inactive" —
+// rather than driving the ▲, the header "need attention" count and the rail dot.
+// Same for a warning the operator has acknowledged, until a newer run fails
+// (the backend re-raises it on its own; `warning_acknowledged` says which).
+const warnTextOf = (c, downReason) => c.last_error || downReason
+  || (c.last_run_warning ? `last run found nothing · ${ago(c.last_scraped_at)}` : null)
+const warnMuted = (c) => !c.active || !!c.warning_acknowledged
+const isAlarming = (c, downReason) => !!warnTextOf(c, downReason) && !warnMuted(c)
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
 const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
@@ -252,8 +262,9 @@ export default function Companies() {
       return hay.includes(q)
     })
     // COMP-07: the row ▲, the health line and the drawer banner all treat a
-    // last_error as "needs attention"; the sort and the count must agree.
-    const down = (c) => !!downMap[c.id] || !!c.last_error
+    // last_error as "needs attention"; the sort and the count must agree —
+    // including on skipping paused and acknowledged rows.
+    const down = (c) => isAlarming(c, downMap[c.id])
     const cmp = {
       health: (a, b) => (down(b) - down(a)) || ((b.active ? 1 : 0) - (a.active ? 1 : 0)) || a.name.localeCompare(b.name),
       name: (a, b) => a.name.localeCompare(b.name),
@@ -266,7 +277,7 @@ export default function Companies() {
   }, [companies, query, tiers, sortBy, downMap])
 
   const activeCount = companies.filter((c) => c.active).length
-  const downCount = companies.filter((c) => downMap[c.id] || c.last_error).length
+  const downCount = companies.filter((c) => isAlarming(c, downMap[c.id])).length
   const countLine = `${companies.length} tracked · ${activeCount} active · ${downCount} need attention`
   const inactiveInFilter = filtered.filter((c) => !c.active)
   const activeInFilter = filtered.filter((c) => c.active)
@@ -275,9 +286,23 @@ export default function Companies() {
     : `Applies to all ${filtered.length} companies · jobs already found are kept`
 
   // ── actions ──
+  // the shell re-reads its rail badges (including the amber health dot) on this
+  // event, so every mutation that changes what needs attention fires it.
+  const bumpCounts = () => window.dispatchEvent(new CustomEvent('jn:counts-changed'))
   const patchCompany = async (id, patch) => {
-    try { await api.patch(`/companies/${id}`, patch); fetchCompanies(); return true }
+    // pausing/resuming changes what /health/entities counts, so the row, the
+    // header count and the rail dot are all re-read — not just the list.
+    try { await api.patch(`/companies/${id}`, patch); fetchCompanies(); fetchHealth(); bumpCounts(); return true }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save company changes' + errSuffix(e) }); return false }
+  }
+  // "I have seen this, stop shouting" — the warning stays on the row, muted,
+  // and /health/entities re-raises it by itself once a newer run fails.
+  const acknowledgeCompany = async (c) => {
+    try {
+      await api.post(`/companies/${c.id}/acknowledge`)
+      fetchCompanies(); fetchHealth(); bumpCounts()
+      pushToast({ kind: 'success', msg: `${c.name} acknowledged — it stops counting until a later run fails` })
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not acknowledge ${c.name}` + errSuffix(e) }) }
   }
   const bulkSet = async (active) => {
     const targets = active ? inactiveInFilter : activeInFilter
@@ -328,9 +353,12 @@ export default function Companies() {
   }
   const healthOf = (c) => {
     if (scraping[c.id]) return { dot: 'var(--accent)', fg: 'var(--accent)', text: 'scraping now…' }
-    if (c.last_error) return { dot: 'var(--bad)', fg: 'var(--bad)', text: `error · ${c.last_error}` }
-    if (downMap[c.id]) return { dot: 'var(--warn)', fg: 'var(--warn)', text: downMap[c.id] }
-    if (c.active && c.last_run_warning) return { dot: 'var(--warn)', fg: 'var(--warn)', text: `last run found nothing · ${ago(c.last_scraped_at)}` }   // COMP-19
+    const warn = warnTextOf(c, downMap[c.id])
+    // paused or acknowledged: keep the verdict, drop the alarm colours
+    if (warn && warnMuted(c)) return { dot: 'var(--edge)', fg: 'var(--muted)',
+      text: `${c.last_error ? `error · ${warn}` : warn} · ${c.active ? `acknowledged ${ago(c.warning_acknowledged_at)}` : 'inactive'}` }
+    if (c.last_error) return { dot: 'var(--bad)', fg: 'var(--bad)', text: `error · ${warn}` }
+    if (warn) return { dot: 'var(--warn)', fg: 'var(--warn)', text: warn }   // COMP-19
     if (c.active && !c.last_scraped_at) return { dot: 'var(--edge)', fg: 'var(--muted)', text: 'not scraped yet' }   // COMP-18
     if (c.active) return { dot: 'var(--good)', fg: 'var(--text-2)', text: `healthy · scraped ${ago(c.last_scraped_at)}` }
     return { dot: 'var(--edge)', fg: 'var(--muted)', text: `inactive · last run ${ago(c.last_scraped_at)}` }
@@ -469,7 +497,7 @@ export default function Companies() {
               style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 30px 0 24px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
-                {(c.last_error || downMap[c.id]) && <span title={`Needs attention — ${c.last_error || downMap[c.id]}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
+                {isAlarming(c, downMap[c.id]) && <span title={`Needs attention — ${warnTextOf(c, downMap[c.id])}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
                 <span title={c.h1b_lca_count ? `${c.name} · ${c.h1b_lca_count} H-1B filings on record${c.h1b_approval_rate ? `, ${c.h1b_approval_rate}% approved` : ''} — feeds the verdict on each job` : c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {aliases.length > 0 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length}</span>}
               </span>
@@ -562,7 +590,7 @@ export default function Companies() {
           and keep only `draft` in drawer state. */}
       {drawer && (() => {
         const live = companies.find((c) => c.id === drawer.company.id) || drawer.company
-        return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} onClose={closeDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} />
+        return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} onClose={closeDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} onAcknowledge={acknowledgeCompany} />
       })()}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       {addOpen && <AddModal onClose={() => setAddOpen(false)} resumes={resumes} personaPopulated={personaPopulated} onCreated={fetchCompanies} pushToast={pushToast} />}
@@ -573,11 +601,11 @@ export default function Companies() {
 }
 
 // ── edit drawer ───────────────────────────────────────────────────────────────
-function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, onDelete, onTest, testingId, downReason }) {
+function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, onDelete, onTest, testingId, downReason, onAcknowledge }) {
   const { company, draft } = state
   const [tuning, setTuning] = useState(() => {
     try { const v = localStorage.getItem('company_tuning_open'); if (v !== null) return v === 'true' } catch { /* ignore */ }
-    return !!(downReason || company.last_error)
+    return !!warnTextOf(company, downReason) && !warnMuted(company)
   })
   const toggleTuning = () => setTuning((v) => { const n = !v; try { localStorage.setItem('company_tuning_open', String(n)) } catch {} return n })
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
@@ -588,7 +616,9 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
   const resumeHelp = selNames.length ? `New jobs are scored against ${selNames.join(', ')}.` : 'Nothing selected, so new jobs use your default résumé from Settings.'
-  const tuningNote = (downReason || company.last_error) ? 'needs attention' : (draft.scrape_interval_minutes || draft.wait_for_selector || (draft.max_pages && draft.max_pages !== 5) || draft.h1b_slug) ? 'customised' : 'using defaults'
+  const bannerText = warnTextOf(company, downReason)
+  const bannerMuted = !!bannerText && warnMuted(company)
+  const tuningNote = (bannerText && !bannerMuted) ? 'needs attention' : (draft.scrape_interval_minutes || draft.wait_for_selector || (draft.max_pages && draft.max_pages !== 5) || draft.h1b_slug) ? 'customised' : 'using defaults'
 
   const [saveErr, setSaveErr] = useState('')
   const [saving, setSaving] = useState(false)
@@ -636,13 +666,25 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       </div>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px 20px', display: 'flex', flexDirection: 'column', gap: 15, minHeight: 0 }}>
-        {(company.last_error || downReason) && (
-          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', border: `1px solid ${company.last_error ? 'var(--bad)' : 'var(--warn)'}`, background: company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)', borderRadius: 9 }}>
-            <span style={{ flex: '0 0 auto', fontSize: 12, color: company.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>
+        {bannerText && (
+          /* muted while the company is paused or the warning is acknowledged:
+             the history is still worth reading, it just isn't an open problem */
+          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', border: `1px solid ${bannerMuted ? 'var(--line)' : company.last_error ? 'var(--bad)' : 'var(--warn)'}`, background: bannerMuted ? 'var(--recessed)' : company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)', borderRadius: 9 }}>
+            <span style={{ flex: '0 0 auto', fontSize: 12, color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>{company.last_error || downReason}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{company.last_error ? 'Last scrape run' : 'Detected on the recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}</span>
+              <span style={{ fontSize: 12, color: bannerMuted ? 'var(--text-2)' : 'var(--text)', lineHeight: 1.5 }}>{bannerText}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>
+                {company.last_error ? 'Last scrape run' : 'Detected on the recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
+                {bannerMuted
+                  ? ` · ${company.active ? `acknowledged ${ago(company.warning_acknowledged_at)}` : 'paused, so it is not counted'}`
+                  : null}
+              </span>
             </div>
+            {!bannerMuted && onAcknowledge && (
+              <span onClick={() => onAcknowledge(company)} className="v2-hover-accent-text"
+                title="Stop counting this company as needing attention. The warning stays here; a run that fails after this raises it again."
+                style={{ flex: '0 0 auto', alignSelf: 'flex-start', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
+            )}
           </div>
         )}
 
@@ -691,7 +733,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <div onClick={toggleTuning} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
             <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', position: 'relative', top: -2, fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
-            <span style={{ fontSize: 10.5, color: company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
+            <span style={{ fontSize: 10.5, color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
           </div>
           {tuning && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>

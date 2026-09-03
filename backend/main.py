@@ -1183,14 +1183,26 @@ def get_stats_timeline(days: int = 30):
 @app.get("/api/health/entities", tags=["stats"], summary="Companies/searches needing attention")
 def get_failing_entities(window: int = 3):
     """Active companies + searches whose last `window` scrapes ALL errored or returned
-    0 results — a likely broken/moved ATS or dead URL. Computed from ScrapeLog."""
-    from backend.models.db import ScrapeLog, Company, Search
+    0 results — a likely broken/moved ATS or dead URL. Computed from ScrapeLog.
+
+    Paused/inactive entities are never listed (nothing is scraping them, so their
+    last-run state is history), and an entity whose warning has been acknowledged
+    via POST /api/{searches,companies}/{id}/acknowledge drops out until a run
+    newer than the acknowledgement goes wrong."""
+    from backend.models.db import ScrapeLog, Company, Search, is_acknowledged
     from backend.scraper.orchestrator import source_errors, source_label
     db = SessionLocal()
     try:
-        def _reason(entity_col, entity_id):
+        def _reason(entity_col, entity_id, acknowledged_at=None):
             recent = (db.query(ScrapeLog).filter(entity_col == entity_id)
                       .order_by(ScrapeLog.ran_at.desc()).limit(window).all())
+            # An operator who has seen the warning and decided to live with it
+            # acknowledges it; the entity then reads healthy until something
+            # *newer* than the acknowledgement goes wrong. Comparing against the
+            # newest run (not "now") is what makes a later failed run re-raise it
+            # without any expiry timer.
+            if recent and is_acknowledged(recent[0].ran_at, acknowledged_at):
+                return None
             # R3-A-03: one configured board refusing the request is worth
             # flagging on its own — it needs neither `window` consecutive bad
             # runs nor a run that returned nothing overall, because the other
@@ -1206,15 +1218,20 @@ def get_failing_entities(window: int = 3):
             err = next((r.error for r in recent if r.error), None)
             return err[:160] if err else f"No results in the last {window} scrapes"
 
+        # Paused/inactive entities are excluded on purpose: they are not being
+        # scraped, so their last-run state is history, not an open problem. The
+        # row itself still shows that history (muted, labelled "paused" /
+        # "inactive"); it just no longer feeds the rail dot, the header
+        # "N need attention" counts or the scheduler health line.
         companies = []
         for c in db.query(Company).filter(Company.active == True).all():
-            reason = _reason(ScrapeLog.company_id, c.id)
+            reason = _reason(ScrapeLog.company_id, c.id, c.warning_acknowledged_at)
             if reason:
                 companies.append({"id": str(c.id), "name": c.name, "reason": reason})
 
         searches = []
         for s in db.query(Search).filter(Search.active == True).all():
-            reason = _reason(ScrapeLog.search_id, s.id)
+            reason = _reason(ScrapeLog.search_id, s.id, s.warning_acknowledged_at)
             if reason:
                 searches.append({"id": str(s.id), "name": s.name, "reason": reason})
 

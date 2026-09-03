@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from backend.models.db import get_db, Company, Job, Application, Setting, ScrapeLog
+from backend.models.db import get_db, Company, Job, Application, Setting, ScrapeLog, is_acknowledged
 
 logger = logging.getLogger("jobnavigator.companies")
 
@@ -186,6 +186,8 @@ def list_companies(
             last_error=(ll.error if ll else None),
             last_run_warning=(bool(ll.is_warning) if ll else False),
             last_run_at=(ll.ran_at.isoformat() if (ll and ll.ran_at) else None),
+            warning_acknowledged=is_acknowledged(
+                ll.ran_at if ll else None, c.warning_acknowledged_at),
         ))
     return out
 
@@ -251,6 +253,25 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
         VisaCache.name_key == (company.name or "").strip().lower(), VisaCache.country == "US"
     ).first()
     return _company_to_dict(company, h1b=h1b)
+
+
+@router.post("/{company_id}/acknowledge")
+def acknowledge_company_warning(company_id: str, db: Session = Depends(get_db)):
+    """Mark this company's current scrape warning as seen.
+
+    /api/health/entities stops counting the company (rail dot, header "N need
+    attention") while its newest ScrapeLog row is no newer than this stamp. The
+    row keeps showing the warning, muted, so the history stays visible; a run
+    that fails *after* the acknowledgement is newer, so it raises it again with
+    no expiry timer to tune.
+    """
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    company.warning_acknowledged_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"id": str(company.id), "name": company.name,
+            "warning_acknowledged_at": company.warning_acknowledged_at.isoformat()}
 
 
 @router.delete("/{company_id}")
@@ -658,7 +679,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
 
 def _company_to_dict(c: Company, application_count: int = 0, h1b=None,
                      open_jobs: int = 0, open_jobs_week: int = 0, avg_fit=None,
-                     last_error=None, last_run_warning: bool = False, last_run_at=None) -> dict:
+                     last_error=None, last_run_warning: bool = False, last_run_at=None,
+                     warning_acknowledged: bool = False) -> dict:
     urls = c.scrape_urls or []
     detected_types = {url: detect_scrape_type(url) for url in urls if url.strip()}
     # h1b is a VisaCache row (or None) for this company — H-1B metrics live there now.
@@ -687,6 +709,10 @@ def _company_to_dict(c: Company, application_count: int = 0, h1b=None,
         "last_error": last_error,
         "last_run_warning": last_run_warning,
         "last_run_at": last_run_at,
+        "warning_acknowledged_at": c.warning_acknowledged_at.isoformat() if c.warning_acknowledged_at else None,
+        # True while the acknowledgement still covers the newest run — the UI
+        # mutes the warning instead of hiding it, so the history stays readable.
+        "warning_acknowledged": warning_acknowledged,
         "h1b_lca_count": h1b.lca_count if h1b else None,
         "h1b_approval_rate": h1b.approval_rate if h1b else None,
         "h1b_median_salary": h1b.median_salary if h1b else None,

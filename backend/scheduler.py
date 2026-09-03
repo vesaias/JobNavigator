@@ -119,19 +119,34 @@ def configure_scheduler():
 
 
 def _scrape_summary(since) -> str:
-    from backend.models.db import ScrapeLog
+    from backend.models.db import ScrapeLog, Search, Company
     db = SessionLocal()
     try:
         from backend.scraper.orchestrator import source_errors
         rows = db.query(ScrapeLog).filter(ScrapeLog.ran_at >= since).all()
         if not rows:
             return "No sources ran"
+        # A paused search / inactive company is not a problem to report: it was
+        # switched off deliberately, and a manual run against one inside the
+        # window used to leave "1 failed" hanging off an otherwise clean sweep.
+        # Its row still counts toward "N sources ran" — it did run — but not
+        # toward any of the attention counts.
+        off_searches = {s.id for s in db.query(Search).filter(Search.active == False).all()}
+        off_companies = {c.id for c in db.query(Company).filter(Company.active == False).all()}
+
+        def _live(r):
+            return not (
+                (r.search_id is not None and r.search_id in off_searches)
+                or (r.company_id is not None and r.company_id in off_companies)
+            )
+
+        live = [r for r in rows if _live(r)]
         found = sum(r.new_jobs or 0 for r in rows)
-        failed = sum(1 for r in rows if r.error)
+        failed = sum(1 for r in live if r.error)
         # R3-A-03: a run where one configured board refused the request now sets
         # is_warning, but it is not "empty" — say which it is.
-        bad_source = {r.id for r in rows if not r.error and source_errors(r.source_breakdown)}
-        warned = sum(1 for r in rows if r.is_warning and not r.error and r.id not in bad_source)
+        bad_source = {r.id for r in live if not r.error and source_errors(r.source_breakdown)}
+        warned = sum(1 for r in live if r.is_warning and not r.error and r.id not in bad_source)
         parts = [f"{len(rows)} source{'' if len(rows) == 1 else 's'}", f"+{found} new"]
         if failed:
             parts.append(f"{failed} failed")
