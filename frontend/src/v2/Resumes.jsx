@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useFlashToast, useSnapTop } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Button, Pill } from './ui'
+import { Button, Input, Pill, SearchInput } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -151,8 +151,8 @@ export default function V2Resumes() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input value={q} onChange={(e) => { setQ(e.target.value); setShowArchived(false) }} placeholder="Search bases, copies, archived…"
-            style={{ height: 36, width: 300, padding: '0 2px', border: 'none', borderBottom: '1px solid var(--line)', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', outline: 'none' }} />
+          <SearchInput variant="underline" width="300px" value={q} onChange={(v) => { setQ(v); setShowArchived(false) }}
+            placeholder="Search bases, copies, archived…" ariaLabel="Search résumés" />
           <Button onClick={() => setAddOpen(true)}>+ New résumé</Button>
         </div>
       </div>
@@ -348,9 +348,9 @@ function AddModal({ onClose, onCreated }) {
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
         <div style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', marginBottom: 4 }}>New base résumé</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Résumé name (e.g. Backend — Platform v4)"
-          onKeyDown={(e) => e.key === 'Enter' && createScratch()}
-          style={{ width: '100%', height: 38, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface-2)', fontSize: 13, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)', marginBottom: 14 }} />
+        <Input autoFocus value={name} onChange={setName} placeholder="Résumé name (e.g. Backend — Platform v4)"
+          ariaLabel="Résumé name" onKeyDown={(e) => e.key === 'Enter' && createScratch()}
+          style={{ marginBottom: 14 }} />
         {err && <div style={{ fontSize: 12, color: 'var(--bad)', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 9 }}>
           {/* RES-17: a disabled primary pill is --line on --muted (the design's
@@ -359,6 +359,7 @@ function AddModal({ onClose, onCreated }) {
           <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={!!busy} style={{ flex: 1 }}>{busy === 'import' ? 'Parsing…' : 'Import PDF ↑'}</Button>
           {/* RES-28: clear the input after every pick, or choosing the same PDF
               twice in one modal session fires no change event at all. */}
+          {/* ui: keep — hidden <input type="file">, not a rendered field */}
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; importPdf(f) }} />
         </div>

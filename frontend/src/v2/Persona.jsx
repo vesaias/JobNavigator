@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Pill } from './ui'
+import { Input, Pill, Select } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -86,7 +86,10 @@ const GROUPS = [
 const ANSWERABLE = GROUPS.reduce((n, g) => n + g[2].filter((f) => !f[4]?.uncounted).length, 0)
 
 const isSet = (v) => v !== undefined && v !== null && v !== ''
-const labelFor = (opts, v) => (opts.find(([ov]) => ov === v) || [])[1] || v
+// The Picker's clear row needs a value of its own: an unset answer is rendered
+// as the placeholder (Select shows it whenever no option matches), so '' would
+// make "— not answered" the trigger's *label* instead of the em dash.
+const UNSET = '__unset__'
 
 // qa_bank holds two shapes: the canonical {question, answer} the extension writes,
 // and legacy single-key {"<question>": "<answer>"} maps. Read both, always write
@@ -106,35 +109,16 @@ const toPairs = (e) => {
 }
 
 const FIELD_LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-const BOX = { height: 30, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }
-
 // A picker styled as the design's box: value + ▾, opening the standard v2 menu.
-function Picker({ value, options, onChange, placeholder = '—' }) {
-  const [open, setOpen] = useState(false)
-  const set = isSet(value)
+// Thin wrapper over ui.jsx's Select — it keeps the "— not answered" row, because
+// clearing an answer is a real action here (an unset field is not the same as an
+// empty one for the autofill extension).
+function Picker({ value, options, onChange, placeholder = '—', ariaLabel }) {
+  const opts = useMemo(() => [[UNSET, '— not answered'], ...options], [options])
   return (
-    <div style={{ position: 'relative' }}>
-      <div onClick={() => setOpen((v) => !v)} {...kb(() => setOpen((v) => !v))} aria-expanded={open} className="v2-act v2-ctl" style={{ ...BOX, cursor: 'pointer', borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
-        {/* PERS-20: --edge is a border token; as 10.5–12px text it fell under the
-            AA contrast floor in both themes. The three small texts use --muted. */}
-        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 12, color: set ? 'var(--text)' : 'var(--muted)' }}>
-          {set ? labelFor(options, value) : placeholder}
-        </span>
-        <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--muted)' }}>▾</span>
-      </div>
-      {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 31, minWidth: '100%', maxWidth: 280, maxHeight: 260, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-            <div onClick={() => { onChange(undefined); setOpen(false) }} {...kb(() => { onChange(undefined); setOpen(false) })} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: !set ? 'var(--accent)' : 'var(--muted)', background: !set ? 'var(--accent-soft)' : 'transparent' }}>— not answered</div>
-            {options.map(([v, l]) => (
-              <div key={String(v)} onClick={() => { onChange(v); setOpen(false) }} {...kb(() => { onChange(v); setOpen(false) })} className="v2-menuitem"
-                style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === value ? 'var(--accent)' : 'var(--text-2)', background: v === value ? 'var(--accent-soft)' : 'transparent' }}>{l}</div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <Select value={isSet(value) ? value : ''} options={opts} placeholder={placeholder}
+      ariaLabel={ariaLabel} onPick={(v) => onChange(v === UNSET ? undefined : v)}
+      style={{ flex: '0 0 auto', width: '100%' }} />
   )
 }
 
@@ -155,15 +139,12 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
       <span style={FIELD_LABEL} title={label}>{label}</span>
       {kind === 'text' ? (
-        <div className="v2-fieldwrap" style={BOX}>
-          <input value={val ?? ''} onChange={(e) => write(node, fkey, e.target.value)}
-            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text)', fontFamily: 'var(--sans)' }} />
-        </div>
+        <Input value={val ?? ''} onChange={(v) => write(node, fkey, v)} ariaLabel={label} />
       ) : kind === 'bool' ? (
-        <Picker value={val === true ? 'yes' : val === false ? 'no' : undefined} options={YESNO}
+        <Picker value={val === true ? 'yes' : val === false ? 'no' : undefined} options={YESNO} ariaLabel={label}
           onChange={(v) => write(node, fkey, v === undefined ? undefined : v === 'yes')} />
       ) : (
-        <Picker value={val} options={opts.options} onChange={(v) => write(node, fkey, v)} />
+        <Picker value={val} options={opts.options} ariaLabel={label} onChange={(v) => write(node, fkey, v)} />
       )}
     </div>
   )

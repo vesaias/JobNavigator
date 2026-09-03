@@ -653,7 +653,9 @@ export default function Stats() {
                     </>
                   )}
                 </span>
-                {/* ui: keep — search field wrapper (Input role), not a pill */}
+                {/* ui: keep — a 26px transparent v2-fieldwrap pill that carries the ⌕ and
+                    the focus signal around a bare input; SearchInput's boxed variant is h30
+                    on --search-bg, which would not sit on this log header row */}
                 <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
                   <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"

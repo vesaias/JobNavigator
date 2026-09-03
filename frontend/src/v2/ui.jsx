@@ -107,27 +107,46 @@ const BTN_LOOK = {
     hover: 'v2-hover-accent',
   },
 }
+// `as="button"` renders a real <button type=…> instead of the div, for the one
+// case where the element *is* the semantics: a form's submit control (LoginModal),
+// where Enter-in-a-field must submit the form. The UA button styles it would
+// otherwise inherit (border, margin, appearance) are reset first, and it keeps
+// `tabindex="0"` so theme.css's focus ring still applies — zero-pixel either way.
 export function Button({
-  variant = 'primary', size = 'md', disabled, busy, onClick, title, ariaLabel,
+  variant = 'primary', size = 'md', as, type = 'button', disabled, busy, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
 }) {
   const s = BTN_SIZE[size] || BTN_SIZE.md
   const look = BTN_LOOK[variant] || BTN_LOOK.primary
   const off = !!(disabled || busy)
+  const native = as === 'button'
+  const common = {
+    title,
+    'aria-label': ariaLabel,
+    'aria-expanded': ariaExpanded,
+    'aria-haspopup': ariaHaspopup,
+    'aria-busy': ariaBusy,
+    className: cx('v2-ctl', !off && look.hover, className),
+    style: {
+      flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 500,
+      whiteSpace: 'nowrap', cursor: off ? 'default' : 'pointer',
+      opacity: busy && !disabled ? 0.6 : 1,
+      ...(native ? { margin: 0, border: 'none', appearance: 'none', WebkitAppearance: 'none' } : null),
+      ...s, ...(off ? look.off : look.rest), ...style,
+    },
+  }
+  const body = <>{busy && <Spinner size={12} color="currentColor" />}{children}</>
+  if (native) {
+    return (
+      <button type={type} tabIndex={0} disabled={off} onClick={off ? undefined : onClick} {...common}>
+        {body}
+      </button>
+    )
+  }
   return (
-    <div
-      {...act(onClick, off)} title={title} aria-label={ariaLabel} aria-disabled={off || undefined}
-      aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
-      className={cx('v2-ctl', !off && look.hover, className)}
-      style={{
-        flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 500,
-        whiteSpace: 'nowrap', cursor: off ? 'default' : 'pointer',
-        opacity: busy && !disabled ? 0.6 : 1,
-        ...s, ...(off ? look.off : look.rest), ...style,
-      }}>
-      {busy && <Spinner size={12} color="currentColor" />}
-      {children}
+    <div {...act(onClick, off)} aria-disabled={off || undefined} {...common}>
+      {body}
     </div>
   )
 }
@@ -202,20 +221,25 @@ const FIELD = {
   borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', color: 'var(--input-ink)',
   fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', outline: 'none',
 }
-export function Input({ value, onChange, placeholder, type = 'text', mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+// `defaultValue` (instead of `value`) renders the field *uncontrolled* — the shape
+// Applications' autosaving notes box needs, where every keystroke must not round-trip
+// through React state. Zero-pixel either way.
+export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+  const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
   return (
     <input
-      type={type} value={value ?? ''} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
+      type={type} {...bind} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
       aria-label={ariaLabel} title={title} className={className}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{ ...FIELD, height: 29, padding: '0 9px', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
       {...rest} />
   )
 }
-export function Textarea({ value, onChange, placeholder, rows = 3, mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3, mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+  const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
   return (
     <textarea
-      value={value ?? ''} placeholder={placeholder} rows={rows} disabled={disabled} readOnly={readOnly}
+      {...bind} placeholder={placeholder} rows={rows} disabled={disabled} readOnly={readOnly}
       aria-label={ariaLabel} title={title} className={className}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{

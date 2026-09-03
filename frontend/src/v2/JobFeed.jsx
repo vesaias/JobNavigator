@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Pill } from './ui'
+import { Button, Input, Pill, SearchInput } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -730,12 +730,10 @@ export default function V2JobFeed() {
 
       {/* filter bar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 9, rowGap: 8, borderBottom: '1px solid var(--line)' }}>
-        <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3 }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
-          <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>   {/* FEED-25 */}
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search titles…" style={{ width: 226, height: 30, padding: '0 12px 0 29px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
-            {search && <span onClick={() => setSearch('')} title="Clear search" className="v2-x" style={{ position: 'absolute', right: 8, width: 18, height: 18, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✕</span>}
-          </span>
+        {/* FEED-25: the clear ✕ rides in this relative wrapper, over SearchInput's box */}
+        <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3, display: 'flex', alignItems: 'center' }}>
+          <SearchInput width="226px" value={search} onChange={setSearch} placeholder="Search titles…" ariaLabel="Search job titles" />
+          {search && <span onClick={() => setSearch('')} title="Clear search" className="v2-x" style={{ position: 'absolute', right: 8, width: 18, height: 18, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✕</span>}
         </div>
         {searchId && (
           <Pill on onClick={() => { setSearchId(''); setSearchParams({}, { replace: true }) }}
@@ -747,8 +745,8 @@ export default function V2JobFeed() {
           {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={sourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
         <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} onClear={() => setF({ company: [] })} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
-          <input autoFocus value={companyQuery} onChange={(e) => setCompanyQuery(e.target.value)} placeholder={`Type to search ${companyList.length} companies…`}
-            style={{ width: '100%', height: 30, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, fontSize: 12.5, background: 'var(--surface-2)', color: 'var(--text)', outline: 'none', marginBottom: 6, fontFamily: 'var(--sans)' }} />
+          <Input autoFocus value={companyQuery} onChange={setCompanyQuery} ariaLabel="Search companies"
+            placeholder={`Type to search ${companyList.length} companies…`} style={{ marginBottom: 6 }} />
           {(() => {
             const q = companyQuery.trim().toLowerCase()
             const list = companyList.filter((c) => filters.company.includes(c.name) || c.name.toLowerCase().includes(q))
@@ -777,7 +775,8 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
-            <input type="number" value={numDraft.min_score} onChange={(e) => setNum('min_score', e.target.value)} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
+            <Input type="number" mono value={numDraft.min_score} onChange={(v) => setNum('min_score', v)}
+              ariaLabel="Minimum score" style={{ flex: 1, minWidth: 0 }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides unscored jobs — they have no score to compare</div>
         </Drop>
@@ -787,7 +786,8 @@ export default function V2JobFeed() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
-            <input type="number" placeholder="$K" value={numDraft.min_salary} onChange={(e) => setNum('min_salary', e.target.value)} style={{ flex: 1, minWidth: 0, height: 28, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 7, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)' }} />
+            <Input type="number" mono placeholder="$K" value={numDraft.min_salary} onChange={(v) => setNum('min_salary', v)}
+              ariaLabel="Minimum salary in thousands" style={{ flex: 1, minWidth: 0 }} />
           </div>
           <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides jobs without a listed salary</div>
         </Drop>

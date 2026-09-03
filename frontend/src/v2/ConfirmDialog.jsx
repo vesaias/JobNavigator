@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import './theme.css'
 import { useEscape, useSnapTop } from './hooks'
-import { Button } from './ui'
+import { Button, Input } from './ui'
 
 // RES-16: the one destructive-confirm dialog for v2. Lifted out of Companies.jsx
 // (COMP-28) so the résumé and cover-letter deletes stop falling back to
@@ -42,11 +42,11 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 440, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '22px 24px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '26px' }}>{title}</span>
         {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>{body}</span>}
-        <input value={v} readOnly={readOnly} placeholder={placeholder} autoFocus
-          onChange={(e) => setV(e.target.value)}
+        <Input value={v} readOnly={readOnly} placeholder={placeholder} autoFocus mono={mono}
+          ariaLabel={title} onChange={setV}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onSubmit(v) } }}
           onFocus={(e) => readOnly && e.target.select()}
-          style={{ height: 33, marginTop: 4, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, outline: 'none' }} />
+          style={{ marginTop: 4 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
           {readOnly && <Button variant="secondary" size="sm" onClick={copy}>{copied ? 'Copied ✓' : '⧉ Copy'}</Button>}
           {!readOnly && <Button variant="secondary" size="sm" onClick={onCancel} style={{ marginLeft: 'auto' }}>Cancel</Button>}

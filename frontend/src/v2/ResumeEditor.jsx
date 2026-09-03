@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   MenuHead, MenuItem, SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Button, IconButton, Pill } from './ui'
+import { Button, IconButton, Input, Pill, Textarea } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -65,7 +65,7 @@ const timeAgo = (s) => {
 
 // ── MOVED to ResumeSections.jsx ──────────────────────────────────────────────
 // Field, BulletText, MicroField, RemoveLink, DashedAdd, EmptyState, MenuHead,
-// MenuItem, UPPER, cellInput and the seven *Editor sections now live there so
+// MenuItem, UPPER and the seven *Editor sections now live there so
 // /v2/persona edits resume_content with the identical components. IconBtn,
 // AddLink and normUrl were unreferenced and were dropped rather than moved.
 // RES-06: "reviewed" was recomputed from the base-vs-copy diff on every render,
@@ -788,7 +788,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Pick a job · saved and scored first</span>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search jobs…" style={{ height: 32, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface-2)', fontSize: 12.5, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
+            <Input value={q} onChange={setQ} placeholder="Search jobs…" ariaLabel="Search jobs" />
             {list.slice(0, 40).map((j) => {
               const on = String(pick) === String(j.id), sc = jobScore(j), has = existing.has(String(j.id))
               return (
@@ -807,7 +807,9 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>…or a freeform job description</span>
-            <textarea value={jd} onChange={(e) => { setJd(e.target.value); if (e.target.value.trim()) setPick(null) }} placeholder="Paste any JD — the copy won't be linked to a feed job" rows={3} style={{ padding: '8px 10px', border: '1px dashed var(--edge)', borderRadius: 8, background: 'var(--surface-2)', fontSize: 12, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)', resize: 'vertical' }} />
+            <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
+              placeholder="Paste any JD — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
+              style={{ borderStyle: 'dashed' }} />
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>

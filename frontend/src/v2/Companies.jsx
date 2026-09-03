@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSnapTop } from './hooks'
-import { Button, IconButton, Pill } from './ui'
+import { Button, IconButton, Input, Pill, SearchInput } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -96,8 +96,6 @@ const ShowMore = ({ n, onClick }) => (
   </div>
 )
 
-const inputBox = { width: '100%', minHeight: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
-const monoBox = { ...inputBox, fontFamily: 'var(--mono)', fontSize: 10.5 }
 const helpTxt = { fontSize: 10.5, color: 'var(--muted)' }
 const fieldLabel = { fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }
 
@@ -110,8 +108,8 @@ function UrlEditor({ urls, onChange }) {
         return (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span className={atsSlug(detectAts(u))} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{detectAts(u)}</span>
-            <input value={u} onChange={(e) => set(i, e.target.value)} placeholder="https://boards.greenhouse.io/company"
-              style={{ ...monoBox, flex: 1, height: 32, minHeight: 0 }} />
+            <Input value={u} onChange={(v) => set(i, v)} placeholder="https://boards.greenhouse.io/company"
+              mono ariaLabel="Career page URL" style={{ flex: 1, minWidth: 0 }} />
             <span title="Remove this URL" onClick={() => onChange(urls.filter((_, j) => j !== i))} className="v2-hover-bad v2-hover-bad-text"
               style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
           </div>
@@ -418,11 +416,8 @@ export default function Companies() {
 
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <span style={{ position: 'relative', flex: '0 0 226px', display: 'flex', alignItems: 'center' }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>⌕</span>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, alias, URL or ATS…"
-            style={{ width: '100%', height: 30, padding: '0 12px 0 29px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', fontSize: 12, color: 'var(--text)', outline: 'none', fontFamily: 'var(--sans)' }} />
-        </span>
+        <SearchInput width="226px" value={query} onChange={setQuery}
+          placeholder="Search name, alias, URL or ATS…" ariaLabel="Search companies" />
         <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 3px' }} />
         {['1', '2', '3', 'none'].map((t) => {
           const on = tiers.includes(t)
@@ -692,11 +687,11 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Identity and sources</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Display name</span>
-            <input value={draft.name} onChange={(e) => set({ name: e.target.value })} style={{ ...inputBox, height: 32 }} />
+            <Input value={draft.name} onChange={(v) => set({ name: v })} ariaLabel="Display name" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Also known as</span>
-            <input value={draft.aliases} onChange={(e) => set({ aliases: e.target.value })} placeholder="Alt names, comma-separated" style={{ ...inputBox, height: 32 }} />
+            <Input value={draft.aliases} onChange={(v) => set({ aliases: v })} placeholder="Alt names, comma-separated" ariaLabel="Also known as" />
             <span style={helpTxt}>Postings under these names collapse into this company.</span>
           </div>
           <UrlEditor urls={draft.scrape_urls} onChange={(u) => set({ scrape_urls: u })} />
@@ -709,12 +704,12 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Which postings to keep</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Title must match</span>
-            <input value={draft.title_include_expr} onChange={(e) => set({ title_include_expr: e.target.value })} placeholder="(Product OR Project) AND Manager" style={{ ...inputBox, height: 32 }} />
+            <Input value={draft.title_include_expr} onChange={(v) => set({ title_include_expr: v })} placeholder="(Product OR Project) AND Manager" ariaLabel="Title must match" />
             <span style={helpTxt}>Supports AND, OR and parentheses. Blank keeps every title.</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Skip titles containing</span>
-            <input value={draft.title_exclude_keywords} onChange={(e) => set({ title_exclude_keywords: e.target.value })} placeholder="intern, junior, associate" style={{ ...inputBox, height: 32 }} />
+            <Input value={draft.title_exclude_keywords} onChange={(v) => set({ title_exclude_keywords: v })} placeholder="intern, junior, associate" ariaLabel="Skip titles containing" />
             <span style={helpTxt}>Comma-separated. Applied after the match above.</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -744,23 +739,23 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Scrape interval in minutes</span>
-                  <input type="number" min={1} value={draft.scrape_interval_minutes} onChange={(e) => set({ scrape_interval_minutes: e.target.value })} placeholder="Use global interval" style={{ ...inputBox, height: 32 }} />
+                  <Input type="number" min={1} value={draft.scrape_interval_minutes} onChange={(v) => set({ scrape_interval_minutes: v })} placeholder="Use global interval" ariaLabel="Scrape interval in minutes" />
                   <span style={helpTxt}>Blank follows the schedule set in Settings.</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Wait for element</span>
-                  <input value={draft.wait_for_selector} onChange={(e) => set({ wait_for_selector: e.target.value })} placeholder="CSS selector" style={{ ...monoBox, height: 32, minHeight: 0 }} />
+                  <Input value={draft.wait_for_selector} onChange={(v) => set({ wait_for_selector: v })} placeholder="CSS selector" mono ariaLabel="Wait for element" />
                   <span style={helpTxt}>CSS selector the page must render before reading.</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Pages to read</span>
-                  <input type="number" min={1} max={20} value={draft.max_pages} onChange={(e) => set({ max_pages: e.target.value })} style={{ ...inputBox, height: 32 }} />
+                  <Input type="number" min={1} max={20} value={draft.max_pages} onChange={(v) => set({ max_pages: v })} ariaLabel="Pages to read" />
                   <span style={helpTxt}>Stops paging after this many.</span>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={fieldLabel}>H-1B employer name</span>
-                <input value={draft.h1b_slug} onChange={(e) => set({ h1b_slug: e.target.value })} placeholder="Auto-detect" style={{ ...monoBox, height: 32, minHeight: 0 }} />
+                <Input value={draft.h1b_slug} onChange={(v) => set({ h1b_slug: v })} placeholder="Auto-detect" mono ariaLabel="H-1B employer name" />
                 <span style={{ fontSize: 10.5, color: lca ? 'var(--good)' : 'var(--muted)' }}>{lcaLine}</span>
               </div>
             </div>
@@ -836,18 +831,18 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Career page URL</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span className={url ? atsSlug(ats) : undefined} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, background: url ? undefined : 'var(--surface-2)', color: url ? undefined : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://boards.greenhouse.io/acme" style={{ ...monoBox, flex: 1, height: 33, minHeight: 0, fontSize: 11 }} />
+              <Input value={url} onChange={setUrl} placeholder="https://boards.greenhouse.io/acme" mono ariaLabel="Career page URL" style={{ flex: 1, minWidth: 0 }} />
             </div>
             <span style={{ fontSize: 11, color: url && !known ? 'var(--warn)' : 'var(--muted)' }}>{atsNote}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Company name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme" style={{ ...inputBox, height: 33, fontSize: 12.5 }} />
+              <Input value={name} onChange={setName} placeholder="Acme" ariaLabel="Company name" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Aliases</span>
-              <input value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="Alt names, comma-separated" style={{ ...inputBox, height: 33 }} />
+              <Input value={aliases} onChange={setAliases} placeholder="Alt names, comma-separated" ariaLabel="Aliases" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
@@ -857,7 +852,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Scrape interval in minutes</span>
-              <input type="number" min={1} value={interval} onChange={(e) => setIntervalV(e.target.value)} placeholder="Use global interval" style={{ ...inputBox, height: 33, fontSize: 12.5 }} />
+              <Input type="number" min={1} value={interval} onChange={setIntervalV} placeholder="Use global interval" ariaLabel="Scrape interval in minutes" />
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2, borderTop: '1px solid var(--line-soft)', marginTop: 2 }}>

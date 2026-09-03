@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Button, Pill } from './ui'
+import { Button, Pill, SearchInput } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -28,6 +28,9 @@ const POPOVER = {
 
 // Design draws these selects as a bordered row with a ▾ — a native <select>
 // can't carry the two-line job labels, so this is a small popover instead.
+// ui: keep — ui.jsx's Select renders single-line `[value, label]` rows; this one
+// carries a second `sub` line per option and claims Escape (RES-15) so the modal
+// it may sit in does not close on the same press. Not an input-role scan site.
 export function Picker({ value, options, placeholder, onPick, width }) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
@@ -325,8 +328,8 @@ export default function CoverLetters() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search letters, companies… "
-            style={{ height: 36, width: 280, padding: '0 13px', border: 'none', borderBottom: '1px solid var(--line-strong)', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)' }} />
+          <SearchInput variant="underline" width="280px" value={query} onChange={setQuery}
+            placeholder="Search letters, companies… " ariaLabel="Search cover letters" />
         </div>
       </header>
 

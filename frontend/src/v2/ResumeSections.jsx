@@ -11,6 +11,7 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { Input, Textarea } from './ui'
 
 export const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
 // PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them were
@@ -26,7 +27,6 @@ export const EMPTY = { header: { name: '', contact_items: [] }, summary: '', exp
 export const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
 
 export const UPPER = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
-export const cellInput = { width: '100%', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--sans)' }
 
 // Section counts for the collapsed header, from whichever sections exist.
 export const sectionCounts = (data) => ({
@@ -58,13 +58,12 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, fl
     if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
-  const st = { width: '100%', padding: multiline ? '7px 9px' : '0 9px', height: multiline ? undefined : 30, minHeight: multiline ? (rows || 3) * 20 : undefined, border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, fontFamily: 'var(--sans)', outline: 'none', resize: multiline ? 'vertical' : undefined, lineHeight: multiline ? '19px' : undefined }
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: flex || undefined, minWidth: 0 }}>
       {label && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>}
       {multiline
-        ? <textarea value={value || ''} onChange={(e) => onChange(e.target.value)} onKeyDown={boldKey} placeholder={placeholder} rows={rows || 3} style={st} />
-        : <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={st} />}
+        ? <Textarea value={value || ''} onChange={onChange} onKeyDown={boldKey} placeholder={placeholder} rows={rows || 3} />
+        : <Input value={value || ''} onChange={onChange} placeholder={placeholder} />}
     </label>
   )
 }
@@ -95,6 +94,9 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
     if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
+  // ui: keep — a bullet is flowing text, not a field: no border, no background, no
+  // padding, resize:none + overflow:hidden for the autosize, and the row around it
+  // supplies the box. Textarea would have to be overridden away entirely.
   return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1} placeholder={placeholder}
     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
@@ -146,7 +148,7 @@ export const MenuItem = ({ icon, label, hint, onClick }) => (
 export const MicroField = ({ label, value, onChange, placeholder }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
-    <input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', height: 30, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)' }} />
+    <Input value={value || ''} onChange={onChange} placeholder={placeholder} ariaLabel={label} />
   </div>
 )
 
@@ -200,14 +202,14 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <span style={UPPER}>Full name</span>
-        <input value={data.header?.name || ''} onChange={(e) => setField('header.name', e.target.value)} style={{ ...cellInput, height: 32, fontSize: 13 }} />
+        <Input value={data.header?.name || ''} onChange={(v) => setField('header.name', v)} ariaLabel="Full name" />
       </div>
       {/* R3-B-01: header.title round-trips through the API and prints in the
           templates, but had no editor — it was invisible and uneditable in v2.
           Optional: an empty value renders nothing at all in the PDF. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <span style={UPPER}>Title</span>
-        <input value={data.header?.title || ''} onChange={(e) => setField('header.title', e.target.value)} placeholder="Headline, e.g. Senior Product Manager" style={{ ...cellInput, height: 32, fontSize: 13 }} />
+        <Input value={data.header?.title || ''} onChange={(v) => setField('header.title', v)} placeholder="Headline, e.g. Senior Product Manager" ariaLabel="Title" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -220,11 +222,11 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ flex: '45 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* controls + text: 45 % of the row */}
               {arrows(i)}
-              <input value={it.text || ''} onChange={(e) => setField(`header.contact_items.${i}.text`, e.target.value)} placeholder="Display text" style={{ ...cellInput, flex: 1, minWidth: 0 }} />
+              <Input value={it.text || ''} onChange={(v) => setField(`header.contact_items.${i}.text`, v)} placeholder="Display text" ariaLabel="Contact item text" style={{ flex: 1, minWidth: 0 }} />
               </div>
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
-              <input value={it.url || ''} onChange={(e) => setField(`header.contact_items.${i}.url`, e.target.value)} placeholder="URL (optional)" style={{ ...cellInput, flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--text-2)' }} />
-              {showStub && <input value={it.stub || ''} onChange={(e) => setField(`header.contact_items.${i}.stub`, e.target.value)} placeholder="id" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ ...cellInput, flex: '0 0 34px', padding: '0 6px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11 }} />}
+              <Input value={it.url || ''} onChange={(v) => setField(`header.contact_items.${i}.url`, v)} placeholder="URL (optional)" ariaLabel="Contact item URL" style={{ flex: 1, minWidth: 0 }} />
+              {showStub && <Input value={it.stub || ''} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" mono ariaLabel="Tracer link stub" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center' }} />}
               <RemoveX onClick={() => undoRemove('Removed contact item',
                 (d) => d.header.contact_items.splice(i, 1),
                 (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })} />
@@ -378,6 +380,8 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
                 bullets and the summary), so a skills row keeps its field colour. */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
+              {/* ui: keep — bare input inside the row's own bordered box; that box, not
+                  the field, carries the tailoring border and the added/decline affordances */}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
               {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
@@ -405,10 +409,10 @@ function CategoryName({ name, rename }) {
   useEffect(() => () => clearTimeout(timer.current), [])
   const commit = (v) => { clearTimeout(timer.current); if (v !== name && !rename.current(name, v)) setDraft(name) }
   return (
-    <input value={draft} placeholder="Category"
-      onChange={(e) => { const v = e.target.value; setDraft(v); clearTimeout(timer.current); timer.current = setTimeout(() => commit(v), 500) }}
+    <Input value={draft} placeholder="Category" ariaLabel="Skill category"
+      onChange={(v) => { setDraft(v); clearTimeout(timer.current); timer.current = setTimeout(() => commit(v), 500) }}
       onBlur={() => commit(draft)}
-      style={{ flex: '0 0 118px', height: 29, padding: '0 9px', border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, fontWeight: 500, outline: 'none', fontFamily: 'var(--sans)' }} />
+      style={{ flex: '0 0 118px', fontWeight: 500 }} />
   )
 }
 export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }) {
