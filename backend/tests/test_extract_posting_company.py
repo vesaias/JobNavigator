@@ -146,6 +146,7 @@ _LINKEDIN_HTML = """
 """
 
 
+@pytest.mark.asyncio
 async def test_extract_posting_uses_board_slug_not_ats_brand(_offline_fetch):
     from backend.api.routes_applications import ExtractRequest, extract_posting
     _offline_fetch(_GREENHOUSE_HTML)
@@ -154,6 +155,7 @@ async def test_extract_posting_uses_board_slug_not_ats_brand(_offline_fetch):
     assert out["company"] == "Duolingo"
 
 
+@pytest.mark.asyncio
 async def test_extract_posting_leaves_company_empty_when_only_brand_is_known(_offline_fetch):
     """LinkedIn has no employer slug in the URL — better empty than "Linkedin"."""
     from backend.api.routes_applications import ExtractRequest, extract_posting
@@ -163,6 +165,7 @@ async def test_extract_posting_leaves_company_empty_when_only_brand_is_known(_of
     assert out["company"] is None
 
 
+@pytest.mark.asyncio
 async def test_extract_posting_keeps_jsonld_hiring_organization(_offline_fetch):
     """A real employer in JSON-LD still wins over the slug layer."""
     from backend.api.routes_applications import ExtractRequest, extract_posting
