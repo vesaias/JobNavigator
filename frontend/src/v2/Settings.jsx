@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Heading, Helper, IconButton, Label, Link, Menu, PageTitle, Pill, Select, Spinner, Textarea } from './ui'
+import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Textarea } from './ui'
 import api from '../api'
 import './theme.css'
 
@@ -479,7 +479,7 @@ export default function Settings() {
 
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Settings</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color .15s' }}>
@@ -495,7 +495,7 @@ export default function Settings() {
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
         </div>
-      </header>
+      </HeaderRow>
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* anchor rail */}
@@ -522,9 +522,9 @@ export default function Settings() {
                   {/* integer line-heights: at the inherited 1.5 these are 28.5 and
                       17.25, which puts every row below the header on a half pixel
                       and drops its 1px bottom rule */}
-                  {/* ui: keep — the 500-weight/-.015em card-title serif family, not the
-                      400-weight Heading scale */}
-                  <span style={{ fontFamily: 'var(--serif)', fontSize: 19, lineHeight: '26px', fontWeight: 500, letterSpacing: '-.015em' }}>{title}</span>
+                  {/* the 26px line-height is load-bearing (see the note above): it keeps
+                      every row under this head on the whole-pixel grid, so it stays here */}
+                  <Heading strong size={19} style={{ lineHeight: '26px' }}>{title}</Heading>
                   {/* ui: keep — the 26px line-height is the alignment (see above): Helper's
                       16px would drop this section head off the whole-pixel grid */}
                   <span style={{ fontSize: 11.5, lineHeight: '26px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
@@ -547,13 +547,13 @@ export default function Settings() {
                 <span style={{ color: 'var(--muted)', fontFamily: 'var(--serif)', fontSize: 12, fontStyle: 'normal' }}>JobNavigator</span>&nbsp;v.2.0
               </span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
-                {/* ui: keep — colophon links: they inherit the row's size on purpose and
-                    stay --muted per SET-13, and they carry rel="noopener noreferrer";
-                    Link would force accent 11.5/500 and a rel of its own */}
-                <a href="/docs" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
-                  style={{ color: 'var(--muted)', textDecoration: 'none', cursor: 'pointer' }}>API docs ↗</a>
-                <a href="https://github.com/vesaias/JobNavigator" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
-                  style={{ color: 'var(--muted)', textDecoration: 'none' }}>github.com/vesaias/JobNavigator ↗</a>
+                {/* Link now takes `rel`, so these two stop being hand-written anchors.
+                    Their ink and size are still the colophon's, not the link scale:
+                    they sit inside the running row and stay --muted per SET-13. */}
+                <Link href="/docs" target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--muted)', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 400, textDecoration: 'none' }}>API docs ↗</Link>
+                <Link href="https://github.com/vesaias/JobNavigator" target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--muted)', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 400, textDecoration: 'none' }}>github.com/vesaias/JobNavigator ↗</Link>
               </span>
             </Helper>
           </div>
@@ -704,8 +704,17 @@ function Row({ r, ctx }) {
     // SET-11: the label column shrinks rather than holding a hard 340px, and
     // below ~720px of pane it moves above the controls entirely — otherwise the
     // pill + Override toggle on the LLM rows are clipped off the right edge.
+    // ui: keep — a settings *row*, not a header row: its bottom rule is the row
+    // divider of a list (the scanner files it under header-row by that rule)
     <div style={{ display: 'flex', flexDirection: narrow ? 'column' : 'row', alignItems: narrow ? 'stretch' : 'center', gap: narrow ? 10 : 24, minHeight: 52, padding: '9px 0', borderBottom: '1px solid var(--line-soft)' }}>
-      <div style={{ flex: narrow ? '0 0 auto' : '0 1 340px', minWidth: narrow ? 0 : 200, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* D4e fix-up: the shared row help below is `Helper` (11.5px) where it used to
+          be a hand-written 11px span. Text layout is linear in font size, so the
+          column was widened by exactly the same ratio — 340 x 11.5/11 = 355.45,
+          rounded up to 356 (and 200 -> 210) — and every row's help wraps on the
+          same word it did before. Without it the longest string on the page
+          ("Model that answers application-form questions in the extension.")
+          wrapped to a second line and grew its row 55px -> 71px. */}
+      <div style={{ flex: narrow ? '0 0 auto' : '0 1 356px', minWidth: narrow ? 0 : 210, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '18px', fontWeight: 500 }}>
           {r.label}
           {r.info && (
@@ -723,7 +732,7 @@ function Row({ r, ctx }) {
           {r.kind === 'switch' && !isOn(r.key, r.dflt) && r.offHelp ? r.offHelp : r.help}
         </Helper>
         {infoOpen && (
-          <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 7, padding: '8px 10px', marginTop: 5, textWrap: 'pretty' }}>{r.info}</span>
+          <Surface radius="row" pad="8px 10px" style={{ fontSize: 11, lineHeight: '17px', color: 'var(--text-2)', marginTop: 5, textWrap: 'pretty' }}>{r.info}</Surface>
         )}
       </div>
       <div style={{ flex: narrow ? '0 0 auto' : 1, minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: narrow ? 'wrap' : 'nowrap', gap: 8 }}>{right}</div>
@@ -882,25 +891,28 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
   }, [])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={close}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1020px, 94vw)', maxHeight: 'min(1280px, 92vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    // escape={false}: this modal keeps its own Escape effect, which is paired with
+    // the flush-on-unmount in the same cleanup — the pending debounce must be
+    // written whichever way the modal goes away, so the two stay together.
+    <ModalPanel width="min(1020px, 94vw)" onClose={close} escape={false} zIndex={60}
+      style={{ maxHeight: 'min(1280px, 92vh)', overflow: 'hidden' }}>
+        <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>{spec.label}</Heading>
           <Helper style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</Helper>
           <IconButton onClick={close} ariaLabel={`Close ${spec.label}`} style={{ marginLeft: 'auto' }}>✕</IconButton>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
           {/* 1.5x wider and 2x taller than before, capped so it never exceeds the window */}
           <Textarea value={text} onChange={(v) => { setText(v); commit(v) }} ariaLabel={spec.label} mono
             style={{ flex: 1, minHeight: 440, ...(err ? { borderColor: 'var(--bad)' } : null) }} />
         </div>
+        {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <Helper style={{ color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</Helper>
           <Button variant="secondary" size="sm" onClick={reset} ariaLabel={`Reset ${spec.label} to default`} style={{ marginLeft: 'auto' }}>Reset to default</Button>
           <Button size="sm" onClick={close} ariaLabel={`Done editing ${spec.label}`}>Done</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
 
@@ -982,14 +994,17 @@ function ModelsModal({ S, save, onClose }) {
   })
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 600, maxHeight: 620, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <>
+    {/* escape={false}: R3-S-04's guard lives above (`useEscape(onClose, !confirm)`)
+        so the remove-confirm keeps the key to itself; a second listener here would
+        be unguarded and take the catalog down with the confirm. */}
+    <ModalPanel width={600} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 620, overflow: 'hidden' }}>
+        <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>Model catalog</Heading>
           <Helper>available in every model picker</Helper>
           <IconButton onClick={onClose} ariaLabel="Close the model catalog" style={{ marginLeft: 'auto' }}>✕</IconButton>
-        </div>
-        <div style={{ flex: '0 0 auto', padding: '12px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        </HeaderRow>
+        <HeaderRow pad="12px 22px" soft bg="page" align="center" style={{ gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
             {/* ui: keep — typeahead composite: the input drives a suggestion listbox
@@ -1031,7 +1046,7 @@ function ModelsModal({ S, save, onClose }) {
             )}
           </span>
           <Button size="sm" onClick={() => add()} ariaLabel="Add this model to the catalog">Add</Button>
-        </div>
+        </HeaderRow>
         {err && <div style={{ padding: '8px 22px', fontSize: 11.5, color: 'var(--bad)' }}>{err}</div>}
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '6px 22px 14px' }}>
           {list.map((m) => (
@@ -1049,10 +1064,11 @@ function ModelsModal({ S, save, onClose }) {
             </div>
           ))}
         </div>
-      </div>
-      {/* the catalog's own scrim closes it on any click that reaches it, so the
-          confirm's scrim has to stop short of it */}
-      {confirm && <div onClick={(e) => e.stopPropagation()}><ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} /></div>}
-    </div>
+    </ModalPanel>
+    {/* outside the catalog's scrim, not inside it wrapped in a stopPropagation
+        div: the confirm's own scrim click must not bubble into the catalog's
+        and close that too */}
+    {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
+    </>
   )
 }

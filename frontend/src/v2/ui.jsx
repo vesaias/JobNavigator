@@ -67,11 +67,16 @@ const act = (fn, off, role) => (fn && !off ? { onClick: fn, ...kb(fn, role) } : 
 // ── Spinner ─────────────────────────────────────────────────────────────────
 // dominant: 1.5px accent · r99 · 9px (9 sites). `color` lets a button spin in
 // its own ink (currentColor) without a second token.
-export function Spinner({ size = 9, color, style }) {
+// `weight="bold"` is the 2px band: the Feed's 28px score ring is drawn heavy on
+// purpose (user decision, D1-D2 §"Decisions during D4"), and a hairline reads as
+// a different control at that diameter.
+const SPIN_WEIGHT = { bold: '2px' }
+export function Spinner({ size = 9, weight, color, style }) {
   return (
     <span className="v2-spin" aria-hidden="true" style={{
       flex: '0 0 auto', display: 'inline-block', width: size, height: size,
-      border: `1.5px solid ${color || 'var(--spinner-ink)'}`, borderTopColor: 'transparent',
+      border: `${SPIN_WEIGHT[weight] || '1.5px'} solid ${color || 'var(--spinner-ink)'}`,
+      borderTopColor: 'transparent',
       borderRadius: 'var(--radius-control)', ...style,
     }} />
   )
@@ -626,14 +631,16 @@ export function Dot({ tone = 'neutral', size = 7, title, style, className }) {
 // Link canonical: accent · 11.5 · 500, hover v2-hover-accent-text.
 // NavLink is the "‹ back"/section jump: accent · 12, hover washes to
 // --navlink-hover-bg with --navlink-hover-ink.
-export function Link({ href, target, onClick, title, ariaLabel, children, style, className }) {
+// `rel` overrides the default so an anchor can spell out `noopener noreferrer`
+// (Settings' colophon, the Companies test-row ↗) without leaving the primitive.
+export function Link({ href, target, rel, onClick, title, ariaLabel, children, style, className }) {
   const st = {
     color: 'var(--link-ink)', fontSize: 'var(--t-11-5)', lineHeight: '17px', fontWeight: 500,
     cursor: 'pointer', ...style,
   }
   const cls = cx('v2-hover-accent-text', className)
   if (href) {
-    return <a href={href} target={target} rel={target === '_blank' ? 'noreferrer' : undefined} title={title} aria-label={ariaLabel} className={cls} style={st}>{children}</a>
+    return <a href={href} target={target} rel={rel || (target === '_blank' ? 'noreferrer' : undefined)} title={title} aria-label={ariaLabel} className={cls} style={st}>{children}</a>
   }
   return <span {...act(onClick, false, 'link')} title={title} aria-label={ariaLabel} className={cls} style={st}>{children}</span>
 }
@@ -651,22 +658,39 @@ export function NavLink({ pad, onClick, title, ariaLabel, children, style, class
 // ModalPanel canonical: surface · 1px --modal-border · r12 · --modal-shadow,
 // on a --scrim-bg scrim. Escape closes (useEscape, RES-15) and the panel is
 // pulled back onto the pixel grid (useSnapTop, RES-32).
-export function ModalPanel({ width = 480, onClose, labelledBy, children, style, className, scrimStyle }) {
-  useEscape(onClose)
+//
+// `as="form"` + `onSubmit` renders the panel as a real <form>, for the sign-in
+// overlay where Enter-in-the-field must submit. `scrimProps` carries the two
+// attributes the two *global* overlays put on the scrim (`className="jn-v2"` +
+// `data-theme`), because they mount outside the v2 shell and have to bring the
+// theme with them; `zIndex` is theirs too — they sit above everything, including
+// an open modal. A panel with no `onClose` (sign-in: there is nowhere to go) also
+// takes no Escape listener, rather than one that swallows the key and does
+// nothing.
+// `escape={false}` is for a screen that already owns Escape for its whole modal
+// set and guards it (Applications and Settings both close every overlay from one
+// handler that stands down while a ConfirmDialog is up). A second, unguarded
+// listener here would close the modal *under* that confirm.
+export function ModalPanel({
+  width = 480, as, onSubmit, onClose, escape = true, labelledBy, zIndex = 70,
+  children, style, className, scrimStyle, scrimProps,
+}) {
+  useEscape(onClose, escape && !!onClose)
   const panel = useRef(null)
   useSnapTop(panel)
+  const Panel = as === 'form' ? 'form' : 'div'
   return (
-    <div onClick={onClose} style={{
+    <div onClick={onClose} {...scrimProps} style={{
       position: 'fixed', inset: 0, background: 'var(--scrim-bg)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70, ...scrimStyle,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex, ...scrimStyle,
     }}>
-      <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
-        onClick={(e) => e.stopPropagation()} className={className}
+      <Panel ref={panel} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
+        onSubmit={onSubmit} onClick={(e) => e.stopPropagation()} className={className}
         style={{
           width, background: 'var(--modal-bg)', border: '1px solid var(--modal-border)',
           borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)',
           display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
-        }}>{children}</div>
+        }}>{children}</Panel>
     </div>
   )
 }
@@ -690,15 +714,92 @@ export function Drawer({ width = 720, onClose, labelledBy, children, style, clas
 // ── HeaderRow ───────────────────────────────────────────────────────────────
 // canonical (modal/drawer header): pad 16 22 13 + --head-line beneath.
 // `screen` is the page header (22 30 16), `compact` the tighter modal head
-// (15 22 12); `soft` swaps the rule for --head-line-soft.
+// (15 22 12); `soft` swaps the rule for --head-line-soft, `strong` for
+// --head-line-strong.
+// `pad` is the escape hatch for the handful of heads whose gutter is set by the
+// pane they sit in (a toolbar inset to a list's own 24/30px rails, the PDF
+// preview strip). It stays a *named prop* rather than an inline `padding` so the
+// site still reads as a HeaderRow and D5's lint has one thing to look at.
+// `id` is a zero-pixel passthrough (the Feed's sticky head is measured by id).
+// `bg` is the head's ground for the strips that are painted rather than
+// transparent — a sticky pane head on --head-bg, a column strip on --head-bg-page,
+// a recessed sub-band on --head-bg-recessed. Named, so a screen never inlines a
+// background token of its own.
 const HEAD_PAD = { modal: '16px 22px 13px', screen: '22px 30px 16px', compact: '15px 22px 12px' }
-export function HeaderRow({ variant = 'modal', soft, align = 'flex-start', children, style, className }) {
+const HEAD_BG = { surface: 'var(--head-bg)', page: 'var(--head-bg-page)', recessed: 'var(--head-bg-recessed)' }
+// `as="header"` keeps the <header> landmark the five screen heads already are —
+// the role is the same box either way, but a screen title deserves its element.
+// `line="none"` is the screen head that carries no rule at all (the four list
+// screens whose filter bar draws the only line under the title block).
+const HEAD_LINE = { line: 'var(--head-line)', soft: 'var(--head-line-soft)', strong: 'var(--head-line-strong)' }
+export function HeaderRow({
+  as, variant = 'modal', pad, bg, line, soft, strong, height, align = 'flex-start',
+  id, children, style, className, ...rest
+}) {
+  const tone = line || (strong ? 'strong' : soft ? 'soft' : 'line')
+  const El = as === 'header' ? 'header' : 'div'
   return (
+    <El id={id} className={className} {...rest} style={{
+      flex: '0 0 auto', padding: pad || HEAD_PAD[variant] || HEAD_PAD.modal,
+      ...(tone === 'none' ? null : { borderBottom: `1px solid ${HEAD_LINE[tone] || HEAD_LINE.line}` }),
+      display: 'flex', alignItems: align, gap: 12,
+      ...(bg ? { background: HEAD_BG[bg] || HEAD_BG.surface } : null),
+      ...(height ? { height } : null), ...style,
+    }}>{children}</El>
+  )
+}
+
+// ── TableHead ───────────────────────────────────────────────────────────────
+// The column-caption strip above a flat list: --bg ground, --label-ink, 9.5/14px
+// uppercase at .11em, a --head-line-strong hairline beneath and the list's own
+// side gutter. Height and gutter are the list's, everything type-and-colour is
+// the role's. `top` adds the --head-line-soft rule above (the Stats cards, where
+// the strip sits between two blocks rather than at the top of a pane).
+export function TableHead({ height = 28, pad = '0 22px', soft, top, children, style, className }) {
+  return (
+    // no `role="row"`: these strips are flex boxes, not rows of a role="table",
+    // and an orphan row role is worse than none
     <div className={className} style={{
-      flex: '0 0 auto', padding: HEAD_PAD[variant] || HEAD_PAD.modal,
-      borderBottom: `1px solid ${soft ? 'var(--head-line-soft)' : 'var(--head-line)'}`,
-      display: 'flex', alignItems: align, gap: 12, ...style,
+      flex: '0 0 auto', display: 'flex', alignItems: 'center', height, padding: pad,
+      background: 'var(--bg)', color: 'var(--label-ink)',
+      fontSize: 'var(--t-9-5)', lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase',
+      borderBottom: `1px solid ${soft ? 'var(--head-line-soft)' : 'var(--head-line-strong)'}`,
+      ...(top ? { borderTop: '1px solid var(--head-line-soft)' } : null), ...style,
     }}>{children}</div>
+  )
+}
+
+// ── Rule ────────────────────────────────────────────────────────────────────
+// The 1px hairline that is *not* a border on something else: the divider between
+// two blocks of a drawer, the filler between a label and its trailing count, the
+// vertical tick between two facts in a band. `tone` picks the same two tokens
+// every border in v2 uses; `vertical` turns it on its side (`length` = its run).
+const RULE_TONE = { soft: 'var(--head-line-soft)', line: 'var(--head-line)', strong: 'var(--head-line-strong)' }
+export function Rule({ tone = 'soft', vertical, length, style, className }) {
+  return (
+    <span aria-hidden="true" className={className} style={{
+      display: 'block', background: RULE_TONE[tone] || RULE_TONE.soft,
+      ...(vertical ? { flex: '0 0 auto', width: 1, height: length ?? 14 } : { height: 1 }),
+      ...style,
+    }} />
+  )
+}
+
+// ── Surface ─────────────────────────────────────────────────────────────────
+// A recessed block: --surface-2 with a radius from the same scale everything
+// else uses. `radius="none"` is the full-bleed pane form (the PDF preview
+// column), where the block runs edge to edge and has nothing to round.
+const SURFACE_RADIUS = {
+  none: undefined, field: 'var(--radius-field)', row: 'var(--radius-row)',
+  card: 'var(--radius-card)', menu: 'var(--radius-menu)',
+}
+export function Surface({ as, radius = 'card', pad, children, style, className, ...rest }) {
+  const El = as === 'section' ? 'section' : 'div'
+  return (
+    <El className={className} {...rest} style={{
+      background: 'var(--surface-2)', borderRadius: SURFACE_RADIUS[radius],
+      ...(pad ? { padding: pad } : null), ...style,
+    }}>{children}</El>
   )
 }
 
@@ -721,25 +822,50 @@ const HELPER_SIZE = {
   md: { fontSize: 'var(--t-11-5)', lineHeight: '16px' },
   xs: { fontSize: 'var(--t-10-5)', lineHeight: '16px' },
 }
-export function Helper({ size = 'md', mono, title, children, style, className }) {
+// `onClick` makes the sub-line itself the control (Applications' interview slot
+// line): it gets `kb()` and the pointer, so a muted line that acts stops being a
+// hand-written span. Inert helpers are untouched — no cursor, no tab stop.
+export function Helper({ size = 'md', mono, onClick, title, ariaLabel, children, style, className }) {
   return (
-    <span title={title} className={className} style={{
+    <span {...act(onClick, false)} title={title} aria-label={ariaLabel} className={className} style={{
       color: 'var(--helper-ink)', fontFamily: mono ? 'var(--font-mono)' : undefined,
-      ...(HELPER_SIZE[size] || HELPER_SIZE.md), ...style,
+      ...(HELPER_SIZE[size] || HELPER_SIZE.md),
+      ...(onClick ? { cursor: 'pointer' } : null), ...style,
     }}>{children}</span>
   )
 }
-// Heading canonical: serif 18 · -.02em. 19 and 22 are the two larger steps.
+// Heading canonical: serif 18 · -.02em · weight 400 (inherited). 19 and 22 are
+// the two larger steps.
 const HEADING_SIZE = {
   18: { fontSize: 'var(--t-18)', lineHeight: '27px' },
   19: { fontSize: 'var(--t-19)', lineHeight: '26px' },
   22: { fontSize: 'var(--t-22)', lineHeight: '30px' },
 }
-export function Heading({ size = 18, id, title, children, style, className }) {
+// `strong` is v2's **second** serif family: the card / column / drawer-section
+// title, set heavier (500, or 600 where the design asks for it) and tracked
+// tighter than the 400-weight display scale — -.01em up to 16, -.015em from 17.
+// D4e left its sites inline because collapsing the two families is a design
+// decision; D4f names the family instead of collapsing it (allowed sizes
+// **15 · 15.5 · 16 · 17 · 18 · 19**, exactly the sizes already drawn).
+// It deliberately declares **no line-height**: every one of these titles sits in
+// a content-driven card box whose height is its own line box, so a whole-pixel
+// step here would move each card. The three sites that need one (a card with an
+// integer height to hold) pass it in `style`, with the reason at the call site.
+const HEADING_STRONG = {
+  15: { fontSize: 'var(--t-15)', letterSpacing: '-.01em' },
+  15.5: { fontSize: 'var(--t-15-5)', letterSpacing: '-.01em' },
+  16: { fontSize: 'var(--t-16)', letterSpacing: '-.01em' },
+  17: { fontSize: 'var(--t-17)', letterSpacing: '-.015em' },
+  18: { fontSize: 'var(--t-18)', letterSpacing: '-.015em' },
+  19: { fontSize: 'var(--t-19)', letterSpacing: '-.015em' },
+}
+export function Heading({ size, strong, id, title, children, style, className }) {
+  const look = strong
+    ? { fontWeight: strong === 600 ? 600 : 500, ...(HEADING_STRONG[size ?? 15.5] || HEADING_STRONG[15.5]) }
+    : { letterSpacing: '-.02em', ...(HEADING_SIZE[size ?? 18] || HEADING_SIZE[18]) }
   return (
     <span id={id} title={title} className={className} style={{
-      fontFamily: 'var(--font-display)', letterSpacing: '-.02em', color: 'var(--heading-ink)',
-      ...(HEADING_SIZE[size] || HEADING_SIZE[18]), ...style,
+      fontFamily: 'var(--font-display)', color: 'var(--heading-ink)', ...look, ...style,
     }}>{children}</span>
   )
 }

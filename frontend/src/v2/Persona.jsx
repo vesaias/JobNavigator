@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
+import { Card, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -156,9 +156,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
 function ColumnHead({ title, help }) {
   return (
     <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, padding: '16px 26px 10px', lineHeight: '26px' }}>
-      {/* ui: keep — the card/column-title serif family (500 · -.015em), not the
-          400-weight Heading scale D4e migrates */}
-      <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, letterSpacing: '-.015em' }}>{title}</span>
+      <Heading strong size={18}>{title}</Heading>
       <Helper title={help} style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>what is this?</Helper>
     </div>
   )
@@ -306,7 +304,7 @@ export default function Persona() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Persona</PageTitle>
           {/* integer line-heights throughout: at the inherited 1.5 a 13px line is
@@ -322,7 +320,7 @@ export default function Persona() {
         {/* ui: keep — an accent-ink save indicator, not a link and not a muted
             helper; Link would add cursor:pointer + a hover class to inert text */}
         <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
-      </header>
+      </HeaderRow>
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* left — résumé content, edited with the Résumé editor's own components */}

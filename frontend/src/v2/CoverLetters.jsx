@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Spinner, Tag } from './ui'
+import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -308,8 +308,9 @@ export default function CoverLetters() {
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
           ...(arc ? { borderColor: 'var(--line-soft)', background: 'var(--recessed)' } : null) }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* ui: keep — serif 15.5/500/-.01em row title: the 500-weight card-title family, not the Heading scale */}
-          <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', lineHeight: '22px', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+          {/* the 22px line-height is the row's: it holds the card at an integer
+              height, the way the pending row below documents */}
+          <Heading strong size={15.5} title={c.name} style={{ lineHeight: '22px', ...(arc ? { color: 'var(--text-2)' } : null), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</Heading>
           <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</Helper>
         </div>
         {(c.stage || arc) && (
@@ -324,7 +325,7 @@ export default function CoverLetters() {
 
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Cover Letters</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
@@ -333,13 +334,12 @@ export default function CoverLetters() {
           <SearchInput variant="underline" width="280px" value={query} onChange={setQuery}
             placeholder="Search letters, companies… " ariaLabel="Search cover letters" />
         </div>
-      </header>
+      </HeaderRow>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* generate panel */}
         <div className="v2-scroll" style={{ flex: '0 0 340px', borderRight: '1px solid var(--line)', background: 'var(--bg)', overflow: 'auto', padding: '16px 26px 20px 30px', display: 'flex', flexDirection: 'column', gap: 13, minHeight: 0 }}>
-          {/* ui: keep — serif 16/600/-.01em panel title: the 600-weight card-title family, not the Heading scale */}
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 600, letterSpacing: '-.01em' }}>Generate new</span>
+          <Heading strong={600} size={16}>Generate new</Heading>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Label>Your résumé</Label>
@@ -374,11 +374,11 @@ export default function CoverLetters() {
 
         {/* list */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--surface)' }}>
-          <div className="v2-gutter-head" style={{ flex: '0 0 auto', padding: '13px 30px 9px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line-soft)' }}>
+          <HeaderRow className="v2-gutter-head" pad="13px 30px 9px" soft align="center" style={{ gap: 9 }}>
             <Label>All letters</Label>
             {/* ui: keep — mono count in --edge ink: the mono-text role, not a muted helper */}
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{letters.length + pending.length}</span>
-          </div>
+          </HeaderRow>
 
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
             {pending.map((r) => (

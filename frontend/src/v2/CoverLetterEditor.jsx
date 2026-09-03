@@ -4,10 +4,9 @@ import { useToasts, ToastStack } from './Toast'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, NavLink, SectionHead, Spinner } from './ui'
+import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, NavLink, SectionHead, Spinner, Surface } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -96,7 +95,6 @@ export default function CoverLetterEditor() {
   const pendingPatch = useRef({})
   const pdfTimer = useRef(null)
   const prevBlob = useRef(null)
-  const regenPanel = useRef(null)
   const loaded = useRef(false)
 
   useEffect(() => {
@@ -268,8 +266,6 @@ export default function CoverLetterEditor() {
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
-  useEscape(() => setRegenOpen(false), regenOpen && !regening)
-  useSnapTop(regenPanel)   // RES-32
 
   const sourceOpts = useMemo(() => {
     const opts = [
@@ -311,7 +307,7 @@ export default function CoverLetterEditor() {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* top bar */}
-      <div style={{ flex: '0 0 auto', padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
@@ -322,10 +318,10 @@ export default function CoverLetterEditor() {
         <Helper title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(saveErr ? { color: 'var(--bad)' } : null) }}>
           {saveErr || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
         </Helper>
-      </div>
+      </HeaderRow>
 
       {/* context band */}
-      <div style={{ flex: '0 0 auto', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', padding: '9px 24px', display: 'flex', alignItems: 'center', gap: 13 }}>
+      <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Written for <span style={{ color: 'var(--text)' }}>{doc.company ? `${doc.company} — ${doc.title}` : doc.name}</span>
@@ -359,7 +355,7 @@ export default function CoverLetterEditor() {
             </Menu>
           )}
         </div>
-      </div>
+      </HeaderRow>
 
       {/* split body */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -475,8 +471,8 @@ export default function CoverLetterEditor() {
         </section>
 
         {/* preview */}
-        <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
-          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
+        <Surface as="section" radius="none" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <HeaderRow pad="8px 20px" align="center" style={{ flexWrap: 'wrap', rowGap: 6, gap: 9 }}>
             <Label>PDF preview</Label>
             {pdfBusy && <Spinner size={10} color="var(--edge)" />}
 
@@ -512,24 +508,26 @@ export default function CoverLetterEditor() {
 
             {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed — showing the last render · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
             <Button size="xs" onClick={download} style={{ marginLeft: 'auto' }}>↓ Download PDF</Button>
-          </div>
+          </HeaderRow>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {pdfUrl
               ? <iframe title="cover letter preview" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />
               : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, color: 'var(--muted)' }}>Rendering the preview…</div>}
           </div>
-        </section>
+        </Surface>
       </div>
 
       {regenOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => !regening && setRegenOpen(false)}>
-          <div ref={regenPanel} onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+        // CL: a run in flight is not cancellable, so while `regening` the panel
+        // takes no `onClose` at all — no scrim click, no Escape listener, exactly
+        // the `regenOpen && !regening` guard it had.
+        <ModalPanel width={460} zIndex={60} onClose={regening ? undefined : () => setRegenOpen(false)} style={{ overflow: 'hidden' }}>
+            <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
               <Heading>Regenerate letter</Heading>
               <Helper style={{ textWrap: 'pretty' }}>
                 Rewrites the whole letter for {doc.company || 'this role'} — your edits to this draft are replaced.
               </Helper>
-            </div>
+            </HeaderRow>
             <div style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>From résumé</Label>
@@ -545,6 +543,7 @@ export default function CoverLetterEditor() {
                 <LengthPicker value={rLength} onPick={setRLength} />
               </div>
             </div>
+            {/* ui: keep — a modal footer bar (rule above, --bg ground) */}
             <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
               {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}   {/* CL-14 */}
               <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
@@ -555,8 +554,7 @@ export default function CoverLetterEditor() {
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </Button>
             </div>
-          </div>
-        </div>
+        </ModalPanel>
       )}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />

@@ -5,8 +5,7 @@ import { useToasts, ToastStack } from './Toast'
 // RES-16: this dialog started here (COMP-28) and now serves the résumé and
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
-import { useSnapTop } from './hooks'
-import { Button, DashedAdd, Dot, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Row, SearchInput, ShowMore, Spinner, Tag } from './ui'
+import { Button, DashedAdd, Dot, Drawer as UiDrawer, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, Rule, SearchInput, ShowMore, Spinner, TableHead, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -395,7 +394,7 @@ export default function Companies() {
   return (
     <div className="v2-scroll" style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header — title + subtitle, matching The Feed */}
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Companies</PageTitle>
           {/* explicit integer line-height: at the inherited 1.5 this 13px line is
@@ -406,13 +405,13 @@ export default function Companies() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button onClick={() => setAddOpen(true)}>+ Add company</Button>
         </div>
-      </header>
+      </HeaderRow>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '2px 30px 12px 24px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+      <HeaderRow pad="2px 30px 12px 24px" align="center" style={{ flexWrap: 'wrap', gap: 8 }}>
         <SearchInput width="226px" value={query} onChange={setQuery}
           placeholder="Search name, alias, URL or ATS…" ariaLabel="Search companies" />
-        <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 3px' }} />
+        <Rule vertical length={20} tone="line" style={{ margin: '0 3px' }} />
         {['1', '2', '3', 'none'].map((t) => {
           const on = tiers.includes(t)
           return (
@@ -422,7 +421,7 @@ export default function Companies() {
             </Pill>
           )
         })}
-        <div style={{ flex: '0 0 auto', width: 1, height: 20, background: 'var(--line)', margin: '0 2px' }} />
+        <Rule vertical length={20} tone="line" style={{ margin: '0 2px' }} />
         {inactiveInFilter.length > 0 && (
           // ui: keep — accent-ink bulk action, paired with the --warn one below; Pill has no tinted variant
           <div onClick={() => bulkSet(true)} title={bulkHint} className="v2-act"
@@ -452,12 +451,12 @@ export default function Companies() {
             )}
           </span>
         </span>
-      </div>
+      </HeaderRow>
 
       {/* rows (column header lives inside the scroll container so its width
           tracks the rows' — otherwise the body scrollbar shifts every column) */}
       <div ref={tableRef} className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', alignItems: 'center', height: 30, padding: '0 30px 0 24px', background: 'var(--bg)', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        <TableHead height={30} pad="0 30px 0 24px" style={{ position: 'sticky', top: 0, zIndex: 3 }}>
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
           <span style={{ flex: 1.9, minWidth: healthMin }}>Health</span>
@@ -468,7 +467,7 @@ export default function Companies() {
           {showFit && <span style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14 }} title="Average fit across this company's scored roles">Ø Fit</span>}
           <span style={{ flex: '0 0 88px', textAlign: 'center' }}>Status</span>
           <span style={{ flex: '0 0 190px' }} />
-        </div>
+        </TableHead>
         {filtered.map((c) => {
           const h = healthOf(c)
           const rn = resumeNames(c)
@@ -635,21 +634,22 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   }
 
   return (
-    <>
-      {/* R3-S-02: the drawer had no backdrop, so it was the one overlay on this
-          screen that survived a click outside it (the Add modal and both row menus
-          close). The scrim is scoped to the companies pane, matching the drawer's
-          own absolute positioning, and routes through onClose so the dirty-discard
-          confirm still fires instead of dropping unsaved edits. */}
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', zIndex: 29 }} />
-    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 720, background: 'var(--surface)', borderLeft: '1px solid var(--line)', boxShadow: 'var(--shadow-drawer)', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
-      <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+    // R3-S-02: the drawer had no backdrop, so it was the one overlay on this
+    // screen that survived a click outside it. ui's Drawer draws that scrim
+    // (scoped to the pane, matching the drawer's own absolute positioning) and
+    // routes it through onClose, so the dirty-discard confirm still fires instead
+    // of dropping unsaved edits. Escape reaches the same onClose — the screen's
+    // own Escape handler already called closeDrawer(), and a second call is
+    // idempotent (same confirm object, same setDrawer(null)).
+    <UiDrawer width={720} onClose={onClose}>
+      <HeaderRow>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* ui: keep — the drawer title is serif 20/-.02em; Heading's 400-weight scale is 18/19/22 */}
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
           <Helper>{subtitle}</Helper>
         </div>
         <IconButton onClick={onClose} title="Close" style={{ flex: '0 0 auto' }}>✕</IconButton>
-      </div>
+      </HeaderRow>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '15px 22px 20px', display: 'flex', flexDirection: 'column', gap: 15, minHeight: 0 }}>
         {bannerText && (
@@ -678,7 +678,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
 
         {/* identity + sources */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Identity and sources</span>
+          <Heading strong={600} size={15}>Identity and sources</Heading>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Display name</span>
             <Input value={draft.name} onChange={(v) => set({ name: v })} ariaLabel="Display name" />
@@ -691,11 +691,11 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <UrlEditor urls={draft.scrape_urls} onChange={(u) => set({ scrape_urls: u })} />
         </div>
 
-        <div style={{ height: 1, background: 'var(--line-soft)' }} />
+        <Rule />
 
         {/* which postings to keep */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Which postings to keep</span>
+          <Heading strong={600} size={15}>Which postings to keep</Heading>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Title must match</span>
             <Input value={draft.title_include_expr} onChange={(v) => set({ title_include_expr: v })} placeholder="(Product OR Project) AND Manager" ariaLabel="Title must match" />
@@ -714,13 +714,13 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           </div>
         </div>
 
-        <div style={{ height: 1, background: 'var(--line-soft)' }} />
+        <Rule />
 
         {/* scraper tuning */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           <div onClick={toggleTuning} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
             <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', position: 'relative', top: -2, fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
+            <Heading strong={600} size={15}>Scraper tuning</Heading>
             <Helper size="xs" style={{ ...(bannerMuted ? null : company.last_error ? { color: 'var(--bad)' } : downReason ? { color: 'var(--warn)' } : null) }}>{tuningNote}</Helper>
           </div>
           {tuning && (
@@ -757,6 +757,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         </div>
       </div>
 
+      {/* ui: keep — a drawer *footer* bar (rule on top, --bg ground) */}
       <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
@@ -768,15 +769,12 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         {saveErr && <Helper style={{ marginLeft: 'auto', color: 'var(--bad)' }}>{saveErr}</Helper>}
         <Button size="sm" onClick={save} busy={saving} style={{ marginLeft: saveErr ? 10 : 'auto' }}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </div>
-    </div>
-    </>
+    </UiDrawer>
   )
 }
 
 // ── add modal ─────────────────────────────────────────────────────────────────
 function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) {
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
   const [aliases, setAliases] = useState('')
@@ -815,12 +813,11 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <ModalPanel width={520} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
+        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
           <Heading>Add company</Heading>
           <Helper>Paste a careers URL — the ATS is read from it.</Helper>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Career page URL</Label>
@@ -865,31 +862,27 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
           <Helper style={{ paddingTop: 2 }}>{scoreNote}</Helper>
           <Helper>Title filters, wait-for selector and max pages use the defaults — change them in the company config when a board needs it.</Helper>
         </div>
+        {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <Helper>Scrapes on the next scheduled run</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
 
 // ── test scrape modal ─────────────────────────────────────────────────────────
 function TestModal({ test, onClose, showShots, setShowShots }) {
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   const [limit, setLimit] = useState(TEST_PAGE)   // COMP-26
   useEffect(() => { setLimit(TEST_PAGE) }, [test])   // a fresh run starts at page 1
   if (test.error) {
     return (
-      <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-        <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
-          <Heading style={{ display: 'block', marginBottom: 10 }}>Test scrape — Error</Heading>
-          <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
-          <Pill onClick={onClose} style={{ marginTop: 16 }}>Close</Pill>
-        </div>
-      </div>
+      <ModalPanel width={520} onClose={onClose} zIndex={60} style={{ padding: 22 }}>
+        <Heading style={{ display: 'block', marginBottom: 10 }}>Test scrape — Error</Heading>
+        <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
+        <Pill onClick={onClose} style={{ marginTop: 16 }}>Close</Pill>
+      </ModalPanel>
     )
   }
   const jobs = test.jobs || []
@@ -927,17 +920,16 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <ModalPanel width={840} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
+        <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>Test scrape — {test.company}</Heading>
           {shots.length > 0 && (
             <Pill size="sm" on={showShots} onClick={() => setShowShots((v) => !v)} style={{ marginLeft: 'auto' }}>{showShots ? 'Hide' : 'Show'} screenshots</Pill>
           )}
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: shots.length ? 0 : 'auto' }}>✕</IconButton>
-        </div>
+        </HeaderRow>
 
-        <div style={{ flex: '0 0 auto', padding: '9px 22px', background: 'var(--bg)', borderBottom: '1px solid var(--line-soft)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <HeaderRow align="stretch" pad="9px 22px" bg="page" soft style={{ flexDirection: 'column', gap: 2 }}>
           <Helper>URLs scraped · {urls.length}</Helper>
           {urls.map((u, i) => <Helper key={i} size="xs" mono style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u}</Helper>)}
           {(test.include_expr || (test.exclude_keywords || []).length > 0) && (
@@ -946,47 +938,50 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
               {(test.exclude_keywords || []).length > 0 && <>· Exclude <span style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>{test.exclude_keywords.join(', ')}</span></>}
             </span>
           )}
-        </div>
+        </HeaderRow>
 
         {showShots && shots.length > 0 && (
-          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '11px 22px', background: 'var(--bg)', borderBottom: '1px solid var(--line-soft)', maxHeight: 280, overflow: 'auto' }}>
+          <HeaderRow align="stretch" pad="11px 22px" bg="page" soft style={{ flexDirection: 'column', gap: 8, maxHeight: 280, overflow: 'auto' }}>
             {shots.map((s, i) => (
               <div key={i}>
                 <Helper size="xs" mono>{s.url}</Helper>
                 <img src={`data:image/png;base64,${s.data}`} alt="" style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 8, marginTop: 4 }} />
               </div>
             ))}
-          </div>
+          </HeaderRow>
         )}
 
         {pag.length > 0 && (
-          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 3, padding: '10px 22px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line-soft)' }}>
+          <HeaderRow align="stretch" pad="10px 22px" bg="recessed" soft style={{ flexDirection: 'column', gap: 3 }}>
             {/* ui: keep — the debug band's head is accent at weight 600; Label is --label-ink at 400 */}
             <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>Pagination debug</span>
             {pag.map((p, i) => (
               <span key={i} style={{ fontSize: 11, color: p.clicked ? 'var(--good)' : 'var(--bad)' }}>Page {p.page} · {p.clicked ? `Clicked ${p.clicked_via?.selector || ''} — ${p.clicked_via?.text || ''}` : 'No next button found'}</span>
             ))}
-          </div>
+          </HeaderRow>
         )}
 
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-          <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <TableHead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <span style={{ flex: '0 0 30px' }}>#</span>
             <span style={{ flex: 1, minWidth: 0 }}>Title</span>
             <span style={{ flex: '0 0 62px' }}>Status</span>
             <span style={{ flex: '0 0 260px' }}>Reason</span>
             <span style={{ flex: '0 0 40px', textAlign: 'right' }}>Link</span>
-          </div>
+          </TableHead>
           {jobs.slice(0, limit).map((j, i) => {
             const st = jobState(j)
             return (
+              // ui: keep — a table body row, not a head: its rule is the row divider
               <div key={i} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 22px', borderBottom: '1px solid var(--line-soft)' }}>
-                {/* ui: keep — mono row numeral + the reason cell's variable ink (mono-text / row-cell), and the ↗ needs rel="noopener noreferrer", which Link does not emit */}
+                {/* ui: keep — mono row numeral + the reason cell's variable ink (mono-text / row-cell) */}
                 <span style={{ flex: '0 0 30px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{i + 1}</span>
                 <span title={j.title} style={{ flex: 1, minWidth: 0, fontSize: 12, color: j.kept ? 'var(--text)' : 'var(--muted)', textDecoration: j.kept ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.title}</span>
                 <span style={{ flex: '0 0 62px' }}><span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: st.tagBg, color: st.tagFg }}>{st.tag}</span></span>
                 <span title={st.reason} style={{ flex: '0 0 260px', fontSize: 11, color: st.reasonFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{st.reason}</span>
-                <span style={{ flex: '0 0 40px', textAlign: 'right' }}><a href={j.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>↗</a></span>
+                {/* Link takes `rel` now, so the ↗ stops being a hand-written anchor;
+                    it keeps the row's own 11px glyph size */}
+                <span style={{ flex: '0 0 40px', textAlign: 'right' }}><Link href={j.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, fontWeight: 400, lineHeight: 'inherit' }}>↗</Link></span>
               </div>
             )
           })}
@@ -994,11 +989,11 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
           {jobs.length === 0 && <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', fontSize: 12.5 }}>No job links found on this page.</div>}
         </div>
 
+        {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}{jobs.length > limit ? ` · showing the first ${limit}` : ''}</span>
           <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }

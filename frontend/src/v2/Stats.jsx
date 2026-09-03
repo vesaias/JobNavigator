@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Helper, Label, Menu, MenuItem, PageTitle, Pill as UiPill, Spinner } from './ui'
+import { Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, PageTitle, Pill as UiPill, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -90,11 +90,14 @@ const decodeCron = (expr) => {
   return `Daily ${t}`
 }
 
-// ui: keep — the 500-weight card-title serif family at 17; Heading is the
-// 400-weight 18/19/22 scale, so this is neither the same weight nor a step
+// ui: keep — the five plain card titles now render through `Heading strong
+// size={17}`; this const survives for the one site Heading cannot serve: the
+// run-history / activity-log **tabs**, which spread it as the base of a
+// keyboard-operable control (kb(), a --accent underline, a swapped ink).
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
-// ui: keep — every ...COL site is a table head (fixed height + borderBottom),
-// which is the TableHead role, not Label
+// ui: keep — COL now has one site left: the LLM-cost card's 9px column strip,
+// which is a TableHead at a smaller step (h22 / 9px) than the role's 9.5, inside
+// a scroll-gutter head. The two 26px strips migrated to <TableHead>.
 const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
 // ui: keep — the mono-text role (ids, timestamps, figures), excluded from D4e
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
@@ -389,7 +392,7 @@ export default function Stats() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Stats</PageTitle>
           {/* Volume, outcomes, scoring and spend each already have a card below,
@@ -405,25 +408,27 @@ export default function Stats() {
             {spend != null && <> · {money(spend)} on LLM calls {period ? `in ${period}d` : 'all time'}</>}
           </span>
         </div>
-        {/* ui: keep — an icon+label header control, not an inline text link: its ink
-            is --muted (Link forces --link-ink) and v2-ctl's line-height:1 is what
-            baselines it in the header, which Link's inline 17px would undo */}
-        <span onClick={refresh} {...kb(refresh)} title="Reload every figure on this page" className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
+        {/* D4f consistency decision: the retry/refresh affordance is a Link on
+            Companies, Searches and Settings, so it is one here too — accent
+            11.5/500 at the canonical 17px line-height, keeping only the icon row
+            layout in `style`. */}
+        <Link onClick={refresh} title="Reload every figure on this page"
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7 }}>
           {refreshing
             ? <Spinner size={10} />
             : <span style={{ fontSize: 12 }}>↻</span>}
           Refresh
-        </span>
-      </header>
+        </Link>
+      </HeaderRow>
       {coreErr && (
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
           {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
           <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
           <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
-          {/* ui: keep — a link inside the running text of the error band: it inherits
-              the band's 12.5/18px and its --bad ink through currentColor, so Link's
-              11.5/500 accent would break the sentence and repaint it green */}
-          <span onClick={refresh} {...kb(refresh)} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
+          {/* D4f consistency decision: the retry link is a Link everywhere else, so
+              it is one here — it leaves the band's --bad run and reads as the
+              accent action it is. The dotted underline stays as its affordance. */}
+          <Link onClick={refresh} style={{ flex: '0 0 auto', borderBottom: '1px dotted currentColor' }}>Try again</Link>
         </div>
       )}
 
@@ -456,7 +461,7 @@ export default function Stats() {
               views get the same 162px of content area inside 230. */}
           <Card style={{ height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
-              <span style={H}>Application funnel</span>
+              <Heading strong size={17}>Application funnel</Heading>
               <span style={{ flex: 1 }} />
               {sankey && (
                 <span style={{ alignSelf: 'center', display: 'flex', gap: 3 }}>
@@ -509,7 +514,7 @@ export default function Stats() {
 
           <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
-              <span style={H}>Score distribution</span>
+              <Heading strong size={17}>Score distribution</Heading>
               <Helper style={{ flex: 1 }}>{int(scores?.scored_count)} scored jobs · best résumé per job</Helper>
               {scores?.avg != null && (
                 <span style={{ fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
@@ -535,7 +540,7 @@ export default function Stats() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
           <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
-              <span style={H}>New jobs · last 30 days</span>
+              <Heading strong size={17}>New jobs · last 30 days</Heading>
               <Helper style={{ flex: 1 }}>daily arrivals across all sources</Helper>
               {/* STAT-07: --stage-applied is the applied series everywhere else in
                   v2; the swatch is solid, as designed. R3-U-02: the legend swatches
@@ -551,7 +556,7 @@ export default function Stats() {
 
           <Card style={{ height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
-              <span style={H}>LLM costs</span>
+              <Heading strong size={17}>LLM costs</Heading>
               <Helper title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
                 style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</Helper>
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
@@ -598,23 +603,25 @@ export default function Stats() {
         {/* schedules */}
         <Card ref={schedRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
-            <span style={H}>Schedules</span>
+            <Heading strong size={17}>Schedules</Heading>
             <Helper>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</Helper>
           </div>
           {schedErr ? (
             <div style={{ padding: '26px 20px 30px', borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div>
           ) : (<>
-          <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+          <TableHead height={26} pad="0 20px" top style={{ background: 'transparent' }}>
             <span style={{ flex: '0 1 250px', minWidth: 0 }}>Job</span>
             {showId && <span style={{ flex: '0 0 132px' }}>Job ID</span>}
             {showSched && <span style={{ flex: '0 0 140px' }}>Schedule</span>}
             {showNext && <span style={{ flex: '0 0 132px' }}>Next run</span>}
             <span style={{ flex: 1, minWidth: 0 }}>{showStatus ? 'Status' : ''}</span>
             <span style={{ flex: '0 0 110px', textAlign: 'right' }}>Run</span>
-          </div>
+          </TableHead>
           {ordered.map((j) => {
             const running = !!j.running || triggering.has(j.id)
             return (
+              // ui: keep — a table *body* row (the scanner files it under header-row by
+              // its bottom rule): its divider is the row's own, not a head's
               <div key={j.id} style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 20px', borderBottom: '1px solid var(--line-soft)' }}>
                 <span title={j.name} style={{ flex: '0 1 250px', minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
                 {showId && <span title={j.id} style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</span>}
@@ -686,13 +693,14 @@ export default function Stats() {
 
           {tab === 'runs' ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+              <TableHead height={26} pad="0 20px" top style={{ background: 'transparent' }}>
                 <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 140px' }}>Job ID</span><span style={{ flex: '0 0 90px' }}>Trigger</span>
                 <span style={{ flex: '0 0 100px' }}>Status</span><span style={{ flex: '0 0 76px' }}>Duration</span><span style={{ flex: 1 }}>Result</span>
-              </div>
+              </TableHead>
               {runs.map((r) => {
                 const failed = r.status === 'failed'
                 return (
+                  // ui: keep — a table body row, not a head (see the schedules row above)
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
                     <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(r.started_at)}</span>
                     <span style={{ flex: '0 0 140px', ...MONO, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</span>
@@ -710,11 +718,12 @@ export default function Stats() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', height: 26, padding: '0 20px', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-strong)', ...COL }}>
+              <TableHead height={26} pad="0 20px" top style={{ background: 'transparent' }}>
                 <span style={{ flex: '0 0 118px' }}>Time</span><span style={{ flex: '0 0 110px' }}>Type</span>
                 <span style={{ flex: 1 }}>Message</span><span style={{ flex: '0 0 130px' }}>Company</span>
-              </div>
+              </TableHead>
               {activity.map((a) => (
+                // ui: keep — a table body row, not a head
                 <div key={a.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
                   <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(a.created_at)}</span>
                   <span style={{ flex: '0 0 110px', display: 'flex' }}>

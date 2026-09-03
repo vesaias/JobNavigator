@@ -82,7 +82,8 @@
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
   --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
-  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-16:16px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
+  --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   /* radii */
   --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
@@ -136,7 +137,8 @@
   --anchor-ink-hover:var(--text);
   --label-ink:var(--muted); --helper-ink:var(--muted); --heading-ink:var(--text);
   /* structure + state */
-  --head-line:var(--line); --head-line-soft:var(--line-soft);
+  --head-line:var(--line); --head-line-soft:var(--line-soft); --head-line-strong:var(--line-strong);
+  --head-bg:var(--surface); --head-bg-page:var(--bg); --head-bg-recessed:var(--surface-2);
   --section-head-ink:var(--muted);
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
@@ -218,7 +220,8 @@
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
   --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
-  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-16:16px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
+  --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   /* radii */
   --radius-field:6px; --radius-row:7px; --radius-card:9px; --radius-menu:10px;
@@ -272,7 +275,8 @@
   --anchor-ink-hover:var(--text);
   --label-ink:var(--muted); --helper-ink:var(--muted); --heading-ink:var(--text);
   /* structure + state */
-  --head-line:var(--line); --head-line-soft:var(--line-soft);
+  --head-line:var(--line); --head-line-soft:var(--line-soft); --head-line-strong:var(--line-strong);
+  --head-bg:var(--surface); --head-bg-page:var(--bg); --head-bg-recessed:var(--surface-2);
   --section-head-ink:var(--muted);
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);

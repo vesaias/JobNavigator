@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSnapTop } from './hooks'
-import { Button, Card, DashedAdd, Dot, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Row, SectionHead, Textarea } from './ui'
+import { useEscape } from './hooks'
+import { Button, Card, DashedAdd, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, SectionHead, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ export default function Applications() {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header */}
-      <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Applications</PageTitle>
           {/* integer line-height: at the inherited 1.5 this span is 19.5px, which
@@ -337,10 +337,10 @@ export default function Applications() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button onClick={() => { closeAll(); setLogOpen(true) }}>+ Log application</Button>
         </div>
-      </header>
+      </HeaderRow>
 
       {/* toolbar */}
-      <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
+      <HeaderRow pad="0 30px 14px 24px" align="center" style={{ gap: 8 }}>
         {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks
             ui.jsx's boxed SearchInput so the two read as one control */}
         <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -397,7 +397,7 @@ export default function Applications() {
             )}
           </span>
         </span>
-      </div>
+      </HeaderRow>
 
       {/* split body */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -496,7 +496,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
   return (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface)', minHeight: 0 }}>
       {/* header block */}
-      <div style={{ flex: '0 0 auto', padding: '16px 26px 14px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <HeaderRow align="stretch" pad="16px 26px 14px" style={{ flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Label>
@@ -555,7 +555,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             )
           })}
         </div>
-      </div>
+      </HeaderRow>
 
       {/* body */}
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 26px', display: 'flex', flexWrap: 'wrap', gap: 24, minHeight: 0 }}>
@@ -615,11 +615,11 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   </>
                 ) : (
                   <>
-                    {/* ui: keep — the whole slot line is a click target that opens the
-                        interview editor, and `Helper` takes no `onClick` */}
-                    <span onClick={() => openIvEdit(iv)} title="Edit this interview" style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', cursor: 'pointer' }}>
+                    {/* Helper now takes an onClick (and brings kb() with it), so the
+                        slot line stops being a hand-written span */}
+                    <Helper size="xs" mono onClick={() => openIvEdit(iv)} title="Edit this interview">
                       {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
-                    </span>
+                    </Helper>
                     {iv.prep && <span onClick={() => openIvEdit(iv)} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)', textWrap: 'pretty', cursor: 'pointer' }}>{iv.prep}</span>}
                   </>
                 )}
@@ -694,21 +694,22 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 // ── prep modal ───────────────────────────────────────────────────────────────
 function PrepModal({ prep, company, copied, onCopy, onClose }) {
   const busy = prep === 'loading' || prep?.failed === true
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    // escape={false}: this screen closes every overlay from one handler that
+    // stands down while a ConfirmDialog is up (see closeAll's useEscape above);
+    // a second listener here would close this modal under that confirm.
+    <ModalPanel width={640} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 640, overflow: 'hidden' }}>
+        <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>Prep handover — {company}</Heading>
           <Helper>paste into the AI of your choice</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
           <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {prep === 'loading' ? 'Building the bundle…' : prep.text}
           </pre>
         </div>
+        {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <Helper>Edit the closing ask in Settings → AI</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
@@ -716,8 +717,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
 
@@ -734,8 +734,6 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])   // APPS-22
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
-  const panel = useRef(null)
-  useSnapTop(panel)   // RES-32
 
   // OPEN-05: converted (the APPS-01 residue). The chips are the modal's only
   // way to attach a résumé, and the user opened the modal to log an application —
@@ -791,12 +789,12 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+    // escape={false}: as PrepModal — the screen owns Escape for its overlays.
+    <ModalPanel width={520} onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
           <Heading>Log application</Heading>
           <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</Helper>
-        </div>
+        </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Posting URL{reading ? ' · reading…' : ''}</Label>
@@ -843,12 +841,12 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
               ariaLabel="Notes" rows={2} style={{ minHeight: 52 }} />
           </div>
         </div>
+        {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <Helper>The posting is cached on save</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
         </div>
-      </div>
-    </div>
+    </ModalPanel>
   )
 }
