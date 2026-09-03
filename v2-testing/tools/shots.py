@@ -1,0 +1,37 @@
+"""D0/D4 pixel baseline: full-page screenshots of every v2 route, both themes, two viewports.
+
+Run inside the backend container: python /tmp/v2t/shots.py <stage>  →  /tmp/v2t/shots/<stage>/<route>__<theme>__<w>.png
+Copy out with: docker compose cp backend:/tmp/v2t/shots/<stage> v2-testing/artifacts/design/<stage>
+Animations/transitions are disabled, the caret hidden, and hover state neutralised (mouse parked at 0,0).
+"""
+import sys, os, json
+sys.path.insert(0, '/tmp/v2t')
+from h import *
+
+stage = sys.argv[1] if len(sys.argv) > 1 else 'D0'
+OUT = f'/tmp/v2t/shots/{stage}'; os.makedirs(OUT, exist_ok=True)
+CSS = "*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; } html { scroll-behavior: auto !important; }"
+
+def unwrap(d): return d if isinstance(d, list) else (d.get('resumes') or d.get('items') or [])
+st, bases = get('/resumes?is_base=true'); bases = unwrap(bases)
+st, copies = get('/resumes?is_base=false'); copies = unwrap(copies)
+st, cls = get('/cover-letters'); cls = cls if isinstance(cls, list) else cls.get('cover_letters', cls.get('items', []))
+withjob = next((c for c in copies if c.get('job_id')), None)
+ROUTES = ['/v2/feed', '/v2/searches', '/v2/companies', '/v2/applications', '/v2/resumes', '/v2/cover-letters', '/v2/persona', '/v2/stats', '/v2/settings', '/v2/toasts']
+if bases: ROUTES.append(f"/v2/resumes/{bases[0]['id']}")
+if withjob: ROUTES.append(f"/v2/resumes/{withjob['id']}")
+if cls: ROUTES.append(f"/v2/cover-letters/{cls[0]['id']}")
+index = {}
+with browser() as b:
+    for th in ('light', 'dark'):
+        for w, hgt in ((1440, 900), (1024, 700)):
+            for r in ROUTES:
+                pg = page(b, th); pg.set_viewport_size({'width': w, 'height': hgt})
+                pg.add_style_tag(content=CSS) if False else None
+                go(pg, r); pg.add_style_tag(content=CSS); pg.mouse.move(0, 0); pg.wait_for_timeout(400)
+                name = r.strip('/').replace('/', '_')[:60] + f'__{th}__{w}.png'
+                pg.screenshot(path=f'{OUT}/{name}', full_page=False)
+                index[name] = {'route': r, 'theme': th, 'width': w, 'errors': pg.jn_log['pageerrors'][:1]}
+                pg.context.close()
+json.dump(index, open(f'{OUT}/index.json', 'w'), indent=1)
+print(f'{len(index)} screenshots → {OUT}')
