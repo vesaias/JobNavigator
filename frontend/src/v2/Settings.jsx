@@ -529,7 +529,12 @@ export default function Settings() {
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 980 }}>
             {visible.map(([id, , title, sub, rows]) => (
               <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
-                <div data-sec={`sec-${id}`} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '26px 0 4px' }}>
+                {/* alignItems center, not baseline: both children are exactly 26px tall
+                    (the shared line-height below), so centring places them identically
+                    to baseline in the default skin — but baseline made the row's height
+                    the union of two font-dependent baseline offsets, which grew the head
+                    56→59px under the alt skin. Centring pins it to the 26px line. */}
+                <div data-sec={`sec-${id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '26px 0 4px' }}>
                   {/* integer line-heights: at the inherited 1.5 these are 28.5 and
                       17.25, which puts every row below the header on a half pixel
                       and drops its 1px bottom rule */}
