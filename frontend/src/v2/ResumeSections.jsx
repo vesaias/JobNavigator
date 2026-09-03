@@ -11,7 +11,7 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, SectionHead, Textarea } from './ui'
+import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from './ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
