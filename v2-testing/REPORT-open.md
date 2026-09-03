@@ -162,4 +162,4 @@ Closed by fact rather than by preference (not re-openable as decisions): **RES-2
 - OPEN-07: `--series-new` confirmed as the token (decided).
 - OPEN-14: no need. OPEN-15: don't care. OPEN-18..22: ignored (worksheet debt).
 - OPEN-17: checked — `llm_models_list` is consumed by the frontend model pickers via `GET /settings`; the backend only seeds/refreshes it. No action.
-- OPEN-05, 08, 09, 11, 13, 16: explained to the user, awaiting a call.
+- OPEN-05 (critical spots), 08 (migrate to `useEscape`), 13 (tracked links in preview), 16 (read-only with expiry): fix, in the same Opus batch. OPEN-09: no need. OPEN-11: CLAUDE.md corrected (gitignored, local).
