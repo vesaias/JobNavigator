@@ -18,6 +18,6 @@ with open(out, 'w', encoding='utf-8') as f:
     f.write(f'# style diff {a} → {b}\n\n{len(A)} baseline elements · {len(changed)} changed tuples · {len(missing)} missing · {len(added)} added\n\n## Changes grouped (state · prop · old → new · count)\n')
     for (state, p, o, n), c in by_change.most_common(): f.write(f'- {c:>4} · {state} · {p}: `{o}` → `{n}`\n')
     f.write('\n## Changed elements\n')
-    for k, state, d in changed[:2000]: f.write(f'- `{k}` · {state} · ' + '; '.join(f'{p} {o} → {n}' for p, (o, n) in d.items()) + '\n')
+    for k, state, d in changed: f.write(f'- `{k}` · {state} · ' + '; '.join(f'{p} {o} → {n}' for p, (o, n) in d.items()) + '\n')
     f.write('\n## Missing in ' + b + '\n' + '\n'.join(f'- `{k}`' for k in missing[:300]) + '\n\n## Added in ' + b + '\n' + '\n'.join(f'- `{k}`' for k in added[:300]) + '\n')
 print(f'{len(changed)} changed, {len(missing)} missing, {len(added)} added → {out}')
