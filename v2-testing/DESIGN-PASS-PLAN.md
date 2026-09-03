@@ -12,7 +12,7 @@ Two baselines, taken in D0 before any change, re-taken after every replacement s
 - Final gate: the round-3 smoke script and the two flow groups are re-run once at the end (D6).
 
 ## Stages
-- [ ] **D0 baselines** (Fable, scripts) — fresh DB dump `backups/design_baseline_<date>.dump`; `shots.py` + `stylecrawl.py` on HEAD → `artifacts/design/D0/`; commit the tools (artifacts are gitignored).
+- [x] **D0 baselines** (Fable, scripts) — fresh DB dump `backups/design_baseline_<date>.dump`; `shots.py` + `stylecrawl.py` on HEAD → `artifacts/design/D0/`; commit the tools (artifacts are gitignored).
 - [x] **D1 static scan** (Fable, script `tools/stylescan.py`) — parse every `style={{…}}` object and `className` in `frontend/src/v2/*.jsx`; classify by signature into roles: `btn-primary`, `btn-secondary`, `pill`, `icon-btn`, `row`, `card`, `band`, `input`, `select-trigger`, `menu-item`, `section-head`, `chip`, `tag`, `link`, `modal-panel`, `drawer`, `toast`, `table-head`, `label`, `helper-text`, `unclassified`. Output `round-design/scan.md`: one table per role — distinct signatures × sites (file:line) × hover class — plus an `unclassified` list. This table is the migration list. **User reviews it before D2.**
 - [x] **D2 canonical spec** (user + Fable) — one signature per role and state written in `round-design/SPEC.md`; semantic tokens defined on top of the palette in `theme.css` (`--btn-primary-bg/-ink/-bg-hover`, `--btn-secondary-*`, `--row-bg-hover`, `--card-bg/-border/-border-hover`, `--input-bg/-border/-border-focus`, `--menu-item-bg-hover`, `--chip-*`, `--tag-*`, `--modal-bg/-shadow`, `--font-body/-display/-mono`, `--t-11…--t-19` text sizes). Palette tokens keep their names; semantic tokens reference them. Variants the user wants kept are named here.
 - [ ] **D3 primitives** (Opus, one run) — `frontend/src/v2/ui.jsx`: `Button` (primary/secondary/danger/ghost, sizes, disabled, busy), `Pill`, `IconButton`, `Row`, `Card`, `Band`, `Input`, `Textarea`, `Select` trigger, `MenuItem`, `SectionHead`, `Chip`, `Tag`, `Link`, `ModalPanel` (with `useSnapTop`), `Drawer`, `TableHead`, `Label`, `Helper`. Each reads only semantic tokens; hover/focus via the existing class mechanism in `theme.css` (rules rewritten to the semantic tokens). Keyboard access (`kb()`), `aria-*`, integer line-heights built in. Storybook-like page `/v2/ui` listing every primitive in every state (replaces `/v2/toasts`). Verified by the style crawl on `/v2/ui` matching SPEC exactly.
@@ -23,3 +23,7 @@ Two baselines, taken in D0 before any change, re-taken after every replacement s
 
 ## Cost plan (worker tokens)
 D3 ≈ 400 k · D4 six runs ≈ 6 × 250 k · D5 ≈ 150 k · D6 ≈ 400 k · fixes reserve ≈ 500 k → ≈ 3 M. D0/D1/D2/D7 and all verification are scripts and Fable.
+
+## Log
+- D0 (2026-09-04): dump `backups/design_baseline_20260904.dump`; 52 shots + 5 689 crawled elements at HEAD `4f3a5f5` (pre-D3 bundle), copied to `artifacts/design/D0/`. Clock frozen in both tools. Noise floor from a repeat run: 5 of 52 shots differ by 1–27 px (anti-aliasing in the PDF preview iframe and one chart pixel) → a route diff above ~50 px is real.
+- D3 committed `b346670`; D3-vs-D0 diff running (expected: zero).
