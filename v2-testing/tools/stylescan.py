@@ -85,6 +85,10 @@ def find_styles(text):
         line = text.count("\n", 0, m.start()) + 1
         yield line, tag, cls, parse_style(body)
 
+def _num(v):
+    try: return float(str(v).strip("'\"px"))
+    except Exception: return None
+
 def role_of(tag, cls, st):
     bg = st.get("background", st.get("backgroundColor", "")); bd = st.get("border", ""); rad = st.get("borderRadius", "")
     h = st.get("height", ""); fs = st.get("fontSize", ""); cur = st.get("cursor", ""); pos = st.get("position", "")
@@ -112,6 +116,23 @@ def role_of(tag, cls, st):
     if st.get("textTransform") == "'uppercase'" and st.get("letterSpacing"): return "label"
     if fs in ("10.5", "11", "11.5") and "--muted" in st.get("color", "") and not cur: return "helper-text"
     if bd and rad and "--surface" in bg: return "card-static"
+    keys = set(st) - {"__spread__"}
+    text_keys = {"color", "fontSize", "fontFamily", "fontWeight", "lineHeight", "letterSpacing", "textTransform", "fontStyle", "whiteSpace", "overflow", "textOverflow", "textAlign", "minWidth", "maxWidth", "flex", "marginLeft", "marginTop", "marginBottom", "marginRight", "display", "alignItems", "gap"}
+    design_keys = {"background", "backgroundColor", "color", "border", "borderColor", "borderBottom", "borderTop", "borderLeft", "borderRadius", "boxShadow", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "textTransform", "opacity", "cursor", "height"}
+    if not (keys & design_keys): return "layout"
+    ff = st.get("fontFamily", "")
+    if "--serif" in ff and (_num(fs) or 0) >= 24: return "page-title"
+    if "--serif" in ff: return "heading"
+    if "1.5px solid var(--accent)" in bd and rad == "99": return "spinner"
+    if h == "1" and bg: return "rule"
+    if st.get("borderBottom") and st.get("padding") and not cur and not bg: return "header-row"
+    if keys <= text_keys:
+        if st.get("textTransform") == "'uppercase'": return "label"
+        if fs and (_num(fs) or 99) <= 11.5 and ("--muted" in st.get("color", "") or "--faint" in st.get("color", "")): return "helper-text"
+        if "--mono" in ff: return "mono-text"
+        return "text"
+    if bg and not bd and not cur and rad in ("", "0"): return "surface-block"
+    if rad == "99" and h and not cur and (bg or bd): return "dot-or-badge"
     return "unclassified"
 
 def signature(st):

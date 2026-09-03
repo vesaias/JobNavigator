@@ -1,23 +1,33 @@
 # D1 static scan — inline style objects by role
 
-1734 `style={{…}}` objects across `frontend/src/v2/*.jsx`. Roles are heuristic; the `unclassified` list is for manual triage. Each row = one distinct signature (design-relevant keys only) + hover class; sites are `file:line`.
+1737 `style={{…}}` objects across `frontend/src/v2/*.jsx`. Roles are heuristic; the `unclassified` list is for manual triage. Each row = one distinct signature (design-relevant keys only) + hover class; sites are `file:line`.
 
 | role | signatures | sites |
 |---|---|---|
-| unclassified | 434 | 1116 |
-| helper-text | 44 | 143 |
+| layout | 39 | 455 |
+| unclassified | 165 | 209 |
+| text | 100 | 202 |
+| helper-text | 53 | 171 |
 | pill | 57 | 79 |
 | input | 37 | 69 |
 | label | 38 | 61 |
+| surface-block | 41 | 56 |
+| heading | 32 | 49 |
+| header-row | 20 | 40 |
 | btn-primary | 33 | 39 |
 | menu-item | 23 | 33 |
 | card-static | 25 | 31 |
 | scrim | 3 | 28 |
+| dot-or-badge | 17 | 27 |
 | link | 14 | 26 |
 | modal-panel | 9 | 22 |
-| section-head | 12 | 17 |
+| section-head | 14 | 19 |
+| mono-text | 15 | 16 |
 | dashed-add | 13 | 16 |
 | menu | 6 | 16 |
+| rule | 4 | 13 |
+| page-title | 2 | 11 |
+| spinner | 3 | 11 |
 | icon-btn | 3 | 9 |
 | btn-danger | 8 | 9 |
 | card | 6 | 8 |
@@ -27,172 +37,115 @@
 | drawer | 1 | 1 |
 | toast | 1 | 1 |
 
-## unclassified — 434 signatures
+## layout — 39 signatures
 
-- **394 sites** · hover `—` · `(no design keys)`
+- **395 sites** · hover `—` · `(no design keys)`
   - Applications.jsx:334, Applications.jsx:337, Applications.jsx:343, Applications.jsx:356, Applications.jsx:362, Applications.jsx:370, Applications.jsx:379, Applications.jsx:381, Applications.jsx:386, Applications.jsx:403, Applications.jsx:433, Applications.jsx:498, Applications.jsx:499, Applications.jsx:514, Applications.jsx:539, Applications.jsx:558, Applications.jsx:561, Applications.jsx:567, Applications.jsx:568, Applications.jsx:578, Applications.jsx:587, Applications.jsx:591, Applications.jsx:592, Applications.jsx:596, Applications.jsx:601, Applications.jsx:605, Applications.jsx:623, Applications.jsx:627, Applications.jsx:628, Applications.jsx:632, Applications.jsx:637, Applications.jsx:641, Applications.jsx:652, Applications.jsx:661, Applications.jsx:664, Applications.jsx:665, Applications.jsx:669, Applications.jsx:790, Applications.jsx:796, Applications.jsx:797 …
-- **14 sites** · hover `—` · `color: 'var(--muted)'`
-  - CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, JobFeed.jsx:836, JobFeed.jsx:913, JobFeed.jsx:1108, JobFeed.jsx:1144, JobFeed.jsx:1156, ResumeEditor.jsx:593, ResumeEditor.jsx:602, Searches.jsx:848, Searches.jsx:849, Stats.jsx:672, Stats.jsx:694, WelcomeModal.jsx:47
-- **12 sites** · hover `—` · `fontSize: 11`
-  - Applications.jsx:531, Applications.jsx:573, Applications.jsx:704, Companies.jsx:513, Companies.jsx:519, Companies.jsx:528, CoverLetterEditor.jsx:374, ResumeEditor.jsx:542, ResumeEditor.jsx:563, Searches.jsx:631, Searches.jsx:638, Searches.jsx:653
-- **11 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; letterSpacing: '-.02em'`
-  - Applications.jsx:691, Applications.jsx:786, Companies.jsx:789, Companies.jsx:901, CoverLetterEditor.jsx:541, ResumeEditor.jsx:672, ResumeEditor.jsx:777, ResumeEditor.jsx:847, Searches.jsx:761, Settings.jsx:895, Settings.jsx:995
-- **10 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 30; fontWeight: 400; lineHeight: 1; letterSpacing: '-.02em'`
-  - Applications.jsx:338, Companies.jsx:383, CoverLetters.jsx:326, JobFeed.jsx:723, Persona.jsx:324, Resumes.jsx:152, Searches.jsx:546, Settings.jsx:510, Stats.jsx:391, ToastLab.jsx:28
-- **9 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; lineHeight: '20px'`
-  - Applications.jsx:341, Companies.jsx:387, CoverLetters.jsx:327, JobFeed.jsx:724, Persona.jsx:328, Resumes.jsx:153, Searches.jsx:547, Stats.jsx:395, ToastLab.jsx:29
-- **9 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 9`
-  - Companies.jsx:512, Companies.jsx:519, Companies.jsx:733, Resumes.jsx:227, Resumes.jsx:267, Searches.jsx:631, Searches.jsx:638, Settings.jsx:747, Stats.jsx:605
-- **9 sites** · hover `—` · `background: 'var(--line-soft)'; height: 1`
-  - Companies.jsx:664, Companies.jsx:687, JobFeed.jsx:934, JobFeed.jsx:989, JobFeed.jsx:1042, JobFeed.jsx:1068, ResumeEditor.jsx:536, ResumeEditor.jsx:541, ResumeEditor.jsx:562
-- **8 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10`
-  - Applications.jsx:419, Companies.jsx:490, Persona.jsx:365, Persona.jsx:384, ResumeSections.jsx:159, ResumeSections.jsx:269, Stats.jsx:566, Stats.jsx:654
-- **8 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13`
-  - CoverLetterEditor.jsx:296, JobFeed.jsx:950, JobFeed.jsx:1196, JobFeed.jsx:1244, JobFeed.jsx:1285, Persona.jsx:307, ResumeEditor.jsx:456, Stats.jsx:385
-- **8 sites** · hover `—` · `color: 'var(--text)'`
-  - CoverLetterEditor.jsx:335, CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, ResumeEditor.jsx:489, ResumeEditor.jsx:593, ResumeEditor.jsx:602, Stats.jsx:565, Stats.jsx:568
-- **7 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '16px 22px 13px'`
-  - Applications.jsx:785, Companies.jsx:630, Companies.jsx:788, CoverLetterEditor.jsx:540, ResumeEditor.jsx:671, ResumeEditor.jsx:776, ResumeEditor.jsx:845
-- **7 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12`
-  - Companies.jsx:397, CoverLetters.jsx:397, JobFeed.jsx:734, Resumes.jsx:291, Resumes.jsx:346, Stats.jsx:456, Stats.jsx:530
-- **7 sites** · hover `—` · `color: 'var(--line)'`
-  - CoverLetterEditor.jsx:320, JobFeed.jsx:907, JobFeed.jsx:912, JobFeed.jsx:913, JobFeed.jsx:964, JobFeed.jsx:965, ResumeEditor.jsx:466
-- **6 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10`
-  - Companies.jsx:910, Companies.jsx:923, Companies.jsx:951, JobFeed.jsx:932, JobFeed.jsx:987, Searches.jsx:807
-- **6 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9`
-  - CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, CoverLetters.jsx:58, Persona.jsx:122, ResumeEditor.jsx:593, ResumeEditor.jsx:602
-- **6 sites** · hover `—` · `color: 'var(--text-2)'`
-  - JobFeed.jsx:762, JobFeed.jsx:964, Stats.jsx:567, Stats.jsx:673, Stats.jsx:678, Stats.jsx:698
-- **5 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 13`
-  - Applications.jsx:449, Companies.jsx:545, CoverLetters.jsx:409, Searches.jsx:686, Settings.jsx:485
-- **5 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '15px 22px 12px'`
-  - Applications.jsx:690, Companies.jsx:900, Searches.jsx:760, Settings.jsx:894, Settings.jsx:994
-- **5 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '22px 30px 16px'`
-  - CoverLetters.jsx:324, Persona.jsx:322, Settings.jsx:508, Stats.jsx:389, ToastLab.jsx:26
-- **5 sites** · hover `—` · `height: 34`
-  - JobFeed.jsx:1004, JobFeed.jsx:1005, JobFeed.jsx:1153, ResumeEditor.jsx:478, ResumeEditor.jsx:479
-- **5 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5`
-  - JobFeed.jsx:1012, JobFeed.jsx:1015, JobFeed.jsx:1130, LoginModal.jsx:52, ResumeEditor.jsx:614
-- **5 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5`
-  - JobFeed.jsx:1013, JobFeed.jsx:1036, JobFeed.jsx:1129, JobFeed.jsx:1216, JobFeed.jsx:1276
-- **4 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 10`
-  - Applications.jsx:392, JobFeed.jsx:1025, ResumeSections.jsx:380, Stats.jsx:646
-- **4 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; lineHeight: '18px'`
-  - Applications.jsx:508, ConfirmDialog.jsx:18, ConfirmDialog.jsx:43, WelcomeModal.jsx:37
 - **4 sites** · hover `—` · `padding: '15px 22px'`
-  - Applications.jsx:789, Companies.jsx:792, CoverLetterEditor.jsx:546, ResumeEditor.jsx:856
-- **4 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line)'; padding: '12px 22px'`
-  - Applications.jsx:836, Companies.jsx:730, Companies.jsx:836, CoverLetterEditor.jsx:561
-- **4 sites** · hover `—` · `cursor: 'pointer'`
-  - Companies.jsx:691, JobFeed.jsx:956, Persona.jsx:146, Settings.jsx:140
-- **4 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 11`
-  - CoverLetterEditor.jsx:345, LoginModal.jsx:78, ResumeEditor.jsx:521, Toast.jsx:63
-- **4 sites** · hover `—` · `fontSize: 12`
-  - CoverLetterEditor.jsx:346, JobFeed.jsx:1142, JobFeed.jsx:1154, Stats.jsx:406
+  - Applications.jsx:789, Companies.jsx:834, CoverLetterEditor.jsx:546, ResumeEditor.jsx:856
 - **4 sites** · hover `—` · `padding: '44px 30px'`
-  - JobFeed.jsx:1184, Searches.jsx:685, Searches.jsx:692, Settings.jsx:484
-- **4 sites** · hover `—` · `lineHeight: '24px'`
-  - Stats.jsx:444, Stats.jsx:493, Stats.jsx:518, Stats.jsx:534
+  - JobFeed.jsx:1184, Searches.jsx:716, Searches.jsx:723, Settings.jsx:484
 - **4 sites** · hover `—` · `padding: '16px 20px'`
   - Stats.jsx:492, Stats.jsx:517, Stats.jsx:683, Stats.jsx:703
 - **3 sites** · hover `—` · `padding: '22px 30px 16px 24px'`
-  - Applications.jsx:336, Companies.jsx:381, JobFeed.jsx:721
-- **3 sites** · hover `—` · `fontSize: 10; opacity: 0.6`
-  - Applications.jsx:359, JobFeed.jsx:78, JobFeed.jsx:801
-- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontWeight: 500`
-  - Applications.jsx:383, Companies.jsx:425, JobFeed.jsx:809
-- **3 sites** · hover `—` · `fontSize: 10`
-  - Applications.jsx:383, Companies.jsx:425, JobFeed.jsx:809
-- **3 sites** · hover `—` · `background: 'var(--surface)'`
-  - Applications.jsx:495, CoverLetters.jsx:372, JobFeed.jsx:949
-- **3 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line)'; padding: '11px 22px'`
-  - Applications.jsx:700, Companies.jsx:963, Settings.jsx:904
+  - Applications.jsx:336, Companies.jsx:409, JobFeed.jsx:721
 - **3 sites** · hover `—` · `padding: '10px 20px 12px'`
-  - Companies.jsx:84, Resumes.jsx:26, Stats.jsx:104
-- **3 sites** · hover `—` · `border: '1.5px solid var(--muted)'; borderRadius: 99; height: 10`
-  - Companies.jsx:537, Searches.jsx:681, Settings.jsx:491
-- **3 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15; fontWeight: 600; letterSpacing: '-.01em'`
-  - Companies.jsx:651, Companies.jsx:668, Companies.jsx:693
-- **3 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'`
-  - Companies.jsx:821, Searches.jsx:568, Searches.jsx:665
-- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11`
-  - Companies.jsx:912, Stats.jsx:497, Stats.jsx:525
-- **3 sites** · hover `—` · `background: 'var(--surface-2)'`
-  - CoverLetterEditor.jsx:491, ResumeEditor.jsx:585, ResumeEditor.jsx:611
-- **3 sites** · hover `—` · `letterSpacing: '.14em'`
-  - CoverLetterEditor.jsx:548, CoverLetterEditor.jsx:553, CoverLetterEditor.jsx:557
-- **3 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 9`
-  - CoverLetterEditor.jsx:567, Stats.jsx:107, Stats.jsx:616
-- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 500`
-  - JobFeed.jsx:1011, JobFeed.jsx:1143, JobFeed.jsx:1155
-- **3 sites** · hover `—` · `background: 'var(--line)'; height: 14`
-  - JobFeed.jsx:1012, JobFeed.jsx:1013, JobFeed.jsx:1014
-- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '18px'`
-  - JobFeed.jsx:1120, JobFeed.jsx:1126, ResumeSections.jsx:134
-- **3 sites** · hover `—` · `color: 'var(--bad)'`
-  - JobFeed.jsx:1120, JobFeed.jsx:1129, Searches.jsx:846
-- **3 sites** · hover `—` · `color: 'var(--accent)'`
-  - JobFeed.jsx:1145, JobFeed.jsx:1221, ResumeEditor.jsx:503
-- **3 sites** · hover `—` · `background: on ? 'var(--accent)' : 'transparent'; borderRadius: 99; height: 7`
-  - JobFeed.jsx:1249, ResumeEditor.jsx:703, ResumeEditor.jsx:792
-- **3 sites** · hover `—` · `fontSize: 13; fontWeight: 600`
-  - Persona.jsx:366, Persona.jsx:385, ResumeSections.jsx:161
-- **3 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 10`
-  - ResumeEditor.jsx:576, ResumeEditor.jsx:577, ResumeSections.jsx:274
-- **3 sites** · hover `—` · `fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
-  - ResumeEditor.jsx:704, ResumeEditor.jsx:794, Stats.jsx:599
-- **3 sites** · hover `—` · `color: 'var(--faint)'; fontSize: 10.5; lineHeight: '16px'`
-  - ResumeSections.jsx:143, ResumeSections.jsx:215, ResumeSections.jsx:331
-- **3 sites** · hover `—` · `borderBottom: '1px solid var(--line-strong)'; borderTop: '1px solid var(--line-soft)'; height: 26; padding: '0 20px'`
-  - Stats.jsx:587, Stats.jsx:664, Stats.jsx:688
-- **2 sites** · hover `—` · `background: 'var(--bg)'`
-  - Applications.jsx:331, Settings.jsx:482
-- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '0 30px 14px 24px'`
-  - Applications.jsx:349, JobFeed.jsx:732
+  - Companies.jsx:94, Resumes.jsx:26, Stats.jsx:104
 - **2 sites** · hover `—` · `padding: '34px 8px'`
   - Applications.jsx:448, CoverLetters.jsx:408
-- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: '34px 8px'`
-  - Applications.jsx:454, CoverLetters.jsx:414
 - **2 sites** · hover `v2-bdc` · `(no design keys)`
   - Applications.jsx:515, Applications.jsx:517
-- **2 sites** · hover `v2-hover-bad` · `color: 'var(--muted)'; borderRadius: 4; fontSize: 11; padding: 2; cursor: 'pointer'`
-  - Applications.jsx:583, Companies.jsx:108
-- **2 sites** · hover `—` · `background: 'var(--line)'; height: 20`
-  - Companies.jsx:401, Companies.jsx:412
-- **2 sites** · hover `—` · `fontSize: 13; fontWeight: 500`
-  - Companies.jsx:473, JobFeed.jsx:1305
 - **2 sites** · hover `—` · `padding: '44px 28px'`
-  - Companies.jsx:544, Companies.jsx:551
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13`
-  - Companies.jsx:552, Searches.jsx:693
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11.5`
-  - Companies.jsx:825, Companies.jsx:964
-- **2 sites** · hover `—` · `background: 'var(--surface-2)'; borderRadius: 4; fontFamily: 'var(--mono)'; fontSize: 10; padding: '1px 5px'`
-  - Companies.jsx:913, Companies.jsx:914
-- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: 32`
-  - Companies.jsx:960, Searches.jsx:836
-- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: '26px'; letterSpacing: '-.02em'`
-  - ConfirmDialog.jsx:17, ConfirmDialog.jsx:42
-- **2 sites** · hover `—` · `background: 'var(--surface)'; borderBottom: '1px solid var(--line-soft)'; padding: '10px 24px'`
-  - CoverLetterEditor.jsx:318, ResumeEditor.jsx:464
-- **2 sites** · hover `—` · `fontFamily: 'inherit'; fontSize: 14; fontWeight: 600; lineHeight: '20px'`
-  - CoverLetterEditor.jsx:325, ResumeEditor.jsx:470
-- **2 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '9px 24px'`
-  - CoverLetterEditor.jsx:332, ResumeEditor.jsx:476
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
-  - CoverLetterEditor.jsx:334, ResumeEditor.jsx:487
+  - Companies.jsx:572, Companies.jsx:579
 - **2 sites** · hover `—` · `padding: '14px 20px 24px'`
   - CoverLetterEditor.jsx:383, ResumeEditor.jsx:574
-- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '8px 20px'`
-  - CoverLetterEditor.jsx:492, ResumeEditor.jsx:588
+- **2 sites** · hover `—` · `padding: '18px 24px'`
+  - JobFeed.jsx:1227, JobFeed.jsx:1279
+- **2 sites** · hover `—` · `padding: '0 26px 24px'`
+  - Persona.jsx:340, Persona.jsx:356
+- **2 sites** · hover `—` · `padding: '14px 22px'`
+  - ResumeEditor.jsx:678, ResumeEditor.jsx:780
+- **2 sites** · hover `—` · `padding: '4px 2px'`
+  - Resumes.jsx:174, Resumes.jsx:191
+- **2 sites** · hover `—` · `padding: '18px 30px 30px'`
+  - Stats.jsx:418, ToastLab.jsx:36
+- **1 sites** · hover `—` · `padding: '6px 14px 14px 22px'`
+  - Applications.jsx:405
+- **1 sites** · hover `—` · `padding: 5`
+  - Applications.jsx:522
+- **1 sites** · hover `—` · `padding: '18px 26px'`
+  - Applications.jsx:557
+- **1 sites** · hover `—` · `padding: '15px 22px 20px'`
+  - Companies.jsx:668
+- **1 sites** · hover `—` · `padding: '7px 10px 0'`
+  - CoverLetterEditor.jsx:460
+- **1 sites** · hover `—` · `padding: '10px 30px 22px'`
+  - CoverLetters.jsx:378
+- **1 sites** · hover `—` · `padding: '0 8px 12px'`
+  - JobFeed.jsx:856
+- **1 sites** · hover `—` · `padding: '14px 30px 18px'`
+  - JobFeed.jsx:1034
+- **1 sites** · hover `—` · `padding: '18px 0'`
+  - LoginModal.jsx:49
+- **1 sites** · hover `—` · `padding: '6px 30px 26px 24px'`
+  - Resumes.jsx:162
+- **1 sites** · hover `—` · `padding: '22px 30px 16px'`
+  - Searches.jsx:567
+- **1 sites** · hover `—` · `padding: '14px 30px 24px'`
+  - Searches.jsx:581
+- **1 sites** · hover `—` · `padding: '16px 0 20px'`
+  - Settings.jsx:524
+- **1 sites** · hover `—` · `padding: '0 40px 40px'`
+  - Settings.jsx:537
+- **1 sites** · hover `—` · `padding: '26px 0 4px'`
+  - Settings.jsx:541
+- **1 sites** · hover `—` · `padding: '16px 22px'`
+  - Settings.jsx:899
+- **1 sites** · hover `—` · `padding: '6px 22px 14px'`
+  - Settings.jsx:1035
+- **1 sites** · hover `—` · `padding: '14px 20px 10px'`
+  - Stats.jsx:429
+- **1 sites** · hover `—` · `padding: '0 6px'`
+  - Stats.jsx:503
+- **1 sites** · hover `—` · `padding: '14px 0'`
+  - Stats.jsx:572
+- **1 sites** · hover `—` · `padding: '12px 20px 10px'`
+  - Stats.jsx:629
+- **1 sites** · hover `v2-rail` · `padding: '6px 0'`
+  - V2App.jsx:108
+- **1 sites** · hover `—` · `padding: '22px 24px 6px'`
+  - WelcomeModal.jsx:31
+- **1 sites** · hover `—` · `padding: '14px 24px 18px'`
+  - WelcomeModal.jsx:40
+
+## unclassified — 165 signatures
+
+- **6 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13`
+  - CoverLetterEditor.jsx:296, JobFeed.jsx:950, JobFeed.jsx:1196, Persona.jsx:307, ResumeEditor.jsx:456, Stats.jsx:385
+- **5 sites** · hover `—` · `height: 34`
+  - JobFeed.jsx:1004, JobFeed.jsx:1005, JobFeed.jsx:1153, ResumeEditor.jsx:478, ResumeEditor.jsx:479
+- **4 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12`
+  - Companies.jsx:425, JobFeed.jsx:734, Stats.jsx:456, Stats.jsx:530
+- **4 sites** · hover `—` · `cursor: 'pointer'`
+  - Companies.jsx:733, JobFeed.jsx:956, Persona.jsx:146, Settings.jsx:140
+- **3 sites** · hover `—` · `fontSize: 10; opacity: 0.6`
+  - Applications.jsx:359, JobFeed.jsx:78, JobFeed.jsx:801
+- **3 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'`
+  - Companies.jsx:863, Searches.jsx:591, Searches.jsx:696
+- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: '34px 8px'`
+  - Applications.jsx:454, CoverLetters.jsx:414
+- **2 sites** · hover `v2-hover-bad` · `color: 'var(--muted)'; borderRadius: 4; fontSize: 11; padding: 2; cursor: 'pointer'`
+  - Applications.jsx:583, Companies.jsx:118
+- **2 sites** · hover `—` · `background: 'var(--surface-2)'; borderRadius: 4; fontFamily: 'var(--mono)'; fontSize: 10; padding: '1px 5px'`
+  - Companies.jsx:955, Companies.jsx:956
+- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: 32`
+  - Companies.jsx:1002, Searches.jsx:867
+- **2 sites** · hover `—` · `fontFamily: 'inherit'; fontSize: 14; fontWeight: 600; lineHeight: '20px'`
+  - CoverLetterEditor.jsx:325, ResumeEditor.jsx:470
 - **2 sites** · hover `v2-bd` · `border: '1px solid var(--edge)'; borderRadius: 6; fontSize: 11.5; height: 24; padding: '0 8px'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:497, CoverLetterEditor.jsx:512
 - **2 sites** · hover `—` · `border: 'none'; height: '100%'`
   - CoverLetterEditor.jsx:531, ResumeEditor.jsx:612
-- **2 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5`
-  - CoverLetterEditor.jsx:562, CoverLetters.jsx:368
-- **2 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11.5`
-  - CoverLetters.jsx:400, Resumes.jsx:292
 - **2 sites** · hover `—` · `fontSize: 11; opacity: 0.7`
   - JobFeed.jsx:77, JobFeed.jsx:743
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; padding: 40`
@@ -201,108 +154,42 @@
   - JobFeed.jsx:878, JobFeed.jsx:881
 - **2 sites** · hover `v2-hover-bad` · `color: 'var(--bad)'; borderRadius: 6; fontSize: 13; padding: '8px 11px'; cursor: 'pointer'`
   - JobFeed.jsx:935, JobFeed.jsx:990
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13; lineHeight: '20px'`
-  - JobFeed.jsx:962, JobFeed.jsx:1188
-- **2 sites** · hover `—` · `color: 'var(--good)'`
-  - JobFeed.jsx:1036, Searches.jsx:846
-- **2 sites** · hover `—` · `background: 'var(--line)'; height: 1`
-  - JobFeed.jsx:1055, Searches.jsx:555
 - **2 sites** · hover `—` · `background: 'var(--iframe-bg)'; border: 'none'`
   - JobFeed.jsx:1176, JobFeed.jsx:1181
-- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '20px 24px 16px'`
-  - JobFeed.jsx:1213, JobFeed.jsx:1273
-- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: '24px'; letterSpacing: '-.02em'`
-  - JobFeed.jsx:1215, JobFeed.jsx:1275
-- **2 sites** · hover `—` · `padding: '18px 24px'`
-  - JobFeed.jsx:1227, JobFeed.jsx:1279
 - **2 sites** · hover `—` · `background: on ? 'var(--accent-soft)' : 'transparent'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 8; padding: '10px 12px'; cursor: 'pointer'`
   - JobFeed.jsx:1234, JobFeed.jsx:1304
 - **2 sites** · hover `v2-act` · `border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 8; fontSize: 13.5; padding: '9px 11px'; cursor: 'pointer'`
   - JobFeed.jsx:1248, JobFeed.jsx:1289
 - **2 sites** · hover `—` · `borderTop: '1px solid var(--line)'; padding: '14px 24px 18px'`
   - JobFeed.jsx:1258, JobFeed.jsx:1314
-- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; letterSpacing: '-.02em'`
-  - LoginModal.jsx:51, Resumes.jsx:345
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12; lineHeight: '18px'`
-  - Persona.jsx:148, Stats.jsx:470
 - **2 sites** · hover `—` · `color: 'var(--muted)'; borderBottom: '1px dotted var(--line-strong)'; fontFamily: 'var(--sans)'; fontSize: 11; lineHeight: '14px'; cursor: 'help'`
   - Persona.jsx:175, Stats.jsx:536
-- **2 sites** · hover `—` · `padding: '0 26px 24px'`
-  - Persona.jsx:340, Persona.jsx:356
 - **2 sites** · hover `v2-act` · `border: '1px solid var(--edge)'; borderRadius: 6; fontSize: 11.5; height: 24; padding: '0 8px'; cursor: 'pointer'`
   - ResumeEditor.jsx:593, ResumeEditor.jsx:602
-- **2 sites** · hover `—` · `padding: '14px 22px'`
-  - ResumeEditor.jsx:678, ResumeEditor.jsx:780
-- **2 sites** · hover `—` · `border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; height: 14`
-  - ResumeEditor.jsx:703, ResumeEditor.jsx:792
 - **2 sites** · hover `—` · `borderTop: '1px solid var(--line)'; padding: '12px 22px'`
   - ResumeEditor.jsx:713, ResumeEditor.jsx:809
 - **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12; cursor: 'pointer'`
   - ResumeEditor.jsx:781, Searches.jsx:206
 - **2 sites** · hover `—` · `color: 'var(--faint)'; fontSize: 8; cursor: 'pointer'`
   - ResumeSections.jsx:195, ResumeSections.jsx:359
-- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12`
-  - ResumeSections.jsx:271, Searches.jsx:808
 - **2 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 11; fontWeight: 500; lineHeight: '19px'; cursor: 'pointer'`
   - ResumeSections.jsx:291, ResumeSections.jsx:329
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; padding: 50`
   - Resumes.jsx:163, Resumes.jsx:206
-- **2 sites** · hover `—` · `padding: '4px 2px'`
-  - Resumes.jsx:174, Resumes.jsx:191
-- **2 sites** · hover `—` · `lineHeight: '28px'`
-  - Resumes.jsx:213, Resumes.jsx:253
-- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; fontWeight: 500; letterSpacing: '-.015em'`
-  - Resumes.jsx:214, Resumes.jsx:254
-- **2 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--sans)'; fontSize: 10`
-  - Resumes.jsx:218, Resumes.jsx:258
-- **2 sites** · hover `—` · `color: scoreColor(c.score); fontFamily: 'var(--mono)'; fontSize: 10`
-  - Resumes.jsx:233, Resumes.jsx:275
-- **2 sites** · hover `—` · `color: 'var(--warn)'`
-  - Searches.jsx:847, Stats.jsx:399
-- **2 sites** · hover `—` · `padding: '18px 30px 30px'`
-  - Stats.jsx:418, ToastLab.jsx:36
-- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; lineHeight: '14px'`
-  - Stats.jsx:508, Stats.jsx:741
-- **2 sites** · hover `—` · `color: 'var(--muted)'; lineHeight: '18px'`
-  - Stats.jsx:600, Stats.jsx:602
-- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; fontSize: 11.5; lineHeight: '18px'; height: 34; padding: '0 20px'`
-  - Stats.jsx:671, Stats.jsx:693
-- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 17; fontWeight: 500; letterSpacing: '-.015em'`
-  - ToastLab.jsx:38, ToastLab.jsx:58
+- **2 sites** · hover `—` · `color: 'var(--text-2)'`
+  - Stats.jsx:673, Stats.jsx:698
 - **2 sites** · hover `—` · `opacity: open ? 0 : 1`
   - V2App.jsx:133, V2App.jsx:153
 - **2 sites** · hover `—` · `opacity: open ? 1 : 0`
   - V2App.jsx:136, V2App.jsx:154
-- **1 sites** · hover `—` · `padding: '6px 14px 14px 22px'`
-  - Applications.jsx:405
-- **1 sites** · hover `—` · `background: st.dot; borderRadius: 99; height: 7`
-  - Applications.jsx:416
-- **1 sites** · hover `—` · `color: 'var(--edge)'; fontFamily: 'var(--mono)'; fontSize: 10.5`
-  - Applications.jsx:418
 - **1 sites** · hover `—` · `lineHeight: 'normal'`
   - Applications.jsx:432
-- **1 sites** · hover `—` · `color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)'; fontSize: 12.5; fontWeight: 500`
-  - Applications.jsx:434
-- **1 sites** · hover `—` · `color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent'; fontSize: 10`
-  - Applications.jsx:435
-- **1 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--muted)'; fontSize: 13`
-  - Applications.jsx:470
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '16px 26px 14px'`
-  - Applications.jsx:497
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; fontWeight: 400; lineHeight: '26px'; letterSpacing: '-.02em'`
-  - Applications.jsx:503
 - **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 13`
   - Applications.jsx:506
 - **1 sites** · hover `—` · `color: d.tailored_resume_id ? 'var(--accent)' : 'var(--text-2)'; fontWeight: d.tailored_resume_id ? 500 : 400; cursor: d.tailored_resume_id ? 'pointer' : 'default'`
   - Applications.jsx:509
 - **1 sites** · hover `v2-bd` · `background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)'; border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`; padding: 0; cursor: 'pointer'`
   - Applications.jsx:519
-- **1 sites** · hover `—` · `padding: 5`
-  - Applications.jsx:522
-- **1 sites** · hover `—` · `background: s.dot; borderRadius: 99; height: 7`
-  - Applications.jsx:549
-- **1 sites** · hover `—` · `padding: '18px 26px'`
-  - Applications.jsx:557
 - **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text-2)'; borderLeft: '2px solid var(--accent)'; borderRadius: '0 8px 8px 0'; fontSize: 12.5; lineHeight: '19px'; padding: '10px 12px'`
   - Applications.jsx:563
 - **1 sites** · hover `—` · `fontSize: 12.5; fontWeight: 500; cursor: 'pointer'`
@@ -311,76 +198,26 @@
   - Applications.jsx:613
 - **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12; lineHeight: 1.5; cursor: 'pointer'`
   - Applications.jsx:616
-- **1 sites** · hover `—` · `background: h.dot; borderRadius: 99; height: 8`
-  - Applications.jsx:666
-- **1 sites** · hover `—` · `background: 'var(--line)'`
-  - Applications.jsx:667
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontSize: 12.5; lineHeight: '18px'`
-  - Applications.jsx:670
-- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12; lineHeight: '18px'`
-  - Applications.jsx:675
-- **1 sites** · hover `—` · `background: 'var(--bg)'; padding: '14px 22px'`
-  - Applications.jsx:695
 - **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11; lineHeight: '18px'`
   - Applications.jsx:696
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '2px 30px 12px 24px'`
-  - Companies.jsx:395
 - **1 sites** · hover `—` · `fontFamily: 'var(--mono)'; fontSize: 10.5; opacity: 0.7`
-  - Companies.jsx:408
+  - Companies.jsx:436
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; cursor: 'pointer'`
-  - Companies.jsx:423
-- **1 sites** · hover `—` · `color: c.last_error ? 'var(--bad)' : 'var(--warn)'; fontSize: 11`
-  - Companies.jsx:472
+  - Companies.jsx:451
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--muted)'; borderRadius: 99; fontSize: 9.5; padding: '1px 5px'`
-  - Companies.jsx:474
-- **1 sites** · hover `—` · `background: h.dot; borderRadius: 99; height: 7`
-  - Companies.jsx:482
-- **1 sites** · hover `—` · `color: h.fg; fontSize: 12`
-  - Companies.jsx:483
-- **1 sites** · hover `—` · `color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)'`
-  - Companies.jsx:495
+  - Companies.jsx:502
 - **1 sites** · hover `—` · `color: fitColor(c.avg_fit); fontFamily: 'var(--mono)'; fontSize: 11.5`
-  - Companies.jsx:500
-- **1 sites** · hover `—` · `background: 'var(--scrim)'`
-  - Companies.jsx:628
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 20; letterSpacing: '-.02em'`
-  - Companies.jsx:632
-- **1 sites** · hover `—` · `padding: '15px 22px 20px'`
-  - Companies.jsx:638
-- **1 sites** · hover `—` · `background: company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)'; border: `1px solid ${company.last_error ? 'var(--bad)' : 'var(--warn)'}`; borderRadius: 9; padding: '11px 13px'`
-  - Companies.jsx:640
-- **1 sites** · hover `—` · `color: company.last_error ? 'var(--bad)' : 'var(--warn)'; fontSize: 12`
-  - Companies.jsx:641
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontSize: 12; lineHeight: 1.5`
-  - Companies.jsx:643
-- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12; lineHeight: '16px'`
-  - Companies.jsx:736
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18`
-  - Companies.jsx:856
-- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12.5`
-  - Companies.jsx:857
-- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '9px 22px'`
-  - Companies.jsx:908
-- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '11px 22px'`
-  - Companies.jsx:920
+  - Companies.jsx:528
+- **1 sites** · hover `—` · `background: bannerMuted ? 'var(--recessed)' : company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)'; border: `1px solid ${bannerMuted ? 'var(--line)' : company.last_error ? 'var(--bad)' : 'var(--warn)'}`; borderRadius: 9; padding: '11px 13px'`
+  - Companies.jsx:672
 - **1 sites** · hover `—` · `border: '1px solid var(--line)'; borderRadius: 8`
-  - Companies.jsx:924
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line-soft)'; padding: '10px 22px'`
-  - Companies.jsx:931
-- **1 sites** · hover `—` · `color: p.clicked ? 'var(--good)' : 'var(--bad)'; fontSize: 11`
-  - Companies.jsx:934
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; height: 32; padding: '0 22px'`
-  - Companies.jsx:950
+  - Companies.jsx:966
 - **1 sites** · hover `—` · `color: j.kept ? 'var(--text)' : 'var(--muted)'; fontSize: 12`
-  - Companies.jsx:952
+  - Companies.jsx:994
 - **1 sites** · hover `—` · `color: st.reasonFg; fontSize: 11`
-  - Companies.jsx:954
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11`
-  - Companies.jsx:955
+  - Companies.jsx:996
 - **1 sites** · hover `—` · `color: 'var(--muted)'; height: 10`
   - CoverLetterEditor.jsx:40
-- **1 sites** · hover `—` · `fontSize: 13; fontWeight: 600; lineHeight: '20px'`
-  - CoverLetterEditor.jsx:47
 - **1 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'; padding: '2px 14px 14px'`
   - CoverLetterEditor.jsx:52
 - **1 sites** · hover `—` · `color: 'var(--accent)'; cursor: doc.resume_id ? 'pointer' : 'default'`
@@ -393,48 +230,22 @@
   - CoverLetterEditor.jsx:405
 - **1 sites** · hover `v2-hover-bad` · `color: 'var(--muted)'; fontSize: 11; cursor: 'pointer'`
   - CoverLetterEditor.jsx:419
-- **1 sites** · hover `—` · `padding: '7px 10px 0'`
-  - CoverLetterEditor.jsx:460
 - **1 sites** · hover `—` · `color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)'; borderRadius: 5; fontSize: 10; height: 20; cursor: i === 0 ? 'default' : 'pointer'`
   - CoverLetterEditor.jsx:462
 - **1 sites** · hover `—` · `color: i === paras.length - 1 ? 'var(--line-strong)' : 'var(--text-2)'; borderRadius: 5; fontSize: 10; height: 20; cursor: i === paras.length - 1 ? 'default' : 'pointer'`
   - CoverLetterEditor.jsx:464
 - **1 sites** · hover `—` · `color: 'var(--edge)'; borderRadius: 5; fontSize: 10; height: 20; cursor: 'pointer'`
   - CoverLetterEditor.jsx:466
-- **1 sites** · hover `—` · `border: '1.5px solid var(--edge)'; borderRadius: 99; height: 10`
-  - CoverLetterEditor.jsx:494
-- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11; lineHeight: '14px'`
-  - CoverLetterEditor.jsx:526
 - **1 sites** · hover `—` · `borderBottom: '1px dotted currentColor'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:526
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; height: '100%'`
   - CoverLetterEditor.jsx:532
 - **1 sites** · hover `—` · `borderColor: open ? 'var(--accent)' : 'var(--edge)'`
   - CoverLetters.jsx:54
-- **1 sites** · hover `—` · `color: cur ? 'var(--text)' : 'var(--muted)'`
-  - CoverLetters.jsx:55
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12; padding: '7px 9px'`
   - CoverLetters.jsx:67
-- **1 sites** · hover `—` · `color: arc ? 'var(--text-2)' : 'var(--text)'; fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; lineHeight: '22px'; letterSpacing: '-.01em'`
-  - CoverLetters.jsx:309
-- **1 sites** · hover `—` · `color: 'var(--edge)'; fontSize: 11`
-  - CoverLetters.jsx:317
-- **1 sites** · hover `—` · `background: 'var(--bg)'; padding: '16px 26px 20px 30px'`
-  - CoverLetters.jsx:337
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 16; fontWeight: 600; letterSpacing: '-.01em'`
-  - CoverLetters.jsx:338
-- **1 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 10`
-  - CoverLetters.jsx:365
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '13px 30px 9px'`
-  - CoverLetters.jsx:373
-- **1 sites** · hover `—` · `color: 'var(--edge)'; fontFamily: 'var(--mono)'; fontSize: 10.5; lineHeight: '16px'`
-  - CoverLetters.jsx:375
-- **1 sites** · hover `—` · `padding: '10px 30px 22px'`
-  - CoverLetters.jsx:378
-- **1 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 11`
-  - CoverLetters.jsx:381
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 12.5; lineHeight: '20px'`
-  - CoverLetters.jsx:385
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5`
+  - CoverLetters.jsx:368
 - **1 sites** · hover `—` · `background: on ? 'var(--accent)' : 'transparent'; color: 'var(--accent-ink)'; border: on ? 'none' : '1px solid var(--line)'; borderRadius: 4; fontSize: 9; height: 14`
   - JobFeed.jsx:96
 - **1 sites** · hover `—` · `color: 'var(--muted)'; borderRadius: 99; fontSize: 10; height: 18; cursor: 'pointer'`
@@ -451,138 +262,50 @@
   - JobFeed.jsx:821
 - **1 sites** · hover `—` · `background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent'; color: 'var(--accent-ink)'; border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`; borderRadius: 4; fontSize: 9; height: 14; cursor: 'pointer'`
   - JobFeed.jsx:822
-- **1 sites** · hover `—` · `fontFamily: 'var(--mono)'; fontSize: 10; letterSpacing: '.02em'`
-  - JobFeed.jsx:825
 - **1 sites** · hover `—` · `fontSize: 12; padding: '3px 0'`
   - JobFeed.jsx:834
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11`
-  - JobFeed.jsx:835
 - **1 sites** · hover `—` · `background: 'var(--rail)'; borderRadius: 99; boxShadow: 'var(--shadow-pop)'; padding: '7px 8px 7px 14px'`
   - JobFeed.jsx:845
-- **1 sites** · hover `—` · `color: 'var(--rail-ink)'; fontSize: 12; fontWeight: 600`
-  - JobFeed.jsx:846
-- **1 sites** · hover `—` · `background: 'var(--on-rail-sep)'; height: 16`
-  - JobFeed.jsx:847
-- **1 sites** · hover `—` · `color: 'var(--rail-accent)'`
-  - JobFeed.jsx:851
 - **1 sites** · hover `—` · `color: 'var(--on-rail-dim)'; borderRadius: 99; fontSize: 12; height: 27; cursor: 'pointer'`
   - JobFeed.jsx:852
-- **1 sites** · hover `—` · `padding: '0 8px 12px'`
-  - JobFeed.jsx:856
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; lineHeight: '20px'; padding: '48px 40px'`
   - JobFeed.jsx:861
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontFamily: 'var(--serif)'; fontSize: 18`
-  - JobFeed.jsx:862
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; lineHeight: '20px'; padding: 40`
   - JobFeed.jsx:865
 - **1 sites** · hover `—` · `padding: '10px 12px'; opacity: isIgnored ? 0.55 : 1`
   - JobFeed.jsx:876
-- **1 sites** · hover `—` · `color: scoreColor(score); fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: 1`
-  - JobFeed.jsx:885
 - **1 sites** · hover `—` · `border: '1px solid var(--accent)'; borderRadius: 99`
   - JobFeed.jsx:890
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 16; fontWeight: 500; lineHeight: 1.15; letterSpacing: '-.01em'`
-  - JobFeed.jsx:901
 - **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 14; lineHeight: 1; height: 18`
   - JobFeed.jsx:902
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 450; lineHeight: 1.2`
-  - JobFeed.jsx:905
-- **1 sites** · hover `—` · `color: 'var(--ink-2)'; fontWeight: 500`
-  - JobFeed.jsx:906
-- **1 sites** · hover `—` · `fontSize: 11; fontWeight: 450; lineHeight: '13px'`
-  - JobFeed.jsx:910
-- **1 sites** · hover `—` · `color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'`
-  - JobFeed.jsx:911
-- **1 sites** · hover `—` · `color: visa.c; letterSpacing: '.04em'`
-  - JobFeed.jsx:912
 - **1 sites** · hover `—` · `borderLeft: '1px solid var(--line-soft)'`
   - JobFeed.jsx:918
 - **1 sites** · hover `v2-rail` · `color: 'var(--text-2)'; borderBottom: '1px solid var(--line-soft)'; fontSize: 11`
   - JobFeed.jsx:919
-- **1 sites** · hover `v2-rail` · `background: rowMenu?.id === j.id ? 'var(--surface-2)' : 'transparent'; color: rowMenu?.id === j.id ? 'var(--text)' : 'var(--muted)'; fontSize: 12`
-  - JobFeed.jsx:921
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: headOpen ? '20px 30px 15px' : '11px 30px 12px'`
-  - JobFeed.jsx:953
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: headOpen ? 26 : 17; fontWeight: 400; lineHeight: headOpen ? '30px' : '20px'; letterSpacing: '-.025em'`
-  - JobFeed.jsx:960
-- **1 sites** · hover `—` · `color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 12.5`
-  - JobFeed.jsx:963
-- **1 sites** · hover `—` · `color: visaCol`
-  - JobFeed.jsx:966
-- **1 sites** · hover `v2-act` · `color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 13; height: headOpen ? 36 : 30; padding: '0 14px'`
-  - JobFeed.jsx:972
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'`
-  - JobFeed.jsx:1001
-- **1 sites** · hover `—` · `color: scoreColor(best?.score || 0); fontFamily: 'var(--serif)'; fontSize: 14; letterSpacing: '-.02em'`
-  - JobFeed.jsx:1009
-- **1 sites** · hover `—` · `background: 'var(--surface)'; borderTop: '2px solid var(--accent)'`
-  - JobFeed.jsx:1018
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '0 30px'`
-  - JobFeed.jsx:1020
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13; lineHeight: '20px'`
+  - JobFeed.jsx:962
 - **1 sites** · hover `—` · `color: onTab ? 'var(--text)' : 'var(--muted)'; borderBottom: `2px solid ${onTab ? 'var(--accent)' : 'transparent'}`; fontSize: 12.5; padding: '7px 0'; cursor: 'pointer'`
   - JobFeed.jsx:1024
 - **1 sites** · hover `—` · `fontFamily: 'var(--mono)'; fontSize: 11.5; opacity: 0.7`
   - JobFeed.jsx:1027
-- **1 sites** · hover `—` · `padding: '14px 30px 18px'`
-  - JobFeed.jsx:1034
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13.5; lineHeight: '22px'`
-  - JobFeed.jsx:1035
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; textTransform: 'capitalize'`
-  - JobFeed.jsx:1052
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15`
-  - JobFeed.jsx:1053
-- **1 sites** · hover `—` · `background: 'var(--accent)'; height: 1`
-  - JobFeed.jsx:1055
-- **1 sites** · hover `—` · `color: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)'; fontFamily: 'var(--mono)'; fontSize: 12`
-  - JobFeed.jsx:1069
-- **1 sites** · hover `—` · `background: 'var(--line)'; borderRadius: 99; height: 4`
-  - JobFeed.jsx:1074
 - **1 sites** · hover `—` · `border: '1px solid var(--edge)'; borderRadius: 99`
   - JobFeed.jsx:1095
 - **1 sites** · hover `—` · `background: reqFilter === id ? 'var(--accent)' : 'transparent'; color: reqFilter === id ? 'var(--accent-ink)' : 'var(--text-2)'; fontSize: 11.5; height: 24; padding: '0 11px'; cursor: 'pointer'`
   - JobFeed.jsx:1096
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; fontSize: 12; lineHeight: '18px'; padding: '8px 0'`
-  - JobFeed.jsx:1106
-- **1 sites** · hover `—` · `color: r.matched ? 'var(--good)' : 'var(--bad)'`
-  - JobFeed.jsx:1109
 - **1 sites** · hover `—` · `border: '1px solid var(--bad)'; borderRadius: 8; padding: '11px 13px'`
   - JobFeed.jsx:1118
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '8px 30px 8px 4px'`
-  - JobFeed.jsx:1139
-- **1 sites** · hover `—` · `background: 'var(--accent-soft)'; borderBottom: '1px solid var(--line)'; padding: '8px 30px 8px 4px'`
-  - JobFeed.jsx:1151
 - **1 sites** · hover `—` · `border: '2px solid var(--accent)'; borderRadius: 99`
   - JobFeed.jsx:1153
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '9px 30px'`
-  - JobFeed.jsx:1167
-- **1 sites** · hover `—` · `color: viewCached ? 'var(--accent)' : 'var(--muted)'; fontSize: 12`
-  - JobFeed.jsx:1168
 - **1 sites** · hover `—` · `background: !viewCached ? 'var(--surface-2)' : 'transparent'; color: !viewCached ? 'var(--text)' : 'var(--muted)'; borderRadius: 99; fontSize: 11; height: 22; padding: '0 10px'; cursor: 'pointer'`
   - JobFeed.jsx:1170
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; letterSpacing: '-.015em'`
-  - JobFeed.jsx:1187
-- **1 sites** · hover `—` · `background: 'var(--accent-soft)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; padding: '10px 24px'`
-  - JobFeed.jsx:1220
-- **1 sites** · hover `—` · `color: on ? 'var(--accent)' : 'var(--text)'; fontSize: 13; fontWeight: 500`
-  - JobFeed.jsx:1235
-- **1 sites** · hover `—` · `border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; height: 15`
-  - JobFeed.jsx:1249
 - **1 sites** · hover `—` · `background: on ? 'var(--accent)' : 'transparent'; color: 'var(--accent-ink)'; border: on ? 'none' : '1px solid var(--edge)'; borderRadius: 5; fontSize: 10; height: 17`
   - JobFeed.jsx:1291
-- **1 sites** · hover `—` · `padding: '18px 0'`
-  - LoginModal.jsx:49
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; fontWeight: 400; lineHeight: '28px'; letterSpacing: '-.02em'`
-  - LoginModal.jsx:57
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; lineHeight: 1.5`
   - LoginModal.jsx:58
-- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5; lineHeight: '16px'`
-  - LoginModal.jsx:73
-- **1 sites** · hover `—` · `color: set ? 'var(--text)' : 'var(--muted)'; fontSize: 12`
-  - Persona.jsx:119
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12; lineHeight: '18px'`
+  - Persona.jsx:148
 - **1 sites** · hover `—` · `lineHeight: '26px'; padding: '16px 26px 10px'`
   - Persona.jsx:173
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; fontWeight: 500; letterSpacing: '-.015em'`
-  - Persona.jsx:174
 - **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11.5; lineHeight: '17px'`
   - Persona.jsx:332
 - **1 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'; padding: '12px 14px 14px'`
@@ -593,76 +316,34 @@
   - Persona.jsx:383
 - **1 sites** · hover `—` · `borderTop: '1px solid var(--amber-line-soft)'; padding: '12px 14px 14px'`
   - Persona.jsx:390
-- **1 sites** · hover `—` · `color: scoreColor(scores.tailored); fontFamily: 'var(--serif)'; fontSize: 13.5`
-  - ResumeEditor.jsx:483
-- **1 sites** · hover `—` · `color: dfg; fontWeight: 600`
-  - ResumeEditor.jsx:502
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; padding: '9px 24px'`
-  - ResumeEditor.jsx:549
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontWeight: 500`
-  - ResumeEditor.jsx:550
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5`
+  - ResumeEditor.jsx:614
 - **1 sites** · hover `v2-act` · `background: on ? 'var(--accent-soft)' : 'transparent'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 8; padding: '9px 11px'; cursor: 'pointer'`
   - ResumeEditor.jsx:685
-- **1 sites** · hover `—` · `color: on ? 'var(--accent)' : 'var(--text)'; fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
-  - ResumeEditor.jsx:687
 - **1 sites** · hover `v2-act` · `background: on ? 'var(--accent-soft)' : 'transparent'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 8; padding: '8px 11px'; opacity: off ? 0.45 : 1; cursor: off ? 'default' : 'pointer'`
   - ResumeEditor.jsx:700
 - **1 sites** · hover `v2-act` · `background: on ? 'var(--accent-soft)' : 'transparent'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 8; padding: '8px 11px'; cursor: 'pointer'`
   - ResumeEditor.jsx:791
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontFamily: 'var(--mono)'; fontSize: 10.5; lineHeight: '16px'`
-  - ResumeEditor.jsx:797
-- **1 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 9; lineHeight: '14px'`
-  - ResumeEditor.jsx:798
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: 20`
   - ResumeEditor.jsx:857
 - **1 sites** · hover `—` · `background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)'; border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`; borderRadius: 9; padding: '11px 13px'`
   - ResumeEditor.jsx:865
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '20px'`
-  - ResumeEditor.jsx:873
 - **1 sites** · hover `—` · `background: 'var(--bad-soft)'; borderRadius: 3; padding: '0 3px'; opacity: 0.75`
   - ResumeEditor.jsx:875
-- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderTop: '1px solid var(--line)'; padding: '12px 22px'`
-  - ResumeEditor.jsx:885
 - **1 sites** · hover `v2-hover-bad` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '17px'; cursor: 'pointer'`
   - ResumeSections.jsx:102
 - **1 sites** · hover `v2-hover-bad` · `color: 'var(--faint)'; fontSize: size; lineHeight: lh; cursor: 'pointer'`
   - ResumeSections.jsx:107
-- **1 sites** · hover `—` · `background: 'var(--edge)'; height: 11`
-  - ResumeSections.jsx:125
 - **1 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'; padding: '4px 14px 14px'`
   - ResumeSections.jsx:167
-- **1 sites** · hover `—` · `fontSize: 12.5; fontWeight: 600`
-  - ResumeSections.jsx:270
 - **1 sites** · hover `—` · `borderTop: '1px solid var(--line-soft)'; padding: '2px 11px 11px'`
   - ResumeSections.jsx:277
 - **1 sites** · hover `—` · `background: 'var(--change-bg)'; border: '1px solid var(--change-soft)'; borderRadius: 6; padding: '8px 10px'`
   - ResumeSections.jsx:299
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11; lineHeight: '19px'`
-  - ResumeSections.jsx:300
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '19px'`
-  - ResumeSections.jsx:301
-- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9.5; lineHeight: '19px'`
-  - ResumeSections.jsx:302
 - **1 sites** · hover `—` · `background: 'var(--change-soft)'; color: 'var(--good)'; borderRadius: 4; fontSize: 11; fontWeight: 500; padding: '1px 6px'`
   - ResumeSections.jsx:382
 - **1 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 11; fontWeight: 500; cursor: 'pointer'`
   - ResumeSections.jsx:383
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '22px 30px 16px 24px'`
-  - Resumes.jsx:150
-- **1 sites** · hover `—` · `padding: '6px 30px 26px 24px'`
-  - Resumes.jsx:162
-- **1 sites** · hover `—` · `color: r.muted ? 'var(--muted)' : 'var(--text)'; fontSize: 13; fontWeight: 500`
-  - Resumes.jsx:182
-- **1 sites** · hover `—` · `color: scoreColor(r.score); fontFamily: 'var(--mono)'; fontSize: 11`
-  - Resumes.jsx:184
-- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; fontWeight: 500`
-  - Resumes.jsx:199
-- **1 sites** · hover `—` · `color: scoreColor(persona.avg_fit); fontFamily: 'var(--serif)'; fontSize: 17`
-  - Resumes.jsx:217
-- **1 sites** · hover `—` · `color: scoreColor(b.avg_fit); fontFamily: 'var(--serif)'; fontSize: 17`
-  - Resumes.jsx:257
-- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12`
-  - Resumes.jsx:350
 - **1 sites** · hover `v2-act` · `color: busy ? 'var(--muted)' : 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 13; height: 40; cursor: busy ? 'default' : 'pointer'`
   - Resumes.jsx:355
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12; cursor: 'pointer'`
@@ -671,206 +352,88 @@
   - Searches.jsx:212
 - **1 sites** · hover `—` · `borderRadius: 8; fontSize: 11.5; lineHeight: '17px'; padding: '9px 12px'`
   - Searches.jsx:283
-- **1 sites** · hover `—` · `padding: '22px 30px 16px'`
-  - Searches.jsx:544
-- **1 sites** · hover `—` · `padding: '14px 30px 24px'`
-  - Searches.jsx:558
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '11px 16px'`
-  - Searches.jsx:562
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; letterSpacing: '-.01em'`
-  - Searches.jsx:563
-- **1 sites** · hover `—` · `background: 'var(--recessed)'; padding: '14px 16px'`
-  - Searches.jsx:566
 - **1 sites** · hover `—` · `padding: '11px 16px'; cursor: 'pointer'`
-  - Searches.jsx:597
-- **1 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 11`
-  - Searches.jsx:598
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; lineHeight: '23px'; letterSpacing: '-.01em'`
-  - Searches.jsx:604
+  - Searches.jsx:621
 - **1 sites** · hover `—` · `borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 9.5; padding: '2px 8px'; letterSpacing: '.05em'`
-  - Searches.jsx:605
-- **1 sites** · hover `—` · `color: summaryFg; fontSize: 11.5; lineHeight: '17px'`
-  - Searches.jsx:607
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 9; letterSpacing: 2`
-  - Searches.jsx:614
+  - Searches.jsx:629
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11; cursor: 'help'`
-  - Searches.jsx:624
-- **1 sites** · hover `—` · `background: 'var(--recessed)'; borderTop: '1px solid var(--line-soft)'; padding: '14px 16px'`
-  - Searches.jsx:663
+  - Searches.jsx:655
 - **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12.5; padding: 22`
-  - Searches.jsx:767
-- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line-soft)'; fontSize: 11; padding: '9px 22px'`
-  - Searches.jsx:770
+  - Searches.jsx:798
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderRadius: 4; fontFamily: 'var(--mono)'; padding: '1px 5px'`
-  - Searches.jsx:772
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '9px 22px'`
-  - Searches.jsx:783
-- **1 sites** · hover `—` · `background: ok ? 'transparent' : 'var(--bad-faint)'; borderBottom: '1px solid var(--line-soft)'; padding: '2px 22px'`
-  - Searches.jsx:806
+  - Searches.jsx:803
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12`
+  - Searches.jsx:839
 - **1 sites** · hover `—` · `color: ok ? 'var(--text)' : 'var(--muted)'; fontSize: 12; lineHeight: '17px'`
-  - Searches.jsx:816
+  - Searches.jsx:847
 - **1 sites** · hover `—` · `color: ok ? 'var(--text-2)' : 'var(--muted)'; fontSize: 12; lineHeight: '17px'; cursor: 'default'`
-  - Searches.jsx:817
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 9.5`
-  - Searches.jsx:825
-- **1 sites** · hover `—` · `color: hasDesc ? 'var(--accent)' : 'var(--line-strong)'; fontSize: 11`
-  - Searches.jsx:826
-- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text-2)'; borderTop: '1px solid var(--line)'; fontSize: 11.5; padding: '11px 22px'`
-  - Searches.jsx:842
-- **1 sites** · hover `—` · `color: cur ? 'var(--text)' : 'var(--muted)'; fontFamily: mono ? 'var(--mono)' : 'var(--sans)'; fontSize: mono ? 11.5 : 12.5`
-  - Settings.jsx:61
-- **1 sites** · hover `—` · `background: on ? 'var(--accent)' : 'var(--line-strong)'; borderRadius: 99; height: 15`
-  - Settings.jsx:143
-- **1 sites** · hover `—` · `background: on ? 'var(--surface-2)' : 'var(--knob)'; borderRadius: 99; height: 11`
-  - Settings.jsx:148
+  - Searches.jsx:848
 - **1 sites** · hover `—` · `color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'); fontSize: 13; lineHeight: '20px'`
   - Settings.jsx:511
-- **1 sites** · hover `—` · `padding: '16px 0 20px'`
-  - Settings.jsx:524
-- **1 sites** · hover `—` · `padding: '0 40px 40px'`
-  - Settings.jsx:537
-- **1 sites** · hover `—` · `padding: '26px 0 4px'`
-  - Settings.jsx:541
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; fontWeight: 500; lineHeight: '26px'; letterSpacing: '-.015em'`
-  - Settings.jsx:545
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; padding: '44px 0'`
   - Settings.jsx:554
-- **1 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--serif)'; fontSize: 12`
-  - Settings.jsx:562
 - **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'`
   - Settings.jsx:567
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
-  - Settings.jsx:688
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '9px 0'`
-  - Settings.jsx:716
-- **1 sites** · hover `—` · `fontSize: 13; fontWeight: 500; lineHeight: '18px'`
-  - Settings.jsx:718
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--text-2)'; borderRadius: 7; fontSize: 11; lineHeight: '17px'; padding: '8px 10px'`
   - Settings.jsx:734
-- **1 sites** · hover `—` · `color: tone; fontSize: 11.5`
-  - Settings.jsx:808
-- **1 sites** · hover `—` · `padding: '16px 22px'`
-  - Settings.jsx:899
-- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '12px 22px'`
-  - Settings.jsx:999
-- **1 sites** · hover `—` · `color: i === hi ? 'var(--text)' : 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11; lineHeight: '16px'`
-  - Settings.jsx:1022
-- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 10; lineHeight: '16px'`
-  - Settings.jsx:1023
 - **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5; padding: '8px 22px'`
   - Settings.jsx:1034
-- **1 sites** · hover `—` · `padding: '6px 22px 14px'`
-  - Settings.jsx:1035
 - **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; height: 36`
   - Settings.jsx:1037
-- **1 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10; lineHeight: '16px'`
-  - Settings.jsx:1039
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
-  - Settings.jsx:1040
-- **1 sites** · hover `—` · `color: m.custom ? 'var(--accent)' : 'var(--muted)'; fontSize: 10; lineHeight: '16px'`
-  - Settings.jsx:1041
-- **1 sites** · hover `—` · `background: bg; color: fg`
-  - Stats.jsx:100
-- **1 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 10`
-  - Stats.jsx:405
-- **1 sites** · hover `—` · `background: 'var(--bad-soft)'; color: 'var(--bad)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; lineHeight: '18px'; padding: '8px 30px'`
-  - Stats.jsx:411
-- **1 sites** · hover `—` · `padding: '14px 20px 10px'`
-  - Stats.jsx:429
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 27; fontWeight: 400; lineHeight: '30px'; letterSpacing: '-.02em'`
-  - Stats.jsx:431
-- **1 sites** · hover `—` · `color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)'; fontSize: 13`
-  - Stats.jsx:432
 - **1 sites** · hover `—` · `height: 230; padding: '16px 20px'`
   - Stats.jsx:443
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderRadius: 5; height: 22`
   - Stats.jsx:471
 - **1 sites** · hover `—` · `background: f.color; borderRadius: 5`
   - Stats.jsx:472
-- **1 sites** · hover `—` · `color: 'var(--text)'; fontSize: 11.5; lineHeight: '18px'`
-  - Stats.jsx:474
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9.5; lineHeight: '18px'; cursor: 'help'`
   - Stats.jsx:475
 - **1 sites** · hover `—` · `lineHeight: '15px'`
   - Stats.jsx:480
 - **1 sites** · hover `—` · `color: 'var(--accent)'; cursor: 'help'`
   - Stats.jsx:499
-- **1 sites** · hover `—` · `padding: '0 6px'`
-  - Stats.jsx:503
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; lineHeight: '14px'`
-  - Stats.jsx:506
 - **1 sites** · hover `—` · `background: BUCKET_COLOR[b.range] || 'var(--accent)'; borderRadius: '5px 5px 0 0'; height: Math.max(2, Math.round((b.count / maxBucket) * 96))`
   - Stats.jsx:507
-- **1 sites** · hover `—` · `background: c; height: 2`
-  - Stats.jsx:526
 - **1 sites** · hover `—` · `height: 300; padding: '16px 20px'`
   - Stats.jsx:533
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; lineHeight: '28px'; letterSpacing: '-.02em'`
-  - Stats.jsx:550
 - **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-strong)'; fontSize: 9; height: 22`
   - Stats.jsx:555
 - **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; fontSize: 11; lineHeight: '16px'; height: 26`
   - Stats.jsx:564
-- **1 sites** · hover `—` · `color: c.cache_involving ? 'var(--accent)' : 'var(--muted)'`
-  - Stats.jsx:569
-- **1 sites** · hover `—` · `padding: '14px 0'`
-  - Stats.jsx:572
+- **1 sites** · hover `—` · `color: 'var(--text)'`
+  - Stats.jsx:565
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10`
+  - Stats.jsx:566
 - **1 sites** · hover `—` · `lineHeight: '24px'; padding: '14px 20px 10px'`
   - Stats.jsx:580
 - **1 sites** · hover `—` · `color: 'var(--muted)'; borderTop: '1px solid var(--line-soft)'; fontSize: 12; padding: '26px 20px 30px'`
   - Stats.jsx:585
-- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; height: 38; padding: '0 20px'`
-  - Stats.jsx:598
+- **1 sites** · hover `—` · `fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
+  - Stats.jsx:599
+- **1 sites** · hover `—` · `color: 'var(--muted)'; lineHeight: '18px'`
+  - Stats.jsx:600
 - **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11.5; lineHeight: '18px'`
   - Stats.jsx:601
-- **1 sites** · hover `—` · `color: running ? 'var(--accent)' : 'var(--text-2)'; fontSize: 11.5; lineHeight: '18px'`
-  - Stats.jsx:607
 - **1 sites** · hover `v2-bdc` · `color: running ? 'var(--edge)' : 'var(--text-2)'; border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; lineHeight: 1; height: 25; padding: '0 11px'; cursor: running ? 'default' : 'pointer'`
   - Stats.jsx:613
-- **1 sites** · hover `—` · `padding: '12px 20px 10px'`
-  - Stats.jsx:629
 - **1 sites** · hover `—` · `color: tab === id ? 'var(--text)' : 'var(--muted)'; borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`; lineHeight: '24px'; cursor: 'pointer'`
   - Stats.jsx:631
 - **1 sites** · hover `—` · `fontSize: 9; opacity: 0.6`
   - Stats.jsx:638
-- **1 sites** · hover `—` · `color: failed ? 'var(--bad)' : 'var(--text-2)'`
-  - Stats.jsx:679
-- **1 sites** · hover `—` · `background: k.markBg; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 9.5; lineHeight: 1; height: 16`
-  - Toast.jsx:65
-- **1 sites** · hover `—` · `fontSize: 12.5; lineHeight: 1.45`
-  - Toast.jsx:67
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; lineHeight: '14px'`
+  - Stats.jsx:741
 - **1 sites** · hover `—` · `color: t.kind === 'undo' ? 'var(--rail-accent)' : 'inherit'; borderBottom: '1px dotted currentColor'; fontSize: 12; fontWeight: 600; cursor: 'pointer'`
   - Toast.jsx:69
 - **1 sites** · hover `—` · `fontSize: 11; opacity: 0.55; cursor: 'pointer'`
   - Toast.jsx:74
-- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text)'`
-  - ToastLab.jsx:25
-- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: 1.6`
-  - ToastLab.jsx:65
-- **1 sites** · hover `—` · `background: 'var(--bg)'; height: '100vh'`
-  - V2App.jsx:101
-- **1 sites** · hover `—` · `background: 'var(--rail)'; padding: '0 0 8px'`
-  - V2App.jsx:102
 - **1 sites** · hover `—` · `color: 'var(--rail-ink)'; height: 64; padding: `0 ${padX}px``
   - V2App.jsx:103
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; letterSpacing: '-.01em'; opacity: open ? 1 : 0`
-  - V2App.jsx:104
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 17; letterSpacing: '.02em'; opacity: open ? 0 : 1`
-  - V2App.jsx:105
-- **1 sites** · hover `v2-rail` · `padding: '6px 0'`
-  - V2App.jsx:108
 - **1 sites** · hover `—` · `height: 18; padding: '0 20px'`
   - V2App.jsx:111
-- **1 sites** · hover `—` · `background: 'var(--rail-line)'; height: 1; opacity: open ? 0 : 1`
-  - V2App.jsx:113
 - **1 sites** · hover `—` · `color: active ? 'var(--rail-accent)' : 'var(--rail-dim)'; fontFamily: 'var(--mono)'; fontSize: 11; opacity: open ? 1 : 0`
   - V2App.jsx:140
-- **1 sites** · hover `v2-navdark` · `color: 'var(--rail-text)'`
-  - V2App.jsx:144
 - **1 sites** · hover `—` · `color: 'var(--rail-dim)'; cursor: 'default'`
   - V2App.jsx:145
-- **1 sites** · hover `v2-navdark` · `color: active ? 'var(--rail-ink)' : 'var(--rail-text)'`
-  - V2App.jsx:146
 - **1 sites** · hover `v2-navdark` · `color: 'var(--rail-dim)'; fontSize: 12; height: 30; padding: `0 ${padX}px``
   - V2App.jsx:152
 - **1 sites** · hover `v2-navdark` · `height: 30; padding: `0 ${padX}px`; cursor: 'pointer'`
@@ -885,39 +448,242 @@
   - V2App.jsx:169
 - **1 sites** · hover `v2-navdark` · `color: 'var(--rail-dim)'; fontSize: 12; lineHeight: '18px'; opacity: open ? 1 : 0; cursor: 'pointer'`
   - V2App.jsx:170
-- **1 sites** · hover `—` · `padding: '22px 24px 6px'`
-  - WelcomeModal.jsx:31
-- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 21; fontWeight: 400; lineHeight: '26px'; letterSpacing: '-.02em'`
-  - WelcomeModal.jsx:33
-- **1 sites** · hover `—` · `padding: '14px 24px 18px'`
-  - WelcomeModal.jsx:40
 - **1 sites** · hover `v2-welcomestep` · `borderRadius: 8; padding: '9px 2px'; cursor: 'pointer'`
   - WelcomeModal.jsx:42
+
+## text — 100 signatures
+
+- **14 sites** · hover `—` · `color: 'var(--muted)'`
+  - CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, JobFeed.jsx:836, JobFeed.jsx:913, JobFeed.jsx:1108, JobFeed.jsx:1144, JobFeed.jsx:1156, ResumeEditor.jsx:593, ResumeEditor.jsx:602, Searches.jsx:879, Searches.jsx:880, Stats.jsx:672, Stats.jsx:694, WelcomeModal.jsx:47
+- **12 sites** · hover `—` · `fontSize: 11`
+  - Applications.jsx:531, Applications.jsx:573, Applications.jsx:704, Companies.jsx:541, Companies.jsx:547, Companies.jsx:556, CoverLetterEditor.jsx:374, ResumeEditor.jsx:542, ResumeEditor.jsx:563, Searches.jsx:662, Searches.jsx:669, Searches.jsx:684
+- **9 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; lineHeight: '20px'`
+  - Applications.jsx:341, Companies.jsx:415, CoverLetters.jsx:327, JobFeed.jsx:724, Persona.jsx:328, Resumes.jsx:153, Searches.jsx:570, Stats.jsx:395, ToastLab.jsx:29
+- **7 sites** · hover `—` · `color: 'var(--line)'`
+  - CoverLetterEditor.jsx:320, JobFeed.jsx:907, JobFeed.jsx:912, JobFeed.jsx:913, JobFeed.jsx:964, JobFeed.jsx:965, ResumeEditor.jsx:466
+- **7 sites** · hover `—` · `color: 'var(--text)'`
+  - CoverLetterEditor.jsx:335, CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, ResumeEditor.jsx:489, ResumeEditor.jsx:593, ResumeEditor.jsx:602, Stats.jsx:568
+- **5 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 13`
+  - Applications.jsx:449, Companies.jsx:573, CoverLetters.jsx:409, Searches.jsx:717, Settings.jsx:485
+- **5 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5`
+  - JobFeed.jsx:1013, JobFeed.jsx:1036, JobFeed.jsx:1129, JobFeed.jsx:1216, JobFeed.jsx:1276
+- **4 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 10`
+  - Applications.jsx:392, JobFeed.jsx:1025, ResumeSections.jsx:380, Stats.jsx:646
+- **4 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5; lineHeight: '18px'`
+  - Applications.jsx:508, ConfirmDialog.jsx:18, ConfirmDialog.jsx:43, WelcomeModal.jsx:37
+- **4 sites** · hover `—` · `fontSize: 12`
+  - CoverLetterEditor.jsx:346, JobFeed.jsx:1142, JobFeed.jsx:1154, Stats.jsx:406
+- **4 sites** · hover `—` · `color: 'var(--text-2)'`
+  - JobFeed.jsx:762, JobFeed.jsx:964, Stats.jsx:567, Stats.jsx:678
+- **4 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12.5`
+  - JobFeed.jsx:1012, JobFeed.jsx:1015, JobFeed.jsx:1130, LoginModal.jsx:52
+- **4 sites** · hover `—` · `lineHeight: '24px'`
+  - Stats.jsx:444, Stats.jsx:493, Stats.jsx:518, Stats.jsx:534
+- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontWeight: 500`
+  - Applications.jsx:383, Companies.jsx:453, JobFeed.jsx:809
+- **3 sites** · hover `—` · `fontSize: 10`
+  - Applications.jsx:383, Companies.jsx:453, JobFeed.jsx:809
+- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11`
+  - Companies.jsx:954, Stats.jsx:497, Stats.jsx:525
+- **3 sites** · hover `—` · `letterSpacing: '.14em'`
+  - CoverLetterEditor.jsx:548, CoverLetterEditor.jsx:553, CoverLetterEditor.jsx:557
+- **3 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12`
+  - CoverLetters.jsx:397, Resumes.jsx:291, Resumes.jsx:346
+- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 500`
+  - JobFeed.jsx:1011, JobFeed.jsx:1143, JobFeed.jsx:1155
+- **3 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '18px'`
+  - JobFeed.jsx:1120, JobFeed.jsx:1126, ResumeSections.jsx:134
+- **3 sites** · hover `—` · `color: 'var(--bad)'`
+  - JobFeed.jsx:1120, JobFeed.jsx:1129, Searches.jsx:877
+- **3 sites** · hover `—` · `color: 'var(--accent)'`
+  - JobFeed.jsx:1145, JobFeed.jsx:1221, ResumeEditor.jsx:503
+- **3 sites** · hover `—` · `fontSize: 13; fontWeight: 600`
+  - Persona.jsx:366, Persona.jsx:385, ResumeSections.jsx:161
+- **3 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 10`
+  - ResumeEditor.jsx:576, ResumeEditor.jsx:577, ResumeSections.jsx:274
+- **2 sites** · hover `—` · `fontSize: 13; fontWeight: 500`
+  - Companies.jsx:501, JobFeed.jsx:1305
+- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13`
+  - Companies.jsx:580, Searches.jsx:724
+- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11.5`
+  - Companies.jsx:867, Companies.jsx:1006
+- **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
+  - CoverLetterEditor.jsx:334, ResumeEditor.jsx:487
+- **2 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11.5`
+  - CoverLetters.jsx:400, Resumes.jsx:292
+- **2 sites** · hover `—` · `color: 'var(--good)'`
+  - JobFeed.jsx:1036, Searches.jsx:877
+- **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13`
+  - JobFeed.jsx:1244, JobFeed.jsx:1285
+- **2 sites** · hover `—` · `fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
+  - ResumeEditor.jsx:704, ResumeEditor.jsx:794
+- **2 sites** · hover `—` · `lineHeight: '28px'`
+  - Resumes.jsx:213, Resumes.jsx:253
+- **2 sites** · hover `—` · `color: 'var(--warn)'`
+  - Searches.jsx:878, Stats.jsx:399
+- **1 sites** · hover `—` · `color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)'; fontSize: 12.5; fontWeight: 500`
+  - Applications.jsx:434
+- **1 sites** · hover `—` · `color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent'; fontSize: 10`
+  - Applications.jsx:435
+- **1 sites** · hover `—` · `color: 'var(--text)'; fontSize: 12.5; lineHeight: '18px'`
+  - Applications.jsx:670
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 12; lineHeight: '18px'`
+  - Applications.jsx:675
+- **1 sites** · hover `—` · `color: c.last_error ? 'var(--bad)' : 'var(--warn)'; fontSize: 11`
+  - Companies.jsx:500
+- **1 sites** · hover `—` · `color: h.fg; fontSize: 12`
+  - Companies.jsx:511
+- **1 sites** · hover `—` · `color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)'`
+  - Companies.jsx:523
+- **1 sites** · hover `—` · `color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : 'var(--warn)'; fontSize: 12`
+  - Companies.jsx:673
+- **1 sites** · hover `—` · `color: bannerMuted ? 'var(--text-2)' : 'var(--text)'; fontSize: 12; lineHeight: 1.5`
+  - Companies.jsx:675
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12; lineHeight: '16px'`
+  - Companies.jsx:778
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12.5`
+  - Companies.jsx:899
+- **1 sites** · hover `—` · `color: p.clicked ? 'var(--good)' : 'var(--bad)'; fontSize: 11`
+  - Companies.jsx:976
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11`
+  - Companies.jsx:997
+- **1 sites** · hover `—` · `fontSize: 13; fontWeight: 600; lineHeight: '20px'`
+  - CoverLetterEditor.jsx:47
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11; lineHeight: '14px'`
+  - CoverLetterEditor.jsx:526
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5`
+  - CoverLetterEditor.jsx:562
+- **1 sites** · hover `—` · `color: cur ? 'var(--text)' : 'var(--muted)'`
+  - CoverLetters.jsx:55
+- **1 sites** · hover `—` · `color: 'var(--edge)'; fontSize: 11`
+  - CoverLetters.jsx:317
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 12.5; lineHeight: '20px'`
+  - CoverLetters.jsx:385
+- **1 sites** · hover `—` · `color: 'var(--rail-ink)'; fontSize: 12; fontWeight: 600`
+  - JobFeed.jsx:846
+- **1 sites** · hover `—` · `color: 'var(--rail-accent)'`
+  - JobFeed.jsx:851
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; fontWeight: 450; lineHeight: 1.2`
+  - JobFeed.jsx:905
+- **1 sites** · hover `—` · `color: 'var(--ink-2)'; fontWeight: 500`
+  - JobFeed.jsx:906
+- **1 sites** · hover `—` · `fontSize: 11; fontWeight: 450; lineHeight: '13px'`
+  - JobFeed.jsx:910
+- **1 sites** · hover `—` · `color: visa.c; letterSpacing: '.04em'`
+  - JobFeed.jsx:912
+- **1 sites** · hover `—` · `color: visaCol`
+  - JobFeed.jsx:966
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13.5; lineHeight: '22px'`
+  - JobFeed.jsx:1035
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; textTransform: 'capitalize'`
+  - JobFeed.jsx:1052
+- **1 sites** · hover `—` · `color: r.matched ? 'var(--good)' : 'var(--bad)'`
+  - JobFeed.jsx:1109
+- **1 sites** · hover `—` · `color: viewCached ? 'var(--accent)' : 'var(--muted)'; fontSize: 12`
+  - JobFeed.jsx:1168
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 13; lineHeight: '20px'`
+  - JobFeed.jsx:1188
+- **1 sites** · hover `—` · `color: on ? 'var(--accent)' : 'var(--text)'; fontSize: 13; fontWeight: 500`
+  - JobFeed.jsx:1235
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 11.5; lineHeight: '16px'`
+  - LoginModal.jsx:73
+- **1 sites** · hover `—` · `color: set ? 'var(--text)' : 'var(--muted)'; fontSize: 12`
+  - Persona.jsx:119
+- **1 sites** · hover `—` · `color: dfg; fontWeight: 600`
+  - ResumeEditor.jsx:502
+- **1 sites** · hover `—` · `color: 'var(--text)'; fontWeight: 500`
+  - ResumeEditor.jsx:550
+- **1 sites** · hover `—` · `color: on ? 'var(--accent)' : 'var(--text)'; fontSize: 12.5; fontWeight: 500; lineHeight: '18px'`
+  - ResumeEditor.jsx:687
+- **1 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 9; lineHeight: '14px'`
+  - ResumeEditor.jsx:798
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '20px'`
+  - ResumeEditor.jsx:873
+- **1 sites** · hover `—` · `fontSize: 12.5; fontWeight: 600`
+  - ResumeSections.jsx:270
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12`
+  - ResumeSections.jsx:271
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11; lineHeight: '19px'`
+  - ResumeSections.jsx:300
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: '19px'`
+  - ResumeSections.jsx:301
+- **1 sites** · hover `—` · `color: r.muted ? 'var(--muted)' : 'var(--text)'; fontSize: 13; fontWeight: 500`
+  - Resumes.jsx:182
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 13; fontWeight: 500`
+  - Resumes.jsx:199
+- **1 sites** · hover `—` · `color: 'var(--bad)'; fontSize: 12`
+  - Resumes.jsx:350
+- **1 sites** · hover `—` · `color: 'var(--warn)'; fontSize: 11`
+  - Searches.jsx:622
+- **1 sites** · hover `—` · `color: summaryFg; fontSize: 11.5; lineHeight: '17px'`
+  - Searches.jsx:632
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 9; letterSpacing: 2`
+  - Searches.jsx:645
+- **1 sites** · hover `—` · `color: hasDesc ? 'var(--accent)' : 'var(--line-strong)'; fontSize: 11`
+  - Searches.jsx:857
+- **1 sites** · hover `—` · `fontSize: 13; fontWeight: 500; lineHeight: '18px'`
+  - Settings.jsx:718
+- **1 sites** · hover `—` · `color: tone; fontSize: 11.5`
+  - Settings.jsx:808
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 10; lineHeight: '16px'`
+  - Settings.jsx:1023
+- **1 sites** · hover `—` · `color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)'; fontSize: 13`
+  - Stats.jsx:432
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12; lineHeight: '18px'`
+  - Stats.jsx:470
+- **1 sites** · hover `—` · `color: 'var(--text)'; fontSize: 11.5; lineHeight: '18px'`
+  - Stats.jsx:474
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; lineHeight: '14px'`
+  - Stats.jsx:506
+- **1 sites** · hover `—` · `color: c.cache_involving ? 'var(--accent)' : 'var(--muted)'`
+  - Stats.jsx:569
+- **1 sites** · hover `—` · `color: 'var(--muted)'; lineHeight: '18px'`
+  - Stats.jsx:602
+- **1 sites** · hover `—` · `color: running ? 'var(--accent)' : 'var(--text-2)'; fontSize: 11.5; lineHeight: '18px'`
+  - Stats.jsx:607
+- **1 sites** · hover `—` · `color: failed ? 'var(--bad)' : 'var(--text-2)'`
+  - Stats.jsx:679
+- **1 sites** · hover `—` · `fontSize: 12.5; lineHeight: 1.45`
+  - Toast.jsx:67
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 12.5; lineHeight: 1.6`
+  - ToastLab.jsx:65
+- **1 sites** · hover `v2-navdark` · `color: 'var(--rail-text)'`
+  - V2App.jsx:144
+- **1 sites** · hover `v2-navdark` · `color: active ? 'var(--rail-ink)' : 'var(--rail-text)'`
+  - V2App.jsx:146
 - **1 sites** · hover `—` · `fontSize: 13; fontWeight: 600; lineHeight: '18px'`
   - WelcomeModal.jsx:46
-- **1 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line-soft)'; padding: '12px 24px'`
-  - WelcomeModal.jsx:55
 
-## helper-text — 44 signatures
+## helper-text — 53 signatures
 
 - **40 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5`
-  - Applications.jsx:450, Applications.jsx:692, Applications.jsx:701, Applications.jsx:787, Applications.jsx:837, Companies.jsx:546, Companies.jsx:553, Companies.jsx:633, Companies.jsx:790, Companies.jsx:834, Companies.jsx:837, CoverLetterEditor.jsx:542, CoverLetterEditor.jsx:562, CoverLetters.jsx:410, JobFeed.jsx:779, JobFeed.jsx:789, JobFeed.jsx:1076, JobFeed.jsx:1091, JobFeed.jsx:1236, JobFeed.jsx:1251, JobFeed.jsx:1259, JobFeed.jsx:1283, JobFeed.jsx:1293, JobFeed.jsx:1306, JobFeed.jsx:1315, Persona.jsx:409, ResumeEditor.jsx:471, ResumeEditor.jsx:888, Resumes.jsx:215, Resumes.jsx:255, Searches.jsx:564, Searches.jsx:687, Searches.jsx:694, Searches.jsx:762, Settings.jsx:486, Settings.jsx:490, Settings.jsx:677, Settings.jsx:896, Settings.jsx:996, ToastLab.jsx:53
+  - Applications.jsx:450, Applications.jsx:692, Applications.jsx:701, Applications.jsx:787, Applications.jsx:837, Companies.jsx:574, Companies.jsx:581, Companies.jsx:663, Companies.jsx:832, Companies.jsx:876, Companies.jsx:879, CoverLetterEditor.jsx:542, CoverLetterEditor.jsx:562, CoverLetters.jsx:410, JobFeed.jsx:779, JobFeed.jsx:789, JobFeed.jsx:1076, JobFeed.jsx:1091, JobFeed.jsx:1236, JobFeed.jsx:1251, JobFeed.jsx:1259, JobFeed.jsx:1283, JobFeed.jsx:1293, JobFeed.jsx:1306, JobFeed.jsx:1315, Persona.jsx:409, ResumeEditor.jsx:471, ResumeEditor.jsx:888, Resumes.jsx:215, Resumes.jsx:255, Searches.jsx:587, Searches.jsx:718, Searches.jsx:725, Searches.jsx:793, Settings.jsx:486, Settings.jsx:490, Settings.jsx:677, Settings.jsx:896, Settings.jsx:996, ToastLab.jsx:53
 - **34 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11`
-  - Applications.jsx:351, Applications.jsx:380, Applications.jsx:527, Applications.jsx:606, Companies.jsx:491, Companies.jsx:525, Companies.jsx:526, Companies.jsx:527, Companies.jsx:692, Companies.jsx:833, Companies.jsx:909, CoverLetterEditor.jsx:357, CoverLetterEditor.jsx:363, CoverLetterEditor.jsx:369, CoverLetters.jsx:74, CoverLetters.jsx:388, JobFeed.jsx:1003, JobFeed.jsx:1043, JobFeed.jsx:1053, JobFeed.jsx:1070, JobFeed.jsx:1092, Persona.jsx:386, ResumeEditor.jsx:509, ResumeSections.jsx:141, ResumeSections.jsx:273, Resumes.jsx:183, Resumes.jsx:200, Searches.jsx:296, Searches.jsx:569, Searches.jsx:649, Searches.jsx:666, Searches.jsx:824, Settings.jsx:516, Stats.jsx:699
+  - Applications.jsx:351, Applications.jsx:380, Applications.jsx:527, Applications.jsx:606, Companies.jsx:519, Companies.jsx:553, Companies.jsx:554, Companies.jsx:555, Companies.jsx:734, Companies.jsx:875, Companies.jsx:951, CoverLetterEditor.jsx:357, CoverLetterEditor.jsx:363, CoverLetterEditor.jsx:369, CoverLetters.jsx:74, CoverLetters.jsx:388, JobFeed.jsx:1003, JobFeed.jsx:1043, JobFeed.jsx:1053, JobFeed.jsx:1070, JobFeed.jsx:1092, Persona.jsx:386, ResumeEditor.jsx:509, ResumeSections.jsx:141, ResumeSections.jsx:273, Resumes.jsx:183, Resumes.jsx:200, Searches.jsx:296, Searches.jsx:592, Searches.jsx:680, Searches.jsx:697, Searches.jsx:855, Settings.jsx:516, Stats.jsx:699
 - **9 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '17px'`
   - JobFeed.jsx:968, ResumeEditor.jsx:673, ResumeEditor.jsx:715, ResumeEditor.jsx:778, ResumeEditor.jsx:811, ResumeEditor.jsx:848, ResumeSections.jsx:135, ResumeSections.jsx:162, WelcomeModal.jsx:49
+- **7 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10`
+  - Applications.jsx:419, Companies.jsx:518, Persona.jsx:365, Persona.jsx:384, ResumeSections.jsx:159, ResumeSections.jsx:269, Stats.jsx:654
 - **7 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10.5; lineHeight: '16px'`
   - CoverLetterEditor.jsx:395, CoverLetters.jsx:343, ResumeEditor.jsx:688, ResumeEditor.jsx:705, ResumeEditor.jsx:795, ResumeEditor.jsx:870, ResumeSections.jsx:64
 - **6 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10.5`
-  - Companies.jsx:644, CoverLetterEditor.jsx:550, JobFeed.jsx:782, JobFeed.jsx:792, Persona.jsx:387, Stats.jsx:674
+  - Companies.jsx:676, CoverLetterEditor.jsx:550, JobFeed.jsx:782, JobFeed.jsx:792, Persona.jsx:387, Stats.jsx:674
+- **6 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10`
+  - Companies.jsx:952, Companies.jsx:965, Companies.jsx:993, JobFeed.jsx:932, JobFeed.jsx:987, Searches.jsx:838
+- **6 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9`
+  - CoverLetterEditor.jsx:499, CoverLetterEditor.jsx:514, CoverLetters.jsx:58, Persona.jsx:122, ResumeEditor.jsx:593, ResumeEditor.jsx:602
 - **5 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10.5; lineHeight: '16px'`
   - Applications.jsx:671, CoverLetters.jsx:316, Settings.jsx:644, Settings.jsx:652, Settings.jsx:669
+- **3 sites** · hover `—` · `color: 'var(--faint)'; fontSize: 10.5; lineHeight: '16px'`
+  - ResumeSections.jsx:143, ResumeSections.jsx:215, ResumeSections.jsx:331
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '16px'`
   - CoverLetters.jsx:85, CoverLetters.jsx:310
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 11`
   - JobFeed.jsx:98, JobFeed.jsx:763
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10.5; lineHeight: '15px'`
   - ResumeEditor.jsx:716, ResumeEditor.jsx:814
+- **2 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--sans)'; fontSize: 10`
+  - Resumes.jsx:218, Resumes.jsx:258
 - **2 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11; lineHeight: '16px'`
   - Settings.jsx:142, Settings.jsx:730
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10.5`
@@ -927,19 +693,19 @@
 - **1 sites** · hover `—` · `color: stale ? 'var(--warn)' : 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10.5`
   - Applications.jsx:439
 - **1 sites** · hover `—` · `color: rn ? 'var(--text-2)' : 'var(--muted)'; fontSize: 11.5`
-  - Companies.jsx:486
+  - Companies.jsx:514
 - **1 sites** · hover `—` · `color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
-  - Companies.jsx:494
+  - Companies.jsx:522
 - **1 sites** · hover `—` · `color: c.application_count ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
-  - Companies.jsx:498
+  - Companies.jsx:526
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; padding: '44px 28px'`
-  - Companies.jsx:536
-- **1 sites** · hover `—` · `color: company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)'; fontSize: 10.5`
-  - Companies.jsx:694
+  - Companies.jsx:564
+- **1 sites** · hover `—` · `color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)'; fontSize: 10.5`
+  - Companies.jsx:736
 - **1 sites** · hover `—` · `color: lca ? 'var(--good)' : 'var(--muted)'; fontSize: 10.5`
-  - Companies.jsx:723
+  - Companies.jsx:765
 - **1 sites** · hover `—` · `color: url && !known ? 'var(--warn)' : 'var(--muted)'; fontSize: 11`
-  - Companies.jsx:799
+  - Companies.jsx:841
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '20px'`
   - CoverLetterEditor.jsx:48
 - **1 sites** · hover `—` · `color: saveErr ? 'var(--bad)' : 'var(--muted)'; fontSize: 11.5`
@@ -962,16 +728,18 @@
   - ResumeSections.jsx:272
 - **1 sites** · hover `—` · `color: m ? 'var(--accent)' : 'var(--muted)'; fontSize: 11; lineHeight: '19px'`
   - ResumeSections.jsx:289
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9.5; lineHeight: '19px'`
+  - ResumeSections.jsx:302
 - **1 sites** · hover `—` · `color: changed ? 'var(--accent)' : 'var(--muted)'; fontSize: 11; lineHeight: '19px'`
   - ResumeSections.jsx:327
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11; lineHeight: '19px'`
   - ResumeSections.jsx:453
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; padding: '44px 30px'`
-  - Searches.jsx:680
+  - Searches.jsx:711
 - **1 sites** · hover `—` · `color: ok ? 'var(--muted)' : 'var(--bad)'; fontSize: 11; lineHeight: '15px'`
-  - Searches.jsx:818
+  - Searches.jsx:849
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11; lineHeight: '15px'`
-  - Searches.jsx:822
+  - Searches.jsx:853
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '16px'; padding: '7px 9px'`
   - Settings.jsx:71
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 11.5; lineHeight: '26px'`
@@ -988,27 +756,33 @@
   - Settings.jsx:905
 - **1 sites** · hover `—` · `color: 'var(--muted)'; borderTop: '1px solid var(--line-soft)'; fontSize: 10.5; lineHeight: '16px'; padding: '5px 9px'`
   - Settings.jsx:1026
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 10; lineHeight: '16px'`
+  - Settings.jsx:1039
+- **1 sites** · hover `—` · `color: m.custom ? 'var(--accent)' : 'var(--muted)'; fontSize: 10; lineHeight: '16px'`
+  - Settings.jsx:1041
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; lineHeight: '14px'`
+  - Stats.jsx:508
 
 ## pill — 57 signatures
 
 - **4 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; height: 27; padding: '0 11px'; cursor: 'pointer'`
-  - Applications.jsx:811, Companies.jsx:136, Companies.jsx:139, Searches.jsx:201
+  - Applications.jsx:811, Companies.jsx:146, Companies.jsx:149, Searches.jsx:201
 - **3 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12.5; height: 33; padding: '0 14px'; cursor: 'pointer'`
-  - Applications.jsx:838, Companies.jsx:838, CoverLetterEditor.jsx:563
+  - Applications.jsx:838, Companies.jsx:880, CoverLetterEditor.jsx:563
 - **3 sites** · hover `v2-act` · `color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 13; height: 34; padding: '0 15px'; cursor: 'pointer'`
   - JobFeed.jsx:1191, JobFeed.jsx:1260, JobFeed.jsx:1316
 - **3 sites** · hover `v2-act` · `color: 'var(--accent)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 27; padding: '0 13px'; cursor: 'pointer'`
   - Persona.jsx:311, ResumeEditor.jsx:616, Resumes.jsx:169
 - **3 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 31; padding: '0 13px'; cursor: 'pointer'`
-  - Searches.jsx:570, Searches.jsx:667, Settings.jsx:906
+  - Searches.jsx:593, Searches.jsx:698, Settings.jsx:906
 - **2 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 99; height: 30; padding: '0 12px'`
   - Applications.jsx:350, Settings.jsx:515
 - **2 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 27; padding: '0 12px'; cursor: 'pointer'`
   - Applications.jsx:607, Applications.jsx:642
 - **2 sites** · hover `v2-bdc` · `color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 26; padding: '0 13px'; cursor: 'pointer'`
-  - Companies.jsx:85, Resumes.jsx:27
+  - Companies.jsx:95, Resumes.jsx:27
 - **2 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 31; padding: '0 15px'; cursor: 'pointer'`
-  - Companies.jsx:965, Searches.jsx:851
+  - Companies.jsx:1007, Searches.jsx:882
 - **2 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12.5; height: 31; padding: '0 15px'; cursor: 'pointer'`
   - ConfirmDialog.jsx:20, ConfirmDialog.jsx:51
 - **2 sites** · hover `v2-bd` · `background: statusActive ? 'var(--accent-soft)' : 'var(--surface)'; color: statusActive ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${statusActive ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 30; padding: '0 13px'; cursor: 'pointer'`
@@ -1030,23 +804,23 @@
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 31; padding: '0 14px'; cursor: 'pointer'`
   - Applications.jsx:702
 - **1 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 12; fontWeight: on ? 600 : 400; height: 30; padding: '0 13px'; cursor: 'pointer'`
-  - Companies.jsx:405
+  - Companies.jsx:433
 - **1 sites** · hover `v2-act` · `background: 'var(--surface)'; color: 'var(--accent)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 30; padding: '0 12px'; cursor: 'pointer'`
-  - Companies.jsx:414
+  - Companies.jsx:442
 - **1 sites** · hover `v2-bd` · `background: 'var(--surface)'; color: 'var(--warn)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 30; padding: '0 12px'; cursor: 'pointer'`
-  - Companies.jsx:418
+  - Companies.jsx:446
 - **1 sites** · hover `v2-bd` · `background: c.active ? 'var(--accent-soft)' : 'var(--surface)'; color: c.active ? 'var(--accent)' : 'var(--muted)'; border: `1px solid ${c.active ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11; fontWeight: 500; height: 23; padding: '0 11px'; cursor: 'pointer'`
-  - Companies.jsx:503
+  - Companies.jsx:531
 - **1 sites** · hover `v2-act` · `background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)'; color: 'var(--text-2)'; border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 13; height: 25; cursor: 'pointer'`
-  - Companies.jsx:521
+  - Companies.jsx:549
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: draft.active ? 'var(--warn)' : 'var(--accent)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 32; padding: '0 13px'; cursor: 'pointer'`
-  - Companies.jsx:731
+  - Companies.jsx:773
 - **1 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; fontWeight: on ? 600 : 400; height: 26; padding: '0 11px'; cursor: 'pointer'`
-  - Companies.jsx:828
+  - Companies.jsx:870
 - **1 sites** · hover `v2-bdc` · `color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 31; padding: '0 15px'; cursor: 'pointer'`
-  - Companies.jsx:858
+  - Companies.jsx:900
 - **1 sites** · hover `—` · `background: showShots ? 'var(--accent-soft)' : 'var(--surface)'; color: showShots ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${showShots ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; height: 26; padding: '0 11px'; cursor: 'pointer'`
-  - Companies.jsx:903
+  - Companies.jsx:945
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: copied ? 'var(--accent)' : 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12.5; height: 31; padding: '0 13px'; cursor: 'pointer'`
   - ConfirmDialog.jsx:50
 - **1 sites** · hover `—` · `background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)'; color: 'var(--text-2)'; border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 15; height: 36; cursor: 'pointer'`
@@ -1078,13 +852,13 @@
 - **1 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; fontWeight: on ? 600 : 400; height: 31; padding: '0 12px'; cursor: 'pointer'`
   - Searches.jsx:216
 - **1 sites** · hover `v2-bd` · `background: s.active ? 'var(--accent-soft)' : 'var(--surface)'; color: s.active ? 'var(--accent)' : 'var(--muted)'; border: `1px solid ${s.active ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11; fontWeight: 500; height: 23; cursor: 'pointer'`
-  - Searches.jsx:618
+  - Searches.jsx:649
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: spin ? 'var(--accent)' : 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 25; padding: '0 9px'; cursor: 'pointer'`
-  - Searches.jsx:628
+  - Searches.jsx:659
 - **1 sites** · hover `v2-bd` · `background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)'; color: 'var(--text-2)'; border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 13; height: 25; cursor: 'pointer'`
-  - Searches.jsx:641
+  - Searches.jsx:672
 - **1 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontSize: 11.5; fontWeight: on ? 600 : 400; height: 26; padding: '0 12px'; cursor: 'pointer'`
-  - Searches.jsx:787
+  - Searches.jsx:818
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 26; padding: '0 12px'; cursor: 'pointer'`
   - Settings.jsx:645
 - **1 sites** · hover `—` · `background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)'; color: infoOpen ? 'var(--accent)' : 'var(--muted)'; border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; fontFamily: 'var(--serif)'; fontSize: 9; fontWeight: 400; height: 15; cursor: 'pointer'`
@@ -1111,11 +885,11 @@
 - **16 sites** · hover `—` · `(no design keys)`
   - Applications.jsx:594, Applications.jsx:598, Applications.jsx:630, Applications.jsx:634, CoverLetterEditor.jsx:408, CoverLetterEditor.jsx:435, CoverLetterEditor.jsx:439, CoverLetterEditor.jsx:443, CoverLetterEditor.jsx:447, CoverLetterEditor.jsx:480, CoverLetterEditor.jsx:484, ResumeSections.jsx:223, Resumes.jsx:358, Settings.jsx:115, Settings.jsx:761, Settings.jsx:815
 - **9 sites** · hover `—` · `height: 32`
-  - Companies.jsx:106, Companies.jsx:654, Companies.jsx:658, Companies.jsx:671, Companies.jsx:676, Companies.jsx:706, Companies.jsx:711, Companies.jsx:716, Companies.jsx:722
+  - Companies.jsx:116, Companies.jsx:696, Companies.jsx:700, Companies.jsx:713, Companies.jsx:718, Companies.jsx:748, Companies.jsx:753, Companies.jsx:758, Companies.jsx:764
 - **4 sites** · hover `—` · `background: 'transparent'; color: 'var(--text)'; border: 'none'; fontFamily: 'var(--sans)'; fontSize: 12`
   - Applications.jsx:352, Persona.jsx:158, Settings.jsx:517, Settings.jsx:1003
 - **2 sites** · hover `—` · `fontSize: 12.5; height: 33`
-  - Companies.jsx:804, Companies.jsx:818
+  - Companies.jsx:846, Companies.jsx:860
 - **2 sites** · hover `—` · `color: 'var(--text-2)'; fontSize: 11.5`
   - CoverLetterEditor.jsx:412, ResumeSections.jsx:226
 - **2 sites** · hover `—` · `fontFamily: 'var(--mono)'; fontSize: 11; padding: '0 6px'`
@@ -1133,11 +907,11 @@
 - **1 sites** · hover `—` · `lineHeight: '19px'; height: 'auto'; padding: '9px 10px'`
   - Applications.jsx:832
 - **1 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--text)'; border: '1px solid var(--edge)'; borderRadius: 99; fontFamily: 'var(--sans)'; fontSize: 12; height: 30; padding: '0 12px 0 29px'`
-  - Companies.jsx:398
+  - Companies.jsx:426
 - **1 sites** · hover `—` · `fontSize: 11; height: 33`
-  - Companies.jsx:797
+  - Companies.jsx:839
 - **1 sites** · hover `—` · `height: 33`
-  - Companies.jsx:808
+  - Companies.jsx:850
 - **1 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--text)'; border: '1px solid var(--edge)'; borderRadius: 8; fontFamily: mono ? 'var(--mono)' : 'var(--sans)'; fontSize: mono ? 11.5 : 12.5; height: 33; padding: '0 10px'`
   - ConfirmDialog.jsx:44
 - **1 sites** · hover `—` · `background: 'transparent'; color: 'var(--text)'; border: 'none'; fontFamily: 'var(--sans)'; fontSize: 12.5; lineHeight: '19px'`
@@ -1186,7 +960,7 @@
 ## label — 38 signatures
 
 - **12 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; letterSpacing: '.14em'; textTransform: 'uppercase'`
-  - Companies.jsx:794, Companies.jsx:803, Companies.jsx:807, Companies.jsx:813, Companies.jsx:817, Companies.jsx:822, CoverLetterEditor.jsx:493, ResumeEditor.jsx:589, ResumeEditor.jsx:680, ResumeEditor.jsx:696, ResumeEditor.jsx:786, ResumeEditor.jsx:805
+  - Companies.jsx:836, Companies.jsx:845, Companies.jsx:849, Companies.jsx:855, Companies.jsx:859, Companies.jsx:864, CoverLetterEditor.jsx:493, ResumeEditor.jsx:589, ResumeEditor.jsx:680, ResumeEditor.jsx:696, ResumeEditor.jsx:786, ResumeEditor.jsx:805
 - **6 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10.5; letterSpacing: '.15em'; textTransform: 'uppercase'`
   - JobFeed.jsx:1214, JobFeed.jsx:1229, JobFeed.jsx:1243, JobFeed.jsx:1274, JobFeed.jsx:1282, JobFeed.jsx:1299
 - **4 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 9.5; lineHeight: '14px'; letterSpacing: '.13em'; textTransform: 'uppercase'`
@@ -1204,19 +978,19 @@
 - **1 sites** · hover `—` · `background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)'; color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)'; borderRadius: 99; fontSize: 9.5; padding: '2px 7px'; letterSpacing: '.06em'; textTransform: 'uppercase'; cursor: 'pointer'`
   - Applications.jsx:582
 - **1 sites** · hover `—` · `borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 9.5; padding: '3px 8px'; letterSpacing: '.05em'; textTransform: 'uppercase'`
-  - Companies.jsx:105
+  - Companies.jsx:115
 - **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--muted)'; borderBottom: '1px solid var(--line-strong)'; fontSize: 9.5; lineHeight: '14px'; height: 30; padding: '0 30px 0 24px'; letterSpacing: '.11em'; textTransform: 'uppercase'`
-  - Companies.jsx:449
+  - Companies.jsx:477
 - **1 sites** · hover `—` · `borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 9.5; padding: '2px 7px'; letterSpacing: '.05em'; textTransform: 'uppercase'`
-  - Companies.jsx:489
+  - Companies.jsx:517
 - **1 sites** · hover `—` · `background: url ? undefined : 'var(--surface-2)'; color: url ? undefined : 'var(--muted)'; borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 9.5; padding: '3px 8px'; letterSpacing: '.05em'; textTransform: 'uppercase'`
-  - Companies.jsx:796
+  - Companies.jsx:838
 - **1 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 10; fontWeight: 600; letterSpacing: '.13em'; textTransform: 'uppercase'`
-  - Companies.jsx:932
+  - Companies.jsx:974
 - **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--muted)'; borderBottom: '1px solid var(--line)'; fontSize: 9.5; lineHeight: '14px'; height: 28; padding: '0 22px'; letterSpacing: '.11em'; textTransform: 'uppercase'`
-  - Companies.jsx:940
+  - Companies.jsx:982
 - **1 sites** · hover `—` · `background: st.tagBg; color: st.tagFg; borderRadius: 99; fontSize: 9.5; padding: '2px 7px'; letterSpacing: '.06em'; textTransform: 'uppercase'`
-  - Companies.jsx:953
+  - Companies.jsx:995
 - **1 sites** · hover `—` · `borderRadius: 99; fontSize: 9.5; padding: '2px 7px'; letterSpacing: '.08em'; textTransform: 'uppercase'`
   - CoverLetterEditor.jsx:321
 - **1 sites** · hover `—` · `color: 'var(--edge)'; fontSize: 10; letterSpacing: '.1em'; textTransform: 'uppercase'`
@@ -1246,9 +1020,9 @@
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--faint)'; borderRadius: 99; fontSize: 9.5; lineHeight: '16px'; padding: '2px 7px'; letterSpacing: '.08em'; textTransform: 'uppercase'`
   - Resumes.jsx:198
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; letterSpacing: '.08em'; textTransform: 'uppercase'; cursor: 'help'`
-  - Searches.jsx:610
+  - Searches.jsx:641
 - **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--muted)'; borderBottom: '1px solid var(--line-strong)'; fontSize: 9.5; lineHeight: '14px'; height: 28; padding: '0 22px'; letterSpacing: '.11em'; textTransform: 'uppercase'`
-  - Searches.jsx:793
+  - Searches.jsx:824
 - **1 sites** · hover `—` · `color: 'var(--muted)'; fontSize: 10; padding: '14px 26px 6px 30px'; letterSpacing: '.15em'; textTransform: 'uppercase'`
   - Settings.jsx:527
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--muted)'; borderRadius: 99; fontSize: 9.5; lineHeight: '14px'; padding: '1px 7px'; letterSpacing: '.06em'; textTransform: 'uppercase'`
@@ -1262,10 +1036,205 @@
 - **1 sites** · hover `—` · `color: 'var(--rail-dim)'; fontSize: 10; lineHeight: '18px'; letterSpacing: '.16em'; textTransform: 'uppercase'; opacity: open ? 1 : 0`
   - V2App.jsx:112
 
+## surface-block — 41 signatures
+
+- **4 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line)'; padding: '12px 22px'`
+  - Applications.jsx:836, Companies.jsx:772, Companies.jsx:878, CoverLetterEditor.jsx:561
+- **3 sites** · hover `—` · `background: 'var(--surface)'`
+  - Applications.jsx:495, CoverLetters.jsx:372, JobFeed.jsx:949
+- **3 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line)'; padding: '11px 22px'`
+  - Applications.jsx:700, Companies.jsx:1005, Settings.jsx:904
+- **3 sites** · hover `—` · `background: 'var(--surface-2)'`
+  - CoverLetterEditor.jsx:491, ResumeEditor.jsx:585, ResumeEditor.jsx:611
+- **3 sites** · hover `—` · `background: 'var(--line)'; height: 14`
+  - JobFeed.jsx:1012, JobFeed.jsx:1013, JobFeed.jsx:1014
+- **2 sites** · hover `—` · `background: 'var(--bg)'`
+  - Applications.jsx:331, Settings.jsx:482
+- **2 sites** · hover `—` · `background: 'var(--line)'; height: 20`
+  - Companies.jsx:429, Companies.jsx:440
+- **2 sites** · hover `—` · `background: 'var(--surface)'; borderBottom: '1px solid var(--line-soft)'; padding: '10px 24px'`
+  - CoverLetterEditor.jsx:318, ResumeEditor.jsx:464
+- **2 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '9px 24px'`
+  - CoverLetterEditor.jsx:332, ResumeEditor.jsx:476
+- **1 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--muted)'; fontSize: 13`
+  - Applications.jsx:470
+- **1 sites** · hover `—` · `background: 'var(--line)'`
+  - Applications.jsx:667
+- **1 sites** · hover `—` · `background: 'var(--bg)'; padding: '14px 22px'`
+  - Applications.jsx:695
+- **1 sites** · hover `—` · `background: 'var(--scrim)'`
+  - Companies.jsx:658
+- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '9px 22px'`
+  - Companies.jsx:950
+- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '11px 22px'`
+  - Companies.jsx:962
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line-soft)'; padding: '10px 22px'`
+  - Companies.jsx:973
+- **1 sites** · hover `—` · `background: 'var(--bg)'; padding: '16px 26px 20px 30px'`
+  - CoverLetters.jsx:337
+- **1 sites** · hover `—` · `background: 'var(--on-rail-sep)'; height: 16`
+  - JobFeed.jsx:847
+- **1 sites** · hover `v2-rail` · `background: rowMenu?.id === j.id ? 'var(--surface-2)' : 'transparent'; color: rowMenu?.id === j.id ? 'var(--text)' : 'var(--muted)'; fontSize: 12`
+  - JobFeed.jsx:921
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'`
+  - JobFeed.jsx:1001
+- **1 sites** · hover `—` · `background: 'var(--surface)'; borderTop: '2px solid var(--accent)'`
+  - JobFeed.jsx:1018
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '8px 30px 8px 4px'`
+  - JobFeed.jsx:1139
+- **1 sites** · hover `—` · `background: 'var(--accent-soft)'; borderBottom: '1px solid var(--line)'; padding: '8px 30px 8px 4px'`
+  - JobFeed.jsx:1151
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderBottom: '1px solid var(--line)'; padding: '9px 30px'`
+  - JobFeed.jsx:1167
+- **1 sites** · hover `—` · `background: 'var(--accent-soft)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; padding: '10px 24px'`
+  - JobFeed.jsx:1220
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; padding: '9px 24px'`
+  - ResumeEditor.jsx:549
+- **1 sites** · hover `—` · `background: 'var(--surface-2)'; borderTop: '1px solid var(--line)'; padding: '12px 22px'`
+  - ResumeEditor.jsx:885
+- **1 sites** · hover `—` · `background: 'var(--edge)'; height: 11`
+  - ResumeSections.jsx:125
+- **1 sites** · hover `—` · `background: 'var(--recessed)'; padding: '14px 16px'`
+  - Searches.jsx:589
+- **1 sites** · hover `—` · `background: 'var(--recessed)'; borderTop: '1px solid var(--line-soft)'; padding: '14px 16px'`
+  - Searches.jsx:694
+- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text-2)'; borderBottom: '1px solid var(--line-soft)'; fontSize: 11; padding: '9px 22px'`
+  - Searches.jsx:801
+- **1 sites** · hover `—` · `background: ok ? 'transparent' : 'var(--bad-faint)'; borderBottom: '1px solid var(--line-soft)'; padding: '2px 22px'`
+  - Searches.jsx:837
+- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text-2)'; borderTop: '1px solid var(--line)'; fontSize: 11.5; padding: '11px 22px'`
+  - Searches.jsx:873
+- **1 sites** · hover `—` · `background: 'var(--bg)'; borderBottom: '1px solid var(--line-soft)'; padding: '12px 22px'`
+  - Settings.jsx:999
+- **1 sites** · hover `—` · `background: bg; color: fg`
+  - Stats.jsx:100
+- **1 sites** · hover `—` · `background: 'var(--bad-soft)'; color: 'var(--bad)'; borderBottom: '1px solid var(--line)'; fontSize: 12.5; lineHeight: '18px'; padding: '8px 30px'`
+  - Stats.jsx:411
+- **1 sites** · hover `—` · `background: c; height: 2`
+  - Stats.jsx:526
+- **1 sites** · hover `—` · `background: 'var(--bg)'; color: 'var(--text)'`
+  - ToastLab.jsx:25
+- **1 sites** · hover `—` · `background: 'var(--bg)'; height: '100vh'`
+  - V2App.jsx:101
+- **1 sites** · hover `—` · `background: 'var(--rail)'; padding: '0 0 8px'`
+  - V2App.jsx:102
+- **1 sites** · hover `—` · `background: 'var(--bg)'; borderTop: '1px solid var(--line-soft)'; padding: '12px 24px'`
+  - WelcomeModal.jsx:55
+
+## heading — 32 signatures
+
+- **11 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; letterSpacing: '-.02em'`
+  - Applications.jsx:691, Applications.jsx:786, Companies.jsx:831, Companies.jsx:943, CoverLetterEditor.jsx:541, ResumeEditor.jsx:672, ResumeEditor.jsx:777, ResumeEditor.jsx:847, Searches.jsx:792, Settings.jsx:895, Settings.jsx:995
+- **3 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15; fontWeight: 600; letterSpacing: '-.01em'`
+  - Companies.jsx:693, Companies.jsx:710, Companies.jsx:735
+- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: '26px'; letterSpacing: '-.02em'`
+  - ConfirmDialog.jsx:17, ConfirmDialog.jsx:42
+- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: '24px'; letterSpacing: '-.02em'`
+  - JobFeed.jsx:1215, JobFeed.jsx:1275
+- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; letterSpacing: '-.02em'`
+  - LoginModal.jsx:51, Resumes.jsx:345
+- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; fontWeight: 500; letterSpacing: '-.015em'`
+  - Resumes.jsx:214, Resumes.jsx:254
+- **2 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 17; fontWeight: 500; letterSpacing: '-.015em'`
+  - ToastLab.jsx:38, ToastLab.jsx:58
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; fontWeight: 400; lineHeight: '26px'; letterSpacing: '-.02em'`
+  - Applications.jsx:503
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 20; letterSpacing: '-.02em'`
+  - Companies.jsx:662
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18`
+  - Companies.jsx:898
+- **1 sites** · hover `—` · `color: arc ? 'var(--text-2)' : 'var(--text)'; fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; lineHeight: '22px'; letterSpacing: '-.01em'`
+  - CoverLetters.jsx:309
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 16; fontWeight: 600; letterSpacing: '-.01em'`
+  - CoverLetters.jsx:338
+- **1 sites** · hover `—` · `color: 'var(--text)'; fontFamily: 'var(--serif)'; fontSize: 18`
+  - JobFeed.jsx:862
+- **1 sites** · hover `—` · `color: scoreColor(score); fontFamily: 'var(--serif)'; fontSize: 19; lineHeight: 1`
+  - JobFeed.jsx:885
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 16; fontWeight: 500; lineHeight: 1.15; letterSpacing: '-.01em'`
+  - JobFeed.jsx:901
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: headOpen ? 26 : 17; fontWeight: 400; lineHeight: headOpen ? '30px' : '20px'; letterSpacing: '-.025em'`
+  - JobFeed.jsx:960
+- **1 sites** · hover `—` · `color: scoreColor(best?.score || 0); fontFamily: 'var(--serif)'; fontSize: 14; letterSpacing: '-.02em'`
+  - JobFeed.jsx:1009
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15`
+  - JobFeed.jsx:1053
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; letterSpacing: '-.015em'`
+  - JobFeed.jsx:1187
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; fontWeight: 400; lineHeight: '28px'; letterSpacing: '-.02em'`
+  - LoginModal.jsx:57
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 18; fontWeight: 500; letterSpacing: '-.015em'`
+  - Persona.jsx:174
+- **1 sites** · hover `—` · `color: scoreColor(scores.tailored); fontFamily: 'var(--serif)'; fontSize: 13.5`
+  - ResumeEditor.jsx:483
+- **1 sites** · hover `—` · `color: scoreColor(persona.avg_fit); fontFamily: 'var(--serif)'; fontSize: 17`
+  - Resumes.jsx:217
+- **1 sites** · hover `—` · `color: scoreColor(b.avg_fit); fontFamily: 'var(--serif)'; fontSize: 17`
+  - Resumes.jsx:257
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; letterSpacing: '-.01em'`
+  - Searches.jsx:586
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 15.5; fontWeight: 500; lineHeight: '23px'; letterSpacing: '-.01em'`
+  - Searches.jsx:628
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; fontWeight: 500; lineHeight: '26px'; letterSpacing: '-.015em'`
+  - Settings.jsx:545
+- **1 sites** · hover `—` · `color: 'var(--muted)'; fontFamily: 'var(--serif)'; fontSize: 12`
+  - Settings.jsx:562
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 23; lineHeight: '28px'; letterSpacing: '-.02em'`
+  - Stats.jsx:550
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 19; letterSpacing: '-.01em'; opacity: open ? 1 : 0`
+  - V2App.jsx:104
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 17; letterSpacing: '.02em'; opacity: open ? 0 : 1`
+  - V2App.jsx:105
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 21; fontWeight: 400; lineHeight: '26px'; letterSpacing: '-.02em'`
+  - WelcomeModal.jsx:33
+
+## header-row — 20 signatures
+
+- **7 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '16px 22px 13px'`
+  - Applications.jsx:785, Companies.jsx:660, Companies.jsx:830, CoverLetterEditor.jsx:540, ResumeEditor.jsx:671, ResumeEditor.jsx:776, ResumeEditor.jsx:845
+- **5 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '15px 22px 12px'`
+  - Applications.jsx:690, Companies.jsx:942, Searches.jsx:791, Settings.jsx:894, Settings.jsx:994
+- **5 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '22px 30px 16px'`
+  - CoverLetters.jsx:324, Persona.jsx:322, Settings.jsx:508, Stats.jsx:389, ToastLab.jsx:26
+- **3 sites** · hover `—` · `borderBottom: '1px solid var(--line-strong)'; borderTop: '1px solid var(--line-soft)'; height: 26; padding: '0 20px'`
+  - Stats.jsx:587, Stats.jsx:664, Stats.jsx:688
+- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '0 30px 14px 24px'`
+  - Applications.jsx:349, JobFeed.jsx:732
+- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '8px 20px'`
+  - CoverLetterEditor.jsx:492, ResumeEditor.jsx:588
+- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '20px 24px 16px'`
+  - JobFeed.jsx:1213, JobFeed.jsx:1273
+- **2 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; fontSize: 11.5; lineHeight: '18px'; height: 34; padding: '0 20px'`
+  - Stats.jsx:671, Stats.jsx:693
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '16px 26px 14px'`
+  - Applications.jsx:497
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '2px 30px 12px 24px'`
+  - Companies.jsx:423
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; height: 32; padding: '0 22px'`
+  - Companies.jsx:992
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '13px 30px 9px'`
+  - CoverLetters.jsx:373
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: headOpen ? '20px 30px 15px' : '11px 30px 12px'`
+  - JobFeed.jsx:953
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '0 30px'`
+  - JobFeed.jsx:1020
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; fontSize: 12; lineHeight: '18px'; padding: '8px 0'`
+  - JobFeed.jsx:1106
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line)'; padding: '22px 30px 16px 24px'`
+  - Resumes.jsx:150
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '11px 16px'`
+  - Searches.jsx:585
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '9px 22px'`
+  - Searches.jsx:814
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; padding: '9px 0'`
+  - Settings.jsx:716
+- **1 sites** · hover `—` · `borderBottom: '1px solid var(--line-soft)'; height: 38; padding: '0 20px'`
+  - Stats.jsx:598
+
 ## btn-primary — 33 signatures
 
 - **4 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 13.5; fontWeight: 500; height: 36; padding: '0 18px'; cursor: 'pointer'`
-  - Applications.jsx:344, Companies.jsx:390, JobFeed.jsx:727, Searches.jsx:550
+  - Applications.jsx:344, Companies.jsx:418, JobFeed.jsx:727, Searches.jsx:573
 - **2 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 13; fontWeight: 500; height: 36; padding: '0 19px'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:342, ResumeEditor.jsx:551
 - **2 sites** · hover `—` · `background: canRun ? 'var(--accent)' : 'var(--line)'; color: canRun ? 'var(--accent-ink)' : 'var(--muted)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 33; padding: '0 17px'; cursor: canRun ? 'pointer' : 'default'`
@@ -1281,9 +1250,9 @@
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 33; padding: '0 17px'; opacity: busy ? 0.6 : 1; cursor: busy ? 'default' : 'pointer'`
   - Applications.jsx:839
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 32; padding: '0 16px'; opacity: saving ? 0.6 : 1; cursor: saving ? 'default' : 'pointer'`
-  - Companies.jsx:737
+  - Companies.jsx:779
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 33; padding: '0 17px'; opacity: saving ? 0.6 : 1; cursor: saving ? 'default' : 'pointer'`
-  - Companies.jsx:839
+  - Companies.jsx:881
 - **1 sites** · hover `—` · `background: danger ? 'var(--bad)' : 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 31; padding: '0 16px'; cursor: 'pointer'`
   - ConfirmDialog.jsx:21
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12.5; fontWeight: 500; height: 31; padding: '0 16px'; cursor: 'pointer'`
@@ -1323,9 +1292,9 @@
 - **1 sites** · hover `—` · `background: canCreate ? 'var(--accent)' : 'var(--line)'; color: canCreate ? 'var(--accent-ink)' : 'var(--muted)'; borderRadius: 99; fontSize: 13; fontWeight: 500; height: 40; cursor: canCreate ? 'pointer' : 'default'`
   - Resumes.jsx:354
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12; fontWeight: 500; height: 31; padding: '0 15px'; opacity: busy === 'new' ? .6 : 1; cursor: busy === 'new' ? 'default' : 'pointer'`
-  - Searches.jsx:571
+  - Searches.jsx:594
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12; fontWeight: 500; height: 31; padding: '0 15px'; opacity: busy === s.id ? .6 : 1; cursor: busy === s.id ? 'default' : 'pointer'`
-  - Searches.jsx:668
+  - Searches.jsx:699
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12; fontWeight: 500; height: 30; padding: '0 15px'; cursor: 'pointer'`
   - ToastLab.jsx:49
 - **1 sites** · hover `—` · `background: 'var(--accent)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 12; fontWeight: 500; lineHeight: 1; height: 30; padding: '0 15px'; cursor: 'pointer'`
@@ -1334,11 +1303,11 @@
 ## menu-item — 23 signatures
 
 - **5 sites** · hover `v2-menuitem` · `color: 'var(--text-2)'; borderRadius: 6; fontSize: 12.5; padding: '7px 11px'; cursor: 'pointer'`
-  - Applications.jsx:525, Companies.jsx:525, Companies.jsx:526, Companies.jsx:527, Searches.jsx:648
+  - Applications.jsx:525, Companies.jsx:553, Companies.jsx:554, Companies.jsx:555, Searches.jsx:679
 - **4 sites** · hover `v2-menuitem` · `color: 'var(--text-2)'; borderRadius: 6; fontSize: 13; padding: '7px 11px'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:355, CoverLetterEditor.jsx:361, CoverLetterEditor.jsx:367, ResumeSections.jsx:140
 - **3 sites** · hover `v2-hover-bad` · `color: 'var(--bad)'; borderTop: '1px solid var(--line-soft)'; borderRadius: 6; fontSize: 12.5; padding: '7px 11px'; cursor: 'pointer'`
-  - Applications.jsx:530, Companies.jsx:528, Searches.jsx:652
+  - Applications.jsx:530, Companies.jsx:556, Searches.jsx:683
 - **2 sites** · hover `v2-hover-bad` · `color: 'var(--bad)'; borderRadius: 6; fontSize: 13; padding: '7px 11px'; cursor: 'pointer'`
   - ResumeEditor.jsx:542, ResumeEditor.jsx:563
 - **1 sites** · hover `v2-menuitem` · `color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)'; borderTop: first ? '1px solid var(--line)' : 'none'; borderRadius: 6; fontSize: 12.5; lineHeight: '18px'; padding: '6px 8px'; cursor: 'pointer'`
@@ -1346,7 +1315,7 @@
 - **1 sites** · hover `v2-menuitem` · `background: on ? 'var(--accent-soft)' : 'transparent'; color: on ? 'var(--accent)' : 'var(--text-2)'; borderRadius: 6; fontSize: 12.5; fontWeight: on ? 500 : 400; padding: '7px 9px'; cursor: 'pointer'`
   - Applications.jsx:390
 - **1 sites** · hover `v2-menuitem` · `background: on ? 'var(--accent-soft)' : undefined; color: on ? 'var(--accent)' : 'var(--text-2)'; borderRadius: 6; fontSize: 12.5; fontWeight: on ? 500 : 400; padding: '7px 9px'; cursor: 'pointer'`
-  - Companies.jsx:434
+  - Companies.jsx:462
 - **1 sites** · hover `v2-hover-bad` · `color: 'var(--bad)'; borderTop: '1px solid var(--line-soft)'; borderRadius: 6; fontSize: 13; padding: '7px 11px'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:372
 - **1 sites** · hover `v2-menuitem` · `background: t.id === template ? 'var(--accent-soft)' : 'transparent'; color: t.id === template ? 'var(--accent)' : 'var(--text-2)'; borderRadius: 6; fontSize: 12.5; padding: '7px 9px'; cursor: 'pointer'`
@@ -1395,13 +1364,13 @@
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--accent)'; borderRadius: 9; padding: '10px 12px'`
   - Applications.jsx:622
 - **1 sites** · hover `v2-bd` · `background: on ? 'var(--accent-soft)' : 'var(--surface)'; color: on ? 'var(--accent)' : 'var(--text-2)'; border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 7; fontSize: 12; fontWeight: on ? 600 : 400; height: 33; cursor: 'pointer'`
-  - Companies.jsx:125
+  - Companies.jsx:135
 - **1 sites** · hover `v2-act` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 25; padding: '0 10px'; opacity: testBusy ? 0.5 : 1; cursor: testBusy ? 'default' : 'pointer'`
-  - Companies.jsx:509
+  - Companies.jsx:537
 - **1 sites** · hover `v2-act` · `background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)'; color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)'; border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'); borderRadius: 99; fontSize: 11.5; height: 25; padding: '0 10px'; opacity: testBusy && testingId !== c.id ? 0.5 : 1; cursor: testBusy ? 'default' : 'pointer'`
-  - Companies.jsx:517
+  - Companies.jsx:545
 - **1 sites** · hover `v2-act` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 12; height: 32; padding: '0 13px'; opacity: testingId && testingId !== company.id ? 0.5 : 1; cursor: testingId ? 'default' : 'pointer'`
-  - Companies.jsx:732
+  - Companies.jsx:774
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 6`
   - CoverLetterEditor.jsx:459
 - **1 sites** · hover `—` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--line)'; borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 9.5; height: 16; padding: '0 3px'`
@@ -1427,25 +1396,62 @@
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--line)'; borderRadius: 6; padding: '8px 10px'`
   - ResumeSections.jsx:452
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--accent)'; borderRadius: 10`
-  - Searches.jsx:561
+  - Searches.jsx:584
 - **1 sites** · hover `v2-bd` · `background: 'var(--surface)'; border: `1px solid ${warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : 'var(--line)'}`; borderRadius: 10`
-  - Searches.jsx:594
+  - Searches.jsx:618
 - **1 sites** · hover `v2-bdc` · `background: 'var(--surface)'; color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 11.5; height: 25; padding: '0 9px'; opacity: testBlocked ? .5 : 1; cursor: testBlocked ? 'default' : 'pointer'`
-  - Searches.jsx:635
+  - Searches.jsx:666
 
 ## scrim — 3 signatures
 
 - **18 sites** · hover `—` · `background: 'var(--scrim)'`
-  - Applications.jsx:688, Applications.jsx:783, Companies.jsx:786, Companies.jsx:854, Companies.jsx:898, ConfirmDialog.jsx:15, ConfirmDialog.jsx:40, CoverLetterEditor.jsx:538, JobFeed.jsx:1210, JobFeed.jsx:1270, LoginModal.jsx:44, ResumeEditor.jsx:669, ResumeEditor.jsx:774, ResumeEditor.jsx:843, Resumes.jsx:343, Searches.jsx:758, Settings.jsx:892, Settings.jsx:992
+  - Applications.jsx:688, Applications.jsx:783, Companies.jsx:828, Companies.jsx:896, Companies.jsx:940, ConfirmDialog.jsx:15, ConfirmDialog.jsx:40, CoverLetterEditor.jsx:538, JobFeed.jsx:1210, JobFeed.jsx:1270, LoginModal.jsx:44, ResumeEditor.jsx:669, ResumeEditor.jsx:774, ResumeEditor.jsx:843, Resumes.jsx:343, Searches.jsx:789, Settings.jsx:892, Settings.jsx:992
 - **9 sites** · hover `—` · `(no design keys)`
   - CoverLetters.jsx:64, JobFeed.jsx:83, JobFeed.jsx:830, JobFeed.jsx:929, JobFeed.jsx:978, Persona.jsx:126, ResumeEditor.jsx:529, ResumeEditor.jsx:558, Stats.jsx:642
 - **1 sites** · hover `—` · `background: 'var(--scrim)'; padding: 16`
   - WelcomeModal.jsx:27
 
+## dot-or-badge — 17 signatures
+
+- **4 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 11`
+  - CoverLetterEditor.jsx:345, LoginModal.jsx:78, ResumeEditor.jsx:521, Toast.jsx:63
+- **3 sites** · hover `—` · `border: '1.5px solid var(--muted)'; borderRadius: 99; height: 10`
+  - Companies.jsx:565, Searches.jsx:712, Settings.jsx:491
+- **3 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 9`
+  - CoverLetterEditor.jsx:567, Stats.jsx:107, Stats.jsx:616
+- **3 sites** · hover `—` · `background: on ? 'var(--accent)' : 'transparent'; borderRadius: 99; height: 7`
+  - JobFeed.jsx:1249, ResumeEditor.jsx:703, ResumeEditor.jsx:792
+- **2 sites** · hover `—` · `border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; height: 14`
+  - ResumeEditor.jsx:703, ResumeEditor.jsx:792
+- **1 sites** · hover `—` · `background: st.dot; borderRadius: 99; height: 7`
+  - Applications.jsx:416
+- **1 sites** · hover `—` · `background: s.dot; borderRadius: 99; height: 7`
+  - Applications.jsx:549
+- **1 sites** · hover `—` · `background: h.dot; borderRadius: 99; height: 8`
+  - Applications.jsx:666
+- **1 sites** · hover `—` · `background: h.dot; borderRadius: 99; height: 7`
+  - Companies.jsx:510
+- **1 sites** · hover `—` · `border: '1.5px solid var(--edge)'; borderRadius: 99; height: 10`
+  - CoverLetterEditor.jsx:494
+- **1 sites** · hover `—` · `border: '1.5px solid currentColor'; borderRadius: 99; height: 10`
+  - CoverLetters.jsx:365
+- **1 sites** · hover `v2-act` · `color: 'var(--text-2)'; border: '1px solid var(--edge)'; borderRadius: 99; fontSize: 13; height: headOpen ? 36 : 30; padding: '0 14px'`
+  - JobFeed.jsx:972
+- **1 sites** · hover `—` · `background: 'var(--line)'; borderRadius: 99; height: 4`
+  - JobFeed.jsx:1074
+- **1 sites** · hover `—` · `border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`; borderRadius: 99; height: 15`
+  - JobFeed.jsx:1249
+- **1 sites** · hover `—` · `background: on ? 'var(--accent)' : 'var(--line-strong)'; borderRadius: 99; height: 15`
+  - Settings.jsx:143
+- **1 sites** · hover `—` · `background: on ? 'var(--surface-2)' : 'var(--knob)'; borderRadius: 99; height: 11`
+  - Settings.jsx:148
+- **1 sites** · hover `—` · `background: k.markBg; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 9.5; lineHeight: 1; height: 16`
+  - Toast.jsx:65
+
 ## link — 14 signatures
 
 - **7 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11.5; fontWeight: 500; cursor: 'pointer'`
-  - Applications.jsx:451, Companies.jsx:547, Companies.jsx:554, CoverLetters.jsx:411, Searches.jsx:688, Searches.jsx:695, Settings.jsx:487
+  - Applications.jsx:451, Companies.jsx:575, Companies.jsx:582, CoverLetters.jsx:411, Searches.jsx:719, Searches.jsx:726, Settings.jsx:487
 - **3 sites** · hover `v2-anchor` · `color: 'var(--accent)'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:299, CoverLetterEditor.jsx:300, JobFeed.jsx:865
 - **3 sites** · hover `—` · `color: 'var(--accent)'; fontSize: 11.5; cursor: 'pointer'`
@@ -1476,9 +1482,9 @@
 ## modal-panel — 9 signatures
 
 - **12 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--line)'; borderRadius: 12; boxShadow: 'var(--shadow-modal)'`
-  - Applications.jsx:689, Applications.jsx:784, Companies.jsx:787, Companies.jsx:899, CoverLetterEditor.jsx:539, JobFeed.jsx:1211, JobFeed.jsx:1271, ResumeEditor.jsx:670, ResumeEditor.jsx:775, Searches.jsx:759, Settings.jsx:893, Settings.jsx:993
+  - Applications.jsx:689, Applications.jsx:784, Companies.jsx:829, Companies.jsx:941, CoverLetterEditor.jsx:539, JobFeed.jsx:1211, JobFeed.jsx:1271, ResumeEditor.jsx:670, ResumeEditor.jsx:775, Searches.jsx:790, Settings.jsx:893, Settings.jsx:993
 - **2 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--line)'; borderRadius: 12; boxShadow: 'var(--shadow-modal)'; padding: 22`
-  - Companies.jsx:855, Resumes.jsx:344
+  - Companies.jsx:897, Resumes.jsx:344
 - **2 sites** · hover `—` · `background: 'var(--recessed)'; border: '1px solid var(--line)'; borderRadius: 12; boxShadow: 'var(--shadow-modal)'; padding: '22px 24px 18px'`
   - ConfirmDialog.jsx:16, ConfirmDialog.jsx:41
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 10; boxShadow: 'var(--shadow-menu)'; padding: 8`
@@ -1494,7 +1500,7 @@
 - **1 sites** · hover `—` · `background: 'var(--recessed)'; border: '1px solid var(--line)'; borderRadius: 12; boxShadow: 'var(--shadow-modal)'`
   - WelcomeModal.jsx:29
 
-## section-head — 12 signatures
+## section-head — 14 signatures
 
 - **4 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; fontSize: 12.5; cursor: 'pointer'`
   - Applications.jsx:382, JobFeed.jsx:808, JobFeed.jsx:809, Stats.jsx:403
@@ -1502,6 +1508,8 @@
   - JobFeed.jsx:1040, JobFeed.jsx:1066, JobFeed.jsx:1089
 - **1 sites** · hover `v2-hover-accent` · `borderRadius: 7; lineHeight: '16px'; padding: '12px 8px 5px'; cursor: 'pointer'`
   - Applications.jsx:414
+- **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; fontSize: 11; cursor: 'pointer'`
+  - Companies.jsx:684
 - **1 sites** · hover `v2-clhead` · `borderRadius: '9px 9px 0 0'; padding: '10px 14px'; cursor: 'pointer'`
   - CoverLetterEditor.jsx:39
 - **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; fontSize: 11; height: 26; cursor: 'pointer'`
@@ -1514,12 +1522,47 @@
   - ResumeSections.jsx:158
 - **1 sites** · hover `v2-hover-accent` · `borderRadius: 8; lineHeight: '18px'; padding: '9px 11px'; cursor: 'pointer'`
   - ResumeSections.jsx:268
+- **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; fontSize: 11; lineHeight: '17px'; cursor: 'pointer'`
+  - Searches.jsx:634
 - **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; cursor: 'pointer'`
   - Settings.jsx:565
 - **1 sites** · hover `v2-hover-accent` · `borderBottom: '1px dotted currentColor'; fontWeight: 600; cursor: 'pointer'`
   - Stats.jsx:414
 - **1 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; fontSize: 13; lineHeight: '26px'; cursor: 'pointer'`
   - WelcomeModal.jsx:34
+
+## mono-text — 15 signatures
+
+- **2 sites** · hover `—` · `color: scoreColor(c.score); fontFamily: 'var(--mono)'; fontSize: 10`
+  - Resumes.jsx:233, Resumes.jsx:275
+- **1 sites** · hover `—` · `color: 'var(--edge)'; fontFamily: 'var(--mono)'; fontSize: 10.5`
+  - Applications.jsx:418
+- **1 sites** · hover `—` · `color: 'var(--edge)'; fontFamily: 'var(--mono)'; fontSize: 10.5; lineHeight: '16px'`
+  - CoverLetters.jsx:375
+- **1 sites** · hover `—` · `fontFamily: 'var(--mono)'; fontSize: 10; letterSpacing: '.02em'`
+  - JobFeed.jsx:825
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11`
+  - JobFeed.jsx:835
+- **1 sites** · hover `—` · `color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'`
+  - JobFeed.jsx:911
+- **1 sites** · hover `—` · `color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)'; fontFamily: 'var(--mono)'; fontSize: 12.5`
+  - JobFeed.jsx:963
+- **1 sites** · hover `—` · `color: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)'; fontFamily: 'var(--mono)'; fontSize: 12`
+  - JobFeed.jsx:1069
+- **1 sites** · hover `—` · `color: 'var(--accent)'; fontFamily: 'var(--mono)'; fontSize: 10.5; lineHeight: '16px'`
+  - ResumeEditor.jsx:797
+- **1 sites** · hover `—` · `color: scoreColor(r.score); fontFamily: 'var(--mono)'; fontSize: 11`
+  - Resumes.jsx:184
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 9.5`
+  - Searches.jsx:856
+- **1 sites** · hover `—` · `color: cur ? 'var(--text)' : 'var(--muted)'; fontFamily: mono ? 'var(--mono)' : 'var(--sans)'; fontSize: mono ? 11.5 : 12.5`
+  - Settings.jsx:61
+- **1 sites** · hover `—` · `color: 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
+  - Settings.jsx:688
+- **1 sites** · hover `—` · `color: i === hi ? 'var(--text)' : 'var(--text-2)'; fontFamily: 'var(--mono)'; fontSize: 11; lineHeight: '16px'`
+  - Settings.jsx:1022
+- **1 sites** · hover `—` · `color: 'var(--text)'; fontFamily: 'var(--mono)'; fontSize: 11.5`
+  - Settings.jsx:1040
 
 ## dashed-add — 13 signatures
 
@@ -1532,7 +1575,7 @@
 - **1 sites** · hover `v2-bdc` · `color: 'var(--muted)'; border: '1px dashed var(--line-strong)'; borderRadius: 9; fontSize: 12; height: 34; cursor: 'pointer'`
   - Applications.jsx:647
 - **1 sites** · hover `v2-dashadd` · `color: 'var(--muted)'; border: '1px dashed var(--edge)'; borderRadius: 7; fontSize: 11.5; height: 30; cursor: 'pointer'`
-  - Companies.jsx:113
+  - Companies.jsx:123
 - **1 sites** · hover `—` · `background: 'var(--recessed)'; border: '1px dashed var(--accent)'; borderRadius: 10; padding: '13px 15px'`
   - CoverLetters.jsx:380
 - **1 sites** · hover `—` · `color: 'var(--muted)'; border: '1px dashed var(--edge)'; borderRadius: 99; fontSize: 7.5; height: 34; letterSpacing: '.1em'; textTransform: 'uppercase'`
@@ -1553,22 +1596,49 @@
 ## menu — 6 signatures
 
 - **8 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--line)'; borderRadius: 10; boxShadow: 'var(--shadow-menu)'; padding: 5`
-  - Companies.jsx:524, CoverLetterEditor.jsx:353, CoverLetterEditor.jsx:502, CoverLetterEditor.jsx:517, ResumeEditor.jsx:559, Searches.jsx:644, Settings.jsx:67, Stats.jsx:643
+  - Companies.jsx:552, CoverLetterEditor.jsx:353, CoverLetterEditor.jsx:502, CoverLetterEditor.jsx:517, ResumeEditor.jsx:559, Searches.jsx:675, Settings.jsx:67, Stats.jsx:643
 - **3 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 9; boxShadow: 'var(--shadow-menu)'; padding: 5`
   - Persona.jsx:127, ResumeEditor.jsx:595, ResumeEditor.jsx:604
 - **2 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 10; boxShadow: 'var(--shadow-menu)'; padding: 5`
   - JobFeed.jsx:979, ResumeEditor.jsx:530
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 10; boxShadow: 'var(--shadow-menu)'; padding: 8`
-  - Companies.jsx:428
+  - Companies.jsx:456
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--edge)'; borderRadius: 10; boxShadow: 'var(--shadow-menu)'; padding: 10`
   - JobFeed.jsx:831
 - **1 sites** · hover `—` · `background: 'var(--surface)'; border: '1px solid var(--line)'; borderRadius: 8; boxShadow: 'var(--shadow-menu)'; padding: 4`
   - Settings.jsx:1017
 
+## rule — 4 signatures
+
+- **9 sites** · hover `—` · `background: 'var(--line-soft)'; height: 1`
+  - Companies.jsx:706, Companies.jsx:729, JobFeed.jsx:934, JobFeed.jsx:989, JobFeed.jsx:1042, JobFeed.jsx:1068, ResumeEditor.jsx:536, ResumeEditor.jsx:541, ResumeEditor.jsx:562
+- **2 sites** · hover `—` · `background: 'var(--line)'; height: 1`
+  - JobFeed.jsx:1055, Searches.jsx:578
+- **1 sites** · hover `—` · `background: 'var(--accent)'; height: 1`
+  - JobFeed.jsx:1055
+- **1 sites** · hover `—` · `background: 'var(--rail-line)'; height: 1; opacity: open ? 0 : 1`
+  - V2App.jsx:113
+
+## page-title — 2 signatures
+
+- **10 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 30; fontWeight: 400; lineHeight: 1; letterSpacing: '-.02em'`
+  - Applications.jsx:338, Companies.jsx:411, CoverLetters.jsx:326, JobFeed.jsx:723, Persona.jsx:324, Resumes.jsx:152, Searches.jsx:569, Settings.jsx:510, Stats.jsx:391, ToastLab.jsx:28
+- **1 sites** · hover `—` · `fontFamily: 'var(--serif)'; fontSize: 27; fontWeight: 400; lineHeight: '30px'; letterSpacing: '-.02em'`
+  - Stats.jsx:431
+
+## spinner — 3 signatures
+
+- **9 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 9`
+  - Companies.jsx:540, Companies.jsx:547, Companies.jsx:775, Resumes.jsx:227, Resumes.jsx:267, Searches.jsx:662, Searches.jsx:669, Settings.jsx:747, Stats.jsx:605
+- **1 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 11`
+  - CoverLetters.jsx:381
+- **1 sites** · hover `—` · `border: '1.5px solid var(--accent)'; borderRadius: 99; height: 10`
+  - Stats.jsx:405
+
 ## icon-btn — 3 signatures
 
 - **7 sites** · hover `v2-hover-accent` · `color: 'var(--muted)'; borderRadius: 99; fontSize: 13; height: 26; cursor: 'pointer'`
-  - Applications.jsx:693, Companies.jsx:635, Companies.jsx:905, ResumeEditor.jsx:854, Searches.jsx:763, Settings.jsx:897, Settings.jsx:997
+  - Applications.jsx:693, Companies.jsx:665, Companies.jsx:947, ResumeEditor.jsx:854, Searches.jsx:794, Settings.jsx:897, Settings.jsx:997
 - **1 sites** · hover `v2-navdark` · `color: 'var(--rail-dim)'; borderRadius: 99; fontSize: 13; height: 26; cursor: 'pointer'`
   - V2App.jsx:171
 - **1 sites** · hover `—` · `background: 'var(--surface-2)'; color: 'var(--text-2)'; borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 11; lineHeight: 1; height: 22`
@@ -1583,7 +1653,7 @@
 - **1 sites** · hover `—` · `background: 'var(--bad-soft)'; color: 'var(--bad)'; borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 10.5; padding: '3px 7px'`
   - JobFeed.jsx:1080
 - **1 sites** · hover `—` · `background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)'; color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)'; borderRadius: 99; fontSize: 9.5; padding: '2px 7px'; letterSpacing: '.06em'; textTransform: 'uppercase'; cursor: j.reason ? 'help' : 'default'`
-  - Searches.jsx:830
+  - Searches.jsx:861
 - **1 sites** · hover `—` · `background: 'var(--bad)'; color: 'var(--accent-ink)'; borderRadius: 99; fontSize: 9.5; height: 16`
   - Stats.jsx:412
 - **1 sites** · hover `—` · `background: j.pending ? 'var(--warn)' : 'var(--funnel-low)'; borderRadius: 99; height: 7`
@@ -1611,18 +1681,18 @@
 ## tag — 3 signatures
 
 - **2 sites** · hover `—` · `borderRadius: 99; fontSize: 10; padding: '2px 8px'; letterSpacing: '.06em'; textTransform: 'uppercase'`
-  - Companies.jsx:478, CoverLetters.jsx:313
+  - Companies.jsx:506, CoverLetters.jsx:313
 - **1 sites** · hover `—` · `background: 'var(--accent-soft)'; color: 'var(--good)'; borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 10.5; padding: '3px 7px'`
   - JobFeed.jsx:1079
 - **1 sites** · hover `—` · `borderRadius: 99; fontFamily: 'var(--mono)'; fontSize: 10; padding: '1px 7px'`
-  - Searches.jsx:778
+  - Searches.jsx:809
 
 ## row — 3 signatures
 
 - **1 sites** · hover `v2-arow` · `background: sel === a.id ? 'var(--surface-2)' : 'transparent'; borderLeft: sel === a.id ? '3px solid var(--accent)' : undefined; borderRadius: 7; height: 46; padding: sel === a.id ? '0 10px 0 7px' : '0 10px'; cursor: 'pointer'`
   - Applications.jsx:428
 - **1 sites** · hover `v2-crow` · `borderBottom: '1px solid var(--line-soft)'; height: 46; padding: '0 30px 0 24px'; cursor: 'pointer'`
-  - Companies.jsx:468
+  - Companies.jsx:496
 - **1 sites** · hover `v2-row` · `backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent'; borderBottom: '1px solid var(--line-soft)'; borderRadius: 8; cursor: 'pointer'`
   - JobFeed.jsx:874
 
@@ -1636,7 +1706,7 @@
 ## drawer — 1 signatures
 
 - **1 sites** · hover `—` · `background: 'var(--surface)'; borderLeft: '1px solid var(--line)'; boxShadow: 'var(--shadow-drawer)'`
-  - Companies.jsx:629
+  - Companies.jsx:659
 
 ## toast — 1 signatures
 
