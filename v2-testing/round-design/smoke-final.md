@@ -691,3 +691,254 @@ Two P1 findings were spot-checked directly against the live stack before accepti
 - **Findings by severity:** P1 ×2 (DS-S-11, DS-S-31) · P2 ×1 (DS-S-12) · P3 ×3 (DS-S-14 needs-decision, DS-S-21, DS-S-22) · P4 ×7 (DS-S-01, DS-S-13, DS-S-15, DS-S-16, DS-S-23, DS-S-32, DS-S-33). 13 issues total, DS-S-01 through DS-S-33 (ranges reserved per batch: A 01-10, B 11-20, C 21-30, D 31-40; not all reserved numbers were used).
 - **Scratch data:** none created by this pass (read-only). `ZZA`/`ZZB` rows from parallel flow agents were visible in list snapshots on several routes and left untouched, per instructions.
 - **Don't-fix reminder:** per the task brief this was a verification-only pass — nothing above was fixed in source.
+
+---
+
+## Fixes (source, unbuilt)
+
+Source-only pass on the findings above. No rebuild, no restart, no commit — the
+built bundle still carries the old code, so every claim below is verified against
+the *source* (esbuild parse/minify, `stylelint.py`, brace balance) plus live DOM
+experiments that patched the running page to prove the layout fix before it was
+written. Fixed on branch `v2-redesign`, working tree only.
+
+| DS id | file:line | change |
+|---|---|---|
+| DS-S-31 (P1) | `frontend/src/v2/theme.css:318` (plus a new guard note at `:324`) | The alt-skin block's header comment said `Deliberately NOT re-skinned: --cc-*/--sm-* …`. The `*` of the `--cc-*` glob and the `/` before `--sm-*` spell a literal comment terminator, which **closed the comment 15 lines early**. The surviving prose then parsed as a selector prelude that swallowed the `.jn-v2[data-skin="alt"]` selector and its whole block. Rewrote the two globs as prose (`the --cc- and --sm- families`) and added a note saying why it must never be re-globbed. |
+| DS-S-11 (P1) + DS-S-12 (P2) | `frontend/src/v2/ui.jsx:295` (`SearchInput`; comment at `:287`) | Wrapper `<span>` went from `flex: width ? '0 0 <width>' : '0 1 226px'` to `width: width || 226, flex: '0 1 auto'` (`minWidth: 0` kept). One shared-component change fixes both shelves. |
+| DS-S-21 (P3) + DS-S-32 (P4) | `frontend/src/v2/ui.jsx:311-336` (`Select`) | The open-listbox effect now also registers a **capture-phase** `keydown` on `document` that, on Escape, calls `preventDefault()` + `stopPropagation()` and closes the listbox. Closed, nothing is registered and Escape falls through to a parent modal. |
+| DS-S-01, DS-S-13, DS-S-14, DS-S-15, DS-S-16, DS-S-23 | — | No code change. DS-S-01/13/15/16/23 are negative or test-methodology findings; DS-S-14 is a confirmed-deliberate addition. |
+| DS-S-22 (P3) | `frontend/src/v2/Stats.jsx` ~674-686 | **Not fixed** — outside this pass's scope (a P3 needs-decision in a screen file, not `ui.jsx`). It is a one-liner once someone decides: `useEscape(() => setTypeOpen(false), typeOpen)`. |
+| DS-S-33 (P4) | `frontend/src/v2/ToastLab.jsx` | **Not fixed** — not a `ui.jsx` one-liner (it needs a `kb()`/`act()` pass over ~11 separate `<div onClick>`s), and the file's own header marks the page as temporary. Left as logged. |
+
+### DS-S-31 — root cause, precisely
+
+Not a minifier bug and not a stale artifact. `theme.css:318` read:
+
+```
+   Deliberately NOT re-skinned: --cc-*/--sm-* (the ATS and search-mode badge
+```
+
+The `*` ending the `--cc-*` glob and the `/` that followed it form a comment
+terminator, so the block comment that opened at `theme.css:302`
+(`/* -- Skin: alt (design pass D6) ---`) **ended there** instead of 15 lines
+later. Everything after it — `--sm-* (the ATS … leak a light colour into the dark
+skin. */ .jn-v2[data-skin="alt"]` — became one unparseable selector prelude, and
+the browser discarded that prelude *together with the `{…}` block it introduced*.
+That block was the alt light palette. The next rule,
+`.jn-v2[data-skin="alt"][data-theme="dark"]`, starts a fresh prelude and parses
+normally — which is exactly why alt worked in dark and was inert in light.
+
+This also resolves the report's puzzle that the correct bytes ship in the served
+CSS while the parsed `cssRules` has no such rule: the *text* is present and
+byte-clean, but it is not the start of the rule — the dead comment tail in front
+of it is, and that is what the parser choked on. Nothing was dropped, merged or
+de-duplicated by the build.
+
+Reproduced and verified with the command the task names:
+
+```
+npx esbuild@0.21.5 frontend/src/v2/theme.css --minify --loader:.css=css
+```
+
+- **Before:** esbuild emits `▲ [WARNING] Unexpected "*" [css-syntax-error] theme.css:318:44`, and the minified output contains
+  `…--focus-ring:var(--ring-accent)}--sm-* (the ATS … */ .jn-v2[data-skin="alt"]{--bg:#f7f8fa;…}` — the comment prose is *inside* the selector.
+- **After:** 0 warnings, no prose in the output, and the four rules appear in this order with this specificity:
+
+| # | selector | specificity |
+|---|---|---|
+| 0 | `.jn-v2` (light default) | 0,1,0 |
+| 1 | `.jn-v2[data-theme=dark]` | 0,2,0 |
+| 2 | `.jn-v2[data-skin=alt]` | 0,2,0 |
+| 3 | `.jn-v2[data-skin=alt][data-theme=dark]` | 0,3,0 |
+
+Alt-light (2) beats base-light (0) on specificity; alt-dark (3) beats both
+base-dark (1) and alt-light (2). Rule 2 sits *after* rule 1 at equal specificity,
+so in dark+alt any token rule 2 sets that rule 3 forgets would leak a light
+colour — the hazard the source comment already warns about, and which was latent
+for as long as the rule was being dropped. Re-checked: **both alt blocks declare
+an identical set of 57 custom properties**, no light-only or dark-only names, so
+nothing leaks.
+
+### DS-S-11 / DS-S-12 — root cause, precisely
+
+One defect in the shared `SearchInput`, surfacing twice. `ui.jsx` sized the
+wrapper `<span>` with `flex: 0 0 <width>` — a flex-*basis*, with no `width`
+property. A flex item's **intrinsic contribution** to its parent's `max-content`
+size is measured from its *content*, not from its flex-basis, and the content
+here is a bare `<input>` whose default intrinsic width is ~178px. So:
+
+- **Résumés** — the actions group (`flex: 0 1 auto`, basis `auto` → max-content)
+  measured `178 (span) + 10 (gap) + 127 (Button) = 315px` and was laid out 315px
+  wide, right-aligned to the header's 1410px content edge. Inside it the span
+  then took its inflexible 300px basis and overflowed by 122px, pushing the
+  Button — already correctly `flex: 0 0 auto; whiteSpace: nowrap` — out to
+  `left=1405, right=1532`, past `<main>`'s `overflow-x:hidden`. Measured live:
+  group `width=315` but `scrollWidth=437`. The 315px was **not** a space
+  shortage — the header had 477px of free space at 1440. Setting the group to
+  `flex: 0 0 auto` changed nothing, which is what ruled out a shrink problem and
+  pointed at intrinsic sizing.
+- **Cover Letters** — the same arithmetic with no Button: group = `178px`, the
+  span inside laid out at its 280px basis, overflowing by exactly the 102px the
+  report measured. Nothing was visibly clipped only because an ancestor clips it
+  first.
+
+Giving the wrapper a real `width` makes its contribution equal the declared
+width, so the group measures the full `300 + 10 + 127 = 437`; `flex: 0 1 auto` +
+`minWidth: 0` then keeps the *field* (never the button) as the thing that yields
+when the header genuinely runs out of room.
+
+Validated by patching the live DOM on the running (pre-fix) bundle — read-only,
+no rebuild — applying exactly this style change and re-measuring the furthest
+right edge under `main`:
+
+| route | viewport | before | after |
+|---|---|---|---|
+| `/v2/resumes` | 1440 | 1532 | **1440** |
+| `/v2/resumes` | 1024 | 1116 | **1024** |
+| `/v2/cover-letters` | 1440 | 1512 | **1440** |
+| `/v2/cover-letters` | 1024 | 1096 | **1024** |
+| `/v2/feed` | 1440 / 1024 | 1440 / 1024 | 1440 / 1024 (unchanged) |
+| `/v2/companies` | 1440 / 1024 | 1440 / 1024 | 1440 / 1024 (unchanged) |
+
+On `/v2/resumes` the button lands whole at `1283–1410` (1440) and `867–994`
+(1024) with the search field keeping its full 300px, and it still holds at 860px.
+Field widths on Feed and Companies are unchanged at 226px, so the two boxed
+filter-bar users are unaffected.
+
+**Other screen headers checked for the same pattern** — Companies
+(`Companies.jsx:397/411`), Applications (`Applications.jsx:330/345`), Searches
+(`Searches.jsx:560`) and Feed (`JobFeed.jsx:722/733`) do **not** pair a search
+with a button in one header row: each puts its `+ …` Button alone in the title
+`HeaderRow` and its search in a separate toolbar row. Applications' toolbar uses
+its own `v2-fieldwrap` (`flex: 0 1 210px` + `minWidth: 0` — already shrinkable,
+not `SearchInput`). All measured clean at 1440 and 1024 both before and after, so
+no changes were made to those files.
+
+### Select Escape — behaviour
+
+Matches the Settings model-catalog typeahead
+(`Settings.jsx:1057` — `if (e.key === 'Escape' && showSug) { e.preventDefault(); setSugOpen(false); return }`),
+but at document level, because a `Select`'s popover has no single focused input
+to hang the handler on. Capture phase is required rather than incidental:
+`useEscape` (`hooks.js:18`) listens on `document` in the **bubble** phase and a
+parent modal registers *before* the popover opens, so the "child effects register
+first" ordering `useEscape` documents does not apply here — a capture listener
+always runs first. Confirmed in a headless DOM test:
+
+- listbox open → `['select-closed']` only; the modal handler never runs and the
+  focused input never sees the key;
+- listbox closed (listener removed) → `['input-saw-Escape', 'modal-closed']`.
+
+### Gates
+
+- `py v2-testing/tools/stylelint.py` → `0 findings ({}), 109 allowed, 0 css`, **exit 0**
+- `npx esbuild@0.21.5 --loader:.jsx=jsx frontend/src/v2/ui.jsx` → parses clean
+- `npx esbuild@0.21.5 frontend/src/v2/theme.css --minify --loader:.css=css` → **0 warnings** (was 1); `frontend/src/index.css` also checked, clean
+- Brace balance — `ui.jsx` 508 `{` / 508 `}` (HEAD 507/507; +1 balanced pair from the new listener-cleanup block); `theme.css` 86/86, identical to HEAD
+- Alt-block token parity — 57 names in each of the two alt blocks, no light-only or dark-only name
+
+### Still needs a rebuild to confirm
+
+Nothing here is live. `docker compose build frontend` plus a repeat of the four
+affected checks — light+alt colour sampling on `/v2/ui` and `/v2/settings`;
+`no h-overflow` on `/v2/resumes` and `/v2/cover-letters`; Escape on Persona's
+enum Picker and `/v2/ui`'s Provider select — is the confirmation pass.
+
+### Addendum — two items from `flows-A-final.md`
+
+Same source-only pass, same rules (no rebuild, no restart, no commit). The
+backend file needs a container restart to take effect; the two frontend files
+need a rebuild.
+
+| DS id | file:line | change |
+|---|---|---|
+| DS-A-03 (P2) | `frontend/src/v2/Applications.jsx:158` and `:489` | Escape no longer routes to `closeLog()` unless the Log modal is actually open, and a successful save now clears the dirty flag. |
+| DS-A-02 (P2) | `backend/api/routes_searches.py:370-394`, `:466-469`, `:497`, `:515-519`, `:312-314`; `frontend/src/v2/Searches.jsx:745-750`, `:884-890`, `:866` | The Searches test preview now applies `title_exclude_global` as its own layer, labels the rows it drops, and counts them in the footer. Three tests added in `backend/tests/test_routes_searches.py`. |
+
+#### DS-A-03 — Applications Escape after a save
+
+Two independent changes, both of the ones the finding proposed:
+
+- `:489` — `onSaved` was `setLogOpen(false)`, which unmounts the form but leaves
+  `logDirty.current` true. It is now `dropLog()`, the existing helper that clears
+  the flag *and* closes. The draft itself is `LogModal`'s own `useState`
+  (`:742` onwards) and dies with the unmount, so there is nothing else to reset.
+- `:158` — `useEscape(() => { closeAll(); setPrep(null); setEditIv(null); closeLog() }, !confirm)`
+  became `… if (logOpen) closeLog() …`. This is the real fix: unguarded,
+  `closeLog()` ran on **every** Escape anywhere on the screen, so a stale dirty
+  flag from any path could raise the discard confirm — and, since the design pass
+  swapped `window.confirm` for the DOM `ConfirmDialog`, its full-viewport
+  `z-index:70` scrim then blocked every click until a second Escape.
+
+`logOpen` is the `useState` at `:102`, and `useEscape` holds its callback in a
+ref (`hooks.js:19-20`) that is refreshed on every render, so the guard reads the
+current value even though the listener itself is registered once.
+
+#### DS-A-02 — Searches preview vs. the global title-exclude list
+
+Backend, `test_search` in `routes_searches.py`:
+
+- After the per-search title layers and the company filter/exclude, and **before**
+  the body scan (the run's order — `sources/jobspy.py:285` merges the global list
+  into the title filter, which runs before anything else), the preview now reads
+  `title_exclude_global` through the same `get_global_title_exclude(db)` helper
+  the Companies preview uses, and word-boundary-matches it case-insensitively —
+  identical regex to `routes_companies.py:603`.
+- `after_search_filter` is snapshotted *before* that layer, so the response says
+  both how many rows passed this search's own filters and how many the global
+  list then removed.
+- Per row: `global_excluded_by` (the matched keywords, or `[]`) and
+  `reason = "[Global] Excluded by: <kw>"` — the same string the Companies preview
+  emits. The reason chain places it after the per-search and company reasons and
+  before the body-exclusion one, so a row dropped by this search's own list keeps
+  its own label rather than being relabelled `[Global]`.
+- Response gains `after_search_filter`, `global_excluded_count`,
+  `global_exclude_keyword_count`; the empty-result early return carries the same
+  three keys at 0 so the payload shape does not change with the result count.
+
+Frontend, `Searches.jsx` `TestModal`:
+
+- Footer: `nTitleFiltered` now subtracts the global drops too (they were being
+  counted as title-filtered), and a `· N removed by the global list
+  (M pass this search's filters)` term appears when there are any — the same
+  arithmetic the Companies footer prints (`Companies.jsx:903-906`).
+- Row status badge: a global drop reads `GLOBAL` rather than a bare `OUT`, since
+  the row did pass this search's own filters; its `reason` line already renders
+  under the title.
+
+Tests — `backend/tests/test_routes_searches.py`, three added, all stubbing
+`jobspy.scrape_jobs` (the handler imports it at call time, so patching the module
+attribute is enough):
+
+- `test_preview_applies_global_title_exclude` — 3 rows, global list
+  `["intern", "marketing"]`: `after_filter == 1`, `after_search_filter == 3`,
+  `global_excluded_count == 2`, and the two dropped rows carry the right
+  `global_excluded_by` and `[Global] Excluded by: …` reason. This is the exact
+  shape of the finding's measured repro (`Intern, Design Engineering` and
+  `Staff Technical Product Marketing Manager` kept by the preview, `ignored` by
+  the run).
+- `test_preview_global_exclude_is_word_bounded_and_optional` — `Internal
+  Communications Manager` is **not** dropped by a global `intern`, matching the
+  run's word-bounded filter.
+- `test_preview_per_search_exclude_still_wins_its_own_label` — a per-search
+  exclude keeps `Excluded by: senior`, is not relabelled `[Global]`, and does not
+  count toward `global_excluded_count`.
+
+The helper blanks `Search.title_exclude_keywords` by default, because the model
+seeds it with `["intern", "junior", "associate"]` (`models/db.py:62`) — without
+that, the per-search layer swallows the row before the global layer is reached
+and the test measures the wrong thing.
+
+#### Gates (addendum)
+
+- `python -m pytest backend/tests -q` **in the running backend container** → **861 passed**, 3 pre-existing warnings (the full suite, not just the new file; the new tests are 3 of the 10 in `test_routes_searches.py`)
+- `npx esbuild@0.21.5 --loader:.jsx=jsx` on `ui.jsx`, `Applications.jsx`, `Searches.jsx` → all parse clean
+- `ast.parse` on `routes_searches.py` and `test_routes_searches.py` → clean
+- `py v2-testing/tools/stylelint.py` → 0 findings, exit 0
+- Brace balance vs HEAD — `Applications.jsx` 734/734 (HEAD 733/733, +1 pair: the new JSX comment), `Searches.jsx` 766/766 (HEAD 756/756, +10 pairs: the new footer terms and consts), `ui.jsx` 508/508, `theme.css` 86/86
+
+#### Restart / rebuild needed
+
+- `backend/api/routes_searches.py` — **backend container restart** (uvicorn runs without `--reload`). Handing this to the coordinator rather than restarting it here, since flow agents are live.
+- `frontend/src/v2/Applications.jsx`, `Searches.jsx`, `ui.jsx`, `theme.css` — frontend rebuild.
