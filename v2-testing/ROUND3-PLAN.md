@@ -27,3 +27,9 @@ Starts after the round-2 fixes land (two Opus agents in flight on 2026-09-04). O
 - `406aebe` + `2946d5b` + `8985b53`: R3-A-01/03/04/06/07 fixed, R3-B-01 Title field, user-reported R3-U-03..06 (row hover, input focus, filter hovers, archived band). Verified live (`round3/verify-final.md` 8/10, then R3-A-03/R3-A-06 re-fixed and re-checked: real run shows the ZipRecruiter 403 per board; Applications renders with an interview and edits inline). 776 tests pass.
 - DB restored again from `backups/round3_baseline_20260904.dump`; counts verified (126 / 6 / 377 / 4 / 16 / 18843), 0 `ZZ*` rows.
 - Consolidated open-items report (text excluded): `v2-testing/REPORT-open.md` (Opus).
+
+## PAUSED 2026-09-04 (usage limit) — resume here
+- Code: HEAD `63790cf` is built and live (OPEN-list fixes `2927bdb` + health/acknowledge `63790cf`); 858 tests pass in the container.
+- Verification of the OPEN-list fixes: `round3/verify-open.md` has OPEN-01..06, 08, 10 ✔. **Still to verify live:** OPEN-12 (save-from-extension reason), OPEN-13 (preview tracked links), OPEN-16 (Jobright read-only row), and the HEALTH-ACK checks (inactive entities excluded, acknowledge endpoints/links, 409 on extension searches). The Sonnet verifier was stopped mid-run; re-launch with the same brief (see chat/SendMessage text of 2026-09-04) or verify by hand.
+- Then: statuses in `REPORT-open.md`, DB restore from `backups/round3_baseline_20260904.dump` (the DB currently holds no ZZ* rows but may carry runs/logs from verification), commit.
+- Then the design pass: `DESIGN-PASS-PLAN.md` D0 (baselines) — the scanner draft `tools/stylescan.py` exists; widen its classifier before showing the D1 table.
