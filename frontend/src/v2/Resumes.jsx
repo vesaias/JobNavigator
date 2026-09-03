@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
-import { useEscape, useFlashToast } from './hooks'
+import { useEscape, useFlashToast, useSnapTop } from './hooks'
 import { kb, EMPTY } from './ResumeSections'
 
 const timeAgo = (s) => {
@@ -310,6 +310,8 @@ function AddModal({ onClose, onCreated }) {
   const [err, setErr] = useState('')
   const fileRef = useRef(null)
   useEscape(onClose)   // RES-15
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
 
   const createScratch = async () => {
     if (!name.trim() || busy) return
@@ -339,7 +341,7 @@ function AddModal({ onClose, onCreated }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
         <div style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', marginBottom: 4 }}>New base résumé</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Résumé name (e.g. Backend — Platform v4)"

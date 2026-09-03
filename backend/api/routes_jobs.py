@@ -575,6 +575,12 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
             except Exception as e:
                 logger.warning(f"on-save auto-score launch failed for {job.id}: {e}")
 
+    # R2-H-05: "Applied" is a compound action — it can create an Application and a
+    # Company alongside the status change. Report what it created so the Feed's
+    # Undo can reverse all of it instead of leaving orphans behind.
+    created_application_id = None
+    created_company_id = None
+
     # Auto-cache page and create Application when status changes to applied
     if updates.get("status") == "applied":
         if job.url and not job.has_cached_page:
@@ -590,6 +596,7 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
                               status_transitions=[{"from": None, "to": "applied", "at": datetime.now(timezone.utc).isoformat(), "source": "ui"}])
             db.add(app)
             db.commit()
+            created_application_id = str(app.id)
 
         # Auto-create company if it doesn't exist
         if job.company and job.company.strip():
@@ -605,10 +612,14 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
                 )
                 db.add(new_co)
                 db.commit()
+                created_company_id = str(new_co.id)
                 from backend.analyzer.h1b_checker import fetch_h1b_for_company_id
                 background_tasks.add_task(fetch_h1b_for_company_id, str(new_co.id))
 
-    return _job_to_dict(job)
+    result = _job_to_dict(job)
+    result["created_application_id"] = created_application_id
+    result["created_company_id"] = created_company_id
+    return result
 
 
 @router.post("/cache-applied")

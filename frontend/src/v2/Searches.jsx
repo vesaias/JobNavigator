@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
+import ConfirmDialog from './ConfirmDialog'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -127,7 +128,21 @@ const draftOf = (s) => ({
   auto_scoring_depth: s.auto_scoring_depth || 'off',
   run_interval_minutes: s.run_interval_minutes ?? 0,
 })
-const NEW_DRAFT = draftOf({ sources: ['linkedin', 'indeed', 'zip_recruiter', 'google'], title_exclude_keywords: ['intern', 'junior', 'associate'] })
+// R2-H-03: a new search opens on Light, the same as the Add-company modal — the
+// two creation flows used to disagree (off vs light) on the one control that
+// spends money per scraped job.
+const NEW_DRAFT = draftOf({ sources: ['linkedin', 'indeed', 'zip_recruiter', 'google'], title_exclude_keywords: ['intern', 'junior', 'associate'], auto_scoring_depth: 'light' })
+
+// R2-A-02: the numeric bounds live in one place so an input's min/max and the
+// payload clamp can't drift apart (COMP-12 did the same for Companies).
+const BOUNDS = {
+  hours_old: [0, 720],
+  results_wanted: [1, 500],
+  results_wanted_jobright: [20, 500],
+  max_pages: [1, 50],
+  min_fit_score: [0, 100],
+  run_interval_minutes: [0, 10080],
+}
 
 const toPayload = (d) => {
   const list = (v) => (v || '').split(',').map((x) => x.trim()).filter(Boolean)
@@ -135,20 +150,26 @@ const toPayload = (d) => {
   // cleared field now goes out as null — the backend falls back to the column
   // default on create and stores NULL on update, which reads back as the default.
   const num = (v) => { const n = parseInt(v, 10); return Number.isNaN(n) ? null : n }
+  // R2-A-02: `parseInt(x) || fallback` swallowed a legal 0 (max_pages 0 became 50)
+  // and let a negative page count or a 999-page run reach the wire, while the
+  // "20–500" label enforced nothing. Clamp to the bounds the inputs declare; a
+  // cleared field still goes out as null so the column default applies.
+  const clamp = (v, key) => { const n = num(v); if (n == null) return null; const [lo, hi] = BOUNDS[key]; return Math.min(hi, Math.max(lo, n)) }
+  const rwKey = d.search_mode === 'jobright' ? 'results_wanted_jobright' : 'results_wanted'
   const p = {
     name: d.name, search_mode: d.search_mode,
     search_term: d.search_term || null, direct_url: d.direct_url || null,
     is_remote: d.is_remote === 'true' ? true : d.is_remote === 'false' ? false : null,
-    job_type: d.job_type, hours_old: num(d.hours_old),
-    results_wanted: num(d.results_wanted),
-    max_pages: parseInt(d.max_pages) || 50, min_fit_score: parseInt(d.min_fit_score) || 0,
+    job_type: d.job_type, hours_old: clamp(d.hours_old, 'hours_old'),
+    results_wanted: clamp(d.results_wanted, rwKey),
+    max_pages: clamp(d.max_pages, 'max_pages') ?? 50, min_fit_score: clamp(d.min_fit_score, 'min_fit_score') ?? 0,
     require_salary: !!d.require_salary, sources: d.sources,
     title_include_keywords: list(d.title_include_keywords),
     title_exclude_keywords: list(d.title_exclude_keywords),
     company_filter: list(d.company_filter), company_exclude: list(d.company_exclude),
     exclude_active_companies: !!d.exclude_active_companies,
     auto_scoring_depth: d.auto_scoring_depth,
-    run_interval_minutes: parseInt(d.run_interval_minutes) || 0,
+    run_interval_minutes: clamp(d.run_interval_minutes, 'run_interval_minutes') ?? 0,
   }
   // SRCH-12: location is a keyword-search field only — sending it for
   // levels_fyi / jobright / freehire / extension searches means nothing.
@@ -157,7 +178,7 @@ const toPayload = (d) => {
 }
 
 // ── small pieces ─────────────────────────────────────────────────────────────
-function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type }) {
+function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type, min, max }) {   // R2-A-02: min/max
   const st = {
     width: '100%', height: 31, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7,
     background: disabled ? 'var(--surface-2)' : 'var(--surface)', color: disabled ? 'var(--muted)' : 'var(--text)',
@@ -170,7 +191,7 @@ function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, 
         ? <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} style={st}>
             {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-        : <input type={type || 'text'} value={value} disabled={disabled} placeholder={placeholder}
+        : <input type={type || 'text'} value={value} disabled={disabled} placeholder={placeholder} min={min} max={max}
             onChange={(e) => onChange(e.target.value)} style={st} />}
       {sub && <span style={{ ...HELP, textWrap: 'pretty' }}>{sub}</span>}
     </div>
@@ -228,20 +249,20 @@ function ConfigForm({ d, set }) {
       <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="United States" />,
       <Cell key="rem" label="Remote" value={d.is_remote} options={[['', 'Any'], ['true', 'Remote only'], ['false', 'On-site only']]} onChange={(v) => set({ is_remote: v })} />,
       <Cell key="jt" label="Job type" value={d.job_type} options={[['fulltime', 'Full-time'], ['parttime', 'Part-time'], ['contract', 'Contract']]} onChange={(v) => set({ job_type: v })} />,
-      <Cell key="ho" label="Hours old" mono type="number" value={d.hours_old} onChange={(v) => set({ hours_old: v })} />,
-      <Cell key="rw" label="Results wanted" mono type="number" value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+      <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })} />,
+      <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
   } else if (m === 'levels_fyi') {
     fields.push(
-      <Cell key="mp" label="Max pages" mono type="number" value={d.max_pages} onChange={(v) => set({ max_pages: v })} />,
+      <Cell key="mp" label="Max pages · 1–50" mono type="number" min={BOUNDS.max_pages[0]} max={BOUNDS.max_pages[1]} value={d.max_pages} onChange={(v) => set({ max_pages: v })} />,
       <Cell key="url" label="Levels.fyi URL · filters applied" mono span={3} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
         placeholder="https://www.levels.fyi/jobs/location/united-states?jobFamilySlugs=software-engineer" />,
     )
   } else if (m === 'jobright') {
     fields.push(
       <Cell key="term" label="Search term · optional" value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="Leave empty for AI recommendations" />,
-      <Cell key="rw" label="Results wanted · 20–500" mono type="number" value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
-      <Cell key="ms" label="Min score" mono type="number" value={d.min_fit_score} onChange={(v) => set({ min_fit_score: v })} placeholder="0 = no filter" />,
+      <Cell key="rw" label="Results wanted · 20–500" mono type="number" min={BOUNDS.results_wanted_jobright[0]} max={BOUNDS.results_wanted_jobright[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+      <Cell key="ms" label="Min score · 0–100" mono type="number" min={BOUNDS.min_fit_score[0]} max={BOUNDS.min_fit_score[1]} value={d.min_fit_score} onChange={(v) => set({ min_fit_score: v })} placeholder="0 = no filter" />,
     )
   } else if (m === 'freehire') {
     fields.push(
@@ -250,7 +271,7 @@ function ConfigForm({ d, set }) {
       <Cell key="url" label="freehire.me URL · filters forwarded" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
         placeholder="https://freehire.me/?role=backend&seniority=senior&countries=us"
         sub="Role, seniority, countries, posted_within_days… pass straight through" />,
-      <Cell key="rw" label="Results wanted" mono type="number" value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+      <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
   }
 
@@ -292,7 +313,7 @@ function ConfigForm({ d, set }) {
         {!ext ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={MICRO}>Run interval · min</span>
-            <input type="number" min={0} value={d.run_interval_minutes} onChange={(e) => set({ run_interval_minutes: e.target.value })}
+            <input type="number" min={BOUNDS.run_interval_minutes[0]} max={BOUNDS.run_interval_minutes[1]} value={d.run_interval_minutes} onChange={(e) => set({ run_interval_minutes: e.target.value })}
               style={{ width: 110, height: 31, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 7, background: 'var(--surface)', color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 11.5, outline: 'none' }} />
             <span style={HELP}>0 follows the global schedule from Settings</span>
           </div>
@@ -326,6 +347,7 @@ export default function Searches() {
   const [nextRun, setNextRun] = useState(null)
   const [test, setTest] = useState(null)       // {name, data} | {name, error}
   const [testingId, setTestingId] = useState(null)
+  const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
   const [busy, setBusy] = useState(null)      // SRCH-29: 'new' | search id while a POST/PATCH is in flight
   const [testTab, setTestTab] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -347,16 +369,16 @@ export default function Searches() {
   // a run finishes, not only on mount. Failures stay silent and leave whatever
   // was loaded before in place.
   const loadAux = useCallback(() => {
-    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => {})
+    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => { /* silent: SRCH-24 — re-read after every mutation; a failure leaves the last verdict in place */ })
     api.get('/scheduler/jobs').then(({ data }) => {
       const j = (data || []).find((x) => x.id === 'scrape_all')
       if (j?.next_run) setNextRun(j.next_run)
-    }).catch(() => {})
+    }).catch(() => { /* silent: SRCH-24 — the “next run” hint keeps its last value */ })
   }, [])
   useEffect(() => {
     load()
     loadAux()
-    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => {})
+    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => { /* silent: poller — the interval below retries */ })
   }, [load, loadAux])
 
   // SRCH-28: one interval for the life of the screen. It used to list `running`
@@ -462,10 +484,16 @@ export default function Searches() {
       setRunning((m) => { const n = { ...m }; delete n[s.id]; return n })
     }
   }
-  const remove = async (s) => {
+  // R2-A-01: the styled dialog every other v2 destructive action uses.
+  const remove = (s) => {
     setMenuFor(null)
-    if (!window.confirm(`Delete "${s.name}"?`)) return
-    try { await api.delete(`/searches/${s.id}`); load(); loadAux(); bumpCounts() } catch (e) { fail(e, `Could not delete “${s.name}”`) }
+    setConfirm({
+      title: `Delete “${s.name}”?`, body: 'Jobs this search already found are kept.', label: 'Delete', danger: true,
+      onConfirm: async () => {
+        setConfirm(null)
+        try { await api.delete(`/searches/${s.id}`); load(); loadAux(); bumpCounts(); pushToast({ kind: 'success', msg: `“${s.name}” deleted` }) } catch (e) { fail(e, `Could not delete “${s.name}”`) }
+      },
+    })
   }
   const duplicate = async (s) => {
     setMenuFor(null)
@@ -661,6 +689,7 @@ export default function Searches() {
       </div>
 
       {test && <TestModal test={test} tab={testTab} setTab={setTestTab} onClose={() => setTest(null)} />}
+      {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -761,9 +790,15 @@ function TestModal({ test, tab, setTab, onClose }) {
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
                     {/* SRCH-27: a preview row can arrive with url: null - render
                         the title as text then, not as a link that goes nowhere */}
-                    {j.url
-                      ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.title}</a>
-                      : <span title={j.title} style={{ flex: 2, minWidth: 0, fontSize: 12, color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8, cursor: 'default' }}>{j.title}</span>}
+                    {/* R2-H-01: the reason a row was filtered is the whole point of
+                        the Filtered tab, and it only existed on the OUT chip's
+                        title= — one hover per row. Render it under the title. */}
+                    <span style={{ flex: 2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, paddingRight: 8 }}>
+                      {j.url
+                        ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</a>
+                        : <span title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'default' }}>{j.title}</span>}
+                      {j.reason && <span title={j.reason} style={{ minWidth: 0, fontSize: 11, lineHeight: '15px', color: ok ? 'var(--muted)' : 'var(--bad)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.reason}</span>}
+                    </span>
                     <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
                     <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>

@@ -158,19 +158,19 @@ export default function CoverLetters() {
     // isn't in these windows, and this response usually lands last (the 200-job
     // list is the slowest call on the screen) — replacing wiped the deep link.
     const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch(() => {})
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch(() => { /* silent: the generate panel's Generate button stays disabled without a source, which is the signal */ })
+    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional source among the bases */ })
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
     // landed on an id with no matching option and the field rendered blank
     api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
-      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch(() => {})
+      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch(() => { /* silent: auxiliary picker window; the ?job= deep link below reports its own failure */ })
     api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       const list = Array.isArray(p) ? p : []
       setPresets(list)
       setGenVoice(data.cover_letter_default_voice || list[0]?.id || '')
-    }).catch(() => {})
+    }).catch(() => { /* silent: without presets the backend applies its own default voice */ })
   }, [load])
 
   // ?job= / ?resume= deep links (from the Feed, Résumé editor and Applications)
@@ -180,15 +180,18 @@ export default function CoverLetters() {
     if (j) {
       setGenJob(j)
       // make sure the target is pickable even if it's outside the fetched window
+      // R2-A-03: converted — the user followed a link *to this job*; if the row
+      // can't be fetched the picker silently shows an unmatched id
       api.get(`/jobs/${j}`).then(({ data }) => {
         setJobs((p) => p.some((x) => x.id === data.id) ? p : [data, ...p])
-      }).catch(() => {})
+      }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the linked job — pick it from the list' }) })
     }
     if (r) {
       setGenResume(r)
+      // R2-A-03: converted — same for the résumé half of the deep link
       api.get(`/resumes/${r}`).then(({ data }) => {
         setResumes((p) => p.some((x) => x.id === data.id) ? p : [data, ...p])
-      }).catch(() => {})
+      }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the linked résumé — pick it from the list' }) })
     }
     setSearchParams({}, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps

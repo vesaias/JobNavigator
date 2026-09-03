@@ -4,7 +4,7 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, setFlashToast } from './hooks'
+import { useEscape, setFlashToast, useSnapTop } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -109,6 +109,8 @@ export default function ResumeEditor() {
   const [headMenu, setHeadMenu] = useState(false)
   const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
   const [jobErr, setJobErr] = useState(false)   // RES-20: the linked job failed to load
+  const [parentName, setParentName] = useState(null)   // R2-H-10: the base this copy came from
+  const [tailorChain, setTailorChain] = useState('light')   // R2-H-09: 'light' | 'full' | null
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
   const pendingRef = useRef([])   // [{baseId, jobId, company, since}]
@@ -216,19 +218,29 @@ export default function ResumeEditor() {
       setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
       navigate('/v2/resumes')
     })
-    api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch(() => {})
+    api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch(() => { /* silent: the picker falls back to the stored template id as its label */ })
     return () => { alive = false }
   }, [id, navigate])
+
+  // R2-H-09: a job-linked tailor chains a score of the new copy (routes_resumes.py
+  // reads `tailor_auto_quick_score` and maps it exactly this way). Nothing in the
+  // UI said so, so the second LLM call was invisible — the tailor modals now do.
+  useEffect(() => {
+    api.get('/settings').then(({ data }) => {
+      const v = String(data?.tailor_auto_quick_score ?? 'light').trim().toLowerCase()
+      setTailorChain(['off', 'false', 'no', '0'].includes(v) ? null : v === 'full' ? 'full' : 'light')
+    }).catch(() => { /* silent: the note falls back to the seeded default */ })
+  }, [])
 
   // parent base data for the diff/marks (tailored copies only); copy count for a base
   useEffect(() => {
     let alive = true
     if (doc && doc.is_base) {
       setBaseData(null)
-      api.get('/resumes', { params: { is_base: false } }).then(({ data }) => { if (alive) setBaseCopyCount((data || []).filter((r) => String(r.parent_id) === String(doc.id)).length) }).catch(() => {})
+      api.get('/resumes', { params: { is_base: false } }).then(({ data }) => { if (alive) setBaseCopyCount((data || []).filter((r) => String(r.parent_id) === String(doc.id)).length) }).catch(() => { /* silent: an auxiliary count in the band; absent it simply doesn't render */ })
     } else if (doc && doc.parent_id) {
-      api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) setBaseData(p.json_data || null) }).catch(() => {})
-    } else { setBaseData(null) }
+      api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) { setBaseData(p.json_data || null); setParentName(p.name || null) } }).catch(() => { /* silent: the diff marks and the base name degrade to the name heuristic */ })
+    } else { setBaseData(null); setParentName(null) }
     return () => { alive = false }
   }, [doc])
 
@@ -243,13 +255,13 @@ export default function ResumeEditor() {
   const loadJobCtx = useCallback(() => {
     if (!doc || doc.is_base || !doc.job_id) return
     api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => { setJobData(j); setJobErr(false) }).catch(() => setJobErr(true))
-    api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => setCoverExists((data || []).length > 0)).catch(() => {})
+    api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => setCoverExists((data || []).length > 0)).catch(() => { /* silent: only picks the wording of the cover-letter step */ })
   }, [doc])
   useEffect(() => {
     if (!doc || doc.is_base) { setJobData(null); setTracers([]); setJobErr(false); return }
     if (!doc.job_id) { setJobData(null); setJobErr(false) }   // RES-20: no job to load, so no failure to report
     loadJobCtx()
-    api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => setTracers(data || [])).catch(() => {})
+    api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => setTracers(data || [])).catch(() => { /* silent: an optional click-count suffix on the band line */ })
   }, [doc, id, loadJobCtx])
 
   // RES-20: a copy tailored from a pasted description has no Job row. The JD it was
@@ -444,7 +456,9 @@ export default function ResumeEditor() {
         <span onClick={() => navigate('/v2/resumes')} style={{ fontSize: 13, lineHeight: '20px', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }} className="v2-navlink">‹ Résumés</span>
         <span style={{ color: 'var(--line)' }}>|</span>
         <span style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
-        <span title={doc.name} style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</span>
+        {/* R2-S-06: every other v2 screen names itself with an h1; visually this
+            is the same span it always was (margin and font reset inline). */}
+        <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>
         <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</span>
       </div>
 
@@ -466,7 +480,11 @@ export default function ResumeEditor() {
                 ? <>Tailored for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></>
                 : (jobless && freeformJd ? 'Tailored from a pasted description' : 'Tailored copy')}
               {doc.parent_id && (() => {
-                const baseName = (doc.name || '').split('→')[0].trim() || 'base'
+                // R2-H-10: a freeform copy is named "<base> (tailored)" — no "→" to
+                // split on — so the heuristic returned the copy's own name and the
+                // link read "based on <copy>". Use the parent's name; keep the
+                // split only until that fetch lands.
+                const baseName = parentName || ((doc.name || '').includes('→') ? (doc.name || '').split('→')[0].trim() : '') || 'base'
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
                   <>
@@ -555,7 +573,9 @@ export default function ResumeEditor() {
 
         {/* right: PDF preview */}
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
-          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
+          {/* R2-S-02: wraps rather than overflowing, like the cover-letter
+              editor's identical toolbar */}
+          <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
             {/* template picker — the container swallows its own clicks so the
                 document closer below can't undo the toggle (RES-28) */}
@@ -576,7 +596,7 @@ export default function ResumeEditor() {
                   </div>
               )}
             </div>
-            <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500 }}>↓ Download PDF</a>
+            <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', flex: '0 0 auto', minWidth: 0, height: 29, padding: '0 15px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>↓ Download PDF</a>
           </div>
           <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--surface-2)' }}>
             {pdfUrl && <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />}
@@ -591,8 +611,8 @@ export default function ResumeEditor() {
       </div>
 
       {tailorOpen && (isCopy
-        ? <RetailorModal doc={doc} job={jobData} onClose={() => setTailorOpen(false)} onRun={runRetailor} />
-        : <TailorModal doc={doc} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
+        ? <RetailorModal doc={doc} job={jobData} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runRetailor} />
+        : <TailorModal doc={doc} chain={tailorChain} onClose={() => setTailorOpen(false)} onRun={runTailor} />)}
       {reviewOpen && <ReviewModal changes={changes} onClose={() => setReviewOpen(false)} onApply={applyReview} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
 
@@ -605,16 +625,18 @@ export default function ResumeEditor() {
 // The job is already decided — we are on that job's résumé. What is open is
 // which base to work from, and whether to run the tailoring LLM at all or just
 // take an exact copy for a fresh set of tracer links.
-function RetailorModal({ doc, job, onClose, onRun }) {
+function RetailorModal({ doc, job, chain, onClose, onRun }) {
   useEscape(onClose)   // RES-15
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
   const [mode, setMode] = useState('tailor')
   const [bases, setBases] = useState([])
   const [persona, setPersona] = useState(false)
   const [baseId, setBaseId] = useState(doc.parent_id || 'persona')
 
   useEffect(() => {
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch(() => {})
-    api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch(() => { /* silent: the modal renders “No base résumés yet.” and Re-tailor stays disabled */ })
+    api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional row in the base list */ })
   }, [])
 
   // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be
@@ -633,7 +655,7 @@ function RetailorModal({ doc, job, onClose, onRun }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Re-tailor for this job</span>
           <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -677,7 +699,10 @@ function RetailorModal({ doc, job, onClose, onRun }) {
         </div>
 
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
+            {mode === 'tailor' && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
+          </div>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
           {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
           <div onClick={() => canRun && onRun({ mode, baseId })} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</div>
@@ -687,9 +712,18 @@ function RetailorModal({ doc, job, onClose, onRun }) {
   )
 }
 
+// R2-H-09: the tailor endpoint chains a score of the copy it just made, which is
+// a second LLM call the modals never mentioned. One line, read from the setting
+// that controls it — the control itself stays in Settings › AI.
+const chainNote = (chain) => (chain
+  ? `Also scores the copy afterwards at ${chain} depth · 1 more LLM call · change under Settings › AI`
+  : 'Scoring after tailoring is off')
+
 // ── tailor modal (job picker + freeform + persona) ───────────────────────────
-function TailorModal({ doc, onClose, onRun }) {
+function TailorModal({ doc, chain, onClose, onRun }) {
   useEscape(onClose)   // RES-15
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
   const baseId = doc.id
   const [jobs, setJobs] = useState([])
   const [existing, setExisting] = useState(new Set())
@@ -702,9 +736,9 @@ function TailorModal({ doc, onClose, onRun }) {
 
   useEffect(() => {
     api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60 } })
-      .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch(() => {})
+      .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch(() => { /* silent: the empty list already points at the freeform box, which is the working path */ })
     api.get('/resumes', { params: { is_base: false } })
-      .then(({ data }) => setExisting(new Set((data || []).filter((r) => String(r.parent_id) === String(baseId)).map((r) => String(r.job_id))))).catch(() => {})
+      .then(({ data }) => setExisting(new Set((data || []).filter((r) => String(r.parent_id) === String(baseId)).map((r) => String(r.job_id))))).catch(() => { /* silent: drives only the “✦ exists” hint on a row */ })
   }, [baseId])
 
   const baseName = (r) => (typeof r === 'string' ? r : r?.name)
@@ -724,7 +758,7 @@ function TailorModal({ doc, onClose, onRun }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailor {doc.name} for a job</span>
           <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
@@ -759,7 +793,12 @@ function TailorModal({ doc, onClose, onRun }) {
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Runs in the background</span>
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Runs in the background</span>
+            {/* the chain only fires for a job-linked tailor (routes_resumes.py:
+                `if chain_depth and job_id`), so a freeform run says nothing */}
+            {pick && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
+          </div>
           <div onClick={onClose} className="v2-act" style={{ marginLeft: 'auto', height: 33, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
           {/* RES-17 */}
           <div onClick={() => canRun && run()} style={{ height: 33, padding: '0 17px', borderRadius: 99, background: canRun ? 'var(--accent)' : 'var(--line)', color: canRun ? 'var(--accent-ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 12.5, fontWeight: 500, cursor: canRun ? 'pointer' : 'default' }}>✦ Tailor</div>
@@ -772,11 +811,13 @@ function TailorModal({ doc, onClose, onRun }) {
 // ── review modal (decline-based) ─────────────────────────────────────────────
 function ReviewModal({ changes, onClose, onApply }) {
   useEscape(onClose)   // RES-15
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailoring changes — already applied</span>

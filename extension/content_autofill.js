@@ -415,6 +415,7 @@
       txt: root.querySelector('.txt'),
       chars: root.querySelector('.chars'),
       len: fieldMax || DEFAULT_LEN,
+      fieldMax,                    // R2-H-12: the field's own hard ceiling, if it has one
       acc: '', prevAcc: '', port: null, streaming: false, inserting: false,
       instructions: [],   // ordered refinement history; UI shows only the last as a pill
       ctx: { question: questionFor(el), company: pageCompany(), position: pagePosition() },
@@ -494,6 +495,23 @@
     markLen();
   }
 
+  // R2-H-12: max_chars is a hint to the model, not a contract — a 300-char ask
+  // came back at 346. When the field declares a maxLength, cut the text we write
+  // to it (the browser would silently truncate an <input>, and would not truncate
+  // a contenteditable at all), and say so in the counter. Trim back to a word
+  // boundary when one is close, so the cut doesn't land mid-word.
+  const capForField = (s) => {
+    const hard = s.fieldMax;
+    if (!hard || s.acc.length <= hard) return s.acc;
+    const cut = s.acc.slice(0, hard);
+    const sp = cut.lastIndexOf(' ');
+    return (sp > hard - 20 ? cut.slice(0, sp) : cut).replace(/[\s,;:]+$/, '');
+  };
+  const countLabel = (s) => {
+    const base = `${s.acc.length}/${s.len}`;
+    return s.fieldMax && s.acc.length > s.fieldMax ? `${base} · trimmed to ${capForField(s).length}` : base;
+  };
+
   const TWISTS = [
     ['More confident', 'Make it more confident and assertive'],
     ['More specific', 'Be more specific with concrete detail'],
@@ -518,7 +536,7 @@
       <button id="regen">Regenerate</button>
       <button class="icon-btn" id="more">···</button>
       <span class="spacer"></span>
-      <span class="count ${over ? 'over' : ''}" id="count">${s.acc.length}/${s.len}</span>`;
+      <span class="count ${over ? 'over' : ''}" id="count" title="${s.fieldMax ? 'This field accepts ' + s.fieldMax + ' characters' : ''}">${countLabel(s)}</span>`;
     s.root.getElementById('insert').onclick = () => insertDraft(s);
     s.root.getElementById('regen').onclick = () => beginStream(s);
     s.root.getElementById('more').onclick = () => s.root.getElementById('overflow').classList.toggle('hidden');
@@ -563,7 +581,7 @@
   function updateCount(s) {
     const c = s.root.getElementById('count');
     if (!c) return;
-    c.textContent = `${s.acc.length}/${s.len}`;
+    c.textContent = countLabel(s);
     c.classList.toggle('over', s.acc.length > s.len);
   }
 
@@ -637,7 +655,7 @@
   }
   function insertDraft(s) {
     s.inserting = true;                 // guard our own input event from closing the draft
-    writeToField(s.el, s.acc);
+    writeToField(s.el, capForField(s));   // R2-H-12: never write past the field's maxLength
     teardownSession(s.key, { reveal: true });   // affordance returns as "Redraft"
   }
 

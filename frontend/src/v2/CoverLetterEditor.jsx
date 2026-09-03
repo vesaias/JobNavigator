@@ -4,7 +4,7 @@ import { useToasts, ToastStack } from './Toast'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape } from './hooks'
+import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
 import './theme.css'
@@ -74,6 +74,13 @@ export default function CoverLetterEditor() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [regenOpen, setRegenOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
+  // CL-28: one `err` slot used to hold every failure on the screen, so a PDF
+  // download error sat in the top bar indefinitely (only a successful save
+  // cleared it) next to a letter name it had pushed out. The bar now holds save
+  // failures only — they are the one error the autosave header is about — and
+  // everything else goes to the toast host. `err` keeps the load and regenerate
+  // failures, which have their own slots (the empty state and the regen footer).
+  const [saveErr, setSaveErr] = useState('')
   const [regening, setRegening] = useState(false)
   const [presets, setPresets] = useState([])
   const [resumes, setResumes] = useState([])
@@ -93,6 +100,7 @@ export default function CoverLetterEditor() {
   const pendingPatch = useRef({})
   const pdfTimer = useRef(null)
   const prevBlob = useRef(null)
+  const regenPanel = useRef(null)
   const loaded = useRef(false)
 
   useEffect(() => {
@@ -110,15 +118,15 @@ export default function CoverLetterEditor() {
   }, [id])
 
   useEffect(() => {
-    api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch(() => {})
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => {})
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => {})
+    api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch(() => { /* silent: the picker falls back to the stored template id as its label */ })
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only feeds the Regenerate source list; editing and saving are unaffected */ })
+    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional Regenerate source */ })
     api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       setPresets(Array.isArray(p) ? p : [])
       setRVoice((v) => v || data.cover_letter_default_voice || '')
-    }).catch(() => {})
+    }).catch(() => { /* silent: voice presets are Regenerate-only; the letter's stored voice still shows */ })
   }, [])
 
   useEffect(() => () => { clearTimeout(saveTimer.current); clearTimeout(pdfTimer.current) }, [])
@@ -135,8 +143,8 @@ export default function CoverLetterEditor() {
     saveTimer.current = setTimeout(async () => {
       const body = pendingPatch.current
       pendingPatch.current = {}
-      try { await api.patch(`/cover-letters/${id}`, body); setSavedAt(new Date().toISOString()); setErr('') }
-      catch (e) { console.error(e); setErr('Could not save — your last edit is not stored.'); pushToast({ kind: 'error', msg: 'Could not save — your last edit is not stored.' }) }
+      try { await api.patch(`/cover-letters/${id}`, body); setSavedAt(new Date().toISOString()); setSaveErr('') }
+      catch (e) { console.error(e); setSaveErr('Could not save — your last edit is not stored.'); pushToast({ kind: 'error', msg: 'Could not save — your last edit is not stored.' }) }
     }, 500)
   }, [id])
 
@@ -189,7 +197,7 @@ export default function CoverLetterEditor() {
       a.href = url; a.download = m ? m[1] : 'CoverLetter.pdf'
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (e) { console.error(e); setErr('Could not download the PDF.'); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }   // CL-28: a download failure is not a save failure
   }
 
   const remove = () => {
@@ -199,7 +207,7 @@ export default function CoverLetterEditor() {
       onConfirm: async () => {
         setConfirm(null)
         try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }   // CL-17
-        catch (e) { console.error(e); setErr('Could not delete this letter.'); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
+        catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }   // CL-28
       },
     })
   }
@@ -262,11 +270,23 @@ export default function CoverLetterEditor() {
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
   useEscape(() => setRegenOpen(false), regenOpen && !regening)
+  useSnapTop(regenPanel)   // RES-32
 
-  const sourceOpts = useMemo(() => [
-    ...(personaAvailable ? [{ id: 'persona', label: 'Persona (full profile)' }] : []),
-    ...resumes.map((r) => ({ id: r.id, label: r.name })),
-  ], [resumes, personaAvailable])
+  const sourceOpts = useMemo(() => {
+    const opts = [
+      ...(personaAvailable ? [{ id: 'persona', label: 'Persona (full profile)' }] : []),
+      ...resumes.map((r) => ({ id: r.id, label: r.name })),
+    ]
+    // R2-H-14: the list is bases + Persona, but a letter generated from the
+    // Résumé editor is paired with a *tailored* copy. Its id matched no option, so
+    // the picker showed "Select a source…" while Regenerate ran against that very
+    // copy. Prepend the letter's own source when it isn't already there.
+    const own = doc?.resume_id
+    if (own && !doc.from_persona && !opts.some((o) => String(o.id) === String(own))) {
+      opts.unshift({ id: own, label: doc.source_name ? `${doc.source_name} · tailored copy` : 'This letter’s tailored copy' })
+    }
+    return opts
+  }, [resumes, personaAvailable, doc])
 
   if (!doc) {
     return (
@@ -297,9 +317,11 @@ export default function CoverLetterEditor() {
         <span style={{ color: 'var(--line)' }}>|</span>
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
           style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99 }}>{badge}</span>
-        <span title={doc.name} style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</span>
-        <span style={{ marginLeft: 'auto', flex: '0 0 auto', fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>
-          {err || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
+        {/* R2-S-06: every other v2 screen names itself with an h1; visually this
+            is the same span it always was (margin and font reset inline). */}
+        <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>
+        <span title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, fontSize: 11.5, color: saveErr ? 'var(--bad)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {saveErr || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
         </span>
       </div>
 
@@ -511,7 +533,7 @@ export default function CoverLetterEditor() {
 
       {regenOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => !regening && setRegenOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div ref={regenPanel} onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Regenerate letter</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>
