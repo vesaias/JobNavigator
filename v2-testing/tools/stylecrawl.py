@@ -35,7 +35,10 @@ data = {}
 with browser() as b:
     for th in ('light', 'dark'):
         for r in ROUTES:
-            pg = page(b, th); go(pg, r); pg.mouse.move(0, 0); pg.wait_for_timeout(300)
+            pg = page(b, th)
+            try: pg.clock.set_fixed_time('2026-09-04T12:00:00Z')
+            except Exception: pass
+            go(pg, r); pg.mouse.move(0, 0); pg.wait_for_timeout(300)
             els = pg.evaluate(JS_REST, PROPS)
             # hover pass: at most 400 hoverable elements per route, sampled in DOM order
             hov = [k for k, v in els.items() if v['hoverable']][:400]

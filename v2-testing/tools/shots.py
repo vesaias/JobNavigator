@@ -27,7 +27,8 @@ with browser() as b:
         for w, hgt in ((1440, 900), (1024, 700)):
             for r in ROUTES:
                 pg = page(b, th); pg.set_viewport_size({'width': w, 'height': hgt})
-                pg.add_style_tag(content=CSS) if False else None
+                try: pg.clock.set_fixed_time('2026-09-04T12:00:00Z')  # freeze 'N min ago' strings
+                except Exception: pass
                 go(pg, r); pg.add_style_tag(content=CSS); pg.mouse.move(0, 0); pg.wait_for_timeout(400)
                 name = r.strip('/').replace('/', '_')[:60] + f'__{th}__{w}.png'
                 pg.screenshot(path=f'{OUT}/{name}', full_page=False)
