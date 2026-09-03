@@ -124,8 +124,12 @@ async def _ensure_session(force_relogin: bool = False) -> str:
 
         session_id = await _login(email, password)
 
-        # Persist session for reuse across restarts
+        # Persist session for reuse across restarts. OPEN-16: stamp when it was
+        # obtained too — the cookie is redacted on GET /settings, so its age is
+        # the only thing the Accounts tab can honestly show.
+        from datetime import datetime as _dt, timezone as _tz
         _save_setting(db, "jobright_session_id", session_id)
+        _save_setting(db, "jobright_session_obtained_at", _dt.now(_tz.utc).isoformat())
         return session_id
     finally:
         db.close()

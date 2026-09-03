@@ -123,6 +123,59 @@ def describe_source_errors(breakdown) -> str:
     return " · ".join(f"{key}: {err}" for key, err in source_errors(breakdown))
 
 
+def filtered_count(breakdown) -> int:
+    """Postings the title filters rejected, summed across boards.
+
+    OPEN-03: rejected postings are still written to `jobs` as `ignored` (that is
+    how the next run dedups them), so the rows a run stores can exceed its
+    "N seen" count. The per-board `filtered` entry makes the difference visible
+    instead of leaving an unexplained gap.
+    """
+    if not isinstance(breakdown, dict):
+        return 0
+    return sum(int(v.get("filtered") or 0) for v in breakdown.values()
+               if isinstance(v, dict))
+
+
+def summarize_search_run(label: str, result: dict) -> str:
+    """The Run-history line for one search run, built from the ScrapeLog row the
+    run itself wrote.
+
+    OPEN-03: this used to read the scraper's own return dict, so nothing tied the
+    sentence to the audit row a reader compares it against. Same convention as
+    scheduler._scrape_summary: read back what was stored, and the summary cannot
+    disagree with the log.
+    """
+    if not isinstance(result, dict):
+        return f"{label} - nothing ran"
+
+    found = result.get("jobs_found", 0)
+    new = result.get("new_jobs", 0)
+    breakdown = result.get("source_breakdown")
+    log_id = result.get("scrape_log_id")
+    if log_id:
+        db = SessionLocal()
+        try:
+            row = db.query(ScrapeLog).filter(ScrapeLog.id == log_id).first()
+            if row:
+                found = row.jobs_found or 0
+                new = row.new_jobs or 0
+                breakdown = row.source_breakdown
+        except Exception as e:          # a summary must never break the run
+            logger.warning(f"Could not read back ScrapeLog {log_id}: {e}")
+        finally:
+            db.close()
+
+    summary = f"{label} - {found} seen, +{new} new"
+    filtered = filtered_count(breakdown)
+    if filtered:
+        summary += f", {filtered} filtered out"
+    # R3-A-03: name the boards that hard-failed, so "9 seen, +0 new" can't be
+    # mistaken for a quiet day on every configured source.
+    failed = describe_source_errors(breakdown)
+    return f"{summary} · {failed}" if failed else summary
+
+
 def _source_for_search(search: Search) -> str:
     """Source string used for ScrapeLog.source — matches old jobspy_scraper behavior."""
     source_map = {
@@ -336,6 +389,9 @@ async def _run_search_by_id(search_id: str, auto_score: Optional[bool] = None) -
         )
         db.add(log)
         db.commit()
+        # OPEN-03: hand the caller the row it should summarise, so the Run-history
+        # line and the audit row are read from the same place.
+        result["scrape_log_id"] = str(log.id)
 
         if failed_sources:
             logger.warning(f"Search '{search.name}': {describe_source_errors(breakdown)}")

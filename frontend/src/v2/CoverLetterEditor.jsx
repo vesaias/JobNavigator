@@ -118,16 +118,19 @@ export default function CoverLetterEditor() {
   }, [id])
 
   useEffect(() => {
-    api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch(() => { /* silent: the picker falls back to the stored template id as its label */ })
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only feeds the Regenerate source list; editing and saving are unaffected */ })
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional Regenerate source */ })
+    // OPEN-05: converted — these four fill the editor's own pickers. Failing
+    // silently left the Layout menu, the Regenerate source list and the voice
+    // list empty with nothing to say why, on a screen the user just opened.
+    api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) })
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — Regenerate has no source to pick.' }) })
+    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
     api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       setPresets(Array.isArray(p) ? p : [])
       setRVoice((v) => v || data.cover_letter_default_voice || '')
-    }).catch(() => { /* silent: voice presets are Regenerate-only; the letter's stored voice still shows */ })
-  }, [])
+    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) })
+  }, [pushToast])
 
   useEffect(() => () => { clearTimeout(saveTimer.current); clearTimeout(pdfTimer.current) }, [])
   useEffect(() => () => { if (prevBlob.current) URL.revokeObjectURL(prevBlob.current) }, [])

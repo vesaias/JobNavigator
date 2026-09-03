@@ -248,8 +248,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         # Build source list — filter out 'direct' which is Playwright
         sources = [s for s in (search.sources or []) if s != "direct"]
         if not sources:
-            return {"jobs_found": 0, "new_jobs": 0, "error": "No JobSpy sources configured",
-                    "source_breakdown": {}}
+            return {"jobs_found": 0, "new_jobs": 0, "ignored_jobs": 0,
+                    "error": "No JobSpy sources configured", "source_breakdown": {}}
         breakdown = {s: {"seen": 0, "new": 0} for s in sources}
 
         kwargs = {
@@ -276,8 +276,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
 
         if jobs_df is None or jobs_df.empty:
             duration = time.time() - start_time
-            return {"jobs_found": 0, "new_jobs": 0, "error": None, "duration": duration,
-                    "source_breakdown": breakdown}
+            return {"jobs_found": 0, "new_jobs": 0, "ignored_jobs": 0, "error": None,
+                    "duration": duration, "source_breakdown": breakdown}
 
         # Apply filters (merge global title exclude with per-search)
         db_excl = SessionLocal()
@@ -326,6 +326,11 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         # Save to DB, dedup via external_id
         db = SessionLocal()
         new_jobs = 0
+        # OPEN-03: the title filters reject postings, but the rejected rows are
+        # still written to `jobs` (status "ignored") so the next run dedups them.
+        # They were counted nowhere, so a run that stored 8 rows reported
+        # "6 seen, +6 new" with nothing to explain the other two. Count them.
+        ignored_jobs = 0
         # Per-run hoists: one event loop, one company lookup, one parsed phrase
         # list — previously rebuilt per job (fresh loop + full company scan +
         # Settings read/JSON-parse, thousands of times per scrape).
@@ -457,6 +462,9 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                             db.add(job)
                             db.flush()
                         existing_ids.add(ext_id)
+                        ignored_jobs += 1
+                        entry = breakdown.setdefault(site or "unknown", {"seen": 0, "new": 0})
+                        entry["filtered"] = entry.get("filtered", 0) + 1
                     except IntegrityError:
                         continue
 
@@ -475,10 +483,12 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         duration = time.time() - start_time
 
         from backend.activity import log_activity
-        log_activity("scrape", f"JobSpy search '{search.name}': {new_jobs} new / {jobs_found} found in {duration:.1f}s")
+        log_activity("scrape", f"JobSpy search '{search.name}': {new_jobs} new / {jobs_found} found"
+                     + (f" ({ignored_jobs} filtered out)" if ignored_jobs else "")
+                     + f" in {duration:.1f}s")
 
-        return {"jobs_found": jobs_found, "new_jobs": new_jobs, "error": None, "duration": duration,
-                "source_breakdown": breakdown}
+        return {"jobs_found": jobs_found, "new_jobs": new_jobs, "ignored_jobs": ignored_jobs,
+                "error": None, "duration": duration, "source_breakdown": breakdown}
 
     except Exception as e:
         duration = time.time() - start_time
@@ -487,8 +497,8 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         from backend.activity import log_activity
         log_activity("scrape", f"JobSpy search '{search.name}' failed: {e}")
 
-        return {"jobs_found": 0, "new_jobs": 0, "error": str(e), "duration": duration,
-                "source_breakdown": breakdown}
+        return {"jobs_found": 0, "new_jobs": 0, "ignored_jobs": 0, "error": str(e),
+                "duration": duration, "source_breakdown": breakdown}
 
 
 async def run(search, proxy_url: str = None) -> dict:

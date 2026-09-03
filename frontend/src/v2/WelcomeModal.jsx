@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Settings as SettingsIcon, FileUser, Building2, Search } from 'lucide-react'
+import { useSnapTop } from './hooks'
 import './theme.css'
 
 // First-run overlay (System Overlays.dc.html · 2). The design draws the steps as
@@ -19,11 +20,13 @@ export default function WelcomeModal({ onClose }) {
   const base = useLocation().pathname.startsWith('/v2') ? '/v2/' : '/'
   const dark = (() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })()
   const go = (slug) => { onClose?.(); navigate(base + slug) }
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
 
   return (
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'} onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()}
+      <div ref={panel} onClick={(e) => e.stopPropagation()}
         style={{ width: 420, maxWidth: '100%', background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '22px 24px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', alignItems: 'baseline' }}>

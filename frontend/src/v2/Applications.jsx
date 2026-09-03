@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
+import { useEscape, useSnapTop } from './hooks'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -141,10 +142,21 @@ export default function Applications() {
   }
   useEffect(() => {
     const onDoc = () => closeAll()
-    const onKey = (e) => { if (e.key === 'Escape') { closeAll(); setPrep(null); setEditIv(null); closeLog() } }   // R3-A-06: Escape cancels the interview edit
-    document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
+    document.addEventListener('click', onDoc)
+    return () => document.removeEventListener('click', onDoc)
   }, [])
+  // OPEN-08: was this screen's own `document` keydown listener, the last one of
+  // its kind. Same behaviour — one Escape closes the filter menus, the prep
+  // modal, the interview edit (R3-A-06) and the Log modal (whose dirty-discard
+  // confirm still fires) — but through the shared hook, which claims the event
+  // so nothing behind it also acts on the same keypress.
+  //
+  // Ordering: this listener is registered at mount, i.e. *before* a
+  // ConfirmDialog that opens later, so it would otherwise fire first and swallow
+  // the Escape meant for the dialog. Gating it on `!confirm` hands the key to the
+  // dialog's own useEscape while one is open — the same guard Settings' model
+  // catalog uses for its dropdown.
+  useEscape(() => { closeAll(); setPrep(null); setEditIv(null); closeLog() }, !confirm)
 
   // ── derived ──
   const nInterview = apps.filter((a) => a.status === 'interview').length
@@ -670,9 +682,11 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 // ── prep modal ───────────────────────────────────────────────────────────────
 function PrepModal({ prep, company, copied, onCopy, onClose }) {
   const busy = prep === 'loading' || prep?.failed === true
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep handover — {company}</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the AI of your choice</span>
@@ -708,8 +722,13 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])   // APPS-22
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
 
-  useEffect(() => { api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch(() => { /* silent: APPS-01 — the résumé chips are optional; the form saves without one */ }) }, [])
+  // OPEN-05: converted (the APPS-01 residue). The chips are the modal's only
+  // way to attach a résumé, and the user opened the modal to log an application —
+  // an empty row read as "you have no résumés", which is a different thing.
+  useEffect(() => { api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — log it now and attach one later.' }) }) }, [pushToast])
 
   // R2-H-07: `title`/`company` are captured in readUrl's closure at call time —
   // both empty — so a response landing after the user had typed overwrote what
@@ -762,7 +781,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   const box = { height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, outline: 'none', fontFamily: 'var(--sans)', width: '100%' }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Log application</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</span>

@@ -20,19 +20,44 @@ def get_setting(db, key, default=None):
     return default
 
 
+def _int_setting(db, key: str) -> int:
+    """A minutes-interval setting, or 0 (= disabled) if the stored value is junk.
+
+    OPEN-01: PATCH /settings now rejects non-integer intervals, but a row written
+    before that guard existed (or edited straight in the DB) must not take the
+    process down — configure_scheduler() runs inside the app's lifespan, so an
+    int() raising here meant the backend could not start at all. Log it loudly
+    and leave that one job unscheduled instead.
+    """
+    raw = get_setting(db, key, "0")
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        logger.error(f"Setting '{key}' is not a whole number: {raw!r} — job disabled until it is fixed")
+        return 0
+    if value < 0:
+        logger.error(f"Setting '{key}' is negative: {raw!r} — job disabled until it is fixed")
+        return 0
+    return value
+
+
 def configure_scheduler():
     """Read all intervals from settings table and configure scheduler jobs.
     Called at startup and after any settings update.
+
+    Every value is read defensively: a bad interval or cron skips its own job and
+    logs an error, so one unparseable row can never stop the rest of the schedule
+    (or the app) from coming up.
     """
     db = SessionLocal()
     try:
-        scrape_interval = int(get_setting(db, "scrape_interval_minutes", "0"))
-        email_interval = int(get_setting(db, "email_check_interval_minutes", "0"))
-        backup_cron = get_setting(db, "backup_cron", "").strip()
-        digest_cron = get_setting(db, "digest_cron", "").strip()
-        h1b_cron = get_setting(db, "h1b_cron", "").strip()
-        cleanup_cron = get_setting(db, "cleanup_cron", "").strip()
-        reject_cron = get_setting(db, "reject_cron", "").strip()
+        scrape_interval = _int_setting(db, "scrape_interval_minutes")
+        email_interval = _int_setting(db, "email_check_interval_minutes")
+        backup_cron = str(get_setting(db, "backup_cron", "") or "").strip()
+        digest_cron = str(get_setting(db, "digest_cron", "") or "").strip()
+        h1b_cron = str(get_setting(db, "h1b_cron", "") or "").strip()
+        cleanup_cron = str(get_setting(db, "cleanup_cron", "") or "").strip()
+        reject_cron = str(get_setting(db, "reject_cron", "") or "").strip()
     finally:
         db.close()
 
@@ -50,9 +75,9 @@ def configure_scheduler():
                     replace_existing=True,
                 )
             else:
-                logger.warning(f"Invalid cron for {job_id}: '{cron_expr}' (need 5 fields)")
+                logger.error(f"Invalid cron for {job_id}: '{cron_expr}' (need 5 fields) — job disabled until it is fixed")
         except Exception as e:
-            logger.warning(f"Invalid cron for {job_id}: '{cron_expr}': {e}")
+            logger.error(f"Invalid cron for {job_id}: '{cron_expr}': {e} — job disabled until it is fixed")
 
     # Remove existing jobs before reconfiguring
     scheduler.remove_all_jobs()

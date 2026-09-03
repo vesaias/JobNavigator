@@ -508,6 +508,28 @@ def _company_from_url(url: str):
     return _title_slug(slug) or None
 
 
+def _decode_entities(value):
+    """OPEN-04: strip HTML entities out of an extracted field.
+
+    BeautifulSoup decodes entities in text nodes and attributes, but JSON-LD
+    lives inside a `<script>` whose contents are raw text — `json.loads` has no
+    reason to touch `&amp;`. LinkedIn emits its titles there, so the reader
+    handed the Log-application modal
+    "…AI Strategy &amp; Health Plan Tech…". Unescape repeatedly for the
+    double-encoded case ("&amp;amp;"), which some boards also emit.
+    """
+    import html
+    if not value:
+        return value
+    text = str(value)
+    for _ in range(3):
+        decoded = html.unescape(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
 @router.post("/extract")
 async def extract_posting(payload: ExtractRequest):
     """Read title + company off a posting URL for the Log-application modal.
@@ -580,7 +602,8 @@ async def extract_posting(payload: ExtractRequest):
         # Leave it empty rather than fill the Company field with a board name.
         company = candidate if candidate and not _is_ats_brand(candidate) else None
 
-    return {"title": (title or "").strip() or None, "company": (company or "").strip() or None}
+    return {"title": (_decode_entities(title) or "").strip() or None,
+            "company": (_decode_entities(company) or "").strip() or None}
 
 
 @router.post("/{app_id}/interviews", status_code=201)

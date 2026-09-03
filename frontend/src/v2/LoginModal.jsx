@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import axios from 'axios'
+import { useSnapTop } from './hooks'
 import './theme.css'
 
 // Sign-in overlay (System Overlays.dc.html · 1). The design draws the resting
@@ -12,6 +13,8 @@ export default function LoginModal({ onSuccess }) {
   const [showKey, setShowKey] = useState(false)
   const [success, setSuccess] = useState(false)
   const dark = (() => { try { return localStorage.getItem('jobnavigator_dark_mode') === 'true' } catch { return false } })()
+  const panel = useRef(null)
+  useSnapTop(panel)   // RES-32
 
   const submit = async (e) => {
     e.preventDefault()
@@ -40,7 +43,7 @@ export default function LoginModal({ onSuccess }) {
   return (
     <div className="jn-v2" data-theme={dark ? 'dark' : 'light'}
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <form onSubmit={submit}
+      <form ref={panel} onSubmit={submit}
         style={{ width: 360, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '26px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {success ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>

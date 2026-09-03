@@ -158,20 +158,23 @@ export default function CoverLetters() {
     // isn't in these windows, and this response usually lands last (the 200-job
     // list is the slowest call on the screen) — replacing wiped the deep link.
     const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch(() => { /* silent: the generate panel's Generate button stays disabled without a source, which is the signal */ })
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional source among the bases */ })
+    // OPEN-05: converted — the generate panel is the point of this screen, and a
+    // disabled button is not an explanation. Same for the job picker and the
+    // voice list below.
+    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — there is nothing to generate from.' }) })
+    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
     // landed on an id with no matching option and the field rendered blank
     api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
-      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch(() => { /* silent: auxiliary picker window; the ?job= deep link below reports its own failure */ })
+      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your saved jobs — the job picker is empty.' }) })
     api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       const list = Array.isArray(p) ? p : []
       setPresets(list)
       setGenVoice(data.cover_letter_default_voice || list[0]?.id || '')
-    }).catch(() => { /* silent: without presets the backend applies its own default voice */ })
-  }, [load])
+    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) })
+  }, [load, pushToast])
 
   // ?job= / ?resume= deep links (from the Feed, Résumé editor and Applications)
   useEffect(() => {
