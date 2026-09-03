@@ -212,9 +212,12 @@ export default function V2Resumes() {
                       <Helper>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</Helper>
                       {persona.avg_fit != null && (
                         /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
-                           Helper has no sans reset for a child of a serif parent */
+                           Helper has no sans reset for a child of a serif parent.
+                           lineHeight 1 on the unit: left on the row's inherited 28px it
+                           baselines at a font-dependent offset inside the numeral's own
+                           28px box, which pushed the numeral to 29px (31px under alt) */
                         <span title="Average fit across copies tailored from Persona (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(persona.avg_fit) }}>
-                          {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
+                          {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, lineHeight: 1, color: 'var(--muted)' }}> avg fit</span>
                         </span>
                       )}
                     </div>
@@ -256,9 +259,12 @@ export default function V2Resumes() {
                       <Helper>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</Helper>
                       {b.avg_fit != null && (
                         /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
-                           Helper has no sans reset for a child of a serif parent */
+                           Helper has no sans reset for a child of a serif parent.
+                           lineHeight 1 on the unit: left on the row's inherited 28px it
+                           baselines at a font-dependent offset inside the numeral's own
+                           28px box, which pushed the numeral to 29px (31px under alt) */
                         <span title="Average fit across this base's scored copies (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(b.avg_fit) }}>
-                          {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
+                          {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, lineHeight: 1, color: 'var(--muted)' }}> avg fit</span>
                         </span>
                       )}
                     </div>

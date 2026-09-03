@@ -256,7 +256,10 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
               <Helper style={{ flex: '0 0 auto', marginLeft: 'auto' }}>{e.date}</Helper>
               <Helper style={{ flex: '0 0 auto' }}>{nb} bullet{nb === 1 ? '' : 's'}</Helper>
-              {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
+              {/* lineHeight 1: this head is baseline-aligned, so a 10px glyph left on
+                  the row's 18px line-height rides a font-dependent offset from the
+                  shared baseline — it grew the head 36→37px under the alt skin */}
+              {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, lineHeight: 1, color: 'var(--warn)' }}>●</span>}
             </SectionHead>
             {isOpen && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '2px 11px 11px', borderTop: '1px solid var(--line-soft)' }}>

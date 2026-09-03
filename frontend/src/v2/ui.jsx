@@ -548,8 +548,14 @@ export function SectionHead({
   title, ariaLabel, children, style, className,
 }) {
   const glyph = onToggle && caret ? (
+    // explicit lineHeight: without one the caret box is the row's 18px line-height,
+    // and in a `alignItems:'baseline'` head (ResumeSections' entry heads) a 10px
+    // glyph in an 18px box sits at a font-dependent offset from the shared
+    // baseline, so the head grew 36→37px under the alt skin. `1` pins the box to
+    // the glyph's own 10px; with `center` the content area stays centred, so the
+    // glyph does not move in either alignment.
     <span aria-hidden="true" style={{
-      flex: '0 0 auto', fontSize: 'var(--t-10)', color: 'var(--label-ink)',
+      flex: '0 0 auto', fontSize: 'var(--t-10)', lineHeight: 1, color: 'var(--label-ink)',
       ...(caret === 'pin' ? { marginLeft: 'auto' } : null),
     }}>{open ? '⌄' : '›'}</span>
   ) : null

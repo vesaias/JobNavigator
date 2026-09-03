@@ -448,7 +448,10 @@ export default function Stats() {
               {/* ui: keep — the KPI numeral at serif 27/30px: 3px off PageTitle's 30
                   and above Heading's 22, so it is its own step */}
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
+                {/* lineHeight 1 on the sub-unit: left on the numeral's 30px it baselines at
+                    a font-dependent offset inside that box, which made the numeral 33px
+                    (35px under alt) and pushed the whole KPI strip with it */}
+                {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, lineHeight: 1, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
               </span>
             </div>
           ))}
@@ -517,7 +520,10 @@ export default function Stats() {
               <Heading strong size={17}>Score distribution</Heading>
               <Helper style={{ flex: 1 }}>{int(scores?.scored_count)} scored jobs · best résumé per job</Helper>
               {scores?.avg != null && (
-                <span style={{ fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                // lineHeight 1: this head is baseline-aligned, so an 11px span left on the
+                // row's 24px line-height rides a font-dependent offset from the shared
+                // baseline and grew the head 25→27px under the alt skin
+                <span style={{ fontSize: 11, lineHeight: 1, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
                   avg {scores.avg}
                   {scores.tailored_avg != null && <> · <span title={`Average score after tailoring, across the ${scores.tailored_count} jobs with a tailored copy`} style={{ color: 'var(--accent)', cursor: 'help' }}>tailored {scores.tailored_avg}</span></>}
                 </span>
@@ -546,7 +552,9 @@ export default function Stats() {
                   v2; the swatch is solid, as designed. R3-U-02: the legend swatches
                   follow the strokes below, so "new" is --series-new here too. */}
               {[['new', 'var(--series-new)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
-                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-2)' }}>
+                // lineHeight 1: same baseline-alignment leak as the score head above —
+                // these 11px legends on the row's 24px line-height grew it 27→29px alt
+                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, lineHeight: 1, color: 'var(--text-2)' }}>
                   <span style={{ width: 14, height: 2, background: c }} />{l}
                 </span>
               ))}
