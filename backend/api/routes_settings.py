@@ -1,7 +1,7 @@
 """GET /settings and PATCH /settings endpoints."""
 import json
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.models.db import get_db, Setting
 from backend.scheduler import configure_scheduler
@@ -37,7 +37,22 @@ def get_settings(db: Session = Depends(get_db)):
 
 @router.patch("")
 def update_settings(updates: dict, db: Session = Depends(get_db)):
-    """Update one or more settings."""
+    """Update one or more settings.
+
+    Only keys the app actually reads are writable: the seeded defaults plus the
+    handful written at runtime (seed.RUNTIME_SETTING_KEYS). A typo used to create
+    a brand-new Setting row nothing ever reads (SET-28), so unknown keys are now
+    rejected as a group with 400.
+    """
+    from backend.seed import unknown_setting_keys
+
+    unknown = unknown_setting_keys(updates.keys())
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown setting: {', '.join(sorted(unknown))}",
+        )
+
     warnings: list[str] = []
     updated = []
     for key, value in updates.items():

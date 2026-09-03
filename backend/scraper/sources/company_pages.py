@@ -92,6 +92,40 @@ def _ats_labels_for(urls) -> str:
     return ", ".join(sorted(labels))
 
 
+def record_company_scrape_log(company_id, company_name: str, result: dict, db=None):
+    """Write the per-company ScrapeLog row for one career-page scrape.
+
+    Single source of truth for the audit trail: both the batch path
+    (scrape_career_pages) and the manual single-company trigger
+    (POST /api/scrape/company/{id}) go through here, so /api/scrape-log,
+    is_warning and /health/entities see manual runs exactly like scheduled ones.
+
+    `db` lets a caller reuse an open session; otherwise one is opened and closed.
+    """
+    own_db = db is None
+    if own_db:
+        db = SessionLocal()
+    try:
+        is_warning = (
+            result.get("jobs_found", 0) == 0
+            and not result.get("error")
+        )
+        log = ScrapeLog(
+            source=f"playwright_{company_name}",
+            company_id=company_id,
+            jobs_found=result.get("jobs_found", 0),
+            new_jobs=result.get("new_jobs", 0),
+            error=result.get("error"),
+            is_warning=is_warning,
+            duration_seconds=result.get("duration", 0),
+        )
+        db.add(log)
+        db.commit()
+    finally:
+        if own_db:
+            db.close()
+
+
 def _needs_browser(urls):
     """True if any URL requires a real browser (not a pure-API ATS)."""
     for u in urls:
@@ -410,22 +444,7 @@ async def scrape_career_pages(force: bool = False):
             result = await scrape_single_career_page(company, shared_browser=shared_browser,
                                                      known_external_ids=batch_external_ids)
 
-            is_warning = (
-                result.get("jobs_found", 0) == 0
-                and not result.get("error")
-            )
-
-            log = ScrapeLog(
-                source=f"playwright_{company.name}",
-                company_id=company.id,
-                jobs_found=result.get("jobs_found", 0),
-                new_jobs=result.get("new_jobs", 0),
-                error=result.get("error"),
-                is_warning=is_warning,
-                duration_seconds=result.get("duration", 0),
-            )
-            db.add(log)
-            db.commit()
+            record_company_scrape_log(company.id, company.name, result, db=db)
 
             logger.info(
                 f"Playwright {company.name}: found={result['jobs_found']}, new={result['new_jobs']}"

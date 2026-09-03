@@ -65,20 +65,35 @@ async def track_llm_call(purpose: str, provider: str, model: str, job_id=None):
     Usage:
         async with track_llm_call("email", provider, model) as tracker:
             resp = await call_email_llm(...)
-            tracker.usage = resp.get("usage", tracker.usage)
+            tracker.record(resp)          # usage + the pair that actually ran
             raw = resp["text"]
 
     Automatically captures duration, success/failure, and error text.
-    Caller must set tracker.usage from the LLM response dict.
+    Caller must set tracker.usage (or call tracker.record) from the LLM response.
+
+    provider/model are the resolved pair the caller is about to dispatch with —
+    always from llm_client.resolve_llm_config(), never a second fallback chain
+    (R2-H-15). tracker.record() then overwrites them with whatever the response
+    reports, so a fallback dispatch is logged as the model that answered.
     """
     started = time.monotonic()
 
     class _Tracker:
-        def __init__(self):
+        def __init__(self, provider, model):
             self.usage = {"input_tokens": 0, "output_tokens": 0,
                           "cache_read_tokens": 0, "cache_write_tokens": 0}
+            self.provider = provider
+            self.model = model
 
-    t = _Tracker()
+        def record(self, resp):
+            """Take usage + the dispatched provider/model off an LLM response dict."""
+            if isinstance(resp, dict):
+                self.usage = resp.get("usage") or self.usage
+                self.provider = resp.get("provider") or self.provider
+                self.model = resp.get("model") or self.model
+            return resp
+
+    t = _Tracker(provider, model)
     success = True
     error = None
     try:
@@ -90,7 +105,7 @@ async def track_llm_call(purpose: str, provider: str, model: str, job_id=None):
     finally:
         try:
             # Keep OpenRouter live pricing fresh (TTL-gated) so cost is accurate.
-            if provider == "openrouter":
+            if t.provider == "openrouter":
                 try:
                     from backend.analyzer.llm_cost import refresh_openrouter_prices
                     await refresh_openrouter_prices()
@@ -98,8 +113,8 @@ async def track_llm_call(purpose: str, provider: str, model: str, job_id=None):
                     pass
             log_llm_call(
                 purpose=purpose,
-                provider=provider,
-                model=model,
+                provider=t.provider,
+                model=t.model,
                 usage=t.usage,
                 duration_ms=int((time.monotonic() - started) * 1000),
                 job_id=job_id,

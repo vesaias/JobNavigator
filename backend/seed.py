@@ -308,6 +308,26 @@ DEFAULT_SETTINGS = {
     ),
 }
 
+# Settings the app writes at runtime but never seeds. PATCH /api/settings rejects
+# keys outside DEFAULT_SETTINGS (SET-28: a typo used to silently create a dead row
+# that no reader ever looks at), so these have to be listed explicitly.
+RUNTIME_SETTING_KEYS = {
+    "gmail_processed_ids",   # email_monitor/gmail_client.py — processed-message dedup
+    "gmail_refresh_token",   # Gmail OAuth setup (gmail_oauth_setup.py)
+    "llm_seeded_models",     # migrate_llm_settings() — one-time "defaults offered" marker
+}
+
+
+def is_known_setting(key: str) -> bool:
+    """True if PATCH /api/settings may write this key."""
+    return key in DEFAULT_SETTINGS or key in RUNTIME_SETTING_KEYS
+
+
+def unknown_setting_keys(keys) -> list:
+    """The subset of `keys` no reader in the codebase would ever look at."""
+    return [k for k in keys if not is_known_setting(k)]
+
+
 SEED_COMPANIES = [
     # Example companies — one per ATS type. All inactive by default.
     # Greenhouse

@@ -6,9 +6,50 @@ from backend.models.db import SessionLocal, Setting
 logger = logging.getLogger("jobnavigator.llm")
 
 
+DEFAULT_PROVIDER = "claude_api"
+DEFAULT_MODEL = "claude-sonnet-5"
+
+
 def _get_setting(db, key, default=""):
     row = db.query(Setting).filter(Setting.key == key).first()
     return row.value if row and row.value else default
+
+
+def resolve_llm_config(feature: str = "", db=None) -> dict:
+    """Resolve the provider/model/api_key a feature will actually dispatch with.
+
+    Order: ``<feature>_llm_*`` setting → primary ``llm_*`` setting → shipped default.
+
+    This is the single source of truth for dispatch (the ``call_*_llm`` helpers
+    below) AND for logging (``track_llm_call`` / ``log_llm_call``). Before this,
+    the logging side of each feature re-derived the pair with its own fallback
+    chain — cover letters logged ``claude_api``/``claude-sonnet-4-6`` while the
+    call actually ran on the primary pair (R2-H-15), and tailor/email/pdf
+    disagreed on the final default model.
+
+    feature: "" (primary), "email", "cv_tailor", "cover_letter", "autofill",
+    "scoring". Pass an open session as ``db`` to reuse it.
+    """
+    own_db = db is None
+    if own_db:
+        db = SessionLocal()
+    try:
+        prefix = f"{feature}_" if feature else ""
+        provider = _get_setting(db, f"{prefix}llm_provider", "")
+        model = _get_setting(db, f"{prefix}llm_model", "")
+        api_key = _get_setting(db, f"{prefix}llm_api_key", "")
+        if feature:
+            provider = provider or _get_setting(db, "llm_provider", "")
+            model = model or _get_setting(db, "llm_model", "")
+            api_key = api_key or _get_setting(db, "llm_api_key", "")
+        return {
+            "provider": provider or DEFAULT_PROVIDER,
+            "model": model or DEFAULT_MODEL,
+            "api_key": api_key,
+        }
+    finally:
+        if own_db:
+            db.close()
 
 
 async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
@@ -26,12 +67,13 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
 
     db = SessionLocal()
     try:
+        primary = resolve_llm_config("", db=db)
         if provider is None:
-            provider = _get_setting(db, "llm_provider", "claude_api")
+            provider = primary["provider"]
         if model is None:
-            model = _get_setting(db, "llm_model", "claude-sonnet-5")
+            model = primary["model"]
         if api_key is None:
-            api_key = _get_setting(db, "llm_api_key", "")
+            api_key = primary["api_key"]
         fallback_provider = _get_setting(db, "llm_fallback_provider", "")
         fallback_model = _get_setting(db, "llm_fallback_model", "")
         fb_api_key = _get_setting(db, "llm_fallback_api_key", "")
@@ -47,7 +89,8 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             logger.info(f"LLM call: provider={provider}, model={model}, attempt={attempt}/{MAX_ATTEMPTS}, caching={'on' if caching else 'off'}")
-            return await _dispatch(provider, model, api_key, prompt, system, max_tokens, cached_prefix=cached_prefix)
+            res = await _dispatch(provider, model, api_key, prompt, system, max_tokens, cached_prefix=cached_prefix)
+            return {**res, "provider": provider, "model": model}
         except Exception as e:
             last_primary_err = e
             if attempt < MAX_ATTEMPTS:
@@ -64,7 +107,10 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 logger.info(f"LLM fallback: provider={fallback_provider}, model={fallback_model}, attempt={attempt}/{MAX_ATTEMPTS}, caching={'on' if fb_caching else 'off'}")
-                return await _dispatch(fallback_provider, fallback_model, fb_api_key, prompt, system, max_tokens, cached_prefix=cached_prefix)
+                res = await _dispatch(fallback_provider, fallback_model, fb_api_key, prompt, system, max_tokens, cached_prefix=cached_prefix)
+                # Report the pair that actually answered so the caller logs the
+                # fallback, not the primary it never reached.
+                return {**res, "provider": fallback_provider, "model": fallback_model}
             except Exception as e:
                 last_fallback_err = e
                 if attempt < MAX_ATTEMPTS:
@@ -85,44 +131,22 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
 
 async def call_email_llm(prompt: str, system: str, max_tokens: int = 150) -> dict:
     """Route to email-specific LLM provider. Returns {text, usage}."""
-    db = SessionLocal()
-    try:
-        # Read email-specific settings
-        provider = _get_setting(db, "email_llm_provider", "")
-        model = _get_setting(db, "email_llm_model", "")
-        api_key = _get_setting(db, "email_llm_api_key", "")
-        # Fall back to primary if email-specific not configured
-        if not provider:
-            provider = _get_setting(db, "llm_provider", "claude_api")
-        if not model:
-            model = _get_setting(db, "llm_model", "claude-sonnet-5")
-        if not api_key:
-            api_key = _get_setting(db, "llm_api_key", "")
-    finally:
-        db.close()
+    cfg = resolve_llm_config("email")
+    provider, model = cfg["provider"], cfg["model"]
 
     logger.info(f"Email LLM call: provider={provider}, model={model}, max_tokens={max_tokens}")
-    return await _dispatch(provider, model, api_key, prompt, system, max_tokens)
+    res = await _dispatch(provider, model, cfg["api_key"], prompt, system, max_tokens)
+    return {**res, "provider": provider, "model": model}
 
 
 async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -> dict:
     """Route to CV-tailoring-specific LLM provider. Returns {text, usage}."""
-    db = SessionLocal()
-    try:
-        provider = _get_setting(db, "cv_tailor_llm_provider", "")
-        model = _get_setting(db, "cv_tailor_llm_model", "")
-        api_key = _get_setting(db, "cv_tailor_llm_api_key", "")
-        if not provider:
-            provider = _get_setting(db, "llm_provider", "claude_api")
-        if not model:
-            model = _get_setting(db, "llm_model", "claude-sonnet-5")
-        if not api_key:
-            api_key = _get_setting(db, "llm_api_key", "")
-    finally:
-        db.close()
+    cfg = resolve_llm_config("cv_tailor")
+    provider, model = cfg["provider"], cfg["model"]
 
     logger.info(f"CV tailor LLM call: provider={provider}, model={model}, max_tokens={max_tokens}")
-    return await _dispatch(provider, model, api_key, prompt, system, max_tokens)
+    res = await _dispatch(provider, model, cfg["api_key"], prompt, system, max_tokens)
+    return {**res, "provider": provider, "model": model}
 
 
 async def call_cover_letter_llm(prompt: str, system: str, max_tokens: int = 1500,
@@ -133,24 +157,14 @@ async def call_cover_letter_llm(prompt: str, system: str, max_tokens: int = 1500
     is stable per resume, so regenerating in a different voice/length only pays
     for the JD suffix.
     """
-    db = SessionLocal()
-    try:
-        provider = _get_setting(db, "cover_letter_llm_provider", "")
-        model = _get_setting(db, "cover_letter_llm_model", "")
-        api_key = _get_setting(db, "cover_letter_llm_api_key", "")
-        if not provider:
-            provider = _get_setting(db, "llm_provider", "claude_api")
-        if not model:
-            model = _get_setting(db, "llm_model", "claude-sonnet-5")
-        if not api_key:
-            api_key = _get_setting(db, "llm_api_key", "")
-    finally:
-        db.close()
+    cfg = resolve_llm_config("cover_letter")
+    provider, model = cfg["provider"], cfg["model"]
 
     logger.info(f"Cover-letter LLM call: provider={provider}, model={model}, max_tokens={max_tokens}, "
                 f"caching={'on' if cached_prefix and provider == 'claude_api' else 'off'}")
-    return await _dispatch(provider, model, api_key, prompt, system, max_tokens,
-                           cached_prefix=cached_prefix)
+    res = await _dispatch(provider, model, cfg["api_key"], prompt, system, max_tokens,
+                          cached_prefix=cached_prefix)
+    return {**res, "provider": provider, "model": model}
 
 
 async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
@@ -161,24 +175,14 @@ async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
     per request, so regenerating with a different length/company only pays for
     the per-question suffix.
     """
-    db = SessionLocal()
-    try:
-        provider = _get_setting(db, "autofill_llm_provider", "")
-        model = _get_setting(db, "autofill_llm_model", "")
-        api_key = _get_setting(db, "autofill_llm_api_key", "")
-        if not provider:
-            provider = _get_setting(db, "llm_provider", "claude_api")
-        if not model:
-            model = _get_setting(db, "llm_model", "claude-sonnet-5")
-        if not api_key:
-            api_key = _get_setting(db, "llm_api_key", "")
-    finally:
-        db.close()
+    cfg = resolve_llm_config("autofill")
+    provider, model = cfg["provider"], cfg["model"]
 
     logger.info(f"Autofill LLM call: provider={provider}, model={model}, max_tokens={max_tokens}, "
                 f"caching={'on' if cached_prefix and provider == 'claude_api' else 'off'}")
-    return await _dispatch(provider, model, api_key, prompt, system, max_tokens,
-                           cached_prefix=cached_prefix)
+    res = await _dispatch(provider, model, cfg["api_key"], prompt, system, max_tokens,
+                          cached_prefix=cached_prefix)
+    return {**res, "provider": provider, "model": model}
 
 
 async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 400,
@@ -186,13 +190,8 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
     """Streaming version of call_autofill_llm — async-yields text chunks as the
     model generates them. claude_api + openai/openrouter stream natively; other
     providers fall back to a single chunk with the full answer."""
-    db = SessionLocal()
-    try:
-        provider = _get_setting(db, "autofill_llm_provider", "") or _get_setting(db, "llm_provider", "claude_api")
-        model = _get_setting(db, "autofill_llm_model", "") or _get_setting(db, "llm_model", "claude-sonnet-5")
-        api_key = _get_setting(db, "autofill_llm_api_key", "") or _get_setting(db, "llm_api_key", "")
-    finally:
-        db.close()
+    cfg = resolve_llm_config("autofill")
+    provider, model, api_key = cfg["provider"], cfg["model"], cfg["api_key"]
 
     if provider == "claude_api":
         async for c in _stream_claude(prompt, system, model, api_key, max_tokens, cached_prefix):

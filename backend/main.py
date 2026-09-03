@@ -389,7 +389,7 @@ async def trigger_email_check():
         started = _dt.now(_tz.utc)
         from backend.email_monitor.gmail_client import check_emails
         await check_emails()
-        return _activity_summary(started, "email", "repl")
+        return _activity_summary(started, "email", "repl") or "No new replies"
 
     try:
         run_id = launch_background("email_check", _do, trigger="manual")
@@ -437,7 +437,8 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
 
     async def _do():
         from backend.analyzer.cv_scorer import score_single_job
-        await score_single_job(job_id, cv_ids=cv_ids, depth=depth)
+        # Forwarded so the run's summary reaches JobRun.result_summary (R2-H-13).
+        return await score_single_job(job_id, cv_ids=cv_ids, depth=depth)
 
     # Include cv_ids in scope_key so scoring the same job with different CVs doesn't conflict
     scope = f"{job_id}:{','.join(sorted(cv_ids))}" if cv_ids else job_id
@@ -664,12 +665,17 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
 
     async def _do():
         from backend.models.db import Company as C
-        from backend.scraper.sources.company_pages import scrape_single_career_page
+        from backend.scraper.sources.company_pages import (
+            scrape_single_career_page, record_company_scrape_log,
+        )
         db2 = SessionLocal()
         try:
             c = db2.query(C).filter(C.id == company_id).first()
             if c:
                 result = await scrape_single_career_page(c)
+                # Same audit row the batch path writes — a manual run must show up
+                # in /api/scrape-log, is_warning and /health/entities too (R2-H-02).
+                record_company_scrape_log(c.id, c.name, result or {}, db=db2)
                 should_score = auto_score if auto_score is not None else (c.auto_scoring_depth in ("light", "full"))
                 if should_score and result and result.get("new_jobs", 0) > 0:
                     from backend.analyzer.cv_scorer import analyze_unscored_jobs

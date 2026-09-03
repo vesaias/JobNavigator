@@ -281,14 +281,14 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         schema_key = "scoring_output_full" if depth == "full" else "scoring_output_light"
         schema_row = settings_db.query(Setting).filter(Setting.key == schema_key).first()
         output_schema = schema_row.value if schema_row and schema_row.value else ""
-        def _sv(k, d=""):
-            r = settings_db.query(Setting).filter(Setting.key == k).first()
-            return (r.value if r and r.value else d)
         # Scoring can override the Primary model (empty = use Primary). The Fallback
-        # (llm_fallback_*) is applied inside call_llm regardless.
-        provider_for_log = _sv("scoring_llm_provider") or _sv("llm_provider", "claude_api")
-        model_for_log = _sv("scoring_llm_model") or _sv("llm_model", "claude-sonnet-5")
-        scoring_api_key = _sv("scoring_llm_api_key") or _sv("llm_api_key")
+        # (llm_fallback_*) is applied inside call_llm regardless — and when it fires,
+        # the response reports the pair that answered and we log that instead.
+        from backend.analyzer.llm_client import resolve_llm_config
+        _cfg = resolve_llm_config("scoring", db=settings_db)
+        provider_for_log = _cfg["provider"]
+        model_for_log = _cfg["model"]
+        scoring_api_key = _cfg["api_key"]
         cache_row = settings_db.query(Setting).filter(Setting.key == "prompt_caching_enabled").first()
         caching_enabled = (cache_row.value if cache_row else "true").strip().lower() == "true"
     finally:
@@ -337,6 +337,9 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
                               provider=provider_for_log, model=model_for_log, api_key=scoring_api_key)
         text = resp["text"]
         usage = resp.get("usage", usage)
+        # If call_llm fell back to the secondary pair, log what actually ran.
+        provider_for_log = resp.get("provider") or provider_for_log
+        model_for_log = resp.get("model") or model_for_log
 
         # Parse JSON — handle markdown wrapping and trailing commentary
         import re
@@ -617,6 +620,10 @@ async def analyze_unscored_jobs(status: str = "saved"):
 async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"):
     """Re-run CV analysis for a specific job. Optionally score only against specific CV IDs.
     DB sessions are opened and closed around each phase to avoid holding connections during LLM calls.
+
+    Returns a one-line summary string. launch_background() stores it as
+    JobRun.result_summary, so Stats -> Run history shows what an analyze_job run
+    actually produced instead of a bare status (R2-H-13).
     """
     # ── Phase 1: Read job + CVs from DB, then release connection ──
     db = SessionLocal()
@@ -624,7 +631,7 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             logger.error(f"Job {job_id} not found")
-            return
+            return "Job not found"
 
         job_title = job.title
         job_company = job.company
@@ -665,33 +672,33 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
                 "score_single_job: empty cv_texts (job=%s, cv_ids=%r) — nothing to score against",
                 job_id, cv_ids,
             )
-            return
+            return "No resumes to score against"
 
         # Pre-fetch job text (may do live page fetch + cache, needs DB)
         job_text = await _get_job_text(job, db)
         if not job_text:
             logger.warning(f"Job {job_id} has no text, skipping scoring")
-            return
+            return "No job text to score"
     finally:
         db.close()
 
     # ── Phase 2: LLM scoring (no DB connection held) ──
     result = await score_job_sync(job, cv_texts, db=None, depth=depth, preloaded_text=job_text)
     if not result:
-        return
+        return "Scoring failed"
 
     # ── Phase 3: Save results back to DB ──
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
-            return
+            return "Job disappeared mid-run"
 
         # Defensive: .get's default doesn't catch an explicit "scores": null.
         new_scores = result.get("scores")
         if not isinstance(new_scores, dict):
             logger.warning(f"Job {job_id}: rescore result has invalid scores — not persisting")
-            return
+            return "Malformed LLM response - not persisted"
         merged = dict(job.cv_scores or {})
         merged.update(new_scores)
         job.cv_scores = merged
@@ -727,5 +734,9 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         best = max(numeric_new) if numeric_new else 0
         log_activity("cv_score", f"Scored job '{job_title}' at {job_company}: best={best}", company=job_company)
 
+        # Returned string becomes JobRun.result_summary (Stats -> Run history).
+        return (f"{job_title} - best {best}"
+                + (f" ({job.best_cv})" if job.best_cv else "")
+                + f", {depth}")
     finally:
         db.close()

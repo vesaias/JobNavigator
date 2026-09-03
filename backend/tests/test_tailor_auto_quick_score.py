@@ -76,3 +76,71 @@ async def test_auto_score_skipped_when_setting_is_false(test_db, monkeypatch):
     await rr._tailor_impl(str(base.id), str(job.id), None)
 
     assert "analyze_job" not in launched, f"Expected no analyze_job launch, got {launched}"
+
+
+# ── R2-H-09: the tailor response announces the chained score ────────────────
+
+@pytest.mark.parametrize("value,expected", [
+    ("off", None), ("false", None), ("0", None),
+    ("light", "light"), ("true", "light"), ("", "light"),
+    ("full", "full"), ("nonsense", "light"),
+])
+def test_resolve_chain_score_depth(test_db, value, expected):
+    """Setting `tailor_auto_quick_score` (seeded default 'light') maps to a depth."""
+    import backend.api.routes_resumes as rr
+    test_db.add(Setting(key="tailor_auto_quick_score", value=value))
+    test_db.commit()
+    assert rr._resolve_chain_score_depth(test_db) == expected
+
+
+def test_resolve_chain_score_depth_defaults_to_light_when_unset(test_db):
+    import backend.api.routes_resumes as rr
+    assert rr._resolve_chain_score_depth(test_db) == "light"
+
+
+@pytest.mark.asyncio
+async def test_tailor_response_reports_chain_score(test_db, monkeypatch):
+    """POST /resumes/tailor tells the UI whether a score will follow, and at what depth."""
+    import backend.api.routes_resumes as rr
+
+    _seed(test_db)
+    test_db.add(Setting(key="tailor_auto_quick_score", value="full"))
+    job = Job(external_id="chain3", content_hash="c3", company="Acme", title="PM", description="jd")
+    test_db.add(job)
+    test_db.flush()
+    base = Resume(name="Base", is_base=True, template="inter",
+                  json_data={"summary": "s", "experience": [], "skills": {}})
+    test_db.add(base)
+    test_db.commit()
+
+    monkeypatch.setattr(rr, "launch_background",
+                        lambda *a, **kw: str(uuid.uuid4()), raising=False)
+
+    resp = await rr.tailor_resume({"base_resume_id": str(base.id), "job_id": str(job.id)}, db=test_db)
+    assert resp["chain_score"] == "full"
+
+    # A freeform tailor has no job to score against, so nothing is chained.
+    resp = await rr.tailor_resume({"base_resume_id": str(base.id),
+                                   "job_description": "a pasted description"}, db=test_db)
+    assert resp["chain_score"] == "off"
+
+
+@pytest.mark.asyncio
+async def test_tailor_response_reports_off_when_chain_disabled(test_db, monkeypatch):
+    import backend.api.routes_resumes as rr
+
+    _seed(test_db)
+    test_db.add(Setting(key="tailor_auto_quick_score", value="off"))
+    job = Job(external_id="chain4", content_hash="c4", company="Acme", title="PM", description="jd")
+    test_db.add(job)
+    test_db.flush()
+    base = Resume(name="Base", is_base=True, template="inter",
+                  json_data={"summary": "s", "experience": [], "skills": {}})
+    test_db.add(base)
+    test_db.commit()
+
+    monkeypatch.setattr(rr, "launch_background",
+                        lambda *a, **kw: str(uuid.uuid4()), raising=False)
+
+    resp = await rr.tailor_resume({"base_resume_id": str(base.id), "job_id": str(job.id)}, db=test_db)
+    assert resp["chain_score"] == "off"
