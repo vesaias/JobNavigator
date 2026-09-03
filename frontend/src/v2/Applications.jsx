@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Card, DashedAdd, IconButton, Input, Pill, Row, Textarea } from './ui'
+import { Button, Card, DashedAdd, Dot, IconButton, Input, Menu, MenuItem, Pill, Row, SectionHead, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -56,11 +56,8 @@ const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].i
 
 const LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
 const FIELD_LABEL = { fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
-const POPOVER = {
-  position: 'absolute', top: '100%', zIndex: 40, background: 'var(--surface)',
-  border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)',
-  padding: 6, display: 'flex', flexDirection: 'column',
-}
+// where a popover sits; how it looks is `Menu`'s.
+const POPOVER = { position: 'absolute', top: '100%', zIndex: 40 }
 // Header action pill — same metrics as the Feed's "Open ↗" (collapsed header).
 // lineHeight:1 is local to these fixed-height controls: at the inherited 1.5 the
 // line box stops centring in the pill and the label rides ~1px high, and under
@@ -358,21 +355,22 @@ export default function Applications() {
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
           </Pill>
           {openFlt === 'company' && (
-            <div className="v2-scroll" style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, gap: 1, maxHeight: 340, overflow: 'auto' }}>
+            <Menu ariaLabel="Filter by company" className="v2-scroll" style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, maxHeight: 340, overflow: 'auto' }}>
               {['live', 'closed'].map((band) => companyOpts[band].map(([name, e], i) => {
                 const on = companies.includes(name)
                 const first = band === 'closed' && i === 0 && companyOpts.live.length > 0
                 return (
-                  <div key={name} className="v2-menuitem" onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
-                    style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, lineHeight: '18px', color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)', cursor: 'pointer', marginTop: first ? 5 : 0, borderTop: first ? '1px solid var(--line)' : 'none', paddingTop: first ? 10 : 6 }}>
-                    {/* ui: keep — checkbox indicator, not a card */}
-                    <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
-                    <span title={band === 'closed' ? 'Every application here is rejected' : undefined} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{e.n}</span>
-                  </div>
+                  <MenuItem key={name} ellipsis hint={e.n} hintMono divider={first}
+                    title={band === 'closed' ? 'Every application here is rejected' : undefined}
+                    onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
+                    style={{ ...(band === 'closed' ? { color: 'var(--muted)' } : null), ...(first ? { marginTop: 5, paddingTop: 10 } : null) }}
+                    icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
+                      <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>}>
+                    {name}
+                  </MenuItem>
                 )
               }))}
-            </div>
+            </Menu>
           )}
         </span>
 
@@ -383,17 +381,15 @@ export default function Applications() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {openFlt === 'sort' && (
-              <div style={{ ...POPOVER, right: 0, marginTop: 8, width: 190, gap: 1 }}>
+              <Menu ariaLabel="Sort applications" style={{ ...POPOVER, right: 0, marginTop: 8, width: 190 }}>
                 {SORTS.map(([id, label]) => {
                   const on = sortBy === id
                   return (
-                    <div key={id} className="v2-menuitem" onClick={() => { setSortBy(id); setOpenFlt(null) }}
-                      style={{ padding: '7px 9px', borderRadius: 6, display: 'flex', alignItems: 'center', fontSize: 12.5, color: on ? 'var(--accent)' : 'var(--text-2)', fontWeight: on ? 500 : 400, background: on ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
-                      {label}{on && <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--accent)' }}>✓</span>}
-                    </div>
+                    <MenuItem key={id} selected={on} hint={on ? '✓' : null}
+                      onClick={() => { setSortBy(id); setOpenFlt(null) }}>{label}</MenuItem>
                   )
                 })}
-              </div>
+              </Menu>
             )}
           </span>
         </span>
@@ -411,13 +407,12 @@ export default function Applications() {
                 {/* every collapsible header in v2 washes to --surface-2 on hover
                     (theme.css .v2-hover-accent) — the stage bands were the last
                     ones with no hover at all */}
-                <div onClick={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))} className="v2-hover-accent"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 8px 5px', borderRadius: 7, lineHeight: '16px', cursor: 'pointer' }}>
-                  <span style={{ width: 7, height: 7, flex: '0 0 7px', borderRadius: 99, background: st.dot }} />
+                <SectionHead boxed caret="pin" open={!shut} onToggle={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
+                  style={{ gap: 8, padding: '12px 8px 5px', lineHeight: '16px' }}>
+                  <Dot style={{ background: st.dot }} />
                   <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{st.label}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>{shut ? '›' : '⌄'}</span>
-                </div>
+                </SectionHead>
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
@@ -519,18 +514,13 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             <div onClick={() => setMenuOpen((v) => !v)} className="v2-bd" title="More actions"
               style={{ ...ACT_BTN, width: 30, padding: 0, justifyContent: 'center', border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', cursor: 'pointer' }}>⋯</div>
             {menuOpen && (
-              <div style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, padding: 5, textAlign: 'left' }}>
+              <Menu ariaLabel="Application actions" style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
                   ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => navigate(`/v2/cover-letters?job=${d.job_id}`)]] : [])].map(([g, label, act]) => (
-                  <div key={label} onClick={() => { setMenuOpen(false); act() }} className="v2-menuitem"
-                    style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
-                    <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{g}</span>{label}
-                  </div>
+                  <MenuItem key={label} icon={g} onClick={() => { setMenuOpen(false); act() }}>{label}</MenuItem>
                 ))}
-                <div onClick={onDelete} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--bad)', cursor: 'pointer', marginTop: 3, borderTop: '1px solid var(--line-soft)' }}>
-                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete application
-                </div>
-              </div>
+                <MenuItem danger icon="✕" onClick={onDelete}>Delete application</MenuItem>
+              </Menu>
             )}
           </div>
         </div>
@@ -548,6 +538,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   border: `1px solid ${on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--line)'}`,
                   background: on ? (rej ? 'var(--bad-soft)' : 'var(--accent-soft)') : 'var(--surface)',
                   color: on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--text-2)' }}>
+                {/* ui: keep — the stage stepper's own dot, part of the segmented control */}
                 <span style={{ width: 7, height: 7, borderRadius: 99, background: s.dot }} />{s.label}
               </div>
             )
@@ -667,7 +658,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
           {history.map((h, i) => (
             <div key={i} style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ width: 8, height: 8, borderRadius: 99, background: h.dot, marginTop: 4 }} />
+                <Dot size={8} style={{ background: h.dot, marginTop: 4 }} />
                 {i < history.length - 1 && <span style={{ width: 1, flex: 1, background: 'var(--line)' }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 12 }}>

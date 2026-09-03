@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Pill as UiPill } from './ui'
+import { Card, Menu, MenuItem, Pill as UiPill } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -103,6 +103,7 @@ const Pill = ({ children, bg, fg }) => (
 const LoadMore = ({ onClick, busy }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
     <UiPill size="sm" disabled={!!busy} ariaBusy={!!busy} onClick={onClick}>
+      {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
       {busy && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
       {busy ? 'Loading…' : 'Load more'}
     </UiPill>
@@ -614,6 +615,7 @@ export default function Stats() {
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
                         className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
+                        {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
                         {running && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
                         {running ? 'Running…' : 'Run now'}
                       </span>
@@ -642,13 +644,12 @@ export default function Stats() {
                   {typeOpen && (
                     <>
                       <span onClick={() => setTypeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
-                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Menu ariaLabel="Filter by type" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 5, width: 150 }}>
                         {TYPE_OPTS.map(([id, label]) => (
-                          <span key={id} onClick={() => { setActType(id); setTypeOpen(false) }} {...kb(() => { setActType(id); setTypeOpen(false) })} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', padding: '6px 9px', borderRadius: 6, fontSize: 12, lineHeight: '16px', color: actType === id ? 'var(--accent)' : 'var(--text-2)', fontWeight: actType === id ? 500 : 400, background: actType === id ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}>
-                            {label}<span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--accent)' }}>{actType === id ? '✓' : ''}</span>
-                          </span>
+                          <MenuItem key={id} selected={actType === id} hint={actType === id ? '✓' : null}
+                            onClick={() => { setActType(id); setTypeOpen(false) }}>{label}</MenuItem>
                         ))}
-                      </span>
+                      </Menu>
                     </>
                   )}
                 </span>

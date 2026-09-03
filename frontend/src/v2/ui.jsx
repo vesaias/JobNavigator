@@ -343,8 +343,8 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
                 style={{
                   padding: '7px 9px', borderRadius: 'var(--radius-field)', fontSize: 'var(--t-12-5)',
                   cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  color: sel ? 'var(--pill-on-ink)' : 'var(--menu-item-ink)',
-                  background: sel ? 'var(--pill-on-bg)' : 'transparent',
+                  color: sel ? 'var(--menu-item-on-ink)' : 'var(--menu-item-ink)',
+                  background: sel ? 'var(--menu-item-on-bg)' : 'transparent',
                 }}>{o[1]}</div>
             )
           })}
@@ -375,7 +375,10 @@ export function Row({ selected, divider, flush, onClick, title, ariaLabel, child
         borderLeft: selected ? '3px solid var(--row-selected-mark)' : undefined,
         borderBottom: divider ? '1px solid var(--row-line)' : undefined,
         padding: selected ? '0 10px 0 7px' : '0 10px',
-        cursor: onClick ? 'pointer' : 'default', ...style,
+        // conditional spread, never `cursor: … : undefined`: a present-but-undefined
+        // key clears the property (and, where a shorthand set it, half of that
+        // shorthand). An inert row leaves `cursor` unset so its text keeps the I-beam.
+        ...(onClick ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
 }
@@ -396,7 +399,10 @@ export const Card = React.forwardRef(function Card(
       style={{
         background: 'var(--card-bg)', border: '1px solid var(--card-border)',
         borderRadius: 'var(--radius-card)', padding: '10px 14px',
-        cursor: live ? 'pointer' : 'default', ...style,
+        // `cursor` is inherited: setting `default` on a *static* card pushed the plain
+        // arrow down through every text node inside it, so selectable card text lost
+        // its I-beam hint. Only an interactive card claims a cursor.
+        ...(live ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
 })
@@ -407,7 +413,7 @@ export function Band({ interactive = true, onClick, title, ariaLabel, children, 
       className={cx(live && 'v2-act', className)}
       style={{
         border: '1px dashed var(--band-border)', borderRadius: 'var(--radius-card)',
-        padding: '10px 14px', cursor: live ? 'pointer' : 'default', ...style,
+        padding: '10px 14px', ...(live ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
 }
@@ -439,9 +445,12 @@ export function MenuHead({ children, style }) {
     }}>{children}</div>
   )
 }
-export function Menu({ children, ariaLabel, style, className }) {
+// `role` is a prop because the same box serves an action menu (role="menu") and
+// an option picker (role="listbox" — Settings' typeahead, the cover-letter
+// template/paper pickers). Positioning is the caller's, passed as `style`.
+export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
   return (
-    <div role="menu" aria-label={ariaLabel} className={className} style={{
+    <div role={role} aria-label={ariaLabel} className={className} style={{
       background: 'var(--menu-bg)', border: '1px solid var(--menu-border)',
       borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
@@ -452,41 +461,108 @@ export function Menu({ children, ariaLabel, style, className }) {
 // `danger` → --menu-item-danger-ink + v2-hover-bad, and (matching all three
 // danger sites in the scan) a --menu-item-sep rule above it; pass
 // `divider={false}` for a danger item that is not the last of its menu.
-export function MenuItem({ icon, hint, danger, divider, disabled, onClick, title, ariaLabel, children, style, className }) {
+// `selected` is the picked row of an option menu (sort, template, paper size,
+// filter value): --menu-item-on-bg / -on-ink at weight 500 — the same tint the
+// Select listbox paints, named once.
+// `icon` sits in a fixed 16 px gutter so every label in a menu starts on one
+// axis whatever glyph precedes it (the shape every icon menu in v2 already drew
+// by hand). `hint` is the trailing shortcut/count; `hintMono` sets it in the
+// mono face, the way keyboard hints and counts are written elsewhere.
+// `href` renders a real <a> — a menu row that navigates must stay ⌘/middle-
+// clickable (Companies' "View jobs in feed", the cover-letter editor's job link).
+export function MenuItem({
+  icon, hint, hintMono, selected, danger, divider, disabled, href, target, ellipsis,
+  role = 'menuitem', onClick, title, ariaLabel, ariaSelected, children, style, className,
+}) {
   const sep = divider === undefined ? !!danger : divider
-  return (
-    <div {...act(onClick, disabled, 'menuitem')} title={title} aria-label={ariaLabel} aria-disabled={disabled || undefined}
-      className={cx(!disabled && (danger ? 'v2-hover-bad' : 'v2-menuitem'), className)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px',
-        borderRadius: 'var(--radius-field)', fontSize: 'var(--t-12-5)',
-        color: danger ? 'var(--menu-item-danger-ink)' : 'var(--menu-item-ink)',
-        borderTop: sep ? '1px solid var(--menu-item-sep)' : undefined,
-        opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
-      }}>
-      {icon && <span aria-hidden="true" style={{ flex: '0 0 auto' }}>{icon}</span>}
-      <span style={{ minWidth: 0, flex: 1 }}>{children}</span>
-      {hint && <Helper size="xs" style={{ flex: '0 0 auto' }}>{hint}</Helper>}
-    </div>
+  const common = {
+    title,
+    'aria-label': ariaLabel,
+    'aria-selected': ariaSelected,
+    'aria-disabled': disabled || undefined,
+    className: cx(!disabled && (danger ? 'v2-hover-bad' : 'v2-menuitem'), className),
+    style: {
+      display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px',
+      borderRadius: 'var(--radius-field)', fontSize: 'var(--t-12-5)',
+      color: danger ? 'var(--menu-item-danger-ink)' : selected ? 'var(--menu-item-on-ink)' : 'var(--menu-item-ink)',
+      ...(selected ? { background: 'var(--menu-item-on-bg)', fontWeight: 500 } : null),
+      ...(sep ? { borderTop: '1px solid var(--menu-item-sep)' } : null),
+      opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
+    },
+  }
+  const body = (
+    <>
+      {icon != null && icon !== false && (
+        <span aria-hidden="true" style={{
+          flex: '0 0 16px', textAlign: 'center', fontSize: 'var(--t-11)',
+          // a flex box, not just text-align: the gutter also holds the filter
+          // menus' 14/15px checkbox, which is a block and would sit left of centre
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          ...(danger ? null : { color: 'var(--label-ink)' }),
+        }}>{icon}</span>
+      )}
+      <span style={{
+        minWidth: 0, flex: 1,
+        ...(ellipsis ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : null),
+      }}>{children}</span>
+      {hint != null && hint !== false && hint !== '' && (
+        <Helper size="xs" mono={hintMono} style={{ flex: '0 0 auto', ...(selected ? { color: 'inherit' } : null) }}>{hint}</Helper>
+      )}
+    </>
   )
+  if (href) {
+    return (
+      <a href={href} target={target} rel={target === '_blank' ? 'noreferrer' : undefined}
+        role={role} onClick={disabled ? undefined : onClick} {...common}
+        style={{ ...common.style, textDecoration: 'none' }}>{body}</a>
+    )
+  }
+  return <div {...act(onClick, disabled, role)} {...common}>{body}</div>
 }
 
 // ── SectionHead ─────────────────────────────────────────────────────────────
-// canonical: muted · 12.5 · hover v2-hover-accent. Collapsible: the caret and
-// aria-expanded are driven by `open`; `boxed` is the padded/rounded variant.
-export function SectionHead({ open = true, onToggle, count, boxed, title, ariaLabel, children, style, className }) {
+// canonical: --section-head-ink · 12.5/18px · gap 6 · hover v2-hover-accent, the
+// caret first, `aria-expanded` and Enter/Space driven by `open`/`onToggle`.
+// The caret glyph is ⌄ / › — the pair every screen in v2 already draws (D3's
+// ▾ / ▸ had no call site outside the gallery).
+// Variants:
+//   `boxed` — r6 · pad 2 4: a hover target slightly larger than the label, the
+//             form the Feed's report heads use.
+//   `card`  — the collapsible **card header** (Persona's autofill groups, the
+//             résumé sections, the cover-letter editor): gap 9, the card's own
+//             radius, ink inherited from the card rather than muted. Its padding
+//             is layout and is passed in `style`.
+// `caret="end"` puts the glyph last, adjacent to the last child (a head that
+// reads label → rule → caret); `caret="pin"` puts it last and pins it to the
+// right edge (`margin-left:auto`); `caret={false}` draws none, for a head that
+// supplies its own (the cover-letter editor's rotating SVG chevron).
+// Children render as-is, so a head that is a row of its own — a hairline, a
+// count, a status — lays itself out.
+export function SectionHead({
+  open = true, onToggle, count, boxed, card, caret = 'start', hover = 'v2-hover-accent',
+  title, ariaLabel, children, style, className,
+}) {
+  const glyph = onToggle && caret ? (
+    <span aria-hidden="true" style={{
+      flex: '0 0 auto', fontSize: 'var(--t-10)', color: 'var(--label-ink)',
+      ...(caret === 'pin' ? { marginLeft: 'auto' } : null),
+    }}>{open ? '⌄' : '›'}</span>
+  ) : null
   return (
     <div {...act(onToggle, false)} title={title} aria-label={ariaLabel} aria-expanded={onToggle ? !!open : undefined}
-      className={cx(onToggle && 'v2-hover-accent', className)}
+      className={cx(onToggle && hover, className)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        fontSize: 'var(--t-12-5)', lineHeight: '18px', color: 'var(--section-head-ink)',
-        borderRadius: boxed ? 'var(--radius-field)' : undefined, padding: boxed ? '2px 4px' : undefined,
-        cursor: onToggle ? 'pointer' : 'default', ...style,
+        display: 'flex', alignItems: 'center', gap: card ? 9 : 6,
+        fontSize: 'var(--t-12-5)', lineHeight: '18px',
+        ...(card ? null : { color: 'var(--section-head-ink)' }),
+        ...(card ? { borderRadius: 'var(--radius-card)' } : null),
+        ...(boxed ? { borderRadius: 'var(--radius-field)', padding: '2px 4px' } : null),
+        ...(onToggle ? { cursor: 'pointer' } : null), ...style,
       }}>
-      {onToggle && <span aria-hidden="true" style={{ flex: '0 0 auto' }}>{open ? '▾' : '▸'}</span>}
-      <span style={{ minWidth: 0 }}>{children}</span>
+      {caret === 'start' && glyph}
+      {children}
       {count !== undefined && count !== null && <Helper size="xs" style={{ flex: '0 0 auto' }}>{count}</Helper>}
+      {(caret === 'end' || caret === 'pin') && glyph}
     </div>
   )
 }
@@ -511,7 +587,11 @@ export function Chip({ disabled, onClick, title, ariaLabel, children, style, cla
 
 // ── Tag / Dot ───────────────────────────────────────────────────────────────
 // Tag canonical: r99 · 10px · pad 2 8 · .06em uppercase, tinted by tone.
+// `tone="none"` sets no colour at all: the ATS / search-mode / tier badges are a
+// separate hue taxonomy that theme.css paints from a `cc-*` / `sm-*` class, and
+// an inline tone would beat that class. Everything else about the box is shared.
 const TAG_TONE = {
+  none: {},
   neutral: { background: 'var(--tag-neutral-bg)', color: 'var(--tag-neutral-ink)' },
   accent: { background: 'var(--tag-accent-bg)', color: 'var(--tag-accent-ink)' },
   good: { background: 'var(--tag-good-bg)', color: 'var(--tag-good-ink)' },

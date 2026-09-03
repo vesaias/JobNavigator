@@ -114,6 +114,7 @@
   /* menus */
   --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
+  --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
   --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
@@ -249,6 +250,7 @@
   /* menus */
   --menu-bg:var(--surface); --menu-border:var(--line); --menu-shadow:var(--shadow-menu);
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
+  --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
   --menu-item-danger-ink:var(--bad); --menu-item-danger-hover:var(--bad-soft); --menu-item-sep:var(--line-soft);
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);

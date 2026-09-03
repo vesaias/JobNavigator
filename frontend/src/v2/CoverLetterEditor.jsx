@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, IconButton, Input } from './ui'
+import { Button, Card as UiCard, DashedAdd, IconButton, Input, Menu, MenuItem, SectionHead } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -29,7 +29,10 @@ const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase
 function Card({ title, note, open, onToggle, children }) {
   return (
     <UiCard style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-      <div onClick={onToggle} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: '9px 9px 0 0' }}>
+      {/* caret={false}: this head keeps its own SVG chevron, which *rotates* between
+          the two states rather than swapping glyphs */}
+      <SectionHead card caret={false} hover="v2-clhead" open={!!open} onToggle={onToggle}
+        style={{ padding: '10px 14px', borderRadius: '9px 9px 0 0' }}>
         <span style={{ flex: '0 0 auto', width: 10, height: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
           <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true"
             style={{ display: 'block', transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform .12s' }}>
@@ -40,7 +43,7 @@ function Card({ title, note, open, onToggle, children }) {
           <span style={{ flex: '0 0 auto', fontSize: 13, lineHeight: '20px', fontWeight: 600 }}>{title}</span>
           {note && <span style={{ flex: '0 1 auto', fontSize: 11.5, lineHeight: '20px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
         </span>
-      </div>
+      </SectionHead>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '2px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
           {children}
@@ -333,6 +336,7 @@ export default function CoverLetterEditor() {
           <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--muted)' }}>{voiceLen}</span>
         </div>
         <Button onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length">
+          {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
           {regening
             ? <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />
             : <span style={{ fontSize: 12 }}>↻</span>}
@@ -342,30 +346,18 @@ export default function CoverLetterEditor() {
           <IconButton size={36} on={menuOpen} ariaExpanded={menuOpen} ariaHaspopup="menu"
             onClick={() => setMenuOpen((v) => !v)} title="More actions">⋯</IconButton>
           {menuOpen && (
-            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', zIndex: 50, padding: 5, display: 'flex', flexDirection: 'column' }}>
+            <Menu ariaLabel="Letter actions" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, zIndex: 50 }}>
               {doc.has_application && (
-                <div onClick={() => { setMenuOpen(false); navigate('/v2/applications') }} className="v2-menuitem"
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>▤</span><span style={{ flex: 1 }}>View application</span>
-                </div>
+                <MenuItem icon="▤" onClick={() => { setMenuOpen(false); navigate('/v2/applications') }}>View application</MenuItem>
               )}
               {doc.job_id && (
-                <div onClick={() => { setMenuOpen(false); navigate(`/v2/feed?job=${doc.job_id}`) }} className="v2-menuitem"
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span><span style={{ flex: 1 }}>View job in feed</span>
-                </div>
+                <MenuItem icon="☰" onClick={() => { setMenuOpen(false); navigate(`/v2/feed?job=${doc.job_id}`) }}>View job in feed</MenuItem>
               )}
               {doc.job_url && (
-                <a href={doc.job_url} target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)} className="v2-menuitem"
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer', textDecoration: 'none' }}>
-                  <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>↗</span><span style={{ flex: 1 }}>Open job posting</span>
-                </a>
+                <MenuItem icon="↗" href={doc.job_url} target="_blank" onClick={() => setMenuOpen(false)}>Open job posting</MenuItem>
               )}
-              <div onClick={remove} className="v2-hover-bad"
-                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer', marginTop: 3, borderTop: '1px solid var(--line-soft)' }}>
-                <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span><span style={{ flex: 1 }}>Delete letter</span>
-              </div>
-            </div>
+              <MenuItem danger icon="✕" onClick={remove}>Delete letter</MenuItem>
+            </Menu>
           )}
         </div>
       </div>
@@ -486,6 +478,7 @@ export default function CoverLetterEditor() {
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
           <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
             <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
+            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
             {pdfBusy && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--edge)', borderTopColor: 'transparent', borderRadius: 99 }} />}
 
             <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
@@ -494,12 +487,12 @@ export default function CoverLetterEditor() {
                 <span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {tplOpen && (
-                <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 210, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Menu role="listbox" ariaLabel="Cover letter template" className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 210, maxHeight: 300, overflow: 'auto' }}>
                   {templates.map((t) => (
-                    <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" title={t.description || ''}
-                      style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : 'transparent' }}>{t.name}</div>
+                    <MenuItem key={t.id} role="option" ariaSelected={t.id === template} selected={t.id === template}
+                      title={t.description || ''} onClick={() => pickTemplate(t.id)}>{t.name}</MenuItem>
                   ))}
-                </div>
+                </Menu>
               )}
             </span>
 
@@ -509,12 +502,12 @@ export default function CoverLetterEditor() {
                 <span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{fmtLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
               </span>
               {fmtOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 130, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Menu role="listbox" ariaLabel="Paper size" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 130 }}>
                   {PAGE_FORMATS.map(([f, label]) => (
-                    <div key={f} onClick={() => pickFormat(f)} className="v2-menuitem"
-                      style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: f === format ? 'var(--accent)' : 'var(--text-2)', background: f === format ? 'var(--accent-soft)' : 'transparent' }}>{label}</div>
+                    <MenuItem key={f} role="option" ariaSelected={f === format} selected={f === format}
+                      onClick={() => pickFormat(f)}>{label}</MenuItem>
                   ))}
-                </div>
+                </Menu>
               )}
             </span>
 
@@ -559,6 +552,7 @@ export default function CoverLetterEditor() {
               {/* RES-17: a disabled primary pill is --line on --muted across the three
                   builders — a dimmed accent still reads as the live button. */}
               <Button size="sm" onClick={regenerate} disabled={regening || !rSource}>
+                {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
                 {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </Button>

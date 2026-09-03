@@ -11,7 +11,7 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Input, Textarea } from './ui'
+import { Band, Card, DashedAdd, Input, SectionHead, Textarea } from './ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
@@ -139,14 +139,8 @@ export const EmptyState = ({ what, note }) => (
     <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
   </Band>
 )
-export const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
-export const MenuItem = ({ icon, label, hint, onClick }) => (
-  <div onClick={onClick} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-    {icon != null && <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{icon}</span>}
-    <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
-    {hint && <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>{hint}</span>}
-  </div>
-)
+// MenuHead / MenuItem used to be declared here too. There is now one of each,
+// in ui.jsx — the résumé editor imports them straight from './ui'.
 export const MicroField = ({ label, value, onChange, placeholder }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
@@ -159,14 +153,13 @@ export const MicroField = ({ label, value, onChange, placeholder }) => (
 export function SectionShell({ name, count, open, onToggle, meta, children }) {
   return (
     <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-      <div onClick={onToggle} {...kb(onToggle)} aria-expanded={!!open} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
-        <span style={{ color: 'var(--muted)', fontSize: 10 }}>{open ? '⌄' : '›'}</span>
+      <SectionHead card open={!!open} onToggle={onToggle} style={{ padding: '10px 14px' }}>
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
           {count != null && <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>({count})</span>}
         </span>
         {meta}
-      </div>
+      </SectionHead>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
           {children}
@@ -269,14 +262,13 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 18.75px, which made this row 36.75px tall and put every row below it
                 (and the Skills/Education/Projects cards) on a half pixel, where
                 Chrome rounds their 1px borders away — same fix as SectionShell */}
-            <div onClick={() => toggle(i)} {...kb(() => toggle(i))} aria-expanded={isOpen} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
-              <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
+            <SectionHead card open={isOpen} onToggle={() => toggle(i)} style={{ alignItems: 'baseline', padding: '9px 11px' }}>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
               <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--sans)', color: 'var(--muted)' }}>{e.date}</span>
               <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
-            </div>
+            </SectionHead>
             {isOpen && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '2px 11px 11px', borderTop: '1px solid var(--line-soft)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, paddingTop: 9 }}>

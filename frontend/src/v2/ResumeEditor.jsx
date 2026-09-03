@@ -10,9 +10,9 @@ import { useTitle } from '../useTitle'
 // resume_content is the same shape as a Resume's json_data).
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
-  MenuHead, MenuItem, SectionShell, SectionEditor, BandRule,
+  SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, IconButton, Input, Pill, Textarea } from './ui'
+import { Band, Button, IconButton, Input, Menu, MenuHead, MenuItem, Pill, Textarea } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -519,6 +519,7 @@ export default function ResumeEditor() {
           </div>
           {stage && (
             <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'Pipeline complete' : 'The one next step'}>
+              {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
               {scoring && <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
               {stage.label}
             </Button>
@@ -529,20 +530,19 @@ export default function ResumeEditor() {
             {headMenu && (
               <>
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+                <Menu ariaLabel="Résumé actions" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244 }}>
                   <MenuHead>This copy</MenuHead>
-                  <MenuItem icon="✦" label="Re-tailor…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
-                  <MenuItem icon="◎" label="Score again · light" hint="score only" onClick={() => runScore('light')} />
-                  <MenuItem icon="◎" label="Score again · full" hint="with report" onClick={() => runScore('full')} />
-                  {changes.length > 0 && <MenuItem icon="≋" label="Review changes" hint={`${changes.length} to review`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }} />}
+                  <MenuItem icon="✦" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }}>Re-tailor…</MenuItem>
+                  <MenuItem icon="◎" hint="score only" onClick={() => runScore('light')}>Score again · light</MenuItem>
+                  <MenuItem icon="◎" hint="with report" onClick={() => runScore('full')}>Score again · full</MenuItem>
+                  {changes.length > 0 && <MenuItem icon="≋" hint={`${changes.length} to review`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }}>Review changes</MenuItem>}
                   <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
                   <MenuHead>Job</MenuHead>
-                  <MenuItem icon="✉" label="Cover letter" hint="c" onClick={goCover} />
-                  {doc.job_id && <MenuItem icon="↗" label="Open in feed" hint="e" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)} />}
-                  {doc.job_id && <MenuItem icon="✓" label="Mark applied" hint="a" onClick={markApplied} />}
-                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete copy</div>
-                </div>
+                  <MenuItem icon="✉" hint="c" onClick={goCover}>Cover letter</MenuItem>
+                  {doc.job_id && <MenuItem icon="↗" hint="e" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
+                  {doc.job_id && <MenuItem icon="✓" hint="a" onClick={markApplied}>Mark applied</MenuItem>}
+                  <MenuItem danger icon="✕" onClick={deleteResume}>Delete copy</MenuItem>
+                </Menu>
               </>
             )}
           </div>
@@ -559,12 +559,11 @@ export default function ResumeEditor() {
             {headMenu && (
               <>
                 <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column' }}>
+                <Menu ariaLabel="Résumé actions" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 244 }}>
                   <MenuHead>This base</MenuHead>
-                  <MenuItem icon="✦" label="Tailor for a job…" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }} />
-                  <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                  <div onClick={deleteResume} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete résumé</div>
-                </div>
+                  <MenuItem icon="✦" hint="adds a copy" onClick={() => { setHeadMenu(false); setTailorOpen(true) }}>Tailor for a job…</MenuItem>
+                  <MenuItem danger icon="✕" onClick={deleteResume}>Delete résumé</MenuItem>
+                </Menu>
               </>
             )}
           </div>
@@ -595,18 +594,18 @@ export default function ResumeEditor() {
             <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Résumé template" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {tplOpen && (
-                  <div className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-                    {templates.map((t) => <div key={t.id} onClick={() => pickTemplate(t.id)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: t.id === template ? 'var(--accent)' : 'var(--text-2)', background: t.id === template ? 'var(--accent-soft)' : undefined }}>{t.name}</div>)}
-                  </div>
+                  <Menu role="listbox" ariaLabel="Résumé template" className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto' }}>
+                    {templates.map((t) => <MenuItem key={t.id} role="option" ariaSelected={t.id === template} selected={t.id === template} onClick={() => pickTemplate(t.id)}>{t.name}</MenuItem>)}
+                  </Menu>
               )}
             </div>
             {/* format */}
             <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{format === 'a4' ? 'A4' : 'US Letter'}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {fmtOpen && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 9, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-                    {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <div key={v} onClick={() => pickFormat(v)} className="v2-menuitem" style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: v === format ? 'var(--accent)' : 'var(--text-2)', background: v === format ? 'var(--accent-soft)' : undefined }}>{l}</div>)}
-                  </div>
+                  <Menu role="listbox" ariaLabel="Paper size" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130 }}>
+                    {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <MenuItem key={v} role="option" ariaSelected={v === format} selected={v === format} onClick={() => pickFormat(v)}>{l}</MenuItem>)}
+                  </Menu>
               )}
             </div>
             {/* ui: keep — native <a href target=_blank> download link; Button renders a div and would drop the anchor */}
@@ -704,6 +703,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
                 <div key={o.id} onClick={() => !off && setBaseId(o.id)} className={off ? undefined : 'v2-act'}
                   title={off ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: off ? 'default' : 'pointer', opacity: off ? 0.45 : 1 }}>
+                  {/* ui: keep — radio indicator, not a status dot */}
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
                   <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</span>
@@ -793,6 +793,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
               const on = String(pick) === String(j.id), sc = jobScore(j), has = existing.has(String(j.id))
               return (
                 <div key={j.id} onClick={() => { setPick(j.id); setJd('') }} className="v2-act" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer' }}>
+                  {/* ui: keep — radio indicator, not a status dot */}
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>

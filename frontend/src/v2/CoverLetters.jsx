@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Pill, SearchInput } from './ui'
+import { Band, Button, Card, Menu, Pill, SearchInput, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -20,11 +20,8 @@ const CTRL = {
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
   justifyContent: 'space-between', fontSize: 12.5, cursor: 'pointer', color: 'var(--text)',
 }
-const POPOVER = {
-  position: 'absolute', top: '100%', left: 0, zIndex: 40, marginTop: 4, background: 'var(--surface)',
-  border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)',
-  padding: 5, display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 300, overflow: 'auto',
-}
+// where a popover sits; how it looks is `Menu`'s.
+const POPOVER = { position: 'absolute', top: '100%', left: 0, zIndex: 40, marginTop: 4, maxHeight: 300, overflow: 'auto' }
 
 // Design draws these selects as a bordered row with a ▾ — a native <select>
 // can't carry the two-line job labels, so this is a small popover instead.
@@ -67,8 +64,10 @@ export function Picker({ value, options, placeholder, onPick, width }) {
           just closes it. */}
       {open && <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />}
       {open && (
-        <div className="v2-scroll" style={{ ...POPOVER, width: width || '100%' }}>
+        <Menu role="listbox" className="v2-scroll" style={{ ...POPOVER, width: width || '100%' }}>
           {options.length === 0 && <div style={{ padding: '7px 9px', fontSize: 12, color: 'var(--muted)' }}>Nothing to pick yet.</div>}
+          {/* ui: keep — two-line option (label over `sub`); MenuItem draws a single-line
+              row, and this Picker is already a documented keep for the same reason */}
           {options.map((o) => (
             <div key={o.id} className="v2-menuitem" onClick={() => { onPick(o.id); setOpen(false) }}
               style={{ padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', minWidth: 0,
@@ -78,7 +77,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
               {o.sub && <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.sub}</div>}
             </div>
           ))}
-        </div>
+        </Menu>
       )}
     </span>
   )
@@ -313,8 +312,8 @@ export default function CoverLetters() {
           <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
         </div>
         {(c.stage || arc) && (
-          <span title={c.stage ? 'Stage of the linked application' : 'No application yet'} className={STAGE_CLASS[c.stage] || 'cc-generic'}
-            style={{ flex: '0 0 auto', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.stage || 'Draft'}</span>
+          <Tag tone="none" title={c.stage ? 'Stage of the linked application' : 'No application yet'}
+            className={STAGE_CLASS[c.stage] || 'cc-generic'}>{c.stage || 'Draft'}</Tag>
         )}
         <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{agoShort(c.updated_at)}</span>
         <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
@@ -365,6 +364,7 @@ export default function CoverLetters() {
               in the three builders — a dimmed accent still reads as live. */}
           <Button onClick={generate} disabled={!canGenerate}
             title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}>
+            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
             {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
           </Button>

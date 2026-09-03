@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, Card, IconButton, Input, Pill, Select } from './ui'
+import { Button, Card, IconButton, Input, Menu, MenuItem, Pill, Select } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -611,7 +611,7 @@ export default function Searches() {
                keeps its amber edge (.v2-bd-warn comes later in theme.css, so its
                border-color wins over .v2-card's accent). */
             <Card key={s.id} className={isOpen ? undefined : warn ? 'v2-card v2-bd-warn' : 'v2-card'}
-              style={{ padding: 0, borderColor: warn ? 'var(--warn-line)' : isOpen ? 'var(--accent)' : undefined, display: 'flex', flexDirection: 'column' }}>
+              style={{ padding: 0, ...(warn ? { borderColor: 'var(--warn-line)' } : isOpen ? { borderColor: 'var(--accent)' } : null), display: 'flex', flexDirection: 'column' }}>
               {/* summary row */}
               <div onClick={() => openEdit(s)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', cursor: 'pointer' }}>
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
@@ -670,18 +670,14 @@ export default function Searches() {
                     <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
                       style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                     {menuFor === s.id && (
-                      <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                      <Menu ariaLabel={`${s.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
                           ['☰', 'View results in feed', () => navigate(`/v2/feed?search=${s.id}`)],
                           ['⧉', 'Duplicate', () => duplicate(s)]].map(([g, label, act]) => (
-                          <span key={label} onClick={act} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
-                            <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>{g}</span>{label}
-                          </span>
+                          <MenuItem key={label} icon={g} onClick={act}>{label}</MenuItem>
                         ))}
-                        <span onClick={() => remove(s)} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--bad)', cursor: 'pointer', marginTop: 3, borderTop: '1px solid var(--line-soft)' }}>
-                          <span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete search
-                        </span>
-                      </span>
+                        <MenuItem danger icon="✕" onClick={() => remove(s)}>Delete search</MenuItem>
+                      </Menu>
                     )}
                   </span>
                 )}
@@ -707,6 +703,7 @@ export default function Searches() {
             before the first response landed. */}
         {loading && searches.length === 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 30px', fontSize: 11.5, color: 'var(--muted)' }}>
+            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
             <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading searches…
           </div>
         )}
@@ -804,6 +801,9 @@ function TestModal({ test, tab, setTab, onClose }) {
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {Object.entries(bySource).map(([k, v]) => {
                   const c = srcChip(k)
+                  /* ui: keep — mono source badge on the cc- / sm- hue taxonomy (its colour
+                     comes from `c.className`/`c.style`, which an inline Tag tone would beat);
+                     Tag is the uppercase .06em sans form at pad 2 8 */
                   return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 99, ...(c.style || {}) }}>{k} {v}</span>
                 })}
               </span>
