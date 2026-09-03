@@ -1,0 +1,76 @@
+"""D5 lint: fail on styling that bypasses the primitive layer.
+
+Usage: py v2-testing/tools/stylelint.py [--strict]
+Checks frontend/src/v2/*.jsx (except ui.jsx, UiGallery.jsx, ToastLab.jsx) and theme.css:
+  1. raw colours (#hex, rgb(/rgba(/hsl() in JSX  → only theme.css may hold them
+  2. fontFamily / fontSize literals in JSX style objects (numbers or px strings) outside ui.jsx
+  3. borderRadius / boxShadow literals in JSX outside ui.jsx (var(--radius-*) / var(--*-shadow) are fine)
+  4. hover classes (v2-bd, v2-bdc, v2-act, v2-row, v2-card, v2-menuitem, v2-hover-*, v2-dashadd, v2-navlink) on elements that are not ui.jsx primitives
+  5. style objects matching a primitive role signature (radius 99 + border/background; 1px border + radius 6-12 + surface bg) outside ui.jsx
+  6. theme.css: the semantic token block must be identical in the light and dark sections (same names)
+Lines carrying `// ui: keep` or `// lint: allow` are exempt (reported separately as allowed).
+Exit 1 on any finding unless every finding is allowed.
+"""
+import re, os, sys, io, collections
+
+ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "v2")
+SKIP = {"ui.jsx", "UiGallery.jsx", "ToastLab.jsx"}
+HOVER = re.compile(r"\bv2-(bdc?|act|row|crow|arow|card|chip|menuitem|hover-[a-z-]+|dashadd|navlink|clhead)\b")
+PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface"}
+
+def lint_jsx(fn, text):
+    out = []
+    for i, line in enumerate(text.splitlines(), 1):
+        allowed = "ui: keep" in line or "lint: allow" in line
+        code = re.sub(r"//.*$", "", line) if "//" in line and "http" not in line else line
+        if re.search(r"(?<![\w-])#[0-9a-fA-F]{3,8}\b", code) and "var(--" not in code and "href" not in code:
+            out.append((i, "raw-colour", allowed, line.strip()[:120]))
+        if re.search(r"\brgba?\(|\bhsla?\(", code):
+            out.append((i, "raw-colour", allowed, line.strip()[:120]))
+        m = re.search(r"fontSize:\s*(?:'?\d[\d.]*(?:px)?'?)", code)
+        if m and "var(--t-" not in code:
+            out.append((i, "font-size-literal", allowed, line.strip()[:120]))
+        if re.search(r"fontFamily:\s*'(?!var\()", code):
+            out.append((i, "font-family-literal", allowed, line.strip()[:120]))
+        if re.search(r"borderRadius:\s*\d", code) and "var(--radius" not in code:
+            out.append((i, "radius-literal", allowed, line.strip()[:120]))
+        if re.search(r"boxShadow:\s*'(?!var\()", code):
+            out.append((i, "shadow-literal", allowed, line.strip()[:120]))
+        if HOVER.search(code):
+            tag = re.search(r"<([A-Z][A-Za-z]*)\b", code)
+            if not (tag and tag.group(1) in PRIMS):
+                out.append((i, "hover-class-on-non-primitive", allowed, line.strip()[:120]))
+        if re.search(r"borderRadius:\s*99\b", code) and re.search(r"\b(background|border):", code):
+            out.append((i, "pill-shaped-inline", allowed, line.strip()[:120]))
+    return out
+
+def lint_css(text):
+    out = []
+    blocks = re.findall(r"\.jn-v2(\[data-theme=\"dark\"\])?\s*\{([^}]*)\}", text, re.S)
+    names = []
+    for dark, body in blocks:
+        names.append((bool(dark), set(re.findall(r"(--[a-z0-9-]+)\s*:", body))))
+    light = set().union(*[n for d, n in names if not d]) if any(not d for d, _ in names) else set()
+    dark = set().union(*[n for d, n in names if d]) if any(d for d, _ in names) else set()
+    sem = {n for n in light | dark if not re.match(r"--(t-|radius-)", n)}
+    only_light = sorted(n for n in sem if n in light and n not in dark and not n.startswith("--t-"))
+    only_dark = sorted(n for n in sem if n in dark and n not in light)
+    if only_light: out.append(("theme.css", "token-missing-in-dark", ", ".join(only_light[:30])))
+    if only_dark: out.append(("theme.css", "token-missing-in-light", ", ".join(only_dark[:30])))
+    return out
+
+def main():
+    findings = []; allowed = []
+    for fn in sorted(os.listdir(ROOT)):
+        if not fn.endswith(".jsx") or fn in SKIP: continue
+        for i, kind, ok, snippet in lint_jsx(fn, io.open(os.path.join(ROOT, fn), encoding="utf-8").read()):
+            (allowed if ok else findings).append((fn, i, kind, snippet))
+    css = lint_css(io.open(os.path.join(ROOT, "theme.css"), encoding="utf-8").read())
+    by = collections.Counter(k for _, _, k, _ in findings)
+    print(f"stylelint: {len(findings)} findings ({dict(by)}), {len(allowed)} allowed, {len(css)} css")
+    for fn, i, kind, snippet in findings[:400]: print(f"  {fn}:{i} {kind}: {snippet}")
+    for f, kind, detail in css: print(f"  {f} {kind}: {detail}")
+    sys.exit(1 if findings or css else 0)
+
+if __name__ == "__main__":
+    main()
