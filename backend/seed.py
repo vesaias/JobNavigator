@@ -640,6 +640,11 @@ END $$;""",
         # that hard-fails (ZipRecruiter 403) stops looking like one that simply
         # found nothing. create_all() never adds columns to an existing table.
         "ALTER TABLE scrape_log ADD COLUMN IF NOT EXISTS source_breakdown JSONB",
+        # Per-entity acknowledgement of a scrape warning: /health/entities stops
+        # counting the entity while its newest ScrapeLog row is no newer than
+        # this stamp. A later failed run is newer, so it re-raises on its own.
+        "ALTER TABLE searches ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
     ]
     for sql in migrations:
         try:

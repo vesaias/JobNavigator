@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from backend.models.db import get_db, Search, Setting, ScrapeLog, Job
+from backend.models.db import get_db, Search, Setting, ScrapeLog, Job, is_acknowledged
 
 logger = logging.getLogger("jobnavigator.routes_searches")
 
@@ -96,6 +96,35 @@ def update_search(search_id: str, updates: dict, db: Session = Depends(get_db)):
             setattr(search, key, value)
     db.commit()
     return _search_to_dict(search)
+
+
+@router.post("/{search_id}/acknowledge")
+def acknowledge_search_warning(search_id: str, db: Session = Depends(get_db)):
+    """Mark this search's current scrape warning as seen.
+
+    /api/health/entities stops counting the search (rail dot, header "N need
+    attention") while its newest ScrapeLog row is no newer than this stamp. The
+    row keeps showing the warning, muted, so the history stays visible; a run
+    that fails *after* the acknowledgement is newer, so it raises it again.
+
+    The two seeded extension searches never scrape, so they can never raise one
+    of these warnings — acknowledging is meaningless there and returns 409, the
+    same guard /run and DELETE use.
+    """
+    search = db.query(Search).filter(Search.id == search_id).first()
+    if not search:
+        raise HTTPException(status_code=404, detail="Search not found")
+    if search.search_mode in EXTENSION_MODES:
+        raise HTTPException(
+            status_code=409,
+            detail="Extension searches have no scrape health to acknowledge — "
+                   "jobs arrive from the browser extension",
+        )
+    from datetime import datetime, timezone
+    search.warning_acknowledged_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"id": str(search.id), "name": search.name,
+            "warning_acknowledged_at": search.warning_acknowledged_at.isoformat()}
 
 
 @router.delete("/{search_id}")
@@ -737,6 +766,11 @@ def _search_to_dict(s: Search, last_log=None) -> dict:
         "auto_scoring_depth": s.auto_scoring_depth,
         "run_interval_minutes": s.run_interval_minutes,
         "last_run_at": s.last_run_at.isoformat() if s.last_run_at else None,
+        "warning_acknowledged_at": s.warning_acknowledged_at.isoformat() if s.warning_acknowledged_at else None,
+        # True while the acknowledgement still covers the newest run — the UI
+        # mutes the warning instead of hiding it, so the history stays readable.
+        "warning_acknowledged": is_acknowledged(
+            getattr(last_log, "ran_at", None), s.warning_acknowledged_at),
         "created_at": s.created_at.isoformat() if s.created_at else None,
         # most recent ScrapeLog for this search (None until it has run once)
         "last_error": (last_log.error if last_log else None),

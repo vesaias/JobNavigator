@@ -72,6 +72,11 @@ class Search(Base):
     # from a company-specific scrape.
     exclude_active_companies = Column(Boolean, default=False)
     last_run_at = Column(DateTime(timezone=True), nullable=True)
+    # Operator acknowledgement of the current scrape warning. /health/entities
+    # treats the entity as healthy while the newest ScrapeLog row is not newer
+    # than this stamp, so a known-broken board stops holding the rail dot amber
+    # until it fails again. NULL = never acknowledged.
+    warning_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
 
@@ -98,6 +103,8 @@ class Company(Base):
     # H-1B metrics moved to the VisaCache table (single source of truth, keyed by
     # company name + country) so search-sourced companies not in this table are covered.
     last_scraped_at = Column(DateTime(timezone=True), nullable=True)
+    # See Search.warning_acknowledged_at — same contract, per company.
+    warning_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
 
 
@@ -462,6 +469,22 @@ class TracerClickEvent(Base):
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+def is_acknowledged(last_run_at, acknowledged_at) -> bool:
+    """True when a scrape warning has been acknowledged and nothing has gone
+    wrong since — i.e. the entity's newest run is not newer than the stamp.
+
+    Postgres hands back tz-aware datetimes; SQLite (tests) drops the offset, so
+    both sides are normalised to UTC before comparing rather than assuming.
+    """
+    if acknowledged_at is None or last_run_at is None:
+        return False
+
+    def _utc(dt):
+        return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+    return _utc(last_run_at) <= _utc(acknowledged_at)
+
+
 def find_company_by_name(db, name: str):
     """Find a Company by name or alias (case-insensitive)."""
     if not name:
