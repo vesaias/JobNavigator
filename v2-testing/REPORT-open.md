@@ -156,3 +156,10 @@ Closed by fact rather than by preference (not re-openable as decisions): **RES-2
 | Closed by fact | 3 |
 | Filed findings still open across rounds 1–3 | **0** |
 | Text suggestions (excluded here) | 156 |
+
+## Decisions (2026-09-04, user — this is the final list)
+- Fix: OPEN-01, 02, 03, 04, 06, 10, 12 (Opus batch in progress).
+- OPEN-07: `--series-new` confirmed as the token (decided).
+- OPEN-14: no need. OPEN-15: don't care. OPEN-18..22: ignored (worksheet debt).
+- OPEN-17: checked — `llm_models_list` is consumed by the frontend model pickers via `GET /settings`; the backend only seeds/refreshes it. No action.
+- OPEN-05, 08, 09, 11, 13, 16: explained to the user, awaiting a call.
