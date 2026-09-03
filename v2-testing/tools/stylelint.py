@@ -28,7 +28,9 @@ def lint_jsx(fn, text):
         return False
     for i, line in enumerate(lines, 1):
         allowed = is_allowed(i)
+        if re.match(r"^\s*(//|/\*|\*|\{/\*)", line): continue  # comment lines
         code = re.sub(r"//.*$", "", line) if "//" in line and "http" not in line else line
+        code = re.sub(r"\{/\*.*?\*/\}", "", code)
         if re.search(r"(?<![\w-])#[0-9a-fA-F]{3,8}\b", code) and "var(--" not in code and "href" not in code:
             out.append((i, "raw-colour", allowed, line.strip()[:120]))
         if re.search(r"\brgba?\(|\bhsla?\(", code):
@@ -58,7 +60,8 @@ def lint_css(text):
         names.append((bool(dark), set(re.findall(r"(--[a-z0-9-]+)\s*:", body))))
     light = set().union(*[n for d, n in names if not d]) if any(not d for d, _ in names) else set()
     dark = set().union(*[n for d, n in names if d]) if any(d for d, _ in names) else set()
-    sem = {n for n in light | dark if not re.match(r"--(t-|radius-)", n)}
+    INVARIANT = {"--sans", "--serif", "--mono", "--knob", "--faint", "--iframe-bg", "--rail-active", "--rail-hover", "--rail-ink", "--rail-line", "--on-rail-dim", "--on-rail-line", "--on-rail-sep"}  # same in both themes by design
+    sem = {n for n in light | dark if not re.match(r"--(t-|radius-)", n) and n not in INVARIANT}
     only_light = sorted(n for n in sem if n in light and n not in dark and not n.startswith("--t-"))
     only_dark = sorted(n for n in sem if n in dark and n not in light)
     if only_light: out.append(("theme.css", "token-missing-in-dark", ", ".join(only_light[:30])))
