@@ -85,13 +85,26 @@ _JOBSPY_SITE_KEYS = {
 }
 
 
-def _site_key(logger_name: str):
-    """"JobSpy:ZipRecruiter" -> "zip_recruiter". None for non-site loggers.
+# jobspy's create_logger() builds "JobSpy:<DisplayName>" per board. Two spellings
+# reach the logging module for the same board: the module-level one
+# (create_logger("LinkedIn") / ("BDJobs") in each scraper package) and the one
+# scrape_jobs() itself emits (site.value.capitalize() → "Linkedin" / "Bdjobs",
+# special-cased to "ZipRecruiter"). _site_key() lowercases, so both collapse to
+# the same key; the map below only has to cover the site values we configure.
+_JOBSPY_LOGGER_DISPLAY = {
+    "linkedin": "LinkedIn",
+    "indeed": "Indeed",
+    "zip_recruiter": "ZipRecruiter",
+    "google": "Google",
+    "glassdoor": "Glassdoor",
+    "bayt": "Bayt",
+    "naukri": "Naukri",
+    "bdjobs": "BDJobs",
+}
 
-    jobspy names its per-board loggers with a colon, so they are top-level
-    loggers rather than children of a "JobSpy" parent — the handler has to sit
-    on the root logger and filter by name.
-    """
+
+def _site_key(logger_name: str):
+    """"JobSpy:ZipRecruiter" -> "zip_recruiter". None for non-site loggers."""
     name = str(logger_name or "")
     if ":" not in name:
         return None
@@ -130,21 +143,53 @@ class _SourceLogCapture(logging.Handler):
             pass
 
 
-@contextmanager
-def _capture_source_errors():
-    """Attach the capture handler to the root logger for one scrape_jobs() call.
+def _capture_targets(sites=None):
+    """Every logger the capture handler has to sit on, for one scrape_jobs() call.
 
-    Deliberately does not touch any logger's level: these records already reach
-    the backend log, and lowering a level mid-run would leak into every other
-    request sharing the process.
+    jobspy's create_logger() does ``logger.propagate = False`` (jobspy/util.py),
+    so a board's WARNING/ERROR records never reach the root logger and a handler
+    installed there is a no-op — the bug this replaces. The handler has to be
+    attached to each "JobSpy:<Board>" logger directly.
+
+    Two sources of names, deliberately unioned:
+      * every already-created ``JobSpy*`` logger — this is the one that matters,
+        and it is complete in practice because ``from jobspy import scrape_jobs``
+        runs before this and imports every board package, each of which creates
+        its logger at import time;
+      * the configured sites' expected names, as a backstop for a board whose
+        logger is created later (jobspy's own ``scrape_site`` re-derives one).
+
+    The root logger is kept as a final fallback so a record from a logger that
+    *does* propagate is still seen.
+    """
+    names = set()
+    for raw in list(logging.Logger.manager.loggerDict):
+        if str(raw).startswith("JobSpy"):
+            names.add(str(raw))
+    for site in (sites or []):
+        display = _JOBSPY_LOGGER_DISPLAY.get(str(site).lower())
+        if display:
+            names.add(f"JobSpy:{display}")
+    return [logging.getLogger()] + [logging.getLogger(n) for n in sorted(names)]
+
+
+@contextmanager
+def _capture_source_errors(sites=None):
+    """Attach the capture handler to every JobSpy board logger for one call.
+
+    Deliberately does not touch any logger's level or its `propagate` flag:
+    these records already reach the backend log, and changing either mid-run
+    would leak into every other request sharing the process.
     """
     handler = _SourceLogCapture()
-    root = logging.getLogger()
-    root.addHandler(handler)
+    targets = _capture_targets(sites)
+    for lg in targets:
+        lg.addHandler(handler)
     try:
         yield handler
     finally:
-        root.removeHandler(handler)
+        for lg in targets:
+            lg.removeHandler(handler)
 
 
 def _merge_source_errors(breakdown: dict, errors: dict) -> dict:
@@ -225,7 +270,7 @@ def _run_sync(search, proxy_url: str = None) -> dict:
             kwargs["proxies"] = [proxy_url]
 
         logger.info(f"Running JobSpy search: {search.name} — term='{search.search_term}', sources={sources}")
-        with _capture_source_errors() as capture:
+        with _capture_source_errors(sources) as capture:
             jobs_df = scrape_jobs(**kwargs)
         _merge_source_errors(breakdown, capture.errors)
 

@@ -1110,7 +1110,9 @@ def get_scrape_log(
 ):
     """Raw scrape run history with per-search/company details.
 
-    Each entry includes: source, jobs_found, new_jobs, error, duration.
+    Each entry includes: source, jobs_found, new_jobs, error, duration, and
+    `source_breakdown` — per-board `{seen, new}` plus an `error` key for any
+    board that failed inside an otherwise successful run.
 
     **Filters:**
     - `errors_only` — only show runs that had errors
@@ -1136,6 +1138,9 @@ def get_scrape_log(
                 "error": log.error,
                 "is_warning": log.is_warning,
                 "duration_seconds": log.duration_seconds,
+                # R3-A-03: per-board {seen, new, error?} — without it a run whose
+                # ZipRecruiter leg 403'd is indistinguishable here from a clean one.
+                "source_breakdown": log.source_breakdown or None,
                 "ran_at": log.ran_at.isoformat() if log.ran_at else None,
             }
             for log in logs

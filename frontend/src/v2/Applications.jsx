@@ -451,7 +451,9 @@ export default function Applications() {
           onDelete={() => remove(d)} navigate={navigate}
           intForm={intForm} setIntForm={setIntForm} intWhat={intWhat} setIntWhat={setIntWhat}
           intWhen={intWhen} setIntWhen={setIntWhen} intWhere={intWhere} setIntWhere={setIntWhere}
-          intPrep={intPrep} setIntPrep={setIntPrep}
+          intPrep={intPrep} setIntPrep={setIntPrep} intBusy={intBusy}
+          editIv={editIv} setEditIv={setEditIv} ivDraft={ivDraft} setIvDraft={setIvDraft}
+          openIvEdit={openIvEdit} saveInterview={saveInterview}
           addInterview={addInterview} canAddInterview={canAddInterview} delInterview={delInterview} toggleInterview={toggleInterview} openPrep={openPrep} />
           : <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13 }}>Select an application.</div>}
       </div>
@@ -467,7 +469,11 @@ export default function Applications() {
 // ── detail pane ──────────────────────────────────────────────────────────────
 function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete, navigate,
                   intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen,
-                  intWhere, setIntWhere, intPrep, setIntPrep,
+                  intWhere, setIntWhere, intPrep, setIntPrep, intBusy,
+                  // R3-A-06: the inline interview editor's state lives in the parent
+                  // (the Escape handler there clears it) — Detail is a separate closure,
+                  // so every one of these has to arrive as a prop, like canAddInterview.
+                  editIv, setEditIv, ivDraft, setIvDraft, openIvEdit, saveInterview,
                   addInterview, canAddInterview, delInterview, toggleInterview, openPrep }) {
   const meta = [fmtSalary(d.salary_min, d.salary_max), d.location].filter(Boolean).join(' · ') || 'No posting details captured'
   const cv = d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'
@@ -622,7 +628,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
                   <div onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }} className="v2-bdc" style={{ height: 27, padding: '0 12px', border: '1px solid var(--edge)', borderRadius: 99, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer' }}>Cancel</div>
-                  <div onClick={canAddInterview ? addInterview : undefined} style={{ opacity: canAddInterview ? 1 : 0.5, cursor: canAddInterview ? 'pointer' : 'default', height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500, cursor: 'pointer' }}>Add interview</div>
+                  <div onClick={canAddInterview ? addInterview : undefined} style={{ opacity: canAddInterview ? 1 : 0.5, cursor: canAddInterview ? 'pointer' : 'default', height: 27, padding: '0 13px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 500 }}>Add interview</div>
                 </div>
               </div>
             ) : (
