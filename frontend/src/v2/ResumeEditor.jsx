@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, IconButton, Input, Menu, MenuHead, MenuItem, Pill, Textarea } from './ui'
+import { Band, Button, Heading, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, NavLink, Pill, Spinner, Textarea } from './ui'
 
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
@@ -463,13 +463,14 @@ export default function ResumeEditor() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* top bar */}
       <div style={{ flex: '0 0 auto', padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span onClick={() => navigate('/v2/resumes')} style={{ fontSize: 13, lineHeight: '20px', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }} className="v2-navlink">‹ Résumés</span>
+        <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
+        {/* ui: keep — Tag role (D4d): an uppercase badge with a background and r99, not a Label */}
         <span style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
         {/* R2-S-06: every other v2 screen names itself with an h1; visually this
             is the same span it always was (margin and font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>
-        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</span>
+        <Helper style={{ marginLeft: 'auto' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</Helper>
       </div>
 
       {/* sub-band: base vs copy */}
@@ -481,6 +482,7 @@ export default function ResumeEditor() {
                 <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="6" />
                 <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(scores.tailored)} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(219.9 * scores.tailored / 100).toFixed(1)} 219.9`} transform="rotate(-90 39 39)" />
               </svg>
+              {/* ui: keep — score numeral: serif 13.5 in scoreColor(), centred in the ring; data display, not a Heading */}
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 13.5, color: scoreColor(scores.tailored), transform: 'translateY(1px)' }}>{scores.tailored}</div>
             </div>
           )}
@@ -499,15 +501,15 @@ export default function ResumeEditor() {
                 return (
                   <>
                     <BandRule />
-                    <span onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ cursor: 'pointer', position: 'relative', top: '1px' }} className="v2-navlink">
+                    <NavLink onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ position: 'relative', top: '1px' }}>
                       {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
                       <span style={{ color: 'var(--accent)' }}>based on {baseName} ↗</span>
-                    </span>
+                    </NavLink>
                   </>
                 )
               })()}
             </div>
-            <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {/* RES-20: "not scored yet" used to cover three different states — a
                   copy waiting to be scored, one that can never be, and a job whose
                   fetch failed. They read differently now. */}
@@ -515,12 +517,11 @@ export default function ResumeEditor() {
                 : jobless && !freeformJd ? 'No job or description linked, so this copy can’t be scored.'
                   : (changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
-            </span>
+            </Helper>
           </div>
           {stage && (
             <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'Pipeline complete' : 'The one next step'}>
-              {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-              {scoring && <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+              {scoring && <Spinner size={11} color="currentColor" />}
               {stage.label}
             </Button>
           )}
@@ -588,9 +589,10 @@ export default function ResumeEditor() {
           {/* R2-S-02: wraps rather than overflowing, like the cover-letter
               editor's identical toolbar */}
           <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
+            <Label>PDF preview</Label>
             {/* template picker — the container swallows its own clicks so the
                 document closer below can't undo the toggle (RES-28) */}
+            {/* ui: keep — the two 9px muted ▾ carets below are the PDF-preview toolbar's own paper scale (below Helper's tolerance) */}
             <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Résumé template" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {tplOpen && (
@@ -672,15 +674,15 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Re-tailor for this job</span>
-          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Heading>Re-tailor for this job</Heading>
+          <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy
-          </span>
+          </Helper>
         </div>
 
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 13, maxHeight: 460, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>How</span>
+            <Label>How</Label>
             <div style={{ display: 'flex', gap: 7 }}>
               {MODES.map(([id, label, hint]) => {
                 const on = mode === id
@@ -688,7 +690,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
                   <div key={id} onClick={() => setMode(id)} title={hint} className="v2-act"
                     style={{ flex: 1, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
-                    <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>{hint}</span>
+                    <Helper size="xs" style={{ textWrap: 'pretty' }}>{hint}</Helper>
                   </div>
                 )
               })}
@@ -696,7 +698,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>From which base</span>
+            <Label>From which base</Label>
             {options.map((o) => {
               const on = String(baseId) === String(o.id), off = disabled(o.id)
               return (
@@ -706,18 +708,18 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
                   {/* ui: keep — radio indicator, not a status dot */}
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                  <span style={{ flex: '0 0 auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</span>
+                  <Helper size="xs" style={{ flex: '0 0 auto' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</Helper>
                 </div>
               )
             })}
-            {options.length === 0 && <Band interactive={false} style={{ padding: 12, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No base résumés yet.</Band>}
+            {options.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No base résumés yet.</Helper></Band>}
           </div>
         </div>
 
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</span>
-            {mode === 'tailor' && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
+            <Helper>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</Helper>
+            {mode === 'tailor' && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
           </div>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
@@ -778,8 +780,8 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 480, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Tailor {doc.name} for a job</span>
-          <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Changes land automatically — you review and decline afterwards.</span>
+          <Heading>Tailor {doc.name} for a job</Heading>
+          <Helper>Changes land automatically — you review and decline afterwards.</Helper>
         </div>
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
@@ -787,7 +789,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
             Tailor from Persona instead of this base
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Pick a job · saved and scored first</span>
+            <Label>Pick a job · saved and scored first</Label>
             <Input value={q} onChange={setQ} placeholder="Search jobs…" ariaLabel="Search jobs" />
             {list.slice(0, 40).map((j) => {
               const on = String(pick) === String(j.id), sc = jobScore(j), has = existing.has(String(j.id))
@@ -797,17 +799,18 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
                   <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>
-                    <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</span>
+                    <Helper size="xs" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</Helper>
                   </div>
+                  {/* ui: keep — mono-text role (accent ink, not --helper-ink); the step excludes mono ids */}
                   {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)' }}>{sc}</span>}
                   {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, lineHeight: '14px', color: 'var(--warn)' }}>✦ exists</span>}
                 </div>
               )
             })}
-            {list.length === 0 && <Band interactive={false} style={{ padding: 12, fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>No jobs match — paste a description below instead.</Band>}
+            {list.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No jobs match — paste a description below instead.</Helper></Band>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>…or a freeform job description</span>
+            <Label>…or a freeform job description</Label>
             <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
               placeholder="Paste any JD — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
               style={{ borderStyle: 'dashed' }} />
@@ -815,10 +818,10 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>Runs in the background</span>
+            <Helper>Runs in the background</Helper>
             {/* the chain only fires for a job-linked tailor (routes_resumes.py:
                 `if chain_depth and job_id`), so a freeform run says nothing */}
-            {pick && <span style={{ fontSize: 10.5, lineHeight: '15px', color: 'var(--muted)', textWrap: 'pretty' }}>{chainNote(chain)}</span>}
+            {pick && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
           </div>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           {/* RES-17 */}
@@ -851,12 +854,12 @@ function ReviewModal({ changes, onClose, onApply }) {
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 'min(920px, 94vw)', height: 'min(760px, 90vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</span>
-            <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>
+            <Heading>{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</Heading>
+            <Helper>
               {nSuggested
                 ? `${nApplied ? 'Applied changes are already in the document — decline any and the base text comes back. ' : ''}Suggested bullets are not in it yet: they are added when you finish reviewing.`
                 : "These landed automatically. Decline any you don't want; the base text comes back."}
-            </span>
+            </Helper>
           </div>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
@@ -871,12 +874,12 @@ function ReviewModal({ changes, onClose, onApply }) {
             return (
               <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{c.where}</span>
+                  <Label>{c.where}</Label>
                   {/* ui: keep — a state badge whose dashed --warn-line edge marks a
                       suggestion; not a dashed add-line */}
                   <span title={pending ? 'Suggested — not in the document or the PDF yet; added when you finish reviewing' : off ? 'Declined — the base text is restored' : 'Already in the document and in the PDF'}
                     style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--accent-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, color: !live ? 'var(--muted)' : pending ? 'var(--warn)' : 'var(--accent)', cursor: 'help' }}>{!live ? (pending ? 'dropped' : 'declined') : pending ? 'suggested' : 'applied'}</span>
-                  {live && pending && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>added when you finish reviewing</span>}
+                  {live && pending && <Helper size="xs">added when you finish reviewing</Helper>}
                   {/* ui: keep — border+ink swing --accent/--warn with the change's state; Pill has no tinted variant */}
                   <div onClick={() => setDeclined((p) => ({ ...p, [c.key]: !p[c.key] }))} style={{ marginLeft: 'auto', height: 24, padding: '0 12px', borderRadius: 99, border: `1px solid ${off ? 'var(--accent)' : 'var(--warn)'}`, color: off ? 'var(--accent)' : 'var(--warn)', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{pending ? (off ? 'Keep it' : 'Drop ↩') : (off ? 'Restore change' : 'Decline ↩')}</div>
                 </div>
@@ -896,9 +899,9 @@ function ReviewModal({ changes, onClose, onApply }) {
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9 }}>
           {/* R3-B-02: the count line separates what is already in the document from
               what is only proposed, so "Done reviewing" says what it is about to do. */}
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{nSuggested
+          <Helper>{nSuggested
             ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
-            : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</span>
+            : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</Helper>
           <Button size="sm" onClick={() => onApply(declined)} style={{ marginLeft: 'auto' }}>Done reviewing</Button>
         </div>
       </div>

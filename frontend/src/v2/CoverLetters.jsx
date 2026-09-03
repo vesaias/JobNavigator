@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Menu, Pill, SearchInput, Tag } from './ui'
+import { Band, Button, Card, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -14,7 +14,6 @@ export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['deta
 export const STAGE_CLASS = { applied: 'cc-smartrecruiters', interview: 'cc-workday', offer: 'cc-tier1', rejected: 'cc-generic' }
 
 const ARCH_KEY = 'v2_cl_archive_open'
-const LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 const CTRL = {
   height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 8,
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
@@ -56,6 +55,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
         <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)' }}>
           {cur ? cur.label : placeholder}
         </span>
+        {/* ui: keep — 9px ▾ glyph, below the Helper scale (md 11.5 / xs 10.5) */}
         <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--muted)', marginLeft: 8 }}>▾</span>
       </div>
       {/* CL-07: the popover physically covers the control below it, so without a
@@ -74,7 +74,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
                 color: o.id === value ? 'var(--accent)' : 'var(--text-2)', fontWeight: o.id === value ? 500 : 400,
                 background: o.id === value ? 'var(--accent-soft)' : 'transparent' }}>
               <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</div>
-              {o.sub && <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.sub}</div>}
+              {o.sub && <Helper style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.sub}</Helper>}
             </div>
           ))}
         </Menu>
@@ -85,7 +85,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
 
 // Voice chips + length segments are shared with the editor's Regenerate modal.
 export function VoicePicker({ presets, value, onPick }) {
-  if (!presets.length) return <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)' }}>No voice presets — add them in Settings → AI.</span>   // CL-13
+  if (!presets.length) return <Helper>No voice presets — add them in Settings → AI.</Helper>   // CL-13
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
       {presets.map((v) => {
@@ -308,14 +308,15 @@ export default function CoverLetters() {
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
           ...(arc ? { borderColor: 'var(--line-soft)', background: 'var(--recessed)' } : null) }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* ui: keep — serif 15.5/500/-.01em row title: the 500-weight card-title family, not the Heading scale */}
           <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', lineHeight: '22px', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-          <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+          <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</Helper>
         </div>
         {(c.stage || arc) && (
           <Tag tone="none" title={c.stage ? 'Stage of the linked application' : 'No application yet'}
             className={STAGE_CLASS[c.stage] || 'cc-generic'}>{c.stage || 'Draft'}</Tag>
         )}
-        <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{agoShort(c.updated_at)}</span>
+        <Helper size="xs" mono style={{ flex: '0 0 40px', textAlign: 'right' }}>{agoShort(c.updated_at)}</Helper>
         <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
       </Card>
     )
@@ -325,7 +326,7 @@ export default function CoverLetters() {
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Cover Letters</h1>
+          <PageTitle>Cover Letters</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
@@ -337,26 +338,27 @@ export default function CoverLetters() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* generate panel */}
         <div className="v2-scroll" style={{ flex: '0 0 340px', borderRight: '1px solid var(--line)', background: 'var(--bg)', overflow: 'auto', padding: '16px 26px 20px 30px', display: 'flex', flexDirection: 'column', gap: 13, minHeight: 0 }}>
+          {/* ui: keep — serif 16/600/-.01em panel title: the 600-weight card-title family, not the Heading scale */}
           <span style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 600, letterSpacing: '-.01em' }}>Generate new</span>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={LABEL}>Your résumé</span>
+            <Label>Your résumé</Label>
             <Picker value={genResume} options={resumeOpts} placeholder="Select a résumé…" onPick={setGenResume} />
-            <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', textWrap: 'pretty' }}>Base for achievements and motivation</span>
+            <Helper size="xs" style={{ textWrap: 'pretty' }}>Base for achievements and motivation</Helper>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={LABEL}>Target job</span>
+            <Label>Target job</Label>
             <Picker value={genJob} options={jobOpts} placeholder="Select a saved or applied job…" onPick={setGenJob} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={LABEL}>Voice</span>
+            <Label>Voice</Label>
             <VoicePicker presets={presets} value={genVoice} onPick={setGenVoice} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={LABEL}>Length</span>
+            <Label>Length</Label>
             <LengthPicker value={genLength} onPick={setGenLength} />
           </div>
 
@@ -364,8 +366,7 @@ export default function CoverLetters() {
               in the three builders — a dimmed accent still reads as live. */}
           <Button onClick={generate} disabled={!canGenerate}
             title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}>
-            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-            {thisPairRunning && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+            {thisPairRunning && <Spinner size={10} color="currentColor" />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}
           </Button>
           {err && <span style={{ fontSize: 11.5, color: 'var(--bad)', textWrap: 'pretty' }}>{err}</span>}
@@ -374,21 +375,22 @@ export default function CoverLetters() {
         {/* list */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--surface)' }}>
           <div className="v2-gutter-head" style={{ flex: '0 0 auto', padding: '13px 30px 9px', display: 'flex', alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line-soft)' }}>
-            <span style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>All letters</span>
+            <Label>All letters</Label>
+            {/* ui: keep — mono count in --edge ink: the mono-text role, not a muted helper */}
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{letters.length + pending.length}</span>
           </div>
 
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
             {pending.map((r) => (
               <Band key={r.run_id} interactive={false} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', borderColor: 'var(--accent)', background: 'var(--recessed)' }}>
-                <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                <Spinner size={11} />
                 {/* integer line-height: at 1.5 this 12.5px label makes the row
                     46.75px tall and every letter row below it lands on a half
                     pixel, which drops their 1px borders on alternating rows */}
                 <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Generating — {rowLabel(r)}
                 </span>
-                <span style={{ marginLeft: 'auto', flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>~30s</span>
+                <Helper style={{ marginLeft: 'auto', flex: '0 0 auto' }}>~30s</Helper>
               </Band>
             ))}
 
@@ -410,8 +412,8 @@ export default function CoverLetters() {
             {visible.length === 0 && pending.length === 0 && (loadErr ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '34px 8px' }}>
                 <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your letters</span>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{loadErr}</span>
-                <span onClick={() => load()} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+                <Helper style={{ textAlign: 'center' }}>{loadErr}</Helper>
+                <Link onClick={() => load()} style={{ paddingTop: 2 }}>Try again</Link>
               </div>
             ) : (
               <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>

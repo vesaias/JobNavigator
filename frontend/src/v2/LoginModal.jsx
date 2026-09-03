@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import axios from 'axios'
 import { useSnapTop } from './hooks'
-import { Button } from './ui'
+import { Button, Heading, Helper, Label } from './ui'
 import './theme.css'
 
 // Sign-in overlay (System Overlays.dc.html · 1). The design draws the resting
@@ -50,12 +50,13 @@ export default function LoginModal({ onSuccess }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
             {/* ui: keep — success glyph, not a control (no handler, no hover, 34px round badge) */}
             <span style={{ width: 34, height: 34, borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em' }}>Signed in</span>
+            <Heading size={19}>Signed in</Heading>
             <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Loading dashboard…</span>
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {/* ui: keep — the sign-in wordmark is serif 23/28px; the Heading scale is 18/19/22 */}
               <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '28px' }}>JobNavigator</span>
               <span style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>
                 Enter your dashboard API key — you can view or change it later in Settings.
@@ -63,7 +64,7 @@ export default function LoginModal({ onSuccess }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>API key</span>
+              <Label>API key</Label>
               <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 7, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 {/* ui: keep — the API-key field is a bare input inside a v2-fieldwrap that also
                     holds the show/hide toggle and turns --bad on an error; Input draws its own
@@ -71,20 +72,22 @@ export default function LoginModal({ onSuccess }) {
                 <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type={showKey ? 'text' : 'password'}
                   placeholder="jn_live_…" autoFocus autoComplete="current-password"
                   style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)' }} />
+                {/* ui: keep — the show/hide toggle is deliberately out of the tab order (tabIndex -1)
+                    beside the key field, and Link is a tab stop with role="link" */}
                 <span onClick={() => setShowKey((v) => !v)} className="v2-anchor" role="button" tabIndex={-1}
                   aria-label={showKey ? 'Hide API key' : 'Show API key'}
                   style={{ fontSize: 10.5, lineHeight: '14px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{showKey ? 'hide' : 'show'}</span>
               </div>
-              {error && <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--bad)' }}>{error}</span>}
+              {error && <Helper style={{ color: 'var(--bad)' }}>{error}</Helper>}
             </div>
 
             <Button as="button" type="submit" busy={loading} ariaLabel="Sign in">
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
 
-            <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.55, textWrap: 'pretty' }}>
+            <Helper style={{ textWrap: 'pretty' }}>
               First run with no key configured? Leave the field blank and sign in — you’ll set one in Settings › Advanced.
-            </span>
+            </Helper>
           </>
         )}
       </form>

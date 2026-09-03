@@ -708,13 +708,13 @@ const LABEL_SIZE = {
   md: { fontSize: 'var(--t-10)', lineHeight: '15px' },
   lg: { fontSize: 'var(--t-11)', lineHeight: '16px' },
 }
-export function Label({ size = 'md', htmlFor, children, style, className }) {
+export function Label({ size = 'md', htmlFor, title, children, style, className }) {
   const st = {
     letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--label-ink)',
     ...(LABEL_SIZE[size] || LABEL_SIZE.md), ...style,
   }
-  if (htmlFor) return <label htmlFor={htmlFor} className={className} style={st}>{children}</label>
-  return <span className={className} style={st}>{children}</span>
+  if (htmlFor) return <label htmlFor={htmlFor} title={title} className={className} style={st}>{children}</label>
+  return <span title={title} className={className} style={st}>{children}</span>
 }
 // Helper canonical: muted · 11.5/16px. `size="xs"` is the 10.5/16 form.
 const HELPER_SIZE = {

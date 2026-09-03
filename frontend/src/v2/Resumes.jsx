@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useFlashToast, useSnapTop } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Band, Button, Card, Chip, Input, Pill, SearchInput } from './ui'
+import { Band, Button, Card, Chip, Heading, Helper, Input, Label, Link, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -21,13 +21,8 @@ const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : '
 
 // RES-19: the archived band and a broad search both render every matching row —
 // 296 rows in 1.56 s on this account. Page them client-side, 100 at a time, with
-// the same pager the Stats logs use (Stats.jsx:103).
+// the shared `ShowMore` pager from ./ui (the same one the Stats logs use).
 const PAGE = 100
-const ShowMore = ({ n, onClick }) => (
-  <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
-    <Pill size="sm" onClick={onClick}>Show {n} more</Pill>
-  </div>
-)
 
 // company / role label for a copy — from the shelf payload, else parse "Base → Company — Role"
 const copyLabel = (c) => {
@@ -53,7 +48,8 @@ const chipTitle = (c, baseName, avgFit) => {
     c.fresh ? 'changes unreviewed' : null,
   ].filter(Boolean).join(' · ')
 }
-const CHIP_LABEL = { flex: '0 0 auto', fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', marginRight: 3 }
+// layout half of the chip-row label; the type is `Label`'s (ui.jsx)
+const CHIP_LABEL = { flex: '0 0 auto', marginRight: 3 }
 
 export default function V2Resumes() {
   const navigate = useNavigate()
@@ -147,7 +143,7 @@ export default function V2Resumes() {
       {/* header */}
       <div style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Résumés</h1>
+          <PageTitle>Résumés</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -170,15 +166,17 @@ export default function V2Resumes() {
           : searching ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
-                <span onClick={() => setQ('')} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
-                <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</span>
+                <NavLink onClick={() => setQ('')}>‹ Back</NavLink>
+                <Label size="lg">{results.length} {results.length === 1 ? 'match' : 'matches'} — bases, copies, and archived</Label>
               </div>
               {results.length === 0 ? <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing matches “{q}” — search covers base names, company names, and job titles.</Band>
                 : results.slice(0, resLimit).map((r, i) => (
                   <Card key={`${r.kind}-${r.id}-${i}`} onClick={() => openResume(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
+                    {/* ui: keep — uppercase kind badge (bg + r99): the Tag role, not Label */}
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
-                    {r.note && <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{r.note}</span>}
+                    {r.note && <Helper style={{ flex: '0 0 auto' }}>{r.note}</Helper>}
+                    {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
                     {r.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(r.score) }}>{r.score}</span>}
                   </Card>
                 ))}
@@ -187,15 +185,16 @@ export default function V2Resumes() {
           ) : showArchived ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
-                <span onClick={() => setShowArchived(false)} style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }} className="v2-navlink">‹ Back</span>
-                <span style={{ fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Archived · {archived.length} from rejected or stale applications</span>
+                <NavLink onClick={() => setShowArchived(false)}>‹ Back</NavLink>
+                <Label size="lg">Archived · {archived.length} from rejected or stale applications</Label>
               </div>
               {archived.length === 0 && <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing archived yet — copies land here when their application is rejected or goes stale.</Band>}
               {archived.slice(0, archLimit).map((c) => (
                 <Card key={c.id} onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
+                  {/* ui: keep — uppercase "archived" badge (bg + r99): the Tag role, not Label */}
                   <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--faint)' }}>archived</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{copyLabel(c)}</span>
-                  <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{c.why}</span>
+                  <Helper style={{ flex: '0 0 auto' }}>{c.why}</Helper>
                 </Card>
               ))}
               {archived.length > archLimit && <ShowMore n={Math.min(PAGE, archived.length - archLimit)} onClick={() => setArchLimit((n) => n + PAGE)} />}
@@ -206,12 +205,15 @@ export default function V2Resumes() {
             <>
               {persona && (
                 <>
-                  <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Profile</span>
+                  <Label style={{ padding: '4px 2px 0' }}>Profile</Label>
                   <Card onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
+                      {/* ui: keep — serif 19/500/-.015em card title: the 500-weight card-title family, not the Heading scale */}
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>Persona</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</span>
+                      <Helper>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</Helper>
                       {persona.avg_fit != null && (
+                        /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
+                           Helper has no sans reset for a child of a serif parent */
                         <span title="Average fit across copies tailored from Persona (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(persona.avg_fit) }}>
                           {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
                         </span>
@@ -219,30 +221,30 @@ export default function V2Resumes() {
                     </div>
                     {(persona.copies?.length > 0 || inflight.some((f) => f.baseId === 'persona')) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        {(persona.copies?.length || 0) > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
+                        {(persona.copies?.length || 0) > 0 && <Label style={CHIP_LABEL}>Recent copies</Label>}
                         {inflight.filter((f) => f.baseId === 'persona').map((f, k) => (
                           <Chip key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ color: 'var(--muted)' }}>
-                            {/* ui: keep — Spinner role (v2-spin ring), not a status dot */}
-                            <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /><span>tailoring…</span>
+                            <Spinner /><span>tailoring…</span>
                           </Chip>
                         ))}
                         {(expanded.has('persona') ? (persona.copies || []) : (persona.copies || []).slice(0, 6)).map((c) => (
                           <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, 'Persona', persona.avg_fit)} style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
+                            {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
                           </Chip>
                         ))}
                         {(persona.copies?.length || 0) > 6 && (
-                          <span onClick={(e) => { e.stopPropagation(); toggleExpand('persona') }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>
+                          <Link onClick={(e) => { e.stopPropagation(); toggleExpand('persona') }}>
                             {expanded.has('persona') ? 'show fewer ‹' : `+ ${persona.copies.length - 6} more ›`}
-                          </span>
+                          </Link>
                         )}
                       </div>
                     )}
                   </Card>
-                  <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '4px 2px 0' }}>Résumés</span>
+                  <Label style={{ padding: '4px 2px 0' }}>Résumés</Label>
                 </>
               )}
               {bases.map((b) => {
@@ -251,9 +253,12 @@ export default function V2Resumes() {
                 return (
                   <Card key={b.id} onClick={() => openResume(b.id)} title={`Open ${b.name} — the base résumé`} style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
+                      {/* ui: keep — serif 19/500/-.015em card title: the 500-weight card-title family, not the Heading scale */}
                       <span title={b.name} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, letterSpacing: '-.015em' }}>{b.name}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</span>
+                      <Helper>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</Helper>
                       {b.avg_fit != null && (
+                        /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
+                           Helper has no sans reset for a child of a serif parent */
                         <span title="Average fit across this base's scored copies (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(b.avg_fit) }}>
                           {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--muted)' }}> avg fit</span>
                         </span>
@@ -261,11 +266,10 @@ export default function V2Resumes() {
                     </div>
                     {(copies.length > 0 || baseInflight.length > 0) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        {copies.length > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
+                        {copies.length > 0 && <Label style={CHIP_LABEL}>Recent copies</Label>}
                         {baseInflight.map((f, k) => (
                           <Chip key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ color: 'var(--muted)', maxWidth: 250 }}>
-                            {/* ui: keep — Spinner role (v2-spin ring), not a status dot */}
-                            <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                            <Spinner />
                             <span>tailoring…</span>
                           </Chip>
                         ))}
@@ -273,15 +277,16 @@ export default function V2Resumes() {
                           <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, b.name, b.avg_fit)}
                             style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
+                            {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
                           </Chip>
                         ))}
                         {copies.length > 6 && (
-                          <span onClick={(e) => { e.stopPropagation(); toggleExpand(b.id) }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>
+                          <Link onClick={(e) => { e.stopPropagation(); toggleExpand(b.id) }}>
                             {expanded.has(b.id) ? 'show fewer ‹' : `+ ${copies.length - 6} more ›`}
-                          </span>
+                          </Link>
                         )}
                       </div>
                     )}
@@ -344,7 +349,7 @@ function AddModal({ onClose, onCreated }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 420, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
-        <div style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', marginBottom: 4 }}>New base résumé</div>
+        <Heading size={19} style={{ display: 'block', marginBottom: 4 }}>New base résumé</Heading>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
         <Input autoFocus value={name} onChange={setName} placeholder="Résumé name (e.g. Backend — Platform v4)"
           ariaLabel="Résumé name" onKeyDown={(e) => e.key === 'Enter' && createScratch()}

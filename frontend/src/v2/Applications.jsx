@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Card, DashedAdd, Dot, IconButton, Input, Menu, MenuItem, Pill, Row, SectionHead, Textarea } from './ui'
+import { Button, Card, DashedAdd, Dot, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Row, SectionHead, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -54,8 +54,6 @@ const groupOf = (status) => (STAGE[status] ? status : 'rejected')
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
-const LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
-const FIELD_LABEL = { fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }
 // where a popover sits; how it looks is `Menu`'s.
 const POPOVER = { position: 'absolute', top: '100%', zIndex: 40 }
 // Header action pill — same metrics as the Feed's "Open ↗" (collapsed header).
@@ -329,9 +327,11 @@ export default function Applications() {
       {/* header */}
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Applications</h1>
+          <PageTitle>Applications</PageTitle>
           {/* integer line-height: at the inherited 1.5 this span is 19.5px, which
               lands the whole list pane on a half pixel and every row on x.25 */}
+          {/* ui: keep — the count line is 13/20px, off the 11.5 helper step, and its
+              integer line-height is what keeps the pane on whole pixels */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -344,6 +344,8 @@ export default function Applications() {
         {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks
             ui.jsx's boxed SearchInput so the two read as one control */}
         <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+          {/* ui: keep — the search field's own ⌕ glyph, on the control's icon scale
+              (like the ▾ carets), not a helper sub-line */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -375,8 +377,10 @@ export default function Applications() {
         </span>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {visible.length !== apps.length && <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{visible.length} of {apps.length} shown</span>}
+          {visible.length !== apps.length && <Helper style={{ whiteSpace: 'nowrap' }}>{visible.length} of {apps.length} shown</Helper>}
           <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+            {/* ui: keep — a menu disclosure trigger (muted 12.5 + value + caret), not a
+                link: it opens the Sort menu and carries the trigger's own hover */}
             <div onClick={() => setOpenFlt(openFlt === 'sort' ? null : 'sort')} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
@@ -410,7 +414,9 @@ export default function Applications() {
                 <SectionHead boxed caret="pin" open={!shut} onToggle={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
                   style={{ gap: 8, padding: '12px 8px 5px', lineHeight: '16px' }}>
                   <Dot style={{ background: st.dot }} />
-                  <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{st.label}</span>
+                  <Label>{st.label}</Label>
+                  {/* ui: keep — the band's row count is the mono-id ink (--edge), a
+                      `mono-text` site, not a helper */}
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
                 </SectionHead>
                 {!shut && rows.map((a) => {
@@ -429,10 +435,10 @@ export default function Applications() {
                           <span title={a.title || 'Unknown Role'} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
                           <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent' }}>✉</span>
                         </div>
-                        <span title={companyOf(a)} style={{ fontSize: 11, color: companyOf(a) === 'Unknown Company' ? 'var(--edge)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyOf(a)}</span>
+                        <Helper title={companyOf(a)} style={{ color: companyOf(a) === 'Unknown Company' ? 'var(--edge)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyOf(a)}</Helper>
                       </div>
-                      <span title={stale ? `No movement for ${daysSince(a.updated_at)} days` : `Last activity ${daysSince(a.updated_at)}d ago`}
-                        style={{ flex: '0 0 30px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: stale ? 'var(--warn)' : 'var(--muted)' }}>{daysSince(a.updated_at)}d</span>
+                      <Helper size="xs" mono title={stale ? `No movement for ${daysSince(a.updated_at)} days` : `Last activity ${daysSince(a.updated_at)}d ago`}
+                        style={{ flex: '0 0 30px', textAlign: 'right', color: stale ? 'var(--warn)' : 'var(--muted)' }}>{daysSince(a.updated_at)}d</Helper>
                     </Row>
                   )
                 })}
@@ -441,9 +447,10 @@ export default function Applications() {
           })}
           {visible.length === 0 && (loadErr ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '34px 8px' }}>
+              {/* ui: keep — the empty-state's 13px --bad headline, off the helper step */}
               <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your applications</span>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>{loadErr}</span>
-              <span onClick={() => load()} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+              <Helper style={{ textAlign: 'center' }}>{loadErr}</Helper>
+              <Link onClick={() => load()} style={{ paddingTop: 2 }}>Try again</Link>
             </div>
           ) : (
             <div style={{ padding: '34px 8px', textAlign: 'center', fontSize: 12.5, color: 'var(--muted)' }}>
@@ -492,14 +499,18 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
       <div style={{ flex: '0 0 auto', padding: '16px 26px 14px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            <Label>
               {d.short_id ? `#${d.short_id} · ` : ''}{d.company_canonical || d.company}
-            </span>
+            </Label>
+            {/* ui: keep — serif 23/26px: the detail title's own step, between
+                Heading's 22 and the 30px page title */}
             <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px', textWrap: 'pretty' }}>
               {d.title || 'Unknown Role'}
               {(d.last_email_received || d.last_email_snippet) &&
                 <span title="Reply detected in Gmail" style={{ marginLeft: 8, fontSize: 13, color: 'var(--accent)', verticalAlign: 'middle' }}>✉</span>}
             </span>
+            {/* ui: keep — a 12.5/18px sentence, and the résumé link inside it inherits
+                that run; Link's 11.5/500/17px would break the line */}
             <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>
               {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
@@ -552,14 +563,14 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 
           {(d.last_email_received || d.last_email_snippet) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={LABEL}>Last email · Gmail detection</span>
+              <Label>Last email · Gmail detection</Label>
               <div style={{ padding: '10px 12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg)', borderRadius: '0 8px 8px 0', fontSize: 12.5, fontStyle: 'italic', lineHeight: '19px', color: 'var(--text-2)', textWrap: 'pretty' }}>{d.last_email_snippet ? `“${d.last_email_snippet}”` : 'A reply was detected, but no snippet was stored.'}</div>
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={LABEL}>Interviews · {ivs.length}</span>
+              <Label>Interviews · {ivs.length}</Label>
               <Pill size="sm" onClick={openPrep} style={{ marginLeft: 'auto' }}
                 title="Builds one pasteable block — the role, my résumé, the posting and what to ask for — for the AI of your choice">
                 <span style={{ fontSize: 11 }}>⧉</span>Generate prep handover for AI
@@ -571,37 +582,41 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   {/* R3-A-06: the row text opens the editor; the status chip and ✕
                       keep the behaviour they had, so nothing that worked moved. */}
                   <span onClick={() => (editIv === iv.id ? setEditIv(null) : openIvEdit(iv))} title={editIv === iv.id ? 'Close without saving' : 'Edit this interview'} style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>{iv.what}</span>
+                  {/* ui: keep — an uppercase status badge with a background + r99: the
+                      `Tag` role (D4d), not a Label */}
                   <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
                   <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 4 }}>✕</span>
                 </div>
                 {editIv === iv.id ? (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={FIELD_LABEL}>What</span>
+                      <Label>What</Label>
                       <Input autoFocus value={ivDraft.what} onChange={(t) => setIvDraft((v) => ({ ...v, what: t }))} placeholder="e.g. System design round" ariaLabel="What" />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                        <span style={FIELD_LABEL}>When</span>
+                        <Label>When</Label>
                         <Input type="datetime-local" value={ivDraft.when} onChange={(t) => setIvDraft((v) => ({ ...v, when: t }))} ariaLabel="When" style={{ minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                        <span style={FIELD_LABEL}>Where</span>
+                        <Label>Where</Label>
                         <Input value={ivDraft.where} onChange={(t) => setIvDraft((v) => ({ ...v, where: t }))} placeholder="Zoom · Onsite — London" ariaLabel="Where" style={{ minWidth: 0 }} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={FIELD_LABEL}>Prep note · optional</span>
+                      <Label>Prep note · optional</Label>
                       <Input value={ivDraft.prep} onChange={(t) => setIvDraft((v) => ({ ...v, prep: t }))} placeholder="Who I'm meeting, what to revise…" ariaLabel="Prep note" />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>Escape cancels</span>
+                      <Helper>Escape cancels</Helper>
                       <Button variant="secondary" size="xs" onClick={() => setEditIv(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                       <Button size="xs" onClick={saveInterview} busy={intBusy}>{intBusy ? 'Saving…' : 'Save'}</Button>
                     </div>
                   </>
                 ) : (
                   <>
+                    {/* ui: keep — the whole slot line is a click target that opens the
+                        interview editor, and `Helper` takes no `onClick` */}
                     <span onClick={() => openIvEdit(iv)} title="Edit this interview" style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)', cursor: 'pointer' }}>
                       {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
                     </span>
@@ -613,21 +628,21 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             {intForm ? (
               <Card style={{ display: 'flex', flexDirection: 'column', gap: 8, borderColor: 'var(--accent)', padding: '10px 12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={FIELD_LABEL}>What</span>
+                  <Label>What</Label>
                   <Input value={intWhat} onChange={setIntWhat} placeholder="e.g. System design round" ariaLabel="What" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                    <span style={FIELD_LABEL}>When</span>
+                    <Label>When</Label>
                     <Input type="datetime-local" value={intWhen} onChange={setIntWhen} ariaLabel="When" style={{ minWidth: 0 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                    <span style={FIELD_LABEL}>Where</span>
+                    <Label>Where</Label>
                     <Input value={intWhere} onChange={setIntWhere} placeholder="Zoom · Onsite — London" ariaLabel="Where" style={{ minWidth: 0 }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={FIELD_LABEL}>Prep note · optional</span>
+                  <Label>Prep note · optional</Label>
                   <Input value={intPrep} onChange={setIntPrep} placeholder="Who I'm meeting, what to revise…" ariaLabel="Prep note" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
@@ -642,7 +657,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={LABEL}>Notes · autosaves</span>
+            <Label>Notes · autosaves</Label>
             {/* rows={2} keeps the intrinsic height (2×19 + 13 = 51) under the 64 px
                 floor, so `minHeight` is the value that actually renders — the pre-D4b
                 box. At rows={3} the intrinsic height wins and the floor is dead code. */}
@@ -654,7 +669,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 
         {/* history rail */}
         <div style={{ flex: '1 0 250px', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 6 }}>   {/* APPS-09: wraps under the content when the pane is narrow */}
-          <span style={LABEL}>History</span>
+          <Label>History</Label>
           {history.map((h, i) => (
             <div key={i} style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -663,10 +678,12 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 12 }}>
                 <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text)' }}>{h.what}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{ago(h.at)}</span>
+                <Helper size="xs" mono>{ago(h.at)}</Helper>
               </div>
             </div>
           ))}
+          {/* ui: keep — the empty rail sits on the history entries' own 12/18px line
+              rhythm (matching the 12.5/18px event lines), not the helper step */}
           {history.length === 0 && <span style={{ fontSize: 12, lineHeight: '18px', color: 'var(--muted)' }}>No history recorded yet.</span>}
         </div>
       </div>
@@ -683,8 +700,8 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 640, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Prep handover — {company}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>paste into the AI of your choice</span>
+          <Heading>Prep handover — {company}</Heading>
+          <Helper>paste into the AI of your choice</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
@@ -693,7 +710,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
           </pre>
         </div>
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Edit the closing ask in Settings → AI</span>
+          <Helper>Edit the closing ask in Settings → AI</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
           <Button size="sm" onClick={onCopy} busy={busy}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
@@ -777,27 +794,27 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Log application</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</span>
+          <Heading>Log application</Heading>
+          <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</Helper>
         </div>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={FIELD_LABEL}>Posting URL{reading ? ' · reading…' : ''}</span>
+            <Label>Posting URL{reading ? ' · reading…' : ''}</Label>
             <Input value={url} onChange={setUrl} onBlur={(e) => readUrl(e.target.value)} mono
               placeholder="Paste the job URL — title and company are read from it" ariaLabel="Posting URL" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-              <span style={FIELD_LABEL}>Title</span>
+              <Label>Title</Label>
               <Input value={title} onChange={setTitle} placeholder="Senior Backend Engineer" ariaLabel="Title" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-              <span style={FIELD_LABEL}>Company</span>
+              <Label>Company</Label>
               <Input value={company} onChange={setCompany} placeholder="Acme" ariaLabel="Company" />
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={FIELD_LABEL}>Applied with</span>
+            <Label>Applied with</Label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {resumes.map((r) => {
                 const on = cv === r.name
@@ -807,7 +824,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-            <span style={FIELD_LABEL}>Stage</span>
+            <Label>Stage</Label>
             <div style={{ display: 'flex', gap: 5 }}>
               {['applied', 'interview', 'offer'].map((id) => {
                 const on = stage === id
@@ -816,18 +833,18 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-            <span style={FIELD_LABEL}>Applied on</span>
+            <Label>Applied on</Label>
             <Input type="date" value={when} onChange={setWhen} ariaLabel="Applied on" />
           </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={FIELD_LABEL}>Notes</span>
+            <Label>Notes</Label>
             <Textarea value={notes} onChange={setNotes} placeholder="Optional — referral, recruiter contact…"
               ariaLabel="Notes" rows={2} style={{ minHeight: 52 }} />
           </div>
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>The posting is cached on save</span>
+          <Helper>The posting is cached on save</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
         </div>

@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Card, Input, Menu, MenuItem, Pill, Row, SearchInput, SectionHead } from './ui'
+import { Button, Card, Heading, Helper, Input, Label, Link, Menu, MenuItem, NavLink, PageTitle, Pill, Row, SearchInput, SectionHead, Spinner } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -720,7 +720,7 @@ export default function V2JobFeed() {
       {/* header */}
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>The Feed</h1>
+          <PageTitle>The Feed</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{total} open roles · {stats.arrived_today} arrived today · {stats.unscored} not yet scored</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -761,7 +761,7 @@ export default function V2JobFeed() {
                     {c.name}
                   </MenuItem>
                 ))}
-                <div style={{ padding: '6px 8px 2px', fontSize: 10.5, color: 'var(--muted)', lineHeight: '16px' }}>Top by open roles · picked companies pin to the top</div>
+                <Helper size="xs" style={{ padding: '6px 8px 2px' }}>Top by open roles · picked companies pin to the top</Helper>
               </>
             ) : <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)' }}>No matches</div>
           })()}
@@ -774,22 +774,22 @@ export default function V2JobFeed() {
             {[70, 80, 90].map((n) => <Pill key={n} size="sm" on={filters.min_score === String(n)} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1 }}>{n}</Pill>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>or at least</span>
+            <Helper>or at least</Helper>
             <Input type="number" mono value={numDraft.min_score} onChange={(v) => setNum('min_score', v)}
               ariaLabel="Minimum score" style={{ flex: 1, minWidth: 0 }} />
           </div>
-          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides unscored jobs — they have no score to compare</div>
+          <Helper size="xs" style={{ marginTop: 8 }}>Also hides unscored jobs — they have no score to compare</Helper>
         </Drop>
         <Drop label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[150, 180, 220].map((n) => <Pill key={n} size="sm" on={filters.min_salary === String(n)} onClick={() => setF({ min_salary: String(n) })} style={{ flex: 1 }}>${n}K</Pill>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>at least</span>
+            <Helper>at least</Helper>
             <Input type="number" mono placeholder="$K" value={numDraft.min_salary} onChange={(v) => setNum('min_salary', v)}
               ariaLabel="Minimum salary in thousands" style={{ flex: 1, minWidth: 0 }} />
           </div>
-          <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)' }}>Also hides jobs without a listed salary</div>
+          <Helper size="xs" style={{ marginTop: 8 }}>Also hides jobs without a listed salary</Helper>
         </Drop>
         <Drop width={170} active open={menu === 'status'} onToggle={() => setMenu(menu === 'status' ? null : 'status')}
           trigger={(t) => {
@@ -830,6 +830,7 @@ export default function V2JobFeed() {
               <>
                 <div onClick={() => setShortcutsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 34 }} />
                 <Menu role="group" ariaLabel="Keyboard shortcuts" style={{ position: 'absolute', top: '100%', right: 14, zIndex: 35, marginTop: 4, width: 214, padding: 10, gap: 0 }}>
+                  {/* ui: keep — MenuHead role: the head of a <Menu> popover, not a filter-bar eyebrow */}
                   <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Keyboard</div>
                   {SHORTCUTS.map(([k, desc]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '3px 0', fontSize: 12 }}>
@@ -857,14 +858,15 @@ export default function V2JobFeed() {
 
           <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column', userSelect: 'none', WebkitUserSelect: 'none' }}>
             {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+              // ui: keep — the "Try again" link runs inline inside a 13px sentence; Link's 11.5/500 would break the run
               : loadError ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Couldn't load jobs · <span onClick={fetchJobs} style={{ color: 'var(--accent)', cursor: 'pointer' }}>Try again</span></div>
               : jobs.length === 0 ? (
                   (!filters.status.length && !filters.company.length && !filters.source.length && !filters.h1b_verdict.length && filters.min_score === '' && !filters.min_salary && !dSearch && !searchId)
                     ? <div style={{ padding: '48px 40px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>   {/* F-010: first-run / nothing open */}
-                        <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--text)', marginBottom: 6 }}>No open roles yet</div>
+                        <Heading style={{ display: 'block', marginBottom: 6 }}>No open roles yet</Heading>
                         Jobs arrive from <a href="/v2/searches" onClick={(e) => { e.preventDefault(); navigate('/v2/searches') }}>Searches</a> and <a href="/v2/companies" onClick={(e) => { e.preventDefault(); navigate('/v2/companies') }}>Companies</a> — activate one, or widen the Status filter to see skipped and applied roles.
                       </div>
-                    : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>No jobs match.<br /><span onClick={() => { setFilters(DEFAULTS); setSearch(''); setSearchId('') }} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>Clear filters</span></div>)   /* FEED-24 */
+                    : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>No jobs match.<br /><Link onClick={() => { setFilters(DEFAULTS); setSearch(''); setSearchId('') }}>Clear filters</Link></div>)   /* FEED-24 */
               : jobs.map((j, i) => {
                 const score = bestScore(j), nsc = scoredCount(j)
                 const badge = BADGE[j.status]
@@ -888,12 +890,14 @@ export default function V2JobFeed() {
                               <circle cx="44" cy="44" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
                               <circle cx="44" cy="44" r="35" fill="none" stroke={scoreColor(score)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} transform="rotate(-90 44 44)" />
                             </svg>
+                            {/* ui: keep — score numeral (serif 19, scoreColor ink, lh 1) centred in the 44px ring: data display, not a heading */}
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
                             {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
                           </>
                         ) : run ? (
                           <>
-                            <div className="v2-spin" style={{ position: 'absolute', inset: 0, border: '1px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                            <Spinner size={44} style={{ position: 'absolute', inset: 0 }} />
+                            {/* ui: keep — 8px accent ··· marker inside the running ring, not a label */}
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent)' }}>···</div>
                           </>
                         ) : (
@@ -906,8 +910,10 @@ export default function V2JobFeed() {
                       {/* text */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, minHeight: 20 }}>
+                          {/* ui: keep — serif 16/500/-.01em row title: the card-title family, not the 18/19 heading scale */}
                           <span title={j.title} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</span>
                           {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--accent)' }}>✦</a>}
+                          {/* ui: keep — status badge with background + border + r99: Tag role (D4d), not a Label */}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, fontWeight: 450, color: 'var(--text-2)', minWidth: 0, marginTop: -2 }}>
@@ -924,6 +930,7 @@ export default function V2JobFeed() {
                     </div>
                     {/* action column */}
                     <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
+                      {/* ui: keep — v2-rail-cell glyph cells (♥ / ✕ / ⋯); rail text is out of scope for this step */}
                       <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
                       <div className="v2-rail-skip v2-rail-cell" title="Skip (x)" onClick={() => skipJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line-soft)' }}>✕</div>
                       <div className="v2-rail-copy v2-rail-cell" title="More" onClick={(ev) => {
@@ -949,8 +956,8 @@ export default function V2JobFeed() {
                   </Row>
                 )
               })}
-            {loadingMore && <div style={{ padding: '14px 0', textAlign: 'center', fontSize: 11.5, color: 'var(--muted)' }}>Loading more…</div>}   {/* FEED-38 */}
-            {!loadingMore && !hasMore && jobs.length > 0 && <div style={{ padding: '14px 0 6px', textAlign: 'center', fontSize: 11.5, color: 'var(--muted)' }}>End of the list · {total} job{total === 1 ? '' : 's'}</div>}
+            {loadingMore && <Helper style={{ padding: '14px 0', textAlign: 'center' }}>Loading more…</Helper>}   {/* FEED-38 */}
+            {!loadingMore && !hasMore && jobs.length > 0 && <Helper style={{ padding: '14px 0 6px', textAlign: 'center' }}>End of the list · {total} job{total === 1 ? '' : 's'}</Helper>}
           </div>
         </section>
 
@@ -966,9 +973,10 @@ export default function V2JobFeed() {
                       separate click target) */}
                   <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
                   <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
-                    {headOpen && <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10.5, lineHeight: '16px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                    {headOpen && <Label style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
-                    </div>}
+                    </Label>}
+                    {/* ui: keep — the collapsing detail title: serif 26/17, -.025em, line-clamped — outside the 18/19 heading scale */}
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
@@ -977,7 +985,7 @@ export default function V2JobFeed() {
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span style={{ color: visaCol }}>{visaText}</span>
                       </div>
-                    ) : <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</span>}
+                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1020,12 +1028,14 @@ export default function V2JobFeed() {
                       résumé tabs, and its body text runs at the band's inherited size, which
                       SectionHead's 12.5/18px type box would restyle */}
                   <div onClick={() => { setReportOpen((v) => !v); if (!reportOpen && best) setReportTab(Math.max(0, reports.indexOf(best))) }} className="v2-hover-accent" style={{ flex: '0 0 auto', padding: '8px 30px 8px 4px', display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                    {/* ui: keep — the band's caret glyph in a fixed 19px gutter, not helper text */}
                     <span style={{ flex: '0 0 auto', width: 19, textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>{reportOpen ? '⌄' : '›'}</span>
                     <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px', marginLeft: -4 }}>
                       <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
                         <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
                         <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(best?.score || 0)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(BAND_C * (best?.score || 0) / 100).toFixed(1)} 220`} transform="rotate(-90 39 39)" />
                       </svg>
+                      {/* ui: keep — score numeral (serif 14, scoreColor ink) centred in the 34px band ring: data display, not a heading */}
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0), transform: 'translateY(1px)' }}>{best?.score}</div>
                     </div>
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
@@ -1048,7 +1058,7 @@ export default function V2JobFeed() {
                             </div>
                           )
                         })}
-                        <div onClick={() => openRescore(d)} className="v2-navlink" style={{ marginLeft: 'auto', padding: '7px 0', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>+ Rescore</div>
+                        <NavLink pad="7px 0" onClick={() => openRescore(d)} style={{ marginLeft: 'auto', color: 'var(--muted)' }}>+ Rescore</NavLink>
                       </div>
                       {/* body */}
                       <div className="v2-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '14px 30px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1059,7 +1069,7 @@ export default function V2JobFeed() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: breakdownOpen ? 11 : 0 }}>
                             <SectionHead boxed caret="end" open={breakdownOpen} onToggle={() => setBreakdownOpen((v) => !v)}
                               style={{ gap: 8, margin: '-2px -4px' }}>
-                              <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Score breakdown</span>
+                              <Label>Score breakdown</Label>
                               <span style={{ flex: 1, minWidth: 0, height: 1, background: 'var(--line-soft)' }} />
                             </SectionHead>
                             {breakdownOpen && (
@@ -1070,6 +1080,7 @@ export default function V2JobFeed() {
                                     <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                                         <span style={{ fontSize: 12.5, color: 'var(--text-2)', textTransform: 'capitalize' }}>{label}</span>
+                                        {/* ui: keep — serif 15 breakdown numeral and its inline 11px "/20" unit: data display, not a heading or helper */}
                                         <span style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{val}<span style={{ fontSize: 11, color: 'var(--muted)' }}>/20</span></span>
                                       </div>
                                       <div style={{ height: 1, background: 'var(--line)' }}><div style={{ height: 1, background: 'var(--accent)', width: `${pct}%` }} /></div>
@@ -1085,7 +1096,7 @@ export default function V2JobFeed() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: keywordOpen ? 6 : 0 }}>
                             <SectionHead boxed caret="end" open={keywordOpen} onToggle={() => setKeywordOpen((v) => !v)}
                               style={{ gap: 8, margin: '-2px -4px' }}>
-                              <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Keyword coverage</span>
+                              <Label>Keyword coverage</Label>
                               <span style={{ flex: 1, minWidth: 8, height: 1, background: 'var(--line-soft)' }} />
                               <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)' }}>{coverage}%</span>
                             </SectionHead>
@@ -1094,8 +1105,8 @@ export default function V2JobFeed() {
                                 {/* ui: keep — 4px keyword-coverage meter, not a control */}
                                 <div style={{ height: 4, borderRadius: 99, background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 99, background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 3 }}>
-                                  <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</span>
-                                  {(rpt.matched_keywords || []).length > 0 && <div onClick={() => setShowMatched((v) => !v)} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>{showMatched ? 'Hide matched' : 'Show matched'}</div>}
+                                  <Helper>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</Helper>
+                                  {(rpt.matched_keywords || []).length > 0 && <Link onClick={() => setShowMatched((v) => !v)}>{showMatched ? 'Hide matched' : 'Show matched'}</Link>}
                                 </div>
                                 {/* ui: keep — mono keyword tags (Tag role), not controls */}
                                 {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
@@ -1111,8 +1122,8 @@ export default function V2JobFeed() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                               <SectionHead boxed caret="end" open={reqOpen} onToggle={() => setReqOpen((v) => !v)}
                                 style={{ gap: 11, flex: '1 1 auto', minWidth: 0, margin: '-2px -4px' }}>
-                                <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Requirement mapping</span>
-                                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{reqMet} of {reqRows.length} met</span>
+                                <Label>Requirement mapping</Label>
+                                <Helper>{reqMet} of {reqRows.length} met</Helper>
                               </SectionHead>
                               {reqOpen && (
                                 <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
@@ -1122,6 +1133,7 @@ export default function V2JobFeed() {
                             </div>
                             {reqOpen && (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {/* ui: keep — the requirement table's column-head row (borderBottom + row metrics): TableHead role (D4f) */}
                             <div style={{ display: 'flex', gap: 14, padding: '0 0 6px', borderBottom: '1px solid var(--line)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                               <span style={{ flex: 1.05 }}>Requirement</span><span style={{ flex: 1.1 }}>Résumé match</span><span style={{ flex: '0 0 34px', textAlign: 'center' }}>Status</span>
                             </div>
@@ -1139,13 +1151,14 @@ export default function V2JobFeed() {
 
                         {(rpt?.hard_blockers || []).length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '11px 13px', border: '1px solid var(--bad)', borderRadius: 8 }}>
+                            {/* ui: keep — --bad 10/600 uppercase: neither the ink nor the weight Label carries */}
                             <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--bad)', fontWeight: 600 }}>Hard blockers</span>
                             {(rpt.hard_blockers || []).map((b, k) => <div key={k} style={{ display: 'flex', gap: 9, fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}><span style={{ color: 'var(--bad)' }}>!</span><span>{b}</span></div>)}
                           </div>
                         )}
                         {rpt?.ats_tip && (
                           <Card style={{ display: 'flex', gap: 11, padding: '12px 14px', background: 'var(--surface-2)' }}>
-                            <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', paddingTop: 2 }}>ATS tip</span>
+                            <Label style={{ flex: '0 0 auto', paddingTop: 2 }}>ATS tip</Label>
                             <span style={{ flex: 1, fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>{rpt.ats_tip}</span>
                           </Card>
                         )}
@@ -1174,7 +1187,7 @@ export default function V2JobFeed() {
               {running && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
-                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, position: 'relative' }}><div className="v2-spin" style={{ position: 'absolute', inset: 3, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /></div>
+                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, position: 'relative' }}><Spinner size={28} style={{ position: 'absolute', inset: 3 }} /></div>
                   <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Scoring in progress</span>
                     <span style={{ color: 'var(--muted)' }}>{' '}This continues in the background if you navigate away.</span>
@@ -1190,7 +1203,7 @@ export default function V2JobFeed() {
                     {dCached && (
                       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                         <span style={{ fontSize: 12, color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>{viewCached ? 'Cached snapshot · captured when you applied' : 'Live posting'}</span>
-                        {/* ui: keep — a two-cell segmented toggle track (r99, 2px inset), not a card */}
+                        {/* ui: keep — a two-cell segmented toggle track (r99, 2px inset), not a card; its Live / Cached cells are toggle cells, not links */}
                         <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 99, padding: 2, gap: 2 }}>
                           <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
                           <div onClick={() => setViewCached(true)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: viewCached ? 'var(--accent-soft)' : 'transparent', color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>Cached</div>
@@ -1210,7 +1223,7 @@ export default function V2JobFeed() {
                         <div style={{ maxWidth: '44ch', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 11, textAlign: 'center' }}>
                           {/* ui: keep — dashed 44px warning glyph, not an add-line */}
                           <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
-                          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.015em' }}>This posting refuses to be framed</span>
+                          <Heading>This posting refuses to be framed</Heading>
                           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} sends X-Frame-Options, so the live page cannot render here. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                             {/* ui: keep — native <a href target=_blank>; Button renders a div and would drop the anchor */}
@@ -1239,8 +1252,8 @@ export default function V2JobFeed() {
             <div ref={pickerPanel} onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* header */}
               <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
-                <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Create résumé copy</span>
-                <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '24px' }}>{single ? single.title : `${picker.jobs.length} selected roles`}</span>
+                <Label>Create résumé copy</Label>
+                <Heading size={19}>{single ? single.title : `${picker.jobs.length} selected roles`}</Heading>
                 {single?.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{single.company}</span>}
               </div>
               {/* existing-copy banner */}
@@ -1248,27 +1261,27 @@ export default function V2JobFeed() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: 'var(--accent-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, color: 'var(--text-2)' }}>
                   <span style={{ flex: '0 0 auto', color: 'var(--accent)' }}>✦</span>
                   <span style={{ flex: 1, minWidth: 0 }}>A tailored copy already exists for this job.</span>
-                  <span onClick={() => { setPicker(null); openTailored(single) }} style={{ flex: '0 0 auto', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}>Open it ↗</span>
+                  <Link onClick={() => { setPicker(null); openTailored(single) }} style={{ flex: '0 0 auto' }}>Open it ↗</Link>
                 </div>
               )}
               {/* body */}
               <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Method</span>
+                  <Label>Method</Label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run'], ['copy', '⧉ Copy with tracers', 'Exact duplicate with tracking links · instant']].map(([m, label, help]) => {
                       const on = cvMode === m
                       return (
                         <div key={m} onClick={() => pickMethod(m)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{help}</span>
+                          <Helper>{help}</Helper>
                         </div>
                       )
                     })}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Base résumé</span>
+                  <Label>Base résumé</Label>
                   {cvBases.length === 0 ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>No base résumés found.</span>
                     : cvBases.map((r) => {
                       const on = cvBase === r.id
@@ -1277,7 +1290,7 @@ export default function V2JobFeed() {
                           {/* ui: keep — radio indicator, not a status dot */}
                           <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                           <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                          {r.id === 'persona' && <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>from /persona</span>}
+                          {r.id === 'persona' && <Helper style={{ flex: '0 0 auto' }}>from /persona</Helper>}
                         </div>
                       )
                     })}
@@ -1285,7 +1298,7 @@ export default function V2JobFeed() {
               </div>
               {/* footer */}
               <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · lands in Résumés'}</span>
+                <Helper>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · lands in Résumés'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
               </div>
@@ -1300,16 +1313,16 @@ export default function V2JobFeed() {
           <div ref={rescorePanel} onClick={(e) => e.stopPropagation()} style={{ width: 436, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* header */}
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 5, borderBottom: '1px solid var(--line)' }}>
-              <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>{rescoreJob.verb} against résumés</span>
-              <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '24px' }}>{rescoreJob.title}</span>
+              <Label>{rescoreJob.verb} against résumés</Label>
+              <Heading size={19}>{rescoreJob.title}</Heading>
               {rescoreJob.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{rescoreJob.company}</span>}
             </div>
             {/* body */}
             <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Résumés</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>{rescoreSel.length} selected</span>
+                  <Label>Résumés</Label>
+                  <Helper style={{ marginLeft: 'auto' }}>{rescoreSel.length} selected</Helper>
                 </div>
                 {rescoreOpts.length === 0 ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>No résumés available.</span>
                   : rescoreOpts.map((o) => {
@@ -1319,20 +1332,20 @@ export default function V2JobFeed() {
                         style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
                         <span style={{ flex: '0 0 auto', width: 17, height: 17, borderRadius: 5, border: on ? 'none' : '1px solid var(--edge)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{on ? '✓' : ''}</span>
                         <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                        <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>{o.note}</span>
+                        <Helper style={{ flex: '0 0 auto' }}>{o.note}</Helper>
                       </div>
                     )
                   })}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span style={{ fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Depth</span>
+                <Label>Depth</Label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[['light', 'Light', 'Scores only'], ['full', 'Full', 'Report + keywords']].map(([v, label, help]) => {
                     const on = rescoreDepth === v
                     return (
                       <div key={v} onClick={() => setRescoreDepth(v)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
-                        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{help}</span>
+                        <Helper>{help}</Helper>
                       </div>
                     )
                   })}
@@ -1341,7 +1354,7 @@ export default function V2JobFeed() {
             </div>
             {/* footer */}
             <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Runs in the background</span>
+              <Helper>Runs in the background</Helper>
               <Button variant="secondary" size="sm" onClick={() => setRescoreJob(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               <Button size="sm" onClick={runRescore} disabled={!rescoreSel.length} title={rescoreSel.length ? undefined : 'Pick at least one résumé'}>Run scoring</Button>
             </div>
