@@ -28,7 +28,8 @@ Starts after the round-2 fixes land (two Opus agents in flight on 2026-09-04). O
 - DB restored again from `backups/round3_baseline_20260904.dump`; counts verified (126 / 6 / 377 / 4 / 16 / 18843), 0 `ZZ*` rows.
 - Consolidated open-items report (text excluded): `v2-testing/REPORT-open.md` (Opus).
 
-## PAUSED 2026-09-04 (usage limit) — resume here
+## Resumed and closed 2026-09-04 (see REPORT-open.md Closure). Earlier pause note kept for history:
+## PAUSED 2026-09-04 (usage limit) — resume here (superseded)
 - Code: HEAD `63790cf` is built and live (OPEN-list fixes `2927bdb` + health/acknowledge `63790cf`); 858 tests pass in the container.
 - Verification of the OPEN-list fixes: `round3/verify-open.md` has OPEN-01..06, 08, 10 ✔. **Still to verify live:** OPEN-12 (save-from-extension reason), OPEN-13 (preview tracked links), OPEN-16 (Jobright read-only row), and the HEALTH-ACK checks (inactive entities excluded, acknowledge endpoints/links, 409 on extension searches). The Sonnet verifier was stopped mid-run; re-launch with the same brief (see chat/SendMessage text of 2026-09-04) or verify by hand.
 - Then: statuses in `REPORT-open.md`, DB restore from `backups/round3_baseline_20260904.dump` (the DB currently holds no ZZ* rows but may carry runs/logs from verification), commit.

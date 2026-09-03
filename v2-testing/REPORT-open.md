@@ -163,3 +163,6 @@ Closed by fact rather than by preference (not re-openable as decisions): **RES-2
 - OPEN-14: no need. OPEN-15: don't care. OPEN-18..22: ignored (worksheet debt).
 - OPEN-17: checked — `llm_models_list` is consumed by the frontend model pickers via `GET /settings`; the backend only seeds/refreshes it. No action.
 - OPEN-05 (critical spots), 08 (migrate to `useEscape`), 13 (tracked links in preview), 16 (read-only with expiry): fix, in the same Opus batch. OPEN-09: no need. OPEN-11: CLAUDE.md corrected (gitignored, local).
+
+## Closure (2026-09-04, later)
+All decided items are fixed and verified live (`round3/verify-open.md`, 12/12): OPEN-01, 02, 03, 04, 05, 06, 08, 10, 12, 13, 16 plus the user-reported health rule (inactive entities never count; per-entity Acknowledge). Commits `2927bdb`, `63790cf`. Backend suite: 858 passing. OPEN-07 decided (token kept), OPEN-09 no need, OPEN-11 corrected in CLAUDE.md, OPEN-14/15 dropped, OPEN-17 no action, OPEN-18..22 ignored. **Nothing from rounds 1–3 remains open except the unapplied text suggestions.**
