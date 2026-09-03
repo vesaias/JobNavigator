@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSnapTop } from './hooks'
-import { Button, IconButton, Input, Pill, SearchInput } from './ui'
+import { Button, DashedAdd, IconButton, Input, Pill, Row, SearchInput } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -115,8 +115,7 @@ function UrlEditor({ urls, onChange }) {
           </div>
         )
       })}
-      <div onClick={() => onChange([...urls, ''])} className="v2-dashadd"
-        style={{ height: 30, border: '1px dashed var(--edge)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--muted)', cursor: 'pointer' }}>+ Add another career page</div>
+      <DashedAdd onClick={() => onChange([...urls, ''])}>+ Add another career page</DashedAdd>
     </div>
   )
 }
@@ -127,6 +126,8 @@ const Seg = ({ opts, value, onPick, valueKey = 'id' }) => (
       const v = o[valueKey] !== undefined ? o[valueKey] : o.v
       const on = value === v
       return (
+        /* ui: keep — a segmented control, not a card: equal-flex cells that swing
+           to accent-soft when picked */
         <div key={String(v)} onClick={() => onPick(v)} title={o.hint || ''} className="v2-bd"
           style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{o.label}</div>
       )
@@ -486,8 +487,8 @@ export default function Companies() {
           const firstAts = urls.length ? atsShort(c.detected_scrape_types?.[urls[0]]) : 'Generic'
           const aliases = c.aliases || []
           return (
-            <div key={c.id} onClick={() => openDrawer(c)} className="v2-crow"
-              style={{ display: 'flex', alignItems: 'center', height: 46, padding: '0 30px 0 24px', borderBottom: '1px solid var(--line-soft)', cursor: 'pointer' }}>
+            <Row key={c.id} flush divider onClick={() => openDrawer(c)} className="v2-crow"
+              style={{ gap: 0, padding: '0 30px 0 24px' }}>
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {isAlarming(c, downMap[c.id]) && <span title={`Needs attention — ${warnTextOf(c, downMap[c.id])}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
@@ -527,6 +528,7 @@ export default function Companies() {
               {/* actions — R2-S-01: pinned to the right edge of the scroller so the
                   ⋯ stays reachable when the row is wider than the pane at 1024px */}
               <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8 }} onClick={(e) => e.stopPropagation()}>
+                {/* ui: keep — 25px Run/Test pills sized to the 46px row; Pill sm is 26 */}
                 <span onClick={testBusy ? undefined : () => runScrape(c.id)} title={testBusy ? 'A test is already running' : 'Scrape this company now'} className={testBusy ? undefined : 'v2-act'}
                   style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.5 : 1 }}>
                   {scraping[c.id]
@@ -551,7 +553,7 @@ export default function Companies() {
                   </span>
                 )}
               </span>
-            </div>
+            </Row>
           )
         })}
         {loading && companies.length === 0 && (
@@ -766,6 +768,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
+        {/* ui: keep — footer pill (r99), paired with the tinted one above it */}
         <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? undefined : 'v2-act'} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
           {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}

@@ -214,8 +214,16 @@ export function IconButton({
 }
 
 // ── Input / Textarea ────────────────────────────────────────────────────────
-// canonical field: h29 · 1px --input-border · r6 · 12.5 · bg --input-bg.
+// canonical field: h32 · 1px --input-border · r6 · 12.5 · bg --input-bg.
 // Focus = accent border, no ring (theme.css `input:focus-visible`).
+// D4b shipped h29 and D4b's reconciliation raised the mismatch it left: `Select`
+// is h32, so any row that pairs a field with a dropdown (Persona's autofill grid,
+// Searches' Cell grid, Settings' value rows) mixed 29 and 32. User decision in
+// D1-D2 §"Decisions during D4": **32 px everywhere**. `Textarea` has no fixed
+// height — its box is intrinsic to `rows` — so the 32 is expressed as its
+// *single-line* basis: 19 px line + 2×5.5 px padding + 2×1 px border = 32, the
+// same box a one-line `Input` draws. `minHeight` then equals that intrinsic
+// height exactly (rows·19 + 13) instead of being a dead floor.
 const FIELD = {
   width: '100%', minWidth: 0, border: '1px solid var(--input-border)',
   borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', color: 'var(--input-ink)',
@@ -231,7 +239,7 @@ export function Input({ value, defaultValue, onChange, placeholder, type = 'text
       type={type} {...bind} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
       aria-label={ariaLabel} title={title} className={className}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
-      style={{ ...FIELD, height: 29, padding: '0 9px', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
+      style={{ ...FIELD, height: 32, padding: '0 9px', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
       {...rest} />
   )
 }
@@ -243,7 +251,7 @@ export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3,
       aria-label={ariaLabel} title={title} className={className}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{
-        ...FIELD, padding: '7px 9px', minHeight: rows * 20, lineHeight: '19px', resize: 'vertical',
+        ...FIELD, padding: '5.5px 9px', minHeight: rows * 19 + 13, lineHeight: '19px', resize: 'vertical',
         fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style,
       }}
       {...rest} />
@@ -251,9 +259,12 @@ export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3,
 }
 
 // ── SearchInput ─────────────────────────────────────────────────────────────
-// boxed (Companies toolbar): h30, r99, 1px --input-border on --search-bg, ⌕ inset.
+// boxed (Companies toolbar): h32, r99, 1px --input-border on --search-bg, ⌕ inset.
 // underline (Cover Letters header): h36, no box, 1px --input-underline beneath.
 // Both take the accent on focus from theme.css — no ring either way.
+// The boxed one is a *box* like Input/Select and moved 30 → 32 with them (D4b
+// fix-up); the underline one is a visually different control — no box at all —
+// and keeps its own 36.
 export function SearchInput({ value, onChange, placeholder = 'Search…', variant = 'boxed', width, ariaLabel, style, className }) {
   const under = variant === 'underline'
   const field = under
@@ -263,7 +274,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-13)', outline: 'none',
     }
     : {
-      width: '100%', height: 30, padding: '0 12px 0 29px', border: '1px solid var(--input-border)',
+      width: '100%', height: 32, padding: '0 12px 0 29px', border: '1px solid var(--input-border)',
       borderRadius: 'var(--radius-control)', background: 'var(--search-bg)',
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', outline: 'none',
     }
@@ -347,13 +358,19 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
 // canonical: h46 · r7 · pad 0 10 · hover --row-hover · selected = --row-selected
 // with a 3px --row-selected-mark bar on the left (padding compensates so the
 // content does not shift when a row is picked).
-export function Row({ selected, divider, onClick, title, ariaLabel, children, style, className }) {
+// `flush` is the named variant for a **full-bleed table row** (Companies): the
+// list has no side padding, so a 7px radius would round the hover fill away from
+// the pane edges and leave a notch under the square sticky actions cell. Radius
+// only — height, hover, selection and divider are the canonical ones.
+// `...rest` carries the `data-*` hooks a screen already relies on (the Feed keys
+// its scroll-into-view and its harness selectors off `data-row={i}`).
+export function Row({ selected, divider, flush, onClick, title, ariaLabel, children, style, className, ...rest }) {
   return (
-    <div {...act(onClick, false, 'button')} title={title} aria-label={ariaLabel} aria-current={selected ? "true" : undefined}
+    <div {...rest} {...act(onClick, false, 'button')} title={title} aria-label={ariaLabel} aria-current={selected ? "true" : undefined}
       className={cx('v2-row', className)}
       style={{
         display: 'flex', alignItems: 'center', gap: 10, height: 46,
-        borderRadius: 'var(--radius-row)',
+        borderRadius: flush ? 0 : 'var(--radius-row)',
         background: selected ? 'var(--row-selected)' : 'transparent',
         borderLeft: selected ? '3px solid var(--row-selected-mark)' : undefined,
         borderBottom: divider ? '1px solid var(--row-line)' : undefined,
@@ -367,10 +384,14 @@ export function Row({ selected, divider, onClick, title, ariaLabel, children, st
 // Card canonical: surface · 1px --card-border · r9 · pad 10 14.
 //   `interactive` adds the accent-border + --card-bg-hover wash (v2-act).
 // Band is the dashed sibling (same box, dashed --band-border).
-export function Card({ interactive, onClick, title, ariaLabel, children, style, className }) {
+// `id` and a forwarded ref are zero-pixel pass-throughs: Stats scrolls two of its
+// static cards into view (`schedRef`/`runsCardRef`) and deep-links one by `#runs`.
+export const Card = React.forwardRef(function Card(
+  { interactive, onClick, id, title, ariaLabel, children, style, className }, ref,
+) {
   const live = interactive || !!onClick
   return (
-    <div {...act(onClick, false)} title={title} aria-label={ariaLabel}
+    <div ref={ref} id={id} {...act(onClick, false)} title={title} aria-label={ariaLabel}
       className={cx(live && 'v2-act', className)}
       style={{
         background: 'var(--card-bg)', border: '1px solid var(--card-border)',
@@ -378,7 +399,7 @@ export function Card({ interactive, onClick, title, ariaLabel, children, style, 
         cursor: live ? 'pointer' : 'default', ...style,
       }}>{children}</div>
   )
-}
+})
 export function Band({ interactive = true, onClick, title, ariaLabel, children, style, className }) {
   const live = interactive || !!onClick
   return (

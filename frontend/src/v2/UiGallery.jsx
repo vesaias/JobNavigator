@@ -131,7 +131,7 @@ export default function UiGallery() {
           <S label="36 · disabled"><IconButton size={36} title="More" disabled>⋯</IconButton></S>
         </Role>
 
-        <Role name="Input · Textarea" canonical="h29 · 1px --input-border · r6 · 12.5 · bg --input-bg · focus = accent border, no ring"
+        <Role name="Input · Textarea" canonical="h32 (textarea: 32 single-line, rows·19+13) · 1px --input-border · r6 · 12.5 · bg --input-bg · focus = accent border, no ring"
           tokens="--input-bg/-border/-border-focus/-ink/-placeholder · --radius-field · --t-12-5 · --font-body/-mono">
           <S label="rest" w={220}><Input value={text} onChange={setText} ariaLabel="Title" /></S>
           <S label="placeholder" w={220}><Input value="" onChange={() => {}} placeholder="Company name…" ariaLabel="Company" /></S>
@@ -140,9 +140,10 @@ export default function UiGallery() {
           <S label="readOnly" w={220}><Input value="Read only" onChange={() => {}} readOnly ariaLabel="Read only" /></S>
           <S label="textarea · 3 rows" w={300}><Textarea value={area} onChange={setArea} ariaLabel="Notes" /></S>
           <S label="textarea · disabled" w={300}><Textarea value="Locked" onChange={() => {}} disabled rows={2} ariaLabel="Locked notes" /></S>
+          <S label="textarea · 1 row (= Input h32)" w={300}><Textarea value="One line" onChange={() => {}} rows={1} ariaLabel="One line" /></S>
         </Role>
 
-        <Role name="SearchInput" canonical="boxed h30 r99 with ⌕ inset · underline h36 on --input-underline"
+        <Role name="SearchInput" canonical="boxed h32 r99 with ⌕ inset · underline h36 on --input-underline"
           tokens="--search-bg/-glyph · --input-border/-border-focus/-ink/-placeholder/-underline · --radius-control · --t-12/-13">
           <S label="boxed · empty" w={240}><SearchInput value={q} onChange={setQ} placeholder="Search name, alias, URL…" /></S>
           <S label="boxed · filled" w={240}><SearchInput value={q2 || 'stripe'} onChange={setQ2} /></S>
@@ -157,13 +158,14 @@ export default function UiGallery() {
           <S label="disabled" w={240}><Select value={pick} options={OPTIONS} onPick={() => {}} disabled ariaLabel="Provider" /></S>
         </Role>
 
-        <Role name="Row" canonical="h46 · r7 · pad 0 10 · selected = --row-selected + 3px mark"
+        <Role name="Row" canonical="h46 · r7 · pad 0 10 · selected = --row-selected + 3px mark (flush: r0, full-bleed tables)"
           tokens="--row-hover/-selected/-selected-mark/-line · --radius-row · hover: v2-row">
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Row onClick={() => setSel(false)}><span style={{ fontSize: 'var(--t-12-5)' }}>Rest — hover me</span></Row>
             <Row selected={sel} onClick={() => setSel((v) => !v)}><span style={{ fontSize: 'var(--t-12-5)' }}>Selected (click to toggle)</span></Row>
             <Row divider onClick={() => {}}><span style={{ fontSize: 'var(--t-12-5)' }}>With a --row-line divider</span></Row>
             <Row><span style={{ fontSize: 'var(--t-12-5)', color: 'var(--helper-ink)' }}>Inert (no onClick — not a tab stop)</span></Row>
+            <Row flush divider onClick={() => {}}><span style={{ fontSize: 'var(--t-12-5)' }}>flush — no radius (full-bleed table row)</span></Row>
           </div>
         </Role>
 

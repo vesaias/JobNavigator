@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Pill as UiPill } from './ui'
+import { Card, Pill as UiPill } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -90,7 +90,6 @@ const decodeCron = (expr) => {
   return `Daily ${t}`
 }
 
-const CARD = { border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)' }
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
 const NOTE = { fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }
 const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
@@ -419,7 +418,7 @@ export default function Stats() {
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '18px 30px 30px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {/* KPI strip */}
-        <div style={{ ...CARD, display: 'flex' }}>
+        <Card style={{ padding: 0, display: 'flex' }}>
           {[
             ['Total jobs', int(stats?.total_jobs), '', 'Everything ever scraped or captured, minus cleanup'],
             ['New this week', int(timeline ? weekly.now : null), timeline && weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs last` : '', 'Discovered in the last 7 days'],
@@ -434,14 +433,14 @@ export default function Stats() {
               </span>
             </div>
           ))}
-        </div>
+        </Card>
 
         {/* funnel + score distribution */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {/* Fixed height: the funnel and the Sankey are different shapes, so
               letting either size the card made the row jump on toggle. Both
               views get the same 162px of content area inside 230. */}
-          <div style={{ ...CARD, height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Card style={{ height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Application funnel</span>
               <span style={{ flex: 1 }} />
@@ -488,9 +487,9 @@ export default function Stats() {
             </span>
             </div>
             )}
-          </div>
+          </Card>
 
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Score distribution</span>
               <span style={{ flex: 1, ...NOTE }}>{int(scores?.scored_count)} scored jobs · best résumé per job</span>
@@ -510,12 +509,12 @@ export default function Stats() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* timeline + llm costs */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
-          <div style={{ ...CARD, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+          <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>New jobs · last 30 days</span>
               <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
@@ -529,9 +528,9 @@ export default function Stats() {
               ))}
             </div>
             {coreErr && !timeline ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div> : <Spark series={series} peak={peak} />}
-          </div>
+          </Card>
 
-          <div style={{ ...CARD, height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
+          <Card style={{ height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>LLM costs</span>
               <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
@@ -573,11 +572,11 @@ export default function Stats() {
               {!(costs?.by_purpose || []).length && <div style={{ padding: '14px 0', ...NOTE }}>No LLM calls in this window.</div>}
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* schedules */}
-        <div ref={schedRef} style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+        <Card ref={schedRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <span style={H}>Schedules</span>
             <span style={NOTE}>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</span>
@@ -624,10 +623,10 @@ export default function Stats() {
             )
           })}
           </>)}
-        </div>
+        </Card>
 
         {/* run history / activity log */}
-        <div id="runs" ref={runsCardRef} style={{ ...CARD, display: 'flex', flexDirection: 'column' }}>
+        <Card id="runs" ref={runsCardRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '12px 20px 10px' }}>
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
               <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} {...kb(() => { setTab(id); setTypeOpen(false) })} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
@@ -654,7 +653,7 @@ export default function Stats() {
                   )}
                 </span>
                 {/* ui: keep — a 26px transparent v2-fieldwrap pill that carries the ⌕ and
-                    the focus signal around a bare input; SearchInput's boxed variant is h30
+                    the focus signal around a bare input; SearchInput's boxed variant is h32
                     on --search-bg, which would not sit on this log header row */}
                 <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
@@ -710,7 +709,7 @@ export default function Stats() {
               {actMore && <LoadMore onClick={moreActivity} busy={moreBusy} />}
             </div>
           )}
-        </div>
+        </Card>
       </div>
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>

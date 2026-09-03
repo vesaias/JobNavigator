@@ -11,7 +11,12 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Input, Textarea } from './ui'
+import { Band, Card, DashedAdd, Input, Textarea } from './ui'
+
+// The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
+// --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
+// same name so Persona/ResumeEditor keep importing it from here.
+export { DashedAdd } from './ui'
 
 export const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
 // PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them were
@@ -126,16 +131,13 @@ export function useUndoRemove(mutate, onRemoved) {
 export const BandRule = () => (
   <span aria-hidden="true" style={{ display: 'inline-block', width: 1, height: 11, margin: '0 9px', verticalAlign: 'middle', alignSelf: 'center', background: 'var(--edge)' }} />
 )
-export const DashedAdd = ({ onClick, children, big }) => (
-  <div onClick={onClick} {...kb(onClick)} className="v2-dashadd" style={{ height: big ? 32 : 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 12 : 11.5, fontWeight: big ? 500 : 400, color: 'var(--accent)', cursor: 'pointer' }}>{children}</div>
-)
 // `note` is the second line. It defaults to the résumé PDF wording; Persona
 // overrides it, since its resume_content is a source pool that never prints.
 export const EmptyState = ({ what, note }) => (
-  <div style={{ padding: '16px 12px', border: '1px dashed var(--edge)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+  <Band interactive={false} style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
     <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>No {what} yet</span>
     <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
-  </div>
+  </Band>
 )
 export const MenuHead = ({ children }) => <div style={{ padding: '4px 11px 3px', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{children}</div>
 export const MenuItem = ({ icon, label, hint, onClick }) => (
@@ -156,7 +158,7 @@ export const MicroField = ({ label, value, onChange, placeholder }) => (
 // right-aligned note (ResumeEditor's "● changed by tailoring").
 export function SectionShell({ name, count, open, onToggle, meta, children }) {
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+    <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
       <div onClick={onToggle} {...kb(onToggle)} aria-expanded={!!open} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
         <span style={{ color: 'var(--muted)', fontSize: 10 }}>{open ? '⌄' : '›'}</span>
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
@@ -170,7 +172,7 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
           {children}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -262,12 +264,12 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
           // containers are never tinted — only the prose rows inside them are.
           // The header's ● still says the entry holds unreviewed changes, and the
           // bullet rows below carry the --change-soft/--change-bg treatment.
-          <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+          <Card key={i} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
             {/* explicit integer line-height: at the inherited 1.5 a 12.5px line is
                 18.75px, which made this row 36.75px tall and put every row below it
                 (and the Skills/Education/Projects cards) on a half pixel, where
                 Chrome rounds their 1px borders away — same fix as SectionShell */}
-            <div onClick={() => toggle(i)} {...kb(() => toggle(i))} aria-expanded={isOpen} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 8, lineHeight: '18px' }}>
+            <div onClick={() => toggle(i)} {...kb(() => toggle(i))} aria-expanded={isOpen} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '9px 11px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
               <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 10 }}>{isOpen ? '⌄' : '›'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
@@ -287,6 +289,8 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 {(e.bullets || []).map((b, bi) => {
                   const m = bulletMark(i, bi, b)
                   return (
+                    /* ui: keep — a field-shaped prose row (r6 = --radius-field), not a
+                       card: it wraps one BulletText and carries the ✦ tailoring tint */
                     <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
                       <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
@@ -297,6 +301,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                     </div>
                   )
                 })}
+                {/* ui: keep — same field-shaped prose row, always tinted */}
                 {(e.suggested_bullets || []).map((sb, k) => (
                   <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
                     <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
@@ -305,13 +310,13 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   </div>
                 ))}
                 {/* PERS-19: accent like every other add-control on the screen */}
-                <div onClick={() => addBullet(i)} {...kb(() => addBullet(i))} className="v2-act" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add bullet</div>
+                <DashedAdd onClick={() => addBullet(i)}>+ Add bullet</DashedAdd>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed role',
                   (d) => d.experience.splice(i, 1),
                   (d) => { d.experience = d.experience || []; d.experience.splice(i, 0, e) })}>Remove role</RemoveLink></div>
               </div>
             )}
-          </div>
+          </Card>
         )
       })}
       {exp.length === 0 && <EmptyState note={emptyNote} what="experience" />}
@@ -325,6 +330,7 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
   const changed = baseSummary != null && baseSummary !== txt
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
+      {/* ui: keep — the summary is one field-shaped prose row (r6), not a card */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
         <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{changed ? '✦' : '—'}</span>
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
@@ -378,6 +384,8 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
             {/* the ✦ and the --change-soft border carry the tailoring signal here;
                 the --change-bg fill is reserved for tailored prose (experience
                 bullets and the summary), so a skills row keeps its field colour. */}
+            {/* ui: keep — a *field* box (h29 · r6 · --edge · --surface-2) that holds a
+                bare input plus the ✦/added/↩ affordances, not a card */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 6 }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
               {/* ui: keep — bare input inside the row's own bordered box; that box, not
@@ -420,7 +428,7 @@ export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.education || []).map((e, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Card key={i} style={{ padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
             <MicroField label="School" value={e.school} onChange={(v) => setField(`education.${i}.school`, v)} />
             <MicroField label="Location" value={e.location} onChange={(v) => setField(`education.${i}.location`, v)} />
@@ -432,7 +440,7 @@ export function EducationEditor({ emptyNote, data, setField, mutate, onRemoved }
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed education entry',
             (d) => d.education.splice(i, 1),
             (d) => { d.education = d.education || []; d.education.splice(i, 0, e) })} /></div>
-        </div>
+        </Card>
       ))}
       {(data.education || []).length === 0 && <EmptyState note={emptyNote} what="education" />}
       <DashedAdd big onClick={() => mutate((d) => { d.education = d.education || []; d.education.push({ school: '', location: '', degree: '' }) })}>+ Add education</DashedAdd>
@@ -444,7 +452,7 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>
       {(data.projects || []).map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Card key={i} style={{ padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
             <MicroField label="Name" value={p.name} onChange={(v) => setField(`projects.${i}.name`, v)} />
             <MicroField label="URL" value={p.url} onChange={(v) => setField(`projects.${i}.url`, v)} />
@@ -453,6 +461,7 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
             {(p.bullets || []).map((b, bi) => (
+              /* ui: keep — field-shaped prose row (r6), as in Experience */
               <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
                 <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>—</span>
                 <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
@@ -466,7 +475,7 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed project',
             (d) => d.projects.splice(i, 1),
             (d) => { d.projects = d.projects || []; d.projects.splice(i, 0, p) })}>Remove project</RemoveLink></div>
-        </div>
+        </Card>
       ))}
       {(data.projects || []).length === 0 && <EmptyState note={emptyNote} what="projects" />}
       <DashedAdd big onClick={() => mutate((d) => { d.projects = d.projects || []; d.projects.push({ name: '', description: '', url: '', bullets: [] }) })}>+ Add project</DashedAdd>
@@ -479,13 +488,13 @@ export function PublicationsEditor({ emptyNote, data, setField, mutate, onRemove
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
       {pubs.length === 0 ? <EmptyState note={emptyNote} what="publications" /> : pubs.map((p, i) => (
-        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Card key={i} style={{ padding: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <MicroField label="Title" value={p.title} onChange={(v) => setField(`publications.${i}.title`, v)} />
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`publications.${i}.description`, v)} />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed publication',
             (d) => d.publications.splice(i, 1),
             (d) => { d.publications = d.publications || []; d.publications.splice(i, 0, p) })} /></div>
-        </div>
+        </Card>
       ))}
       <DashedAdd big onClick={() => mutate((d) => { d.publications = d.publications || []; d.publications.push({ title: '', description: '' }) })}>+ Add publication</DashedAdd>
     </div>

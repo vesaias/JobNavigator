@@ -483,8 +483,9 @@ export default function Settings() {
             {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
         </div>
-        {/* ui: keep — settings search field wrapper (Input role), not a pill */}
-        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 30, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        {/* ui: keep — settings search field wrapper (Input role), not a pill; h32
+            tracks ui.jsx's boxed SearchInput so the two read as one control */}
+        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -976,7 +977,7 @@ function ModelsModal({ S, save, onClose }) {
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
             {/* ui: keep — typeahead composite: the input drives a suggestion listbox
                 (aria-expanded / aria-autocomplete / ↑ ↓ Esc Enter) inside the fieldwrap */}
-            <span className="v2-fieldwrap" style={{ ...BOX, flex: 1, height: 31 }}>
+            <span className="v2-fieldwrap" style={{ ...BOX, flex: 1 }}>
               <input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search the model catalog"
                 aria-expanded={showSug} aria-autocomplete="list"
                 onKeyDown={(e) => {

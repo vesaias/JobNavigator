@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, IconButton, Input } from './ui'
+import { Button, Card as UiCard, DashedAdd, IconButton, Input } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -28,7 +28,7 @@ const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase
 // A collapsible editor card — the three sections of the letter.
 function Card({ title, note, open, onToggle, children }) {
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 9, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+    <UiCard style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
       <div onClick={onToggle} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', cursor: 'pointer', borderRadius: '9px 9px 0 0' }}>
         <span style={{ flex: '0 0 auto', width: 10, height: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
           <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true"
@@ -46,7 +46,7 @@ function Card({ title, note, open, onToggle, children }) {
           {children}
         </div>
       )}
-    </div>
+    </UiCard>
   )
 }
 
@@ -417,8 +417,7 @@ export default function CoverLetterEditor() {
                   </div>
                 )
               })}
-              <div onClick={() => update((d) => { d.header = d.header || {}; d.header.contact_items = [...(d.header.contact_items || []), { text: '', url: '' }] })}
-                className="v2-dashadd" style={{ height: 28, border: '1px dashed var(--edge)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add contact item</div>
+              <DashedAdd onClick={() => update((d) => { d.header = d.header || {}; d.header.contact_items = [...(d.header.contact_items || []), { text: '', url: '' }] })}>+ Add contact item</DashedAdd>
             </div>
           </Card>
 
@@ -451,7 +450,7 @@ export default function CoverLetterEditor() {
               <Input value={data.greeting || ''} onChange={(v) => update((d) => { d.greeting = v })} ariaLabel="Greeting" />
             </div>
             {paras.map((text, i) => (
-              <div key={i} style={{ border: '1px solid var(--edge)', borderRadius: 6, background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
+              <UiCard key={i} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px 0' }}>
                   <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--edge)' }}>¶ {i + 1}</span>
                   <span onClick={() => i > 0 && update((d) => { const a = d.body_paragraphs; [a[i - 1], a[i]] = [a[i], a[i - 1]] })} title="Move up" className={i > 0 ? 'v2-parabtn' : ''}
@@ -467,10 +466,9 @@ export default function CoverLetterEditor() {
                     border, no background, margin instead of padding, resize:none */}
                 <textarea value={text} rows={4} onChange={(e) => update((d) => { d.body_paragraphs[i] = e.target.value })}
                   style={{ margin: '4px 10px 9px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: '19px', color: 'var(--text)', outline: 'none', resize: 'none' }} />
-              </div>
+              </UiCard>
             ))}
-            <div onClick={() => update((d) => { d.body_paragraphs = [...(d.body_paragraphs || []), ''] })} className="v2-dashadd"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 28, border: '1px dashed var(--edge)', borderRadius: 6, fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>+ Add paragraph</div>
+            <DashedAdd onClick={() => update((d) => { d.body_paragraphs = [...(d.body_paragraphs || []), ''] })} style={{ gap: 7 }}>+ Add paragraph</DashedAdd>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
                 <span style={FLABEL}>Closing</span>

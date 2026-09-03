@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, IconButton, Input, Pill, Textarea } from './ui'
+import { Button, Card, DashedAdd, IconButton, Input, Pill, Row, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -344,8 +344,9 @@ export default function Applications() {
 
       {/* toolbar */}
       <div style={{ flex: '0 0 auto', padding: '0 30px 14px 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
-        {/* ui: keep — search field wrapper (Input role), not a pill */}
-        <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks
+            ui.jsx's boxed SearchInput so the two read as one control */}
+        <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -364,6 +365,7 @@ export default function Applications() {
                 return (
                   <div key={name} className="v2-menuitem" onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
                     style={{ padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, lineHeight: '18px', color: band === 'closed' ? 'var(--muted)' : 'var(--text-2)', cursor: 'pointer', marginTop: first ? 5 : 0, borderTop: first ? '1px solid var(--line)' : 'none', paddingTop: first ? 10 : 6 }}>
+                    {/* ui: keep — checkbox indicator, not a card */}
                     <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
                     <span title={band === 'closed' ? 'Every application here is rejected' : undefined} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--muted)' }}>{e.n}</span>
@@ -423,8 +425,8 @@ export default function Applications() {
                   // vanished under the pointer. The 3px accent bar carries the
                   // selection; the 10→7px left pad keeps the text on the same axis.
                   return (
-                    <div key={a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 46px', height: 46, marginBottom: 3, padding: sel === a.id ? '0 10px 0 7px' : '0 10px', borderLeft: sel === a.id ? '3px solid var(--accent)' : undefined, borderRadius: 7, background: sel === a.id ? 'var(--surface-2)' : 'transparent', cursor: 'pointer' }}>
+                    <Row key={a.id} selected={sel === a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
+                      style={{ gap: 8, flex: '0 0 46px', marginBottom: 3 }}>
                       {/* lineHeight:normal — the design is authored at the browser default;
                           Tailwind's preflight sets 1.5 on <html>, which would inflate the block */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 'normal' }}>
@@ -436,7 +438,7 @@ export default function Applications() {
                       </div>
                       <span title={stale ? `No movement for ${daysSince(a.updated_at)} days` : `Last activity ${daysSince(a.updated_at)}d ago`}
                         style={{ flex: '0 0 30px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, color: stale ? 'var(--warn)' : 'var(--muted)' }}>{daysSince(a.updated_at)}d</span>
-                    </div>
+                    </Row>
                   )
                 })}
               </React.Fragment>
@@ -539,6 +541,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             const on = d.status === s.id
             const rej = s.id === 'rejected'
             return (
+              /* ui: keep — a segmented stage stepper, not a card: equal-flex cells
+                 tinted per stage (accent / bad) when current */
               <div key={s.id} onClick={() => { if (!on) onStage(s.id) }} title={s.hint} className="v2-bd"
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, borderRadius: 8, fontSize: 12.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
                   border: `1px solid ${on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--line)'}`,
@@ -571,7 +575,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               </Pill>
             </div>
             {ivs.map((iv) => (
-              <div key={iv.id} style={{ border: `1px solid ${editIv === iv.id ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 9, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: editIv === iv.id ? 8 : 3, background: editIv === iv.id ? 'var(--surface)' : 'var(--bg)' }}>
+              <Card key={iv.id} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: editIv === iv.id ? 8 : 3, ...(editIv === iv.id ? { borderColor: 'var(--accent)' } : { background: 'var(--bg)' }) }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {/* R3-A-06: the row text opens the editor; the status chip and ✕
                       keep the behaviour they had, so nothing that worked moved. */}
@@ -613,10 +617,10 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                     {iv.prep && <span onClick={() => openIvEdit(iv)} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)', textWrap: 'pretty', cursor: 'pointer' }}>{iv.prep}</span>}
                   </>
                 )}
-              </div>
+              </Card>
             ))}
             {intForm ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid var(--accent)', borderRadius: 9, padding: '10px 12px', background: 'var(--surface)' }}>
+              <Card style={{ display: 'flex', flexDirection: 'column', gap: 8, borderColor: 'var(--accent)', padding: '10px 12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={FIELD_LABEL}>What</span>
                   <Input value={intWhat} onChange={setIntWhat} placeholder="e.g. System design round" ariaLabel="What" />
@@ -639,18 +643,21 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   <Button variant="secondary" size="xs" onClick={() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('') }}>Cancel</Button>
                   <Button size="xs" onClick={addInterview} disabled={!canAddInterview}>Add interview</Button>
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div onClick={() => setIntForm(true)} className="v2-bdc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, border: '1px dashed var(--line-strong)', borderRadius: 9, fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>+ Add interview</div>
+              <DashedAdd big onClick={() => setIntForm(true)} style={{ gap: 7 }}>+ Add interview</DashedAdd>
             )}
           </div>
 
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={LABEL}>Notes · autosaves</span>
+            {/* rows={2} keeps the intrinsic height (2×19 + 13 = 51) under the 64 px
+                floor, so `minHeight` is the value that actually renders — the pre-D4b
+                box. At rows={3} the intrinsic height wins and the floor is dead code. */}
             <Textarea key={d.id} defaultValue={d.notes || ''} onChange={(t) => onNotes(t)}
               onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…" ariaLabel="Notes"
-              rows={3} style={{ minHeight: 64 }} />
+              rows={2} style={{ minHeight: 64 }} />
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Button, Pill, SearchInput } from './ui'
+import { Band, Button, Card, Pill, SearchInput } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -105,6 +105,8 @@ export function LengthPicker({ value, onPick }) {
       {LENGTHS.map(([id, name]) => {
         const on = id === value
         return (
+          /* ui: keep — a segmented control, not a card: three equal-flex cells
+             that share one border run and swing to accent-soft when picked */
           <div key={id} onClick={() => onPick(id)} className="v2-bdc v2-ctl"
             style={{ flex: 1, height: 31, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
@@ -303,9 +305,9 @@ export default function CoverLetters() {
       LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
     const sub = [...bits, `edited ${ago(c.updated_at)}`].join(' · ')
     return (
-      <div key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)} tabIndex={0} role="button" onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/v2/cover-letters/${c.id}`) }} className="v2-bd"
-        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 10, cursor: 'pointer',
-          border: `1px solid ${arc ? 'var(--line-soft)' : 'var(--line)'}`, background: arc ? 'var(--recessed)' : 'var(--surface)' }}>
+      <Card key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
+          ...(arc ? { borderColor: 'var(--line-soft)', background: 'var(--recessed)' } : null) }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span title={c.name} style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em', lineHeight: '22px', color: arc ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
           <span style={{ fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
@@ -316,7 +318,7 @@ export default function CoverLetters() {
         )}
         <span style={{ flex: '0 0 40px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{agoShort(c.updated_at)}</span>
         <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--edge)' }}>›</span>
-      </div>
+      </Card>
     )
   }
 
@@ -378,7 +380,7 @@ export default function CoverLetters() {
 
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
             {pending.map((r) => (
-              <div key={r.run_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', border: '1px dashed var(--accent)', borderRadius: 10, background: 'var(--recessed)' }}>
+              <Band key={r.run_id} interactive={false} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', borderColor: 'var(--accent)', background: 'var(--recessed)' }}>
                 <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                 {/* integer line-height: at 1.5 this 12.5px label makes the row
                     46.75px tall and every letter row below it lands on a half
@@ -387,21 +389,21 @@ export default function CoverLetters() {
                   Generating — {rowLabel(r)}
                 </span>
                 <span style={{ marginLeft: 'auto', flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>~30s</span>
-              </div>
+              </Band>
             ))}
 
             {active.map((c) => row(c, false))}
 
             {archived.length > 0 && (
-              <div onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} className="v2-act" title={query.trim() ? 'Archived letters are shown while you search' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginTop: 6, border: '1px dashed var(--line)', borderRadius: 9, cursor: 'pointer' }}>
+              <Band onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} title={query.trim() ? 'Archived letters are shown while you search' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
                 </span>
                 <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
                   {query.trim() ? 'shown while searching' : showArch ? 'hide ⌄' : 'browse ›'}
                 </span>
-              </div>
+              </Band>
             )}
             {showArch && archived.map((c) => row(c, true))}
 
