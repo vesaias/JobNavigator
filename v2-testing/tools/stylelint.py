@@ -18,19 +18,50 @@ SKIP = {"ui.jsx", "UiGallery.jsx", "ToastLab.jsx"}
 HOVER = re.compile(r"\bv2-(bdc?|act|row|crow|arow|card|chip|menuitem|hover-[a-z-]+|dashadd|navlink|clhead)\b")
 PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface"}
 
+def strip_block_comments(lines):
+    """Blank out every `/* … */` span (the `{/* … */}` JSX form included) while
+    keeping the line numbering. A block comment that runs over several lines used
+    to leave its continuation lines looking like code — `(theme.css .v2-hover-accent)
+    — the stage bands were the last` read as a hover class on a non-primitive —
+    because each line was tested on its own. The open/closed state has to be
+    carried across lines instead."""
+    out, open_ = [], False
+    for line in lines:
+        buf, i = [], 0
+        while i < len(line):
+            if open_:
+                j = line.find("*/", i)
+                if j < 0: break
+                open_ = False; i = j + 2
+            else:
+                j = line.find("/*", i)
+                if j < 0: buf.append(line[i:]); break
+                buf.append(line[i:j]); open_ = True; i = j + 2
+        out.append("".join(buf))
+    return out
+
 def lint_jsx(fn, text):
     out = []
     lines = text.splitlines()
+    nocomment = strip_block_comments(lines)
     def is_allowed(i):
+        # The keep note is written *above* the element it annotates, so the walk
+        # back may cross that element's own opening tag — but only that one: a
+        # second `^<Tag` means we have stepped into the previous sibling and the
+        # note is not ours. When the flagged line carries its own `<Tag`, the
+        # element starts on this line and no crossing is allowed at all.
+        crossed = bool(re.search(r"<[A-Za-z]", lines[i - 1]))
         for j in range(i - 1, max(-1, i - 8), -1):
             if "ui: keep" in lines[j] or "lint: allow" in lines[j]: return True
-            if j < i - 1 and re.search(r"^\s*<[A-Za-z]", lines[j]): break
+            if j < i - 1 and re.search(r"^\s*<[A-Za-z]", lines[j]):
+                if crossed: break
+                crossed = True
         return False
     for i, line in enumerate(lines, 1):
         allowed = is_allowed(i)
         if re.match(r"^\s*(//|/\*|\*|\{/\*)", line): continue  # comment lines
+        line = nocomment[i - 1]
         code = re.sub(r"//.*$", "", line) if "//" in line and "http" not in line else line
-        code = re.sub(r"\{/\*.*?\*/\}", "", code)
         if re.search(r"(?<![\w-])#[0-9a-fA-F]{3,8}\b", code) and "var(--" not in code and "href" not in code:
             out.append((i, "raw-colour", allowed, line.strip()[:120]))
         if re.search(r"\brgba?\(|\bhsla?\(", code):
@@ -48,7 +79,9 @@ def lint_jsx(fn, text):
             tag = re.search(r"<([A-Z][A-Za-z]*)\b", code)
             if not (tag and tag.group(1) in PRIMS):
                 out.append((i, "hover-class-on-non-primitive", allowed, line.strip()[:120]))
-        if re.search(r"borderRadius:\s*99\b", code) and re.search(r"\b(background|border):", code):
+        # matches the token form too: tokenising `99` must not be a way to make a
+        # hand-rolled pill invisible to the rule.
+        if re.search(r"borderRadius:\s*(99\b|'var\(--radius-control\)')", code) and re.search(r"\b(background|border):", code):
             out.append((i, "pill-shaped-inline", allowed, line.strip()[:120]))
     return out
 

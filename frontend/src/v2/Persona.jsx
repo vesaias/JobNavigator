@@ -132,7 +132,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
         <div onClick={() => write(node, fkey, !on)} {...kb(() => write(node, fkey, !on), 'checkbox')} aria-checked={on} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
           {/* ui: keep — checkbox indicator, not a card (the scan's card-static
               signature catches any bordered, rounded, filled box) */}
-          <span style={{ flex: '0 0 auto', width: 15, height: 15, marginTop: 1, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-ink)', fontSize: 9, lineHeight: 1 }}>{on ? '✓' : ''}</span>
+          <span style={{ flex: '0 0 auto', width: 15, height: 15, marginTop: 1, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', borderRadius: 'var(--radius-inline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-ink)', fontSize: 9, lineHeight: 1 }}>{on ? '✓' : ''}</span>
           <span style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: '18px', textWrap: 'pretty' }}>{opts.text}</span>
         </div>
       </div>
@@ -373,7 +373,7 @@ export default function Persona() {
                 the neutral groups above. Card renders --card-bg/--card-border and has
                 no tone variant; overriding both inline would put two colours back in
                 a screen, which is exactly what the pass removes. */}
-            <div style={{ border: '1px solid var(--amber-line)', borderRadius: 9, background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ border: '1px solid var(--amber-line)', borderRadius: 'var(--radius-card)', background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
               <SectionHead card open={groups.has('qa')} onToggle={() => toggleGroup('qa')} hover="v2-qahead" style={{ padding: '11px 14px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
                 <Helper style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</Helper>
@@ -384,7 +384,7 @@ export default function Persona() {
                   {/* ui: keep — a row inside the amber card, tinted to it
                       (--amber-line-soft); a Card here would reintroduce --line */}
                   {qa.map((e, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: '1px solid var(--amber-line-soft)', borderRadius: 7, background: 'var(--surface)' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: '1px solid var(--amber-line-soft)', borderRadius: 'var(--radius-row)', background: 'var(--surface)' }}>
                       {/* each BulletText needs a ROW flex parent: its flex:1 sizes the
                           width there, whereas in a column parent flex:1 would drive the
                           height and override the auto-grow, clipping every answer to one line */}

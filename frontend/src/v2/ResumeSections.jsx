@@ -11,7 +11,7 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Helper, Input, Label, SectionHead, Textarea } from './ui'
+import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, SectionHead, Textarea } from './ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
@@ -103,15 +103,10 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
   return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1} placeholder={placeholder}
     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
-export const RemoveLink = ({ onClick, children = 'Remove' }) => (
-  <span onClick={onClick} {...kb(onClick)} style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap' }} className="v2-hover-bad v2-hover-bad-text">{children}</span>
-)
-// The ✕ every row carries. One component so the keyboard treatment (PERS-15) is
-// written once rather than at each of the five sites.
-export const RemoveX = ({ onClick, title = 'Remove', size = 11, lh }) => (
-  <span onClick={onClick} {...kb(onClick)} title={title} aria-label={title} className="v2-hover-bad v2-hover-bad-text"
-    style={{ flex: '0 0 auto', color: 'var(--faint)', fontSize: size, cursor: 'pointer', lineHeight: lh }}>✕</span>
-)
+// The worded remove and the ✕ every row carries now live in ui.jsx (D5) next to
+// the other row affordances — re-exported here so Persona/ResumeEditor keep
+// importing them from this file. The keyboard treatment (PERS-15) comes with them.
+export { RemoveLink, RemoveX } from './ui'
 // PERS-13: removals are undoable rather than confirmed — no window.confirm anywhere.
 // `mutate` closes over the data of the render that produced the toast, so
 // re-inserting through it five seconds later would work off stale state; keep the
@@ -186,11 +181,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
   const items = data.header?.contact_items || []
   const undoRemove = useUndoRemove(mutate, onRemoved)
   const move = (i, dir) => mutate((d) => { const a = d.header.contact_items; const j = i + dir; if (j < 0 || j >= a.length) return;[a[i], a[j]] = [a[j], a[i]] })
-  const arrows = (i) => (
-    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(i, -1)} {...kb(() => move(i, -1))} title="Move up" className="v2-navlink">▲</span><span onClick={() => move(i, 1)} {...kb(() => move(i, 1))} title="Move down" className="v2-navlink">▼</span>
-    </span>
-  )
+  const arrows = (i) => <MoveArrows onUp={() => move(i, -1)} onDown={() => move(i, 1)} />
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -281,7 +272,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   return (
                     /* ui: keep — a field-shaped prose row (r6 = --radius-field), not a
                        card: it wraps one BulletText and carries the ✦ tailoring tint */
-                    <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
+                    <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
                       <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
                       {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
@@ -293,7 +284,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 })}
                 {/* ui: keep — same field-shaped prose row, always tinted */}
                 {(e.suggested_bullets || []).map((sb, k) => (
-                  <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
+                  <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 'var(--radius-field)' }}>
                     <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
                     <span style={{ flex: 1, fontSize: 12.5, lineHeight: '19px', color: 'var(--text-2)' }}>{sb}</span>
                     {/* ui: keep — the row's markers and this tag ride the 19px prose line of BulletText; Helper's 16px would unalign them */}
@@ -322,7 +313,7 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
       {/* ui: keep — the summary is one field-shaped prose row (r6), not a card */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
         <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{changed ? '✦' : '—'}</span>
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
         {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
@@ -354,11 +345,7 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
   const move = (k, dir) => mutate((d) => { const e = Object.entries(d.skills); const i = e.findIndex(([x]) => x === k); const j = i + dir; if (i < 0 || j < 0 || j >= e.length) return;[e[i], e[j]] = [e[j], e[i]]; d.skills = Object.fromEntries(e) })
   const liveRename = useRef(rename)
   liveRename.current = rename
-  const arrows = (k) => (
-    <span style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--faint)', fontSize: 8, cursor: 'pointer' }}>
-      <span onClick={() => move(k, -1)} {...kb(() => move(k, -1))} title="Move up" className="v2-navlink">▲</span><span onClick={() => move(k, 1)} {...kb(() => move(k, 1))} title="Move down" className="v2-navlink">▼</span>
-    </span>
-  )
+  const arrows = (k) => <MoveArrows onUp={() => move(k, -1)} onDown={() => move(k, 1)} />
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
       {entries.map(([k, v], ei) => {
@@ -377,12 +364,12 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
                 bullets and the summary), so a skills row keeps its field colour. */}
             {/* ui: keep — a *field* box (h29 · r6 · --edge · --surface-2) that holds a
                 bare input plus the ✦/added/↩ affordances, not a card */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 6 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 'var(--radius-field)' }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
               {/* ui: keep — bare input inside the row's own bordered box; that box, not
                   the field, carries the tailoring border and the added/decline affordances */}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
-              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 4, background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
+              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 'var(--radius-inline)', background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
             {/* restore rebuilds the key order so the row comes back where it was */}
@@ -453,7 +440,7 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
             <Label>Bullets</Label>
             {(p.bullets || []).map((b, bi) => (
               /* ui: keep — field-shaped prose row (r6), as in Experience */
-              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>
+              <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
                 <span style={{ flex: '0 0 auto', color: 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>—</span>
                 <BulletText value={b} onChange={(v) => mutate((d) => { d.projects[i].bullets[bi] = v })} />
                 <RemoveX size={10} lh="19px" onClick={() => undoRemove('Removed bullet',

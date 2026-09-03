@@ -45,6 +45,13 @@ const BADGE = {
   skip: { label: 'Skipped', bd: 'var(--line)', bg: 'transparent', fg: 'var(--muted)' },
   ignored: { label: 'Ignored', bd: 'var(--line)', bg: 'transparent', fg: 'var(--muted)' },
 }
+// ui: keep — the bulk bar's on-rail controls: --rail-ink on an --on-rail-line
+// hairline, drawn over the dark --rail bar. Pill and Button paint for light
+// surfaces, so these keep their own look — one object so they cannot drift.
+const RAIL_BTN = {
+  height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 'var(--radius-control)',
+  display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer',
+}
 const SOURCE_LABELS = {
   direct: 'Direct', extension: 'Extension', jobspy_linkedin: 'LinkedIn', jobspy_indeed: 'Indeed',
   jobspy_zip_recruiter: 'ZipRecruiter', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LinkedIn Personal',
@@ -93,7 +100,7 @@ function Check({ on, label, count, onClick }) {
   return (
     <MenuItem ellipsis onClick={onClick} hint={count} hintMono
       icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-        <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>}>
+        <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>}>
       {label}
     </MenuItem>
   )
@@ -727,7 +734,7 @@ export default function V2JobFeed() {
         {/* FEED-25: the clear ✕ rides in this relative wrapper, over SearchInput's box */}
         <div style={{ position: 'relative', flex: '0 0 auto', marginRight: 3, display: 'flex', alignItems: 'center' }}>
           <SearchInput width="226px" value={search} onChange={setSearch} placeholder="Search titles…" ariaLabel="Search job titles" />
-          {search && <span onClick={() => setSearch('')} title="Clear search" className="v2-x" style={{ position: 'absolute', right: 8, width: 18, height: 18, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✕</span>}
+          {search && <span onClick={() => setSearch('')} title="Clear search" className="v2-x" style={{ position: 'absolute', right: 8, width: 18, height: 18, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✕</span>}
         </div>
         {searchId && (
           <Pill on onClick={() => { setSearchId(''); setSearchParams({}, { replace: true }) }}
@@ -751,7 +758,7 @@ export default function V2JobFeed() {
                 {sorted.map((c) => (
                   <MenuItem key={c.name} ellipsis onClick={() => togF('company', c.name)} hint={c.count} hintMono
                     icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-                      <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 4, border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>}>
+                      <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 'var(--radius-inline)', border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>}>
                     {c.name}
                   </MenuItem>
                 ))}
@@ -799,7 +806,7 @@ export default function V2JobFeed() {
         </Drop>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto' }}>
           <Drop width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
-            trigger={(t) => <div onClick={t} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
+            trigger={(t) => /* ui: keep — the Sort control is a text trigger (muted 12.5 + bold value + caret), not a Pill or a Link */ <div onClick={t} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
             {SORT_OPTS.map(([v, label]) => (
               <MenuItem key={v} selected={sortBy === v} hint={sortBy === v ? '✓' : null}
                 onClick={() => { setSortBy(v); setMenu(null); setSel(0) }}>{label}</MenuItem>
@@ -813,12 +820,12 @@ export default function V2JobFeed() {
         {/* list */}
         <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ position: 'relative', padding: '12px 14px 8px 24px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
-            <div onClick={() => setChecked(checked.size === jobs.length && jobs.length ? new Set() : new Set(jobs.map((j) => j.id)))} title="Select all shown" style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`, background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{checked.size === jobs.length && jobs.length ? '✓' : ''}</div>
+            <div onClick={() => setChecked(checked.size === jobs.length && jobs.length ? new Set() : new Set(jobs.map((j) => j.id)))} title="Select all shown" style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`, background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{checked.size === jobs.length && jobs.length ? '✓' : ''}</div>
             <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{jobs.length} shown · {total} matching</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
               {/* ui: keep — 16x16 "?" glyph badge; no Pill/IconButton size is this small */}
-              <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 99, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
+              <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 'var(--radius-control)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
             </div>
             {shortcutsOpen && (
               <>
@@ -838,15 +845,18 @@ export default function V2JobFeed() {
           </div>
 
           {checked.size > 0 && (
-            <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', zIndex: 25, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px 7px 14px', background: 'var(--rail)', borderRadius: 99, boxShadow: 'var(--shadow-pop)' }}>
+            // ui: keep — the floating bulk bar is a pill-shaped *bar* on the dark --rail
+            // ground with --shadow-pop; no primitive owns a bar, and Pill is a control.
+            <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', zIndex: 25, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px 7px 14px', background: 'var(--rail)', borderRadius: 'var(--radius-control)', boxShadow: 'var(--shadow-pop)' }}>
               <span style={{ fontSize: 12, color: 'var(--rail-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
               <div style={{ width: 1, height: 16, background: 'var(--on-rail-sep)', margin: '0 3px' }} />
               <Button size="xs" onClick={() => bulkStatus('saved')}>Save</Button>
-              {/* ui: keep — on-rail buttons (--rail-ink on --on-rail-line); the Pill tokens are for light surfaces */}
-              <div onClick={() => bulkStatus('skip')} className="v2-bdc v2-ctl" style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Skip</div>
-              <div onClick={bulkScore} className="v2-bdc v2-ctl" style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}>Score</div>
-              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ height: 27, padding: '0 11px', border: '1px solid var(--on-rail-line)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--rail-ink)', cursor: 'pointer' }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
-              <div onClick={() => setChecked(new Set())} style={{ width: 27, height: 27, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--on-rail-dim)', cursor: 'pointer' }}>✕</div>
+              {/* ui: keep — RAIL_BTN controls (--rail-ink on --on-rail-line); the Pill tokens are for light surfaces */}
+              <div onClick={() => bulkStatus('skip')} className="v2-bdc v2-ctl" style={RAIL_BTN}>Skip</div>
+              {/* ui: keep — RAIL_BTN, as above */}
+              <div onClick={bulkScore} className="v2-bdc v2-ctl" style={RAIL_BTN}>Score</div>
+              <div onClick={() => setPicker({ mode: 'tailor', jobs: jobs.filter((j) => checked.has(j.id)) })} style={{ ...RAIL_BTN, gap: 5 }}><span style={{ color: 'var(--rail-accent)' }}>✦</span>Tailor</div>
+              <div onClick={() => setChecked(new Set())} style={{ width: 27, height: 27, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--on-rail-dim)', cursor: 'pointer' }}>✕</div>
             </div>
           )}
 
@@ -886,7 +896,9 @@ export default function V2JobFeed() {
                             </svg>
                             {/* ui: keep — score numeral (serif 19, scoreColor ink, lh 1) centred in the 44px ring: data display, not a heading */}
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
-                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 99, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
+                            {/* ui: keep — the “+N reports” count badge pinned to the ring: a 16px min-width
+                                box on --surface with a --line hairline; Tag has no fixed box */}
+                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-control)', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
                           </>
                         ) : run ? (
                           <>
@@ -896,10 +908,10 @@ export default function V2JobFeed() {
                           </>
                         ) : (
                           /* ui: keep — 8.5px dashed uppercase micro-badge filling the 34px score slot (position:absolute inset 0) */
-                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
+                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
                         )}
                         {/* ui: keep — 16px selected ✓ badge on the score disc, not a control */}
-                        {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 99, background: 'var(--accent)', border: '2px solid var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
+                        {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 'var(--radius-control)', background: 'var(--accent)', border: '2px solid var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
                       </div>
                       {/* text */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -909,7 +921,7 @@ export default function V2JobFeed() {
                           <Heading strong size={16} title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
                           {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--accent)' }}>✦</a>}
                           {/* ui: keep — status badge with background + border + r99: Tag role (D4d), not a Label */}
-                          {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 99, border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
+                          {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 'var(--radius-control)', border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, fontWeight: 450, color: 'var(--text-2)', minWidth: 0, marginTop: -2 }}>
                           <span title={j.company} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230, fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company}</span>
@@ -985,12 +997,12 @@ export default function V2JobFeed() {
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {/* ui: keep — a real <a href target=_blank>, and its height tracks the collapsing detail header (36/30) */}
-                    {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
+                    {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
                     {/* ui: keep — height tracks the collapsing detail header (36/30); Button's sizes are fixed, and its Open ↗ / ⋯ siblings follow the same pair */}
-                    <div onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</div>
+                    <div onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</div>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
                       {/* ui: keep — 36/30 with the collapsing detail header; IconButton's bordered size is a fixed 36 */}
-                      <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
+                      <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
                       {headMenu && (
                         <>
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
@@ -1099,15 +1111,15 @@ export default function V2JobFeed() {
                             {keywordOpen && (
                               <>
                                 {/* ui: keep — 4px keyword-coverage meter, not a control */}
-                                <div style={{ height: 4, borderRadius: 99, background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 99, background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
+                                <div style={{ height: 4, borderRadius: 'var(--radius-control)', background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 'var(--radius-control)', background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 3 }}>
                                   <Helper>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</Helper>
                                   {(rpt.matched_keywords || []).length > 0 && <Link onClick={() => setShowMatched((v) => !v)}>{showMatched ? 'Hide matched' : 'Show matched'}</Link>}
                                 </div>
                                 {/* ui: keep — mono keyword tags (Tag role), not controls */}
-                                {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
+                                {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 'var(--radius-control)', background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
                                 {/* ui: keep — mono keyword tags (Tag role), not controls */}
-                                {(rpt.missing_keywords || []).length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.missing_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--bad-soft)', color: 'var(--bad)' }}>{w}</span>)}</div>}
+                                {(rpt.missing_keywords || []).length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.missing_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 'var(--radius-control)', background: 'var(--bad-soft)', color: 'var(--bad)' }}>{w}</span>)}</div>}
                               </>
                             )}
                           </div>
@@ -1122,7 +1134,9 @@ export default function V2JobFeed() {
                                 <Helper>{reqMet} of {reqRows.length} met</Helper>
                               </SectionHead>
                               {reqOpen && (
-                                <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
+                                // ui: keep — a two-cell segmented filter track: one shared border run,
+                                // overflow hidden, its cells are toggle cells rather than Pills.
+                                <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', overflow: 'hidden' }}>
                                   {[['all', `All ${reqRows.length}`], ['gaps', `Gaps ${reqRows.length - reqMet}`]].map(([id, label]) => <div key={id} onClick={() => setReqFilter(id)} style={{ height: 24, padding: '0 11px', display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', background: reqFilter === id ? 'var(--accent)' : 'transparent', color: reqFilter === id ? 'var(--accent-ink)' : 'var(--text-2)' }}>{label}</div>)}
                                 </div>
                               )}
@@ -1146,7 +1160,7 @@ export default function V2JobFeed() {
                         )}
 
                         {(rpt?.hard_blockers || []).length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '11px 13px', border: '1px solid var(--bad)', borderRadius: 8 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '11px 13px', border: '1px solid var(--bad)', borderRadius: 'var(--radius-cell)' }}>
                             {/* ui: keep — --bad 10/600 uppercase: neither the ink nor the weight Label carries */}
                             <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--bad)', fontWeight: 600 }}>Hard blockers</span>
                             {(rpt.hard_blockers || []).map((b, k) => <div key={k} style={{ display: 'flex', gap: 9, fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}><span style={{ color: 'var(--bad)' }}>!</span><span>{b}</span></div>)}
@@ -1171,7 +1185,7 @@ export default function V2JobFeed() {
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
                   {/* ui: keep — dashed 34px "no score" badge filling the ring slot, not an add-line */}
-                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
+                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
                   <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Not scored yet</span>
                     <span style={{ color: 'var(--muted)' }}>{' '}Score against your résumés for the </span>
@@ -1200,9 +1214,11 @@ export default function V2JobFeed() {
                       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                         <span style={{ fontSize: 12, color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>{viewCached ? 'Cached snapshot · captured when you applied' : 'Live posting'}</span>
                         {/* ui: keep — a two-cell segmented toggle track (r99, 2px inset), not a card; its Live / Cached cells are toggle cells, not links */}
-                        <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 99, padding: 2, gap: 2 }}>
-                          <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
-                          <div onClick={() => setViewCached(true)} style={{ height: 22, padding: '0 10px', borderRadius: 99, fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: viewCached ? 'var(--accent-soft)' : 'transparent', color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>Cached</div>
+                        <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', padding: 2, gap: 2 }}>
+                          {/* ui: keep — Live cell of the segmented toggle above */}
+                          <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 'var(--radius-control)', fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
+                          {/* ui: keep — Cached cell of the same toggle */}
+                          <div onClick={() => setViewCached(true)} style={{ height: 22, padding: '0 10px', borderRadius: 'var(--radius-control)', fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: viewCached ? 'var(--accent-soft)' : 'transparent', color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>Cached</div>
                         </div>
                       </div>
                     )}
@@ -1218,14 +1234,14 @@ export default function V2JobFeed() {
                       <div style={{ flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 30px', minHeight: 0 }}>
                         <div style={{ maxWidth: '44ch', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 11, textAlign: 'center' }}>
                           {/* ui: keep — dashed 44px warning glyph, not an add-line */}
-                          <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
+                          <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
                           <Heading>This posting refuses to be framed</Heading>
                           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} sends X-Frame-Options, so the live page cannot render here. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                             {/* ui: keep — native <a href target=_blank>; Button renders a div and would drop the anchor */}
-                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 34, padding: '0 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open in new tab ↗</a>
+                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 34, padding: '0 16px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open in new tab ↗</a>
                             {/* ui: keep — h34 to match the native anchor it sits beside (which stays inline) */}
-                            {dCached && <div onClick={() => setViewCached(true)} className="v2-act" style={{ height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>View cached snapshot</div>}
+                            {dCached && <div onClick={() => setViewCached(true)} className="v2-act" style={{ height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>View cached snapshot</div>}
                           </div>
                         </div>
                       </div>
@@ -1269,7 +1285,7 @@ export default function V2JobFeed() {
                     {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run'], ['copy', '⧉ Copy with tracers', 'Exact duplicate with tracking links · instant']].map(([m, label, help]) => {
                       const on = cvMode === m
                       return (
-                        <div key={m} onClick={() => pickMethod(m)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div key={m} onClick={() => pickMethod(m)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
                           <Helper>{help}</Helper>
                         </div>
@@ -1283,9 +1299,10 @@ export default function V2JobFeed() {
                     : cvBases.map((r) => {
                       const on = cvBase === r.id
                       return (
-                        <div key={r.id} className="v2-act" onClick={() => setCvBase(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
+                        // ui: keep — a selectable choice card with a radio slot; v2-act is the choice-card hover.
+                        <div key={r.id} className="v2-act" onClick={() => setCvBase(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 'var(--radius-cell)', cursor: 'pointer', fontSize: 13.5 }}>
                           {/* ui: keep — radio indicator, not a status dot */}
-                          <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
+                          <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 'var(--radius-control)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'transparent' }} /></span>
                           <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                           {r.id === 'persona' && <Helper style={{ flex: '0 0 auto' }}>from /persona</Helper>}
                         </div>
@@ -1325,9 +1342,10 @@ export default function V2JobFeed() {
                   : rescoreOpts.map((o) => {
                     const on = rescoreSel.includes(o.id)
                     return (
+                      // ui: keep — a selectable choice card with a tick slot; v2-act is the choice-card hover.
                       <div key={o.id} className="v2-act" onClick={() => setRescoreSel((prev) => prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id])}
-                        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
-                        <span style={{ flex: '0 0 auto', width: 17, height: 17, borderRadius: 5, border: on ? 'none' : '1px solid var(--edge)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{on ? '✓' : ''}</span>
+                        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 'var(--radius-cell)', cursor: 'pointer', fontSize: 13.5 }}>
+                        <span style={{ flex: '0 0 auto', width: 17, height: 17, borderRadius: 'var(--radius-mini)', border: on ? 'none' : '1px solid var(--edge)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{on ? '✓' : ''}</span>
                         <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
                         <Helper style={{ flex: '0 0 auto' }}>{o.note}</Helper>
                       </div>
@@ -1340,7 +1358,7 @@ export default function V2JobFeed() {
                   {[['light', 'Light', 'Scores only'], ['full', 'Full', 'Report + keywords']].map(([v, label, help]) => {
                     const on = rescoreDepth === v
                     return (
-                      <div key={v} onClick={() => setRescoreDepth(v)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div key={v} onClick={() => setRescoreDepth(v)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
                         <Helper>{help}</Helper>
                       </div>

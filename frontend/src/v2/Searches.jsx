@@ -197,7 +197,7 @@ const Chip = ({ on, label, onClick }) => (
 const Check = ({ on, label, title, onClick }) => (
   <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
     {/* ui: keep — checkbox indicator, not a card */}
-    <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
+    <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
     {label}
   </div>
 )
@@ -272,7 +272,7 @@ function ConfigForm({ d, set }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>{fields}</div>
 
       {note && (
-        <div className={note[1]} style={{ padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: '17px', textWrap: 'pretty' }}>{note[0]}</div>
+        <div className={note[1]} style={{ padding: '9px 12px', borderRadius: 'var(--radius-cell)', fontSize: 11.5, lineHeight: '17px', textWrap: 'pretty' }}>{note[0]}</div>
       )}
 
       {m === 'keyword' && (
@@ -614,11 +614,10 @@ export default function Searches() {
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {/* integer line-heights: 15.5px/11.5px text under Tailwind
-                        preflight's 1.5 gives a 67.5px card, so every other row
-                        lands on x.5 and Chrome rounds its 1px border away. */}
-                    <Heading strong size={15.5} style={{ lineHeight: '23px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
-                    <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge}</span>
+                    {/* the 23px that held this card on an integer height is now
+                        `Heading strong`'s own pinned line-height (D5). */}
+                    <Heading strong size={15.5} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
+                    <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                     <span title={summary} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
@@ -653,7 +652,7 @@ export default function Searches() {
                     {/* ui: keep — 25px Run pill matched to the Test pill beside it (Test carries an opacity state the scan left unclassified) */}
                     <span onClick={() => runNow(s)} className="v2-bdc"
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
-                      style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                      style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                       {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </span>
@@ -661,13 +660,13 @@ export default function Searches() {
                     {TESTABLE.includes(s.search_mode) && (
                       <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
                         title={testBlocked ? 'A test is already running' : 'Dry run — previews results and per-job filter reasons, saves nothing'}
-                        style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
+                        style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
                     )}
                     {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
                     <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
-                      style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
+                      style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                     {menuFor === s.id && (
                       <Menu ariaLabel={`${s.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
@@ -794,7 +793,7 @@ function TestModal({ test, tab, setTab, onClose }) {
           <>
             <HeaderRow pad="9px 22px" soft bg="page" align="center" style={{ flexWrap: 'wrap', fontSize: 11, color: 'var(--text-2)' }}>
               {cfg.search_term && cfg.mode !== 'jobright' && cfg.mode !== 'freehire' && (
-                <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>“{cfg.search_term}”</span></span>
+                <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 'var(--radius-inline)' }}>“{cfg.search_term}”</span></span>
               )}
               <span>{params.join(' · ')}</span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -803,7 +802,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                   /* ui: keep — mono source badge on the cc- / sm- hue taxonomy (its colour
                      comes from `c.className`/`c.style`, which an inline Tag tone would beat);
                      Tag is the uppercase .06em sans form at pad 2 8 */
-                  return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 99, ...(c.style || {}) }}>{k} {v}</span>
+                  return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 'var(--radius-control)', ...(c.style || {}) }}>{k} {v}</span>
                 })}
               </span>
             </HeaderRow>
@@ -856,7 +855,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                       {/* R3-A-01: a body-phrase drop is stored as `ignored`, not
                           filtered out of the feed — label it as what it becomes. */}
                       {/* ui: keep — per-row verdict badge (Tag role), not a control */}
-                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : 'Out'}</span>
+                      <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : 'Out'}</span>
                     </span>
                   </div>
                 )

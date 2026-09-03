@@ -102,7 +102,7 @@ const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTra
 // ui: keep — the mono-text role (ids, timestamps, figures), excluded from D4e
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
-const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, lineHeight: '14px', whiteSpace: 'nowrap' }
+const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', lineHeight: '14px', whiteSpace: 'nowrap' }
 const Pill = ({ children, bg, fg }) => (
   <span style={{ ...BADGE, background: bg, color: fg }}>{children}</span>
 )
@@ -423,7 +423,7 @@ export default function Stats() {
       {coreErr && (
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
           {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
-          <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
+          <span style={{ width: 16, height: 16, borderRadius: 'var(--radius-control)', background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
           <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
           {/* D4f consistency decision: the retry link is a Link everywhere else, so
               it is one here — it leaves the band's --bad run and reads as the
@@ -477,7 +477,7 @@ export default function Stats() {
                 <ResponsiveContainer width="100%" height="100%">
                   <Sankey data={sankey} nodePadding={18} nodeWidth={10} margin={{ top: 4, right: 112, left: 4, bottom: 4 }}
                     link={{ stroke: 'var(--stage-applied)', strokeOpacity: 0.22 }} node={<SankeyNode />}>
-                    <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontSize: 12 }} />
+                    <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-cell)', color: 'var(--text)', fontSize: 12 }} />
                   </Sankey>
                 </ResponsiveContainer>
               </div>
@@ -487,8 +487,8 @@ export default function Stats() {
               {funnel.map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ flex: '0 0 76px', fontSize: 12, lineHeight: '18px', color: 'var(--text-2)' }}>{f.label}</span>
-                  <div style={{ flex: 1, height: 22, background: 'var(--surface-2)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: f.w, background: f.color, borderRadius: 5 }} />
+                  <div style={{ flex: 1, height: 22, background: 'var(--surface-2)', borderRadius: 'var(--radius-mini)', overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ width: f.w, background: f.color, borderRadius: 'var(--radius-mini)' }} />
                   </div>
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
                   {/* ui: keep — 9.5 is below Helper's 10.5 xs step, and the 18px
@@ -631,16 +631,17 @@ export default function Stats() {
                   {showStatus && (running
                     ? <Spinner size={9} />
                     /* ui: keep — 7px scheduler status dot (Dot role, migrates with Tag/Dot) */
-                    : <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />)}
+                    : <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 'var(--radius-control)', background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />)}
                   {showStatus && <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {running ? `Running · ${dur(j.running?.elapsed_seconds || 0)}` : j.pending ? 'Pending' : 'Scheduled'}
                   </span>}
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
+                    // ui: keep — the 25px scheduler Run pill, matched to the Run/Test pills on Searches and Companies; Pill sm is 26.
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
-                        className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
+                        className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
                         {running && <Spinner size={9} color="currentColor" />}
                         {running ? 'Running…' : 'Run now'}
                       </span>
@@ -681,7 +682,7 @@ export default function Stats() {
                 {/* ui: keep — a 26px transparent v2-fieldwrap pill that carries the ⌕ and
                     the focus signal around a bare input; SearchInput's boxed variant is h32
                     on --search-bg, which would not sit on this log header row */}
-                <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {/* ui: keep — a 10px icon glyph inside the field wrap, not helper text */}
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
                   <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"
@@ -762,7 +763,7 @@ function Spark({ series, peak }) {
           <YAxis yAxisId="l" allowDecimals={false} width={38} {...axis} tick={{ ...axis.tick, fill: 'var(--series-new)' }} />
           <YAxis yAxisId="r" orientation="right" allowDecimals={false} width={26} {...axis} tick={{ ...axis.tick, fill: 'var(--stage-applied)' }} />
           <Tooltip
-            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, padding: '6px 10px' }}
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-cell)', fontSize: 12, padding: '6px 10px' }}
             labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
           {/* R3-U-02: "new" was --accent, a dark green that sits within 1.2:1 of
               --stage-applied's dark blue in light mode — the two lines read as one.

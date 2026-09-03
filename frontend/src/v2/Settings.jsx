@@ -26,7 +26,7 @@ const KEYLESS = ['claude_code', 'ollama', '']
 // `v2-fieldwrap`, so it — not the field — carries the focus signal, and it also
 // holds the show/hide affordance. Change this only alongside `Select` in ui.jsx.
 const BOX = {
-  height: 32, minWidth: 0, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 6,
+  height: 32, minWidth: 0, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 7, fontSize: 12.5, color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', lineHeight: 1,
 }
@@ -114,12 +114,13 @@ function Toggle({ on, label, onPick, ariaLabel }) {
       {/* ui: keep — a switch track and its sliding knob, not a status dot: the pair
           is one control (26x15 track, 11px knob animating between two positions).
           Dot draws a single tone-coloured disc. */}
-      <span style={{ width: 26, height: 15, borderRadius: 99, background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
+      <span style={{ width: 26, height: 15, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
         {/* SET-14: --knob is white in both themes, which is 2.16:1 on the dark
             theme's light-green track. --surface-2 (user's pick, 2026-09-03) is the ON knob so it reads as a
             surface disc on the accent track in both themes; OFF keeps --knob
             against the neutral track. */}
-        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 99, background: on ? 'var(--surface-2)' : 'var(--knob)', transition: 'left 150ms' }} />
+        {/* ui: keep — the switch knob: an 11px disc that slides inside the track (absolute + transition); Dot is a static status disc */}
+        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 'var(--radius-control)', background: on ? 'var(--surface-2)' : 'var(--knob)', transition: 'left 150ms' }} />
       </span>
     </span>
   )
@@ -488,7 +489,7 @@ export default function Settings() {
         </div>
         {/* ui: keep — settings search field wrapper (Input role), not a pill; h32
             tracks ui.jsx's boxed SearchInput so the two read as one control */}
-        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
           {/* ui: keep — the field's search glyph (an icon adornment), not a helper
               sub-line; Helper's 11.5 would grow the glyph inside the h32 box */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
@@ -524,7 +525,7 @@ export default function Settings() {
                       and drops its 1px bottom rule */}
                   {/* the 26px line-height is load-bearing (see the note above): it keeps
                       every row under this head on the whole-pixel grid, so it stays here */}
-                  <Heading strong size={19} style={{ lineHeight: '26px' }}>{title}</Heading>
+                  <Heading strong size={19}>{title}</Heading>
                   {/* ui: keep — the 26px line-height is the alignment (see above): Helper's
                       16px would drop this section head off the whole-pixel grid */}
                   <span style={{ fontSize: 11.5, lineHeight: '26px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
@@ -605,7 +606,7 @@ function Row({ r, ctx }) {
               </span>
             )}
             {/* ui: keep — a Tag (D4d): uppercase on a --surface-2 r99 chip, not a Label */}
-            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
+            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" ariaLabel={`${r.label} — override the Primary model`} onPick={async () => {
                 const next = !on
@@ -721,7 +722,7 @@ function Row({ r, ctx }) {
             // ui: keep — 15x15 italic-serif "i" glyph badge; no Pill/IconButton size is this small
             <span onClick={() => setInfo(infoOpen ? null : r.label)} {...kb(() => setInfo(infoOpen ? null : r.label))}
               aria-label={`More detail about ${r.label}`} aria-expanded={!!infoOpen} title="More detail"
-              style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>
+              style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>
               {/* the italic serif 'i' has no descender and slants right, so flex
                   centring leaves its ink high and right of the circle's centre */}
               <span style={{ display: 'block', transform: 'translate(-0.9px, 1.4px)' }}>i</span>
@@ -1032,7 +1033,7 @@ function ModelsModal({ S, save, onClose }) {
                 {suggestions.map((n, i) => (
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 5, cursor: 'pointer', background: i === hi ? 'var(--accent-soft)' : 'transparent' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 'var(--radius-mini)', cursor: 'pointer', background: i === hi ? 'var(--accent-soft)' : 'transparent' }}>
                     {/* ui: keep — the suggestion's mono id at --text/--text-2 (the mono-text
                         role), keyboard-highlighted with the row; not helper ink */}
                     <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '16px', color: i === hi ? 'var(--text)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</span>
@@ -1060,7 +1061,7 @@ function ModelsModal({ S, save, onClose }) {
               {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}
               <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
                 title="Remove — removal persists" className="v2-hover-bad-bdc"
-                style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>
+                style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>
             </div>
           ))}
         </div>
