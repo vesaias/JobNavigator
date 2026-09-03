@@ -11,7 +11,7 @@
 // goes through mutate(), which deep-clones and writes one path, so unknown keys
 // survive — never rebuild a node from a known field list.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Input, SectionHead, Textarea } from './ui'
+import { Band, Card, DashedAdd, Helper, Input, Label, SectionHead, Textarea } from './ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
@@ -30,8 +30,6 @@ export const kb = (fn, role = 'button') => ({
 })
 export const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
 export const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
-
-export const UPPER = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 
 // Section counts for the collapsed header, from whichever sections exist.
 export const sectionCounts = (data) => ({
@@ -65,7 +63,7 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, fl
   }
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: flex || undefined, minWidth: 0 }}>
-      {label && <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>}
+      {label && <Helper size="xs">{label}</Helper>}
       {multiline
         ? <Textarea value={value || ''} onChange={onChange} onKeyDown={boldKey} placeholder={placeholder} rows={rows || 3} />
         : <Input value={value || ''} onChange={onChange} placeholder={placeholder} />}
@@ -136,14 +134,14 @@ export const BandRule = () => (
 export const EmptyState = ({ what, note }) => (
   <Band interactive={false} style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
     <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>No {what} yet</span>
-    <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)', textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</span>
+    <Helper style={{ textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</Helper>
   </Band>
 )
 // MenuHead / MenuItem used to be declared here too. There is now one of each,
 // in ui.jsx — the résumé editor imports them straight from './ui'.
 export const MicroField = ({ label, value, onChange, placeholder }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-    <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</span>
+    <Label>{label}</Label>
     <Input value={value || ''} onChange={onChange} placeholder={placeholder} ariaLabel={label} />
   </div>
 )
@@ -156,7 +154,7 @@ export function SectionShell({ name, count, open, onToggle, meta, children }) {
       <SectionHead card open={!!open} onToggle={onToggle} style={{ padding: '10px 14px' }}>
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-          {count != null && <span style={{ fontSize: 11.5, lineHeight: '17px', color: 'var(--muted)' }}>({count})</span>}
+          {count != null && <Helper>({count})</Helper>}
         </span>
         {meta}
       </SectionHead>
@@ -196,20 +194,20 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <span style={UPPER}>Full name</span>
+        <Label>Full name</Label>
         <Input value={data.header?.name || ''} onChange={(v) => setField('header.name', v)} ariaLabel="Full name" />
       </div>
       {/* R3-B-01: header.title round-trips through the API and prints in the
           templates, but had no editor — it was invisible and uneditable in v2.
           Optional: an empty value renders nothing at all in the PDF. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <span style={UPPER}>Title</span>
+        <Label>Title</Label>
         <Input value={data.header?.title || ''} onChange={(v) => setField('header.title', v)} placeholder="Headline, e.g. Senior Product Manager" ariaLabel="Title" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={UPPER}>Contact items</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>text · link · stub</span>
+          <Label>Contact items</Label>
+          <Helper size="xs" style={{ marginLeft: 'auto' }}>text · link · stub</Helper>
         </div>
         {items.map((it, i) => {
           const showStub = it.url && !it.url.startsWith('mailto:')
@@ -265,8 +263,8 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
             <SectionHead card open={isOpen} onToggle={() => toggle(i)} style={{ alignItems: 'baseline', padding: '9px 11px' }}>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
-              <span style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--sans)', color: 'var(--muted)' }}>{e.date}</span>
-              <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>{nb} bullet{nb === 1 ? '' : 's'}</span>
+              <Helper style={{ flex: '0 0 auto', marginLeft: 'auto' }}>{e.date}</Helper>
+              <Helper style={{ flex: '0 0 auto' }}>{nb} bullet{nb === 1 ? '' : 's'}</Helper>
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--warn)' }}>●</span>}
             </SectionHead>
             {isOpen && (
@@ -298,6 +296,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 6 }}>
                     <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
                     <span style={{ flex: 1, fontSize: 12.5, lineHeight: '19px', color: 'var(--text-2)' }}>{sb}</span>
+                    {/* ui: keep — the row's markers and this tag ride the 19px prose line of BulletText; Helper's 16px would unalign them */}
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
                   </div>
                 ))}
@@ -328,7 +327,7 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
         {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
       </div>
-      <span style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--faint)' }}>{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</span>
+      <Helper size="xs">{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</Helper>
     </div>
   )
 }
@@ -451,7 +450,7 @@ export function ProjectsEditor({ emptyNote, data, setField, mutate, onRemoved })
           </div>
           <MicroField label="Description" value={p.description} onChange={(v) => setField(`projects.${i}.description`, v)} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Bullets</span>
+            <Label>Bullets</Label>
             {(p.bullets || []).map((b, bi) => (
               /* ui: keep — field-shaped prose row (r6), as in Experience */
               <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 6 }}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Input, Pill, SectionHead, Select } from './ui'
+import { Card, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -108,7 +108,8 @@ const toPairs = (e) => {
   return Object.keys(e).filter((k) => k !== '').map((k) => ({ question: k, answer: String(e[k] ?? '') }))
 }
 
-const FIELD_LABEL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+// layout only — the type (uppercase 10/15px · .13em · --label-ink) comes from Label
+const FIELD_LABEL = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 // A picker styled as the design's box: value + ▾, opening the standard v2 menu.
 // Thin wrapper over ui.jsx's Select — it keeps the "— not answered" row, because
 // clearing an answer is a real action here (an unset field is not the same as an
@@ -139,7 +140,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
-      <span style={FIELD_LABEL} title={label}>{label}</span>
+      <Label style={FIELD_LABEL} title={label}>{label}</Label>
       {kind === 'text' ? (
         <Input value={val ?? ''} onChange={(v) => write(node, fkey, v)} ariaLabel={label} />
       ) : kind === 'bool' ? (
@@ -155,8 +156,10 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
 function ColumnHead({ title, help }) {
   return (
     <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, padding: '16px 26px 10px', lineHeight: '26px' }}>
+      {/* ui: keep — the card/column-title serif family (500 · -.015em), not the
+          400-weight Heading scale D4e migrates */}
       <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, letterSpacing: '-.015em' }}>{title}</span>
-      <span title={help} style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: '14px', color: 'var(--muted)', cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>what is this?</span>
+      <Helper title={help} style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>what is this?</Helper>
     </div>
   )
 }
@@ -305,14 +308,19 @@ export default function Persona() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Persona</h1>
+          <PageTitle>Persona</PageTitle>
           {/* integer line-heights throughout: at the inherited 1.5 a 13px line is
               19.5px, which lands every row below the header on a half pixel and
               makes Chrome round away their 1px borders on alternating rows */}
+          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the
+              explicit 20px line-height is what keeps this header row on whole
+              pixels (see the note above) */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Saves automatically · autofill {filled} of {ANSWERABLE} set
           </span>
         </div>
+        {/* ui: keep — an accent-ink save indicator, not a link and not a muted
+            helper; Link would add cursor:pointer + a hover class to inert text */}
         <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
       </header>
 
@@ -348,7 +356,7 @@ export default function Persona() {
                   <SectionHead card open={open} onToggle={() => toggleGroup(id)} hover="v2-clhead" style={{ padding: '11px 14px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
                     <span style={{ flex: 1, minWidth: 0 }} />
-                    <span style={{ flex: '0 0 auto', fontSize: 10.5, color: done ? 'var(--accent)' : 'var(--muted)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</span>
+                    <Helper size="xs" style={{ flex: '0 0 auto', color: done ? 'var(--accent)' : 'var(--muted)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</Helper>
                   </SectionHead>
                   {open && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, padding: '12px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
@@ -370,8 +378,8 @@ export default function Persona() {
             <div style={{ border: '1px solid var(--amber-line)', borderRadius: 9, background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
               <SectionHead card open={groups.has('qa')} onToggle={() => toggleGroup('qa')} hover="v2-qahead" style={{ padding: '11px 14px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</span>
-                <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
+                <Helper style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</Helper>
+                <Helper size="xs" style={{ flex: '0 0 auto' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</Helper>
               </SectionHead>
               {groups.has('qa') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 14px 14px', borderTop: '1px solid var(--amber-line-soft)' }}>
@@ -395,7 +403,7 @@ export default function Persona() {
                       <RemoveX onClick={() => removeQa(i)} title="Remove answer" lh="19px" />
                     </div>
                   ))}
-                  {qa.length === 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>No saved answers yet — the extension can add them as you apply.</span>}
+                  {qa.length === 0 && <Helper>No saved answers yet — the extension can add them as you apply.</Helper>}
                   <DashedAdd onClick={() => writeQa([...qa, { question: '', answer: '' }])}>+ Add answer</DashedAdd>
                 </div>
               )}

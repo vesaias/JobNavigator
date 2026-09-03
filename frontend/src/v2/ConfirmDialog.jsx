@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import './theme.css'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Input } from './ui'
+import { Button, Heading, Input } from './ui'
 
 // RES-16: the one destructive-confirm dialog for v2. Lifted out of Companies.jsx
 // (COMP-28) so the résumé and cover-letter deletes stop falling back to
@@ -15,7 +15,7 @@ export default function ConfirmDialog({ title, body, label, danger, onConfirm, o
   return (
     <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 400, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '22px 24px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '26px' }}>{title}</span>
+        <Heading size={19}>{title}</Heading>
         {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>{body}</span>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
           <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
@@ -40,7 +40,7 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
   return (
     <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70 }}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 440, background: 'var(--recessed)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: '22px 24px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.02em', lineHeight: '26px' }}>{title}</span>
+        <Heading size={19}>{title}</Heading>
         {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>{body}</span>}
         <Input value={v} readOnly={readOnly} placeholder={placeholder} autoFocus mono={mono}
           ariaLabel={title} onChange={setV}

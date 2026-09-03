@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Menu, MenuItem, Pill as UiPill } from './ui'
+import { Card, Helper, Label, Menu, MenuItem, PageTitle, Pill as UiPill, Spinner } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -90,9 +90,13 @@ const decodeCron = (expr) => {
   return `Daily ${t}`
 }
 
+// ui: keep — the 500-weight card-title serif family at 17; Heading is the
+// 400-weight 18/19/22 scale, so this is neither the same weight nor a step
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
-const NOTE = { fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }
+// ui: keep — every ...COL site is a table head (fixed height + borderBottom),
+// which is the TableHead role, not Label
 const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
+// ui: keep — the mono-text role (ids, timestamps, figures), excluded from D4e
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
 const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, lineHeight: '14px', whiteSpace: 'nowrap' }
@@ -103,8 +107,7 @@ const Pill = ({ children, bg, fg }) => (
 const LoadMore = ({ onClick, busy }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
     <UiPill size="sm" disabled={!!busy} ariaBusy={!!busy} onClick={onClick}>
-      {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-      {busy && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+      {busy && <Spinner size={9} color="currentColor" />}
       {busy ? 'Loading…' : 'Load more'}
     </UiPill>
   </div>
@@ -388,10 +391,12 @@ export default function Stats() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Stats</h1>
+          <PageTitle>Stats</PageTitle>
           {/* Volume, outcomes, scoring and spend each already have a card below,
               so the header carries the one thing none of them shows: whether the
               pipeline ran and whether anything is broken. */}
+          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the whole
+              header column is pinned to integer line-heights */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {sweep
               ? `Last sweep ${sweep.status === 'failed' ? 'failed ' : ''}${ago(sweep.finished_at || sweep.started_at) || '—'}`
@@ -400,9 +405,12 @@ export default function Stats() {
             {spend != null && <> · {money(spend)} on LLM calls {period ? `in ${period}d` : 'all time'}</>}
           </span>
         </div>
+        {/* ui: keep — an icon+label header control, not an inline text link: its ink
+            is --muted (Link forces --link-ink) and v2-ctl's line-height:1 is what
+            baselines it in the header, which Link's inline 17px would undo */}
         <span onClick={refresh} {...kb(refresh)} title="Reload every figure on this page" className="v2-hover-accent-text v2-ctl" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
           {refreshing
-            ? <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+            ? <Spinner size={10} />
             : <span style={{ fontSize: 12 }}>↻</span>}
           Refresh
         </span>
@@ -412,6 +420,9 @@ export default function Stats() {
           {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
           <span style={{ width: 16, height: 16, borderRadius: 99, background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
           <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
+          {/* ui: keep — a link inside the running text of the error band: it inherits
+              the band's 12.5/18px and its --bad ink through currentColor, so Link's
+              11.5/500 accent would break the sentence and repaint it green */}
           <span onClick={refresh} {...kb(refresh)} className="v2-hover-accent-text v2-ctl" style={{ fontWeight: 600, cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Try again</span>
         </div>
       )}
@@ -428,7 +439,9 @@ export default function Stats() {
             ['Best open score', bestScore, bestScore === '—' ? '' : (best?.company || ''), 'Highest-scoring posting you haven’t applied to'],
           ].map(([label, value, sub, hint], i, arr) => (
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
-              <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
+              <Label style={{ whiteSpace: 'nowrap' }}>{label}</Label>
+              {/* ui: keep — the KPI numeral at serif 27/30px: 3px off PageTitle's 30
+                  and above Heading's 22, so it is its own step */}
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
               </span>
@@ -473,12 +486,16 @@ export default function Stats() {
                     <div style={{ width: f.w, background: f.color, borderRadius: 5 }} />
                   </div>
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
+                  {/* ui: keep — 9.5 is below Helper's 10.5 xs step, and the 18px
+                      line-height baselines it against the 22px funnel bar beside it */}
                   {f.snapshot && <span title="No stage history recorded for these — counted by current status, so anything that passed through this stage and moved on is missing"
                     style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '18px', color: 'var(--muted)', cursor: 'help' }}>snapshot</span>}
                 </div>
               ))}
             </div>
-            <span style={{ ...NOTE, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: '15px' }}>
+            {/* ui: keep — the 15px line-height is what fits two caveat lines inside
+                the card's fixed 230px height; Helper's 16px would overflow it */}
+            <span style={{ fontSize: 11, lineHeight: '15px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* the card's height is fixed, so the caveat replaces the "bars are
                   relative to Applied" clause rather than adding a third line */}
               <span>{funnel.some((f) => f.snapshot)
@@ -493,7 +510,7 @@ export default function Stats() {
           <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>Score distribution</span>
-              <span style={{ flex: 1, ...NOTE }}>{int(scores?.scored_count)} scored jobs · best résumé per job</span>
+              <Helper style={{ flex: 1 }}>{int(scores?.scored_count)} scored jobs · best résumé per job</Helper>
               {scores?.avg != null && (
                 <span style={{ fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
                   avg {scores.avg}
@@ -506,6 +523,7 @@ export default function Stats() {
                 <div key={b.range} title={`${b.count} jobs scored ${b.range}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <span style={{ ...MONO, lineHeight: '14px', color: 'var(--text-2)' }}>{b.count}</span>
                   <div style={{ width: '100%', height: Math.max(2, Math.round((b.count / maxBucket) * 96)), background: BUCKET_COLOR[b.range] || 'var(--accent)', borderRadius: '5px 5px 0 0' }} />
+                  {/* ui: keep — an axis tick label under a bar, not body helper text */}
                   <span style={{ fontSize: 10, lineHeight: '14px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{b.range}</span>
                 </div>
               ))}
@@ -518,7 +536,7 @@ export default function Stats() {
           <Card style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>New jobs · last 30 days</span>
-              <span style={{ flex: 1, ...NOTE }}>daily arrivals across all sources</span>
+              <Helper style={{ flex: 1 }}>daily arrivals across all sources</Helper>
               {/* STAT-07: --stage-applied is the applied series everywhere else in
                   v2; the swatch is solid, as designed. R3-U-02: the legend swatches
                   follow the strokes below, so "new" is --series-new here too. */}
@@ -534,8 +552,8 @@ export default function Stats() {
           <Card style={{ height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <span style={H}>LLM costs</span>
-              <span title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
-                style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: '14px', color: 'var(--muted)', cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</span>
+              <Helper title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
+                style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</Helper>
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
                   const on = period === id
@@ -547,7 +565,8 @@ export default function Stats() {
               {[['Spend', money(costs?.total_cost_usd)], ['Calls', int(costs?.total_calls)],
                 ['Avg / call', costs?.total_calls ? money(costs.total_cost_usd / costs.total_calls) : '—']].map(([l, v]) => (
                 <div key={l} style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, lineHeight: '14px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>{l}</span>
+                  <Label>{l}</Label>
+                  {/* ui: keep — serif 23/28px figure: not one of Heading's 18/19/22 steps */}
                   <span style={{ fontFamily: 'var(--serif)', fontSize: 23, lineHeight: '28px', letterSpacing: '-.02em' }}>{v}</span>
                 </div>
               ))}
@@ -570,7 +589,7 @@ export default function Stats() {
                   <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--muted)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
                 </div>
               ))}
-              {!(costs?.by_purpose || []).length && <div style={{ padding: '14px 0', ...NOTE }}>No LLM calls in this window.</div>}
+              {!(costs?.by_purpose || []).length && <Helper style={{ display: 'block', padding: '14px 0' }}>No LLM calls in this window.</Helper>}
               </div>
             </div>
           </Card>
@@ -580,7 +599,7 @@ export default function Stats() {
         <Card ref={schedRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <span style={H}>Schedules</span>
-            <span style={NOTE}>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</span>
+            <Helper>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</Helper>
           </div>
           {schedErr ? (
             <div style={{ padding: '26px 20px 30px', borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div>
@@ -603,7 +622,7 @@ export default function Stats() {
                 {showNext && <span style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : when(j.next_run)}</span>}
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {showStatus && (running
-                    ? <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                    ? <Spinner size={9} />
                     /* ui: keep — 7px scheduler status dot (Dot role, migrates with Tag/Dot) */
                     : <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: j.pending ? 'var(--warn)' : 'var(--funnel-low)' }} />)}
                   {showStatus && <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: '18px', color: running ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -615,11 +634,10 @@ export default function Stats() {
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
                         className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
-                        {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-                        {running && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+                        {running && <Spinner size={9} color="currentColor" />}
                         {running ? 'Running…' : 'Run now'}
                       </span>
-                    : <span style={{ ...NOTE }}>—</span>}
+                    : <Helper>—</Helper>}
                 </span>
               </div>
             )
@@ -633,7 +651,7 @@ export default function Stats() {
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
               <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} {...kb(() => { setTab(id); setTypeOpen(false) })} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
             ))}
-            <span style={{ flex: 1, ...NOTE }}>{tab === 'runs' ? `last ${runs.length} scheduler and manual runs` : 'everything the pipeline did, newest first'}</span>
+            <Helper style={{ flex: 1 }}>{tab === 'runs' ? `last ${runs.length} scheduler and manual runs` : 'everything the pipeline did, newest first'}</Helper>
             {tab === 'activity' && (
               <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>
@@ -657,6 +675,7 @@ export default function Stats() {
                     the focus signal around a bare input; SearchInput's boxed variant is h32
                     on --search-bg, which would not sit on this log header row */}
                 <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* ui: keep — a 10px icon glyph inside the field wrap, not helper text */}
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
                   <input value={actQuery} onChange={(e) => setActQuery(e.target.value)} placeholder="Company…"
                     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--text)' }} />
@@ -677,7 +696,7 @@ export default function Stats() {
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
                     <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(r.started_at)}</span>
                     <span style={{ flex: '0 0 140px', ...MONO, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</span>
-                    <span style={{ flex: '0 0 90px', fontSize: 10.5, color: 'var(--muted)' }}>{r.trigger}</span>
+                    <Helper size="xs" style={{ flex: '0 0 90px' }}>{r.trigger}</Helper>
                     <span style={{ flex: '0 0 100px', display: 'flex' }}>
                       <Pill bg={failed ? 'var(--bad-soft)' : r.status === 'running' ? 'var(--accent-soft)' : 'var(--hover-soft)'} fg={failed ? 'var(--bad)' : 'var(--accent)'}>{r.status}</Pill>
                     </span>
@@ -686,7 +705,7 @@ export default function Stats() {
                   </div>
                 )
               })}
-              {!runs.length && <div style={{ padding: '16px 20px', ...NOTE }}>No runs yet.</div>}
+              {!runs.length && <Helper style={{ padding: '16px 20px' }}>No runs yet.</Helper>}
               {runsMore && <LoadMore onClick={moreRuns} busy={moreBusy} />}
             </div>
           ) : (
@@ -702,11 +721,11 @@ export default function Stats() {
                     <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={BADGE}>{String(a.type || '').replace('_', ' ')}</span>
                   </span>
                   <span title={a.message} style={{ flex: 1, minWidth: 0, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{a.message}</span>
-                  <span style={{ flex: '0 0 130px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</span>
+                  <Helper style={{ flex: '0 0 130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</Helper>
                 </div>
               ))}
               {/* STAT-18: an empty log and an over-tight filter are different problems */}
-              {!activity.length && <div style={{ padding: '16px 20px', ...NOTE }}>{actType || actQuery.trim() ? 'No activity matches these filters.' : 'No activity recorded yet.'}</div>}
+              {!activity.length && <Helper style={{ padding: '16px 20px' }}>{actType || actQuery.trim() ? 'No activity matches these filters.' : 'No activity recorded yet.'}</Helper>}
               {actMore && <LoadMore onClick={moreActivity} busy={moreBusy} />}
             </div>
           )}

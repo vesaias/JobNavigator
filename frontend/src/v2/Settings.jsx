@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, IconButton, Menu, Pill, Select, Textarea } from './ui'
+import { Button, Heading, Helper, IconButton, Label, Link, Menu, PageTitle, Pill, Select, Spinner, Textarea } from './ui'
 import api from '../api'
 import './theme.css'
 
@@ -97,10 +97,10 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
         autoComplete="off"
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, color: 'var(--text)' }} />
       {secret && !!value && (
-        <span onClick={toggleShown} {...kb(toggleShown)} aria-label={`${shown ? 'Hide' : 'Show'} ${ariaLabel || 'value'}`}
-          style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+        <Link onClick={toggleShown} ariaLabel={`${shown ? 'Hide' : 'Show'} ${ariaLabel || 'value'}`}
+          style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}>
           {shown ? 'hide' : 'show'}
-        </span>
+        </Link>
       )}
     </span>
   )
@@ -110,7 +110,7 @@ function Toggle({ on, label, onPick, ariaLabel }) {
   return (
     <span onClick={onPick} {...kb(onPick, 'switch')} aria-checked={on} aria-label={ariaLabel}
       style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: '0 0 auto' }}>
-      <span style={{ fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>
+      <Helper>{label}</Helper>
       {/* ui: keep — a switch track and its sliding knob, not a status dot: the pair
           is one control (26x15 track, 11px knob animating between two positions).
           Dot draws a single tone-coloured disc. */}
@@ -457,14 +457,13 @@ export default function Settings() {
       {loadErr ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
           <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your settings</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
-          <span onClick={() => { setLoadErr(null); load() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+          <Helper>{loadErr}</Helper>
+          <Link onClick={() => { setLoadErr(null); load() }} style={{ paddingTop: 2 }}>Try again</Link>
         </div>
       ) : (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--muted)' }}>
-          {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-          <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading settings…
-        </span>
+        <Helper style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Spinner size={10} color="var(--muted)" />Loading settings…
+        </Helper>
       )}
     </div>
   )
@@ -482,7 +481,7 @@ export default function Settings() {
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18, borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Settings</h1>
+          <PageTitle>Settings</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color .15s' }}>
             {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
@@ -490,6 +489,8 @@ export default function Settings() {
         {/* ui: keep — settings search field wrapper (Input role), not a pill; h32
             tracks ui.jsx's boxed SearchInput so the two read as one control */}
         <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7 }}>
+          {/* ui: keep — the field's search glyph (an icon adornment), not a helper
+              sub-line; Helper's 11.5 would grow the glyph inside the h32 box */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -501,7 +502,9 @@ export default function Settings() {
         <div className="v2-scroll" style={{ flex: '0 0 216px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '16px 0 20px' }}>
           {sections.map(([id, group, title]) => (
             <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
-              {group && <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', padding: '14px 26px 6px 30px' }}>{group}</div>}
+              {group && <Label style={{ padding: '14px 26px 6px 30px' }}>{group}</Label>}
+              {/* ui: keep — a nav row, not an inline link: h29 with a selected state
+                  (accent border-left, 600 weight) on the settings anchor rail */}
               <div onClick={() => jump(id)} {...kb(() => jump(id), 'link')} aria-label={`Jump to ${title}`} className="v2-anchor" style={{ display: 'flex', alignItems: 'center', height: 29, padding: '0 26px 0 29px', fontSize: 12.5, cursor: 'pointer',
                 color: active === id && !q ? 'var(--text)' : 'var(--text-2)', fontWeight: active === id && !q ? 600 : 400,
                 /* 3px accent + 29px pad keeps the label on the same axis as the 2px version */
@@ -519,7 +522,11 @@ export default function Settings() {
                   {/* integer line-heights: at the inherited 1.5 these are 28.5 and
                       17.25, which puts every row below the header on a half pixel
                       and drops its 1px bottom rule */}
+                  {/* ui: keep — the 500-weight/-.015em card-title serif family, not the
+                      400-weight Heading scale */}
                   <span style={{ fontFamily: 'var(--serif)', fontSize: 19, lineHeight: '26px', fontWeight: 500, letterSpacing: '-.015em' }}>{title}</span>
+                  {/* ui: keep — the 26px line-height is the alignment (see above): Helper's
+                      16px would drop this section head off the whole-pixel grid */}
                   <span style={{ fontSize: 11.5, lineHeight: '26px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
                 </div>
                 {rows.filter((r) => !(r.hide && r.hide())).map((r) => (
@@ -534,17 +541,21 @@ export default function Settings() {
             {/* colophon — API docs lives here now rather than in the nav rail.
                 SET-13: --edge as 11px body text is 3.69:1 on --bg (3.95:1 dark),
                 under AA; --muted clears it at 5.5:1 / 6.2:1 with the same tone. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '34px 0 6px', fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }}>
+            <Helper style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '34px 0 6px' }}>
               <span style={{ fontStyle: 'italic' }}>
+                {/* ui: keep — serif 12 wordmark, below the 18/19 Heading scale */}
                 <span style={{ color: 'var(--muted)', fontFamily: 'var(--serif)', fontSize: 12, fontStyle: 'normal' }}>JobNavigator</span>&nbsp;v.2.0
               </span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
+                {/* ui: keep — colophon links: they inherit the row's size on purpose and
+                    stay --muted per SET-13, and they carry rel="noopener noreferrer";
+                    Link would force accent 11.5/500 and a rel of its own */}
                 <a href="/docs" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
                   style={{ color: 'var(--muted)', textDecoration: 'none', cursor: 'pointer' }}>API docs ↗</a>
                 <a href="https://github.com/vesaias/JobNavigator" target="_blank" rel="noopener noreferrer" className="v2-hover-accent-text"
                   style={{ color: 'var(--muted)', textDecoration: 'none' }}>github.com/vesaias/JobNavigator ↗</a>
               </span>
-            </div>
+            </Helper>
           </div>
         </div>
       </div>
@@ -593,6 +604,7 @@ function Row({ r, ctx }) {
                 <TextBox value={val(`${r.base}_api_key`)} onSave={(v) => save(`${r.base}_api_key`, v)} width="150px" mono secret ariaLabel={`${r.label} — API key`} />
               </span>
             )}
+            {/* ui: keep — a Tag (D4d): uppercase on a --surface-2 r99 chip, not a Label */}
             {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" ariaLabel={`${r.label} — override the Primary model`} onPick={async () => {
@@ -618,7 +630,7 @@ function Row({ r, ctx }) {
             : String(raw ?? '')
         return (
           <>
-            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview || '—'}</span>
+            <Helper size="xs" mono style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview || '—'}</Helper>
             <Pill size="sm" onClick={() => setEditFor(r)} ariaLabel={`Edit ${r.label}`}>Edit</Pill>
           </>
         )
@@ -626,11 +638,11 @@ function Row({ r, ctx }) {
       case 'models':
         return (
           <>
-            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Helper size="xs" mono style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {(() => { let m = S.llm_models_list; if (typeof m === 'string') { try { m = JSON.parse(m) } catch { m = [] } } m = Array.isArray(m) ? m : []
                 const c = m.filter((x) => x.custom).length
                 return `${m.length} models · ${m.length - c} seeded · ${c} added by you` })()}
-            </span>
+            </Helper>
             <ActionBtn label="Manage…" state="" onClick={() => setModelsOpen(true)} ariaLabel={`${r.label} — manage`} />
           </>
         )
@@ -642,9 +654,9 @@ function Row({ r, ctx }) {
             {r.preview && (r.previewBox
               /* ui: keep — a read-only preview box (a span, no field inside) */
               ? <span style={{ ...BOX, flex: `0 1 ${r.previewBox}`, cursor: 'default' }}>
-                  <span style={{ minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</span>
+                  <Helper mono style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>
                 </span>
-              : <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</span>)}
+              : <Helper size="xs" mono style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>)}
             <ActionBtn label={r.btnLabel} state={trig[r.label] || ''} onClick={() => runAction(r.label, r.act)} ariaLabel={`${r.label} — ${r.btnLabel}`} />
           </>
         )
@@ -652,7 +664,7 @@ function Row({ r, ctx }) {
         return <ApiKeyRow value={val('dashboard_api_key')} save={save} flash={flash} />
       case 'readonly': {
         const set = !!val(r.key)
-        if (!set) return <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--muted)' }}>{r.emptyText || 'Not set'}</span>
+        if (!set) return <Helper style={{ flex: 1, minWidth: 0 }}>{r.emptyText || 'Not set'}</Helper>
         const since = val(r.sinceKey)
         const until = (() => {
           if (!since || !r.days) return null
@@ -663,13 +675,14 @@ function Row({ r, ctx }) {
         const expired = until && until.getTime() < Date.now()
         return (
           <>
+            {/* ui: keep — a mono value at --text-2 (the mono-text role), not helper ink */}
             <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text-2)' }}>{'•'.repeat(6)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: expired ? 'var(--warn)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Helper style={{ flex: 1, minWidth: 0, color: expired ? 'var(--warn)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {until
                 ? (expired ? `expired ${until.toLocaleDateString()} — renewed on the next run`
                   : `session valid until ${until.toLocaleDateString()}`)
                 : 'session stored — expiry unknown'}
-            </span>
+            </Helper>
             {r.clearLabel && (
               <ActionBtn label={r.clearLabel} state="" onClick={async () => {
                 const ok = await save(r.key, '')
@@ -706,9 +719,9 @@ function Row({ r, ctx }) {
             </span>
           )}
         </span>
-        <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: '16px', textWrap: 'pretty' }}>
+        <Helper style={{ textWrap: 'pretty' }}>
           {r.kind === 'switch' && !isOn(r.key, r.dflt) && r.offHelp ? r.offHelp : r.help}
-        </span>
+        </Helper>
         {infoOpen && (
           <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 7, padding: '8px 10px', marginTop: 5, textWrap: 'pretty' }}>{r.info}</span>
         )}
@@ -722,7 +735,7 @@ function ActionBtn({ label, state, onClick, ariaLabel }) {
   const done = state === 'done'
   return (
     <Pill on={done} onClick={onClick} ariaLabel={ariaLabel || label}>
-      {state === 'running' && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+      {state === 'running' && <Spinner />}
       {state === 'running' ? 'Running…' : done ? 'Done ✓' : label}
     </Pill>
   )
@@ -742,8 +755,8 @@ function ApiKeyRow({ value, save, flash }) {
           aria-label="Dashboard API key"
           placeholder={isSet ? 'Set — type a new key to replace it' : 'No key — the dashboard is open'}
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
-        <span onClick={() => setShown((v) => !v)} {...kb(() => setShown((v) => !v))} aria-label={`${shown ? 'Hide' : 'Show'} the dashboard API key`}
-          style={{ fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</span>
+        <Link onClick={() => setShown((v) => !v)} ariaLabel={`${shown ? 'Hide' : 'Show'} the dashboard API key`}
+          style={{ whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</Link>
       </span>
       <ActionBtn label="Save key" state="" ariaLabel="Save the dashboard API key" onClick={async () => {
         if (!local.trim()) { flash('Type the new key first', true); return }
@@ -784,11 +797,11 @@ function LinkedInRow({ li, setLi, flash }) {
 
   return (
     <>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: tone, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <Helper style={{ flex: 1, minWidth: 0, color: tone, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {phase === 'awaiting_pin' ? 'LinkedIn emailed a PIN to the mock account.'
           : phase === 'running' ? (li?.detail || 'Signing in…')
             : (li?.summary || 'Unknown')}
-      </span>
+      </Helper>
       {phase === 'awaiting_pin' && (
         <>
           {/* ui: keep — the PIN box is a 120px v2-fieldwrap on the LinkedIn status row */}
@@ -872,8 +885,8 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={close}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1020px, 94vw)', maxHeight: 'min(1280px, 92vh)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>{spec.label}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</span>
+          <Heading>{spec.label}</Heading>
+          <Helper style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</Helper>
           <IconButton onClick={close} ariaLabel={`Close ${spec.label}`} style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
@@ -882,7 +895,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
             style={{ flex: 1, minHeight: 440, ...(err ? { borderColor: 'var(--bad)' } : null) }} />
         </div>
         <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</span>
+          <Helper style={{ color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</Helper>
           <Button variant="secondary" size="sm" onClick={reset} ariaLabel={`Reset ${spec.label} to default`} style={{ marginLeft: 'auto' }}>Reset to default</Button>
           <Button size="sm" onClick={close} ariaLabel={`Done editing ${spec.label}`}>Done</Button>
         </div>
@@ -972,8 +985,8 @@ function ModelsModal({ S, save, onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 600, maxHeight: 620, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Model catalog</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>available in every model picker</span>
+          <Heading>Model catalog</Heading>
+          <Helper>available in every model picker</Helper>
           <IconButton onClick={onClose} ariaLabel="Close the model catalog" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderBottom: '1px solid var(--line-soft)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1005,13 +1018,15 @@ function ModelsModal({ S, save, onClose }) {
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 5, cursor: 'pointer', background: i === hi ? 'var(--accent-soft)' : 'transparent' }}>
+                    {/* ui: keep — the suggestion's mono id at --text/--text-2 (the mono-text
+                        role), keyboard-highlighted with the row; not helper ink */}
                     <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '16px', color: i === hi ? 'var(--text)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</span>
                     {i === hi && <span style={{ flex: '0 0 auto', fontSize: 10, lineHeight: '16px', color: 'var(--accent)' }}>↵ to add</span>}
                   </div>
                 ))}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '5px 9px', borderTop: '1px solid var(--line-soft)', marginTop: 3, fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>
+                <Helper size="xs" style={{ display: 'flex', alignItems: 'center', padding: '5px 9px', borderTop: '1px solid var(--line-soft)', marginTop: 3 }}>
                   {matched} of {live.length} match · or paste any slug and Add
-                </div>
+                </Helper>
               </Menu>
             )}
           </span>
@@ -1022,9 +1037,10 @@ function ModelsModal({ S, save, onClose }) {
           {list.map((m) => (
             <div key={`${m.provider}/${m.model}`} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, borderBottom: '1px solid var(--line-soft)' }}>
               {/* SET-13: --edge at 10px is under 4.5:1 on --surface in both themes */}
-              <span style={{ flex: '0 0 92px', fontFamily: 'var(--mono)', fontSize: 10, lineHeight: '16px', color: 'var(--muted)' }}>{m.provider}</span>
+              <Helper size="xs" mono style={{ flex: '0 0 92px' }}>{m.provider}</Helper>
+              {/* ui: keep — the model id itself: mono at --text (the mono-text role) */}
               <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</span>
-              <span style={{ flex: '0 0 auto', fontSize: 10, lineHeight: '16px', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</span>
+              <Helper size="xs" style={{ flex: '0 0 auto', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</Helper>
               {/* SET-15: the design turns the border --bad on hover too, not just the glyph */}
               {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}
               <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}

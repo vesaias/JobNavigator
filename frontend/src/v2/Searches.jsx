@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, Card, IconButton, Input, Menu, MenuItem, Pill, Select } from './ui'
+import { Button, Card, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Select, Spinner } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -72,9 +72,6 @@ const DEPTHS = [
 ]
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
 const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Applicant']]
-
-const MICRO = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
-const HELP = { fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
@@ -182,13 +179,13 @@ const toPayload = (d) => {
 function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type, min, max }) {   // R2-A-02: min/max
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: span ? `span ${span}` : undefined, minWidth: 0 }}>
-      <span style={MICRO}>{label}</span>
+      <Label>{label}</Label>
       {options
         ? <Select value={value} options={options} onPick={onChange} disabled={disabled} mono={mono}
             ariaLabel={label} style={{ flex: '0 0 auto', width: '100%' }} />
         : <Input type={type || 'text'} value={value} disabled={disabled} placeholder={placeholder} min={min} max={max}
             mono={mono} ariaLabel={label} onChange={onChange} />}
-      {sub && <span style={{ ...HELP, textWrap: 'pretty' }}>{sub}</span>}
+      {sub && <Helper size="xs" style={{ textWrap: 'pretty' }}>{sub}</Helper>}
     </div>
   )
 }
@@ -280,15 +277,15 @@ function ConfigForm({ d, set }) {
 
       {m === 'keyword' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-          <span style={{ ...MICRO, marginRight: 3 }}>Sources</span>
+          <Label style={{ marginRight: 3 }}>Sources</Label>
           {SOURCES.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} onClick={() => toggleSrc(id)} />)}
         </div>
       )}
       {m === 'linkedin_personal' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-          <span style={{ ...MICRO, marginRight: 3 }}>Collections</span>
+          <Label style={{ marginRight: 3 }}>Collections</Label>
           {COLLECTIONS.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} onClick={() => toggleSrc(id)} />)}
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>Credentials live in Settings › Accounts</span>
+          <Helper>Credentials live in Settings › Accounts</Helper>
         </div>
       )}
 
@@ -301,21 +298,21 @@ function ConfigForm({ d, set }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={MICRO}>Auto-scoring</span>
+          <Label>Auto-scoring</Label>
           <DepthPills value={d.auto_scoring_depth} onPick={(v) => set({ auto_scoring_depth: v })} />
-          <span style={HELP}>How deeply new results are scored as they arrive</span>
+          <Helper size="xs">How deeply new results are scored as they arrive</Helper>
         </div>
         {!ext ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={MICRO}>Run interval · min</span>
+            <Label>Run interval · min</Label>
             <Input type="number" min={BOUNDS.run_interval_minutes[0]} max={BOUNDS.run_interval_minutes[1]} mono
               value={d.run_interval_minutes} onChange={(v) => set({ run_interval_minutes: v })}
               ariaLabel="Run interval in minutes" style={{ width: 110 }} />
-            <span style={HELP}>0 follows the global schedule from Settings</span>
+            <Helper size="xs">0 follows the global schedule from Settings</Helper>
           </div>
         ) : <div />}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={MICRO}>Import rules</span>
+          <Label>Import rules</Label>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, minHeight: 31 }}>
             <Check on={d.exclude_active_companies} label="Skip active companies"
               title="Their Company scrapes already bring these postings"
@@ -562,7 +559,7 @@ export default function Searches() {
       {/* header */}
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Searches</h1>
+          <PageTitle>Searches</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -578,13 +575,14 @@ export default function Searches() {
         {newOpen && (
           <Card style={{ padding: 0, borderColor: 'var(--accent)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* ui: keep — serif 15.5/500/-.01em card title: v2's second serif family (card + column titles), not the 18/19 Heading scale */}
               <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, letterSpacing: '-.01em' }}>New search</span>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>pick a mode — the fields below follow it</span>
+              <Helper>pick a mode — the fields below follow it</Helper>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Runs on the next scheduled sweep once created</span>
+                <Helper>Runs on the next scheduled sweep once created</Helper>
                 <Button variant="secondary" size="sm" onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>
@@ -620,12 +618,15 @@ export default function Searches() {
                     {/* integer line-heights: 15.5px/11.5px text under Tailwind
                         preflight's 1.5 gives a 67.5px card, so every other row
                         lands on x.5 and Chrome rounds its 1px border away. */}
+                    {/* ui: keep — serif 15.5/500/-.01em card title (the card-title serif family) with a load-bearing 23px line-height, not the 18/19 Heading scale */}
                     <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: '23px', fontWeight: 500, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                     <span title={summary} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
                     {warn && !ext && (
+                      /* ui: keep — muted 11 inline action, not the Link signature (accent 11.5/500); its 17px
+                         line-height is the card's row rhythm, matching the summary line beside it */
                       <span onClick={(e) => { e.stopPropagation(); acknowledge(s) }} className="v2-hover-accent-text"
                         title="Stop counting this search as needing attention. The warning stays here; a run that fails after this raises it again."
                         style={{ flex: '0 0 auto', fontSize: 11, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
@@ -633,12 +634,12 @@ export default function Searches() {
                   </div>
                 </div>
                 {depth !== 'off' && (
-                  <span title={depth === 'full'
+                  <Label title={depth === 'full'
                     ? 'Full — every new result gets a score plus the full report with keywords and requirements'
                     : 'Light — every new result gets a score only; open a job to generate its report'}
-                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'help' }}>
+                    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, cursor: 'help' }}>
                     <span style={{ color: 'var(--accent)', letterSpacing: 2, fontSize: 9 }}>{dep?.dots}</span>{dep?.label}
-                  </span>
+                  </Label>
                 )}
                 {/* fixed width so Active matches Paused and both sit on one vertical axis */}
                 <Pill size="sm" on={s.active} onClick={(e) => { e.stopPropagation(); toggleActive(s) }}
@@ -655,7 +656,7 @@ export default function Searches() {
                     <span onClick={() => runNow(s)} className="v2-bdc"
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                      {spin ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>↻</span>}
+                      {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </span>
                     {/* ui: keep — 25px Run/Test pills sized to their row siblings; Pill sm is 26 */}
@@ -663,7 +664,7 @@ export default function Searches() {
                       <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
                         title={testBlocked ? 'A test is already running' : 'Dry run — previews results and per-job filter reasons, saves nothing'}
                         style={{ height: 25, padding: '0 9px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
-                        {testingId === s.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
+                        {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
                     )}
                     {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
@@ -688,7 +689,7 @@ export default function Searches() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', borderTop: '1px solid var(--line-soft)', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }} onClick={(e) => e.stopPropagation()}>
                   <ConfigForm d={draft} set={(p) => setDraft((x) => ({ ...x, ...p }))} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>Changes apply from the next run</span>
+                    <Helper>Changes apply from the next run</Helper>
                     <Button variant="secondary" size="sm" onClick={() => setEditing(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                     <Button size="sm" onClick={() => save(s)} busy={busy === s.id}>{busy === s.id ? 'Saving…' : 'Save changes'}</Button>
                   </div>
@@ -702,23 +703,22 @@ export default function Searches() {
             as an empty database; and the empty state flashed on every mount
             before the first response landed. */}
         {loading && searches.length === 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 30px', fontSize: 11.5, color: 'var(--muted)' }}>
-            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-            <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading searches…
-          </div>
+          <Helper style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 30px' }}>
+            <Spinner size={10} color="var(--muted)" />Loading searches…
+          </Helper>
         )}
         {!loading && loadErr && searches.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your searches</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
-            <span onClick={() => { setLoading(true); load() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+            <Helper>{loadErr}</Helper>
+            <Link onClick={() => { setLoading(true); load() }} style={{ paddingTop: 2 }}>Try again</Link>
           </div>
         )}
         {!loading && !loadErr && searches.length === 0 && !newOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No searches yet</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Create one to start pulling roles into the Job Feed on a schedule.</span>
-            <span onClick={() => setNewOpen(true)} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>+ New search</span>
+            <Helper>Create one to start pulling roles into the Job Feed on a schedule.</Helper>
+            <Link onClick={() => setNewOpen(true)} style={{ paddingTop: 2 }}>+ New search</Link>
           </div>
         )}
       </div>
@@ -784,8 +784,8 @@ function TestModal({ test, tab, setTab, onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 980, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</span>
-          <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>dry run · nothing saved</span>
+          <Heading size={18} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
+          <Helper style={{ flex: '0 0 auto' }}>dry run · nothing saved</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </div>
 
@@ -819,6 +819,7 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
 
             <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {/* ui: keep — TableHead role (height + borderBottom + background), and its 9.5/.11em is the table-head signature, not Label's 10/.13em */}
               <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg)', display: 'flex', alignItems: 'center', height: 28, padding: '0 22px', borderBottom: '1px solid var(--line-strong)', fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                 <span style={{ flex: '0 0 80px' }}>Source</span>
                 <span style={{ flex: 1.3, minWidth: 0 }}>Company</span>
@@ -833,7 +834,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                 const hasDesc = !!(j.desc_length || j.description_length || j.has_description)
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '2px 22px', borderBottom: '1px solid var(--line-soft)', background: ok ? 'transparent' : 'var(--bad-faint)' }}>
-                    <span style={{ flex: '0 0 80px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{j.source}</span>
+                    <Helper size="xs" mono style={{ flex: '0 0 80px' }}>{j.source}</Helper>
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
                     {/* SRCH-27: a preview row can arrive with url: null - render
                         the title as text then, not as a link that goes nowhere */}
@@ -844,13 +845,13 @@ function TestModal({ test, tab, setTab, onClose }) {
                       {j.url
                         ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</a>
                         : <span title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'default' }}>{j.title}</span>}
-                      {j.reason && <span title={j.reason} style={{ minWidth: 0, fontSize: 11, lineHeight: '15px', color: ok ? 'var(--muted)' : 'var(--bad)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.reason}</span>}
+                      {j.reason && <Helper title={j.reason} style={{ minWidth: 0, color: ok ? 'var(--muted)' : 'var(--bad)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.reason}</Helper>}
                       {/* R3-A-01: a kept row the body scan could not run on is not
                           a promise — say which check is missing rather than let
                           the run turn it into an `ignored` row unexplained. */}
-                      {ok && needsDesc(j) && <span title="The run scans the description for body_exclusion_phrases; this preview didn’t have one" style={{ minWidth: 0, fontSize: 11, lineHeight: '15px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>body check needs the description</span>}
+                      {ok && needsDesc(j) && <Helper title="The run scans the description for body_exclusion_phrases; this preview didn’t have one" style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>body check needs the description</Helper>}
                     </span>
-                    <span title={j.location} style={{ flex: '0 0 116px', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</span>
+                    <Helper title={j.location} style={{ flex: '0 0 116px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</Helper>
                     <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>

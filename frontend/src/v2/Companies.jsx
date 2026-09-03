@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSnapTop } from './hooks'
-import { Button, DashedAdd, Dot, IconButton, Input, Menu, MenuItem, Pill, Row, SearchInput, Tag } from './ui'
+import { Button, DashedAdd, Dot, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, PageTitle, Pill, Row, SearchInput, ShowMore, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -90,13 +90,6 @@ const TIER_BTNS = [{ v: 1, label: '1' }, { v: 2, label: '2' }, { v: 3, label: '3
 // one of them in a single pass. Page them client-side with the pager the
 // résumé shelf and the Stats logs already use.
 const TEST_PAGE = 100
-const ShowMore = ({ n, onClick }) => (
-  <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
-    <Pill size="sm" onClick={onClick}>Show {n} more</Pill>
-  </div>
-)
-
-const helpTxt = { fontSize: 10.5, color: 'var(--muted)' }
 const fieldLabel = { fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }
 
 // ── URL list editor (drawer + add) ───────────────────────────────────────────
@@ -404,7 +397,7 @@ export default function Companies() {
       {/* header — title + subtitle, matching The Feed */}
       <header style={{ flex: '0 0 auto', padding: '22px 30px 16px 24px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 400, letterSpacing: '-.02em', lineHeight: 1 }}>Companies</h1>
+          <PageTitle>Companies</PageTitle>
           {/* explicit integer line-height: at the inherited 1.5 this 13px line is
               19.5px tall, so the header ends on a half pixel and every row below
               lands on x.5 and drops its 1px border on alternating rows. */}
@@ -501,19 +494,19 @@ export default function Companies() {
                 <span title={c.last_error || downMap[c.id] || (c.active ? `Last successful run ${ago(c.last_scraped_at)}` : 'Inactive — jobs already found are kept')} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
-              {showResumes && <span title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', fontSize: 11.5, color: rn ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{rn || 'Default'}</span>}
+              {showResumes && <Helper title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10, ...(rn ? { color: 'var(--text-2)' } : null) }}>{rn || 'Default'}</Helper>}
               {/* ats */}
               {showAts && <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
                 {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `H-1B slug · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{firstAts}</span>}
-                {urls.length > 1 && <span title={urls.join('\n')} style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>+{urls.length - 1}</span>}
-                {urls.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}
+                {urls.length > 1 && <Helper size="xs" title={urls.join('\n')} style={{ flex: '0 0 auto' }}>+{urls.length - 1}</Helper>}
+                {urls.length === 0 && <Helper>—</Helper>}
               </span>}
               {/* open · 7d */}
-              <span title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} found in the last 7 days — everything discovered, including titles the filters rejected`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.open_jobs ? 'var(--text-2)' : 'var(--muted)' }}>
+              <Helper mono title={`${c.open_jobs || 0} open roles from ${c.name} in the Job Feed · ${c.open_jobs_week || 0} found in the last 7 days — everything discovered, including titles the filters rejected`} style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10, ...(c.open_jobs ? { color: 'var(--text-2)' } : null) }}>
                 {c.open_jobs || 0}<span style={{ color: c.open_jobs_week ? 'var(--good)' : 'var(--muted)' }}> +{c.open_jobs_week || 0}</span>
-              </span>
+              </Helper>
               {/* apps */}
-              {showApps && <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10, fontFamily: 'var(--mono)', fontSize: 11.5, color: c.application_count ? 'var(--text-2)' : 'var(--muted)' }}>{c.application_count || '·'}</span>}
+              {showApps && <Helper mono style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10, ...(c.application_count ? { color: 'var(--text-2)' } : null) }}>{c.application_count || '·'}</Helper>}
               {/* fit */}
               {showFit && <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>}
               {/* status */}
@@ -528,14 +521,14 @@ export default function Companies() {
                 <span onClick={testBusy ? undefined : () => runScrape(c.id)} title={testBusy ? 'A test is already running' : 'Scrape this company now'} className={testBusy ? undefined : 'v2-act'}
                   style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.5 : 1 }}>
                   {scraping[c.id]
-                    ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
+                    ? <Spinner />
                     : <span style={{ fontSize: 11 }}>↻</span>}
                   {scraping[c.id] ? 'Running' : 'Run'}
                 </span>
                 {/* COMP-26: the running test names itself; every other pill goes quiet */}
                 <span onClick={testBusy ? undefined : () => runTest(c.id)} title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Dry run — shows what would be kept, writes nothing'} className={testBusy ? undefined : 'v2-act'}
                   style={{ height: 25, padding: '0 10px', borderRadius: 99, border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'), background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy && testingId !== c.id ? 0.5 : 1 }}>
-                  {testingId === c.id ? <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
+                  {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </span>
                 {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
                 <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
@@ -554,10 +547,9 @@ export default function Companies() {
           )
         })}
         {loading && companies.length === 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 28px', fontSize: 11.5, color: 'var(--muted)' }}>
-            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-            <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading companies…
-          </div>
+          <Helper style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 28px' }}>
+            <Spinner size={10} color="var(--muted)" />Loading companies…
+          </Helper>
         )}
         {/* a failed GET used to fall through to the filter-miss copy, so a server
             outage read as "nothing matches your search" and Clear filters "fixed"
@@ -565,15 +557,15 @@ export default function Companies() {
         {!loading && loadErr && companies.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load companies</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{loadErr}</span>
-            <span onClick={() => { setLoading(true); fetchCompanies() }} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Try again</span>
+            <Helper>{loadErr}</Helper>
+            <Link onClick={() => { setLoading(true); fetchCompanies() }} style={{ paddingTop: 2 }}>Try again</Link>
           </div>
         )}
         {!loading && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : `Tier ${t}`)).join(', ')}.`}</span>   {/* COMP-29 */}
-            {companies.length > 0 && <span onClick={clearFilters} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', paddingTop: 2 }}>Clear filters</span>}
+            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : `Tier ${t}`)).join(', ')}.`}</Helper>   {/* COMP-29 */}
+            {companies.length > 0 && <Link onClick={clearFilters} style={{ paddingTop: 2 }}>Clear filters</Link>}
           </div>
         )}
       </div>
@@ -654,7 +646,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{subtitle}</span>
+          <Helper>{subtitle}</Helper>
         </div>
         <IconButton onClick={onClose} title="Close" style={{ flex: '0 0 auto' }}>✕</IconButton>
       </div>
@@ -667,14 +659,16 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
             <span style={{ flex: '0 0 auto', fontSize: 12, color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 12, color: bannerMuted ? 'var(--text-2)' : 'var(--text)', lineHeight: 1.5 }}>{bannerText}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>
+              <Helper size="xs">
                 {company.last_error ? 'Last scrape run' : 'Detected on the recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
                 {bannerMuted
                   ? ` · ${company.active ? `acknowledged ${ago(company.warning_acknowledged_at)}` : 'paused, so it is not counted'}`
                   : null}
-              </span>
+              </Helper>
             </div>
             {!bannerMuted && onAcknowledge && (
+              /* ui: keep — "Acknowledge" is the quiet inline action on the banner: --muted 11 at
+                 normal weight, where Link is --link-ink 11.5/500. Same call as Searches' twin. */
               <span onClick={() => onAcknowledge(company)} className="v2-hover-accent-text"
                 title="Stop counting this company as needing attention. The warning stays here; a run that fails after this raises it again."
                 style={{ flex: '0 0 auto', alignSelf: 'flex-start', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
@@ -692,7 +686,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Also known as</span>
             <Input value={draft.aliases} onChange={(v) => set({ aliases: v })} placeholder="Alt names, comma-separated" ariaLabel="Also known as" />
-            <span style={helpTxt}>Postings under these names collapse into this company.</span>
+            <Helper size="xs">Postings under these names collapse into this company.</Helper>
           </div>
           <UrlEditor urls={draft.scrape_urls} onChange={(u) => set({ scrape_urls: u })} />
         </div>
@@ -705,18 +699,18 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Title must match</span>
             <Input value={draft.title_include_expr} onChange={(v) => set({ title_include_expr: v })} placeholder="(Product OR Project) AND Manager" ariaLabel="Title must match" />
-            <span style={helpTxt}>Supports AND, OR and parentheses. Blank keeps every title.</span>
+            <Helper size="xs">Supports AND, OR and parentheses. Blank keeps every title.</Helper>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Skip titles containing</span>
             <Input value={draft.title_exclude_keywords} onChange={(v) => set({ title_exclude_keywords: v })} placeholder="intern, junior, associate" ariaLabel="Skip titles containing" />
-            <span style={helpTxt}>Comma-separated. Applied after the match above.</span>
+            <Helper size="xs">Comma-separated. Applied after the match above.</Helper>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={fieldLabel}>Score new jobs automatically</span>
             <Seg opts={DEPTHS} value={draft.auto_scoring_depth} onPick={(v) => set({ auto_scoring_depth: v })} />
             <div style={{ paddingTop: 2 }}><ResumeChips resumes={resumes} personaPopulated={personaPopulated} selected={draft.selected_resume_ids} toggle={toggleResume} /></div>
-            <span style={helpTxt}>{resumeHelp}</span>
+            <Helper size="xs">{resumeHelp}</Helper>
           </div>
         </div>
 
@@ -727,7 +721,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <div onClick={toggleTuning} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
             <span style={{ flex: '0 0 12px', display: 'inline-flex', justifyContent: 'center', position: 'relative', top: -2, fontSize: 11, color: 'var(--muted)' }}>{tuning ? '⌄' : '›'}</span>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 600, letterSpacing: '-.01em' }}>Scraper tuning</span>
-            <span style={{ fontSize: 10.5, color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : downReason ? 'var(--warn)' : 'var(--muted)' }}>{tuningNote}</span>
+            <Helper size="xs" style={{ ...(bannerMuted ? null : company.last_error ? { color: 'var(--bad)' } : downReason ? { color: 'var(--warn)' } : null) }}>{tuningNote}</Helper>
           </div>
           {tuning && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -735,28 +729,28 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Priority tier</span>
                   <Seg opts={TIER_BTNS} value={draft.tier} onPick={(v) => set({ tier: v })} valueKey="v" />
-                  <span style={helpTxt}>Groups companies for filtering and bulk actions.</span>
+                  <Helper size="xs">Groups companies for filtering and bulk actions.</Helper>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Scrape interval in minutes</span>
                   <Input type="number" min={1} value={draft.scrape_interval_minutes} onChange={(v) => set({ scrape_interval_minutes: v })} placeholder="Use global interval" ariaLabel="Scrape interval in minutes" />
-                  <span style={helpTxt}>Blank follows the schedule set in Settings.</span>
+                  <Helper size="xs">Blank follows the schedule set in Settings.</Helper>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Wait for element</span>
                   <Input value={draft.wait_for_selector} onChange={(v) => set({ wait_for_selector: v })} placeholder="CSS selector" mono ariaLabel="Wait for element" />
-                  <span style={helpTxt}>CSS selector the page must render before reading.</span>
+                  <Helper size="xs">CSS selector the page must render before reading.</Helper>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Pages to read</span>
                   <Input type="number" min={1} max={20} value={draft.max_pages} onChange={(v) => set({ max_pages: v })} ariaLabel="Pages to read" />
-                  <span style={helpTxt}>Stops paging after this many.</span>
+                  <Helper size="xs">Stops paging after this many.</Helper>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={fieldLabel}>H-1B employer name</span>
                 <Input value={draft.h1b_slug} onChange={(v) => set({ h1b_slug: v })} placeholder="Auto-detect" mono ariaLabel="H-1B employer name" />
-                <span style={{ fontSize: 10.5, color: lca ? 'var(--good)' : 'var(--muted)' }}>{lcaLine}</span>
+                <Helper size="xs" style={{ ...(lca ? { color: 'var(--good)' } : null) }}>{lcaLine}</Helper>
               </div>
             </div>
           )}
@@ -768,10 +762,10 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
         {/* ui: keep — footer pill (r99), paired with the tinted one above it */}
         <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? undefined : 'v2-act'} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
-          {testingId === company.id && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+          {testingId === company.id && <Spinner />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
         </div>
-        {saveErr && <span style={{ marginLeft: 'auto', fontSize: 12, lineHeight: '16px', color: 'var(--bad)' }}>{saveErr}</span>}
+        {saveErr && <Helper style={{ marginLeft: 'auto', color: 'var(--bad)' }}>{saveErr}</Helper>}
         <Button size="sm" onClick={save} busy={saving} style={{ marginLeft: saveErr ? 10 : 'auto' }}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </div>
     </div>
@@ -824,40 +818,40 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Add company</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Paste a careers URL — the ATS is read from it.</span>
+          <Heading>Add company</Heading>
+          <Helper>Paste a careers URL — the ATS is read from it.</Helper>
         </div>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Career page URL</span>
+            <Label>Career page URL</Label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span className={url ? atsSlug(ats) : undefined} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 99, background: url ? undefined : 'var(--surface-2)', color: url ? undefined : 'var(--muted)', whiteSpace: 'nowrap' }}>{url ? ats : '—'}</span>
               <Input value={url} onChange={setUrl} placeholder="https://boards.greenhouse.io/acme" mono ariaLabel="Career page URL" style={{ flex: 1, minWidth: 0 }} />
             </div>
-            <span style={{ fontSize: 11, color: url && !known ? 'var(--warn)' : 'var(--muted)' }}>{atsNote}</span>
+            <Helper style={{ ...(url && !known ? { color: 'var(--warn)' } : null) }}>{atsNote}</Helper>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Company name</span>
+              <Label>Company name</Label>
               <Input value={name} onChange={setName} placeholder="Acme" ariaLabel="Company name" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Aliases</span>
+              <Label>Aliases</Label>
               <Input value={aliases} onChange={setAliases} placeholder="Alt names, comma-separated" ariaLabel="Aliases" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Tier</span>
+              <Label>Tier</Label>
               <Seg opts={TIER_BTNS} value={tier} onPick={setTier} valueKey="v" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>Scrape interval in minutes</span>
+              <Label>Scrape interval in minutes</Label>
               <Input type="number" min={1} value={interval} onChange={setIntervalV} placeholder="Use global interval" ariaLabel="Scrape interval in minutes" />
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2, borderTop: '1px solid var(--line-soft)', marginTop: 2 }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)', paddingTop: 8 }}>Score new jobs against</span>
+            <Label style={{ paddingTop: 8 }}>Score new jobs against</Label>
             <ResumeChips resumes={resumes} personaPopulated={personaPopulated} selected={selected} toggle={toggle} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 2 }}>
               <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Depth</span>
@@ -868,11 +862,11 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
               </div>
             </div>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--muted)', paddingTop: 2 }}>{scoreNote}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Title filters, wait-for selector and max pages use the defaults — change them in the company config when a board needs it.</span>
+          <Helper style={{ paddingTop: 2 }}>{scoreNote}</Helper>
+          <Helper>Title filters, wait-for selector and max pages use the defaults — change them in the company config when a board needs it.</Helper>
         </div>
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Scrapes on the next scheduled run</span>
+          <Helper>Scrapes on the next scheduled run</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
@@ -891,7 +885,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
         <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 520, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', padding: 22 }}>
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 18, marginBottom: 10 }}>Test scrape — Error</div>
+          <Heading style={{ display: 'block', marginBottom: 10 }}>Test scrape — Error</Heading>
           <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
           <Pill onClick={onClose} style={{ marginTop: 16 }}>Close</Pill>
         </div>
@@ -936,7 +930,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={onClose}>
       <div ref={panel} onClick={(e) => e.stopPropagation()} style={{ width: 840, maxHeight: 660, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 auto', padding: '15px 22px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Test scrape — {test.company}</span>
+          <Heading>Test scrape — {test.company}</Heading>
           {shots.length > 0 && (
             <Pill size="sm" on={showShots} onClick={() => setShowShots((v) => !v)} style={{ marginLeft: 'auto' }}>{showShots ? 'Hide' : 'Show'} screenshots</Pill>
           )}
@@ -944,8 +938,8 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         </div>
 
         <div style={{ flex: '0 0 auto', padding: '9px 22px', background: 'var(--bg)', borderBottom: '1px solid var(--line-soft)', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>URLs scraped · {urls.length}</span>
-          {urls.map((u, i) => <span key={i} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u}</span>)}
+          <Helper>URLs scraped · {urls.length}</Helper>
+          {urls.map((u, i) => <Helper key={i} size="xs" mono style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u}</Helper>)}
           {(test.include_expr || (test.exclude_keywords || []).length > 0) && (
             <span style={{ fontSize: 11, color: 'var(--text-2)' }}>
               {test.include_expr && <>Include <span style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>{test.include_expr}</span> </>}
@@ -958,7 +952,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
           <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '11px 22px', background: 'var(--bg)', borderBottom: '1px solid var(--line-soft)', maxHeight: 280, overflow: 'auto' }}>
             {shots.map((s, i) => (
               <div key={i}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{s.url}</span>
+                <Helper size="xs" mono>{s.url}</Helper>
                 <img src={`data:image/png;base64,${s.data}`} alt="" style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 8, marginTop: 4 }} />
               </div>
             ))}
@@ -967,6 +961,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
 
         {pag.length > 0 && (
           <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 3, padding: '10px 22px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line-soft)' }}>
+            {/* ui: keep — the debug band's head is accent at weight 600; Label is --label-ink at 400 */}
             <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>Pagination debug</span>
             {pag.map((p, i) => (
               <span key={i} style={{ fontSize: 11, color: p.clicked ? 'var(--good)' : 'var(--bad)' }}>Page {p.page} · {p.clicked ? `Clicked ${p.clicked_via?.selector || ''} — ${p.clicked_via?.text || ''}` : 'No next button found'}</span>
@@ -986,6 +981,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
             const st = jobState(j)
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 22px', borderBottom: '1px solid var(--line-soft)' }}>
+                {/* ui: keep — mono row numeral + the reason cell's variable ink (mono-text / row-cell), and the ↗ needs rel="noopener noreferrer", which Link does not emit */}
                 <span style={{ flex: '0 0 30px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{i + 1}</span>
                 <span title={j.title} style={{ flex: 1, minWidth: 0, fontSize: 12, color: j.kept ? 'var(--text)' : 'var(--muted)', textDecoration: j.kept ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.title}</span>
                 <span style={{ flex: '0 0 62px' }}><span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: st.tagBg, color: st.tagFg }}>{st.tag}</span></span>

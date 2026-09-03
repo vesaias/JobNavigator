@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, IconButton, Input, Menu, MenuItem, SectionHead } from './ui'
+import { Button, Card as UiCard, DashedAdd, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, NavLink, SectionHead, Spinner } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 
@@ -22,7 +22,6 @@ const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || 
 
 import { ago } from './time'
 
-const FLABEL = { fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }
 // Contact-item cells are 1:1 with the Résumé editor's header — both are `Input` now.
 
 // A collapsible editor card — the three sections of the letter.
@@ -41,6 +40,7 @@ function Card({ title, note, open, onToggle, children }) {
         </span>
         <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 9 }}>
           <span style={{ flex: '0 0 auto', fontSize: 13, lineHeight: '20px', fontWeight: 600 }}>{title}</span>
+          {/* ui: keep — the head's note rides the 13/20px title's line; Helper's 16px would unalign the row */}
           {note && <span style={{ flex: '0 1 auto', fontSize: 11.5, lineHeight: '20px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</span>}
         </span>
       </SectionHead>
@@ -292,8 +292,8 @@ export default function CoverLetterEditor() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
         <span>{err || 'Loading…'}</span>
         {err && <span style={{ display: 'flex', gap: 14 }}>
-          <span onClick={() => navigate('/v2/cover-letters')} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>‹ Back to cover letters</span>
-          {!/no longer exists/.test(err) && <span onClick={() => window.location.reload()} className="v2-anchor" style={{ color: 'var(--accent)', cursor: 'pointer' }}>Try again</span>}
+          <Link onClick={() => navigate('/v2/cover-letters')}>‹ Back to cover letters</Link>
+          {!/no longer exists/.test(err) && <Link onClick={() => window.location.reload()}>Try again</Link>}
         </span>}
       </div>
     )
@@ -312,16 +312,16 @@ export default function CoverLetterEditor() {
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* top bar */}
       <div style={{ flex: '0 0 auto', padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span onClick={() => navigate('/v2/cover-letters')} className="v2-ctl" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>‹ Cover Letters</span>
+        <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
           style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99 }}>{badge}</span>
         {/* R2-S-06: every other v2 screen names itself with an h1; visually this
             is the same span it always was (margin and font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'inherit', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>
-        <span title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, fontSize: 11.5, color: saveErr ? 'var(--bad)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Helper title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(saveErr ? { color: 'var(--bad)' } : null) }}>
           {saveErr || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
-        </span>
+        </Helper>
       </div>
 
       {/* context band */}
@@ -333,12 +333,11 @@ export default function CoverLetterEditor() {
               title={doc.resume_id ? 'Open the source résumé' : 'Written from your Persona'}
               style={{ color: 'var(--accent)', cursor: doc.resume_id ? 'pointer' : 'default' }}>{doc.source_name}{doc.resume_id ? ' ↗' : ''}</span></>}
           </span>
-          <span style={{ fontSize: 11, lineHeight: '17px', color: 'var(--muted)' }}>{voiceLen}</span>
+          <Helper>{voiceLen}</Helper>
         </div>
         <Button onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length">
-          {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
           {regening
-            ? <span className="v2-spin" style={{ width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />
+            ? <Spinner size={11} color="currentColor" />
             : <span style={{ fontSize: 12 }}>↻</span>}
           Regenerate…
         </Button>
@@ -368,15 +367,15 @@ export default function CoverLetterEditor() {
 
           <Card title="Header" open={headOpen} onToggle={() => setHeadOpen((v) => !v)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>
-              <span style={FLABEL}>Full name</span>
+              <Label>Full name</Label>
               <Input value={data.header?.name || ''} onChange={(v) => update((d) => { d.header = d.header || {}; d.header.name = v })} ariaLabel="Full name" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={FLABEL}>Contact items</span>
+                <Label>Contact items</Label>
                 {/* integer line-height: at 1.5 this 10.5px hint is 15.75 tall and
                     pushes every card below onto a half pixel (borders drop out) */}
-                <span style={{ marginLeft: 'auto', fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>text · link · stub</span>
+                <Helper size="xs" style={{ marginLeft: 'auto' }}>text · link · stub</Helper>
               </div>
               {(data.header?.contact_items || []).map((ct, i, arr) => {
                 const tracked = ct.url && !String(ct.url).startsWith('mailto:')
@@ -417,19 +416,19 @@ export default function CoverLetterEditor() {
             open={recipOpen} onToggle={() => setRecipOpen((v) => !v)}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, paddingTop: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Company</span>
+                <Label>Company</Label>
                 <Input value={data.recipient?.company || ''} onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.company = v })} ariaLabel="Company" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Date</span>
+                <Label>Date</Label>
                 <Input value={data.date || ''} onChange={(v) => update((d) => { d.date = v })} ariaLabel="Date" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Hiring manager</span>
+                <Label>Hiring manager</Label>
                 <Input value={data.recipient?.manager || ''} placeholder="Unknown" onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.manager = v })} ariaLabel="Hiring manager" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Address</span>
+                <Label>Address</Label>
                 <Input value={data.recipient?.address || ''} placeholder="—" onChange={(v) => update((d) => { d.recipient = d.recipient || {}; d.recipient.address = v })} ariaLabel="Address" style={{ minWidth: 0 }} />
               </div>
             </div>
@@ -438,12 +437,13 @@ export default function CoverLetterEditor() {
           <Card title="Letter" note={`${paras.length} paragraph${paras.length === 1 ? '' : 's'}`}
             open={letterOpen} onToggle={() => setLetterOpen((v) => !v)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>
-              <span style={FLABEL}>Greeting</span>
+              <Label>Greeting</Label>
               <Input value={data.greeting || ''} onChange={(v) => update((d) => { d.greeting = v })} ariaLabel="Greeting" />
             </div>
             {paras.map((text, i) => (
               <UiCard key={i} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px 0' }}>
+                  {/* ui: keep — the ¶ ordinal is drawn in --edge, a dimmer ink than --label-ink, at .1em */}
                   <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--edge)' }}>¶ {i + 1}</span>
                   <span onClick={() => i > 0 && update((d) => { const a = d.body_paragraphs; [a[i - 1], a[i]] = [a[i], a[i - 1]] })} title="Move up" className={i > 0 ? 'v2-parabtn' : ''}
                     style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i === 0 ? 'var(--line-strong)' : 'var(--text-2)', cursor: i === 0 ? 'default' : 'pointer' }}>↑</span>
@@ -463,11 +463,11 @@ export default function CoverLetterEditor() {
             <DashedAdd onClick={() => update((d) => { d.body_paragraphs = [...(d.body_paragraphs || []), ''] })} style={{ gap: 7 }}>+ Add paragraph</DashedAdd>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Closing</span>
+                <Label>Closing</Label>
                 <Input value={data.closing || ''} onChange={(v) => update((d) => { d.closing = v })} ariaLabel="Closing" style={{ minWidth: 0 }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                <span style={FLABEL}>Signature</span>
+                <Label>Signature</Label>
                 <Input value={data.signature || ''} onChange={(v) => update((d) => { d.signature = v })} ariaLabel="Signature" style={{ minWidth: 0 }} />
               </div>
             </div>
@@ -477,9 +477,8 @@ export default function CoverLetterEditor() {
         {/* preview */}
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minHeight: 0 }}>
           <div style={{ flex: '0 0 auto', padding: '8px 20px', display: 'flex', flexWrap: 'wrap', rowGap: 6, alignItems: 'center', gap: 9, borderBottom: '1px solid var(--line)' }}>
-            <span style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>PDF preview</span>
-            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-            {pdfBusy && <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--edge)', borderTopColor: 'transparent', borderRadius: 99 }} />}
+            <Label>PDF preview</Label>
+            {pdfBusy && <Spinner size={10} color="var(--edge)" />}
 
             <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Cover letter template" className="v2-bd v2-ctl"
@@ -526,34 +525,33 @@ export default function CoverLetterEditor() {
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => !regening && setRegenOpen(false)}>
           <div ref={regenPanel} onClick={(e) => e.stopPropagation()} style={{ width: 460, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: 'var(--shadow-modal)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', padding: '16px 22px 13px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--serif)', fontSize: 18, letterSpacing: '-.02em' }}>Regenerate letter</span>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)', textWrap: 'pretty' }}>
+              <Heading>Regenerate letter</Heading>
+              <Helper style={{ textWrap: 'pretty' }}>
                 Rewrites the whole letter for {doc.company || 'this role'} — your edits to this draft are replaced.
-              </span>
+              </Helper>
             </div>
             <div style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ ...FLABEL, letterSpacing: '.14em' }}>From résumé</span>
+                <Label>From résumé</Label>
                 <Picker value={rSource} options={sourceOpts} placeholder="Select a source…" onPick={setRSource} />
-                <span style={{ fontSize: 10.5, color: 'var(--muted)', textWrap: 'pretty' }}>Bases and Persona — switch to draw on different achievements.</span>
+                <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona — switch to draw on different achievements.</Helper>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ ...FLABEL, letterSpacing: '.14em' }}>Voice</span>
+                <Label>Voice</Label>
                 <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ ...FLABEL, letterSpacing: '.14em' }}>Length</span>
+                <Label>Length</Label>
                 <LengthPicker value={rLength} onPick={setRLength} />
               </div>
             </div>
             <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-              {err && !regening ? <span style={{ fontSize: 11.5, color: 'var(--bad)' }}>{err}</span> : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>~30 seconds</span>}   {/* CL-14 */}
+              {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}   {/* CL-14 */}
               <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               {/* RES-17: a disabled primary pill is --line on --muted across the three
                   builders — a dimmed accent still reads as the live button. */}
               <Button size="sm" onClick={regenerate} disabled={regening || !rSource}>
-                {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
-                {regening && <span className="v2-spin" style={{ width: 9, height: 9, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+                {regening && <Spinner color="currentColor" />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </Button>
             </div>
