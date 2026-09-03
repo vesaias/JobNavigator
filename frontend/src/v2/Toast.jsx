@@ -60,7 +60,9 @@ function Toast({ t, onClose }) {
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(10px)',
       transition: 'opacity 250ms ease, transform 250ms ease',
     }}>
+      {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
       {k.spin && <span className="v2-spin" style={{ flex: '0 0 auto', width: 11, height: 11, border: '1.5px solid currentColor', borderTopColor: 'transparent', borderRadius: 99 }} />}
+      {/* ui: keep — a 16px filled glyph badge (✓ / ✕ on the toast tint), not a status dot: Dot draws a bare tone disc with no glyph */}
       {k.mark && (
         <span style={{ flex: '0 0 auto', width: 16, height: 16, borderRadius: 99, background: k.markBg, color: 'var(--accent-ink)', fontSize: 9.5, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{k.mark}</span>
       )}

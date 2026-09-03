@@ -59,7 +59,7 @@ export default function UiGallery() {
   const [pick, setPick] = useState('a')
   const [on, setOn] = useState(true)
   const [sel, setSel] = useState(true)
-  const [open, setOpen] = useState({ a: true, b: false })
+  const [open, setOpen] = useState({ a: true, b: false, c: true })
   const [modal, setModal] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -195,6 +195,14 @@ export default function UiGallery() {
               <MenuItem icon="✕" danger onClick={() => {}}>Delete</MenuItem>
             </Menu>
           </S>
+          <S label="option menu · selected / mono hint / link row" w={250}>
+            <Menu role="listbox" ariaLabel="Example options" style={{ width: '100%' }}>
+              <MenuItem role="option" selected ariaSelected hint="✓" onClick={() => {}}>Newest first</MenuItem>
+              <MenuItem role="option" ariaSelected={false} onClick={() => {}}>Best fit</MenuItem>
+              <MenuItem ellipsis hint={42} hintMono onClick={() => {}}>A very long company name that has to clip</MenuItem>
+              <MenuItem icon="↗" href="#" onClick={(e) => e.preventDefault()}>Real anchor row</MenuItem>
+            </Menu>
+          </S>
         </Role>
 
         <Role name="SectionHead" canonical="muted · 12.5 · collapsible, aria-expanded"
@@ -203,6 +211,27 @@ export default function UiGallery() {
           <S label="collapsed" w={220}><SectionHead open={open.b} onToggle={() => setOpen((p) => ({ ...p, b: !p.b }))} count={0}>Publications</SectionHead></S>
           <S label="boxed" w={220}><SectionHead boxed open onToggle={() => {}}>Filters</SectionHead></S>
           <S label="static (no toggle)" w={220}><SectionHead>Read-only head</SectionHead></S>
+          <S label="caret end / pin" w={220}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+              <SectionHead boxed caret="end" open onToggle={() => {}}>
+                <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Score breakdown</span>
+                <span style={{ flex: 1, minWidth: 0, height: 1, background: 'var(--line-soft)' }} />
+              </SectionHead>
+              <SectionHead boxed caret="pin" open={false} onToggle={() => {}}>
+                <span style={{ fontSize: 10.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--muted)' }}>Applied</span>
+              </SectionHead>
+            </div>
+          </S>
+          <S label="card (collapsible card header)" w={260}>
+            <Card style={{ padding: 0, display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <SectionHead card open={open.c} onToggle={() => setOpen((p) => ({ ...p, c: !p.c }))} style={{ padding: '11px 14px' }}>
+                <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Contact</span>
+                <span style={{ flex: 1, minWidth: 0 }} />
+                <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>4 of 6 set</span>
+              </SectionHead>
+              {open.c && <div style={{ padding: '12px 14px', borderTop: '1px solid var(--line-soft)', fontSize: 12, color: 'var(--muted)' }}>body</div>}
+            </Card>
+          </S>
         </Role>
 
         <Role name="Chip" canonical="--chip-bg · 1px --chip-border · r99 · 11.5 · h26"
@@ -216,6 +245,9 @@ export default function UiGallery() {
           tokens="--tag-neutral/-accent/-good/-warn/-bad ×(-bg,-ink) · --dot-neutral/-accent/-good/-warn/-bad · --radius-control · --t-10">
           <S label="tag tones">
             <Tag>neutral</Tag><Tag tone="accent">accent</Tag><Tag tone="good">good</Tag><Tag tone="warn">warn</Tag><Tag tone="bad">bad</Tag>
+          </S>
+          <S label='tone="none" · hue from a cc- / sm- class'>
+            <Tag tone="none" className="cc-greenhouse">greenhouse</Tag><Tag tone="none" className="cc-tier1">T1</Tag>
           </S>
           <S label="dot tones">
             <Dot title="neutral" /><Dot tone="accent" title="accent" /><Dot tone="good" title="good" /><Dot tone="warn" title="warn" /><Dot tone="bad" title="bad" />

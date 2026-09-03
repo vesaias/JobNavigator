@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Input, Pill, Select } from './ui'
+import { Card, Input, Pill, SectionHead, Select } from './ui'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -345,12 +345,11 @@ export default function Persona() {
               const done = n === counted.length
               return (
                 <Card key={id} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-                  <div onClick={() => toggleGroup(id)} {...kb(() => toggleGroup(id))} aria-expanded={open} className="v2-clhead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
-                    <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{open ? '⌄' : '›'}</span>
+                  <SectionHead card open={open} onToggle={() => toggleGroup(id)} hover="v2-clhead" style={{ padding: '11px 14px' }}>
                     <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>{title}</span>
                     <span style={{ flex: 1, minWidth: 0 }} />
                     <span style={{ flex: '0 0 auto', fontSize: 10.5, color: done ? 'var(--accent)' : 'var(--muted)' }}>{done ? 'complete' : `${n} of ${counted.length} set`}</span>
-                  </div>
+                  </SectionHead>
                   {open && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, padding: '12px 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
                       {fields.map(([node, fkey, label, kind, opts]) => (
@@ -369,12 +368,11 @@ export default function Persona() {
                 no tone variant; overriding both inline would put two colours back in
                 a screen, which is exactly what the pass removes. */}
             <div style={{ border: '1px solid var(--amber-line)', borderRadius: 9, background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
-              <div onClick={() => toggleGroup('qa')} {...kb(() => toggleGroup('qa'))} aria-expanded={groups.has('qa')} className="v2-qahead" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', cursor: 'pointer', borderRadius: 9, lineHeight: '18px' }}>
-                <span style={{ flex: '0 0 auto', fontSize: 10, color: 'var(--muted)' }}>{groups.has('qa') ? '⌄' : '›'}</span>
+              <SectionHead card open={groups.has('qa')} onToggle={() => toggleGroup('qa')} hover="v2-qahead" style={{ padding: '11px 14px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>reusable screener answers</span>
                 <span style={{ flex: '0 0 auto', fontSize: 10.5, color: 'var(--muted)' }}>{qa.length} answer{qa.length === 1 ? '' : 's'}</span>
-              </div>
+              </SectionHead>
               {groups.has('qa') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 14px 14px', borderTop: '1px solid var(--amber-line-soft)' }}>
                   {/* ui: keep — a row inside the amber card, tinted to it

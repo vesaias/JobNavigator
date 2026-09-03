@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, IconButton, Pill, Select, Textarea } from './ui'
+import { Button, IconButton, Menu, Pill, Select, Textarea } from './ui'
 import api from '../api'
 import './theme.css'
 
@@ -111,6 +111,9 @@ function Toggle({ on, label, onPick, ariaLabel }) {
     <span onClick={onPick} {...kb(onPick, 'switch')} aria-checked={on} aria-label={ariaLabel}
       style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: '0 0 auto' }}>
       <span style={{ fontSize: 11, lineHeight: '16px', color: 'var(--muted)' }}>{label}</span>
+      {/* ui: keep — a switch track and its sliding knob, not a status dot: the pair
+          is one control (26x15 track, 11px knob animating between two positions).
+          Dot draws a single tone-coloured disc. */}
       <span style={{ width: 26, height: 15, borderRadius: 99, background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
         {/* SET-14: --knob is white in both themes, which is 2.16:1 on the dark
             theme's light-green track. --surface-2 (user's pick, 2026-09-03) is the ON knob so it reads as a
@@ -459,6 +462,7 @@ export default function Settings() {
         </div>
       ) : (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--muted)' }}>
+          {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
           <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading settings…
         </span>
       )}
@@ -992,7 +996,11 @@ function ModelsModal({ S, save, onClose }) {
                 style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
             </span>
             {showSug && (
-              <div role="listbox" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, boxShadow: 'var(--shadow-menu)', padding: 4, display: 'flex', flexDirection: 'column' }}>
+              <Menu role="listbox" ariaLabel="Model suggestions" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, gap: 0 }}>
+                {/* ui: keep — typeahead rows, not MenuItem: the highlight is keyboard-driven
+                    (`hi`), so a row turns its own `v2-menuitem` hover OFF when it is the
+                    highlighted one and needs onMouseEnter/onMouseDown to keep the caret in
+                    the input. MenuItem owns its hover class and takes neither. */}
                 {suggestions.map((n, i) => (
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
@@ -1004,7 +1012,7 @@ function ModelsModal({ S, save, onClose }) {
                 <div style={{ display: 'flex', alignItems: 'center', padding: '5px 9px', borderTop: '1px solid var(--line-soft)', marginTop: 3, fontSize: 10.5, lineHeight: '16px', color: 'var(--muted)' }}>
                   {matched} of {live.length} match · or paste any slug and Add
                 </div>
-              </div>
+              </Menu>
             )}
           </span>
           <Button size="sm" onClick={() => add()} ariaLabel="Add this model to the catalog">Add</Button>

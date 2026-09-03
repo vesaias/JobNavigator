@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSnapTop } from './hooks'
-import { Button, Card, Input, Pill, Row, SearchInput } from './ui'
+import { Button, Card, Input, Menu, MenuItem, Pill, Row, SearchInput, SectionHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -81,10 +81,9 @@ function Drop({ label, active, open, onToggle, children, width = 216, trigger, o
       {open && pos && (
         <>
           <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-          <div className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box',
-            background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 8 }}>
+          <Menu className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
             {children}
-          </div>
+          </Menu>
         </>
       )}
     </div>
@@ -92,10 +91,11 @@ function Drop({ label, active, open, onToggle, children, width = 216, trigger, o
 }
 function Check({ on, label, count, onClick }) {
   return (
-    <div className="v2-menuitem" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: 'var(--text-2)' }}>
-      <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-    {count != null && <span style={{ marginLeft: 'auto', paddingLeft: 10, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{count}</span>}</div>
+    <MenuItem ellipsis onClick={onClick} hint={count} hintMono
+      icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
+        <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 4, border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>}>
+      {label}
+    </MenuItem>
   )
 }
 
@@ -755,11 +755,11 @@ export default function V2JobFeed() {
             return sorted.length ? (
               <>
                 {sorted.map((c) => (
-                  <div key={c.name} className="v2-menuitem" onClick={() => togF('company', c.name)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 8px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer' }}>
-                    <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 4, border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>
-                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-2)' }}>{c.name}</span>
-                    <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{c.count}</span>
-                  </div>
+                  <MenuItem key={c.name} ellipsis onClick={() => togF('company', c.name)} hint={c.count} hintMono
+                    icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
+                      <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 4, border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>}>
+                    {c.name}
+                  </MenuItem>
                 ))}
                 <div style={{ padding: '6px 8px 2px', fontSize: 10.5, color: 'var(--muted)', lineHeight: '16px' }}>Top by open roles · picked companies pin to the top</div>
               </>
@@ -807,7 +807,8 @@ export default function V2JobFeed() {
           <Drop width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
             trigger={(t) => <div onClick={t} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTS.find((o) => o[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span></div>}>
             {SORT_OPTS.map(([v, label]) => (
-              <div key={v} className="v2-menuitem" onClick={() => { setSortBy(v); setMenu(null); setSel(0) }} style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: sortBy === v ? 'var(--accent)' : 'var(--text-2)', fontWeight: sortBy === v ? 500 : 400, ...(sortBy === v ? { background: 'var(--accent-soft)' } : {}) }}>{label}{sortBy === v && <span style={{ marginLeft: 'auto' }}>✓</span>}</div>
+              <MenuItem key={v} selected={sortBy === v} hint={sortBy === v ? '✓' : null}
+                onClick={() => { setSortBy(v); setMenu(null); setSel(0) }}>{label}</MenuItem>
             ))}
           </Drop>
         </div>
@@ -828,7 +829,7 @@ export default function V2JobFeed() {
             {shortcutsOpen && (
               <>
                 <div onClick={() => setShortcutsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 34 }} />
-                <div style={{ position: 'absolute', top: '100%', right: 14, zIndex: 35, marginTop: 4, width: 214, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 10 }}>
+                <Menu role="group" ariaLabel="Keyboard shortcuts" style={{ position: 'absolute', top: '100%', right: 14, zIndex: 35, marginTop: 4, width: 214, padding: 10, gap: 0 }}>
                   <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Keyboard</div>
                   {SHORTCUTS.map(([k, desc]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '3px 0', fontSize: 12 }}>
@@ -836,7 +837,7 @@ export default function V2JobFeed() {
                       <span style={{ color: 'var(--muted)' }}>{desc}</span>
                     </div>
                   ))}
-                </div>
+                </Menu>
               </>
             )}
           </div>
@@ -934,13 +935,14 @@ export default function V2JobFeed() {
                       {rowMenu?.id === j.id && (
                         <>
                           <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 59 }} />
-                          <div style={{ position: 'fixed', left: rowMenu.left, top: rowMenu.top, bottom: rowMenu.bottom, zIndex: 60, width: 228, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
-                            {[['Mark applied', 'a', () => applyJob(j)], ['Tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [j] })], ['Rescore', 'r', () => openRescore(j)], ['Open posting ↗', 'e', () => j.url && window.open(j.url, '_blank', 'noopener,noreferrer')]].map(([label, kb, act]) => (
-                              <div key={label} className="v2-menuitem" onClick={() => { setRowMenu(null); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer', fontWeight: label === 'Tailor résumé' ? 600 : 400 }}>{label}<span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span></div>
+                          <Menu ariaLabel="Job actions" style={{ position: 'fixed', left: rowMenu.left, top: rowMenu.top, bottom: rowMenu.bottom, zIndex: 60, width: 228 }}>
+                            {[['Mark applied', 'a', () => applyJob(j)], ['Tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [j] })], ['Rescore', 'r', () => openRescore(j)], ['Open posting ↗', 'e', () => j.url && window.open(j.url, '_blank', 'noopener,noreferrer')]].map(([label, key, act]) => (
+                              <MenuItem key={label} hint={key} hintMono onClick={() => { setRowMenu(null); act() }}
+                                style={label === 'Tailor résumé' ? { fontWeight: 600 } : undefined}>{label}</MenuItem>
                             ))}
-                            <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                            <div className="v2-hover-bad" onClick={() => { setRowMenu(null); ignoreCompany(j) }} style={{ display: j.company ? 'flex' : 'none', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {j.company} everywhere</div>
-                          </div>
+                            <MenuItem danger onClick={() => { setRowMenu(null); ignoreCompany(j) }}
+                              style={{ display: j.company ? 'flex' : 'none' }}>Ignore {j.company} everywhere</MenuItem>
+                          </Menu>
                         </>
                       )}
                     </div>
@@ -959,6 +961,9 @@ export default function V2JobFeed() {
               {/* header */}
               <div style={{ flex: '0 0 auto', padding: headOpen ? '20px 30px 15px' : '11px 30px 12px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
+                  {/* ui: keep — a bare 19x26 caret cell in the header gutter: it has no label,
+                      so there is no head row for SectionHead to draw (the title beside it is a
+                      separate click target) */}
                   <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
                   <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10.5, lineHeight: '16px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)' }}>
@@ -976,6 +981,7 @@ export default function V2JobFeed() {
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* ui: keep — a real <a href target=_blank>, and its height tracks the collapsing detail header (36/30) */}
                     {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 99, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
                     {/* ui: keep — height tracks the collapsing detail header (36/30); Button's sizes are fixed, and its Open ↗ / ⋯ siblings follow the same pair */}
                     <div onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</div>
@@ -985,19 +991,20 @@ export default function V2JobFeed() {
                       {headMenu && (
                         <>
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-                          <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 236, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5 }}>
+                          <Menu ariaLabel="Job actions" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 236 }}>
                             {[
                               ...(d.tailored_resume_id ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
                               ['Cover letter ↗', 'c', () => navigate(`/v2/cover-letters?job=${d.id}`)],
                               ['Copy résumé with tracers', '', () => setPicker({ mode: 'copy', jobs: [d] })],
-                            ].map(([label, kb, act, bold]) => (
-                              <div key={label} className="v2-menuitem" onClick={() => { setHeadMenu(false); act() }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6, fontSize: 13, color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, cursor: 'pointer' }}>{label}{kb && <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{kb}</span>}</div>
+                            ].map(([label, key, act, bold]) => (
+                              <MenuItem key={label} hint={key} hintMono onClick={() => { setHeadMenu(false); act() }}
+                                style={bold ? { color: 'var(--text)', fontWeight: 600 } : undefined}>{label}</MenuItem>
                             ))}
-                            <div style={{ height: 1, margin: '4px 8px', background: 'var(--line-soft)' }} />
-                            <div className="v2-hover-bad" onClick={() => { setHeadMenu(false); ignoreCompany(d) }} style={{ display: d.company ? 'block' : 'none', padding: '8px 11px', borderRadius: 6, fontSize: 13, color: 'var(--bad)', cursor: 'pointer' }}>Ignore {d.company} everywhere</div>
-                          </div>
+                            <MenuItem danger onClick={() => { setHeadMenu(false); ignoreCompany(d) }}
+                              style={{ display: d.company ? 'flex' : 'none' }}>Ignore {d.company} everywhere</MenuItem>
+                          </Menu>
                         </>
                       )}
                     </div>
@@ -1008,6 +1015,10 @@ export default function V2JobFeed() {
               {/* report band */}
               {dScored && (
                 <div style={{ position: 'relative', zIndex: 18, flex: reportOpen ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
+                  {/* ui: keep — the report *band* header, not a section head: its caret is a
+                      fixed 19px gutter aligned to the row rail, it carries a 34px score ring and
+                      résumé tabs, and its body text runs at the band's inherited size, which
+                      SectionHead's 12.5/18px type box would restyle */}
                   <div onClick={() => { setReportOpen((v) => !v); if (!reportOpen && best) setReportTab(Math.max(0, reports.indexOf(best))) }} className="v2-hover-accent" style={{ flex: '0 0 auto', padding: '8px 30px 8px 4px', display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
                     <span style={{ flex: '0 0 auto', width: 19, textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>{reportOpen ? '⌄' : '›'}</span>
                     <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px', marginLeft: -4 }}>
@@ -1046,11 +1057,11 @@ export default function V2JobFeed() {
 
                         {rpt?.breakdown && Object.keys(rpt.breakdown).length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: breakdownOpen ? 11 : 0 }}>
-                            <div onClick={() => setBreakdownOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
+                            <SectionHead boxed caret="end" open={breakdownOpen} onToggle={() => setBreakdownOpen((v) => !v)}
+                              style={{ gap: 8, margin: '-2px -4px' }}>
                               <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Score breakdown</span>
                               <span style={{ flex: 1, minWidth: 0, height: 1, background: 'var(--line-soft)' }} />
-                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{breakdownOpen ? '⌄' : '›'}</span>
-                            </div>
+                            </SectionHead>
                             {breakdownOpen && (
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 30px' }}>
                                 {Object.entries(rpt.breakdown).filter(([, v]) => typeof v === 'number').map(([label, val]) => {
@@ -1072,12 +1083,12 @@ export default function V2JobFeed() {
 
                         {coverage != null && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: keywordOpen ? 6 : 0 }}>
-                            <div onClick={() => setKeywordOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
+                            <SectionHead boxed caret="end" open={keywordOpen} onToggle={() => setKeywordOpen((v) => !v)}
+                              style={{ gap: 8, margin: '-2px -4px' }}>
                               <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Keyword coverage</span>
                               <span style={{ flex: 1, minWidth: 8, height: 1, background: 'var(--line-soft)' }} />
                               <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)' }}>{coverage}%</span>
-                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{keywordOpen ? '⌄' : '›'}</span>
-                            </div>
+                            </SectionHead>
                             {keywordOpen && (
                               <>
                                 {/* ui: keep — 4px keyword-coverage meter, not a control */}
@@ -1086,6 +1097,7 @@ export default function V2JobFeed() {
                                   <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</span>
                                   {(rpt.matched_keywords || []).length > 0 && <div onClick={() => setShowMatched((v) => !v)} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>{showMatched ? 'Hide matched' : 'Show matched'}</div>}
                                 </div>
+                                {/* ui: keep — mono keyword tags (Tag role), not controls */}
                                 {showMatched && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.matched_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--good)' }}>{w}</span>)}</div>}
                                 {/* ui: keep — mono keyword tags (Tag role), not controls */}
                                 {(rpt.missing_keywords || []).length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>{(rpt.missing_keywords || []).map((w, k) => <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 7px', borderRadius: 99, background: 'var(--bad-soft)', color: 'var(--bad)' }}>{w}</span>)}</div>}
@@ -1097,11 +1109,11 @@ export default function V2JobFeed() {
                         {reqRows.length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: reqOpen ? 9 : 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                              <div onClick={() => setReqOpen((v) => !v)} className="v2-hover-accent" style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer', flex: '1 1 auto', minWidth: 0, margin: '-2px -4px', padding: '2px 4px', borderRadius: 6 }}>
+                              <SectionHead boxed caret="end" open={reqOpen} onToggle={() => setReqOpen((v) => !v)}
+                                style={{ gap: 11, flex: '1 1 auto', minWidth: 0, margin: '-2px -4px' }}>
                                 <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)' }}>Requirement mapping</span>
                                 <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{reqMet} of {reqRows.length} met</span>
-                                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{reqOpen ? '⌄' : '›'}</span>
-                              </div>
+                              </SectionHead>
                               {reqOpen && (
                                 <div style={{ marginLeft: 'auto', display: 'flex', border: '1px solid var(--edge)', borderRadius: 99, overflow: 'hidden' }}>
                                   {[['all', `All ${reqRows.length}`], ['gaps', `Gaps ${reqRows.length - reqMet}`]].map(([id, label]) => <div key={id} onClick={() => setReqFilter(id)} style={{ height: 24, padding: '0 11px', display: 'flex', alignItems: 'center', fontSize: 11.5, cursor: 'pointer', background: reqFilter === id ? 'var(--accent)' : 'transparent', color: reqFilter === id ? 'var(--accent-ink)' : 'var(--text-2)' }}>{label}</div>)}
@@ -1262,6 +1274,7 @@ export default function V2JobFeed() {
                       const on = cvBase === r.id
                       return (
                         <div key={r.id} className="v2-act" onClick={() => setCvBase(r.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, borderRadius: 8, cursor: 'pointer', fontSize: 13.5 }}>
+                          {/* ui: keep — radio indicator, not a status dot */}
                           <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 99, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 99, background: on ? 'var(--accent)' : 'transparent' }} /></span>
                           <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                           {r.id === 'persona' && <span style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--muted)' }}>from /persona</span>}

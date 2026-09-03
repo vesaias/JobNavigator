@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useFlashToast, useSnapTop } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Band, Button, Card, Input, Pill, SearchInput } from './ui'
+import { Band, Button, Card, Chip, Input, Pill, SearchInput } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -221,19 +221,18 @@ export default function V2Resumes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {(persona.copies?.length || 0) > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
                         {inflight.filter((f) => f.baseId === 'persona').map((f, k) => (
-                          /* ui: keep — Chip role (--bg on --line), migrates with Chip */
-                          <div key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)' }}>
+                          <Chip key={`pfl${k}`} title="Tailoring in progress — opens when ready" style={{ color: 'var(--muted)' }}>
+                            {/* ui: keep — Spinner role (v2-spin ring), not a status dot */}
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} /><span>tailoring…</span>
-                          </div>
+                          </Chip>
                         ))}
                         {(expanded.has('persona') ? (persona.copies || []) : (persona.copies || []).slice(0, 6)).map((c) => (
-                          /* ui: keep — Chip role (--bg on --line, v2-chip hover), migrates with Chip */
-                          <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, 'Persona', persona.avg_fit)} className="v2-chip" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
+                          <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, 'Persona', persona.avg_fit)} style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
-                          </div>
+                          </Chip>
                         ))}
                         {(persona.copies?.length || 0) > 6 && (
                           <span onClick={(e) => { e.stopPropagation(); toggleExpand('persona') }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>
@@ -264,21 +263,20 @@ export default function V2Resumes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {copies.length > 0 && <span style={CHIP_LABEL}>Recent copies</span>}
                         {baseInflight.map((f, k) => (
-                          /* ui: keep — Chip role (--bg on --line), migrates with Chip */
-                          <div key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', maxWidth: 250 }}>
+                          <Chip key={`fl${k}`} title="Tailoring in progress — opens when ready" style={{ color: 'var(--muted)', maxWidth: 250 }}>
+                            {/* ui: keep — Spinner role (v2-spin ring), not a status dot */}
                             <span className="v2-spin" style={{ flex: '0 0 auto', width: 9, height: 9, border: '1.5px solid var(--accent)', borderTopColor: 'transparent', borderRadius: 99 }} />
                             <span>tailoring…</span>
-                          </div>
+                          </Chip>
                         ))}
                         {(expanded.has(b.id) ? copies : copies.slice(0, 6)).map((c) => (
-                          /* ui: keep — Chip role (--bg on --line, v2-chip hover), migrates with Chip */
-                          <div key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, b.name, b.avg_fit)} className="v2-chip"
-                            style={{ height: 26, padding: '0 10px', border: '1px solid var(--line)', background: 'var(--bg)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-2)', cursor: 'pointer', maxWidth: 250 }}>
+                          <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, b.name, b.avg_fit)}
+                            style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
                             {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 99, background: 'var(--warn)' }} />}
-                          </div>
+                          </Chip>
                         ))}
                         {copies.length > 6 && (
                           <span onClick={(e) => { e.stopPropagation(); toggleExpand(b.id) }} style={{ fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>

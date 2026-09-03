@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSnapTop } from './hooks'
-import { Button, DashedAdd, IconButton, Input, Pill, Row, SearchInput } from './ui'
+import { Button, DashedAdd, Dot, IconButton, Input, Menu, MenuItem, Pill, Row, SearchInput, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -447,19 +447,15 @@ export default function Companies() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTIONS.find((s) => s.id === sortBy)?.label}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {sortOpen && (
-              <div className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172, background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 8, display: 'flex', flexDirection: 'column' }}>
+              <Menu ariaLabel="Row order" className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172 }}>
                 {SORT_OPTIONS.map((so) => {
                   const on = so.id === sortBy
-                  // no inline background when unselected: an inline value beats
-                  // `.v2-menuitem:hover`, which is why this menu never hovered.
                   return (
-                    <div key={so.id} onClick={() => { setSortBy(so.id); setSortOpen(false) }} title={so.hint} className="v2-menuitem"
-                      style={{ display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 6, fontSize: 12.5, cursor: 'pointer', color: on ? 'var(--accent)' : 'var(--text-2)', fontWeight: on ? 500 : 400, background: on ? 'var(--accent-soft)' : undefined }}>
-                      {so.label}{on && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                    </div>
+                    <MenuItem key={so.id} selected={on} title={so.hint} hint={on ? '✓' : null}
+                      onClick={() => { setSortBy(so.id); setSortOpen(false) }}>{so.label}</MenuItem>
                   )
                 })}
-              </div>
+              </Menu>
             )}
           </span>
         </span>
@@ -497,11 +493,11 @@ export default function Companies() {
               </span>
               {/* tier */}
               <span style={{ flex: '0 0 62px' }}>
-                <span className={tierSlug(tierKey(c))} style={{ fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 99 }}>{c.tier == null ? '—' : `T${c.tier}`}</span>
+                <Tag tone="none" className={tierSlug(tierKey(c))}>{c.tier == null ? '—' : `T${c.tier}`}</Tag>
               </span>
               {/* health */}
               <span style={{ flex: 1.9, minWidth: healthMin, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
-                <span style={{ flex: '0 0 auto', width: 7, height: 7, borderRadius: 99, background: h.dot }} />
+                <Dot style={{ background: h.dot }} />
                 <span title={c.last_error || downMap[c.id] || (c.active ? `Last successful run ${ago(c.last_scraped_at)}` : 'Inactive — jobs already found are kept')} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
@@ -545,12 +541,13 @@ export default function Companies() {
                 <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
                   style={{ width: 25, height: 25, border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
                 {menuId === c.id && (
-                  <span style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: 'var(--shadow-menu)', padding: 5, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                    <span onClick={() => { setMenuId(null); openDrawer(c) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>✎</span>Edit config</span>
-                    {urls.length > 0 && <span onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>↗</span>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</span>}
-                    <a href={`/v2/feed?company=${encodeURIComponent(c.name)}`} onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/v2/feed?company=${encodeURIComponent(c.name)}`) }} className="v2-menuitem" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer', textDecoration: 'none' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11, color: 'var(--muted)' }}>☰</span>View jobs in feed</a>
-                    <span onClick={() => deleteCompany(c)} className="v2-hover-bad" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px', borderRadius: 6, fontSize: 12.5, color: 'var(--bad)', cursor: 'pointer', marginTop: 3, borderTop: '1px solid var(--line-soft)' }}><span style={{ flex: '0 0 16px', textAlign: 'center', fontSize: 11 }}>✕</span>Delete company</span>
-                  </span>
+                  <Menu ariaLabel={`${c.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
+                    <MenuItem icon="✎" onClick={() => { setMenuId(null); openDrawer(c) }}>Edit config</MenuItem>
+                    {urls.length > 0 && <MenuItem icon="↗" onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }}>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</MenuItem>}
+                    <MenuItem icon="☰" href={`/v2/feed?company=${encodeURIComponent(c.name)}`}
+                      onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/v2/feed?company=${encodeURIComponent(c.name)}`) }}>View jobs in feed</MenuItem>
+                    <MenuItem danger icon="✕" onClick={() => deleteCompany(c)}>Delete company</MenuItem>
+                  </Menu>
                 )}
               </span>
             </Row>
@@ -558,6 +555,7 @@ export default function Companies() {
         })}
         {loading && companies.length === 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 28px', fontSize: 11.5, color: 'var(--muted)' }}>
+            {/* ui: keep — Spinner role (the v2-spin ring), not a status dot; the scan files it under dot-or-badge because it is a round bordered box */}
             <span className="v2-spin" style={{ width: 10, height: 10, border: '1.5px solid var(--muted)', borderTopColor: 'transparent', borderRadius: 99 }} />Loading companies…
           </div>
         )}
