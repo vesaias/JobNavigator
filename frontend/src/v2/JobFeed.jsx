@@ -758,7 +758,7 @@ export default function V2JobFeed() {
         </Drop>
         <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} onClear={() => setF({ company: [] })} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
           <Input autoFocus value={companyQuery} onChange={setCompanyQuery} ariaLabel="Search companies"
-            placeholder={`Type to search ${companyList.length} companies…`} style={{ margin: '0 6px 6px', paddingLeft: 12 }} />
+            placeholder={`Type to search ${companyList.length} companies…`} style={{ margin: '0 6px 6px', width: 'calc(100% - 12px)', paddingLeft: 12 }} />
           {(() => {
             const q = companyQuery.trim().toLowerCase()
             const list = companyList.filter((c) => filters.company.includes(c.name) || c.name.toLowerCase().includes(q))
