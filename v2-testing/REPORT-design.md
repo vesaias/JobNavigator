@@ -33,7 +33,7 @@ Canonical = dominant signature per role (approved as proposed); footers at 33 px
 | DS-B-02 P2 | a failed tailor/score/regenerate shown as success | pollers read the run's real status; error toasts with the reason |
 | DS-B-03 P3 | autofill sometimes returned the JSON envelope | robust extraction, never returns text starting with `{` |
 | DS-B-01 P4 | disabled primitives dropped `role` | role kept, `tabindex -1` |
-Verification: `round-design/verify-final.md`.
+Verification: `round-design/verify-final.md` — 10/10 confirmed live on the final build (including the skin fixed-height check: no control differs between skins; the two flagged heights are a wrapped hint label).
 
 ## Still open after the pass
 - DS-A-01 (P3): the hand-written controls kept inline (row Run/Test/⋯, Feed Sort trigger, row rail ♥/✕/⋯, stage stepper, `Select all shown`, `?` badge) are not keyboard-reachable. Suggested: give them `kb()` or migrate to `IconButton`/`Pill`.
