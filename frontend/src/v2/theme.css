@@ -390,7 +390,7 @@
    light skin block sets and the dark one forgets would beat the default dark
    value and leak a light colour into the dark skin. */
 .jn-v2[data-skin="alt"] {
-  --ring-shift-sm:0px; --ring-shift-md:-1px; --ring-label-shift:1.5px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher */
+  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default skin, see v2-testing/round-design/ring-sizes.md */
   --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
   --line-strong:#c3cad6; --edge:#7c8698; --track:#828c9e;
   --text:#161a21; --text-2:#4b5468; --muted:#5f6878; --ink-2:#2a3140;
@@ -415,7 +415,7 @@
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="alt"][data-theme="dark"] {
-  --ring-shift-sm:0px; --ring-shift-md:-1px; --ring-label-shift:1.5px;
+  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;
   --bg:#161a21; --surface:#1d222b; --surface-2:#262c37; --line:#343b47; --line-soft:#232830;
   --line-strong:#454d5b; --edge:#737d8f; --track:#7d8798;
   --text:#d6dae2; --text-2:#c6cbd5; --muted:#9aa2b0; --ink-2:#ced3dc;
