@@ -129,7 +129,7 @@ export const BandRule = () => (
 export const EmptyState = ({ what, note }) => (
   <Band interactive={false} style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
     <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>No {what} yet</span>
-    <Helper style={{ textAlign: 'center' }}>{note || 'Empty sections are skipped in the PDF — nothing prints until you add one.'}</Helper>
+    <Helper style={{ textAlign: 'center' }}>{note || 'Empty sections are left out of the PDF.'}</Helper>
   </Band>
 )
 // MenuHead / MenuItem used to be declared here too. There is now one of each,
@@ -210,7 +210,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
               </div>
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
               <Input value={it.url || ''} onChange={(v) => setField(`header.contact_items.${i}.url`, v)} placeholder="URL (optional)" ariaLabel="Contact item URL" style={{ flex: 1, minWidth: 0 }} />
-              {showStub && <Input value={it.stub || ''} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" mono ariaLabel="Tracked link stub" title="Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them" style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center' }} />}
+              {showStub && <Input value={it.stub || ''} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" mono ariaLabel="Tracked link stub" title="Short stub used in the tracked link, e.g. l, w, gh" style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center' }} />}
               <RemoveX onClick={() => undoRemove('Removed contact item',
                 (d) => d.header.contact_items.splice(i, 1),
                 (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })} />
@@ -288,7 +288,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 {/* ui: keep — same field-shaped prose row, always tinted */}
                 {(e.suggested_bullets || []).map((sb, k) => (
                   <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 'var(--radius-field)' }}>
-                    <span title="Suggested by tailoring — keep on review" style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
+                    <span title="Suggested by tailoring. Kept unless you decline it in Review." style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
                     <span style={{ flex: 1, fontSize: 12.5, lineHeight: '19px', color: 'var(--text-2)' }}>{sb}</span>
                     {/* ui: keep — the row's markers and this tag ride the 19px prose line of BulletText; Helper's 16px would unalign them */}
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
@@ -321,7 +321,7 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
         {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
       </div>
-      <Helper size="xs">{txt.length} characters{pageHint && txt.length > 600 ? ' · long summaries can push to a second page' : ''}</Helper>
+      <Helper size="xs">{txt.length} characters</Helper>
     </div>
   )
 }

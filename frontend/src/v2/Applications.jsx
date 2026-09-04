@@ -44,7 +44,7 @@ const srcLabel = (v) => ({
 // --bad; what moved is which screens are guaranteed to track them.
 const STAGES = [
   { id: 'applied', label: 'Applied', dot: 'var(--stage-applied)', hint: 'Waiting on a first response' },
-  { id: 'interview', label: 'Interview', dot: 'var(--stage-interview)', hint: 'In the interview loop' },
+  { id: 'interview', label: 'Interview', dot: 'var(--stage-interview)', hint: 'Interviewing' },
   { id: 'offer', label: 'Offer', dot: 'var(--stage-offer)', hint: 'Offer received' },
   { id: 'rejected', label: 'Rejected', dot: 'var(--stage-rejected)', hint: 'Closed — kept in Stats' },
 ]
@@ -114,7 +114,7 @@ export default function Applications() {
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
     } catch (e) {
       console.error(e)
-      setLoadErr(e?.response?.status ? `The server answered ${e.response.status}.${errSuffix(e)}` : (e.message || 'Network error'))
+      setLoadErr(e?.response?.status ? `The server returned error ${e.response.status}. Try again.${errSuffix(e)}` : (e.message || 'Network error'))
       pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) })
     }
   }, [pushToast])
@@ -163,8 +163,9 @@ export default function Applications() {
   const nOffer = apps.filter((a) => a.status === 'offer').length
   const nStale = apps.filter(isStale).length
   const shown = total ?? apps.length
-  const countLine = `${shown} application${shown === 1 ? '' : 's'} · ${nInterview} in interview · ${nOffer} offer${nOffer === 1 ? '' : 's'}${total > apps.length ? ` · showing the first ${apps.length}` : ''}`
-    + (nStale ? ` · ${nStale} waiting >7d` : '')
+  const countLine = `${shown} application${shown === 1 ? '' : 's'} · ${nInterview} interviewing · ${nOffer} offer${nOffer === 1 ? '' : 's'}`
+    + (nStale ? ` · ${nStale} with no reply for 7+ days` : '')
+    + (total > apps.length ? ` · showing ${apps.length}` : '')
 
   const companyOf = (a) => a.company_canonical || a.company || 'Unknown Company'
   // live companies (≥1 non-rejected application) first, then a rule, then the closed ones
@@ -572,7 +573,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Label>Interviews · {ivs.length}</Label>
               <Pill size="sm" onClick={openPrep} style={{ marginLeft: 'auto' }}
-                title="Builds one pasteable block — the role, my résumé, the posting and what to ask for — for the AI of your choice">
+                title="Builds one text block with the role, your résumé, the posting and the questions to ask, to paste into any AI chat">
                 <span style={{ fontSize: 11 }}>⧉</span>Generate prep handover for AI
               </Pill>
             </div>
@@ -713,7 +714,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         </div>
         {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Helper>Edit the closing ask in Settings → AI</Helper>
+          <Helper>Edit the questions added at the end in Settings → AI</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
           <Button size="sm" onClick={onCopy} busy={busy}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
@@ -795,7 +796,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
     <ModalPanel width={520} onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
         <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
           <Heading>Log application</Heading>
-          <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app — jobs from the feed log themselves when you mark them applied.</Helper>
+          <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app. Jobs marked Applied in the Feed are logged automatically.</Helper>
         </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -841,7 +842,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
         </div>
         {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Helper>The posting is cached on save</Helper>
+          <Helper>A copy of the posting is saved with the application</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
         </div>

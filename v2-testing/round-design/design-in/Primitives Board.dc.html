@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..600&amp;family=Public+Sans:wght@300..700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Public Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #e9e7e1; color: #1b1a16; }
+  a { color: #3f6b52; }
+  @keyframes v2-spin { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+<div style="display:flex;flex-direction:column;gap:14px;padding:26px 28px 40px;min-width:1440px">
+  <div style="display:flex;align-items:flex-end;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:4px;max-width:820px">
+      <span style="font-family:'Newsreader',Georgia,serif;font-size:26px;letter-spacing:-.02em">v2 primitives × skins</span>
+      <span style="font-size:12.5px;color:#57534a;line-height:1.55">Rows = <b>ui.jsx</b> export names (plus six proposed). Columns = skins. States left→right: <b>rest · hover · pressed · on · disabled · focus · loading</b>; a dash means the state does not apply. Palette is theme.css @539da1e; geometry and state values come from <code>skins.js</code> — the same object that generates <code>theme-skins.css</code>. Cells tagged <span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#f3e7ef;color:#7c4066;font-weight:600">P</span> are proposals for the spec's §F gaps.</span>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <sc-for list="{{ modes }}" as="m" hint-placeholder-count="2">
+        <span onClick="{{ m.pick }}" style="height:28px;padding:0 12px;border:1px solid {{ m.bd }};background:{{ m.bg }};color:{{ m.fg }};border-radius:99px;display:flex;align-items:center;font-size:12px;font-weight:{{ m.weight }};cursor:pointer">{{ m.label }}</span>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:150px repeat(4,1fr);gap:0;border:1px solid #cfcac0;border-radius:10px;overflow:hidden;background:#fff">
+    <div style="padding:10px 12px;border-bottom:1px solid #cfcac0;background:#f3f1ec;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6d6862">primitive</div>
+    <sc-for list="{{ skinHeads }}" as="h" hint-placeholder-count="4">
+      <div style="padding:10px 14px;border-bottom:1px solid #cfcac0;border-left:1px solid #e2ddd0;background:#f3f1ec;display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:12.5px;font-weight:600">{{ h.label }}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6d6862">{{ h.meta }}</span>
+      </div>
+    </sc-for>
+
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+      <div style="display:contents">
+        <div style="padding:12px 12px;border-bottom:1px solid #e2ddd0;display:flex;flex-direction:column;gap:3px;background:#faf9f6">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500">{{ r.name }}</span>
+          <span style="font-size:10.5px;color:#6d6862;line-height:1.45;text-wrap:pretty">{{ r.desc }}</span>
+          <span style="display:{{ r.newDisplay }};align-self:flex-start;margin-top:3px;font-size:9.5px;padding:1px 6px;border-radius:99px;background:#eaf1eb;color:#3f6b52;font-weight:600">new primitive</span>
+        </div>
+        <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4">
+          <div style="padding:12px 14px;border-bottom:1px solid #e2ddd0;border-left:1px solid #e2ddd0;background:{{ c.bg }};color:{{ c.fg }};font-family:{{ c.font }};display:flex;flex-direction:column;gap:8px;min-width:0">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0">
+              <sc-for list="{{ c.states }}" as="s" hint-placeholder-count="3">
+                <div title="{{ s.title }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0">
+                  <div style="display:flex;align-items:center;min-height:26px">{{ s.node }}</div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:{{ c.muted }};display:flex;align-items:center;gap:4px">{{ s.label }}<span style="display:{{ s.pDisplay }};font-size:8.5px;padding:0 4px;border-radius:99px;background:#f3e7ef;color:#7c4066;font-weight:700;font-family:'Public Sans',sans-serif">P</span></span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="display:{{ c.noteDisplay }};font-size:10.5px;color:{{ c.muted }};line-height:1.45;text-wrap:pretty">{{ c.note }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1000}}">
+// The board renders every primitive from resolved tokens: palette (skins-palette.json,
+// from theme.css @539da1e) + geometry/state (skins.js). Specimens are React elements
+// because ~40 shapes × 7 states can't be expressed as static template markup; the
+// token values, not the markup, are the deliverable — see theme-skins.css.
+const ORDER = ["editorial", "saas", "cobalt", "win98"];
+const h = React.createElement;
+class Component extends DCLogic {
+  state = { mode: "light", skins: null, pal: null };
+  async componentDidMount() {
+    const [m, p] = await Promise.all([import("./skins.js"), fetch("./skins-palette.json").then(r => r.json())]);
+    this.setState({ skins: m.SKINS, pal: p, stops: m.T_STOPS });
+  }
+  // Resolve a theme: palette vars + geometry into a plain object with helpers.
+  theme(id) {
+    const S = this.state; const sk = S.skins[id]; const pal = S.pal[id === "editorial" ? "default" : id][S.mode];
+    const v = (k) => pal[k] || "magenta";
+    const t = (px) => Math.round(px * sk.type.scale * 2) / 2 + "px";
+    const dark = S.mode === "dark";
+    return { id, sk, v, t, dark, r: sk.radius, bw: sk.bw, sh: sk.shadow, st: sk.state, ty: sk.type,
+      font: v("sans"), display: v("serif"), mono: v("mono"),
+      ai: sk.ai ? sk.ai[S.mode] : [v("accent"), v("accent-ink")],
+      sc: sk.sc ? sk.sc[S.mode] : null };
+  }
+  // ── shared paint helpers
+  bevel(T, kind) { const b = T.st.bevel && T.st.bevel[kind]; return b ? { border: b.border, borderColor: b.borderColor, boxShadow: b.shadow } : null; }
+  ctl(T, o) { // generic control box
+    const base = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, height: o.h, padding: "0 " + o.px + "px", borderRadius: T.r.control, fontFamily: T.font, fontSize: T.t(o.fs), fontWeight: o.w || 500, lineHeight: 1, whiteSpace: "nowrap", cursor: "pointer", border: T.bw.control + " solid transparent" };
+    return Object.assign(base, o.style || {});
+  }
+  disabledStyle(T) { return T.st.disabledOpacity === "1" ? { color: T.st.disabledInk, textShadow: T.st.disabledEngrave, cursor: "default" } : { opacity: T.st.disabledOpacity, cursor: "default" }; }
+  focusStyle(T) { return T.st.focusRing === "none" ? { outline: T.st.focusOutline, outlineOffset: "-4px" } : { boxShadow: T.st.focusRing }; }
+  spinner(T, size, color) { return h("span", { style: { width: size, height: size, border: "1.5px solid " + color, borderTopColor: "transparent", borderRadius: "99px", animation: "v2-spin .9s linear infinite", display: "inline-block", flex: "0 0 auto" } }); }
+  S(label, node, o = {}) { return { label, node, title: o.title || label, pDisplay: o.p ? "inline" : "none" }; }
+  DASH(label) { return { label, node: h("span", { style: { color: "#c9c3b4", fontSize: 11 } }, "—"), title: label + " · n/a", pDisplay: "none" }; }
+
+  // ── specimen builders, one per primitive; return [states…]
+  button(T, variant, size = "md") {
+    const H = { md: 36, sm: 33, xs: 28 }[size], PX = { md: 18, sm: 15, xs: 14 }[size], FS = { md: 13.5, sm: 13, xs: 12.5 }[size];
+    const win = !!T.st.bevel;
+    const paint = {
+      primary: { background: T.v("accent"), color: T.v("accent-ink"), boxShadow: T.sh.btn },
+      danger: { background: T.v("bad"), color: T.v("accent-ink"), boxShadow: T.sh.btn },
+      secondary: { background: T.v("surface"), color: T.v("text-2"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill },
+      ghost: { background: "transparent", color: T.v("text-2") },
+      ai: { background: T.ai[0], color: T.ai[1], boxShadow: T.sh.btn }
+    }[variant];
+    if (win) { const bv = this.bevel(T, "raised"); Object.assign(paint, { background: T.v("surface"), color: T.v("text") }, bv); if (variant === "ghost") { paint.border = "2px solid transparent"; paint.boxShadow = "none"; } }
+    const mk = (extra, txt) => h("span", { style: Object.assign(this.ctl(T, { h: H, px: PX, fs: FS, w: T.ty.btnWeight, style: paint }), extra) }, txt || ({ primary: "Score 42 jobs", danger: "Delete", secondary: "Cancel", ghost: "Skip", ai: "✦ Tailor" })[variant]);
+    const hoverBg = variant === "primary" || variant === "ai" ? T.st.primaryHover : variant === "danger" ? T.st.dangerHover : variant === "secondary" ? T.v("surface") : T.v("surface-2");
+    const hoverExtra = win ? {} : variant === "secondary" ? { borderColor: T.v("accent"), color: T.v("accent") } : { background: hoverBg, color: variant === "ghost" ? T.v("text") : paint.color };
+    const pressedExtra = win ? this.bevel(T, "inset") : { background: variant === "primary" || variant === "ai" ? T.st.primaryPressed : variant === "danger" ? T.st.dangerHover : T.st.pressedWash, transform: T.st.pressedShift };
+    const disExtra = win ? this.disabledStyle(T) : variant === "primary" || variant === "danger" || variant === "ai" ? { background: T.v("line"), color: T.v("muted"), boxShadow: "none", cursor: "default" } : { color: T.v("muted"), borderColor: T.v("line"), cursor: "default" };
+    return [
+      this.S("rest", mk({})),
+      this.S("hover", mk(hoverExtra), { p: variant === "primary" || variant === "danger" || variant === "ai" }),
+      this.S("pressed", mk(pressedExtra), { p: true }),
+      this.DASH("on"),
+      this.S("disabled", mk(disExtra)),
+      this.S("focus", mk(this.focusStyle(T))),
+      this.S("loading", mk({ opacity: win ? 1 : .6, cursor: "default" }, h(React.Fragment, null, this.spinner(T, 12, "currentColor"), variant === "ai" ? "Tailoring…" : "Scoring…")))
+    ];
+  }
+  pill(T, size = "md") {
+    const H = size === "xs" ? 25 : size === "sm" ? 26 : 31, PX = size === "xs" ? 10 : size === "sm" ? 13 : 15, FS = size === "xs" ? 11.5 : size === "sm" ? 11.5 : 12.5;
+    const win = !!T.st.bevel;
+    const off = win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : { background: T.v("surface"), color: T.v("text-2"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill };
+    const onPaint = { background: T.st.pillOnBg === "var(--accent)" ? T.v("accent") : T.v("accent-soft"), color: T.st.pillOnInk === "var(--accent-ink)" ? T.v("accent-ink") : T.v("accent"), border: T.bw.control + " solid " + T.v("accent") };
+    const on = win ? Object.assign(onPaint, this.bevel(T, "inset"), { borderColor: undefined }) : onPaint;
+    const mk = (p, extra, txt) => h("span", { style: Object.assign(this.ctl(T, { h: H, px: PX, fs: FS, w: 500, style: p }), extra) }, txt || "Score · 70+ ▾");
+    return [
+      this.S("rest", mk(off, {})),
+      this.S("hover", mk(off, win ? {} : { borderColor: T.v("accent") })),
+      this.S("pressed", mk(off, win ? this.bevel(T, "inset") : { background: T.st.pressedWash, transform: T.st.pressedShift }), { p: true }),
+      this.S("on", mk(on, {}, "Remote ✓")),
+      this.S("on · hover", mk(on, win ? {} : { filter: "brightness(.96)" }, "Remote ✓"), { p: true }),
+      this.S("disabled", mk(off, this.disabledStyle(T))),
+      this.S("focus", mk(off, this.focusStyle(T))),
+      this.DASH("loading")
+    ];
+  }
+  iconButton(T, size) {
+    const win = !!T.st.bevel;
+    const base = { width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: T.r.control, fontSize: size === 36 ? 15 : 13, color: size === 36 ? T.v("text-2") : T.v("muted"), cursor: "pointer" };
+    if (size === 36) Object.assign(base, win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : { background: T.v("surface"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill });
+    const mk = (extra) => h("span", { style: Object.assign({}, base, extra) }, "⋯");
+    return [this.S("rest", mk({})), this.S("hover", mk(win ? {} : size === 36 ? { borderColor: T.v("accent") } : { background: T.v("surface-2"), color: T.v("text") })), this.S("pressed", mk(win ? this.bevel(T, "inset") : { background: T.st.pressedWash, transform: T.st.pressedShift }), { p: true }), this.S("on", mk(win ? this.bevel(T, "inset") : { background: T.v("accent-soft"), color: T.v("accent"), borderColor: T.v("accent") })), this.S("disabled", mk(this.disabledStyle(T))), this.S("focus", mk(this.focusStyle(T))), this.DASH("loading")];
+  }
+  input(T, o = {}) {
+    const win = !!T.st.bevel;
+    const base = { width: o.w || 170, height: 32, padding: o.search ? "0 12px 0 29px" : "0 9px", display: "inline-flex", alignItems: "center", borderRadius: o.search ? T.r.control : T.r.field, background: o.search ? T.v("surface") : T.v("surface-2"), color: T.v("text"), fontFamily: o.mono ? T.mono : T.font, fontSize: T.t(o.search ? 12 : 12.5), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.field, cursor: "text", position: "relative" };
+    if (win) Object.assign(base, this.bevel(T, "inset"));
+    const glyph = o.search ? h("span", { style: { position: "absolute", left: 12, top: 0, bottom: 0, display: "flex", alignItems: "center", fontSize: 12, color: T.v("muted") } }, "⌕") : null;
+    const mk = (extra, txt, ph) => h("span", { style: Object.assign({}, base, extra, ph ? { color: T.v("muted") } : {}) }, glyph, txt);
+    const underline = h("span", { style: { width: 226, height: 36, padding: "0 13px", display: "inline-flex", alignItems: "center", borderBottom: T.bw.hair + " solid " + T.v("line-strong"), color: T.v("muted"), fontFamily: T.font, fontSize: T.t(13), background: "transparent" } }, "Search résumés…");
+    const out = [
+      this.S("rest", mk({}, o.search ? "" : "senior backend", false)),
+      this.S("placeholder", mk({}, "Search title or company…", true)),
+      this.S("hover", mk(win ? {} : { borderColor: T.st.inputBorderHover || T.v("line-strong") }, o.search ? "" : "senior backend"), { p: true }),
+      this.S("focus", mk(win ? {} : { borderColor: T.v("accent") }, "senior back|")),
+      this.S("disabled", mk(win ? { background: T.v("surface"), color: T.st.disabledInk } : { opacity: .6, cursor: "default" }, "read only")),
+      this.S("error", mk(win ? { borderColor: T.v("bad") } : { borderColor: T.st.inputBorderError, boxShadow: T.st.inputRingError }, "not-an-email"), { p: true })
+    ];
+    if (o.search) out.push(this.S("underline variant", underline));
+    return out;
+  }
+  link(T) {
+    const mk = (extra, txt) => h("span", { style: Object.assign({ fontFamily: T.font, fontSize: T.t(11.5), lineHeight: "17px", fontWeight: 500, color: T.v("accent"), cursor: "pointer", textDecoration: T.id === "win98" ? "underline" : "none" }, extra) }, txt || "view application ↗");
+    return [this.S("rest", mk({})), this.S("hover", mk(T.id === "win98" ? { color: T.v("bad") } : { color: T.v("text"), textDecoration: "underline", textDecorationColor: T.v("accent") }), { p: true }), this.DASH("pressed"), this.S("visited = rest", mk({}), { title: "No visited paint — deliberate" }), this.DASH("disabled"), this.S("focus", mk(Object.assign({ borderRadius: T.r.inline }, this.focusStyle(T)))), this.S("quiet inline", mk({ color: T.v("muted"), fontWeight: 400, fontSize: T.t(12) }, "3 more"), { p: true })];
+  }
+  glyphControls(T) {
+    const box = (g, extra, size) => h("span", { style: Object.assign({ width: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: T.r.control, color: T.v("muted"), fontSize: size || 11, lineHeight: 1, cursor: "pointer" }, extra) }, g);
+    const arrows = (extra) => h("span", { style: { display: "inline-flex", flexDirection: "column", gap: 1 } }, box("▲", Object.assign({ height: 12, fontSize: 8 }, extra)), box("▼", Object.assign({ height: 12, fontSize: 8 }, extra)));
+    const rl = (extra) => h("span", { style: Object.assign({ fontFamily: T.font, fontSize: T.t(11.5), lineHeight: "17px", color: T.v("muted"), padding: "3px 6px", borderRadius: T.r.inline, cursor: "pointer" }, extra) }, "Remove");
+    return [this.S("RemoveX rest", box("✕", {})), this.S("hover", box("✕", { background: T.v("bad-soft"), color: T.v("bad") })), this.S("RemoveLink hover", rl({ background: T.v("bad-soft"), color: T.v("bad") })), this.S("MoveArrows", arrows({})), this.S("disabled", arrows(this.disabledStyle(T))), this.S("focus", box("✕", this.focusStyle(T))), this.S("24px hit box", box("✕", { outline: "1px dashed " + T.v("line-strong") }), { p: true })];
+  }
+  drawer(T) {
+    const win = !!T.st.bevel;
+    const panel = (w) => h("div", { style: Object.assign({ position: "absolute", right: 0, top: 0, bottom: 0, width: w, background: T.v("surface"), borderLeft: T.bw.panel + " solid " + T.v("line"), boxShadow: T.sh.drawer, display: "flex", flexDirection: "column", fontFamily: T.font, color: T.v("text") }, win ? this.bevel(T, "raised") : {}) },
+      T.st.titleBar ? h("div", { style: { height: 22, padding: "0 6px", display: "flex", alignItems: "center", background: "linear-gradient(90deg," + T.st.titleBar[T.dark ? "dark" : "light"].join(",") + ")", color: "#fff", fontSize: 12, fontWeight: 700 } }, "Databricks — config") : null,
+      h("div", { style: { padding: "12px 14px 10px", borderBottom: T.bw.hair + " solid " + T.v("line"), display: "flex", alignItems: "flex-start", gap: 10 } }, h("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 2 } }, h("span", { style: { fontFamily: T.display, fontSize: T.t(18), fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking, lineHeight: "27px" } }, "Databricks"), h("span", { style: { fontSize: T.t(11.5), color: T.v("muted") } }, "Greenhouse · scraped 4m ago")), h("span", { style: { width: 26, height: 26, borderRadius: T.r.control, display: "inline-flex", alignItems: "center", justifyContent: "center", color: T.v("muted"), fontSize: 13 } }, "✕")),
+      h("div", { style: { padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8, flex: 1 } }, h("span", { style: { fontSize: T.t(10), letterSpacing: T.ty.labelTracking, textTransform: T.ty.labelCase, fontWeight: T.ty.labelWeight, color: T.v("muted") } }, "Scrape"), h("span", { style: { height: 32, borderRadius: T.r.field, border: T.bw.control + " solid " + T.v("edge"), background: T.v("surface-2"), display: "flex", alignItems: "center", padding: "0 9px", fontSize: T.t(12.5) } }, "https://databricks.com/careers")),
+      h("div", { style: { padding: "10px 14px", borderTop: T.st.dividerStyle, display: "flex", justifyContent: "flex-end", gap: 8, background: win ? T.v("surface") : T.v("bg") === "#008080" ? T.v("surface") : T.v("bg") } }, h("span", { style: Object.assign(this.ctl(T, { h: 28, px: 12, fs: 12, w: T.ty.btnWeight, style: { background: T.v("accent"), color: T.v("accent-ink"), boxShadow: T.sh.btn } }), win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : {}) }, "Save")));
+    const stage = (open) => h("div", { style: { position: "relative", width: 300, height: 190, borderRadius: T.r.card, overflow: "hidden", background: T.v("bg") === "#008080" || T.v("bg") === "#1f2b3a" ? T.v("surface-2") : T.v("bg"), border: T.bw.hair + " solid " + T.v("line") } }, h("div", { style: { padding: 12, fontFamily: T.font, fontSize: T.t(11.5), color: T.v("muted") } }, "pane content · rail stays reachable"), open ? h("div", { style: { position: "absolute", inset: 0, background: T.v("scrim") } }) : null, open ? panel(190) : null);
+    return [this.S("closed (pane)", stage(false)), this.S("open · scrim + panel", stage(true))];
+  }
+  choice(T) {
+    const win = !!T.st.bevel;
+    const card = (l, hint, o = {}) => h("div", { style: Object.assign({ flex: 1, minWidth: 0, padding: "9px 11px", borderRadius: T.r.cell, border: T.bw.control + " solid " + (o.on ? T.v("accent") : o.hover ? T.v("accent") : T.v("edge")), background: o.on ? (win ? T.v("accent") : T.v("accent-soft")) : o.hover ? T.v("hover-soft") : "transparent", color: o.on ? (win ? T.v("accent-ink") : T.v("accent")) : T.v("text"), display: "flex", flexDirection: "column", gap: 2, fontFamily: T.font, cursor: "pointer" }, o.busy ? { opacity: .6 } : {}, win && o.on ? this.bevel(T, "inset") : {}) }, h("span", { style: { fontSize: T.t(12.5), lineHeight: "18px", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 } }, l, o.busy ? this.spinner(T, 10, "currentColor") : null), h("span", { style: { fontSize: T.t(10.5), lineHeight: "16px", color: o.on && !win ? "inherit" : o.on ? "inherit" : T.v("muted") } }, hint));
+    const row = (l, sub, o = {}) => h("div", { style: { display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: T.r.cell, border: T.bw.control + " solid " + (o.on ? T.v("accent") : T.v("edge")), background: o.on ? (win ? T.v("accent") : T.v("accent-soft")) : o.hover ? T.v("hover-soft") : "transparent", color: o.on && win ? T.v("accent-ink") : T.v("text"), fontFamily: T.font, cursor: "pointer" } }, h("span", { style: { width: 14, height: 14, borderRadius: T.r.control === "0" ? 0 : 99, border: T.bw.hair + " solid " + (o.on ? (win ? T.v("accent-ink") : T.v("accent")) : T.v("edge")), display: "inline-flex", alignItems: "center", justifyContent: "center" } }, o.on ? h("span", { style: { width: 7, height: 7, borderRadius: "inherit", background: win ? T.v("accent-ink") : T.v("accent") } }) : null), h("span", { style: { flex: 1, display: "flex", flexDirection: "column" } }, h("span", { style: { fontSize: T.t(12.5), lineHeight: "18px", fontWeight: 500 } }, l), h("span", { style: { fontSize: T.t(10.5), color: o.on && win ? "inherit" : T.v("muted") } }, sub)));
+    const modal = h("div", { style: Object.assign({ width: 360, background: T.v("surface"), border: T.bw.panel + " solid " + T.v("line"), borderRadius: T.r.modal, boxShadow: T.sh.modal, fontFamily: T.font, color: T.v("text"), overflow: "hidden" }, win ? this.bevel(T, "raised") : {}) },
+      T.st.titleBar ? h("div", { style: { height: 22, padding: "0 6px", display: "flex", alignItems: "center", background: "linear-gradient(90deg," + T.st.titleBar[T.dark ? "dark" : "light"].join(",") + ")", color: "#fff", fontSize: 12, fontWeight: 700 } }, "Tailor résumé") : null,
+      h("div", { style: { padding: "16px 22px 13px", borderBottom: T.bw.hair + " solid " + T.v("line"), display: "flex", alignItems: "flex-start", gap: 12 } }, h("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 3 } }, h("span", { style: { fontFamily: T.display, fontSize: T.t(18), lineHeight: "27px", fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking } }, "Tailor for Stripe"), h("span", { style: { fontSize: T.t(11.5), color: T.v("muted") } }, "Pick a base and how much to change")), h("span", { style: { width: 26, height: 26, borderRadius: T.r.control, display: "inline-flex", alignItems: "center", justifyContent: "center", color: T.v("muted"), fontSize: 13, cursor: "pointer" } }, "✕")),
+      h("div", { style: { padding: "14px 22px", display: "flex", flexDirection: "column", gap: 13 } }, h("div", { style: { display: "flex", gap: 8 } }, card("Platform v4", "rest"), card("Generalist v2", "hover", { hover: true }), card("Persona", "selected", { on: true })), h("div", { style: { display: "flex", gap: 8 } }, card("Scoring…", "busy", { busy: true })), h("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, row("Light touch", "keywords only"), row("Rewrite bullets", "hover", { hover: true }), row("Full rewrite", "on · new STAR bullets", { on: true }))),
+      h("div", { style: { padding: "12px 22px", borderTop: T.st.dividerStyle, display: "flex", alignItems: "center", gap: 9 } }, h("span", { style: { fontSize: T.t(11.5), color: T.v("muted") } }, "~40s · Light scoring after"), h("span", { style: { marginLeft: "auto", display: "flex", gap: 8 } }, h("span", { style: Object.assign(this.ctl(T, { h: 33, px: 15, fs: 13, w: T.ty.btnWeight, style: { background: T.v("surface"), color: T.v("text-2"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill } }), win ? Object.assign({ color: T.v("text") }, this.bevel(T, "raised")) : {}) }, "Cancel"), h("span", { style: Object.assign(this.ctl(T, { h: 33, px: 15, fs: 13, w: T.ty.btnWeight, style: { background: T.ai[0], color: T.ai[1], boxShadow: T.sh.btn } }), win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : {}) }, "✦ Tailor"))));
+    return [this.S("ChoiceModal · cards rest/hover/selected/busy · rows rest/hover/on", modal)];
+  }
+  modalHeader(T) {
+    const win = !!T.st.bevel;
+    const mk = (variant) => h("div", { style: Object.assign({ width: 340, padding: variant === "compact" ? "15px 22px 12px" : "16px 22px 13px", borderBottom: T.bw.hair + " solid " + T.v("line"), display: "flex", alignItems: "flex-start", gap: 12, background: variant === "recessed" ? T.v("surface-2") : T.v("surface"), fontFamily: T.font, color: T.v("text"), borderRadius: T.r.modal + " " + T.r.modal + " 0 0" }, win ? { border: "none", borderBottom: T.st.dividerStyle } : {}) }, h("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 } }, h("span", { style: { fontFamily: T.display, fontSize: T.t(18), lineHeight: "27px", fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking } }, "Log application"), h("span", { style: { fontSize: T.t(11.5), lineHeight: "16px", color: T.v("muted"), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "Paste a posting URL or pick a saved job")), h("span", { style: Object.assign({ width: 26, height: 26, flex: "0 0 auto", borderRadius: T.r.control, display: "inline-flex", alignItems: "center", justifyContent: "center", color: T.v("muted"), fontSize: 13, cursor: "pointer" }, win ? Object.assign({ width: 16, height: 14, background: "#c0c0c0", color: "#000", fontSize: 9, fontWeight: 700 }, this.bevel(T, "raised")) : {}) }, "✕"));
+    return [this.S("modal · line", mk("modal")), this.S("recessed", mk("recessed"))];
+  }
+  select(T) {
+    const win = !!T.st.bevel;
+    const base = { width: 190, height: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "space-between", gap: 7, borderRadius: T.r.field, background: T.v("surface-2"), color: T.v("text"), fontFamily: T.font, fontSize: T.t(12.5), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.field, cursor: "pointer" };
+    if (win) Object.assign(base, this.bevel(T, "inset"));
+    const caret = h("span", { style: { fontSize: 9, color: T.v("muted") } }, "▾");
+    const mk = (extra, txt) => h("span", { style: Object.assign({}, base, extra) }, txt, caret);
+    this._selHover = win ? {} : { borderColor: T.st.inputBorderHover || T.v("line-strong") };
+    const menu = h("div", { style: { width: 190, padding: 5, display: "flex", flexDirection: "column", gap: 1, background: T.v("surface"), border: T.bw.panel + " solid " + T.v("line"), borderRadius: T.r.menu, boxShadow: T.sh.menu, fontFamily: T.font, fontSize: T.t(12.5) } },
+      ...[["Light — score only", false], ["Full — score + report", true], ["Off", false]].map(([l, on]) => h("div", { style: { padding: "7px 9px", borderRadius: T.r.field, background: on ? (win ? T.v("accent") : T.v("accent-soft")) : "transparent", color: on ? (win ? T.v("accent-ink") : T.v("accent")) : T.v("text-2"), fontWeight: on ? 500 : 400 } }, l)));
+    return [this.S("rest", mk({}, "Full — score + report")), this.S("hover", mk(this._selHover, "Full — score + report"), { p: true }), this.DASH("pressed"), this.S("open", h("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, mk({ borderColor: T.v("accent") }, "Full — score + report"), menu)), this.S("disabled", mk(win ? { color: T.st.disabledInk } : { opacity: .6 }, "Use Primary")), this.S("focus", mk(this.focusStyle(T), "Full — score + report")), this.DASH("loading")];
+  }
+  row(T) {
+    const win = !!T.st.bevel;
+    const mk = (extra, sel) => h("div", { style: Object.assign({ width: 230, height: 46, padding: "0 10px", display: "flex", alignItems: "center", gap: 10, borderRadius: T.r.row, borderBottom: T.bw.hair + " " + T.st.rowLineStyle + " " + T.v("line-soft"), color: T.v("text"), fontFamily: T.font, fontSize: T.t(13), cursor: "pointer" }, extra) },
+      h("span", { style: { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 } }, "Senior Backend Engineer"), h("span", { style: { fontFamily: T.mono, fontSize: T.t(10.5), color: sel && T.st.rowSelectedInk !== "inherit" ? T.st.rowSelectedInk : T.v("muted") } }, "2d"));
+    const selBg = T.dark && T.st.rowSelectedBgDark ? T.st.rowSelectedBgDark : T.st.rowSelectedBg;
+    return [this.S("rest", mk({})), this.S("hover", mk({ background: T.v("surface-2") })), this.DASH("pressed"), this.S("selected", mk({ background: selBg, color: T.st.rowSelectedInk === "inherit" ? T.v("text") : T.st.rowSelectedInk, boxShadow: T.st.rowSelectedEdge }, true), { p: T.id !== "editorial" }), this.DASH("disabled"), this.S("focus", mk(this.focusStyle(T))), this.DASH("loading")];
+  }
+  card(T, dashed) {
+    const win = !!T.st.bevel;
+    const mk = (extra, inter) => h("div", { style: Object.assign({ width: 200, padding: "10px 14px", borderRadius: T.r.card, background: dashed ? "transparent" : T.v("surface"), border: T.bw.panel + " " + (dashed ? "dashed" : "solid") + " " + T.v("line"), boxShadow: dashed ? "none" : T.sh.card, color: T.v("text"), fontFamily: T.font, fontSize: T.t(12.5), lineHeight: 1.45, cursor: inter ? "pointer" : "default" }, win ? this.bevel(T, dashed ? "inset" : "raised") : {}, win && dashed ? { border: "1px dashed #808080", boxShadow: "none" } : {}, extra) }, h("div", { style: { fontFamily: T.display, fontWeight: T.ty.titleWeight, fontSize: T.t(15.5), letterSpacing: "-.01em", marginBottom: 3 } }, dashed ? "+ Add experience" : "Fit report"), dashed ? null : h("div", { style: { color: T.v("text-2"), fontSize: T.t(11.5) } }, "Stack overlap 92% · scope 78%"));
+    return [this.S("rest", mk({})), this.S("hover", mk(win ? {} : { borderColor: T.v("accent"), background: dashed ? T.v("hover-soft") : T.v("hover-soft") }, true)), this.DASH("pressed"), this.DASH("on"), this.DASH("disabled"), this.S("focus", mk(this.focusStyle(T), true)), this.DASH("loading")];
+  }
+  menu(T) {
+    const win = !!T.st.bevel;
+    const item = (l, o = {}) => h("div", { style: { display: "flex", alignItems: "center", gap: 9, padding: "7px 11px", borderRadius: T.r.field, fontSize: T.t(12.5), color: o.danger ? T.v("bad") : o.on ? (win ? T.v("accent-ink") : T.v("accent")) : T.v("text-2"), background: o.hover ? T.v("surface-2") : o.on ? (win ? T.v("accent") : T.v("accent-soft")) : "transparent", fontWeight: o.on ? 500 : 400, borderTop: o.danger ? T.bw.hair + " solid " + T.v("line-soft") : "none", marginTop: o.danger ? 3 : 0, cursor: "pointer" } }, h("span", { style: { flex: "0 0 16px", textAlign: "center", fontSize: 11, color: o.on ? "inherit" : T.v("muted") } }, o.icon || ""), h("span", { style: { flex: 1 } }, l), o.hint ? h("span", { style: { fontSize: T.t(10.5), color: o.on ? "inherit" : T.v("muted") } }, o.hint) : null);
+    const node = h("div", { style: Object.assign({ width: 236, padding: 5, display: "flex", flexDirection: "column", gap: 1, background: T.v("surface"), border: T.bw.panel + " solid " + T.v("line"), borderRadius: T.r.menu, boxShadow: T.sh.menu, fontFamily: T.font, color: T.v("text") }, win ? this.bevel(T, "raised") : {}) },
+      h("div", { style: { padding: "4px 11px 3px", fontSize: T.t(9.5), letterSpacing: T.ty.labelTracking, textTransform: T.ty.labelCase, color: T.v("muted"), fontWeight: T.ty.labelWeight } }, "This letter"),
+      item("Edit search", { icon: "✎" }), item("View results in feed", { icon: "☰", hover: true }), item("Duplicate", { icon: "⧉", on: true, hint: "⌘D" }), item("Delete search", { icon: "✕", danger: true }));
+    return [this.S("rest · hover · on · danger", node)];
+  }
+  sectionHead(T) {
+    const mk = (open, hover) => h("div", { style: { display: "flex", alignItems: "center", gap: 6, height: 18, fontFamily: T.font, fontSize: T.t(12.5), color: hover ? T.v("text") : T.v("muted"), background: hover ? T.v("surface-2") : "transparent", padding: "0 4px", borderRadius: T.r.field, cursor: "pointer" } }, h("span", { style: { fontSize: 10, lineHeight: 1, color: T.v("muted") } }, open ? "⌄" : "›"), "Experience", h("span", { style: { fontSize: T.t(10.5), color: T.v("muted") } }, "3 roles"));
+    return [this.S("rest", mk(true)), this.S("hover", mk(true, true)), this.DASH("pressed"), this.S("closed", mk(false)), this.DASH("disabled"), this.S("focus", h("div", { style: this.focusStyle(T) }, mk(true))), this.DASH("loading")];
+  }
+  chip(T) {
+    const win = !!T.st.bevel;
+    const mk = (extra, txt) => h("span", { style: Object.assign({ display: "inline-flex", alignItems: "center", gap: 6, height: 26, padding: "0 10px", borderRadius: T.r.control, background: T.v("bg"), color: T.v("text-2"), border: T.bw.hair + " solid " + T.v("line"), fontFamily: T.font, fontSize: T.t(11.5), lineHeight: 1, whiteSpace: "nowrap", cursor: "pointer" }, win ? { background: T.v("surface-2"), border: "1px solid #808080" } : {}, extra) }, txt || "Kubernetes", h("span", { style: { color: T.v("muted"), fontSize: 11 } }, "×"));
+    return [this.S("rest", mk({})), this.S("hover", mk(win ? {} : { borderColor: T.v("accent"), background: T.v("surface"), color: T.v("good"), boxShadow: "0 0 0 2px " + T.v("ring-accent") })), this.S("pressed", mk({ transform: T.st.pressedShift, background: T.st.pressedWash }), { p: true }), this.S("on", mk(T.st.chipOnBg === "var(--accent)" ? { background: T.v("accent"), color: T.v("accent-ink"), borderColor: T.v("accent") } : { background: T.v("accent-soft"), color: T.v("accent"), borderColor: T.v("accent") }), { p: true, title: "on · " + (T.dark ? "dark" : "light") + " — value emitted per mode from --chip-on-*" }), this.S("disabled", mk(this.disabledStyle(T))), this.S("focus", mk(this.focusStyle(T))), this.DASH("loading")];
+  }
+  tag(T) {
+    const mk = (bg, fg, txt) => h("span", { style: { display: "inline-flex", padding: "2px 8px", borderRadius: T.r.control, background: bg, color: fg, fontFamily: T.font, fontSize: T.t(10), lineHeight: "15px", letterSpacing: T.ty.labelTracking === "0" ? "0" : ".06em", textTransform: T.ty.labelCase, fontWeight: T.ty.labelWeight, whiteSpace: "nowrap" } }, txt);
+    return [this.S("neutral", mk(T.v("surface-2"), T.v("text-2"), "Career")), this.S("accent", mk(T.v("accent-soft"), T.v("accent"), "New")), this.S("good", mk(T.v("accent-soft"), T.v("good"), "H-1B likely")), this.S("warn", mk(T.v("warn-soft"), T.v("warn"), "Stale")), this.S("bad", mk(T.v("bad-soft"), T.v("bad"), "Rejected")), this.S("cc-* (not skinned)", mk("#e6efe7", "#2f6b4a", "Greenhouse"))];
+  }
+  dot(T) { const mk = (c) => h("span", { style: { width: 7, height: 7, borderRadius: T.r.control === "0" ? 0 : 99, background: c, display: "inline-block" } }); return [this.S("neutral", mk(T.v("muted"))), this.S("accent", mk(T.v("accent"))), this.S("good", mk(T.v("good"))), this.S("warn", mk(T.v("warn"))), this.S("bad", mk(T.v("bad")))]; }
+  check(T, round) {
+    const win = !!T.st.bevel;
+    const box = (on, extra) => h("span", { style: Object.assign({ width: 14, height: 14, borderRadius: round ? T.r.control : T.r.inline, border: on && !win ? "none" : T.bw.hair + " solid " + T.v("edge"), background: on ? (win ? T.v("surface-2") : T.v("accent")) : (win ? T.v("surface-2") : "transparent"), color: win ? T.v("text") : T.v("accent-ink"), display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, lineHeight: 1 }, win ? this.bevel(T, "inset") : {}, extra) }, on ? (round ? "●" : "✓") : "");
+    const mk = (on, extra, lbl) => h("span", { style: Object.assign({ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: T.font, fontSize: T.t(12), color: T.v("text-2"), cursor: "pointer" }, extra) }, box(on, {}), lbl || "Skip active companies");
+    return [this.S("rest", mk(false)), this.S("hover", mk(false, {}, "Skip active companies")), this.DASH("pressed"), this.S("on", mk(true)), this.S("disabled", mk(true, this.disabledStyle(T))), this.S("focus", h("span", { style: { display: "inline-flex", alignItems: "center", gap: 7, fontFamily: T.font, fontSize: T.t(12), color: T.v("text-2") } }, box(false, this.focusStyle(T)), "Require salary")), this.DASH("loading")];
+  }
+  sw(T) {
+    const win = !!T.st.bevel;
+    const mk = (on, extra) => h("span", { style: Object.assign({ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: T.font, fontSize: T.t(11.5), color: T.v("muted") }, extra) }, "Telegram", h("span", { style: Object.assign({ width: 26, height: 15, borderRadius: T.r.control === "0" ? 0 : 99, background: on ? T.v("accent") : T.v("line-strong"), position: "relative", display: "inline-block" }, win ? this.bevel(T, "inset") : {}) }, h("span", { style: { position: "absolute", top: win ? 0 : 2, left: on ? (win ? 11 : 13) : (win ? 0 : 2), width: 11, height: 11, borderRadius: T.r.control === "0" ? 0 : 99, background: on ? T.v("surface-2") : "#fff", boxShadow: win ? "none" : "0 1px 2px rgba(0,0,0,.2)" } })));
+    return [this.S("off", mk(false)), this.DASH("hover"), this.DASH("pressed"), this.S("on", mk(true)), this.S("disabled", mk(true, this.disabledStyle(T))), this.S("focus", mk(false, {})), this.DASH("loading")];
+  }
+  segmented(T) {
+    const win = !!T.st.bevel;
+    const cell = (l, on, bad) => h("span", { style: Object.assign({ flex: 1, height: 33, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: T.r.cell, border: T.bw.control + " solid " + (on ? (bad ? T.v("bad") : T.v("accent")) : T.v("edge")), background: on ? (bad ? T.v("bad-soft") : T.v("accent-soft")) : T.v("surface"), color: on ? (bad ? T.v("bad") : T.v("accent")) : T.v("text-2"), fontWeight: on ? 600 : 400, fontFamily: T.font, fontSize: T.t(12), lineHeight: 1, boxShadow: on ? T.sh.segOn : "none", cursor: "pointer" }, win ? Object.assign({ background: on ? T.v("surface-2") : T.v("surface"), color: T.v("text") }, this.bevel(T, on ? "inset" : "raised")) : {}) }, h("span", { style: { width: 7, height: 7, borderRadius: T.r.control === "0" ? 0 : 99, background: bad ? T.v("bad") : on ? T.v("accent") : T.v("line-strong") } }), l);
+    const group = h("div", { style: { width: 300, display: "flex", gap: 5 } }, cell("Applied", false), cell("Interview", true), cell("Offer", false), cell("Rejected", false, false));
+    const inset = h("div", { style: Object.assign({ display: "inline-flex", padding: 2, gap: 2, background: T.v("surface"), border: T.bw.hair + " solid " + T.v("edge"), borderRadius: T.r.control }, win ? this.bevel(T, "inset") : {}) }, ...[["Live", true], ["Cached", false]].map(([l, on]) => h("span", { style: { height: 18, padding: "0 10px", display: "inline-flex", alignItems: "center", borderRadius: T.r.control, background: on ? (win ? T.v("accent") : T.v("accent-soft")) : "transparent", color: on ? (win ? T.v("accent-ink") : T.v("accent")) : T.v("muted"), fontSize: T.t(11), fontFamily: T.font } }, l)));
+    return [this.S("group · picked", group), this.S("inset", inset), this.S("bad", h("div", { style: { width: 90 } }, cell("Rejected", true, true)))];
+  }
+  meter(T) { const mk = (v, tone, hgt) => h("span", { style: { width: 120, height: hgt, borderRadius: hgt >= 12 ? T.r.mini : T.r.control, background: T.v("line"), display: "inline-block", overflow: "hidden" } }, h("span", { style: { display: "block", width: v + "%", height: "100%", background: T.v(tone), borderRadius: "inherit" } })); return [this.S("accent 4px", mk(72, "accent", 4)), this.S("good", mk(88, "good", 4)), this.S("warn", mk(52, "warn", 4)), this.S("bad", mk(23, "bad", 4)), this.S("funnel 22px", mk(64, "stage-applied", 22))]; }
+  ring(T) {
+    const tone = (s) => s == null ? "muted" : s >= 70 ? "good" : s >= 50 ? "warn" : "bad";
+    const v = T.sk.ring.variant;
+    const mkRing = (s, box, busy) => { const r = 35, c = 2 * Math.PI * r, vb = box === 34 ? 78 : 88, cx = vb / 2; const col = T.v(tone(s));
+      return h("span", { style: { position: "relative", width: box, height: box, display: "inline-block" } }, h("svg", { viewBox: "0 0 " + vb + " " + vb, style: { width: box, height: box, transform: "rotate(-90deg)", animation: busy ? "v2-spin .9s linear infinite" : "none" } }, h("circle", { cx, cy: cx, r, fill: "none", stroke: T.v("track"), strokeWidth: 5 }), h("circle", { cx, cy: cx, r, fill: "none", stroke: busy ? T.v("accent") : col, strokeWidth: 5, strokeLinecap: "round", strokeDasharray: busy ? (c / 4).toFixed(1) + " " + c.toFixed(0) : (c * (s || 0) / 100).toFixed(1) + " " + c.toFixed(0) })), busy ? null : h("span", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.display, fontSize: box === 34 ? T.t(14) : T.t(19), color: col, lineHeight: 1, letterSpacing: box === 34 ? "-.02em" : 0 } }, s)); };
+    const unscored = h("span", { style: { width: 44, height: 44, borderRadius: T.r.control, border: "1px dashed " + T.v("edge"), display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: T.font, fontSize: T.t(9.5), letterSpacing: ".1em", textTransform: "uppercase", color: T.v("muted") } }, "No fit");
+    if (v === "ring") return [this.S("sm 87", mkRing(87, 34)), this.S("md 64", mkRing(64, 44)), this.S("md 41", mkRing(41, 44)), this.S("unscored", unscored), this.S("busy", mkRing(null, 44, true))];
+    if (v === "pill") { const mk = (s) => { const k = s == null ? "none" : s >= 70 ? "hi" : s >= 50 ? "mid" : "lo"; const [bg, fg] = T.sc[k]; return h("span", { style: { width: 40, height: 44, borderRadius: 6, background: bg, color: fg, display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: T.mono, fontWeight: 600, fontSize: 14, lineHeight: 1, letterSpacing: "-.01em" } }, s == null ? "—" : s, h("span", { style: { fontFamily: T.font, fontSize: 8.5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", opacity: .7, marginTop: 2 } }, "fit")); };
+      return [this.S("hi 87", mk(87)), this.S("mid 64", mk(64)), this.S("lo 41", mk(41)), this.S("none", mk(null)), this.S("busy", h("span", { style: { width: 40, height: 44, borderRadius: 6, background: T.sc.none[0], display: "inline-flex", alignItems: "center", justifyContent: "center" } }, this.spinner(T, 12, T.v("accent"))))]; }
+    if (v === "bar") { const mk = (s) => { const col = T.v(tone(s)); return h("span", { style: { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 4, width: 40 } }, h("span", { style: { fontFamily: T.mono, fontWeight: 600, fontSize: 16, lineHeight: 1, color: col, fontVariantNumeric: "tabular-nums" } }, s == null ? "—" : s), h("span", { style: { width: 32, height: 3, borderRadius: 2, background: T.v("line"), overflow: "hidden", display: "block" } }, h("span", { style: { display: "block", width: (s || 0) + "%", height: "100%", background: col } }))); };
+      return [this.S("87", mk(87)), this.S("64", mk(64)), this.S("41", mk(41)), this.S("unscored", mk(null)), this.S("busy", h("span", { style: { width: 40, display: "inline-flex", justifyContent: "center" } }, this.spinner(T, 12, T.v("accent"))))]; }
+    const mk = (s) => { const col = T.v(tone(s)); const n = s == null ? 0 : Math.round(s / 10); return h("span", { style: { display: "inline-flex", flexDirection: "column", gap: 2, fontFamily: T.mono, color: col, lineHeight: 1 } }, h("span", { style: { fontSize: 13, fontWeight: 700 } }, s == null ? "--" : s), h("span", { style: { fontSize: 9, letterSpacing: "-.02em" } }, "[" + "█".repeat(n) + "░".repeat(10 - n) + "]")); };
+    return [this.S("87", mk(87)), this.S("64", mk(64)), this.S("41", mk(41)), this.S("unscored", mk(null)), this.S("busy", h("span", { style: { fontFamily: T.mono, fontSize: 9, color: T.v("muted") } }, "[..........]"))];
+  }
+  toasts(T) {
+    const win = !!T.st.bevel;
+    const mk = (kind) => { const paint = { progress: [T.v("recessed"), T.v("line"), T.v("text-2")], success: [T.v("toast-ok-bg"), T.v("toast-ok-line"), T.v("toast-ok-ink")], error: [T.v("toast-bad-bg"), T.v("toast-bad-line"), T.v("toast-bad-ink")], undo: [T.v("rail"), T.v("rail"), T.v("rail-ink")] }[kind]; const msg = { progress: "Tailoring for Senior SWE at Plaid…", success: "Tailored for Senior SWE at Plaid", error: "Scoring failed for Backend Engineer", undo: "Skipped “Senior Go Engineer”" }[kind];
+      return h("div", { style: Object.assign({ display: "flex", alignItems: "center", gap: 10, maxWidth: 300, padding: "10px 13px", background: paint[0], border: T.bw.panel + " solid " + paint[1], color: paint[2], borderRadius: T.r.card, boxShadow: T.sh.toast, fontFamily: T.font, fontSize: 12.5, lineHeight: 1.45 }, win ? this.bevel(T, "raised") : {}, win && kind === "undo" ? { background: T.v("accent"), color: T.v("accent-ink") } : {}) },
+        kind === "progress" ? this.spinner(T, 11, paint[2]) : kind === "undo" ? null : h("span", { style: { width: 16, height: 16, borderRadius: T.r.control === "0" ? 0 : 99, background: kind === "success" ? T.v("accent") : T.v("bad"), color: T.v("accent-ink"), display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, flex: "0 0 auto" } }, kind === "success" ? "✓" : "!"),
+        h("span", { style: { minWidth: 0 } }, msg), kind === "undo" ? h("span", { style: { fontWeight: 600, borderBottom: "1px dotted currentColor", color: win ? T.v("accent-ink") : T.v("rail-accent"), fontSize: 12 } }, "Undo") : kind === "error" ? h("span", { style: { fontWeight: 600, borderBottom: "1px dotted currentColor", fontSize: 12 } }, "Retry") : null, h("span", { style: { opacity: .55, fontSize: 11 } }, "✕")); };
+    return [this.S("progress", mk("progress")), this.S("success", mk("success")), this.S("error", mk("error")), this.S("undo", mk("undo"))];
+  }
+  dialog(T) {
+    const win = !!T.st.bevel; const bar = T.st.titleBar ? T.st.titleBar[T.dark ? "dark" : "light"] : null;
+    const btn = (variant, txt) => this.button(T, variant, "sm")[0].node && h("span", { style: Object.assign(this.ctl(T, { h: 33, px: 15, fs: 13, w: T.ty.btnWeight, style: variant === "danger" ? { background: T.v("bad"), color: T.v("accent-ink"), boxShadow: T.sh.btn } : { background: T.v("surface"), color: T.v("text-2"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill } }), win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : {}) }, txt);
+    const node = h("div", { style: Object.assign({ width: 340, background: T.v("surface"), border: T.bw.panel + " solid " + T.v("line"), borderRadius: T.r.modal, boxShadow: T.sh.modal, fontFamily: T.font, color: T.v("text"), overflow: "hidden" }, win ? this.bevel(T, "raised") : {}) },
+      bar ? h("div", { style: { height: 22, padding: "0 6px", display: "flex", alignItems: "center", background: "linear-gradient(90deg," + bar[0] + "," + bar[1] + ")", color: "#fff", fontSize: 12, fontWeight: 700 } }, "Delete search", h("span", { style: { marginLeft: "auto", display: "flex", gap: 2 } }, ...["_", "□", "×"].map(g => h("span", { style: Object.assign({ width: 16, height: 14, background: "#c0c0c0", color: "#000", fontSize: 9, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: T.mono }, this.bevel(T, "raised")) }, g)))) : null,
+      h("div", { style: { padding: bar ? "14px 16px 4px" : "22px 24px 18px", display: "flex", flexDirection: "column", gap: 8 } }, bar ? null : h("span", { style: { fontFamily: T.display, fontSize: T.t(19), fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking, lineHeight: "26px" } }, "Delete search?"), h("span", { style: { fontSize: 12.5, lineHeight: "18px", color: T.v("muted") } }, "“Levels.fyi backend $180K+” and its 14 unsaved results go away. Saved jobs stay."), h("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10, paddingBottom: bar ? 12 : 0 } }, btn("secondary", "Cancel"), btn("danger", "Delete"))));
+    return [this.S("ConfirmDialog · danger", node)];
+  }
+  textRoles(T) {
+    const L = (txt) => h("span", { style: { fontFamily: T.font, fontSize: T.t(10), lineHeight: "15px", letterSpacing: T.ty.labelTracking, textTransform: T.ty.labelCase, fontWeight: T.ty.labelWeight, color: T.v("muted") } }, txt);
+    return [this.S("Label", L("Auto-scoring")), this.S("Helper", h("span", { style: { fontFamily: T.font, fontSize: T.t(11.5), lineHeight: "16px", color: T.v("muted") } }, "0 follows the global schedule")), this.S("Mono", h("span", { style: { fontFamily: T.mono, fontSize: T.t(11), color: T.v("text-2") } }, "0 3 * * *")), this.S("Heading 18", h("span", { style: { fontFamily: T.display, fontSize: T.t(18), lineHeight: "27px", fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking, color: T.v("text") } }, "Application funnel")), this.S("Heading strong 15.5", h("span", { style: { fontFamily: T.display, fontSize: T.t(15.5), lineHeight: "23px", fontWeight: Math.max(500, T.ty.titleWeight), letterSpacing: "-.01em", color: T.v("text") } }, "Fit report")), this.S("PageTitle 30", h("span", { style: { fontFamily: T.display, fontSize: T.id === "win98" ? 12 : T.t(30), lineHeight: 1, fontWeight: T.ty.titleWeight, letterSpacing: T.ty.displayTracking, color: T.v("text") } }, T.id === "win98" ? "Jobs — JobNavigator (title bar 12px)" : "Jobs"))];
+  }
+  tableRows(T) {
+    const head = h("div", { style: { width: 300, height: 28, padding: "0 12px", display: "flex", alignItems: "center", background: T.v("bg") === "#008080" || T.v("bg") === "#1f2b3a" ? T.v("surface") : T.v("bg"), color: T.v("muted"), fontFamily: T.font, fontSize: T.t(9.5), letterSpacing: T.ty.labelTracking === "0" ? "0" : ".11em", textTransform: T.ty.labelCase, fontWeight: T.ty.labelWeight, borderBottom: T.bw.hair + " solid " + T.v("line-strong") } }, h("span", { style: { flex: 1 } }, "Company"), h("span", { style: { flex: "0 0 60px" } }, "Health"), h("span", { style: { flex: "0 0 50px", textAlign: "right" } }, "Yield"));
+    const body = (sel) => h("div", { style: { width: 300, height: 34, padding: "0 12px", display: "flex", alignItems: "center", background: sel ? (T.dark && T.st.rowSelectedBgDark ? T.st.rowSelectedBgDark : T.st.rowSelectedBg) : "transparent", color: sel && T.st.rowSelectedInk !== "inherit" ? T.st.rowSelectedInk : T.v("text"), boxShadow: sel ? T.st.rowSelectedEdge : "none", fontFamily: T.font, fontSize: T.t(12.5), borderBottom: T.bw.hair + " " + T.st.rowLineStyle + " " + T.v("line-soft") } }, h("span", { style: { flex: 1, fontWeight: 500 } }, "Databricks"), h("span", { style: { flex: "0 0 60px", display: "flex", alignItems: "center", gap: 5, fontSize: T.t(11.5), color: sel && T.st.rowSelectedInk !== "inherit" ? "inherit" : T.v("text-2") } }, h("span", { style: { width: 7, height: 7, borderRadius: T.r.control === "0" ? 0 : 99, background: T.v("good") } }), "OK"), h("span", { style: { flex: "0 0 50px", textAlign: "right", fontFamily: T.mono, fontSize: T.t(11), color: sel && T.st.rowSelectedInk !== "inherit" ? "inherit" : T.v("text-2") } }, "+14"));
+    return [this.S("TableHead 28 + TableRow 34", h("div", { style: { display: "flex", flexDirection: "column" } }, head, body(false), body(true)))];
+  }
+  footerRow(T) {
+    const win = !!T.st.bevel;
+    const btn = (primary, txt) => h("span", { style: Object.assign(this.ctl(T, { h: 33, px: 15, fs: 13, w: T.ty.btnWeight, style: primary ? { background: T.v("accent"), color: T.v("accent-ink"), boxShadow: T.sh.btn } : { background: T.v("surface"), color: T.v("text-2"), border: T.bw.control + " solid " + T.v("edge"), boxShadow: T.sh.pill } }), win ? Object.assign({ background: T.v("surface"), color: T.v("text") }, this.bevel(T, "raised")) : {}) }, txt);
+    return [this.S("modal footer · rule on top", h("div", { style: { width: 340, padding: "12px 22px", display: "flex", alignItems: "center", gap: 9, borderTop: T.st.dividerStyle, background: win ? T.v("surface") : T.v("bg") === "#008080" ? T.v("surface") : T.v("bg"), fontFamily: T.font } }, h("span", { style: { fontSize: T.t(11.5), color: T.v("muted") } }, "Saves on close"), h("span", { style: { marginLeft: "auto", display: "flex", gap: 8 } }, btn(false, "Cancel"), btn(true, "Save changes"))))];
+  }
+  toolbarTrigger(T) {
+    const win = !!T.st.bevel;
+    const mk = (extra) => h("span", { style: Object.assign({ height: 24, padding: "0 8px", display: "inline-flex", alignItems: "center", gap: 6, borderRadius: T.r.field, border: T.bw.control + " solid " + T.v("edge"), background: T.v("surface"), color: T.v("text-2"), fontFamily: T.font, fontSize: T.t(11.5), lineHeight: 1, cursor: "pointer", boxShadow: T.sh.pill }, win ? Object.assign({ color: T.v("text") }, this.bevel(T, "raised")) : {}, extra) }, "Letter", h("span", { style: { fontSize: 9, color: T.v("muted") } }, "▾"));
+    return [this.S("rest", mk({})), this.S("hover", mk(win ? {} : { borderColor: T.st.inputBorderHover || T.v("line-strong") }), { p: true }), this.S("pressed", mk(win ? this.bevel(T, "inset") : { background: T.st.pressedWash }), { p: true }), this.S("open", mk({ borderColor: T.v("accent") })), this.S("disabled", mk(this.disabledStyle(T))), this.S("focus", mk(this.focusStyle(T))), this.DASH("loading")];
+  }
+  glyphBadge(T) {
+    const mk = (size, bg, fg, g, bd) => h("span", { style: { width: size, height: size, borderRadius: T.r.control === "0" ? 0 : 99, background: bg, color: fg, border: bd ? T.bw.hair + " solid " + bd : "none", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * .58), lineHeight: 1, fontFamily: T.font } }, g);
+    return [this.S("15 ✓ filled", mk(15, T.v("accent"), T.v("accent-ink"), "✓")), this.S("16 ! bad", mk(16, T.v("bad"), T.v("accent-ink"), "!")), this.S("22 ✦ ai", mk(22, T.ai[0], T.ai[1], "✦")), this.S("22 i bordered", mk(22, "transparent", T.v("muted"), "i", T.v("edge"))), this.S("34 JN", mk(34, T.v("rail"), T.v("rail-ink"), "JN"))];
+  }
+  railItem(T) {
+    const rail = T.v("rail"), ink = T.v("rail-text");
+    const mk = (active, hover) => h("div", { style: { width: 186, background: rail, padding: "6px 0" } }, h("div", { style: { display: "flex", alignItems: "center", height: 32, margin: T.st.railItemInset, padding: T.st.railItemInset === "0" ? "0 22px" : "0 12px", borderRadius: T.r.railItem, background: active ? T.st.railActiveBg : hover ? "rgba(255,255,255,.06)" : "transparent", color: active ? T.st.railActiveInk : ink, borderLeft: active ? T.st.railActiveMark : "2px solid transparent", fontFamily: T.font, fontSize: T.t(14), fontWeight: active && T.id !== "editorial" ? 600 : 400, boxShadow: T.id === "win98" && active ? "none" : "none" } }, "Searches", h("span", { style: { marginLeft: "auto", fontFamily: T.mono, fontSize: T.t(11), color: active ? (T.id === "editorial" ? T.v("rail-accent") : "inherit") : T.v("rail-dim"), opacity: active && T.id !== "editorial" ? .8 : 1 } }, "7")));
+    return [this.S("rest", mk(false)), this.S("hover", mk(false, true)), this.DASH("pressed"), this.S("active", mk(true), { p: T.id !== "editorial" }), this.DASH("disabled"), this.DASH("focus"), this.DASH("loading")];
+  }
+  aiButton(T) { return T.sk.ai ? this.button(T, "ai") : [this.S("= primary", this.button(T, "primary")[0].node, { title: "No --ai in this skin: falls back to --accent" })]; }
+  notice(T) {
+    const win = !!T.st.bevel;
+    const node = h("div", { style: Object.assign({ width: 320, display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", border: T.bw.hair + " solid " + T.v("warn-line"), borderRadius: T.r.cell, background: T.v("warn-soft"), color: T.v("warn"), fontFamily: T.font, fontSize: T.t(12), lineHeight: 1.5 }, win ? { border: "1px solid #808000" } : {}) }, h("span", { style: { fontWeight: 700, flex: "0 0 auto" } }, "ATS"), h("span", { style: { flex: 1 } }, "Mirror “ledger reconciliation” — used 4× in the posting, 0× in your résumé."), h("span", { style: { fontWeight: 600, color: T.ai[0], whiteSpace: "nowrap", cursor: "pointer" } }, "✦ Tailor"));
+    return [this.S("warn · with CTA", node, { p: true })];
+  }
+
+  renderVals() {
+    const S = this.state;
+    const modes = ["light", "dark"].map(id => ({ label: id === "light" ? "Light" : "Dark", weight: S.mode === id ? "600" : "400", bd: S.mode === id ? "#3f6b52" : "#8a826e", bg: S.mode === id ? "#eaf1eb" : "#fff", fg: S.mode === id ? "#3f6b52" : "#57534a", pick: () => this.setState({ mode: id }) }));
+    if (!S.skins) return { modes, skinHeads: ORDER.map(id => ({ label: id, meta: "loading…" })), rows: [] };
+    const themes = ORDER.map(id => this.theme(id));
+    const PRIMS = [
+      ["Button primary", "36/33/28 · --btn-primary-*", T => this.button(T, "primary")],
+      ["Button secondary", "--btn-secondary-* · hover v2-bdc", T => this.button(T, "secondary")],
+      ["Button ghost", "--btn-ghost-ink · hover wash", T => this.button(T, "ghost")],
+      ["Button danger", "--btn-danger-*", T => this.button(T, "danger")],
+      ["Button variant=ai", "LLM actions · --ai/--ai-ink (Cobalt violet; others = accent)", T => this.aiButton(T), true],
+      ["Pill", "31/26 · --pill-*", T => this.pill(T)],
+      ["PillXs", "25px · the Run/Test pill drawn by hand at 7 sites", T => this.pill(T, "xs"), true],
+      ["IconButton 36", "bordered ⋯ · --pill-*", T => this.iconButton(T, 36)],
+      ["IconButton 26", "bare glyph · --icon-btn-ink", T => this.iconButton(T, 26)],
+      ["ToolbarTrigger", "24px · PDF-toolbar picker at 4 sites", T => this.toolbarTrigger(T), true],
+      ["Input", "32 · --input-* · error state = U-06", T => this.input(T)],
+      ["SearchInput", "boxed 32 · --search-* · + underline 36", T => this.input(T, { w: 226, search: true })],
+      ["Select", "trigger 32 + listbox --menu-*", T => this.select(T)],
+      ["Row", "46 · --row-selected / --row-hover · selection model differs per skin", T => this.row(T)],
+      ["TableHead + TableRow", "28 head · 32/34/38 body rows drawn by hand at 7 sites", T => this.tableRows(T), true],
+      ["Card", "--card-* · hover only when interactive", T => this.card(T, false)],
+      ["Band / DashedAdd", "dashed --band-border · --dashadd-*", T => this.card(T, true)],
+      ["Menu · MenuHead · MenuItem", "--menu-* · danger divider", T => this.menu(T)],
+      ["SectionHead", "18px · caret --t-10", T => this.sectionHead(T)],
+      ["Chip", "26 · --chip-* · on-state = proposal", T => this.chip(T)],
+      ["Tag", "--tag-{tone}-* · cc-* excluded from skins", T => this.tag(T)],
+      ["Dot", "7px --dot-*", T => this.dot(T)],
+      ["Check", "14 · --check-*", T => this.check(T, false)],
+      ["Radio", "14 round · --check-*", T => this.check(T, true)],
+      ["Switch", "26×15 · --switch-*", T => this.sw(T)],
+      ["Segmented", "33 cells --seg-* · inset 22 · bad", T => this.segmented(T)],
+      ["Meter", "--meter-* · 4px / 22px funnel", T => this.meter(T)],
+      ["ScoreRing", "variant per skin: ring · bar · pill · ascii", T => this.ring(T)],
+      ["ToastCard", "progress · success · error · undo", T => this.toasts(T)],
+      ["ConfirmDialog", "400 · Heading 19 · Cancel → danger", T => this.dialog(T)],
+      ["ModalPanel header (HeaderRow)", "title · subtitle · close × · line/recessed", T => this.modalHeader(T)],
+      ["ChoiceModal · ChoiceCard · ChoiceRow", "Tailor / Re-tailor / Persona import composition", T => this.choice(T)],
+      ["Drawer", "pane-relative · --shadow-drawer · scrim z29 / panel z30", T => this.drawer(T)],
+      ["Link", "11.5/500 accent · hover = proposal · quiet inline = proposal", T => this.link(T)],
+      ["RemoveX · RemoveLink · MoveArrows", "glyph controls · 24px hit box = U-11", T => this.glyphControls(T)],
+      ["FooterRow", "mirror of HeaderRow · rule on top · 11 hand-drawn sites", T => this.footerRow(T), true],
+      ["Label · Helper · Mono · Heading · PageTitle", "text roles · Mono is new", T => this.textRoles(T), true],
+      ["GlyphBadge", "15/16/22/34 round glyph boxes · 9 hand-drawn sites", T => this.glyphBadge(T), true],
+      ["Notice", "ATS / warn notice with CTA · new", T => this.notice(T), true],
+      ["NavLink (rail item)", "active model: bar · filled tile · navy", T => this.railItem(T)]
+    ];
+    return {
+      modes,
+      skinHeads: themes.map(T => ({ label: T.sk.label, meta: T.font.split(",")[0].replace(/'/g, "") + " · r-control " + T.r.control + " · bw " + T.bw.control })),
+      rows: PRIMS.map(([name, desc, fn, isNew]) => ({
+        name, desc, newDisplay: isNew ? "inline" : "none",
+        cells: themes.map(T => {
+          const states = fn(T);
+          const note = { ScoreRing: T.sk.ring.note || "", Row: T.id === "cobalt" ? "selected = #eef3fe + inset 3px accent edge, radius 0" : T.id === "saas" ? "selected = --accent-soft wash (S6: semantic re-point)" : T.id === "win98" ? "selected = navy --accent with --accent-ink (W12)" : "" }[name.split(" ")[0]] || "";
+          return { states, note, noteDisplay: note ? "block" : "none", bg: T.v("bg") === "#008080" || T.v("bg") === "#1f2b3a" ? T.v("surface") : T.v("bg"), fg: T.v("text"), muted: T.v("muted"), font: T.font };
+        })
+      }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+/* theme-skins.css — generated from skins.js + skins-palette.json (theme.css @539da1e).
+   Drop-in replacement for the three board-skin blocks in theme.css, PLUS the geometry/state
+   layer the recorded decision now allows a skin to carry (radius · shadow · border-width ·
+   type scale · control weight/tracking · selection model · U-01…U-22 proposals).
+
+   Contract (extends D6): every [data-skin] block declares the IDENTICAL set of names — the
+   60 palette names + the 10 radii + 5 shadows + 5 control shadows + 3 border widths +
+   20 type stops + the state/geometry names below. Light and dark blocks weigh (0,2,0)
+   equally, so a name set in one and forgotten in the other leaks. The generator emits both
+   from one object, which is the whole point.
+
+   NEW semantic names (defaults in the base .jn-v2 block = today's paint, so no visual change
+   until a skin overrides them):
+     --bw-hair --bw-control --bw-panel                       U-22
+     --btn-shadow --pill-shadow --field-shadow --card-shadow --seg-on-shadow
+     --btn-weight --title-weight --label-weight --label-tracking --label-case --display-tracking
+     --btn-primary-hover-bg --btn-primary-pressed-bg --btn-danger-hover-bg   U-01/U-02
+     --pressed-shift --pressed-wash                          U-01
+     --motion-fast --motion-mid --ease                       U-03
+     --disabled-opacity --disabled-ink --disabled-engrave    U-05
+     --input-border-error --input-ring-error --input-border-hover   U-06 (+ field hover)
+     --pill-on-bg --pill-on-ink --pill-on-border --pill-on-hover-bg --chip-on-bg --chip-on-ink --chip-on-border   Pill/Chip on-state, emitted per mode
+     --row-selected-ink --row-selected-edge --row-line-style --divider
+     --rail-active-bg --rail-active-ink --rail-active-mark --rail-item-inset --radius-rail-item
+     --bevel-raised-border --bevel-raised-color --bevel-raised-shadow (+ -inset-)   win98 only, 'none' elsewhere
+     --ai --ai-ink                                           Button variant="ai"
+     --sc-hi-bg --sc-hi --sc-mid-bg --sc-mid --sc-lo-bg --sc-lo --sc-none-bg --sc-none   ScoreRing variant="pill"
+     --ring-variant                                          ring | bar | pill | ascii (read by ScoreRing)
+*/
+
+/* ── base additions: paste into BOTH .jn-v2 and .jn-v2[data-theme="dark"] ── */
+.jn-v2, .jn-v2[data-theme="dark"] {
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px; --radius-menu:10px; --radius-modal:12px; --radius-control:99px; --radius-rail-item:0;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 18px 50px rgba(0,0,0,.28); --shadow-menu:0 12px 32px rgba(0,0,0,.16); --shadow-pop:0 10px 30px rgba(0,0,0,.28); --shadow-toast:0 8px 24px rgba(20,19,15,.18); --shadow-drawer:-14px 0 40px rgba(0,0,0,.14);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:500; --title-weight:400; --label-weight:400; --label-tracking:.13em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black); --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
+  --row-selected:var(--surface-2); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink); --rail-active-mark:2px solid var(--rail-accent); --rail-item-inset:0;
+  --focus-ring:0 0 0 2px var(--focus-ring); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ring;
+  --input-border-hover:var(--line-strong); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+}
+
+.jn-v2[data-skin="saas"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#f9fafb; --surface:#ffffff; --surface-2:#f3f4f6; --line:#e5e7eb; --line-soft:#f3f4f6; --line-strong:#9ca3af; --edge:#d1d5db; --track:#e5e7eb; --text:#111827; --text-2:#4b5563; --muted:#6b7280; --ink-2:#1f2937; --accent:#1d4ed8; --accent-ink:#ffffff; --accent-soft:#eff6ff; --good:#15803d; --warn:#b45309; --warn-soft:#fffbeb; --warn-line:#dda85c; --bad:#b91c1c; --bad-soft:#fef2f2; --bad-faint:#fef7f7; --change-soft:#bbf7d0; --change-bg:#f7fdf9; --hover-soft:#f5f8ff; --ring-accent:rgba(29,78,216,.22); --scrim:rgba(17,24,39,.46); --recessed:#fbfcfd; --stage-applied:#155e75; --stage-interview:#b45309; --stage-offer:#15803d; --stage-rejected:#b91c1c; --stage-new:#9ca3af; --series-new:#b8801f; --amber-bg:#fffbeb; --amber-line:#d9b675; --amber-line-soft:#f0e2bd; --amber-hover:#fdf6e3; --sand:#cbd5e1; --gold:#c08a2e; --funnel-low:#93b4f0; --funnel-mid:#3b6ad4; --toast-ok-bg:#ecfdf5; --toast-ok-line:#86c9a4; --toast-ok-ink:#15803d; --toast-bad-bg:#fef2f2; --toast-bad-line:#e2a3a3; --toast-bad-ink:#a01818; --rail:#0f172a; --rail-text:#cbd5e1; --rail-dim:#94a3b8; --rail-accent:#93c5fd; --rail-line:#1e293b; --rail-ink:#ffffff; --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
+  --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:var(--accent-soft); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:var(--accent); --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-ring:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:bar;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+}
+.jn-v2[data-skin="saas"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#111827; --surface:#1f2937; --surface-2:#273244; --line:#374151; --line-soft:#2c3646; --line-strong:#55606f; --edge:#4b5563; --track:#272b34; --text:#f3f4f6; --text-2:#d1d5db; --muted:#9ca3af; --ink-2:#e5e7eb; --accent:#60a5fa; --accent-ink:#0b1220; --accent-soft:#1e3a5f; --good:#4ade80; --warn:#fbbf24; --warn-soft:#241d0e; --warn-line:#6b5524; --bad:#f87171; --bad-soft:#2a1512; --bad-faint:#241413; --change-soft:#2f5c42; --change-bg:#18261e; --hover-soft:#232f42; --ring-accent:rgba(96,165,250,.24); --scrim:rgba(0,0,0,.58); --recessed:#182131; --stage-applied:#5ec8dd; --stage-interview:#fbbf24; --stage-offer:#4ade80; --stage-rejected:#f87171; --stage-new:#55606f; --series-new:#9d6d1c; --amber-bg:#241d0e; --amber-line:#4a3d1c; --amber-line-soft:#352c15; --amber-hover:#2c2412; --sand:#5b6472; --gold:#c9a35a; --funnel-low:#3b6ad4; --funnel-mid:#93b4f0; --toast-ok-bg:#16281f; --toast-ok-line:#2f6b4a; --toast-ok-ink:#4ade80; --toast-bad-bg:#2a1512; --toast-bad-line:#7d3b36; --toast-bad-ink:#f87171; --rail:#0a0c10; --rail-text:#9aa3b2; --rail-dim:#6f7684; --rail-accent:#93c5fd; --rail-line:#1a2030; --rail-ink:#ffffff; --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
+  --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:var(--accent-soft); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:var(--accent); --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-ring:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:bar;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+}
+
+.jn-v2[data-skin="cobalt"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f7f8fa; --line:#e3e5ea; --line-soft:#eef0f3; --line-strong:#c8ccd6; --edge:#d7dae1; --track:#eef0f3; --text:#16181d; --text-2:#5b6270; --muted:#707887; --ink-2:#2f353f; --accent:#2d5be3; --accent-ink:#ffffff; --accent-soft:#e7edfd; --good:#157a43; --warn:#946c07; --warn-soft:#fbf2d7; --warn-line:#ecd9a0; --bad:#c23b32; --bad-soft:#fdeaea; --bad-faint:#fef6f6; --change-soft:#c9e7d6; --change-bg:#f5fbf7; --hover-soft:#f2f6fe; --ring-accent:rgba(45,91,227,.22); --scrim:rgba(15,17,21,.46); --recessed:#fafbfc; --stage-applied:#0b5570; --stage-interview:#946c07; --stage-offer:#157a43; --stage-rejected:#c23b32; --stage-new:#c8ccd6; --series-new:#b8822b; --amber-bg:#fffdf4; --amber-line:#ecd9a0; --amber-line-soft:#f5ead0; --amber-hover:#fbf5e2; --sand:#ccd2de; --gold:#c08a2e; --funnel-low:#8fa5e2; --funnel-mid:#4a6fd0; --toast-ok-bg:#e2f5e9; --toast-ok-line:#bfe3cc; --toast-ok-ink:#157a43; --toast-bad-bg:#fdeaea; --toast-bad-line:#efb3b0; --toast-bad-ink:#a8322a; --rail:#16181d; --rail-text:#8d95a6; --rail-dim:#6b7280; --rail-accent:#7f9cf5; --rail-line:#232a38; --rail-ink:#ffffff; --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif; --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif; --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
+  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:#eef3fe; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-ring:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:#7b3ff2; --ai-ink:#ffffff;
+  --sc-hi-bg:#e2f5e9; --sc-hi:#157a43; --sc-mid-bg:#fbf2d7; --sc-mid:#946c07; --sc-lo-bg:#fdeaea; --sc-lo:#c23b32; --sc-none-bg:#eef0f3; --sc-none:#707887;
+  --ring-variant:pill;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+}
+.jn-v2[data-skin="cobalt"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#0f1115; --surface:#16181d; --surface-2:#1c1f26; --line:#2a2f3a; --line-soft:#22262f; --line-strong:#3f4653; --edge:#3a4050; --track:#2a2f3a; --text:#e8eaf0; --text-2:#b3bac7; --muted:#8d95a6; --ink-2:#d5dae3; --accent:#4d79f6; --accent-ink:#ffffff; --accent-soft:#1c2b4d; --good:#5fd394; --warn:#e8c46a; --warn-soft:#2b2410; --warn-line:#6a5a2e; --bad:#f28b82; --bad-soft:#3c1a1a; --bad-faint:#2a1614; --change-soft:#28503b; --change-bg:#14211a; --hover-soft:#1a1f29; --ring-accent:rgba(77,121,246,.24); --scrim:rgba(0,0,0,.58); --recessed:#121419; --stage-applied:#6fc3dd; --stage-interview:#e8c46a; --stage-offer:#5fd394; --stage-rejected:#f28b82; --stage-new:#3f4653; --series-new:#9c6f22; --amber-bg:#231e12; --amber-line:#453c25; --amber-line-soft:#332c1c; --amber-hover:#2b2517; --sand:#5a6070; --gold:#c9a35a; --funnel-low:#4a6fd0; --funnel-mid:#8fa5e2; --toast-ok-bg:#123723; --toast-ok-line:#2a7d4d; --toast-ok-ink:#5fd394; --toast-bad-bg:#3c1a1a; --toast-bad-line:#8a3d38; --toast-bad-ink:#f28b82; --rail:#090c12; --rail-text:#8d95a6; --rail-dim:#5b6270; --rail-accent:#7f9cf5; --rail-line:#1a1f2b; --rail-ink:#ffffff; --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif; --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif; --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
+  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:#1a2334; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-ring:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:#a375f5; --ai-ink:#14101f;
+  --sc-hi-bg:#173226; --sc-hi:#5fd394; --sc-mid-bg:#2b2410; --sc-mid:#e8c46a; --sc-lo-bg:#3c1a1a; --sc-lo:#f28b82; --sc-none-bg:#1c1f26; --sc-none:#8d95a6;
+  --ring-variant:pill;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+}
+
+.jn-v2[data-skin="win98"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#008080; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0; --line-strong:#404040; --edge:#404040; --track:#808080; --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000; --accent:#000080; --accent-ink:#ffffff; --accent-soft:#c0c0c0; --good:#006000; --warn:#575700; --warn-soft:#ffffcc; --warn-line:#808000; --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0; --change-soft:#008000; --change-bg:#e4ffe4; --hover-soft:#d4d4d4; --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#b4b4b4; --stage-applied:#000080; --stage-interview:#575700; --stage-offer:#006000; --stage-rejected:#800000; --stage-new:#808080; --series-new:#8f4a00; --amber-bg:#ffffe4; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc; --sand:#a0a0a0; --gold:#808000; --funnel-low:#8080c0; --funnel-mid:#000080; --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#006000; --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000; --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080; --rail-line:#808080; --rail-ink:#000000; --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif; --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif; --mono:'Lucida Console','Courier New',Consolas,monospace;
+  --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
+  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
+  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --motion-fast:0s; --motion-mid:0s; --ease:linear;
+  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
+  --input-border-error:var(--bad); --input-ring-error:none;
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
+  --focus-ring:transparent; --focus-outline:1px dotted #000000;
+  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ascii;
+  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
+}
+.jn-v2[data-skin="win98"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#1f2b3a; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0; --line-strong:#404040; --edge:#404040; --track:#808080; --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000; --accent:#2b3a5c; --accent-ink:#ffffff; --accent-soft:#c0c0c0; --good:#006400; --warn:#7a5a00; --warn-soft:#ffffcc; --warn-line:#7a5a00; --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0; --change-soft:#006400; --change-bg:#e4ffe4; --hover-soft:#d4d4d4; --ring-accent:rgba(43,58,92,.22); --scrim:rgba(0,0,0,.58); --recessed:#b4b4b4; --stage-applied:#2b3a5c; --stage-interview:#7a5a00; --stage-offer:#006400; --stage-rejected:#800000; --stage-new:#808080; --series-new:#a15300; --amber-bg:#ffffe4; --amber-line:#7a5a00; --amber-line-soft:#c0c080; --amber-hover:#ffffcc; --sand:#a0a0a0; --gold:#7a5a00; --funnel-low:#8090b8; --funnel-mid:#2b3a5c; --toast-ok-bg:#e4ffe4; --toast-ok-line:#006400; --toast-ok-ink:#006400; --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000; --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#2b3a5c; --rail-line:#808080; --rail-ink:#000000; --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif; --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif; --mono:'Lucida Console','Courier New',Consolas,monospace;
+  --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
+  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
+  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --motion-fast:0s; --motion-mid:0s; --ease:linear;
+  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
+  --input-border-error:var(--bad); --input-ring-error:none;
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
+  --focus-ring:transparent; --focus-outline:1px dotted #000000;
+  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ascii;
+  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
+}
+
+/* ── state rules that read the new names (replace the literal hover classes) ── */
+.jn-v2 .v2-btn-primary:hover { background: var(--btn-primary-hover-bg) !important; }
+.jn-v2 .v2-btn-primary:active { background: var(--btn-primary-pressed-bg) !important; transform: var(--pressed-shift); }
+.jn-v2 .v2-btn-danger:hover { background: var(--btn-danger-hover-bg) !important; }
+.jn-v2 .v2-bd:active, .jn-v2 .v2-bdc:active, .jn-v2 .v2-act:active { background: var(--pressed-wash) !important; transform: var(--pressed-shift); }
+.jn-v2 [aria-disabled="true"] { opacity: var(--disabled-opacity); color: var(--disabled-ink); text-shadow: var(--disabled-engrave); }
+.jn-v2 [aria-invalid="true"], .jn-v2 .v2-fieldwrap[data-invalid="true"] { border-color: var(--input-border-error) !important; box-shadow: var(--input-ring-error) !important; }
+.jn-v2 .v2-card, .jn-v2 .v2-chip, .jn-v2 .v2-dashadd, .jn-v2 .v2-navlink, .jn-v2 .v2-act, .jn-v2 .v2-bd, .jn-v2 .v2-bdc, .jn-v2 .v2-row, .jn-v2 .v2-menuitem { transition: border-color var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease); }
+.jn-v2 .v2-row[aria-current="true"] { background: var(--row-selected) !important; color: var(--row-selected-ink); box-shadow: var(--row-selected-edge); }
+.jn-v2 [tabindex="0"]:focus-visible { outline: var(--focus-outline); outline-offset: -4px; box-shadow: var(--focus-ring); }
+.jn-v2 input:hover:not(:focus), .jn-v2 .v2-fieldwrap:hover:not(:focus-within), .jn-v2 .v2-select-trigger:hover { border-color: var(--input-border-hover) !important; }
+.jn-v2 .v2-pill[aria-pressed="true"]:hover { background: var(--pill-on-hover-bg) !important; }
+.jn-v2 .v2-chip[aria-pressed="true"] { background: var(--chip-on-bg) !important; color: var(--chip-on-ink) !important; border-color: var(--chip-on-border) !important; }
+/* win98 bevels: raised on controls, inset on fields/lists/pressed */
+.jn-v2 .v2-raised { border: var(--bevel-raised-border); border-color: var(--bevel-raised-color); box-shadow: var(--bevel-raised-shadow); }
+.jn-v2 .v2-inset, .jn-v2 .v2-raised:active { border: var(--bevel-inset-border); border-color: var(--bevel-inset-color); box-shadow: var(--bevel-inset-shadow); }
+@media (prefers-reduced-motion: reduce) { .jn-v2 * { transition-duration: 0s !important; animation-duration: 0s !important; } }

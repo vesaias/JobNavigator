@@ -41,7 +41,7 @@ export default function WelcomeModal({ onClose }) {
           <span onClick={onClose} className="v2-hover-accent-text" role="button" aria-label="Close"
             style={{ marginLeft: 'auto', fontSize: 13, lineHeight: '26px', color: 'var(--muted)', cursor: 'pointer' }}>✕</span>
         </div>
-        <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>Four steps and your search runs itself.</span>
+        <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>Four steps to set up automatic searching.</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 24px 18px' }}>

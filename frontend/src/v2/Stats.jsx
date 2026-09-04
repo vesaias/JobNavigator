@@ -466,7 +466,7 @@ export default function Stats() {
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
           {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
           <span style={{ width: 16, height: 16, borderRadius: 'var(--radius-control)', background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
-          <span style={{ flex: 1 }}>Couldn’t reach the backend for some of these numbers — tiles show “—” and charts are marked unavailable until it answers.</span>
+          <span style={{ flex: 1 }}>Some numbers could not be loaded. They show “—” until the backend responds.</span>
           {/* D4f consistency decision: the retry link is a Link everywhere else, so
               it is one here — it leaves the band's --bad run and reads as the
               accent action it is. The dotted underline stays as its affordance. */}
@@ -479,10 +479,10 @@ export default function Stats() {
         {/* KPI strip */}
         <Card style={{ padding: 0, display: 'flex' }}>
           {[
-            ['Total jobs', int(stats?.total_jobs), '', 'Everything ever scraped or captured, minus cleanup'],
-            ['New this week', int(timeline ? weekly.now : null), timeline && weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs last` : '', 'Discovered in the last 7 days'],
+            ['Total jobs', int(stats?.total_jobs), '', 'All jobs ever found, excluding ones removed by cleanup'],
+            ['New this week', int(timeline ? weekly.now : null), timeline && weekly.prev ? `${weekly.now - weekly.prev >= 0 ? '+' : ''}${weekly.now - weekly.prev} vs previous period` : '', 'Discovered in the last 7 days'],
             ['Saved', int(stats?.saved_jobs), '', 'In your feed shortlist'],
-            ['Applications', int(stats?.total_applications), `${inPlay} in play`, 'In play = not rejected, ghosted or withdrawn'],
+            ['Applications', int(stats?.total_applications), `${inPlay} open`, 'Open = not rejected, ghosted or withdrawn'],
             ['Best open score', bestScore, bestScore === '—' ? '' : (best?.company || ''), 'Highest-scoring posting you haven’t applied to'],
           ].map(([label, value, sub, hint], i, arr) => (
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
@@ -537,7 +537,7 @@ export default function Stats() {
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
                   {/* ui: keep — 9.5 is below Helper's 10.5 xs step, and the 18px
                       line-height baselines it against the 22px funnel bar beside it */}
-                  {f.snapshot && <span title="No stage history recorded for these — counted by current status, so anything that passed through this stage and moved on is missing"
+                  {f.snapshot && <span title="No stage history for these applications. They are counted by current status only."
                     style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '18px', color: 'var(--muted)', cursor: 'help' }}>snapshot</span>}
                 </div>
               ))}
@@ -548,8 +548,8 @@ export default function Stats() {
               {/* the card's height is fixed, so the caveat replaces the "bars are
                   relative to Applied" clause rather than adding a third line */}
               <span>{funnel.some((f) => f.snapshot)
-                ? 'Rows count applications that ever reached that stage; snapshot rows count current status'
-                : 'Every row counts applications that ever reached that stage; bars are relative to Applied'}</span>
+                ? 'Stage rows count every application that reached the stage. Snapshot rows count current status only.'
+                : 'Each row counts applications that reached that stage. Bar length is relative to Applied.'}</span>
               <span>applied → interview {conv(stats?.total_applications, reached.interview || 0)} · interview → offer {conv(reached.interview || 0, reached.offer || 0)}</span>
             </span>
             </div>
@@ -606,7 +606,7 @@ export default function Stats() {
           <Card style={{ height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <Heading strong size={17}>LLM costs</Heading>
-              <Helper title="OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then."
+              <Helper title="OpenAI and Claude pricing info comes from a fixed table, OpenRouter from its catalog (updated every 12 h), Claude Code and Ollama counted as $0. Each call is priced when it is logged."
                 style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</Helper>
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {
@@ -629,7 +629,7 @@ export default function Stats() {
               <div className="v2-gutter-head" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
                 <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
-                <span title="Prompt-cache hit ratio" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
+                <span title="Share of calls that reused a cached prompt" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
               {/* takes whatever the fixed-height card leaves, so switching period
                   (2 rows at 1d, 13 at all-time) can't resize anything */}
@@ -643,7 +643,7 @@ export default function Stats() {
                   <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--muted)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
                 </div>
               ))}
-              {!(costs?.by_purpose || []).length && <Helper style={{ display: 'block', padding: '14px 0' }}>No LLM calls in this window.</Helper>}
+              {!(costs?.by_purpose || []).length && <Helper style={{ display: 'block', padding: '14px 0' }}>No LLM calls in this period.</Helper>}
               </div>
             </div>
           </Card>
@@ -653,7 +653,7 @@ export default function Stats() {
         <Card ref={schedRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <Heading strong size={17}>Schedules</Heading>
-            <Helper>{schedErr ? 'intervals and crons are in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons are in Settings`}</Helper>
+            <Helper>{schedErr ? 'intervals and crons are in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next run shown in ${TZ_SHORT}, schedule set in UTC · edit intervals in Settings`}</Helper>
           </div>
           {schedErr ? (
             <div style={{ padding: '26px 20px 30px', borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div>
@@ -708,7 +708,7 @@ export default function Stats() {
             {[['runs', 'Run history'], ['activity', 'Activity log']].map(([id, label]) => (
               <span key={id} onClick={() => { setTab(id); setTypeOpen(false) }} {...kb(() => { setTab(id); setTypeOpen(false) })} style={{ ...H, lineHeight: '24px', color: tab === id ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'transparent'}`, paddingBottom: 2 }}>{label}</span>
             ))}
-            <Helper style={{ flex: 1 }}>{tab === 'runs' ? `last ${runs.length} scheduler and manual runs` : 'everything the pipeline did, newest first'}</Helper>
+            <Helper style={{ flex: 1 }}>{tab === 'runs' ? `last ${runs.length} scheduler and manual runs` : 'every run and change, newest first'}</Helper>
             {tab === 'activity' && (
               <span style={{ alignSelf: 'center', display: 'flex', gap: 6 }}>
                 <span style={{ position: 'relative' }}>

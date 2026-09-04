@@ -586,7 +586,7 @@ export default function ResumeEditor() {
             </Helper>
           </div>
           {ctxReady && stage && (
-            <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'Pipeline complete' : 'The one next step'}>
+            <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'All steps done' : 'Next step'}>
               {scoring && <Spinner size={11} color="currentColor" />}
               {stage.label}
             </Button>
@@ -621,7 +621,7 @@ export default function ResumeEditor() {
               sentence is withheld until ctxReady (not just the copy-count clause), so
               it paints in one state instead of a bare sentence followed ~100ms later
               by the same sentence with the clause inserted. */}
-          <span>{!ctxReady ? NBSP : <>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</>}</span>
+          <span>{!ctxReady ? NBSP : <>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}edits here affect new copies only</>}</span>
           <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
               R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
@@ -768,7 +768,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
         <Label>From which base</Label>
         {options.map((o) => (
           <ChoiceRow key={o.id} on={String(baseId) === String(o.id)} disabled={disabled(o.id)}
-            title={disabled(o.id) ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
+            title={disabled(o.id) ? 'Persona is not a résumé, so it can’t be copied. Use Tailor instead.' : undefined}
             label={o.name}
             hint={String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}
             onClick={() => setBaseId(o.id)} />
@@ -827,7 +827,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
     // naming the shared shell moved no pixel here.
     <ChoiceModal
       title={<>Tailor {doc.name} for a job</>}
-      sub="Changes are applied automatically — you review and decline afterwards."
+      sub="Changes are applied automatically. You can decline any of them afterwards."
       bodyGap={12} onClose={onClose}
       note={<>
         <Helper>Runs in the background</Helper>
@@ -858,7 +858,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Label>…or a freeform job description</Label>
         <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
-          placeholder="Paste any job description — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
+          placeholder="Paste a job description. The copy will not be linked to a job in the Feed." ariaLabel="Freeform job description"
           style={{ borderStyle: 'dashed' }} />
       </div>
     </ChoiceModal>
@@ -887,7 +887,7 @@ function ReviewModal({ changes, onClose, onApply }) {
             <Helper>
               {nSuggested
                 ? `${nApplied ? 'Applied changes are already in the document — decline any and the base text comes back. ' : ''}Suggested bullets are not in it yet: they are added when you finish reviewing.`
-                : "These were applied automatically. Decline any you don't want; the base text comes back."}
+                : "These changes were applied automatically. Decline any you don't want to restore the base text."}
             </Helper>
           </div>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
@@ -932,7 +932,7 @@ function ReviewModal({ changes, onClose, onApply }) {
               what is only proposed, so "Done reviewing" says what it is about to do. */}
           <Helper>{nSuggested
             ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
-            : n ? `${n} declined — base text restored · the rest stay` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} live · decline any to restore the base text`}</Helper>
+            : n ? `${n} declined and restored to the base text · the other changes are kept` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} applied · decline one to restore its base text`}</Helper>
           <Button size="sm" onClick={() => onApply(declined)} style={{ marginLeft: 'auto' }}>Done reviewing</Button>
         </div>
     </ModalPanel>

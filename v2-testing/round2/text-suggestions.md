@@ -1,7 +1,8 @@
+
 # R4b — plain-language suggestions for v2 UI copy
 
 Rule applied: **"Avoid mannered prose, say things plainly. No metaphors or figures of speech."**
-Source list: `round2/text-candidates.md` (156 flagged rows; `ToastLab.jsx` skipped — debug route). The twelve vocabulary decisions in §0 are applied; every remaining row is still a proposal for you to accept, edit or reject. Placeholders (`${n}` etc.) are kept as in the code.
+Source list: `round2/text-candidates.md` (156 flagged rows; `ToastLab.jsx` skipped — debug route). The twelve vocabulary decisions in §0 are applied. Every row left in the per-screen tables below (§1 onward) was accepted and **applied to `frontend/src/v2/*.jsx` on 2026-09-05** — 120 rows, 123 sites; rejected rows were deleted from the tables first. Placeholders (`${n}` etc.) are kept as in the code. The pre-apply misalignment check — stale line numbers, flattened templates, sibling branches no row covers — is `round2/text-apply-check.md`.
 
 ## 0. Decided and applied (2026-09-05)
 
@@ -43,18 +44,15 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | Resumes.jsx:195 | Nothing archived yet — copies appear here when their application is rejected or goes stale. | Nothing archived yet. A copy is archived when its application is rejected or has had no activity for a long time. |
 | Resumes.jsx:168 | Couldn't load your résumés — the shelf request failed. | Couldn't load your résumés. Retry, or check that the backend is running. |
 | Resumes.jsx:335 | Import failed — is it a text PDF? | Import failed. The PDF must contain selectable text, not a scanned image. |
-| ResumeSections.jsx:324 | ${n} characters · long summaries can push to a second page | ${n} characters · a long summary can make the résumé two pages |
+| ResumeSections.jsx:324 | ${n} characters · long summaries can push to a second page | ${n} characters |
 | ResumeSections.jsx:135 | Empty sections are skipped in the PDF — nothing prints until you add one. | Empty sections are left out of the PDF. |
-| ResumeSections.jsx:220 / CoverLetterEditor.jsx:390 | Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them | Short code used in the tracked link, e.g. l, w, gh |
+| ResumeSections.jsx:220 / CoverLetterEditor.jsx:390 | Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them | Short stub used in the tracked link, e.g. l, w, gh |
 | ResumeSections.jsx:293 | Suggested by tailoring — keep on review | Suggested by tailoring. Kept unless you decline it in Review. |
-| ResumeSections.jsx:208 / CoverLetterEditor.jsx:370 | text · link · stub | label · URL · link code |
 | ResumeEditor.jsx:730 | Changes are applied automatically — you review and decline afterwards. | Changes are applied automatically. You can decline any of them afterwards. |
 | ResumeEditor.jsx:783 | These were applied automatically. Decline any you don't want; the base text comes back. | These changes were applied automatically. Decline any you don't want to restore the base text. |
 | ResumeEditor.jsx:493 | The one next step | Next step |
 | ResumeEditor.jsx:493 | Pipeline complete | All steps done |
-| ResumeEditor.jsx:535 | Delete copy (on a base) | Delete résumé (bases) / Delete copy (copies) |
-| ResumeEditor.jsx:523 | Base résumé · ${n} tailored copies · editing here changes future tailoring only | Base résumé · ${n} tailored copies · edits here affect new copies only, not existing ones |
-| ResumeEditor.jsx:489 | · tracked links: ${t.source_label} ${t.clicks} | · tracked link opens: ${t.source_label} ${t.clicks} |
+| ResumeEditor.jsx:523 | Base résumé · ${n} tailored copies · editing here changes future tailoring only | Base résumé · ${n} tailored copies · edits here affect new copies only |
 | ResumeEditor.jsx:667 | Persona has no résumé row to copy — tailor from it instead | Persona is not a résumé, so it can't be copied. Use Tailor instead. |
 | ResumeEditor.jsx:758 | Paste any job description — the copy won't be linked to a feed job | Paste a job description. The copy will not be linked to a job in the Feed. |
 | ResumeEditor.jsx:813 | ${n} declined — base text restored · the rest stay | ${n} declined and restored to the base text · the other changes are kept |
@@ -65,7 +63,6 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | file:line | current | suggested |
 |---|---|---|
 | CoverLetters.jsx:151 / Applications.jsx:111 | The server answered ${status}. | The server returned error ${status}. Try again. |
-| CoverLetters.jsx:337 | Base for achievements and motivation | Résumé to take achievements and motivation from |
 | CoverLetters.jsx:254 | ${n} of ${m} letters match · ${live} live applications | ${n} of ${m} letters match · ${live} open applications |
 | CoverLetterEditor.jsx:525 | Bases and Persona — switch to use different achievements. | Bases and Persona. Switch to use a different set of achievements. |
 | CoverLetterEditor.jsx:501 | Preview failed — showing the last render · Retry | Preview failed. Showing the previous version · Retry |
@@ -78,7 +75,6 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | Persona.jsx:337 | Your full work history, summary, skills and achievements. The AI uses this as the source pool for tailored résumés, as raw material for cover-letter anecdotes, and as the candidate profile when scoring jobs. | Your full work history, summary, skills and achievements. Used for tailored résumés, cover letters and job scoring. |
 | Persona.jsx:353 | Personal info used to auto-fill application forms — contact details, work authorization, EEO answers, salary expectations and reusable screener answers. Not used by the AI for résumé generation or scoring. | Details used to fill application forms: contact, work authorization, EEO answers, salary and reusable screener answers. Not used for résumés or scoring. |
 | Persona.jsx:65 | Prefer not to answer demographic questions — autofill picks "decline" where the form allows it | Decline demographic questions where the form allows it |
-| Persona.jsx:175 | what is this? | What is this used for? |
 
 ## 5. Applications
 
@@ -95,14 +91,13 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 
 | file:line | current | suggested |
 |---|---|---|
-| Stats.jsx:520 | OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then. | Prices: OpenAI and Claude from a fixed table, OpenRouter from its catalog (updated every 12 h), Claude Code and Ollama counted as $0. Each call is priced when it is logged. |
+| Stats.jsx:520 | OpenAI and Claude prices come from a static table; OpenRouter uses live catalog pricing refreshed at most every 12h; Claude Code and Ollama count as $0. Cost is computed per call at log time, so past rows keep the price in effect then. | OpenAI and Claude pricing info comes from a fixed table, OpenRouter from its catalog (updated every 12 h), Claude Code and Ollama counted as $0. Each call is priced when it is logged. |
 | Stats.jsx:460 | No stage history recorded for these — counted by current status, so anything that passed through this stage and moved on is missing | No stage history for these applications. They are counted by current status only. |
 | Stats.jsx:398 | Couldn't reach the backend for some of these numbers — tiles show "—" and charts are marked unavailable until it answers. | Some numbers could not be loaded. They show "—" until the backend responds. |
 | Stats.jsx:566 | ${n} jobs · next runs in ${TZ}, schedules as configured (UTC) · intervals and crons are in Settings | ${n} jobs · next run shown in ${TZ}, schedule set in UTC · edit intervals in Settings |
 | Stats.jsx:470 | Every row counts applications that ever reached that stage; bars are relative to Applied | Each row counts applications that reached that stage. Bar length is relative to Applied. |
 | Stats.jsx:469 | Rows count applications that ever reached that stage; snapshot rows count current status | Stage rows count every application that reached the stage. Snapshot rows count current status only. |
 | Stats.jsx:411 | In play = not rejected, ghosted or withdrawn / ${n} in play | Open = not rejected, ghosted or withdrawn / ${n} open |
-| Stats.jsx:521 | how priced? | How costs are calculated |
 | Stats.jsx:408 | Everything ever scraped or captured, minus cleanup | All jobs ever found, excluding ones removed by cleanup |
 | Stats.jsx:542 | Prompt-cache hit ratio | Share of calls that reused a cached prompt |
 | Stats.jsx:613 | everything the pipeline did, newest first | every run and change, newest first |
@@ -141,7 +136,6 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | Companies.jsx:537 (filings) | ${n} filings on record · ${p}% approved — each job's H-1B verdict is based on these. | ${n} H-1B filings on record · ${p}% approved. Each job's H-1B verdict is based on these. |
 | Companies.jsx:424 | ${name} · ${n} H-1B filings on record, ${p}% approved — feeds the verdict on each job | ${name} · ${n} H-1B filings, ${p}% approved. Used for each job's H-1B verdict. |
 | Companies.jsx:851 | Pagination debug | Page-by-page details |
-| Companies.jsx:813 | Global | Global exclude |
 | Companies.jsx:440 | H-1B slug · ${slug or auto-detected} | MyVisaJobs company id · ${slug or auto-detected} |
 | Companies.jsx:586 | Detected on the recent runs | Detected in recent runs |
 | Companies.jsx:659 | Stops paging after this many. | Maximum number of result pages to read. |
@@ -180,9 +174,9 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | Settings.jsx:327 | Extra requests queue — protects the DB pool. | Extra requests wait in a queue to limit database load. |
 | Settings.jsx:335 | placeholders stay literal — replaced at runtime | keep placeholders like {job_description} as written; they are filled in when the prompt runs |
 | Settings.jsx:348 | Label + prompt per voice, can be expanded. | One label and prompt per voice. Add more if you want. |
-| Settings.jsx:357 | the prep handover Applications exports for your LLM of choice | the prep pack that Applications builds for an AI chat |
-| Settings.jsx:358 | The hardcoded ask appended to the prep handover. | The questions added at the end of the prep pack. |
-| Settings.jsx:359 | Sections the prep handover carries. Ask is always included. | Sections included in the prep pack. The questions are always included. |
+| Settings.jsx:357 | the prep handover Applications exports for your LLM of choice | the prep handover that Applications builds for an AI chat |
+| Settings.jsx:358 | The hardcoded ask appended to the prep handover. | The questions added at the end of the prep handover. |
+| Settings.jsx:359 | Sections the prep handover carries. Ask is always included. | Sections included in the prep handover. The questions are always included. |
 | Settings.jsx:392 | High-fit arrivals and the daily digest go to your chat. | New high-scoring jobs and the daily digest are sent to your chat. |
 | Settings.jsx:290 | That did not work | Save failed. Try again. |
 | Settings.jsx:703 | No key — the dashboard is open | No key set. Anyone who can reach this address can use the dashboard. |
@@ -197,10 +191,8 @@ and **pipeline → the app / all runs** (ResumeEditor, Stats). Their rows stay i
 | JobFeed.jsx:1098 | ${company} sends X-Frame-Options, so the live page cannot render here. Open it in a new tab, or install the Navigator extension to strip frame-blocking headers. | ${company} does not allow its page to be shown inside another site. Open it in a new tab, or install the Navigator extension, which removes that restriction. |
 | JobFeed.jsx:773 | Jobs arrive from Searches and Companies — activate one, or widen the Status filter to see skipped and applied roles. | Jobs come from Searches and Companies. Activate one, or change the Status filter to include skipped and applied jobs. |
 | JobFeed.jsx:1097 | This posting refuses to be framed | This page can't be shown here |
-| JobFeed.jsx:1051 | No fit | Not scored |
 | JobFeed.jsx:1141 | Rewrites bullets against the report · LLM run | Rewrites bullets to match the posting · uses the LLM |
 | JobFeed.jsx:1169 | Runs an LLM pass against résumé | Runs the LLM on the résumé |
-| JobFeed.jsx:1029 | Hard blockers | Disqualifying requirements |
 | JobFeed.jsx:735 | ⇧ range · ${PICK_KEY} pick | Shift-click selects a range · ${PICK_KEY}-click selects one |
 | JobFeed.jsx:587 | Done — "${title}" at ${company} / Failed — "${title}" at ${company} | Scored "${title}" at ${company} / Scoring failed for "${title}" at ${company} (use the verb of the run type) |
 | JobFeed.jsx:1161,1203 | from /persona | from Persona |

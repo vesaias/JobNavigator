@@ -164,10 +164,10 @@ export default function V2App() {
   const nS = warn.searches || 0
   const lastSweep = health ? (ago(health.finished_at || health.started_at) || '—') : 'no scrape run recorded yet'
   const healthTip = failing
-    ? `${nC} compan${nC === 1 ? 'y' : 'ies'} and ${nS} search${nS === 1 ? '' : 'es'} need attention. Click → Stats · Run history.`
+    ? `${nC} compan${nC === 1 ? 'y' : 'ies'} and ${nS} search${nS === 1 ? '' : 'es'} need attention. Click to open Run history.`
     : health?.status === 'failed'
-      ? `No company or search is failing, but the last scrape run failed · ${lastSweep}. Click → Stats · Run history.`
-      : `All companies and searches healthy · last scrape run ${lastSweep}. Click → Stats · Run history.`
+      ? `All companies and searches are healthy, but the last scrape run failed ${lastSweep}. Click to open Run history.`
+      : `All companies and searches healthy · last scrape run ${lastSweep}. Click to open Run history.`
 
   const W = open ? 206 : 50
   const padX = open ? 20 : 13

@@ -490,7 +490,7 @@ export default function V2JobFeed() {
     // browser's — every other destructive confirm in v2 is this one.
     setConfirm({
       title: `Ignore “${name}” everywhere?`,
-      body: `This hides ${n} job${n === 1 ? '' : 's'} here and excludes the company from every future scrape. Undo it in Settings → global company exclude.`,
+      body: `This hides ${n} job${n === 1 ? '' : 's'} and skips the company in all future scrapes. You can undo this in Settings → Global exclude.`,
       label: 'Ignore everywhere', danger: true,
       onConfirm: () => { setConfirm(null); doIgnoreCompany(name, n) },
     })
@@ -526,7 +526,7 @@ export default function V2JobFeed() {
     try {
       const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
       const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name, note: 'base' }))
-      if (personaAvailable) opts.push({ id: 'persona', name: 'Persona', note: 'from /persona' })
+      if (personaAvailable) opts.push({ id: 'persona', name: 'Persona', note: 'from Persona' })
       setRescoreOpts(opts)
       const def = st.data?.default_resume_id
       setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
@@ -835,7 +835,7 @@ export default function V2JobFeed() {
               const rid = ok && meta.op === 'tailor' ? fresh?.tailored_resume_id : null
               pushToast({
                 kind: ok ? 'success' : 'error',
-                msg: `${ok ? 'Done' : 'Failed'} — "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}`,
+                msg: `${meta.op === 'tailor' ? (ok ? 'Tailored' : 'Tailoring failed for') : (ok ? 'Scored' : 'Scoring failed for')} "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}`,
                 ...(rid ? { action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${rid}`) } : {}),
               })
               delete pendingRef.current[id]
@@ -1009,7 +1009,7 @@ export default function V2JobFeed() {
             {/* the count line keeps its box until the first page answers */}
             <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{firstLoaded ? `${jobs.length} shown · ${total} matching` : NBSP}</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>Shift-click selects a range · {PICK_KEY}-click selects one</span>
               {/* ui: keep — 16x16 "?" glyph badge; no Pill/IconButton size is this small */}
               <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 'var(--radius-control)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
             </div>
@@ -1057,7 +1057,7 @@ export default function V2JobFeed() {
                   (!filters.status.length && !filters.company.length && !filters.source.length && !filters.h1b_verdict.length && filters.min_score === '' && !filters.min_salary && !dSearch && !searchId)
                     ? <div style={{ padding: '48px 40px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>   {/* F-010: first-run / nothing open */}
                         <Heading style={{ display: 'block', marginBottom: 6 }}>No open roles yet</Heading>
-                        Jobs arrive from <a href="/v2/searches" onClick={(e) => { e.preventDefault(); navigate('/v2/searches') }}>Searches</a> and <a href="/v2/companies" onClick={(e) => { e.preventDefault(); navigate('/v2/companies') }}>Companies</a> — activate one, or widen the Status filter to see skipped and applied roles.
+                        Jobs come from <a href="/v2/searches" onClick={(e) => { e.preventDefault(); navigate('/v2/searches') }}>Searches</a> and <a href="/v2/companies" onClick={(e) => { e.preventDefault(); navigate('/v2/companies') }}>Companies</a>. Activate one, or change the Status filter to include skipped and applied jobs.
                       </div>
                     : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>No jobs match.<br /><Link onClick={() => { setFilters(DEFAULTS); setSearch(''); setSearchId('') }}>Clear filters</Link></div>)   /* FEED-24 */
               : jobs.map((j, i) => {
@@ -1460,8 +1460,8 @@ export default function V2JobFeed() {
                         <div style={{ maxWidth: '44ch', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 11, textAlign: 'center' }}>
                           {/* ui: keep — dashed 44px warning glyph, not an add-line */}
                           <div style={{ width: 44, height: 44, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)' }}>▲</div>
-                          <Heading>This posting refuses to be framed</Heading>
-                          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} sends X-Frame-Options, so the live page cannot render here. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension to strip frame-blocking headers.'}</span>
+                          <Heading>This page can't be shown here</Heading>
+                          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} does not allow its page to be shown inside another site. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension, which removes that restriction.'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                             {/* ui: keep — native <a href target=_blank>; Button renders a div and would drop the anchor */}
                             <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 34, padding: '0 16px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open in new tab ↗</a>
@@ -1507,7 +1507,7 @@ export default function V2JobFeed() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <Label>Method</Label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run', undefined], ['copy', '⧉ Copy with tracked links', 'Exact duplicate with tracked links · instant', 'tracked links — short links that record when a recruiter opens them']].map(([m, label, help, tip]) => {
+                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets to match the posting · uses the LLM', undefined], ['copy', '⧉ Copy with tracked links', 'Exact duplicate with tracked links · instant', 'tracked links — short links that record when a recruiter opens them']].map(([m, label, help, tip]) => {
                       const on = cvMode === m
                       return (
                         <div key={m} onClick={() => pickMethod(m)} title={tip} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1529,7 +1529,7 @@ export default function V2JobFeed() {
                           {/* ui: keep — radio indicator, not a status dot */}
                           <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 'var(--radius-control)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'transparent' }} /></span>
                           <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                          {r.id === 'persona' && <Helper style={{ flex: '0 0 auto' }}>from /persona</Helper>}
+                          {r.id === 'persona' && <Helper style={{ flex: '0 0 auto' }}>from Persona</Helper>}
                         </div>
                       )
                     })}
@@ -1538,7 +1538,7 @@ export default function V2JobFeed() {
               {/* footer */}
               {/* ui: keep — a modal footer bar: its rule is on top */}
               <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
-                <Helper>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
+                <Helper>{cvMode === 'tailor' ? 'Runs the LLM on the résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
               </div>

@@ -279,7 +279,7 @@ export default function Settings() {
     } catch (e) {
       console.error(e)
       setTrig((t) => ({ ...t, [id]: '' }))
-      flash(e?.response?.data?.detail || 'That did not work', true)
+      flash(e?.response?.data?.detail || 'Save failed. Try again.', true)
     }
   }
 
@@ -306,45 +306,45 @@ export default function Settings() {
         { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
         { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts. Cobalt, SaaS and Win98 are the palettes of the three deep-reskin boards; their shape languages (radii, bevels, shadows) are not part of a skin, so those three read as recolours, not as the boards.' },
       ]],
-      ['models', 'AI', 'Models', 'each individual prompt can be run against different model, if needed', [
+      ['models', 'AI', 'Models', 'each prompt can use its own model if needed', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model',
-          info: "Providers: Claude API (Anthropic), Claude Code, OpenAI, Ollama (local), OpenRouter. Picking a provider filters the model dropdown to that provider's models — seeded ones plus any you added under Custom models. OpenRouter reaches every vendor with one key but gets no prompt-cache discount." },
-        B('API key', 'Key for the Primary provider API model.', 'llm_api_key', { secret: true, mono: true, w: '340px', hide: () => KEYLESS.includes(val('llm_provider', 'claude_api')) }),
+          info: "Providers: Claude API, Claude Code, OpenAI, Ollama (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount." },
+        B('API key', 'API key for the primary provider.', 'llm_api_key', { secret: true, mono: true, w: '340px', hide: () => KEYLESS.includes(val('llm_provider', 'claude_api')) }),
         LLM('Scoring', 'Model that scores new jobs against your résumés.', 'scoring_llm'),
         LLM('Scoring fallback', 'Retries scoring once on error or rate limit — scoring only.', 'llm_fallback',
-          { info: 'Fires only when the scoring call errors or hits a rate limit; one retry, then the job is left unscored for the next scrape run. Pick a cheap, reliable model from a different provider than the Primary so one outage can’t take both down.' }),
+          { info: 'Used only when the scoring call fails or is rate-limited. One retry, then the job stays unscored until the next run. Choose a cheap model from a different provider than the primary.' }),
         LLM('Tailoring', 'Model that rewrites résumé bullets for a posting.', 'cv_tailor_llm'),
         LLM('Cover letters', 'Model that drafts letters from résumé + posting + Persona.', 'cover_letter_llm'),
         LLM('Autofill', 'Model that answers application-form questions in the extension.', 'autofill_llm'),
         LLM('Email classification', 'Model that sorts Gmail replies into application events.', 'email_llm'),
         { kind: 'models', label: 'Model catalog', help: 'Add new or unlisted models and remove your additions.',
-          info: 'For models newer than the seeded list. The add search hits the provider’s live catalog for OpenRouter, OpenAI and Claude; Ollama has no catalog — enter the local model name. Removals persist.' },
+          info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI and Claude. For Ollama, type the local model name. Removed models stay removed.' },
       ]],
       ['scoring', '', 'Scoring behavior', 'which résumé gets scored, how deep, and when it runs', [
         SEL('Default résumé', 'Used when a company has no résumés of its own selected.', 'default_resume_id', resumeOpts, { w: '260px' }),
-        B('Max parallel jobs', 'Extra requests queue — protects the DB pool.', 'scoring_max_concurrent', { mono: true, int: true, w: '135px' }),
+        B('Max parallel jobs', 'Extra requests wait in a queue to limit database load.', 'scoring_max_concurrent', { mono: true, int: true, w: '135px' }),
         SEL('Default depth', 'Used when neither the company nor the search sets its own.', 'scoring_default_depth',
           [['light', 'Light — score only'], ['full', 'Full — score + keywords + report']], { w: '260px', dflt: 'light',
-            info: 'Light returns scores + a one-liner (cheap, for high-volume searches). Full adds keyword coverage, requirement mapping and a written report. Companies and Searches can each override this per config.' }),
-        SEL('On save action', 'Score a job once you save it on the feed, if yet unscored.', 'on_save_action',
+            info: 'Light: score and one line, low cost. Full: adds keyword coverage, requirement mapping and a written report. Each company and search can override this.' }),
+        SEL('On save action', 'Score a job when you save it in the Feed, if it has no score yet.', 'on_save_action',
           [['off', "Off — don't score on save"], ['light', 'Light — score only'], ['full', 'Full — score + keywords + report']], { w: '260px', dflt: 'off' }),
-        SW('Prompt caching', 'Rubric + résumés + schema sent as a cached block — ~10× cheaper input tokens on repeat calls.', 'Disabled — full price per call.', 'prompt_caching_enabled',
-          { dflt: true, info: 'Only active when the effective provider is claude_api — no effect with Claude Code, Ollama or OpenRouter. If scoring output ever looks stale after a rubric edit, disable this as a rollback lever, run once, re-enable.' }),
-        E('Scoring rubric', 'The instruction block every scoring call starts from.', 'scoring_rubric', { sub: 'placeholders stay literal — replaced at runtime' }),
+        SW('Prompt caching', 'Sends the rubric, résumés and schema as a cached block. Repeat calls cost about 10× less.', 'Disabled — full price per call.', 'prompt_caching_enabled',
+          { dflt: true, info: 'Only applies to the Claude API provider. If scores look outdated after you edit the rubric, turn this off, run once, then turn it back on.' }),
+        E('Scoring rubric', 'The instruction block every scoring call starts from.', 'scoring_rubric', { sub: 'keep placeholders like {job_description} as written; they are filled in when the prompt runs' }),
         E('Light output schema', 'JSON shape for Light runs.', 'scoring_output_light', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
         E('Full output schema', 'JSON shape for Full runs.', 'scoring_output_full', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
       ]],
       ['tailoring', '', 'Tailoring', 'AI-rewritten résumés', [
-        E('Résumé tailoring prompt', 'Default: rewrites only bullets that benefit.', 'cv_tailor_prompt', { sub: 'placeholders: {job_description} {resume_json}' }),
-        E('Persona tailoring prompt', 'Default: selection from Persona’s richer pool, falls back to the résumé prompt if empty.', 'persona_tailor_prompt', { sub: 'placeholders: {job_description} {persona_json}' }),
+        E('Résumé tailoring prompt', 'Default: rewrites only bullets that the job description makes relevant.', 'cv_tailor_prompt', { sub: 'placeholders: {job_description} {resume_json}' }),
+        E('Persona tailoring prompt', 'Default: uses the Persona résumé content; falls back to the résumé prompt if empty.', 'persona_tailor_prompt', { sub: 'placeholders: {job_description} {persona_json}' }),
         B('Max parallel tailors', 'Tailoring and cover-letter generation share this limit.', 'tailoring_max_concurrent', { mono: true, int: true, w: '135px' }),
-        SEL('Auto-score after tailoring', 'Rescores tailored resume when the tailor finishes.', 'tailor_auto_quick_score',
+        SEL('Auto-score after tailoring', 'Scores a tailored résumé as soon as tailoring finishes.', 'tailor_auto_quick_score',
           [['off', "Off — don't score after tailoring"], ['light', 'Light — score only'], ['full', 'Full — score + keywords + report']], { w: '260px', dflt: 'light' }),
       ]],
       ['letters', '', 'Cover letters', 'AI-written based on Persona or résumé', [
         SEL('Default voice', 'The list comes from the voice presets below.', 'cover_letter_default_voice', voiceOpts, { w: '260px' }),
-        E('Voice presets', 'Label + prompt per voice, can be expanded.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
+        E('Voice presets', 'One label and prompt per voice. Add more if you want.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
         E('Cover letter prompt', 'The generation instruction.', 'cover_letter_prompt', { sub: 'placeholders: {voice_instruction} {length_instruction} {job_description}' }),
       ]],
       ['autofill', '', 'Autofill', 'used by the Chrome extension on ATS forms', [
@@ -353,9 +353,9 @@ export default function Settings() {
         E('Field patterns', 'Maps form-field names to Persona fields.', 'autofill_field_patterns', { json: true, sub: 'JSON — Persona field → name patterns' }),
         E('Option synonyms', 'Normalises dropdown options.', 'autofill_option_synonyms', { json: true, sub: 'JSON — canonical option → synonyms' }),
       ]],
-      ['prep', '', 'Interview prep', 'the prep handover Applications exports for your LLM of choice', [
-        E('"What I need from you" section', 'The hardcoded ask appended to the prep handover.', 'prep_ask', { sub: 'plain text, no placeholders' }),
-        SEL('Include by default', 'Sections the prep handover carries. Ask is always included.', 'prep_include',
+      ['prep', '', 'Interview prep', 'the prep handover that Applications builds for an AI chat', [
+        E('"What I need from you" section', 'The questions added at the end of the prep handover.', 'prep_ask', { sub: 'plain text, no placeholders' }),
+        SEL('Include by default', 'Sections included in the prep handover. The questions are always included.', 'prep_include',
           [['resume,posting,notes', 'Résumé · posting · notes'], ['resume,posting', 'Résumé · posting'],
             ['posting,notes', 'Posting · notes'], ['resume', 'Résumé only'], ['posting', 'Posting only']], { w: '260px', dflt: 'resume,posting,notes' }),
       ]],
@@ -364,15 +364,15 @@ export default function Settings() {
         B('Confidence threshold', '0–100 — below this, the email is flagged for manual review instead.', 'email_llm_confidence_threshold', { mono: true, int: true, w: '135px' }),
         E('Classification prompt', 'Labels + confidence + application hint.', 'email_llm_prompt', { sub: 'placeholders: {applications} {from} {subject} {body}' }),
         E('Gmail query · subjects', 'Subject terms the Gmail poll searches for.', 'email_gmail_query_subjects', { list: true, sub: 'one term per line · OR-combined in the Gmail query' }),
-        E('Gmail query · senders', 'Additional known sender domains check.', 'email_gmail_query_senders', { list: true, sub: 'one domain per line' }),
-        E('Gmail query · exclusions', 'Exclusion of newsletters and job-alert spam.', 'email_gmail_query_exclusions', { list: true, sub: 'one term per line · appended as -term' }),
+        E('Gmail query · senders', 'Extra sender domains treated as job-related email.', 'email_gmail_query_senders', { list: true, sub: 'one domain per line' }),
+        E('Gmail query · exclusions', 'Ignore newsletters and job-alert email.', 'email_gmail_query_exclusions', { list: true, sub: 'one term per line · appended as -term' }),
       ]],
       ['scheduler', 'PIPELINE', 'Scheduler', 'intervals in minutes (0 = off) · crons empty = off', [
         B('Scrape all companies', 'Runs every active company scrape on this interval.', 'scrape_interval_minutes', { mono: true, int: true, w: '135px' }),
         B('Email check', 'Polls Gmail for replies to your applications.', 'email_check_interval_minutes', { mono: true, int: true, w: '135px' }),
         B('Cleanup after', 'Days before ignored and skipped job postings are removed.', 'job_archive_after_days', { mono: true, int: true, w: '135px' }),
         B('Auto-reject threshold', 'Days of silence before an application is auto-moved to Rejected.', 'auto_reject_after_days', { mono: true, int: true, w: '135px',
-          info: 'Counts from the last activity on the application (stage change, email, note). Auto-rejected applications keep their history and stay in Stats — nothing is deleted.' }),
+          info: 'Counted from the last activity on the application (stage change, email, note). Auto-rejected applications keep their history and stay in Stats.' }),
         B('Auto-reject · cron', 'Applies the auto-reject threshold.', 'reject_cron', { mono: true, cron: true, w: '135px' }),
 		B('DB backup · cron', 'Database snapshot.', 'backup_cron', { mono: true, cron: true, w: '135px' }),
         B('Telegram digest · cron', 'Summary of new high-fit jobs.', 'digest_cron', { mono: true, cron: true, w: '135px' }),
@@ -380,22 +380,22 @@ export default function Settings() {
         B('Job cleanup · cron', 'Purges expired postings.', 'cleanup_cron', { mono: true, cron: true, w: '135px' }),        
       ]],
       ['exclude', '', 'Global exclude', 'titles, companies and body phrases dropped before anything else runs', [
-        E('Body phrases', 'Exclusion of postings whose description matches any phrase from this list.', 'body_exclusion_phrases', { list: true, sub: 'one phrase per line · case-insensitive' }),
-        E('Title exclude', 'Exclusion of the job title matches.', 'title_exclude_global', { list: true, sub: 'one phrase per line · case-insensitive' }),
-        E('Company exclude', 'Exclusion of exact company names', 'company_exclude_global', { list: true, sub: 'one company per line · exact match' }),
+        E('Body phrases', 'Skip postings whose description contains any of these phrases.', 'body_exclusion_phrases', { list: true, sub: 'one phrase per line · case-insensitive' }),
+        E('Title exclude', 'Skip jobs whose title matches any of these words.', 'title_exclude_global', { list: true, sub: 'one phrase per line · case-insensitive' }),
+        E('Company exclude', 'Skip jobs from these companies (exact name).', 'company_exclude_global', { list: true, sub: 'one company per line · exact match' }),
       ]],
       ['dedup', '', 'Dedup tracking params', "so the same job from two sources isn't saved twice", [
         E('Stripped params', 'Query params removed from job URLs. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
       ]],
       ['notifications', 'INTEGRATIONS', 'Notifications', 'Telegram bot · digest schedule is under Scheduler', [
-        SW('Telegram', 'High-fit arrivals and the daily digest go to your chat.', 'Off — no push notifications.', 'telegram_enabled'),
+        SW('Telegram', 'New high-scoring jobs and the daily digest are sent to your chat.', 'Off — no push notifications.', 'telegram_enabled'),
         B('Chat ID', 'Your Telegram chat — get it by messaging @userinfobot.', 'telegram_chat_id', { mono: true, w: '135px' }),
         B('Score threshold', 'Only jobs scoring at or above this trigger an instant alert.', 'fit_score_threshold', { mono: true, int: true, w: '135px' }),
         BT('Test', 'Confirms the bot token and chat ID work end to end.', 'Send test message', () => api.post('/telegram/test')),
-        { kind: 'button', label: 'Webhook secret', help: 'Optional — alerts and the digest work without a webhook. Validates every Telegram → backend call.',
+        { kind: 'button', label: 'Webhook secret', help: 'Optional. Checks every call from Telegram to the backend. Alerts and the digest work without it.',
           btnLabel: 'Rotate', previewBox: '260px',
           preview: S.telegram_webhook_secret === MASK ? 'Set (hidden — rotate to view)' : (S.telegram_webhook_secret ? 'Set' : 'Not set'),
-          info: 'Telegram sends the secret as X-Telegram-Bot-Api-Secret-Token on every webhook call; mismatched headers return 401. Rotating shows the new secret once — copy it immediately, then re-register the webhook.',
+          info: 'Telegram sends this secret with every webhook call. Calls with the wrong secret are rejected. After rotating, the new secret is shown once: copy it, then register the webhook again.',
           act: async () => {
             const go = await ask({ title: 'Rotate the webhook secret?', body: 'Telegram stops accepting the old one immediately — you must re-register the webhook afterwards.', label: 'Rotate', danger: true })
             if (!go) return false
@@ -414,9 +414,9 @@ export default function Settings() {
       ]],
       ['tracer', '', 'Tracked links', 'short links that record when a recruiter opens them', [
         SW('Rewrite links', 'Résumé and letter links route through your domain.', 'Off — documents keep their original links.', 'tracer_links_enabled',
-          { info: 'Each application gets its own short link per document link. When a recruiter opens one, the hit is recorded in Stats against that application.' }),
+          { info: 'Each application gets its own short link for every document link. When a recruiter opens one, it is recorded in Stats for that application.' }),
         B('Base URL', 'Your tracked link domain.', 'tracer_links_base_url', { mono: true, w: '260px', placeholder: 'https://yourdomain.com' }),
-        SEL('URL style', 'Your domain needs to support selected style.', 'tracer_links_url_style',
+        SEL('URL style', 'Your domain must support the selected link style.', 'tracer_links_url_style',
           [['path', 'Path + random (/cv/a7x2kp)'], ['param', 'Param + random (?cv=a7x2kp)'],
             ['path_jobid', 'Path + job ID (/cv/142li)'], ['param_jobid', 'Param + job ID (?cv=142li)']], { w: '260px', dflt: 'path' }),
       ]],
@@ -432,12 +432,12 @@ export default function Settings() {
       ['linkedin', '', 'LinkedIn', "personal scraping + the extension's separate mock account", [
         B('Personal email', 'Used by LinkedIn Personal collections.', 'linkedin_email', { w: '260px' }),
         B('Personal password', 'Stored locally.', 'linkedin_password', { secret: true, w: '260px' }),
-        { kind: 'linkedin', label: 'Session cookie', help: 'The extension import reuses a signed-in cookie. LinkedIn gates the login behind an emailed PIN.' },
+        { kind: 'linkedin', label: 'Session cookie', help: 'The extension import reuses a signed-in session. LinkedIn asks for an emailed PIN at login.' },
         B('Mock account email', 'The extension browses specific jobs with this mock account.', 'linkedin_mock_email', { w: '260px',
-          info: 'Capture happens while the extension browses LinkedIn collections. Doing that on a throwaway account means rate limits, CAPTCHAs or bans hit the mock identity — never your real profile.' }),
+          info: 'The extension captures jobs while you browse LinkedIn collections. Use a separate account so rate limits, CAPTCHAs or bans affect it and not your real profile.' }),
         B('Mock account password', 'Stored locally only.', 'linkedin_mock_password', { secret: true, w: '260px' }),
       ]],
-      ['advanced', 'SYSTEM', 'Advanced', 'escape hatches — most days none of this gets touched', [
+      ['advanced', 'SYSTEM', 'Advanced', 'rarely needed settings', [
         B('Proxy URL', 'Used by scrapes that hit rate limits or geo-blocks. Empty = direct.', 'proxy_url', { mono: true, w: '340px', placeholder: 'socks5://127.0.0.1:9050' }),
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup')),
@@ -789,7 +789,7 @@ function ApiKeyRow({ value, save, flash }) {
       <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 340px' }}>
         <input value={local} onChange={(e) => setLocal(e.target.value)} type={shown ? 'text' : 'password'} autoComplete="off"
           aria-label="Dashboard API key"
-          placeholder={isSet ? 'Set — type a new key to replace it' : 'No key — the dashboard is open'}
+          placeholder={isSet ? 'Set — type a new key to replace it' : 'No key set. Anyone who can reach this address can use the dashboard.'}
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
         <Link onClick={() => setShown((v) => !v)} ariaLabel={`${shown ? 'Hide' : 'Show'} the dashboard API key`}
           style={{ whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</Link>
@@ -1046,7 +1046,7 @@ function ModelsModal({ S, save, onClose }) {
                   if (e.key === 'Enter') { e.preventDefault(); add(showSug ? suggestions[hi] : undefined) }
                 }}
                 placeholder={SEARCHABLE.includes(provider)
-                  ? (loading ? 'Loading live models…' : `Search ${live.length} live models, or paste any slug…`)
+                  ? (loading ? 'Loading live models…' : `Search ${live.length} models, or paste a model id…`)
                   : 'Enter the local model name…'}
                 style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
             </span>
@@ -1067,7 +1067,7 @@ function ModelsModal({ S, save, onClose }) {
                   </div>
                 ))}
                 <Helper size="xs" style={{ display: 'flex', alignItems: 'center', padding: '5px 9px', borderTop: '1px solid var(--line-soft)', marginTop: 3 }}>
-                  {matched} of {live.length} match · or paste any slug and Add
+                  {matched} of {live.length} match · or paste a model id and press Add
                 </Helper>
               </Menu>
             )}
@@ -1086,7 +1086,7 @@ function ModelsModal({ S, save, onClose }) {
               {/* SET-15: the design turns the border --bad on hover too, not just the glyph */}
               {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}
               <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
-                title="Remove — removal persists" className="v2-hover-bad-bdc"
+                title="Remove from the list (stays removed)" className="v2-hover-bad-bdc"
                 style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>
             </div>
           ))}
