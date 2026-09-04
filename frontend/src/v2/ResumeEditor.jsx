@@ -495,7 +495,7 @@ export default function ResumeEditor() {
       {isCopy ? (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13 }}>
           {scores.tailored != null && (
-            <ScoreRing value={scores.tailored} size="md" />
+            <ScoreRing value={scores.tailored} size="sm" />
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>

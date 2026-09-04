@@ -894,8 +894,8 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // `children` ride in the ring's own relative box — that is where the Feed's
 // "+N reports" count badge pins itself.
 const RING_SIZE = {
-  sm: { box: 34, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },
-  md: { box: 44, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
+  sm: { box: 34, vb: 78, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },  // vb 78: the pre-pass band ring (r 15.26 px, stroke 2.18) — fits a 34 box without clipping
+  md: { box: 44, vb: 88, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
 }
 const RING_TONE = {
   bad: { arc: 'var(--ring-bad-border)', ink: 'var(--ring-bad-ink)', bg: 'var(--ring-bad-bg)' },
@@ -919,7 +919,7 @@ const RING_VB = 88
 export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', title, ariaLabel, children, style, className }) {
   const z = typeof size === 'number' ? { ...RING_SIZE.md, box: size } : (RING_SIZE[size] || RING_SIZE.md)
   const t = RING_TONE[tone || scoreTone(value)] || RING_TONE.neutral
-  const vb = RING_VB
+  const vb = z.vb || RING_VB  // numeric sizes scale md's ring
   const stroke = weight || z.track
   const c = 2 * Math.PI * RING_R
   return (
