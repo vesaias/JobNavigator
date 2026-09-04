@@ -1,6 +1,7 @@
 """Application-question autofill: generate an answer from persona + qa_bank."""
 import json as _json
 import logging
+import re as _re
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from backend.models.db import SessionLocal, Setting, Persona
@@ -45,6 +46,143 @@ def _trim_to_chars(text: str, max_chars: int):
     if space > 0:
         cut = cut[:space]
     return cut.rstrip().rstrip(",;:-—–").rstrip(), True
+
+
+_FENCE_OPEN = _re.compile(r"^```[A-Za-z0-9_+-]*[^\S\r\n]*\r?\n?")
+
+
+def _strip_code_fences(text: str) -> str:
+    """Drop a ```json … ``` wrapper the model put around its JSON."""
+    t = (text or "").strip()
+    if not t.startswith("```"):
+        return t
+    t = _FENCE_OPEN.sub("", t, count=1).strip()
+    if t.endswith("```"):
+        t = t[:-3].rstrip()
+    return t
+
+
+def _first_json_object(text: str):
+    r"""The first *balanced* {...} in `text`, or None.
+
+    The old salvage regex (r'\{[\s\S]*\}') matched from the first brace to the
+    LAST one anywhere in the reply, so any prose or second object after the
+    envelope made the whole match unparseable and the raw text was served
+    instead. A depth scan that knows about strings and escapes finds the object
+    the model actually emitted.
+    """
+    depth = 0
+    start = -1
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text or ""):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            if depth:
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    return text[start:i + 1]
+    return None
+
+
+def _last_unescaped_quote(body: str) -> int:
+    """Index of the last `"` that is not itself escaped, or -1.
+
+    A plain rfind lands on the `\"` inside `... a \"quoted\" bit ...` and cuts a
+    truncated answer off at its last quotation mark instead of keeping all of it.
+    """
+    i = len(body) - 1
+    while i >= 0:
+        if body[i] == '"':
+            back = 0
+            j = i - 1
+            while j >= 0 and body[j] == "\\":
+                back += 1
+                j -= 1
+            if back % 2 == 0:
+                return i
+        i -= 1
+    return -1
+
+
+def _unescape_json_fragment(body: str) -> str:
+    """Decode a JSON string body that has lost its closing quote."""
+    try:
+        return _json.loads('"' + body + '"')
+    except ValueError:
+        pass
+    # A truncated fragment can end mid-escape ("…\") — drop that and retry.
+    trimmed = body[:-1] if body.endswith("\\") else body
+    try:
+        return _json.loads('"' + trimmed + '"')
+    except ValueError:
+        return (trimmed.replace("\n", "\n").replace("\t", "\t")
+                       .replace('\\"', '"').replace("\\\\", "\\"))
+
+
+def _extract_answer(raw: str) -> str:
+    """Pull the answer text out of whatever the model returned.
+
+    DS-B-03: the model is asked for {"answer": "..."} and usually obliges, but a
+    malformed or truncated envelope fell through to `answer = raw`, and the
+    endpoint served the literal `{"answer": "At additiv I owned …` to the
+    extension — which pastes it straight into a real application form. The order
+    below is widest-net-last, and the last net is never a JSON envelope:
+
+      1. strip a ``` fence,
+      2. parse the whole reply,
+      3. parse the first balanced {...} inside it,
+      4. salvage a truncated `{"answer": "…` by hand,
+      5. accept plain prose — but only if it does not start with `{`.
+
+    Returns "" when nothing usable is left; the caller turns that into the 502
+    it already raises for a failed generation, rather than handing back a wrapper.
+    """
+    text = _strip_code_fences(raw)
+    if not text:
+        return ""
+    for candidate in (text, _first_json_object(text)):
+        if not candidate:
+            continue
+        try:
+            parsed = _json.loads(candidate)
+        except ValueError:
+            continue
+        if isinstance(parsed, dict):
+            value = parsed.get("answer")
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                value = str(value)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        elif isinstance(parsed, str) and parsed.strip():
+            return parsed.strip()
+    # Truncated envelope: the opening `{"answer": "` is there, the closing quote
+    # and brace are not (the model hit its token budget mid-sentence).
+    m = _re.search(r'["\']answer["\']\s*:\s*"', text)
+    if m:
+        body = text[m.end():]
+        end = _last_unescaped_quote(body)
+        if end > 0:
+            body = body[:end]
+        body = _unescape_json_fragment(body.rstrip()).strip()
+        if body and not body.startswith("{"):
+            return body
+    # Plain prose is fine; a leftover JSON envelope never is.
+    text = text.strip().strip('"').strip()
+    return "" if text.startswith("{") else text
 
 
 def _qa_pair(entry) -> tuple:
@@ -178,19 +316,13 @@ async def autofill_answer(body: dict):
             tracker.record(resp)
         raw = (resp.get("text") or "").strip()
         # The model returns {"answer": "..."}; extract it so any leaked reasoning /
-        # preamble outside the JSON is discarded. Fall back to the raw text.
-        answer = raw
-        try:
-            import json as _json
-            import re as _re
-            m = _re.search(r'\{[\s\S]*\}', raw)
-            if m:
-                parsed = _json.loads(m.group(0))
-                if isinstance(parsed, dict) and parsed.get("answer"):
-                    answer = str(parsed["answer"])
-        except Exception:
-            pass
-        answer = answer.strip().strip('"')
+        # preamble outside the JSON is discarded. DS-B-03: an envelope that cannot
+        # be salvaged is a failed generation, not an answer - the 502 below is the
+        # honest outcome, since a JSON wrapper pasted into an application form is
+        # worse than an error the user can retry.
+        answer = _extract_answer(raw)
+        if not answer:
+            raise ValueError(f"unusable model output: {raw[:160]!r}")
     except Exception as e:
         logger.error(f"autofill generation failed: {e}")
         raise HTTPException(502, "autofill generation failed") from e

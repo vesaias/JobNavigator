@@ -7,6 +7,7 @@ import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 import { ago, agoShort } from './time'
+import { fetchRunOutcome, runFailed, runFailureReason } from './hooks'
 
 export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['detailed', 'Detailed']]
 
@@ -217,14 +218,18 @@ export default function CoverLetters() {
         if (gone.length) {
           load()
           window.dispatchEvent(new CustomEvent('jn:counts-changed'))   // CL-17
-          // CL-06: a failed run leaves /monitor/active exactly like a successful
-          // one — the row just vanishes. Ask the history what actually happened.
-          try {
-            const { data: hist } = await api.get('/monitor/history', { params: { job_type: 'generate_cover_letter', limit: 20 } })
-            const bad = (hist || []).find((h) => h.status === 'failed' && gone.some((g) => g.run_id === h.id))
-            if (bad && !dead) { setErr(`Generation failed${bad.error ? ' — ' + bad.error : ''}`); pushToast({ kind: 'error', msg: `Generation failed${bad.error ? ' — ' + bad.error : ''}` }) }
-            else if (!dead) pushToast({ kind: 'success', msg: 'Cover letter ready.' })
-          } catch { /* the reloaded list is then the only signal */ }
+          // CL-06 / DS-B-02: a failed run leaves /monitor/active exactly like a
+          // successful one — the row just vanishes. Ask the run what happened, and
+          // keep the three answers apart: completed, failed, and "cannot tell".
+          for (const g of gone) {
+            const run = await fetchRunOutcome(g.run_id, 'generate_cover_letter')
+            if (dead) return
+            if (runFailed(run)) {
+              const why = `Generation failed — ${runFailureReason(run)}`
+              setErr(why); pushToast({ kind: 'error', msg: why })
+            } else if (run) pushToast({ kind: 'success', msg: 'Cover letter ready.' })
+            else pushToast({ kind: 'progress', spin: false, ttl: 6000, msg: 'Generation finished — check the list for the letter.' })
+          }
         }
       } catch { /* retry next tick */ }
     }

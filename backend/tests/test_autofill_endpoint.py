@@ -38,3 +38,37 @@ def test_autofill_requires_question(api_client, test_db):
     _seed(test_db)
     r = api_client.post("/api/autofill/answer", json={"company": "Rogo"})
     assert r.status_code == 400
+
+
+# ── DS-B-03: the envelope never reaches the user ────────────────────────────
+# These two need the app (api_client → backend.main → apscheduler), so they run
+# in the container; the pure-function coverage is test_autofill_extract.py.
+
+def test_truncated_envelope_is_salvaged_end_to_end(api_client, test_db, monkeypatch):
+    _seed(test_db)
+
+    async def fake(prompt, system, max_tokens=400, cached_prefix=None):
+        # the model hit its token budget mid-sentence: no closing quote, no brace
+        return {"text": '{"answer": "Because Rogo is finance and AI', "usage": {}}
+    monkeypatch.setattr("backend.api.routes_autofill.call_autofill_llm", fake, raising=True)
+
+    r = api_client.post("/api/autofill/answer",
+                        json={"question": "Why are you interested in Rogo?",
+                              "company": "Rogo", "position": "PM", "max_chars": 250})
+    assert r.status_code == 200
+    answer = r.json()["answer"]
+    assert not answer.startswith("{")
+    assert answer == "Because Rogo is finance and AI"
+
+
+def test_unusable_envelope_is_a_502_not_an_answer(api_client, test_db, monkeypatch):
+    _seed(test_db)
+
+    async def fake(prompt, system, max_tokens=400, cached_prefix=None):
+        return {"text": '{"reasoning": "thought about it", "confidence": 0.4}', "usage": {}}
+    monkeypatch.setattr("backend.api.routes_autofill.call_autofill_llm", fake, raising=True)
+
+    r = api_client.post("/api/autofill/answer",
+                        json={"question": "Why are you interested in Rogo?",
+                              "company": "Rogo", "position": "PM", "max_chars": 250})
+    assert r.status_code == 502

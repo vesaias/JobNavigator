@@ -9,6 +9,7 @@ import { useUndoRemove, BandRule } from './ResumeSections'
 import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
+import { fetchRunOutcome, runFailed, runFailureReason } from './hooks'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -209,14 +210,16 @@ export default function CoverLetterEditor() {
     })
   }
 
+  const regenRun = useRef(null)   // DS-B-02: run_id of the regenerate in flight
   const regenerate = async () => {
     if (regening || !rSource) return
     setRegening(true); setErr('')
     try {
-      await api.post('/cover-letters/generate', {
+      const { data: started } = await api.post('/cover-letters/generate', {
         resume_id: rSource, job_id: doc.job_id, voice: rVoice, length: rLength,
         cover_letter_id: id,       // rewrite this draft in place
       })
+      regenRun.current = started?.run_id || null   // DS-B-02: read its status below
     } catch (e) {
       setRegening(false)
       setErr(e?.response?.data?.detail || 'Regeneration failed')
@@ -236,6 +239,19 @@ export default function CoverLetterEditor() {
         // kept this modal spinning until every unrelated generation finished.
         const live = (runs || []).some((r) => r.job_type === 'generate_cover_letter' && r.scope_key === `cl:${id}`)
         if (!live && !dead) {
+          // DS-B-02: the run leaving /monitor/active only means it ended. A failed
+          // regenerate used to close this modal on an unchanged draft, silently
+          // indistinguishable from a rewrite. Ask the run what happened; on a
+          // failure keep the modal open with the reason so it can be retried.
+          const run = await fetchRunOutcome(regenRun.current, 'generate_cover_letter')
+          if (dead) return
+          if (runFailed(run)) {
+            clearInterval(iv)
+            setRegening(false)
+            setErr(`Regeneration failed — ${runFailureReason(run)}`)
+            pushToast({ kind: 'error', msg: `Regeneration failed — ${runFailureReason(run)}` })
+            return
+          }
           // reload FIRST: clearing the interval before a GET that throws left
           // `regening` true for ever with no poll to clear it (modal locked)
           const { data: d } = await api.get(`/cover-letters/${id}`)
@@ -249,7 +265,7 @@ export default function CoverLetterEditor() {
       } catch { /* retry */ }
     }, 2000)
     return () => { dead = true; clearInterval(iv) }
-  }, [regening, id])
+  }, [regening, id, pushToast])
 
   // RES-15: Escape closes the modal through the shared hook. This handler keeps the
   // menu/dropdown half (CL-25) and marks the event handled when one was actually

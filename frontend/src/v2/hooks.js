@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import api from '../api'
 
 // Small cross-screen hooks. Kept out of Toast.jsx so a screen can take the
 // Escape handling without also pulling in the toast host.
@@ -94,4 +95,40 @@ export function useFlashToast(push) {
     } catch { /* ignore */ }
     if (t && t.msg) push(t)
   }, [push])
+}
+
+// DS-B-02: a background run disappearing from GET /monitor/active only means it
+// ENDED — it says nothing about whether it worked, so a screen that infers
+// "done" from the run vanishing reports a crashed run as a success. Every
+// launcher (POST /resumes/tailor, /resumes/{id}/score-check, /cover-letters/
+// generate) hands back a `run_id`; GET /monitor/run/{id} (main.py:1040) carries
+// the real `status` + `error`, with GET /monitor/history as the fallback for a
+// deployment where the by-id route is missing.
+//
+// Returns the run row, or null when it cannot be identified — callers must treat
+// null as "unknown", never as success. `status === 'running'` is also possible
+// for a moment: the in-memory registry drops a run before its row is finalised,
+// so a caller should not read that as a failure.
+export async function fetchRunOutcome(runId, jobType) {
+  if (!runId) return null
+  try {
+    const { data } = await api.get(`/monitor/run/${runId}`)
+    if (data && data.status) return data
+  } catch { /* fall back to the history list below */ }
+  try {
+    const { data } = await api.get('/monitor/history', { params: { job_type: jobType, limit: 10 } })
+    return (data || []).find((h) => String(h.id) === String(runId)) || null
+  } catch { return null }
+}
+
+// A run row is a failure only when it reached a terminal state that is not
+// `completed`; an unknown row (null) and a still-settling `running` are not.
+export function runFailed(run) {
+  return !!(run && run.status && run.status !== 'completed' && run.status !== 'running')
+}
+
+// The failure text a toast should name: the run's own error, else its summary,
+// else the bare status so the user is never told only that "something failed".
+export function runFailureReason(run) {
+  return (run && (run.error || run.result_summary || run.status)) || 'the run did not finish'
 }

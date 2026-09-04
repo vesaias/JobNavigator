@@ -62,7 +62,16 @@ export const kb = (fn, role = 'button') => ({
 const cx = (...v) => v.filter(Boolean).join(' ')
 // `kb()` only when the control can actually act — a disabled control must not be
 // a tab stop, and an inert one (a Card with no onClick) is not a button.
-const act = (fn, off, role) => (fn && !off ? { onClick: fn, ...kb(fn, role) } : {})
+//
+// DS-B-01: a disabled/busy control keeps its ROLE, though. Dropping `role` along
+// with the click and key handlers left a `Parsing…` button reading to a screen
+// reader as loose text rather than a disabled button, and threw away the focus
+// that was on it. Keep the role and the caller's `aria-disabled`/`aria-busy`, and
+// take away only the interactivity: no handlers, and `tabIndex -1` so it leaves
+// the tab order while staying focusable (and focused, if it already was).
+const act = (fn, off, role) => (
+  fn ? (off ? { role: role || 'button', tabIndex: -1 } : { onClick: fn, ...kb(fn, role) }) : {}
+)
 
 // ── Spinner ─────────────────────────────────────────────────────────────────
 // dominant: 1.5px accent · r99 · 9px (9 sites). `color` lets a button spin in
@@ -130,7 +139,9 @@ export function Button({
     'aria-label': ariaLabel,
     'aria-expanded': ariaExpanded,
     'aria-haspopup': ariaHaspopup,
-    'aria-busy': ariaBusy,
+    // DS-B-01: `busy` is the state a screen reader needs; the prop stays an
+    // explicit override for the callers that set it themselves.
+    'aria-busy': ariaBusy !== undefined ? ariaBusy : (busy || undefined),
     className: cx('v2-ctl', !off && look.hover, className),
     style: {
       flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -711,7 +722,7 @@ export const RemoveX = ({ onClick, title = 'Remove', size = 11, lh }) => (
 // never do, and before this both drew their own pair with different hovers.
 export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
   const arrow = (fn, off, title, glyph) => (
-    <span {...act(fn, off)} title={title} className={off ? undefined : 'v2-navlink'}
+    <span {...act(fn, off)} title={title} aria-disabled={off || undefined} className={off ? undefined : 'v2-navlink'}
       style={{ opacity: off ? 0.35 : 1, cursor: off ? 'default' : 'pointer' }}>{glyph}</span>
   )
   return (
