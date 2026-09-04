@@ -61,7 +61,16 @@ const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], min_sco
 
 // small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
 // when the panel would overflow the viewport's right edge.
-function Drop({ label, active, open, onToggle, children, width = 216, trigger, onClear }) {
+//
+// D-POST-15: every Drop panel is a `Menu` (padding 5). A *list* popup (Source,
+// Company, H-1B, Status, Sort) gets its inner room from MenuItem's `7px 11px`,
+// so its text sits 17px in from the panel's outer edge; the popups whose body is
+// a row of fields (Score >=, Salary) had no such inset and their content sat at
+// the panel's bare 6px, which read as cramped next to the list menus. `inset`
+// wraps such a body in the same 11px gutter, so all six popups share one inner
+// geometry. Measured before -> after (content left, from the panel's border):
+// Score/Salary 6 -> 17, list menus unchanged at 17.
+function Drop({ label, active, open, onToggle, children, width = 216, trigger, onClear, inset }) {
   const ref = useRef(null)
   const [pos, setPos] = useState(null)
   useLayoutEffect(() => {
@@ -86,7 +95,7 @@ function Drop({ label, active, open, onToggle, children, width = 216, trigger, o
         <>
           <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
           <Menu className="v2-scroll" style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 45, width, maxHeight: 360, overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
-            {children}
+            {inset ? <div style={{ padding: '6px 11px' }}>{children}</div> : children}
           </Menu>
         </>
       )}
@@ -212,8 +221,8 @@ export default function V2JobFeed() {
 
   useEffect(() => { const t = setTimeout(() => setDSearch(search), 400); return () => clearTimeout(t) }, [search])
   // FEED-33: the Score / Salary boxes commit 400 ms after the last keystroke, like the title search
-  const [numDraft, setNumDraft] = useState({ min_score: filters.min_score, min_salary: filters.min_salary })
-  useEffect(() => { setNumDraft({ min_score: filters.min_score, min_salary: filters.min_salary }) }, [filters.min_score, filters.min_salary])
+  const [numDraft, setNumDraft] = useState({ min_score: filters.min_score, min_salary: filters.min_salary, max_salary: filters.max_salary })
+  useEffect(() => { setNumDraft({ min_score: filters.min_score, min_salary: filters.min_salary, max_salary: filters.max_salary }) }, [filters.min_score, filters.min_salary, filters.max_salary])
   const numTimer = useRef(null)
   const setNum = (key, v) => { setNumDraft((p) => ({ ...p, [key]: v })); clearTimeout(numTimer.current); numTimer.current = setTimeout(() => setF({ [key]: v }), 400) }
   useEffect(() => {
@@ -771,7 +780,7 @@ export default function V2JobFeed() {
         <Drop label={`H-1B${filters.h1b_verdict.length ? ` · ${filters.h1b_verdict.length}` : ''}`} active={filters.h1b_verdict.length > 0} onClear={() => setF({ h1b_verdict: [] })} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
           {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} count={verdictCounts[v]} onClick={() => togF('h1b_verdict', v)} />)}
         </Drop>
-        <Drop label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={212}>
+        <Drop inset label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={234}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[70, 80, 90].map((n) => <Pill key={n} size="sm" on={filters.min_score === String(n)} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1 }}>{n}</Pill>)}
           </div>
@@ -782,14 +791,19 @@ export default function V2JobFeed() {
           </div>
           <Helper size="xs" style={{ marginTop: 8 }}>Also hides unscored jobs — they have no score to compare</Helper>
         </Drop>
-        <Drop label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={224}>
+        <Drop inset label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={288}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[150, 180, 220].map((n) => <Pill key={n} size="sm" on={filters.min_salary === String(n)} onClick={() => setF({ min_salary: String(n) })} style={{ flex: 1 }}>${n}K</Pill>)}
           </div>
+          {/* both ends of the range: `max_salary` was already in DEFAULTS, in the
+              trigger label and in the query params, but had no field to set it */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <Helper>at least</Helper>
+            <Helper>min</Helper>
             <Input type="number" mono placeholder="$K" value={numDraft.min_salary} onChange={(v) => setNum('min_salary', v)}
               ariaLabel="Minimum salary in thousands" style={{ flex: 1, minWidth: 0 }} />
+            <Helper>max</Helper>
+            <Input type="number" mono placeholder="$K" value={numDraft.max_salary} onChange={(v) => setNum('max_salary', v)}
+              ariaLabel="Maximum salary in thousands" style={{ flex: 1, minWidth: 0 }} />
           </div>
           <Helper size="xs" style={{ marginTop: 8 }}>Also hides jobs without a listed salary</Helper>
         </Drop>
@@ -885,8 +899,8 @@ export default function V2JobFeed() {
                 // no gap, inner padding) is the caller's. `on` is the bulk-select
                 // tint, which has no Row state of its own.
                 return (
-                  <Row key={j.id} data-row={i} divider onClick={(e) => rowClick(e, i, j)}
-                    style={{ flex: '0 0 auto', height: 'auto', alignItems: 'stretch', gap: 0, padding: 0, backgroundColor: on ? 'var(--accent-soft)' : i === sel ? 'var(--surface-2)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
+                  <Row key={j.id} data-row={i} divider selected={i === sel} onClick={(e) => rowClick(e, i, j)}
+                    style={{ flex: '0 0 auto', height: 'auto', alignItems: 'stretch', gap: 0, padding: 0, backgroundColor: (on || i === sel) ? 'var(--row-selected)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '10px 12px', opacity: isIgnored ? 0.55 : 1 }}>
                       {/* ring */}
                       <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>

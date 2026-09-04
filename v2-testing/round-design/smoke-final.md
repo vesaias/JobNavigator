@@ -1299,3 +1299,215 @@ that is the drift.
 `v2/HANDOVER.md` (docs only), plus the moved `design-base/*.jsx`. No backend file
 was touched, so no container restart is needed. Handing the rebuild to the
 coordinator rather than doing it here, per the pass's source-only rule.
+
+---
+
+## Post-pass fixes — round 2 (five user reports)
+
+Repo `V:\JTrakProject`, branch `v2-redesign`, HEAD `6010959`. **Source-only** —
+nothing rebuilt, no container restarted, nothing committed, so none of this is on
+screen until the frontend is rebuilt. (A verifier was driving the live build
+throughout; every measurement below was taken against *that* bundle,
+`assets/index-9F1Ab3ny.js` + `index-Cqxd5Yke.css`, built 07:44 today and
+confirmed to carry HEAD's `.v2-menu>*{flex-shrink:0}` rule.)
+
+Measured live first, as before: Playwright in the `backend` container against
+`http://caddy` (not `http://frontend` — that container's nginx does not proxy
+`/api`, so the SPA boots empty there), `localStorage.jobnavigator_api_key` seeded
+from the `dashboard_api_key` setting.
+
+### id -> file:line -> change
+
+| id | file:line | change |
+|---|---|---|
+| D-POST-02 (re-report) | — (`frontend/src/v2/JobFeed.jsx:760-761`) | **still not reproducible**; measured `padding: 0px 9px` on the live in-menu field |
+| D-POST-15 | `frontend/src/v2/JobFeed.jsx:64-73, 98, 224-225, 783, 794-810` | `Drop` gains `inset`; the two number popups share the list menus' inner gutter, and Salary gains its `max` field |
+| D-POST-16 | `frontend/src/v2/ui.jsx:891-895, 909-918, 922, 927, 933` | `ScoreRing`'s viewBox is a constant, so `sm` stops being clipped |
+| D-POST-17 | `frontend/src/v2/theme.css:119, 290, 443-447` + `JobFeed.jsx:902-903` | `--row-selected` is the accent wash on every screen |
+| (label) | `frontend/src/design-base/UiGallery.jsx:379` | the one site overriding the unscored label back to the `No fit` default |
+
+### 1 · Feed > Company filter: "text sits flush against the box's left edge"
+
+**Not reproducible — same verdict as D-POST-02 in the previous batch, now
+re-measured on the current bundle.** The field already draws the canonical inset.
+
+`.v2-menu` panel (Company, `width={248}`): `padding: 5px`, `border: 1px`.
+The field is a direct child of the panel — *not* a bare input inside a padded
+wrapper, and no `pad` / `style={{ padding: 0 }}` is passed:
+
+| measured on the live `<input>` | value |
+|---|---|
+| `padding-left` / `padding-right` | **9px / 9px** |
+| `border-left-width` | 1px |
+| `box-sizing` | `border-box` |
+| `text-indent` | 0px |
+| height x width | 32 x 236 (in a 248 panel) |
+| offset of its border from the panel border | 6px (5 panel pad + 1 panel border) |
+| **text inset from the panel's outer border** | **16px** |
+| a `MenuItem`'s text inset, same panel | **17px** |
+| inline `style` attribute | `… height: 32px; padding: 0px 9px; opacity: 1; margin-bottom: 6px` |
+
+So the typed text starts 9px from its own border and lands within 1px of the
+company names' axis below it. A screenshot of the open menu at 2x confirms it
+visually. The likeliest source of the report is the *contrast* with the rows: a
+row's checkbox gutter pushes the company name to 40px, so the field's 16px reads
+as further left than its neighbours — but that is the gutter, not the field, and
+closing the 1px would misalign the field's box from the rows' hover fill.
+
+The two sibling sites named in the report were measured too, and neither is
+flush:
+
+- **Applications toolbar search** (`Applications.jsx:353-357`) — a bare `<input>`
+  (`padding: 0`, `border: none`) inside a `.v2-fieldwrap` h32 box with
+  `padding: 0 12px`, a `⌕` glyph and `gap: 7`: text lands ~26px in. The wrapper
+  carries the box; this *is* the "outer wrapper" shape the report guessed at, and
+  it is the intended one.
+- **Settings header search** (`Settings.jsx:489-494`) — the same shape, 230x32,
+  `padding: 0 12px`, glyph + `gap: 7`.
+- **Applications' company-filter popup has no search field at all** (measured: a
+  240px `.v2-menu` of `MenuItem`s only), so there is nothing there to align.
+
+### 2 · D-POST-15 · one inner geometry for every Feed filter popup
+
+**Measured before.** Every `Drop` panel is a `Menu` (`padding: 5`). A *list*
+popup gets its room from `MenuItem`'s `7px 11px`; the two number popups had
+none, so their content sat at the panel's bare padding:
+
+| popup | content's left offset in the panel | text inset from the panel border |
+|---|---|---|
+| Source / Company / H-1B / Status / Sort | child at 6, `padding-left: 11` | **17px** |
+| Score >= | child at 6, `padding-left: 0` | **6px** |
+| Salary | child at 6, `padding-left: 0` | **6px** |
+
+**After.** `Drop` takes an `inset` flag (`JobFeed.jsx:73, 98`) that wraps the body
+in `padding: 6px 11px`, so both number popups land on **17px**, the list menus'
+own inset — one geometry for all six. The fields keep the canonical `Input` box
+(h32, 9px text inset); nothing about them changed.
+
+Panel widths, chosen so the *content* width is not paid for by the new gutter:
+
+| popup | width before | width after | content width before -> after |
+|---|---|---|---|
+| Score >= | 212 | **234** | 200 -> **200** (+22 = exactly the new gutter; the field keeps its ~136px) |
+| Salary | 224 | **288** | 212 -> **254** (seats two fields: `min` ~20 + 7 + ~95 + 7 + `max` ~22 + 7 + ~95) |
+| Source / Company / H-1B / Status / Sort | 216 / 248 / 196 / 170 / 172 | unchanged | unchanged |
+
+**Salary now has both ends.** `max_salary` was already in `DEFAULTS`, in the
+trigger's label (`$150K–$220K` / `Salary ≤ $x K`), in the query params and in the
+clear action — but no control anywhere set it, so it was reachable only from a
+stale `localStorage` blob. The row is now `min [field] max [field]`, both on the
+existing 400 ms debounce (`numDraft`/`setNum` gained `max_salary`,
+`JobFeed.jsx:224-225`). **Flagging this as a decision**: it is a small functional
+addition, made because the brief asked for "the two Salary inputs plus their
+min/max labels" and the filter was already wired end-to-end for it. Revert by
+dropping the second `Input` and the `max_salary` key from `numDraft`.
+
+No other popup in v2 hosts a field: the Companies tier filter and the Searches
+filters are `MenuItem` lists; Companies' toolbar search is a `SearchInput` in the
+header, not in a menu.
+
+### 3 · D-POST-16 · `ScoreRing size="sm"` is clipped
+
+**Measured on a Feed detail panel's report band** (`JobFeed.jsx:1036`):
+
+| | `sm` (before) | `md` |
+|---|---|---|
+| svg box | 34 x 34 | 44 x 44 |
+| `viewBox` | `0 0 68 68` | `0 0 88 88` |
+| `r` / `stroke-width` | 35 / 5 | 35 / 5 |
+| drawn outer diameter | **37.5px** | 37.5px |
+| clear space per side | **-1.75px (clipped)** | +3.25px |
+| ring box / parent `overflow` | `visible` / `visible` | `visible` / `visible` |
+| svg root `overflow` (UA) | `hidden` | `hidden` |
+
+So the box was never the clipper and no ancestor was either: the **viewBox** was.
+`vb = box * 2` makes one viewBox unit a constant 0.5px, so `r=35` + half the
+stroke is a *fixed 37.5px outer diameter at every size*. It fits md's 44px box
+and overflows sm's 34px one, and the SVG root's UA `overflow: hidden` sliced
+1.75px off all four sides — the ring rendered as a squircle.
+
+**Fix** (`ui.jsx:918, 922`): `const RING_VB = 88` — a constant viewBox, so every
+size is a uniform scale of the drawing md already renders. Plus
+`boxSizing: 'border-box'` on the ring box (`:927`) and on the unscored dashed
+disc (`:933`), so `size x size` includes the border. Verified in an isolated
+render at 4x:
+
+| box | viewBox | drawn outer | stroke | clear per side |
+|---|---|---|---|---|
+| 34 (before) | `0 0 68 68` | 37.5px | 2.5px | **-1.75 (clipped)** |
+| 34 (after) | `0 0 88 88` | 28.98px | 1.93px | +2.51 |
+| 44 (`md`, before = after) | `0 0 88 88` | 37.5px | 2.5px | +3.25 |
+| 28 (numeric `size`) | `0 0 88 88` | 23.86px | 1.59px | +2.07 |
+
+`md` is pixel-identical (the Feed row's 44px ring and its "+N reports" badge do
+not move). `sm` draws a whole circle at 85% of its box — the same proportion md
+draws — with a proportionally lighter 1.93px band. There is no `lg`; `RING_SIZE`
+has `sm` and `md` only, and a numeric `size` now scales instead of clipping.
+
+### 4 · The unscored ring reads "No fit"
+
+The primitive's default is already `label = 'No fit'` (`ui.jsx:919`), and exactly
+one site in the tree overrode it: `design-base/UiGallery.jsx:379`,
+`<ScoreRing value={null} label="Not scored" />` -> now `<ScoreRing value={null} />`,
+inheriting the default. No shipped screen ever rendered "Not scored" inside a
+ring:
+
+- `JobFeed.jsx:1174` already passes `label="No fit"` explicitly (left as-is).
+- `ResumeEditor.jsx:498` passes no label -> takes the default.
+- The Feed's "**Not scored yet**" (`JobFeed.jsx:1176`) is the band's *body copy*
+  beside the ring, not the ring's label — left alone.
+
+`ui.jsx`'s header comment now states that `No fit` is the label at every site.
+
+### 5 · D-POST-17 · the selected row is the accent wash on every screen
+
+`theme.css:119` (light) and `:290` (dark): `--row-selected: var(--surface-2)` ->
+`var(--accent-soft)`. `--row-hover` stays `var(--surface-2)` in both.
+
+| screen | selected: before -> after | hover |
+|---|---|---|
+| Applications (`Applications.jsx:435`, `Row selected`) | `--row-selected` = `--surface-2` -> `--row-selected` = **`--accent-soft`** (no call-site change) | `--row-hover` |
+| Feed (`JobFeed.jsx:902-903`, the 64px two-column row) | cursor row `--surface-2` -> **`var(--row-selected)`**; bulk-checked `var(--accent-soft)` literal -> **`var(--row-selected)`** (same colour, now one token) | `--row-hover` (unchanged, via `.v2-row:hover`) |
+| Companies (`Companies.jsx:471`) | no selected state — a row opens the drawer | `--row-hover` |
+| Gallery `Row` sample (`UiGallery.jsx:188-192`) | rest / hover / selected, already the three states | — |
+
+Two supporting changes:
+
+- The Feed row now passes `selected={i === sel}`, so the picked row carries
+  `aria-current="true"` the way `Row`'s own selection does. It still paints its
+  own `backgroundColor` (the bulk tint and the ignored-row hatch live there), but
+  the state is now announced.
+- New rule, `theme.css:443-447`:
+  `.v2-row[aria-current="true"]:hover { background: var(--row-selected) !important }`.
+  Without it, `.v2-row:hover { background: var(--row-hover) !important }` would
+  wipe the accent wash off the selected row the moment the pointer crossed it —
+  invisible while selected and hover were the same grey, obvious now. Specificity
+  0,3,0 beats `.v2-arow:hover` / `.v2-crow:hover` (0,2,0), so it wins wherever it
+  applies regardless of source order.
+
+**Decision to note**: on the Feed, "bulk-checked" and "cursor row" are now the
+same wash (they were `--accent-soft` and `--surface-2`). That follows directly
+from the instruction to give the selected row the accent wash; if the two states
+should stay distinguishable, the bulk tint needs its own token.
+
+### Gates
+
+- `py v2-testing/tools/stylelint.py` -> **`0 findings ({}), 97 allowed, 0 css`**, exit 0.
+- `esbuild@0.21.5 --loader:.jsx=jsx` on `JobFeed.jsx`, `ui.jsx`, `Applications.jsx`
+  and `design-base/UiGallery.jsx` -> **`ESBUILD_OK`**, all parse clean.
+- Brace balance vs HEAD `6010959` — delta `{ } ( ) [ ]` = 0 on every file:
+
+| file | HEAD `{`/`(` | now `{`/`(` | why |
+|---|---|---|---|
+| `JobFeed.jsx` | 1432 / 1662 | 1441 / 1668 | the `inset` wrapper, the `max` field, `max_salary` in the draft |
+| `ui.jsx` | 680 / 693 | 680 / 695 | `RING_VB` + two `boxSizing` keys |
+| `theme.css` | 87 / 485 | 88 / 487 | +1 rule (the `aria-current` hover guard), +2 `var()` |
+
+`design-base/UiGallery.jsx` is git-ignored (one prop dropped, balance unchanged).
+
+### Rebuild needed
+
+**Frontend rebuild** — `v2/JobFeed.jsx`, `v2/ui.jsx`, `v2/theme.css` and the
+git-ignored `design-base/UiGallery.jsx`. No backend file was touched, so no
+container restart is needed. Handing the rebuild to the coordinator, per the
+pass's source-only rule.
