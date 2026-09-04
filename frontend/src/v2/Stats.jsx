@@ -415,7 +415,7 @@ export default function Stats() {
   } : null, ready)
   const subLine = !sub ? NBSP : (
     <>
-      {sub.has ? `Last sweep ${sub.status === 'failed' ? 'failed ' : ''}${ago(sub.at) || '—'}` : 'No scrape recorded yet'}
+      {sub.has ? `Last scrape run ${sub.status === 'failed' ? 'failed ' : ''}${ago(sub.at) || '—'}` : 'No scrape recorded yet'}
       {sub.failing > 0 && <> · <span style={{ color: 'var(--warn)' }}>{sub.failing} source{sub.failing === 1 ? ' needs' : 's need'} attention</span></>}
       {sub.spend != null && <> · {money(sub.spend)} on LLM calls {sub.period ? `in ${sub.period}d` : 'all time'}</>}
     </>
@@ -653,7 +653,7 @@ export default function Stats() {
         <Card ref={schedRef} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '14px 20px 10px', lineHeight: '24px' }}>
             <Heading strong size={17}>Schedules</Heading>
-            <Helper>{schedErr ? 'intervals and crons live in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons live in Settings`}</Helper>
+            <Helper>{schedErr ? 'intervals and crons are in Settings' : `${jobs.length} job${jobs.length === 1 ? '' : 's'} · next runs in ${TZ_SHORT}, schedules as configured (UTC) · intervals and crons are in Settings`}</Helper>
           </div>
           {schedErr ? (
             <div style={{ padding: '26px 20px 30px', borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>Unavailable — the request failed</div>

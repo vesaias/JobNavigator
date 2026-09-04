@@ -81,7 +81,7 @@ const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Appl
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
   if (mode === 'levels_fyi') return ['Configure filters on levels.fyi, then paste the URL here — location, job family, salary and recency are all encoded in it.', 'sm-levels']
-  if (mode === 'jobright') return ['Personalized AI recommendations from your Jobright.ai account. A search term switches it to search mode; credentials live in Settings.', 'sm-jobright']
+  if (mode === 'jobright') return ['Personalized AI recommendations from your Jobright.ai account. A search term switches it to search mode; credentials are in Settings.', 'sm-jobright']
   if (mode === 'extension') return ['Jobs arrive via the “Save to Job Feed” button on any website. Set auto-score depth and the filters below — they apply as each job is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs import via passive capture on linkedin.com/jobs/collections/* pages. The filters below auto-filter during import.', 'sm-levels']
   return null
@@ -278,7 +278,7 @@ function ConfigForm({ d, set }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <Label style={{ marginRight: 3 }}>Collections</Label>
           {COLLECTIONS.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} onClick={() => toggleSrc(id)} />)}
-          <Helper>Credentials live in Settings › Accounts</Helper>
+          <Helper>Credentials are in Settings › Accounts</Helper>
         </div>
       )}
 
@@ -585,7 +585,7 @@ export default function Searches() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-                <Helper>Runs on the next scheduled sweep once created</Helper>
+                <Helper>Runs on the next scheduled run once created</Helper>
                 <Button variant="secondary" size="sm" onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>
@@ -604,7 +604,7 @@ export default function Searches() {
           const isOpen = editing === s.id
           const testBlocked = !!testingId && testingId !== s.id   // SRCH-23
           const mutedWarn = mutedWarnOf(s)
-          const summary = spin ? 'running now — results land in the Job Feed as they arrive…' : (warn || mutedWarn || summaryOf(s))
+          const summary = spin ? 'running now — results appear in the Job Feed as they arrive…' : (warn || mutedWarn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
             /* same card hover as Résumés and Cover Letters. Not while open — the
@@ -666,7 +666,7 @@ export default function Searches() {
                     {/* ui: keep — 25px Run/Test pills sized to their row siblings; Pill sm is 26 */}
                     {TESTABLE.includes(s.search_mode) && (
                       <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
-                        title={testBlocked ? 'A test is already running' : 'Dry run — previews results and per-job filter reasons, saves nothing'}
+                        title={testBlocked ? 'A test is already running' : 'Preview run — shows results and per-job filter reasons, saves nothing'}
                         style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
@@ -793,7 +793,7 @@ function TestModal({ test, tab, setTab, onClose }) {
     <ModalPanel width={980} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading size={18} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
-          <Helper style={{ flex: '0 0 auto' }}>dry run · nothing saved</Helper>
+          <Helper style={{ flex: '0 0 auto' }}>preview run · saves nothing</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>
 
