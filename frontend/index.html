@@ -33,21 +33,29 @@
             ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
             : m;
           d.setAttribute('data-theme', r);
-          d.setAttribute('data-skin', s.getItem('jobnavigator_skin') === 'alt' ? 'alt' : 'default');
+          var skins = ['default', 'alt', 'board', 'ink', 'paper', 'soft'];
+          var k = s.getItem('jobnavigator_skin');
+          d.setAttribute('data-skin', skins.indexOf(k) >= 0 ? k : 'default');
           d.classList.toggle('dark', r === 'dark');
         } catch (e) { /* private mode / storage blocked: the default light theme paints */ }
       })();
     </script>
-    <!-- The only place a palette value is written outside theme.css: the four
-         --bg values, so the pre-mount ground matches. `:root[...]` is (0,2,0),
+    <!-- The only place a palette value is written outside theme.css: the --bg
+         values, so the pre-mount ground matches. `:root[...]` is (0,2,0),
          which beats index.css's `html.dark` (0,1,1) deterministically whatever
          order Vite emits the stylesheets in; both shells cover the viewport with
-         their own ground, so this is only ever visible before React mounts. -->
+         their own ground, so this is only ever visible before React mounts.
+         The `ink` and `soft` comparison skins keep the default's two grounds
+         exactly, so they need no rule of their own. -->
     <style>
       :root[data-theme="light"] { background: #fcfbf7 }
       :root[data-theme="dark"] { background: #1e1c17 }
       :root[data-skin="alt"][data-theme="light"] { background: #f7f8fa }
       :root[data-skin="alt"][data-theme="dark"] { background: #161a21 }
+      :root[data-skin="board"][data-theme="light"] { background: #faf7ef }
+      :root[data-skin="board"][data-theme="dark"] { background: #15140f }
+      :root[data-skin="paper"][data-theme="light"] { background: #faf7ef }
+      :root[data-skin="paper"][data-theme="dark"] { background: #17150f }
     </style>
   </head>
   <body>

@@ -387,3 +387,122 @@ was built in its place.
 Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 98 allowed, 0 css` (exit 0);
 `npx esbuild@0.21.5 --loader:.jsx=jsx` parses clean; brace/paren/bracket balance net 0
 against HEAD. Source-only — nothing rebuilt, restarted or committed.
+
+---
+
+## Iframe switch — the previous posting stays up until the next one loads
+
+**Reported.** Stepping through the feed (click, or `j`/`k`) leaves the *old* posting in
+the pane until the new one has painted. It is a browser artifact, not our state: assigning
+a new `src` to a live `<iframe>` keeps the current document on screen while the next
+navigation is in flight, so on a slow host the pane shows the wrong job for seconds.
+
+**Fixed** in `frontend/src/v2/JobFeed.jsx`:
+
+- **l.32-34** — `FRAME_LOAD_MS = 8000`, the safety window a frame gets before the pane
+  gives up on it.
+- **l.185-196** — `frameLoadId` / `frameDeadId` (both hold a *job id*, never a boolean)
+  and `frameDoneRef`. The id is the stale-guard the whole fix turns on: a rapid `j`/`k`
+  run can leave several timers alive, and each one only acts if its captured id is still
+  the one on screen, so the newest job always wins and no cover is ever left behind.
+- **l.688-694** — `cachedAvail` / `frameJobId` / `frameSrc` hoisted above the effects.
+  `frameSrc` is the single source of truth for "the live frame is what this pane shows":
+  it is null for the cached snapshot, for a host the F4 probe confirmed blocked, and for
+  a job whose frame timed out — each of those falls through to the branch it already had.
+  The render's `dCached` (l.864) now just reads `cachedAvail`.
+- **l.695-712** — a `useLayoutEffect` on `[frameSrc, frameJobId]`: raises the cover, arms
+  the 8 s timer, clears both on unmount. Layout, not a plain effect, so the cover is
+  painted in the same frame as the empty iframe — otherwise `--iframe-bg` flashes once.
+  On timeout the job is marked `frameDeadId`, which nulls `frameSrc` and routes it to the
+  existing "This posting refuses to be framed" panel (Open in new tab / cached snapshot).
+  Nothing is written to the F4 per-host cache — a slow host must not teach the cache that
+  it is blocked.
+- **l.713-716** — `settleFrame(id)`, the `onLoad`/`onError` handler; it drops the cover
+  only if that job is still the selected one.
+- **l.1390-1408** — the live branch. `key={`${frameJobId}|${frameSrc}`}` remounts the
+  iframe per job, so the old document is destroyed the instant the selection changes
+  instead of lingering. Its wrapper is `flex:1 · minHeight:0 · position:relative ·
+  display:flex`, i.e. exactly the box the bare iframe used to fill, and the iframe keeps
+  `flex:1 / width:100%` underneath — the cover is `position:absolute; inset:0`, so it
+  never takes the frame out of flow and `onLoad` still fires normally. No layout shift.
+- The cover itself: `--bg` ground, centred `Spinner size={12}` (the primitive's md step)
+  over a `Helper` line reading `Loading stripe.com …` — `hostOf()` minus a leading `www.`.
+  Tokens and primitives only; no colour, font, radius or shadow inline.
+- `setFrameDeadId(null)` was added to both places that open a job (l.346 `focusJob`,
+  l.729 the `?job=` permalink), beside the existing `setFrameOk(frameGuess(...))`, so a
+  job that timed out once is given a fresh try when it is opened again.
+
+**Unchanged.** The F4 optimistic per-host logic (`frameGuess`, the background
+`/frame-check` probe, the `v2_feed_frameable` cache) is untouched; the cached-snapshot
+iframe (`viewCached`) has no cover and no remount key; the "refuses to be framed" panel
+and the "No posting URL captured" line are the same nodes as before.
+
+**Behaviour now.** Selecting a job blanks the pane at once — neutral `--bg`, spinner,
+`Loading <host> …` — and the posting appears the moment it loads. Holding `j` scrolls
+through jobs with the cover following the selection; only the newest job's cover is ever
+up. A posting that never loads inside 8 s hands over to the frame-blocked panel.
+
+**Status**: fixed — source only.
+
+Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 98 allowed, 0 css` (exit 0);
+`npx esbuild@0.21.5 --loader:.jsx=jsx frontend/src/v2/JobFeed.jsx` → exit 0; brace and
+paren balance net 0 against HEAD 04b3508 (`{` `}` 1479 → 1496 each, `(` `)` 1781 → 1822
+each). Not rebuilt, not restarted, not committed.
+
+---
+
+## Grab-line, re-read from the board (the user changed it)
+
+Re-read from Claude Design project `4d073a40…`, `JobNavigator Redesign.dc.html`
+(2272 lines now; the copy in `v2-testing/design/` is stale at 2257 and has no grab-line
+at all). What the board draws today:
+
+| | board (line) | before, in code | now |
+|---|---|---|---|
+| band | `position:absolute;top:0;left:0;right:0;z-index:20;height:12px` (l.252) | in-flow strip, `height:11px`, `--surface-2` ground, `border-bottom:1px --line` | as the board: a floating 12px hit area, no ground, no border |
+| handle | `width:52px;height:4px;border-radius:99px;background:var(--edge)` (l.253) | 44 x 3, `--edge` | 52 x 4, `--edge` |
+| ring | `box-shadow:0 0 0 3px var(--surface)` (l.253) | — | `.v2-grab > span` |
+| hover | `background:var(--accent);width:64px` (l.253, `style-hover`) | strip ground → `--line-soft` | handle → `--accent`, 64px |
+| transition | `background .12s,width .12s` (l.253) | none | same, plus the fold |
+| state | `analysisWrapDisplay`/`headWrapDisplay` = `anaCollapsed ? "none" : "flex"` (l.1734-1735), persisted to `jn_feed_analysis_collapsed` (l.1737-1741) | same | same flag, animated |
+
+The band no longer takes a row of its own: it floats over the top of the pane, so the
+header starts at y=0 and the handle sits in its 20px (open) / 11px (header-caret closed)
+top padding — and over the posting's first 12px when the top is folded away. Collapsed,
+the pane top is now 0px of chrome instead of 12.
+
+**The animation.** The board itself does not animate the collapse — it flips
+`display:none`/`flex` (l.1734-1735), and the only transition it declares anywhere is the
+handle's `background .12s,width .12s` (l.253); there are no `@keyframes` beyond `jnspin`
+and no `prefers-reduced-motion` block. So .12s ease is the board's timing, and the fold
+was built to it rather than invented:
+
+- `theme.css` l.457-479 — `.v2-grab > span` (ring + `.12s` hover transition),
+  `.v2-grab:hover > span` (the board hangs the hover on the handle; here the whole 12px
+  strip is the trigger, because a 4px band is not a hover target — a deliberate
+  departure), `.v2-fold` / `.v2-fold[data-collapsed="true"]` / `.v2-foldbody`, and a
+  `prefers-reduced-motion: reduce` block that turns both transitions off.
+- The fold is **`grid-template-rows: 1fr → 0fr` plus `opacity`**, at `.12s ease`, not
+  `max-height`: the report band is `flex:1 1 0%` while the report is open and `0 0 auto`
+  otherwise, and no single max-height holds both — a grid row travels the real content
+  height in either state. `visibility:hidden` is layered on with a `0s linear .12s`
+  delay so the folded header leaves the tab order the way `display:none` did, without
+  cutting the fade short.
+- `JobFeed.jsx` l.1138-1150 — the grab-line's new geometry (absolute, 12px, 52x4 handle);
+  l.1152-1158 — the fold wrapper: `.v2-fold` carrying the flex the report band used to
+  take (`reportCovers ? '1 1 0%' : '0 0 auto'`) with `.v2-foldbody` inside it, wrapping
+  the header (l.1161) and the score band (l.1219) — the two the board folds together.
+  Both dropped their own `display: anaCollapsed ? 'none' : 'flex'`; the wrapper's
+  `data-collapsed` is the one switch now.
+- `JobFeed.jsx` l.35-37, l.175-186 — `FOLD_MS = 200` and the `folding` flag. The body
+  clips only while the fold travels: with `overflow:hidden` standing, the header's ⋯ menu
+  (`position:absolute; top:100%`, l.1194) would be cut off.
+- The unscored band and the "Scoring in progress" band stay outside the fold and keep
+  their line when the top is collapsed, exactly as before.
+
+**Status**: fixed — source only.
+
+Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 98 allowed, 0 css` (exit 0);
+`npx esbuild@0.21.5 --loader:.jsx=jsx frontend/src/v2/JobFeed.jsx` → exit 0; JSX brace and
+paren balance net 0 against HEAD 04b3508, `theme.css` braces balanced. Not rebuilt, not
+restarted, not committed.

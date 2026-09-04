@@ -1,7 +1,9 @@
 /* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
    Scoped to .jn-v2 so it never touches the classic UI. Light + dark + an `alt`
-   skin (D6). Every .jn-v2 root carries `data-theme` (light|dark, the *resolved*
-   mode — `system` follows prefers-color-scheme) and `data-skin` (default|alt),
+   skin (D6) + the four tone-comparison skins at the bottom of the palette
+   section (board, ink, paper, soft). Every .jn-v2 root carries `data-theme`
+   (light|dark, the *resolved* mode — `system` follows prefers-color-scheme) and
+   `data-skin` (default|alt|board|ink|paper|soft),
    both from the single store in theme.js; <html> carries a boot copy of the same
    two attributes, stamped by the inline script in index.html before React mounts
    so the page ground never flashes. The palette selectors below stay on the
@@ -438,6 +440,192 @@
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
 
+/* — Comparison skins (board · ink · paper · soft) --------------------------
+   Four carbon copies of the shipped palette, cut only along tone and contrast:
+   same warm-paper hues, same green accent, same Newsreader/Public Sans/JetBrains
+   Mono stacks as the default (so --ring-shift-sm/-md and --ring-label-shift are
+   the default's too — the numerals sit where they always did). They exist to be
+   looked at side by side; `default` and `alt` are untouched.
+
+   Same rules as the alt skin above: palette tokens and the three font stacks
+   only, and the light block and the dark block declare the IDENTICAL set of
+   names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]` both weigh (0,2,0),
+   so a name set in one and forgotten in the other leaks a light value into dark.
+   Not re-skinned here either: the --cc- and --sm- badge families, the --shadow-
+   family and the on-rail white overlays. */
+
+/* board — the design boards' own tones, carbon-copied
+   Light is "Job Feed 2.0" as drawn: paper ground #faf7ef, #f3efe0 surface, the
+   #ddd6c2/#e6e0cc/#eee8d5 line ladder, ink #23211a on #4a463a on #5c574a, the deep
+   #2c4f3c green (its rail is green too: #1e3b2d with the #d7c78a gold marker).
+   Dark is the master board's own dark block (#15140f/#1c1b16/#232219, #efeade ink,
+   #8dbb9f accent) with the four ink steps re-tuned onto the *current* dark ratios,
+   so the two dark palettes are comparable rather than merely different. */
+.jn-v2[data-skin="board"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#faf7ef; --surface:#ffffff; --surface-2:#f3efe0; --line:#ddd6c2; --line-soft:#eee8d5;
+  --line-strong:#c9c1a8; --edge:#8a826e; --track:#8d8571;
+  --text:#23211a; --text-2:#4a463a; --muted:#5c574a; --ink-2:#33302a;
+  --accent:#2c4f3c; --accent-ink:#f6f3ea; --accent-soft:#e6efe4;
+  --good:#2c4f3c; --warn:#8f5722; --warn-soft:#f4ead9; --warn-line:#cfa25f;
+  --bad:#8f2f21; --bad-soft:#f6e0da; --bad-faint:#fbf0ec;
+  --change-soft:#cfe0cd; --change-bg:#fbf8f0; --hover-soft:#eef4ea;
+  --ring-accent:rgba(44,79,60,.22); --scrim:rgba(35,33,26,.46); --recessed:#f7f3e8;
+  --stage-applied:#2f4d75; --stage-interview:#8f5722; --stage-offer:#2c4f3c; --stage-rejected:#8f2f21; --stage-new:#c9c1a8;
+  --series-new:#a8791f;
+  --amber-bg:#fdfaee; --amber-line:#d9cfa9; --amber-line-soft:#ece5cf; --amber-hover:#f7f1de;
+  --sand:#d3c6a4; --gold:#bf9a45; --funnel-low:#8aab93; --funnel-mid:#4f7a5f;
+  --toast-ok-bg:#e9f1e6; --toast-ok-line:#9db8a5; --toast-ok-ink:#2c4f3c;
+  --toast-bad-bg:#f6e0da; --toast-bad-line:#e4b8ab; --toast-bad-ink:#8f2f21;
+  --rail:#1e3b2d; --rail-text:#b8c9ba; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#2c4f3c; --rail-ink:#f3efe0;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="board"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
+  --line-strong:#474234; --edge:#75705c; --track:#807a66;
+  --text:#cfcbc0; --text-2:#c2bbac; --muted:#a09a8b; --ink-2:#c7c3b8;
+  --accent:#84b096; --accent-ink:#15140f; --accent-soft:#1f2a23;
+  --good:#84b096; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#221816;
+  --change-soft:#31513c; --change-bg:#1a2019; --hover-soft:#232116;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.62); --recessed:#191814;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#84b096; --stage-rejected:#d98a7e; --stage-new:#474234;
+  --series-new:#a1731f;
+  --amber-bg:#241f13; --amber-line:#443b25; --amber-line-soft:#332c1c; --amber-hover:#2d2719;
+  --sand:#6a6244; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#1d2822; --toast-ok-line:#3f6b52; --toast-ok-ink:#9cc6ad;
+  --toast-bad-bg:#291a17; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#14251c; --rail-text:#a9bcae; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#23402f; --rail-ink:#f3efe0;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* ink — the default with stronger ink and lines
+   Same surfaces as the default, one step darker on every ink and line token and a
+   deepened accent: text >=15:1, text-2 >=8:1, muted >=5.5:1 on --surface. */
+.jn-v2[data-skin="ink"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#d5cfbd; --line-soft:#e5e0d2;
+  --line-strong:#b7b09c; --edge:#6f6857; --track:#746d5c;
+  --text:#141310; --text-2:#494539; --muted:#5a5650; --ink-2:#28251f;
+  --accent:#2f5c45; --accent-ink:#ffffff; --accent-soft:#e4eee6;
+  --good:#2f5c45; --warn:#864a1c; --warn-soft:#f6eee4; --warn-line:#c08c4d;
+  --bad:#8a3128; --bad-soft:#f5e7e5; --bad-faint:#fdf6f4;
+  --change-soft:#c6dfd0; --change-bg:#fdfcf9; --hover-soft:#eff6f1;
+  --ring-accent:rgba(47,92,69,.22); --scrim:rgba(20,19,15,.5); --recessed:#fdfcf9;
+  --stage-applied:#2f4d75; --stage-interview:#864a1c; --stage-offer:#2f5c45; --stage-rejected:#8a3128; --stage-new:#b7b09c;
+  --series-new:#a3711e;
+  --amber-bg:#fffdf6; --amber-line:#c9bd95; --amber-line-soft:#e5daba; --amber-hover:#faf6e9;
+  --sand:#c6bc9e; --gold:#b28c42; --funnel-low:#7ba189; --funnel-mid:#4d7a5e;
+  --toast-ok-bg:#e8f1ea; --toast-ok-line:#7ba189; --toast-ok-ink:#265c3e;
+  --toast-bad-bg:#f7e8e5; --toast-bad-line:#c1887d; --toast-bad-ink:#7a2b22;
+  --rail:#1a1915; --rail-text:#b5b0a2; --rail-dim:#a09884; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="ink"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#4a4638; --line-soft:#36332a;
+  --line-strong:#5a5545; --edge:#948e79; --track:#9b9581;
+  --text:#eae7df; --text-2:#dcd8d0; --muted:#b8b4ac; --ink-2:#e0ddd5;
+  --accent:#a3ccb3; --accent-ink:#15140f; --accent-soft:#2a3830;
+  --good:#a3ccb3; --warn:#dfae7a; --warn-soft:#2a2118; --warn-line:#7d6644;
+  --bad:#e59b8f; --bad-soft:#33201c; --bad-faint:#241a18;
+  --change-soft:#3c5e49; --change-bg:#252f28; --hover-soft:#353225;
+  --ring-accent:rgba(163,204,179,.24); --scrim:rgba(0,0,0,.64); --recessed:#221f19;
+  --stage-applied:#b3cbe6; --stage-interview:#dfae7a; --stage-offer:#a3ccb3; --stage-rejected:#e59b8f; --stage-new:#5a5545;
+  --series-new:#ad7d22;
+  --amber-bg:#2a2418; --amber-line:#584c31; --amber-line-soft:#443a26; --amber-hover:#332c1d;
+  --sand:#7d7350; --gold:#d4ae66; --funnel-low:#6c9a7e; --funnel-mid:#8fbb9d;
+  --toast-ok-bg:#26352e; --toast-ok-line:#4c7b60; --toast-ok-ink:#a3ccb3;
+  --toast-bad-bg:#35211e; --toast-bad-line:#8c463c; --toast-bad-ink:#e59b8f;
+  --rail:#0c0b08; --rail-text:#a8a394; --rail-dim:#9b9481; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* paper — the default with a darker, warmer ground
+   Ground and surfaces move to the boards' paper (#faf7ef / #f1ecdb) and the lines
+   darken with them; every ink token is the default's, untouched. */
+.jn-v2[data-skin="paper"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#faf7ef; --surface:#ffffff; --surface-2:#f1ecdb; --line:#ddd6c2; --line-soft:#eae4d3;
+  --line-strong:#c6bfab; --edge:#877f6a; --track:#8a826d;
+  --text:#1b1a16; --text-2:#57534a; --muted:#6d6862; --ink-2:#302d26;
+  --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#e5eee7;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f3e9d9; --warn-line:#d4a06a;
+  --bad:#9c3b30; --bad-soft:#f4e7e4; --bad-faint:#faf1ee;
+  --change-soft:#d6e8dc; --change-bg:#fbf8f0; --hover-soft:#eff5ef;
+  --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42); --recessed:#f9f6ed;
+  --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52; --stage-rejected:#9c3b30; --stage-new:#c6bfab;
+  --series-new:#b8822b;
+  --amber-bg:#fdfaee; --amber-line:#d2c6a2; --amber-line-soft:#e9e0c4; --amber-hover:#f7f2e1;
+  --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  --toast-ok-bg:#ebf2ec; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#f7e9e6; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  --rail:#211f19; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2d2b22; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="paper"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#17150f; --surface:#211e16; --surface-2:#2b2820; --line:#38352c; --line-soft:#26241c;
+  --line-strong:#454133; --edge:#7b7662; --track:#88826e;
+  --text:#d9d7d0; --text-2:#cbc7bf; --muted:#a8a49d; --ink-2:#d1cec6;
+  --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#1f2a23;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#261e15; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#261714; --bad-faint:#201613;
+  --change-soft:#33503f; --change-bg:#1b231d; --hover-soft:#282519;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58); --recessed:#1b1913;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f; --stage-rejected:#d98a7e; --stage-new:#454133;
+  --series-new:#a1731f;
+  --amber-bg:#251f14; --amber-line:#443b25; --amber-line-soft:#332c1c; --amber-hover:#2e281a;
+  --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#1e2b25; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2a1a17; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#0d0c08; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f; --rail-line:#26241c; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* soft — the default one step lighter
+   The other direction: text, muted and lines lift, the accent lightens. Kept as the
+   low-contrast end of the comparison, not as a recommendation. */
+.jn-v2[data-skin="soft"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#eae6dc; --line-soft:#f3f0e9;
+  --line-strong:#d6d1c4; --edge:#9e9784; --track:#a09984;
+  --text:#2f2c25; --text-2:#6a655b; --muted:#767168; --ink-2:#454136;
+  --accent:#4d7d62; --accent-ink:#ffffff; --accent-soft:#eef4ef;
+  --good:#4d7d62; --warn:#a96c38; --warn-soft:#f8f2ea; --warn-line:#dcb187;
+  --bad:#ac4f43; --bad-soft:#f9f0ef; --bad-faint:#fdf8f7;
+  --change-soft:#dfece3; --change-bg:#fdfcfa; --hover-soft:#f6faf7;
+  --ring-accent:rgba(77,125,98,.2); --scrim:rgba(20,19,15,.36); --recessed:#fdfcfa;
+  --stage-applied:#415f88; --stage-interview:#a96c38; --stage-offer:#4d7d62; --stage-rejected:#ac4f43; --stage-new:#d6d1c4;
+  --series-new:#b8862c;
+  --amber-bg:#fffdf6; --amber-line:#ddd4b8; --amber-line-soft:#f2ecda; --amber-hover:#faf6e9;
+  --sand:#ded7c3; --gold:#d2b076; --funnel-low:#a1bcab; --funnel-mid:#749c83;
+  --toast-ok-bg:#f2f7f3; --toast-ok-line:#a1bcab; --toast-ok-ink:#3d7a58;
+  --toast-bad-bg:#fcf2f1; --toast-bad-line:#dcaba3; --toast-bad-ink:#9c453a;
+  --rail:#2a2822; --rail-text:#b0ab9e; --rail-dim:#9c9583; --rail-accent:#8dbb9f; --rail-line:#363429; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="soft"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#35322a; --line-soft:#28261e;
+  --line-strong:#413d31; --edge:#6f6a59; --track:#7a7461;
+  --text:#c6c3bb; --text-2:#b5b1a9; --muted:#928e87; --ink-2:#bcb8b0;
+  --accent:#7dab8f; --accent-ink:#15140f; --accent-soft:#212b25;
+  --good:#7dab8f; --warn:#c2925f; --warn-soft:#251e16; --warn-line:#5e4c32;
+  --bad:#c47b70; --bad-soft:#251715; --bad-faint:#201716;
+  --change-soft:#2c4536; --change-bg:#1e2621; --hover-soft:#29271d;
+  --ring-accent:rgba(125,171,143,.2); --scrim:rgba(0,0,0,.5); --recessed:#211e18;
+  --stage-applied:#93aeca; --stage-interview:#c2925f; --stage-offer:#7dab8f; --stage-rejected:#c47b70; --stage-new:#413d31;
+  --series-new:#91661c;
+  --amber-bg:#2a2418; --amber-line:#413828; --amber-line-soft:#312b1d; --amber-hover:#332c1d;
+  --sand:#635b41; --gold:#b4914f; --funnel-low:#557b64; --funnel-mid:#6d977e;
+  --toast-ok-bg:#1f2b25; --toast-ok-line:#3a6049; --toast-ok-ink:#7dab8f;
+  --toast-bad-bg:#2a1b19; --toast-bad-line:#6b332c; --toast-bad-ink:#c47b70;
+  --rail:#16150f; --rail-text:#85806f; --rail-dim:#7b7563; --rail-accent:#8dbb9f; --rail-line:#282619; --rail-ink:#f6f3ea;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
 .jn-v2 a { color:var(--accent); text-decoration:none; }
 .jn-v2 a:hover { color:var(--text); }
@@ -454,10 +642,31 @@
 .v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
 .v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour (APPS-10) */
-/* The Feed detail's grab-line: it rests on --surface-2, which is what the wash
-   hovers to, so it needs the next step down instead — one notch darker in both
-   themes, as the board draws it. The strip sets its background inline. */
-.v2-grab:hover { background:var(--line-soft) !important; }
+/* The Feed detail's grab-line (board l.252-254). The strip itself is invisible —
+   12px of hit area floating over the top of the pane — and everything that shows
+   is the 52x4 handle: --edge, ringed 3px in --surface so it reads as lying on
+   the header, growing to 64px and --accent on hover. The board hangs the hover on
+   the handle; here the whole strip is the target, because a 4px band is not one.
+   !important: the handle sets width and background inline. .12s is the board's
+   own timing (`transition:background .12s,width .12s` on the handle). */
+.v2-grab > span { box-shadow:0 0 0 3px var(--surface); transition:background .12s,width .12s; }
+.v2-grab:hover > span { background:var(--accent) !important; width:64px !important; }
+/* The collapse the grab-line drives. The board flips display none/flex
+   (l.1734-1735), which cannot animate, so the header and the score band ride one
+   grid row instead: 1fr → 0fr travels the real content height, which max-height
+   could not do — the band is flex:1 while the report is open and auto otherwise.
+   Same .12s ease as the handle. The body's overflow is inline: it must stay
+   visible when the fold is open and idle, or the header's ⋯ menu is clipped. */
+.v2-fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .12s ease,opacity .12s ease; }
+/* visibility flips only once the row has finished travelling, so the folded
+   header keeps its buttons out of the tab order the way display:none did, and
+   the fade still plays. Expanding uses the base rule, with no delay. */
+.v2-fold[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .12s ease,opacity .12s ease,visibility 0s linear .12s; }
+.v2-foldbody { min-height:0; display:flex; flex-direction:column; }
+@media (prefers-reduced-motion: reduce) {
+  .v2-grab > span { transition:none; }
+  .v2-fold, .v2-fold[data-collapsed="true"] { transition:none; }
+}
 .v2-hover-bad:hover { background:var(--hover-bad-bg) !important; }
 .v2-x:hover { background:var(--line); color:var(--text); }
 .v2-pill { cursor:pointer; }
