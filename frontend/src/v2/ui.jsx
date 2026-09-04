@@ -894,8 +894,8 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // `children` ride in the ring's own relative box — that is where the Feed's
 // "+N reports" count badge pins itself.
 const RING_SIZE = {
-  sm: { box: 34, vb: 78, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },  // vb 78: the pre-pass band ring (r 15.26 px, stroke 2.18) — fits a 34 box without clipping
-  md: { box: 44, vb: 88, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
+  sm: { box: 34, vb: 78, shift: 2, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },  // vb 78: the pre-pass band ring (r 15.26 px, stroke 2.18) — fits a 34 box without clipping
+  md: { box: 44, vb: 88, shift: 1, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
 }
 const RING_TONE = {
   bad: { arc: 'var(--ring-bad-border)', ink: 'var(--ring-bad-ink)', bg: 'var(--ring-bad-bg)' },
@@ -945,6 +945,7 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             lineHeight: 1, fontFamily: 'var(--font-display)', fontSize: z.num,
             letterSpacing: z.letterSpacing, color: t.ink,
+            transform: `translateY(${z.shift || 0}px)`,  // optical centre: digits sit high in the line box (pre-pass used 1px; sm reads best at 2px)
           }}>{value}</div>
         </>
       )}
