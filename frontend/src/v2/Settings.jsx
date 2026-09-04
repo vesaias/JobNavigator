@@ -301,7 +301,7 @@ export default function Settings() {
       // They sit first because they change what every screen below looks like.
       ['appearance', 'GENERAL', 'Appearance', 'theme and skin — remembered in this browser, not in the database', [
         { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
-        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Board, Ink, Paper and Soft are tone comparisons of the default: same hues and fonts, different contrast.' },
+        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Tone 1–3 are the ramp from Default to Board — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts.' },
       ]],
       ['models', 'AI', 'Models', 'each individual prompt can be run against different model, if needed', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',

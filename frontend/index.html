@@ -33,7 +33,7 @@
             ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
             : m;
           d.setAttribute('data-theme', r);
-          var skins = ['default', 'alt', 'board', 'ink', 'paper', 'soft'];
+          var skins = ['default', 'tone1', 'tone2', 'tone3', 'board', 'alt'];
           var k = s.getItem('jobnavigator_skin');
           d.setAttribute('data-skin', skins.indexOf(k) >= 0 ? k : 'default');
           d.classList.toggle('dark', r === 'dark');
@@ -45,17 +45,22 @@
          which beats index.css's `html.dark` (0,1,1) deterministically whatever
          order Vite emits the stylesheets in; both shells cover the viewport with
          their own ground, so this is only ever visible before React mounts.
-         The `ink` and `soft` comparison skins keep the default's two grounds
-         exactly, so they need no rule of their own. -->
+         Every skin moves --bg, so every skin needs its pair of rules here —
+         tone1/tone2/tone3 are the OKLab ramp from the default ground to the
+         board's, so keep them in step with theme.css's tone blocks. -->
     <style>
       :root[data-theme="light"] { background: #fcfbf7 }
       :root[data-theme="dark"] { background: #1e1c17 }
-      :root[data-skin="alt"][data-theme="light"] { background: #f7f8fa }
-      :root[data-skin="alt"][data-theme="dark"] { background: #161a21 }
+      :root[data-skin="tone1"][data-theme="light"] { background: #fcfaf5 }
+      :root[data-skin="tone1"][data-theme="dark"] { background: #1c1a15 }
+      :root[data-skin="tone2"][data-theme="light"] { background: #fbf9f3 }
+      :root[data-skin="tone2"][data-theme="dark"] { background: #191813 }
+      :root[data-skin="tone3"][data-theme="light"] { background: #fbf8f1 }
+      :root[data-skin="tone3"][data-theme="dark"] { background: #171611 }
       :root[data-skin="board"][data-theme="light"] { background: #faf7ef }
       :root[data-skin="board"][data-theme="dark"] { background: #15140f }
-      :root[data-skin="paper"][data-theme="light"] { background: #faf7ef }
-      :root[data-skin="paper"][data-theme="dark"] { background: #17150f }
+      :root[data-skin="alt"][data-theme="light"] { background: #f7f8fa }
+      :root[data-skin="alt"][data-theme="dark"] { background: #161a21 }
     </style>
   </head>
   <body>

@@ -3,12 +3,14 @@
 // Two independent axes, both stored per browser (never in the DB — a skin is a
 // preference, not a setting the backend acts on):
 //   mode  light | dark | system   → localStorage `jobnavigator_theme`
-//   skin  default | alt | board | ink | paper | soft
+//   skin  default | tone1 | tone2 | tone3 | board | alt
 //                                 → localStorage `jobnavigator_skin`
 //
-// `default` and `alt` are the two designed skins; the last four are tone
-// comparisons of the default palette (same hues, same fonts, different
-// contrast) so they can be looked at side by side on the monitor. Adding one is
+// `default` and `alt` are the two designed skins. `board` is the design boards'
+// own palette, and tone1/tone2/tone3 are the ramp between the two: every palette
+// token interpolated in OKLab from default to board at ¼, ½ and ¾, light and
+// dark separately, on the default's fonts — so the six can be looked at side by
+// side on the monitor and the middle of the ramp picked by eye. Adding one is
 // still two palette blocks in theme.css plus a line here — nothing else.
 //
 // `system` follows `prefers-color-scheme` live, so a mode is not the same thing
@@ -39,7 +41,7 @@ const SKIN_KEY = 'jobnavigator_skin'
 const LEGACY_KEY = 'jobnavigator_dark_mode'   // the pre-D6 boolean, migrated once
 
 export const MODES = ['light', 'dark', 'system']
-export const SKINS = ['default', 'alt', 'board', 'ink', 'paper', 'soft']
+export const SKINS = ['default', 'tone1', 'tone2', 'tone3', 'board', 'alt']
 
 // The rail's ◐ is a three-state control, so it needs three glyphs (Nav Rail spec:
 // "cycles Light → Dark → System, tooltip names the current mode").
@@ -48,11 +50,11 @@ export const MODE_LABEL = { light: 'Light', dark: 'Dark', system: 'System' }
 export const MODE_OPTIONS = MODES.map((m) => [m, MODE_LABEL[m]])
 export const SKIN_LABEL = {
   default: 'Default — warm paper',
-  alt: 'Alt — cool slate',
+  tone1: 'Tone 1 — ¼ toward Board',
+  tone2: 'Tone 2 — ½ toward Board',
+  tone3: 'Tone 3 — ¾ toward Board',
   board: 'Board — original tones',
-  ink: 'Ink — darker text and lines',
-  paper: 'Paper — darker ground',
-  soft: 'Soft — lighter',
+  alt: 'Alt — cool slate',
 }
 export const SKIN_OPTIONS = SKINS.map((s) => [s, SKIN_LABEL[s]])
 
