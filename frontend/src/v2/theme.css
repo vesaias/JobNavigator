@@ -7,6 +7,7 @@
    so the page ground never flashes. The palette selectors below stay on the
    .jn-v2 root itself — <html> is the boot copy, not a second source of truth. */
 .jn-v2 {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;  /* ScoreRing optical centring for the default fonts */
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
   --text:#1b1a16; --text-2:#57534a; --muted:#6d6862; --ink-2:#302d26; --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
   --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
@@ -193,6 +194,7 @@
   -webkit-font-smoothing:antialiased; font-size:14px;
 }
 .jn-v2[data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#3e3b32; --line-soft:#2c2a20; --edge:#7f7a66; --track:#8c8672;
   --text:#d9d7d0; --text-2:#cbc7bf; --muted:#a8a49d; --ink-2:#d1cec6; --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#243029;
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
@@ -388,6 +390,7 @@
    light skin block sets and the dark one forgets would beat the default dark
    value and leak a light colour into the dark skin. */
 .jn-v2[data-skin="alt"] {
+  --ring-shift-sm:0px; --ring-shift-md:-1px; --ring-label-shift:1.5px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher */
   --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
   --line-strong:#c3cad6; --edge:#7c8698; --track:#828c9e;
   --text:#161a21; --text-2:#4b5468; --muted:#5f6878; --ink-2:#2a3140;
@@ -412,6 +415,7 @@
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="alt"][data-theme="dark"] {
+  --ring-shift-sm:0px; --ring-shift-md:-1px; --ring-label-shift:1.5px;
   --bg:#161a21; --surface:#1d222b; --surface-2:#262c37; --line:#343b47; --line-soft:#232830;
   --line-strong:#454d5b; --edge:#737d8f; --track:#7d8798;
   --text:#d6dae2; --text-2:#c6cbd5; --muted:#9aa2b0; --ink-2:#ced3dc;

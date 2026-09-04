@@ -932,6 +932,7 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
           display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
           fontFamily: 'var(--font-body)', fontSize: z.unscored, letterSpacing: '.1em',
           textTransform: 'uppercase', color: 'var(--ring-neutral-ink)',
+          transform: 'translateY(var(--ring-label-shift, 0px))',
         }}>{label}</div>
       ) : (
         <>
@@ -945,7 +946,7 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             lineHeight: 1, fontFamily: 'var(--font-display)', fontSize: z.num,
             letterSpacing: z.letterSpacing, color: t.ink,
-            transform: `translateY(${z.shift || 0}px)`,  // optical centre: digits sit high in the line box (pre-pass used 1px; sm reads best at 2px)
+            transform: `translateY(var(--ring-shift-${size === 'sm' ? 'sm' : 'md'}, ${z.shift || 0}px))`,  // optical centre per skin (font metrics differ): tokens in theme.css
           }}>{value}</div>
         </>
       )}
