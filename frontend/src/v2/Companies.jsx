@@ -38,6 +38,14 @@ const atsShort = (detected) => (detected || 'Generic')
   .replace(' API', '').replace(' AJAX', '').replace(' (Playwright)', '').replace(' Careers', '')
 const atsSlug = (short) => { const s = (short || 'generic').toLowerCase().replace(/[^a-z0-9]/g, ''); return 'cc-' + (ATS_SLUGS.has(s) ? s : 'generic') }
 const tierSlug = (key) => 'cc-tier' + (key === 'none' ? 'none' : key)
+// Company.tier is stored as an integer 1/2/3 (nullable) — backend/models/db.py.
+// The UI shows priority tiers as letters; tierLabel(1) -> 'A', tierLabel(1, { long: true }) -> 'Tier A'.
+const TIER_LETTERS = { 1: 'A', 2: 'B', 3: 'C' }
+const tierLabel = (t, { long = false } = {}) => {
+  const letter = TIER_LETTERS[t]
+  if (!letter) return long ? 'Untiered' : '—'
+  return long ? `Tier ${letter}` : letter
+}
 
 // client-side ATS detection (mirror of backend detect, for live editor chips)
 const hostMatches = (url, ...domains) => {
@@ -73,7 +81,7 @@ const detectAts = (url) => {
 const SORT_OPTIONS = [
   { id: 'health', label: 'Needs attention', hint: 'Warnings, then active, then inactive' },
   { id: 'name', label: 'Company name', hint: 'A to Z' },
-  { id: 'tier', label: 'Priority tier', hint: 'Tier 1 first, untiered last' },
+  { id: 'tier', label: 'Priority tier', hint: 'Tier A first, untiered last' },
   { id: 'open', label: 'Open roles', hint: 'Most roles in the feed first' },
   { id: 'fit', label: 'Average fit', hint: 'Best-scoring companies first' },
   { id: 'run', label: 'Last scrape', hint: 'Longest since a run first' },
@@ -83,7 +91,7 @@ const DEPTHS = [
   { id: 'light', label: 'Light', hint: 'Scores only, no report' },
   { id: 'full', label: 'Full', hint: 'Full report with keywords and requirements' },
 ]
-const TIER_BTNS = [{ v: 1, label: '1' }, { v: 2, label: '2' }, { v: 3, label: '3' }, { v: null, label: 'None' }]
+const TIER_BTNS = [{ v: 1, label: tierLabel(1) }, { v: 2, label: tierLabel(2) }, { v: 3, label: tierLabel(3) }, { v: null, label: 'None' }]
 
 // COMP-26: a Playwright board can return ~600 rows and the modal rendered every
 // one of them in a single pass. Page them client-side with the pager the
@@ -410,7 +418,7 @@ export default function Companies() {
           return (
             <Pill key={t} on={on} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
               title="Add/remove from filter · multi-select, remembered per browser">
-              <span>{t === 'none' ? 'Untiered' : `Tier ${t}`}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6 }}>{tierCounts[t]}</span></span>
+              <span>{t === 'none' ? 'Untiered' : tierLabel(t, { long: true })}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6 }}>{tierCounts[t]}</span></span>
             </Pill>
           )
         })}
@@ -479,7 +487,7 @@ export default function Companies() {
               </span>
               {/* tier */}
               <span style={{ flex: '0 0 62px' }}>
-                <Tag tone="none" className={tierSlug(tierKey(c))}>{c.tier == null ? '—' : `T${c.tier}`}</Tag>
+                <Tag tone="none" className={tierSlug(tierKey(c))}>{tierLabel(c.tier)}</Tag>
               </span>
               {/* health */}
               <span style={{ flex: 1.9, minWidth: healthMin, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
@@ -563,7 +571,7 @@ export default function Companies() {
         {!loading && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
-            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : `Tier ${t}`)).join(', ')}.`}</Helper>   {/* COMP-29 */}
+            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>   {/* COMP-29 */}
             {companies.length > 0 && <Link onClick={clearFilters} style={{ paddingTop: 2 }}>Clear filters</Link>}
           </div>
         )}
@@ -596,7 +604,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
   const toggleResume = (id) => set({ selected_resume_ids: draft.selected_resume_ids.includes(id) ? draft.selected_resume_ids.filter((x) => x !== id) : [...draft.selected_resume_ids, id] })
   const nUrl = draft.scrape_urls.filter(Boolean).length, nApp = company.application_count || 0
-  const subtitle = `${draft.tier == null ? 'Untiered' : `Tier ${draft.tier}`} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
+  const subtitle = `${tierLabel(draft.tier, { long: true })} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
   const lca = company.h1b_lca_count
   const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
