@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSettled, useWarm, NBSP } from './hooks'
-import { Button, DashedAdd, Dot, Drawer as UiDrawer, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, Tag } from './ui'
+import { Button, DashedAdd, Dot, Drawer as UiDrawer, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -537,22 +537,26 @@ export default function Companies() {
                   menu is open: 28 clears the sticky column head (3) and every row,
                   and stays under the drawer scrim (29) and the drawer (30). */}
               <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8, zIndex: menuId === c.id ? 28 : undefined }} onClick={(e) => e.stopPropagation()}>
-                {/* ui: keep — 25px Run/Test pills sized to the 46px row; Pill sm is 26 */}
-                <span onClick={testBusy ? undefined : () => runScrape(c.id)} title={testBusy ? 'A test is already running' : 'Scrape this company now'} className={testBusy ? undefined : 'v2-act'}
-                  style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.5 : 1 }}>
+                <Pill size="xs" hover="v2-act" line="inherit" disabled={testBusy} onClick={() => runScrape(c.id)}
+                  title={testBusy ? 'A test is already running' : 'Scrape this company now'}>
                   {scraping[c.id]
                     ? <Spinner />
                     : <span style={{ fontSize: 11 }}>↻</span>}
                   {scraping[c.id] ? 'Running' : 'Run'}
-                </span>
-                {/* ui: keep — the Test twin of the 25px Run pill above (COMP-26: the running test names itself, every other pill goes quiet) */}
-                <span onClick={testBusy ? undefined : () => runTest(c.id)} title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'} className={testBusy ? undefined : 'v2-act'}
-                  style={{ height: 25, padding: '0 10px', borderRadius: 'var(--radius-control)', border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'), background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy && testingId !== c.id ? 0.5 : 1 }}>
+                </Pill>
+                {/* COMP-26: the running test names itself, every other pill goes quiet —
+                    so the running one keeps full opacity while it is un-clickable. */}
+                <Pill size="xs" hover="v2-act" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
+                  style={testingId === c.id ? { opacity: 1 } : undefined}
+                  title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'}>
                   {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
-                </span>
-                {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
-                <span onClick={() => setMenuId(menuId === c.id ? null : c.id)} title="More actions" className="v2-act"
-                  style={{ width: 25, height: 25, border: `1px solid ${menuId === c.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuId === c.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
+                </Pill>
+                {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its
+                    ink: the glyph has always stayed --text-2 here (and on Searches).
+                    Pinned rather than drifted; D-15 decides whether it should swing. */}
+                <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
+                  style={{ color: 'var(--pill-ink)' }}
+                  title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>
                 {menuId === c.id && (
                   <Menu ariaLabel={`${c.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                     <MenuItem icon="✎" onClick={() => { setMenuId(null); openDrawer(c) }}>Edit config</MenuItem>
@@ -673,25 +677,22 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         {bannerText && (
           /* muted while the company is paused or the warning is acknowledged:
              the history is still worth reading, it just isn't an open problem */
-          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', border: `1px solid ${bannerMuted ? 'var(--line)' : company.last_error ? 'var(--bad)' : 'var(--warn)'}`, background: bannerMuted ? 'var(--recessed)' : company.last_error ? 'var(--bad-soft)' : 'var(--warn-soft)', borderRadius: 'var(--radius-card)' }}>
-            <span style={{ flex: '0 0 auto', fontSize: 12, color: bannerMuted ? 'var(--muted)' : company.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 12, color: bannerMuted ? 'var(--text-2)' : 'var(--text)', lineHeight: 1.5 }}>{bannerText}</span>
-              <Helper size="xs">
-                {company.last_error ? 'Last scrape run' : 'Detected in recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
-                {bannerMuted
-                  ? ` · ${company.active ? `acknowledged ${ago(company.warning_acknowledged_at)}` : 'paused, so it is not counted'}`
-                  : null}
-              </Helper>
-            </div>
-            {!bannerMuted && onAcknowledge && (
+          <Notice tone={bannerMuted ? 'quiet' : company.last_error ? 'bad' : 'warn'}
+            action={!bannerMuted && onAcknowledge && (
               /* ui: keep — "Acknowledge" is the quiet inline action on the banner: --muted 11 at
                  normal weight, where Link is --link-ink 11.5/500. Same call as Searches' twin. */
               <span onClick={() => onAcknowledge(company)} className="v2-hover-accent-text"
                 title="Stop counting this company as needing attention. The warning stays here; a run that fails after this raises it again."
                 style={{ flex: '0 0 auto', alignSelf: 'flex-start', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
-            )}
-          </div>
+            )}>
+            <span style={{ fontSize: 12, color: bannerMuted ? 'var(--text-2)' : 'var(--text)', lineHeight: 1.5 }}>{bannerText}</span>
+            <Helper size="xs">
+              {company.last_error ? 'Last scrape run' : 'Detected in recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
+              {bannerMuted
+                ? ` · ${company.active ? `acknowledged ${ago(company.warning_acknowledged_at)}` : 'paused, so it is not counted'}`
+                : null}
+            </Helper>
+          </Notice>
         )}
 
         {/* identity + sources */}
@@ -775,8 +776,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         </div>
       </div>
 
-      {/* ui: keep — a drawer *footer* bar (rule on top, --bg ground) */}
-      <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <FooterRow bg="page" gap={8} style={{ flex: '0 0 auto' }}>
         {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
         <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
         {/* ui: keep — footer pill (r99), paired with the tinted one above it */}
@@ -786,7 +786,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
         </div>
         {saveErr && <Helper style={{ marginLeft: 'auto', color: 'var(--bad)' }}>{saveErr}</Helper>}
         <Button size="sm" onClick={save} busy={saving} style={{ marginLeft: saveErr ? 10 : 'auto' }}>{saving ? 'Saving…' : 'Save changes'}</Button>
-      </div>
+      </FooterRow>
     </UiDrawer>
   )
 }
@@ -881,12 +881,11 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
           <Helper style={{ paddingTop: 2 }}>{scoreNote}</Helper>
           <Helper>Title filters, wait-for selector and max pages use the defaults. Change them in the company settings if needed.</Helper>
         </div>
-        {/* ui: keep — a modal footer bar: its rule is on top */}
-        <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow bg="page" style={{ flex: '0 0 auto' }}>
           <Helper>Scrapes on the next scheduled run</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }
@@ -991,10 +990,8 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
           {jobs.slice(0, limit).map((j, i) => {
             const st = jobState(j)
             return (
-              // ui: keep — a table body row, not a head: its rule is the row divider
-              <div key={i} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 22px', borderBottom: '1px solid var(--line-soft)' }}>
-                {/* ui: keep — mono row numeral + the reason cell's variable ink (mono-text / row-cell) */}
-                <span style={{ flex: '0 0 30px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>{i + 1}</span>
+              <TableRow key={i} height={32} pad="0 22px">
+                <Mono size="sm" tone="muted" style={{ flex: '0 0 30px' }}>{i + 1}</Mono>
                 <span title={j.title} style={{ flex: 1, minWidth: 0, fontSize: 12, color: j.kept ? 'var(--text)' : 'var(--muted)', textDecoration: j.kept ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.title}</span>
                 {/* ui: keep — the test row's kept/dropped tag (9.5 · pad 2 7, tinted from `st`); Tag is 10/pad 2 8 */}
                 <span style={{ flex: '0 0 62px' }}><span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: st.tagBg, color: st.tagFg }}>{st.tag}</span></span>
@@ -1002,18 +999,17 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
                 {/* Link takes `rel` now, so the ↗ stops being a hand-written anchor;
                     it keeps the row's own 11px glyph size */}
                 <span style={{ flex: '0 0 40px', textAlign: 'right' }}><Link href={j.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, fontWeight: 400, lineHeight: 'inherit' }}>↗</Link></span>
-              </div>
+              </TableRow>
             )
           })}
           {jobs.length > limit && <ShowMore n={Math.min(TEST_PAGE, jobs.length - limit)} onClick={() => setLimit((n) => n + TEST_PAGE)} />}
           {jobs.length === 0 && <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', fontSize: 12.5 }}>No job links found on this page.</div>}
         </div>
 
-        {/* ui: keep — a modal footer bar: its rule is on top */}
-        <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow variant="compact" bg="page" style={{ flex: '0 0 auto' }}>
           <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{summary}{jobs.length > limit ? ` · showing the first ${limit}` : ''}</span>
           <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }

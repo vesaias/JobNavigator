@@ -190,6 +190,23 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* — S4 roles: Mono · GlyphBadge · Notice · the toast marks -----------------
+     Semantic names for the four roles the primitive layer had no tokens for.
+     Every value is the palette token the hand-drawn site already wrote, so the
+     default theme does not move; a theme re-points the palette and these follow.
+     The toast marks close the last of the U-16 palette leaks the handoff names
+     (§4 item 11): Toast.jsx read --accent / --bad directly. */
+  --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
+  --mono-ink-strong:var(--text); --mono-ink-accent:var(--accent);
+  --glyph-bg:var(--surface); --glyph-ink:var(--muted); --glyph-border:var(--edge);
+  --glyph-on-bg:var(--accent-soft); --glyph-on-ink:var(--accent); --glyph-on-border:var(--accent);
+  --glyph-neutral-bg:var(--surface-2); --glyph-neutral-ink:var(--text-2);
+  --glyph-accent-bg:var(--accent); --glyph-accent-ink:var(--accent-ink);
+  --glyph-bad-bg:var(--bad); --glyph-bad-ink:var(--accent-ink);
+  --notice-warn-bg:var(--warn-soft); --notice-warn-border:var(--warn); --notice-warn-mark:var(--warn);
+  --notice-bad-bg:var(--bad-soft); --notice-bad-border:var(--bad); --notice-bad-mark:var(--bad);
+  --notice-quiet-bg:var(--recessed); --notice-quiet-border:var(--line); --notice-quiet-mark:var(--muted);
+  --toast-mark-ok:var(--accent); --toast-mark-bad:var(--bad);
 
   /* — Themes layer (round-design "Skins handoff" §1) --------------------------
      The geometry and state names a per-theme block may now carry on top of the
@@ -425,6 +442,21 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* — S4 roles: Mono · GlyphBadge · Notice · the toast marks — the light block's
+     twin. Every value is a var(), so the two blocks are identical by design; the
+     duplication is what stops a light value leaking into dark (both selectors
+     weigh (0,2,0)). */
+  --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
+  --mono-ink-strong:var(--text); --mono-ink-accent:var(--accent);
+  --glyph-bg:var(--surface); --glyph-ink:var(--muted); --glyph-border:var(--edge);
+  --glyph-on-bg:var(--accent-soft); --glyph-on-ink:var(--accent); --glyph-on-border:var(--accent);
+  --glyph-neutral-bg:var(--surface-2); --glyph-neutral-ink:var(--text-2);
+  --glyph-accent-bg:var(--accent); --glyph-accent-ink:var(--accent-ink);
+  --glyph-bad-bg:var(--bad); --glyph-bad-ink:var(--accent-ink);
+  --notice-warn-bg:var(--warn-soft); --notice-warn-border:var(--warn); --notice-warn-mark:var(--warn);
+  --notice-bad-bg:var(--bad-soft); --notice-bad-border:var(--bad); --notice-bad-mark:var(--bad);
+  --notice-quiet-bg:var(--recessed); --notice-quiet-border:var(--line); --notice-quiet-mark:var(--muted);
+  --toast-mark-ok:var(--accent); --toast-mark-bad:var(--bad);
 
   /* — Themes layer (round-design "Skins handoff" §1) — the light block's twin.
      Same names, same values (every one of them is a var() or a mode-neutral

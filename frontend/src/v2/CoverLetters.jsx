@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
+import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, Mono, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -383,8 +383,7 @@ export default function CoverLetters() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--surface)' }}>
           <HeaderRow className="v2-gutter-head" pad="13px 30px 9px" soft align="center" style={{ gap: 9 }}>
             <Label>All letters</Label>
-            {/* ui: keep — mono count in --edge ink: the mono-text role, not a muted helper */}
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{ready ? letters.length + pending.length : NBSP}</span>
+            <Mono line={16} tone="faint">{ready ? letters.length + pending.length : NBSP}</Mono>
           </HeaderRow>
 
           {/* DESIGN-LOAD: the list container is always here (flex:1, its own

@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useSettled, useWarm, NBSP } from './hooks'
-import { Button, Card, Check, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
+import { Button, Card, Check, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -656,24 +656,27 @@ export default function Searches() {
                     style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension • passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                    {/* ui: keep — 25px Run pill matched to the Test pill beside it (Test carries an opacity state the scan left unclassified) */}
-                    <span onClick={() => runNow(s)} className="v2-bdc"
+                    {/* ui: keep — the row's 25px pills are padded 0 9, one pixel tighter each
+                        side than Pill xs's canonical 0 10 (Companies draws 0 10, Stats 0 11);
+                        pinned here rather than drifted, and D-13 picks the one padding. */}
+                    <Pill size="xs" hover="v2-bdc" line="inherit" onClick={() => runNow(s)}
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
-                      style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: spin ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                      style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-on-ink)' } : null) }}>
                       {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
-                    </span>
-                    {/* ui: keep — 25px Run/Test pills sized to their row siblings; Pill sm is 26 */}
+                    </Pill>
                     {TESTABLE.includes(s.search_mode) && (
-                      <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
+                      <Pill size="xs" hover="v2-bdc" line="inherit" disabled={testBlocked} onClick={() => runTest(s)}
                         title={testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.'}
-                        style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
+                        style={{ padding: '0 9px' }}>
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
-                      </span>
+                      </Pill>
                     )}
-                    {/* ui: keep — 25x25 ⋯ sized to its Run/Test row siblings; IconButton's bordered look is 36 */}
-                    <span onClick={() => setMenuFor(menuFor === s.id ? null : s.id)} className="v2-bd" title="More actions"
-                      style={{ width: 25, height: 25, border: `1px solid ${menuFor === s.id ? 'var(--accent)' : 'var(--edge)'}`, background: menuFor === s.id ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>⋯</span>
+                    {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its ink
+                        (the glyph stays --text-2 here, as on Companies); see D-15. */}
+                    <IconButton size={25} hover="v2-bd" line="inherit" on={menuFor === s.id} style={{ color: 'var(--pill-ink)' }}
+                      onClick={() => setMenuFor(menuFor === s.id ? null : s.id)}
+                      title="More actions" ariaExpanded={menuFor === s.id} ariaHaspopup="menu">⋯</IconButton>
                     {menuFor === s.id && (
                       <Menu ariaLabel={`${s.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
@@ -879,8 +882,7 @@ function TestModal({ test, tab, setTab, onClose }) {
               )}
             </div>
 
-            {/* ui: keep — a modal footer bar: its rule is on top */}
-            <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9, fontSize: 11.5, color: 'var(--text-2)' }}>
+            <FooterRow variant="compact" bg="page" style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--text-2)' }}>
               {/* R3-A-01: three buckets, not two — a body-phrase drop is stored
                   as `ignored` by the run and used to hide inside "filtered". */}
               <span>
@@ -896,7 +898,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                 {nBodyUnchecked > 0 && <span style={{ color: 'var(--muted)' }}> · {nBodyUnchecked} not body-checked (needs the description)</span>}
               </span>
               <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>
-            </div>
+            </FooterRow>
           </>
         )}
     </ModalPanel>

@@ -20,7 +20,11 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "v
 # is the skip now and only the primitive layer needs naming.
 SKIP = {"ui.jsx"}
 HOVER = re.compile(r"\bv2-(bdc?|act|row|crow|arow|card|chip|menuitem|hover-[a-z-]+|dashadd|navlink|clhead)\b")
-PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface", "Check", "Radio", "Switch", "Segmented", "Meter", "ScoreRing", "ToastCard"}
+PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface", "Check", "Radio", "Switch", "Segmented", "Meter", "ScoreRing", "ToastCard",
+         # S4 (Skins handoff §4.10): the seven roles the primitive layer had no
+         # component for. `Pill size="xs"` covers the 25px row pill, so there is
+         # no PillXs name to add.
+         "ToolbarTrigger", "TableRow", "FooterRow", "Mono", "GlyphBadge", "Notice"}
 
 def strip_block_comments(lines):
     """Blank out every `/* … */` span (the `{/* … */}` JSX form included) while

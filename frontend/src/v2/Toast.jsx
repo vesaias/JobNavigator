@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Spinner, ToastCard } from './ui'
+import { GlyphBadge, Spinner, ToastCard } from './ui'
 import './theme.css'
 
 // Toast taxonomy (Toasts.dc.html): one accent per meaning, so a glance from the
@@ -19,8 +19,11 @@ import './theme.css'
 // glyph roundel it carries.
 const KINDS = {
   progress: { spin: true },
-  success: { mark: '✓', markBg: 'var(--accent)' },
-  error: { mark: '!', markBg: 'var(--bad)' },
+  // U-16 / handoff §4.11: the two marks read PALETTE names (--accent / --bad).
+  // They are the toast taxonomy's own colours, so they get the taxonomy's own
+  // semantic names — same values, so nothing repaints.
+  success: { mark: '✓', markBg: 'var(--toast-mark-ok)' },
+  error: { mark: '!', markBg: 'var(--toast-mark-bad)' },
   undo: {},
 }
 // RES-25: 2.5 s was not long enough to read a success toast, let alone act on the
@@ -68,9 +71,11 @@ function Toast({ t, onClose }) {
           *result* ("finished, but …"), which must not keep spinning. `spin: false`
           on the toast opts that one card out; nothing else changes. */}
       {k.spin && t.spin !== false && <Spinner size={11} color="currentColor" />}
-      {/* ui: keep — a 16px filled glyph badge (✓ / ✕ on the toast tint), not a status dot: Dot draws a bare tone disc with no glyph */}
+      {/* the mark is a GlyphBadge now (S4). `tone="none"` because its ground is
+          the taxonomy's, not one of the badge tones — the ink stays --accent-ink,
+          the one palette read the handoff's §4.11 list does not cover. */}
       {k.mark && (
-        <span style={{ flex: '0 0 auto', width: 16, height: 16, borderRadius: 'var(--radius-control)', background: k.markBg, color: 'var(--accent-ink)', fontSize: 9.5, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{k.mark}</span>
+        <GlyphBadge tone="none" line={1} style={{ flex: '0 0 auto', background: k.markBg, color: 'var(--accent-ink)' }}>{k.mark}</GlyphBadge>
       )}
       <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: 1.45 }}>{t.msg}</span>
       {label && (
