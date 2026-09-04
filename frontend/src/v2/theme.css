@@ -1,9 +1,9 @@
 /* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
    Scoped to .jn-v2 so it never touches the classic UI. Light + dark + an `alt`
-   skin (D6) + the default→board tone ramp at the bottom of the palette section
-   (tone1, tone2, tone3, board). Every .jn-v2 root carries `data-theme`
-   (light|dark, the *resolved* mode — `system` follows prefers-color-scheme) and
-   `data-skin` (default|tone1|tone2|tone3|board|alt),
+   skin (D6) + the default→editorial tone ramp at the bottom of the palette
+   section (tone1, tone2, tone3, editorial). Every .jn-v2 root carries
+   `data-theme` (light|dark, the *resolved* mode — `system` follows
+   prefers-color-scheme) and `data-skin` (default|tone1|tone2|tone3|editorial|alt),
    both from the single store in theme.js; <html> carries a boot copy of the same
    two attributes, stamped by the inline script in index.html before React mounts
    so the page ground never flashes. The palette selectors below stay on the
@@ -440,20 +440,41 @@
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
 
-/* — Tone ramp: default → board (tone1 · tone2 · tone3 · board) --------------
-   `board` is the design boards' own palette; the three `tone` skins are the
-   straight line from the shipped default to it, sampled at ¼, ½ and ¾. Every
-   palette token — grounds, surfaces, lines, edges, ink steps, the accent family,
-   the states, the stage colours, the rail and the chart series — is the default
-   value and the board value interpolated in OKLab, separately for light and dark
-   (sRGB → linear → OKLab, lerp, back, round to hex; alpha lerps linearly for the
-   two rgba tokens). A token that is identical in default and board is
-   byte-identical here too — --surface, --edge and --track in light, the whole
-   dark --warn family, --gold, the dark stage blue — so the ramp moves only what
-   actually differs. The fonts stay the default's Newsreader / Public Sans /
-   JetBrains Mono, and with them the default's --ring-shift-sm, --ring-shift-md
-   and --ring-label-shift: the numerals sit where they always did. `default` and
-   `alt` are untouched.
+/* — Tone ramp: default → editorial (tone1 · tone2 · tone3 · editorial) ------
+   `editorial` is the palette of the DirectionC-Editorial direction board — the
+   board the shipped v2 palette descends from, before it was lightened. The three
+   `tone` skins are the straight line from today's default to it, sampled at ¼,
+   ½ and ¾. Every palette token — grounds, surfaces, lines, edges, ink steps, the
+   accent family, the states, the stage colours, the rail and the chart series —
+   is the default value and the editorial value interpolated in OKLab, separately
+   for light and dark (sRGB → linear → OKLab, lerp, back, round to hex; alpha
+   lerps linearly for the two rgba tokens). A token that is identical in default
+   and editorial is byte-identical here too, so the ramp moves only what actually
+   differs.
+
+   In light that is four tokens — --bg, --surface-2, --muted and --rail-dim. The
+   rest of the shipped light palette already IS the board's: same #e2ddd0 line
+   ladder, same #1b1a16 / #57534a ink, same #3f6b52 green, same #22211c rail. The
+   board's darker tones live almost entirely in its dark block, where the whole
+   ladder drops (#1e1c17 → #15140f ground) and the ink steps spread apart
+   (#d9d7d0 → #efeade primary, #a8a49d → #807b6e muted). So the ramp reads as a
+   dark-mode ramp with a faint warming of the light ground.
+
+   Tokens the board does not name keep the default's value. One exception, and it
+   is derived, not copied: dark --recessed. Its documented job is to read as set
+   BACK from --surface, and the default's #221f19 is lighter than the editorial
+   dark surface #1c1b16, which would invert it — so it is re-seated between the
+   editorial --bg and --surface at the same OKLab-L fraction (.363) it occupies in
+   the default. Two board literals were deliberately not taken: the board's rail
+   markup hardcodes #f6f3ea / #66604f / #8dbb9f, which the rail wants in both
+   themes and which we do take, but its primary button also hardcodes #fff as ink
+   on --accent, and #fff on the pale dark accent is 1.9:1 — dark keeps the
+   default's --accent-ink.
+
+   The fonts stay the default's Newsreader / Public Sans / JetBrains Mono, and
+   with them the default's --ring-shift-sm, --ring-shift-md and
+   --ring-label-shift: the numerals sit where they always did. `default` and `alt`
+   are untouched.
 
    The dark endpoint is the *effective* default dark palette — the light block
    overridden by `.jn-v2[data-theme="dark"]`. That block does not restate
@@ -468,162 +489,165 @@
 
 .jn-v2[data-skin="tone1"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#fcfaf5; --surface:#ffffff; --surface-2:#f5f3eb; --line:#e1dbcc; --line-soft:#eeeadd;
-  --line-strong:#c9c3b1; --edge:#8a826e; --track:#8d8571;
-  --text:#1d1c17; --text-2:#545046; --muted:#69645c; --ink-2:#312e27;
-  --accent:#3a644c; --accent-ink:#fdfcfa; --accent-soft:#e9f1e9;
-  --good:#3a644c; --warn:#975a27; --warn-soft:#f5ede1; --warn-line:#d3a167;
-  --bad:#99382c; --bad-soft:#f7e9e6; --bad-faint:#fdf4f2;
-  --change-soft:#d4e6d8; --change-bg:#fdfbf7; --hover-soft:#f2f7f2;
-  --ring-accent:rgba(58,100,76,.22); --scrim:rgba(24,22,18,.43); --recessed:#fbfaf5;
-  --stage-applied:#375782; --stage-interview:#975a27; --stage-offer:#3a644c; --stage-rejected:#99382c; --stage-new:#c9c3b1;
-  --series-new:#b48028;
-  --amber-bg:#fefcf4; --amber-line:#d5caa8; --amber-line-soft:#eee5cd; --amber-hover:#f9f5e6;
-  --sand:#d4caaf; --gold:#c6a155; --funnel-low:#8ead99; --funnel-mid:#5b866c;
-  --toast-ok-bg:#edf4ed; --toast-ok-line:#92b09d; --toast-ok-ink:#2f6446;
-  --toast-bad-bg:#f9eae7; --toast-bad-line:#d5a197; --toast-bad-ink:#8d3429;
-  --rail:#222720; --rail-text:#acac9f; --rail-dim:#8f907e; --rail-accent:#a1be9a; --rail-line:#2f352a; --rail-ink:#f5f2e8;
+  --bg:#fbfaf6; --surface:#ffffff; --surface-2:#f5f3ec; --line:#e2ddd0; --line-soft:#eeeae0;
+  --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
+  --text:#1b1a16; --text-2:#57534a; --muted:#757069; --ink-2:#302d26;
+  --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --warn-line:#d4a06a;
+  --bad:#9c3b30; --bad-soft:#f7ecea; --bad-faint:#fdf6f4;
+  --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5;
+  --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42); --recessed:#fdfcf9;
+  --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52; --stage-rejected:#9c3b30; --stage-new:#c9c3b4;
+  --series-new:#b8822b;
+  --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
+  --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#88816f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="tone1"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#1c1a15; --surface:#25221a; --surface-2:#2e2c21; --line:#3b382f; --line-soft:#2a291f;
-  --line-strong:#494537; --edge:#7c7763; --track:#89836f;
-  --text:#d6d4cc; --text-2:#c9c4ba; --muted:#a6a198; --ink-2:#cecbc2;
-  --accent:#8bb89d; --accent-ink:#15140f; --accent-soft:#232e27;
-  --good:#8bb89d; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
-  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#231917;
-  --change-soft:#33503e; --change-bg:#1f2721; --hover-soft:#2b281d;
-  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.59); --recessed:#201d18;
-  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8bb89d; --stage-rejected:#d98a7e; --stage-new:#494537;
+  --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
+  --text:#dedcd3; --text-2:#c6c2b8; --muted:#9e9a91; --ink-2:#d1cec6;
+  --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#232e27;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#241a18;
+  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58); --recessed:#1f1d17;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f; --stage-rejected:#d98a7e; --stage-new:#4a4638;
   --series-new:#a1731f;
-  --amber-bg:#282317; --amber-line:#483f28; --amber-line-soft:#372f1e; --amber-hover:#312b1c;
-  --sand:#6e6546; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
-  --toast-ok-bg:#212e28; --toast-ok-line:#3f6b52; --toast-ok-ink:#91bea2;
-  --toast-bad-bg:#2d1d1a; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
-  --rail:#12140f; --rail-text:#999a8d; --rail-dim:#888977; --rail-accent:#a1be9a; --rail-line:#2c3127; --rail-ink:#f5f2e8;
+  --amber-bg:#2a2418; --amber-line:#4a4029; --amber-line-soft:#38301f; --amber-hover:#332c1d;
+  --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#817a68; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="tone2"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#fbf9f3; --surface:#ffffff; --surface-2:#f4f2e7; --line:#dfdac9; --line-soft:#eee9db;
-  --line-strong:#c9c2ae; --edge:#8a826e; --track:#8d8571;
-  --text:#1f1d18; --text-2:#504c42; --muted:#645f56; --ink-2:#312e28;
-  --accent:#355d47; --accent-ink:#faf9f4; --accent-soft:#e8f0e8;
-  --good:#355d47; --warn:#945925; --warn-soft:#f5ecdf; --warn-line:#d2a165;
-  --bad:#953529; --bad-soft:#f7e6e2; --bad-faint:#fcf3f0;
-  --change-soft:#d2e4d4; --change-bg:#fcfaf5; --hover-soft:#f1f6ef;
-  --ring-accent:rgba(53,93,71,.22); --scrim:rgba(27,26,20,.44); --recessed:#faf7f0;
-  --stage-applied:#34537d; --stage-interview:#945925; --stage-offer:#355d47; --stage-rejected:#953529; --stage-new:#c9c2ae;
-  --series-new:#b07d25;
-  --amber-bg:#fefcf2; --amber-line:#d6cca9; --amber-line-soft:#ede5ce; --amber-hover:#f8f4e4;
-  --sand:#d4c9ab; --gold:#c49e50; --funnel-low:#8cad97; --funnel-mid:#578267;
-  --toast-ok-bg:#ebf3ea; --toast-ok-line:#96b3a0; --toast-ok-ink:#2e5d43;
-  --toast-bad-bg:#f8e6e2; --toast-bad-line:#daa99d; --toast-bad-ink:#8e3226;
-  --rail:#212e24; --rail-text:#b0b6a8; --rail-dim:#8a9481; --rail-accent:#b3c195; --rail-line:#2f3d30; --rail-ink:#f4f1e5;
+  --bg:#fbf9f5; --surface:#ffffff; --surface-2:#f4f2eb; --line:#e2ddd0; --line-soft:#eeeae0;
+  --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
+  --text:#1b1a16; --text-2:#57534a; --muted:#7e796f; --ink-2:#302d26;
+  --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --warn-line:#d4a06a;
+  --bad:#9c3b30; --bad-soft:#f7ecea; --bad-faint:#fdf6f4;
+  --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5;
+  --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42); --recessed:#fdfcf9;
+  --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52; --stage-rejected:#9c3b30; --stage-new:#c9c3b4;
+  --series-new:#b8822b;
+  --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
+  --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#7d7664; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="tone2"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#191813; --surface:#222019; --surface-2:#2a281e; --line:#38352c; --line-soft:#29271e;
-  --line-strong:#484436; --edge:#7a7561; --track:#86806c;
-  --text:#d4d1c8; --text-2:#c6c1b5; --muted:#a49f94; --ink-2:#ccc8bf;
-  --accent:#88b59a; --accent-ink:#15140f; --accent-soft:#212d26;
-  --good:#88b59a; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
-  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#231917;
-  --change-soft:#32513e; --change-bg:#1d251e; --hover-soft:#28261b;
-  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.6); --recessed:#1d1b16;
-  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#88b59a; --stage-rejected:#d98a7e; --stage-new:#484436;
+  --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
+  --text:#e4e0d7; --text-2:#c1bcb1; --muted:#948f85; --ink-2:#d1cec6;
+  --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#212d26;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#241a18;
+  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58); --recessed:#1d1b15;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f; --stage-rejected:#d98a7e; --stage-new:#4a4638;
   --series-new:#a1731f;
-  --amber-bg:#272115; --amber-line:#473d27; --amber-line-soft:#352e1d; --amber-hover:#30291b;
-  --sand:#6c6445; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
-  --toast-ok-bg:#1f2c26; --toast-ok-line:#3f6b52; --toast-ok-ink:#94c0a6;
-  --toast-bad-bg:#2c1c19; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
-  --rail:#131a13; --rail-text:#9fa598; --rail-dim:#858f7c; --rail-accent:#b3c195; --rail-line:#2a3629; --rail-ink:#f4f1e5;
+  --amber-bg:#2a2418; --amber-line:#4a4029; --amber-line-soft:#38301f; --amber-hover:#332c1d;
+  --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#787160; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="tone3"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#fbf8f1; --surface:#ffffff; --surface-2:#f4f0e4; --line:#ded8c5; --line-soft:#eee9d8;
-  --line-strong:#c9c2ab; --edge:#8a826e; --track:#8d8571;
-  --text:#211f19; --text-2:#4d493e; --muted:#605b50; --ink-2:#322f29;
-  --accent:#315641; --accent-ink:#f8f6ef; --accent-soft:#e7f0e6;
-  --good:#315641; --warn:#925824; --warn-soft:#f4ebdc; --warn-line:#d0a262;
-  --bad:#923225; --bad-soft:#f6e3de; --bad-faint:#fcf1ee;
-  --change-soft:#d1e2d1; --change-bg:#fcf9f2; --hover-soft:#eff5ed;
-  --ring-accent:rgba(49,86,65,.22); --scrim:rgba(31,29,23,.45); --recessed:#f8f5ec;
-  --stage-applied:#325079; --stage-interview:#925824; --stage-offer:#315641; --stage-rejected:#923225; --stage-new:#c9c2ab;
-  --series-new:#ac7b22;
-  --amber-bg:#fdfbf0; --amber-line:#d8cda9; --amber-line-soft:#ede5ce; --amber-hover:#f8f2e1;
-  --sand:#d3c7a8; --gold:#c19c4a; --funnel-low:#8bac95; --funnel-mid:#537e63;
-  --toast-ok-bg:#eaf2e8; --toast-ok-line:#99b5a2; --toast-ok-ink:#2d563f;
-  --toast-bad-bg:#f7e3de; --toast-bad-line:#dfb0a4; --toast-bad-ink:#8e3124;
-  --rail:#203429; --rail-text:#b4bfb1; --rail-dim:#849785; --rail-accent:#c5c490; --rail-line:#2e4636; --rail-ink:#f4f0e3;
+  --bg:#faf9f4; --surface:#ffffff; --surface-2:#f4f1e9; --line:#e2ddd0; --line-soft:#eeeae0;
+  --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
+  --text:#1b1a16; --text-2:#57534a; --muted:#868176; --ink-2:#302d26;
+  --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --warn-line:#d4a06a;
+  --bad:#9c3b30; --bad-soft:#f7ecea; --bad-faint:#fdf6f4;
+  --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5;
+  --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42); --recessed:#fdfcf9;
+  --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52; --stage-rejected:#9c3b30; --stage-new:#c9c3b4;
+  --series-new:#b8822b;
+  --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
+  --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#716b59; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 .jn-v2[data-skin="tone3"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#171611; --surface:#1f1d17; --surface-2:#27251c; --line:#353329; --line-soft:#27261e;
-  --line-strong:#484335; --edge:#77725e; --track:#837d69;
-  --text:#d1cec4; --text-2:#c4beb1; --muted:#a29c8f; --ink-2:#c9c6bb;
-  --accent:#86b398; --accent-ink:#15140f; --accent-soft:#202b24;
-  --good:#86b398; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
-  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#221816;
-  --change-soft:#32513d; --change-bg:#1c221c; --hover-soft:#262318;
-  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.61); --recessed:#1b1a15;
-  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#86b398; --stage-rejected:#d98a7e; --stage-new:#484335;
+  --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
+  --text:#e9e5da; --text-2:#bdb7aa; --muted:#8a8579; --ink-2:#d1cec6;
+  --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#202b24;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#241a18;
+  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58); --recessed:#1a1914;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f; --stage-rejected:#d98a7e; --stage-new:#4a4638;
   --series-new:#a1731f;
-  --amber-bg:#252014; --amber-line:#453c26; --amber-line-soft:#342d1d; --amber-hover:#2e281a;
-  --sand:#6b6345; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
-  --toast-ok-bg:#1e2a24; --toast-ok-line:#3f6b52; --toast-ok-ink:#98c3a9;
-  --toast-bad-bg:#2a1b18; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
-  --rail:#141f18; --rail-text:#a4b1a3; --rail-dim:#829482; --rail-accent:#c5c490; --rail-line:#273b2c; --rail-ink:#f4f0e3;
+  --amber-bg:#2a2418; --amber-line:#4a4029; --amber-line-soft:#38301f; --amber-hover:#332c1d;
+  --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#6f6957; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 
-/* board — the far end of the ramp: the design boards' own tones, carbon-copied
-   Light is "Job Feed 2.0" as drawn: paper ground #faf7ef, #f3efe0 surface, the
-   #ddd6c2/#e6e0cc/#eee8d5 line ladder, ink #23211a on #4a463a on #5c574a, the deep
-   #2c4f3c green (its rail is green too: #1e3b2d with the #d7c78a gold marker).
-   Dark is the master board's own dark block (#15140f/#1c1b16/#232219, #efeade ink,
-   #8dbb9f accent) with the four ink steps re-tuned onto the *current* dark ratios,
-   so the two dark palettes are comparable rather than merely different. */
-.jn-v2[data-skin="board"] {
+/* editorial — the far end of the ramp: the direction board's own tones.
+   Light is DirectionC-Editorial's :root as drawn — #faf8f3 paper, #f3f0e8
+   surface-2, #8f8a7d muted — with everything else already matching what
+   shipped. Dark is the board's own [data-theme="dark"] block: the #15140f /
+   #1c1b16 / #232219 ladder, the #323026 / #26251d lines, #efeade ink over
+   #b8b2a3 over #807b6e, the #1f2a23 accent wash, and the #100f0b rail. Note
+   what this costs at the endpoint: --muted is 3.44:1 on --surface in light and
+   4.09:1 in dark (the default is 5.52 / 6.17), and --rail-dim is 2.57:1 on the
+   rail. Those are the board's own numbers — it used --muted for 11-13px
+   secondary lines only. */
+.jn-v2[data-skin="editorial"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#faf7ef; --surface:#ffffff; --surface-2:#f3efe0; --line:#ddd6c2; --line-soft:#eee8d5;
-  --line-strong:#c9c1a8; --edge:#8a826e; --track:#8d8571;
-  --text:#23211a; --text-2:#4a463a; --muted:#5c574a; --ink-2:#33302a;
-  --accent:#2c4f3c; --accent-ink:#f6f3ea; --accent-soft:#e6efe4;
-  --good:#2c4f3c; --warn:#8f5722; --warn-soft:#f4ead9; --warn-line:#cfa25f;
-  --bad:#8f2f21; --bad-soft:#f6e0da; --bad-faint:#fbf0ec;
-  --change-soft:#cfe0cd; --change-bg:#fbf8f0; --hover-soft:#eef4ea;
-  --ring-accent:rgba(44,79,60,.22); --scrim:rgba(35,33,26,.46); --recessed:#f7f3e8;
-  --stage-applied:#2f4d75; --stage-interview:#8f5722; --stage-offer:#2c4f3c; --stage-rejected:#8f2f21; --stage-new:#c9c1a8;
-  --series-new:#a8791f;
-  --amber-bg:#fdfaee; --amber-line:#d9cfa9; --amber-line-soft:#ece5cf; --amber-hover:#f7f1de;
-  --sand:#d3c6a4; --gold:#bf9a45; --funnel-low:#8aab93; --funnel-mid:#4f7a5f;
-  --toast-ok-bg:#e9f1e6; --toast-ok-line:#9db8a5; --toast-ok-ink:#2c4f3c;
-  --toast-bad-bg:#f6e0da; --toast-bad-line:#e4b8ab; --toast-bad-ink:#8f2f21;
-  --rail:#1e3b2d; --rail-text:#b8c9ba; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#2c4f3c; --rail-ink:#f3efe0;
+  --bg:#faf8f3; --surface:#ffffff; --surface-2:#f3f0e8; --line:#e2ddd0; --line-soft:#eeeae0;
+  --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
+  --text:#1b1a16; --text-2:#57534a; --muted:#8f8a7d; --ink-2:#302d26;
+  --accent:#3f6b52; --accent-ink:#ffffff; --accent-soft:#eaf1eb;
+  --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --warn-line:#d4a06a;
+  --bad:#9c3b30; --bad-soft:#f7ecea; --bad-faint:#fdf6f4;
+  --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5;
+  --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42); --recessed:#fdfcf9;
+  --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52; --stage-rejected:#9c3b30; --stage-new:#c9c3b4;
+  --series-new:#b8822b;
+  --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
+  --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
+  --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
+  --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
+  --rail:#22211c; --rail-text:#a8a396; --rail-dim:#66604f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="board"][data-theme="dark"] {
+.jn-v2[data-skin="editorial"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
-  --line-strong:#474234; --edge:#75705c; --track:#807a66;
-  --text:#cfcbc0; --text-2:#c2bbac; --muted:#a09a8b; --ink-2:#c7c3b8;
-  --accent:#84b096; --accent-ink:#15140f; --accent-soft:#1f2a23;
-  --good:#84b096; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
-  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#221816;
-  --change-soft:#31513c; --change-bg:#1a2019; --hover-soft:#232116;
-  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.62); --recessed:#191814;
-  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#84b096; --stage-rejected:#d98a7e; --stage-new:#474234;
+  --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
+  --text:#efeade; --text-2:#b8b2a3; --muted:#807b6e; --ink-2:#d1cec6;
+  --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#1f2a23;
+  --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#241a18;
+  --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58); --recessed:#181712;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f; --stage-rejected:#d98a7e; --stage-new:#4a4638;
   --series-new:#a1731f;
-  --amber-bg:#241f13; --amber-line:#443b25; --amber-line-soft:#332c1c; --amber-hover:#2d2719;
-  --sand:#6a6244; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
-  --toast-ok-bg:#1d2822; --toast-ok-line:#3f6b52; --toast-ok-ink:#9cc6ad;
-  --toast-bad-bg:#291a17; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
-  --rail:#14251c; --rail-text:#a9bcae; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#23402f; --rail-ink:#f3efe0;
+  --amber-bg:#2a2418; --amber-line:#4a4029; --amber-line-soft:#38301f; --amber-hover:#332c1d;
+  --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
+  --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#100f0b; --rail-text:#948f82; --rail-dim:#66604f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 

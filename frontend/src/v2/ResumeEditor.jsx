@@ -4,7 +4,7 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, setFlashToast, fetchRunOutcome, runFailed, runFailureReason } from './hooks'
+import { useEscape, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -237,11 +237,18 @@ export default function ResumeEditor() {
       setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
       navigate('/v2/resumes')
     })
-    // OPEN-05: converted — the Layout picker has no options without this, and
-    // the user is looking at the editor they just opened.
-    api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) })
     return () => { alive = false }
   }, [id, navigate])
+
+  // DESIGN-LOAD: the preview toolbar's two pickers wait on this list — without it
+  // the Template trigger paints the raw template id and renames itself a moment
+  // later. The document already gates the whole screen (`!doc` below), so this is
+  // the other half of "document + templates have both settled".
+  // OPEN-05: converted — the Layout picker has no options without this, and the
+  // user is looking at the editor they just opened.
+  const { ready: tplReady } = useSettled([
+    () => api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) }),
+  ])
 
   // R2-H-09: a job-linked tailor chains a score of the new copy (routes_resumes.py
   // reads `tailor_auto_quick_score` and maps it exactly this way). Nothing in the
@@ -253,17 +260,11 @@ export default function ResumeEditor() {
     }).catch(() => { /* silent: the note falls back to the seeded default */ })
   }, [])
 
-  // parent base data for the diff/marks (tailored copies only); copy count for a base
-  useEffect(() => {
-    let alive = true
-    if (doc && doc.is_base) {
-      setBaseData(null)
-      api.get('/resumes', { params: { is_base: false } }).then(({ data }) => { if (alive) setBaseCopyCount((data || []).filter((r) => String(r.parent_id) === String(doc.id)).length) }).catch(() => { /* silent: an auxiliary count in the band; absent it simply doesn't render */ })
-    } else if (doc && doc.parent_id) {
-      api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (alive) { setBaseData(p.json_data || null); setParentName(p.name || null) } }).catch(() => { /* silent: the diff marks and the base name degrade to the name heuristic */ })
-    } else { setBaseData(null); setParentName(null) }
-    return () => { alive = false }
-  }, [doc])
+  // the document these context loaders belong to — a response that comes back
+  // after the user has moved to another résumé is dropped (what the old `alive`
+  // flags in these two effects did)
+  const docIdRef = useRef(null)
+  docIdRef.current = doc ? String(doc.id) : null
 
   const changes = useMemo(() => (isCopy && baseData && data ? computeChanges(baseData, data) : []), [isCopy, baseData, data])
   const changedSections = useMemo(() => {
@@ -274,16 +275,44 @@ export default function ResumeEditor() {
 
   // copy job context: score/delta, tracers, cover-letter existence
   const loadJobCtx = useCallback(() => {
-    if (!doc || doc.is_base || !doc.job_id) return
-    api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => { setJobData(j); setJobErr(false) }).catch(() => setJobErr(true))
-    api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => setCoverExists((data || []).length > 0)).catch(() => { /* silent: only picks the wording of the cover-letter step */ })
+    if (!doc || doc.is_base || !doc.job_id) return Promise.resolve()
+    const mine = String(doc.id)
+    return Promise.all([
+      api.get(`/jobs/${doc.job_id}`).then(({ data: j }) => { if (docIdRef.current === mine) { setJobData(j); setJobErr(false) } }).catch(() => { if (docIdRef.current === mine) setJobErr(true) }),
+      api.get(`/cover-letters`, { params: { job_id: doc.job_id } }).then(({ data }) => { if (docIdRef.current === mine) setCoverExists((data || []).length > 0) }).catch(() => { /* silent: only picks the wording of the cover-letter step */ }),
+    ])
   }, [doc])
-  useEffect(() => {
-    if (!doc || doc.is_base) { setJobData(null); setTracers([]); setJobErr(false); return }
-    if (!doc.job_id) { setJobData(null); setJobErr(false) }   // RES-20: no job to load, so no failure to report
-    loadJobCtx()
-    api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => setTracers(data || [])).catch(() => { /* silent: an optional click-count suffix on the band line */ })
-  }, [doc, id, loadJobCtx])
+
+  // DESIGN-LOAD: everything the context band says about a copy — the fit ring, the
+  // "Tailored for …" line, the "based on <base> ↗" link, the status/tracer line and
+  // the one next-step button — comes from these four requests. Rendered as they
+  // landed, the band wrote "Tailored copy · not scored yet" and then rewrote itself
+  // twice. They settle as one, and the band's two line boxes are held meanwhile.
+  const { ready: ctxReady } = useSettled([
+    // parent base data for the diff/marks (tailored copies only); copy count for a base
+    () => {
+      if (doc && doc.is_base) {
+        const mine = String(doc.id)
+        setBaseData(null)
+        return api.get('/resumes', { params: { is_base: false } }).then(({ data }) => { if (docIdRef.current === mine) setBaseCopyCount((data || []).filter((r) => String(r.parent_id) === mine).length) }).catch(() => { /* silent: an auxiliary count in the band; absent it simply doesn't render */ })
+      }
+      if (doc && doc.parent_id) {
+        const mine = String(doc.id)
+        return api.get(`/resumes/${doc.parent_id}`).then(({ data: p }) => { if (docIdRef.current === mine) { setBaseData(p.json_data || null); setParentName(p.name || null) } }).catch(() => { /* silent: the diff marks and the base name degrade to the name heuristic */ })
+      }
+      setBaseData(null); setParentName(null)
+      return null
+    },
+    () => {
+      if (!doc || doc.is_base) { setJobData(null); setTracers([]); setJobErr(false); return null }
+      if (!doc.job_id) { setJobData(null); setJobErr(false) }   // RES-20: no job to load, so no failure to report
+      const mine = String(doc.id)
+      return Promise.all([
+        loadJobCtx(),
+        api.get(`/resumes/${id}/tracer-stats`).then(({ data }) => { if (docIdRef.current === mine) setTracers(data || []) }).catch(() => { /* silent: an optional click-count suffix on the band line */ }),
+      ])
+    },
+  ], doc ? String(doc.id) : '')
 
   // RES-20: a copy tailored from a pasted description has no Job row. The JD it was
   // written against lives on the copy (json_data._tailor_context, routes_resumes.py)
@@ -494,11 +523,15 @@ export default function ResumeEditor() {
       {/* sub-band: base vs copy */}
       {isCopy ? (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13 }}>
-          {scores.tailored != null && (
+          {ctxReady && scores.tailored != null && (
             <ScoreRing value={scores.tailored} size="sm" />
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* DESIGN-LOAD: both lines keep their boxes (18px and the Helper's own)
+                while the four context requests are in flight, so the band is its
+                final height from the first frame and fills in once. */}
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>
+              {!ctxReady ? NBSP : <>
               {jobData?.company
                 ? <>Tailored for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></>
                 : (jobless && freeformJd ? 'Tailored from a pasted description' : 'Tailored copy')}
@@ -519,18 +552,23 @@ export default function ResumeEditor() {
                   </>
                 )
               })()}
+              </>}
             </div>
             <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {/* RES-20: "not scored yet" used to cover three different states — a
                   copy waiting to be scored, one that can never be, and a job whose
-                  fetch failed. They read differently now. */}
+                  fetch failed. They read differently now.
+                  DESIGN-LOAD: the tracer counts are part of the same settle, so the
+                  line no longer grows a " · tracers: …" tail after the fact. */}
+              {!ctxReady ? NBSP : <>
               {jobErr ? 'Couldn’t load the linked job.'
                 : jobless && !freeformJd ? 'No job or description linked, so this copy can’t be scored.'
                   : (changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
               {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
+              </>}
             </Helper>
           </div>
-          {stage && (
+          {ctxReady && stage && (
             <Button onClick={() => stage.act && stage.act()} disabled={stage.done} title={stage.done ? 'Pipeline complete' : 'The one next step'}>
               {scoring && <Spinner size={11} color="currentColor" />}
               {stage.label}
@@ -561,7 +599,9 @@ export default function ResumeEditor() {
         </HeaderRow>
       ) : (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
-          <span>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
+          {/* DESIGN-LOAD: the copy count is part of the context settle — it used to
+              push the rest of the line sideways when it landed on its own */}
+          <span>Base résumé · {ctxReady && baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
           <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
               R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
@@ -604,7 +644,9 @@ export default function ResumeEditor() {
             {/* template picker — the container swallows its own clicks so the
                 document closer below can't undo the toggle (RES-28) */}
             {/* ui: keep — the two 9px muted ▾ carets below are the PDF-preview toolbar's own paper scale (below Helper's tolerance) */}
-            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            {/* DESIGN-LOAD: both triggers wait for the template list; the row's
+                height is the Download link's, so nothing moves when they land */}
+            {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               {/* ui: keep — a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32.
                   D5 note: the cover-letter editor draws the same trigger with `v2-bd v2-ctl` — the two
                   hovers are a logged needs-decision, not a licence to add a third. */}
@@ -614,9 +656,9 @@ export default function ResumeEditor() {
                     {templates.map((t) => <MenuItem key={t.id} role="option" ariaSelected={t.id === template} selected={t.id === template} onClick={() => pickTemplate(t.id)}>{t.name}</MenuItem>)}
                   </Menu>
               )}
-            </div>
+            </div>}
             {/* format */}
-            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               {/* ui: keep — the paper-size twin of the template trigger above */}
               <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{format === 'a4' ? 'A4' : 'US Letter'}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
               {fmtOpen && (
@@ -624,7 +666,7 @@ export default function ResumeEditor() {
                     {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <MenuItem key={v} role="option" ariaSelected={v === format} selected={v === format} onClick={() => pickFormat(v)}>{l}</MenuItem>)}
                   </Menu>
               )}
-            </div>
+            </div>}
             {/* ui: keep — native <a href target=_blank> download link; Button renders a div and would drop the anchor */}
             <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', flex: '0 0 auto', minWidth: 0, height: 29, padding: '0 15px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>↓ Download PDF</a>
           </HeaderRow>

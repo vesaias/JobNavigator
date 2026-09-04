@@ -7,7 +7,7 @@ import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 import { ago, agoShort } from './time'
-import { fetchRunOutcome, runFailed, runFailureReason } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useWarm, NBSP } from './hooks'
 
 export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['detailed', 'Detailed']]
 
@@ -144,29 +144,34 @@ export default function CoverLetters() {
     }
   }, [])
 
-  useEffect(() => {
-    load()
-    // merge, don't replace: the ?job=/?resume= effect below prepends a row that
-    // isn't in these windows, and this response usually lands last (the 200-job
-    // list is the slowest call on the screen) — replacing wiped the deep link.
-    const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
+  // merge, don't replace: the ?job=/?resume= effect below prepends a row that
+  // isn't in these windows, and the job response usually lands last (the 200-job
+  // list is the slowest call on the screen) — replacing wiped the deep link.
+  const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
+  // DESIGN-LOAD: the five initial requests settle as one. Until they do, the
+  // subtitle line, the Voice picker and the "All letters" list keep their boxes
+  // and stay empty — instead of reading "0 letters", "No voice presets — add them
+  // in Settings → AI" and "No cover letters yet", each corrected a moment later.
+  // Every loader keeps its own catch, so the error toasts below are unchanged.
+  const { ready } = useSettled([
+    () => load(),
     // OPEN-05: converted — the generate panel is the point of this screen, and a
     // disabled button is not an explanation. Same for the job picker and the
     // voice list below.
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — there is nothing to generate from.' }) })
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
+    () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — there is nothing to generate from.' }) }),
+    () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) }),
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
     // landed on an id with no matching option and the field rendered blank
-    api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
-      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your saved jobs — the job picker is empty.' }) })
-    api.get('/settings').then(({ data }) => {
+    () => api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
+      .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your saved jobs — the job picker is empty.' }) }),
+    () => api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       const list = Array.isArray(p) ? p : []
       setPresets(list)
       setGenVoice(data.cover_letter_default_voice || list[0]?.id || '')
-    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) })
-  }, [load, pushToast])
+    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) }),
+  ])
 
   // ?job= / ?resume= deep links (from the Feed, Résumé editor and Applications)
   useEffect(() => {
@@ -252,9 +257,13 @@ export default function CoverLetters() {
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
   const live = letters.filter((c) => c.stage && c.stage !== 'rejected').length
-  const countLine = query.trim()
+  // the resting form of the line ("N letters · M live applications") is the same
+  // after a refresh as before it, so it is warm-started; the search form is only
+  // reachable once the letters are in hand anyway
+  const { warm: sub, style: subStyle } = useWarm('cover-letters', ready ? { n: letters.length, live } : null, ready)
+  const countLine = ready && query.trim()
     ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} live application${live === 1 ? '' : 's'}`   // CL-23
-    : `${letters.length} letter${letters.length === 1 ? '' : 's'} · ${live} live application${live === 1 ? '' : 's'}`
+    : sub ? `${sub.n} letter${sub.n === 1 ? '' : 's'} · ${sub.live} live application${sub.live === 1 ? '' : 's'}` : NBSP
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
   const voiceLabel = presets.find((p) => p.id === genVoice)?.label || genVoice
@@ -322,7 +331,7 @@ export default function CoverLetters() {
       <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Cover Letters</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...subStyle }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
           <SearchInput variant="underline" width="280px" value={query} onChange={setQuery}
@@ -348,7 +357,11 @@ export default function CoverLetters() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Voice</Label>
-            <VoicePicker presets={presets} value={genVoice} onPick={setGenVoice} />
+            {/* DESIGN-LOAD: the picker's own empty state ("No voice presets…") is a
+                real verdict, not a loading state — it may only be drawn once the
+                settings request has settled. The row keeps a pill's height so the
+                panel below it doesn't shift when the presets land. */}
+            <div style={{ minHeight: 26 }}>{ready && <VoicePicker presets={presets} value={genVoice} onPick={setGenVoice} />}</div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -371,10 +384,14 @@ export default function CoverLetters() {
           <HeaderRow className="v2-gutter-head" pad="13px 30px 9px" soft align="center" style={{ gap: 9 }}>
             <Label>All letters</Label>
             {/* ui: keep — mono count in --edge ink: the mono-text role, not a muted helper */}
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{letters.length + pending.length}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--edge)' }}>{ready ? letters.length + pending.length : NBSP}</span>
           </HeaderRow>
 
+          {/* DESIGN-LOAD: the list container is always here (flex:1, its own
+              scroller); only its contents wait for the settle, so the pane never
+              flips from "No cover letters yet" to the real rows. */}
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
+            {ready && <>
             {pending.map((r) => (
               <Band key={r.run_id} interactive={false} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', borderColor: 'var(--accent)', background: 'var(--recessed)' }}>
                 <Spinner size={11} />
@@ -414,6 +431,7 @@ export default function CoverLetters() {
                 {letters.length === 0 ? 'No cover letters yet — generate one on the left.' : 'Nothing matches that search.'}
               </div>
             ))}
+            </>}
           </div>
         </div>
       </div>

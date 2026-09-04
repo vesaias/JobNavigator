@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape } from './hooks'
+import { useEscape, useSettled, useWarm, NBSP } from './hooks'
 import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
@@ -148,6 +148,7 @@ export default function V2JobFeed() {
   const [jobs, setJobs] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [firstLoaded, setFirstLoaded] = useState(false)   // DESIGN-LOAD: the first /jobs page has answered
   const [loadError, setLoadError] = useState(false)   // FEED-11: a failed list is not an empty one
   const [filters, setFilters] = useState(() => {
     let f = DEFAULTS
@@ -281,14 +282,31 @@ export default function V2JobFeed() {
   useEffect(() => { setNumDraft({ min_score: filters.min_score, min_salary: filters.min_salary, max_salary: filters.max_salary }) }, [filters.min_score, filters.min_salary, filters.max_salary])
   const numTimer = useRef(null)
   const setNum = (key, v) => { setNumDraft((p) => ({ ...p, [key]: v })); clearTimeout(numTimer.current); numTimer.current = setTimeout(() => setF({ [key]: v }), 400) }
-  useEffect(() => {
-    api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => { /* silent: a filter facet — the list itself has FEED-11's error state */ })
-    api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ })   // FEED-26
-    api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ })
-    api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only names the résumés in the score modal; scoring reports its own failures */ })
-    api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; refreshStats re-runs them after every action */ })
-  }, [])
+  // DESIGN-LOAD: the five screen-level facets settle as one. The subtitle's three
+  // counters and the "Score N unscored jobs" button hang off /jobs/feed-stats, and
+  // the Source / H-1B menus off their two lists — drawn as they arrived, the
+  // header read "0 open roles · 0 arrived today" for a beat on every visit.
+  const { ready: facetsReady } = useSettled([
+    () => api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => { /* silent: a filter facet — the list itself has FEED-11's error state */ }),
+    () => api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ }),   // FEED-26
+    () => api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ }),
+    () => api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only names the résumés in the score modal; scoring reports its own failures */ }),
+    () => api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; refreshStats re-runs them after every action */ }),
+  ])
   const refreshStats = useCallback(() => { api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [])
+
+  // Warm start. The subtitle's three counters, the unscored button and the two
+  // facet option lists are the same on the frame after a refresh as they were
+  // before it, so they paint from the cache and reconcile (with the rail's .15s
+  // fade) once the facets AND the first page of jobs have both answered.
+  const headReady = facetsReady && firstLoaded
+  const { warm: head, style: headStyle } = useWarm('feed', headReady
+    ? { total, arrived: stats.arrived_today, unscored: stats.unscored, sources: sourceList, sourceCounts, verdicts: verdictList, verdictCounts }
+    : null, headReady)
+  const facetSources = (head && head.sources) || []
+  const facetSourceCounts = (head && head.sourceCounts) || {}
+  const facetVerdicts = (head && head.verdicts) || []
+  const facetVerdictCounts = (head && head.verdictCounts) || {}
 
   const buildParams = useCallback((off) => {
     const p = { limit: PAGE, offset: off }
@@ -322,6 +340,7 @@ export default function V2JobFeed() {
       if (e?.response?.status !== 401) pushToast({ kind: 'error', msg: "Couldn't load jobs" })   // a 401 opens the shell's login modal instead
     }
     setLoading(false)
+    setFirstLoaded(true)   // DESIGN-LOAD: the header's `total` is real from here on
   }, [buildParams, pushToast])
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
@@ -881,10 +900,10 @@ export default function V2JobFeed() {
       <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>The Feed</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{total} open roles · {stats.arrived_today} arrived today · {stats.unscored} not yet scored</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...headStyle }}>{head ? `${head.total} open roles · ${head.arrived} arrived today · ${head.unscored} not yet scored` : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          {stats.unscored > 0 && <Button onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job">Score {stats.unscored} unscored jobs</Button>}
+          {head && head.unscored > 0 && <Button onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={headStyle}>Score {head.unscored} unscored jobs</Button>}
         </div>
       </HeaderRow>
 
@@ -902,7 +921,9 @@ export default function V2JobFeed() {
           </Pill>
         )}
         <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} onClear={() => setF({ source: [] })} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
-          {sourceList.length ? sourceList.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={sourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
+          {/* warm-started: the option list is the cached one until the facets settle,
+              so an early click on Source is not an empty menu */}
+          {facetSources.length ? facetSources.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={facetSourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
         <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} onClear={() => setF({ company: [] })} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
           <Input autoFocus value={companyQuery} onChange={setCompanyQuery} ariaLabel="Search companies"
@@ -926,7 +947,7 @@ export default function V2JobFeed() {
           })()}
         </Drop>
         <Drop label={`H-1B${filters.h1b_verdict.length ? ` · ${filters.h1b_verdict.length}` : ''}`} active={filters.h1b_verdict.length > 0} onClear={() => setF({ h1b_verdict: [] })} open={menu === 'h1b'} onToggle={() => setMenu(menu === 'h1b' ? null : 'h1b')} width={196}>
-          {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => verdictList.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} count={verdictCounts[v]} onClick={() => togF('h1b_verdict', v)} />)}
+          {['likely', 'possible', 'unlikely', 'unknown'].filter((v) => facetVerdicts.includes(v)).map((v) => <Check key={v} on={filters.h1b_verdict.includes(v)} label={H1B[v].label.replace('H-1B ', '')} count={facetVerdictCounts[v]} onClick={() => togF('h1b_verdict', v)} />)}
         </Drop>
         <Drop inset label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={234}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
@@ -985,7 +1006,8 @@ export default function V2JobFeed() {
           <div style={{ position: 'relative', padding: '12px 14px 8px 24px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
             <UICheck checked={allChecked} indeterminate={someChecked && !allChecked} ariaLabel="Select all shown" title="Select all shown" style={{ flex: '0 0 auto' }}
               onChange={() => setChecked(allChecked ? new Set() : new Set(jobs.map((j) => j.id)))} />
-            <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{jobs.length} shown · {total} matching</span>
+            {/* the count line keeps its box until the first page answers */}
+            <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{firstLoaded ? `${jobs.length} shown · ${total} matching` : NBSP}</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
               {/* ui: keep — 16x16 "?" glyph badge; no Pill/IconButton size is this small */}
@@ -1025,7 +1047,10 @@ export default function V2JobFeed() {
           )}
 
           <div ref={listRef} onScroll={onListScroll} className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 8px 12px', display: 'flex', flexDirection: 'column', userSelect: 'none', WebkitUserSelect: 'none' }}>
-            {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+            {/* DESIGN-LOAD: no "Loading…" on the FIRST paint — the list keeps its
+                box and fills in once. A later reload (a filter change) is an
+                explicit action, and keeps its line. */}
+            {loading ? (firstLoaded ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div> : null)
               // ui: keep — the "Try again" link runs inline inside a 13px sentence; Link's 11.5/500 would break the run
               : loadError ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Couldn't load jobs · <span onClick={fetchJobs} style={{ color: 'var(--accent)', cursor: 'pointer' }}>Try again</span></div>
               : jobs.length === 0 ? (

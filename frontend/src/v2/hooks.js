@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import api from '../api'
 
 // Small cross-screen hooks. Kept out of Toast.jsx so a screen can take the
@@ -80,6 +80,89 @@ export function useSnapTop(ref) {
     window.addEventListener('resize', snap)
     return () => window.removeEventListener('resize', snap)
   })
+}
+
+// ── initial load: settle once, then paint ───────────────────────────────────
+// DESIGN-LOAD: every screen used to render its chrome from empty state and then
+// jump — the subtitle counted 0 bases, the filter pills held no options, the
+// table was an empty box — because each fetch landed in its own render. The rail
+// already solved this (V2App.jsx:46-150): one `Promise.allSettled`, one setState,
+// plus a warm-start snapshot so the numbers are there on the first frame.
+//
+//   const { ready } = useSettled([() => load(), () => loadHealth()])
+//
+// `loaders` is an array of thunks (or promises); it is read from a ref, so an
+// inline array does NOT re-run it — only a change of `key` does (a screen whose
+// document id is in the URL passes that id). The thunks keep doing whatever they
+// already did, including their own setState and their own catch; `ready` simply
+// flips once, after the last of them settles, so the screen can reveal its
+// data-dependent chrome in a single render. `data` carries the fulfilled values
+// (undefined where a loader rejected) for screens that would rather read them
+// here than through their own state.
+//
+// Deliberately no spinner: the wait is a few hundred ms and the layout keeps its
+// boxes, so a spinner would be one more thing appearing and disappearing. The
+// `Spinner` primitive stays for explicit long actions (scoring, tailoring).
+export function useSettled(loaders, key = '') {
+  const ref = useRef(loaders)
+  ref.current = loaders
+  // the settled result carries the key it belongs to, and readiness is derived
+  // during render — a key change (another document) is stale *immediately*,
+  // rather than a frame later when an effect could clear it. That frame is the
+  // whole bug: it is where the previous document's numbers get painted.
+  const [done, setDone] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const list = (typeof ref.current === 'function' ? ref.current() : ref.current) || []
+    Promise.allSettled(list.map((l) => (typeof l === 'function' ? l() : l)))
+      .then((rs) => { if (alive) setDone({ key, data: rs.map((r) => (r.status === 'fulfilled' ? r.value : undefined)) }) })
+    return () => { alive = false }
+  }, [key])
+  const ready = done !== null && done.key === key
+  return { ready, data: ready ? done.data : [] }
+}
+
+// ── warm start ──────────────────────────────────────────────────────────────
+// The parts of a screen that are the same on the frame after a refresh as they
+// were before it — a subtitle's counts, a filter's option list — are cached and
+// read back synchronously in the initial state, so they paint immediately and are
+// silently reconciled when the real data settles.
+//
+//   const { warm, style } = useWarm('resumes', ready ? { bases, copies } : null, ready)
+//
+// `warm` is the cached snapshot until `ready`, the live value after. A value that
+// comes back equal to its cache causes no render at all; one that differs fades
+// (.15s, from .6) exactly like a rail badge. A first-ever visit has nothing
+// cached: `warm` is null and the screen renders the empty line — with its box
+// reserved (NBSP) so nothing shifts when the text lands.
+const WARM_NS = 'jobnavigator_v2_warm:'
+export const NBSP = '\u00A0'
+const readWarm = (screen) => {
+  try {
+    const v = JSON.parse(localStorage.getItem(WARM_NS + screen) || 'null')
+    return v && typeof v === 'object' ? v : null
+  } catch { return null }
+}
+export function useWarm(screen, live, ready) {
+  const [boot] = useState(() => readWarm(screen))
+  const [fade, setFade] = useState(false)
+  const raf = useRef([])
+  const last = useRef(boot === null ? null : JSON.stringify(boot))
+  useEffect(() => () => { raf.current.forEach((id) => cancelAnimationFrame(id)) }, [])
+  const json = ready && live != null ? JSON.stringify(live) : null
+  useEffect(() => {
+    if (json === null || json === last.current) return   // the cache was right: no render, no fade
+    const warmed = last.current !== null                 // nothing to cross-fade from on a first visit
+    last.current = json
+    try { localStorage.setItem(WARM_NS + screen, json) } catch { /* ignore */ }
+    if (!warmed) return
+    raf.current.forEach((id) => cancelAnimationFrame(id)); raf.current = []
+    setFade(true)
+    // two frames: the first guarantees a painted frame at .6, the second starts
+    // the transition back up (one frame alone can be coalesced away)
+    raf.current = [requestAnimationFrame(() => { raf.current = [requestAnimationFrame(() => setFade(false))] })]
+  }, [json, screen])
+  return { warm: ready ? live : boot, fade, style: { opacity: fade ? 0.6 : 1, transition: 'opacity .15s' } }
 }
 
 const FLASH_KEY = 'jobnavigator_v2_flash'

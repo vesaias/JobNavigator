@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape } from './hooks'
+import { useEscape, useSettled } from './hooks'
 import { Button, Card, Check, DashedAdd, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
 import './theme.css'
 
@@ -77,7 +77,6 @@ export default function Applications() {
   const [apps, setApps] = useState([])
   // hold the screen back until the first fetch lands — otherwise the chrome
   // paints with "0 applications" and an empty list, then everything pops in
-  const [loaded, setLoaded] = useState(false)
   // APPS-02: a failed fetch must not read as "you have no applications"
   const [total, setTotal] = useState(null)
   const [loadErr, setLoadErr] = useState(null)
@@ -118,9 +117,11 @@ export default function Applications() {
       setLoadErr(e?.response?.status ? `The server answered ${e.response.status}.${errSuffix(e)}` : (e.message || 'Network error'))
       pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) })
     }
-    setLoaded(true)
   }, [pushToast])
-  useEffect(() => { load() }, [load])
+  // DESIGN-LOAD: this screen already waited for its one request before drawing
+  // anything (an empty pane, never a spinner) — it is the shape the other screens
+  // were brought to. Same behaviour, now through the shared hook.
+  const { ready: loaded } = useSettled([() => load()])
   // APPS-06: the interview draft belongs to the application it was opened on —
   // carrying it to the next row posted it against the wrong application
   useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); setEditIv(null) }, [sel])

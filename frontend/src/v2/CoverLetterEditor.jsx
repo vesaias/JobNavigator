@@ -9,7 +9,7 @@ import { useUndoRemove, BandRule } from './ResumeSections'
 import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
-import { fetchRunOutcome, runFailed, runFailureReason } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled } from './hooks'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -112,20 +112,24 @@ export default function CoverLetterEditor() {
     return () => { dead = true }
   }, [id])
 
-  useEffect(() => {
-    // OPEN-05: converted — these four fill the editor's own pickers. Failing
-    // silently left the Layout menu, the Regenerate source list and the voice
-    // list empty with nothing to say why, on a screen the user just opened.
-    api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) })
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — Regenerate has no source to pick.' }) })
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
-    api.get('/settings').then(({ data }) => {
+  // DESIGN-LOAD: these four are the editor's chrome — the layout and paper
+  // pickers, the Regenerate source list and the voice list. They settle as one,
+  // and `metaReady` (with the document, which already gates the whole screen)
+  // is what lets the preview toolbar draw: otherwise the Template trigger paints
+  // the raw template *id* and swaps to its name a moment later.
+  // OPEN-05: converted — failing silently left those pickers empty with nothing
+  // to say why, on a screen the user just opened. Each keeps its own catch.
+  const { ready: metaReady } = useSettled([
+    () => api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) }),
+    () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — Regenerate has no source to pick.' }) }),
+    () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) }),
+    () => api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
       if (typeof p === 'string') { try { p = JSON.parse(p) } catch { p = [] } }
       setPresets(Array.isArray(p) ? p : [])
       setRVoice((v) => v || data.cover_letter_default_voice || '')
-    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) })
-  }, [pushToast])
+    }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the voice presets — the voice picker is empty.' }) }),
+  ])
 
   useEffect(() => () => { clearTimeout(saveTimer.current); clearTimeout(pdfTimer.current) }, [])
   useEffect(() => () => { if (prevBlob.current) URL.revokeObjectURL(prevBlob.current) }, [])
@@ -488,7 +492,10 @@ export default function CoverLetterEditor() {
             <Label>PDF preview</Label>
             {pdfBusy && <Spinner size={10} color="var(--edge)" />}
 
-            <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+            {/* DESIGN-LOAD: the two triggers wait for the template list. The row's
+                height is the Download button's, so nothing moves when they land —
+                and the Template trigger never shows a raw id first. */}
+            {metaReady && <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
               {/* ui: keep — a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32 */}
               <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Cover letter template" className="v2-bd v2-ctl"
                 style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
@@ -502,9 +509,9 @@ export default function CoverLetterEditor() {
                   ))}
                 </Menu>
               )}
-            </span>
+            </span>}
 
-            <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
+            {metaReady && <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
               {/* ui: keep — the paper-size twin of the template trigger above */}
               <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size — US Letter or A4" className="v2-bd v2-ctl"
                 style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
@@ -518,7 +525,7 @@ export default function CoverLetterEditor() {
                   ))}
                 </Menu>
               )}
-            </span>
+            </span>}
 
             {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed — showing the last render · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
             <Button size="xs" onClick={download} style={{ marginLeft: 'auto' }}>↓ Download PDF</Button>
@@ -550,7 +557,9 @@ export default function CoverLetterEditor() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Voice</Label>
-                <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />
+                {/* DESIGN-LOAD: "No voice presets…" is a verdict, not a loading
+                    state — the row holds a pill's height until the settle. */}
+                <div style={{ minHeight: 26 }}>{metaReady && <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Length</Label>

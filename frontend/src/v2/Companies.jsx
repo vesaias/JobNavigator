@@ -5,6 +5,7 @@ import { useToasts, ToastStack } from './Toast'
 // RES-16: this dialog started here (COMP-28) and now serves the résumé and
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
+import { useSettled, useWarm, NBSP } from './hooks'
 import { Button, DashedAdd, Dot, Drawer as UiDrawer, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, Tag } from './ui'
 import './theme.css'
 
@@ -158,7 +159,7 @@ export default function Companies() {
   const [test, setTest] = useState(null)              // test-scrape result
   const [testingId, setTestingId] = useState(null)
   const [showShots, setShowShots] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [reload, setReload] = useState(0)   // "Try again" re-arms the settle below
   const [loadErr, setLoadErr] = useState(null)
   // R3-S-01 (= R2-S-01): the row's fixed columns summed to ~1130px of container
   // before either flexible column reached its minWidth, so at 1024 with the rail
@@ -176,14 +177,6 @@ export default function Companies() {
   const mounted = useRef(true)
   useEffect(() => () => { mounted.current = false }, [])
 
-  useEffect(() => {
-    const el = tableRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return undefined
-    const ro = new ResizeObserver(([en]) => { const w = en?.contentRect?.width; if (typeof w === 'number') setTblW(w) })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [loading])
-
   // only company_scrape runs belong on this screen; /monitor/active also carries
   // scoring and search runs whose scope_key is a job/search id. X-01: the run now
   // carries company_id explicitly — prefer it, and keep the scope_key reading as a
@@ -198,15 +191,26 @@ export default function Companies() {
   const fetchCompanies = useCallback(async () => {
     try { const { data } = await api.get('/companies'); setCompanies(data); setLoadErr(null) }
     catch (e) { console.error(e); const msg = 'Could not load companies' + errSuffix(e); setLoadErr(msg); pushToast({ kind: 'error', msg }) }
-    finally { setLoading(false) }
-    fetchHealth()
+    return fetchHealth()
   }, [pushToast, fetchHealth])
+  // DESIGN-LOAD: list, health, résumé names and the running scrapes settle as one.
+  // The table, the tier counts, the bulk buttons and the subtitle used to arrive in
+  // that order — an empty table under "0 tracked · 0 active", then rows, then the
+  // ▲ marks as /health/entities landed.
+  const { ready } = useSettled([
+    () => fetchCompanies(),
+    () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => { /* silent: the résumé chips are decoration on this screen; the list load has its own error state */ }),
+    () => api.get('/persona').then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: one optional chip — absent Persona simply isn't offered */ }),
+    () => api.get('/monitor/active').then(({ data }) => setScraping(runMap(data))).catch(() => { /* silent: poller — the 3s tick below retries, a toast per tick would be worse */ }),
+  ], reload)
+
   useEffect(() => {
-    fetchCompanies()
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => { /* silent: the résumé chips are decoration on this screen; the list load has its own error state */ })
-    api.get('/persona').then(({ data }) => setPersonaPopulated(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: one optional chip — absent Persona simply isn't offered */ })
-    api.get('/monitor/active').then(({ data }) => setScraping(runMap(data))).catch(() => { /* silent: poller — the 3s tick below retries, a toast per tick would be worse */ })
-  }, [fetchCompanies])
+    const el = tableRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(([en]) => { const w = en?.contentRect?.width; if (typeof w === 'number') setTblW(w) })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ready])
 
   // COMP-05: a fixed 2.6 s timer used to declare the scrape finished; poll the
   // real run registry instead and refresh the list once a run disappears.
@@ -267,7 +271,14 @@ export default function Companies() {
 
   const activeCount = companies.filter((c) => c.active).length
   const downCount = companies.filter((c) => isAlarming(c, downMap[c.id])).length
-  const countLine = `${companies.length} tracked · ${activeCount} active · ${downCount} need attention`
+  // Warm start: the subtitle's three numbers and the tier pills' counts are the
+  // same on the frame after a refresh as they were before it. They paint from the
+  // cache and reconcile (with the rail's .15s fade) when the settle disagrees.
+  const { warm, style: warmStyle } = useWarm('companies', ready
+    ? { n: companies.length, active: activeCount, down: downCount, tiers: tierCounts }
+    : null, ready)
+  const countLine = warm ? `${warm.n} tracked · ${warm.active} active · ${warm.down} need attention` : NBSP
+  const warmTier = (t) => (warm && warm.tiers ? warm.tiers[t] : undefined)
   const inactiveInFilter = filtered.filter((c) => !c.active)
   const activeInFilter = filtered.filter((c) => c.active)
   const bulkHint = tiers.length || query.trim()
@@ -401,7 +412,7 @@ export default function Companies() {
           {/* explicit integer line-height: at the inherited 1.5 this 13px line is
               19.5px tall, so the header ends on a half pixel and every row below
               lands on x.5 and drops its 1px border on alternating rows. */}
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{countLine}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...warmStyle }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button onClick={() => setAddOpen(true)}>+ Add company</Button>
@@ -418,7 +429,9 @@ export default function Companies() {
           return (
             <Pill key={t} on={on} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
               title="Add/remove from filter · multi-select, remembered per browser">
-              <span>{t === 'none' ? 'Untiered' : tierLabel(t, { long: true })}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6 }}>{tierCounts[t]}</span></span>
+              {/* the count comes from the warm snapshot until the list settles, so
+                  the pill is its final width on the first frame */}
+              <span>{t === 'none' ? 'Untiered' : tierLabel(t, { long: true })}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6, ...warmStyle }}>{warmTier(t) != null ? warmTier(t) : NBSP}</span></span>
             </Pill>
           )
         })}
@@ -553,22 +566,19 @@ export default function Companies() {
             </Row>
           )
         })}
-        {loading && companies.length === 0 && (
-          <Helper style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 28px' }}>
-            <Spinner size={10} color="var(--muted)" />Loading companies…
-          </Helper>
-        )}
+        {/* DESIGN-LOAD: no "Loading companies…" row — the table keeps its container
+            and stays empty until the settle, then draws once. */}
         {/* a failed GET used to fall through to the filter-miss copy, so a server
             outage read as "nothing matches your search" and Clear filters "fixed"
             nothing; and that copy also flashed before the first response landed. */}
-        {!loading && loadErr && companies.length === 0 && (
+        {ready && loadErr && companies.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load companies</span>
             <Helper>{loadErr}</Helper>
-            <Link onClick={() => { setLoading(true); fetchCompanies() }} style={{ paddingTop: 2 }}>Try again</Link>
+            <Link onClick={() => setReload((n) => n + 1)} style={{ paddingTop: 2 }}>Try again</Link>
           </div>
         )}
-        {!loading && filtered.length === 0 && !(loadErr && companies.length === 0) && (
+        {ready && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
             <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>   {/* COMP-29 */}

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
+import { useSettled } from './hooks'
+import { Button, Card, Heading, HeaderRow, Helper, Input, Label, Menu, MenuItem, ModalPanel, PageTitle, Pill, SectionHead, Select } from './ui'
+import ConfirmDialog from './ConfirmDialog'
+import { ago } from './time'
 import './theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -86,6 +89,9 @@ const GROUPS = [
 const ANSWERABLE = GROUPS.reduce((n, g) => n + g[2].filter((f) => !f[4]?.uncounted).length, 0)
 
 const isSet = (v) => v !== undefined && v !== null && v !== ''
+// the server's own words for a failure, when it sent any
+const errDetail = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
+const plural = (n, word) => `${n || 0} ${word}${(n || 0) === 1 ? '' : 's'}`
 // The Picker's clear row needs a value of its own: an unset answer is rendered
 // as the placeholder (Select shows it whenever no option matches), so '' would
 // make "— not answered" the trigger's *label* instead of the em dash.
@@ -197,12 +203,15 @@ export default function Persona() {
     })
   }, [])
 
-  const loadPersona = useCallback(() => {
+  const loadPersona = useCallback(() => (
     api.get('/persona').then(({ data }) => { if (data) { setP(data); setLoadErr(false) } else { setLoadErr(true) } })
       .catch((e) => { console.error(e); setLoadErr(true); pushToast({ kind: 'error', msg: 'Could not load your persona' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') }) })
-  }, [pushToast])
+  ), [pushToast])
 
-  useEffect(() => { loadPersona() }, [loadPersona])
+  // DESIGN-LOAD: one request, so the screen simply waits for it — no "Loading…"
+  // line that the real editor then replaces.
+  const [reload, setReload] = useState(0)
+  const { ready } = useSettled([() => loadPersona()], reload)
 
   useEffect(() => {
     window.addEventListener('beforeunload', flushPending)
@@ -278,6 +287,72 @@ export default function Persona() {
     return GROUPS.reduce((n, g) => n + g[2].filter((f) => !f[4]?.uncounted && isSet((p[f[0]] || {})[f[1]])).length, 0)
   }, [p])
 
+  // ── Import ─────────────────────────────────────────────────────────────────
+  // Initial population, from a base résumé or a PDF. The *server* decides what
+  // an import means (POST /api/persona/import replaces `contact` and
+  // `resume_content` and leaves the five autofill nodes alone); everything here
+  // picks the source, warns once, and re-seats the editor on the response.
+  const [importMenu, setImportMenu] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [bases, setBases] = useState(null)      // null while the list is in flight
+  const [pending, setPending] = useState(null)  // { label, run } waiting on the confirm
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef(null)
+
+  const openPicker = () => {
+    setImportMenu(false)
+    setBases(null)
+    setPickerOpen(true)
+    api.get('/resumes', { params: { is_base: true } })
+      .then(({ data }) => setBases(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        console.error('persona import: list résumés', e)
+        setPickerOpen(false)
+        pushToast({ kind: 'error', msg: 'Could not list your résumés' + errDetail(e) })
+      })
+  }
+
+  const runImport = async () => {
+    const job = pending
+    setPending(null)
+    if (!job) return
+    setImporting(true)
+    try {
+      const { data } = await job.run()
+      // The import replaced both nodes outright, so a debounced PATCH still
+      // holding the *pre-import* value would land on top of it a moment later.
+      ;['contact', 'resume_content'].forEach((k) => {
+        clearTimeout(timers.current[k]?.timer)
+        delete timers.current[k]
+      })
+      setP(data.persona)
+      const s = data.summary || {}
+      pushToast({
+        kind: 'success',
+        msg: `Imported ${plural(s.roles, 'role')} · ${plural(s.bullets, 'bullet')} · ${plural(s.skill_groups, 'skill group')} from ${job.label}`,
+      })
+    } catch (e) {
+      console.error('persona import', e)
+      pushToast({ kind: 'error', msg: 'Import failed' + errDetail(e) })
+    } finally { setImporting(false) }
+  }
+
+  const pickResume = (r) => {
+    setPickerOpen(false)
+    setPending({ label: r.name, run: () => api.post('/persona/import', { resume_id: r.id }) })
+  }
+  const pickPdf = (f) => {
+    if (!f) return
+    setPending({
+      label: f.name,
+      run: () => {
+        const fd = new FormData()
+        fd.append('file', f)
+        return api.post('/persona/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      },
+    })
+  }
+
   const toggler = (setter, storeKey) => (name) => setter((prev) => {
     const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name)
     try { localStorage.setItem(storeKey, JSON.stringify([...n])) } catch { /* ignore */ }
@@ -288,14 +363,14 @@ export default function Persona() {
 
   // PERS-06: a 500 (the documented "singleton missing — restart to re-seed") or a
   // `200 null` used to sit on "Loading…" forever with no retry.
-  if (!p) return (
+  if (!ready || !p) return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 13 }}>
-      {loadErr ? (
+      {ready && loadErr ? (
         <>
           <span>Couldn’t load your persona.</span>
-          <Pill size="sm" onClick={() => { setLoadErr(false); loadPersona() }}>Try again</Pill>
+          <Pill size="sm" onClick={() => { setLoadErr(false); setReload((n) => n + 1) }}>Try again</Pill>
         </>
-      ) : 'Loading…'}
+      ) : null}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -320,6 +395,26 @@ export default function Persona() {
         {/* ui: keep — an accent-ink save indicator, not a link and not a muted
             helper; Link would add cursor:pointer + a hover class to inert text */}
         <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
+        <div style={{ position: 'relative', flex: '0 0 auto' }}>
+          <Button variant="secondary" size="sm" busy={importing}
+            ariaExpanded={importMenu} ariaHaspopup="menu"
+            title="Fill contact details and résumé content from an existing résumé"
+            onClick={() => setImportMenu((v) => !v)}>{importing ? 'Parsing…' : 'Import ↑'}</Button>
+          {importMenu && (
+            <>
+              <div onClick={() => setImportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
+              <Menu ariaLabel="Import persona from" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 226 }}>
+                <MenuItem icon="☰" onClick={openPicker}>From a résumé…</MenuItem>
+                <MenuItem icon="↑" onClick={() => { setImportMenu(false); fileRef.current?.click() }}>From a PDF…</MenuItem>
+              </Menu>
+            </>
+          )}
+        </div>
+        {/* clear the value after every pick, or choosing the same PDF twice in a
+            row fires no change event at all (RES-28) */}
+        {/* ui: keep — hidden <input type="file">, not a rendered field */}
+        <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; pickPdf(f) }} />
       </HeaderRow>
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -409,6 +504,31 @@ export default function Persona() {
           </div>
         </div>
       </div>
+
+      {pickerOpen && (
+        <ModalPanel width={430} onClose={() => setPickerOpen(false)} style={{ padding: '22px 24px 18px', gap: 8, maxHeight: '70vh' }}>
+          <Heading size={19}>Import from a résumé</Heading>
+          <Helper>Its header becomes your contact details; its sections become your résumé content.</Helper>
+          {/* DESIGN-LOAD: nothing is drawn while the list is in flight — the rows
+              land once rather than replacing a "Loading…" line. */}
+          <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'auto', minHeight: 0, margin: '6px -6px 0', padding: '0 6px' }}>
+            {(bases || []).map((r) => (
+              <MenuItem key={r.id} ellipsis icon="☰" hint={ago(r.updated_at)} onClick={() => pickResume(r)}>{r.name}</MenuItem>
+            ))}
+            {bases && bases.length === 0 && <Helper>No base résumés yet — import a PDF instead.</Helper>}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <Button variant="secondary" size="sm" onClick={() => setPickerOpen(false)}>Cancel</Button>
+          </div>
+        </ModalPanel>
+      )}
+
+      {pending && (
+        <ConfirmDialog danger title="Replace persona content?"
+          body={`Contact and résumé content will be replaced by ${pending.label}. Work authorization, demographics, compensation, preferences and the Q&A bank stay as they are.`}
+          label="Replace" onConfirm={runImport} onCancel={() => setPending(null)} />
+      )}
+
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
