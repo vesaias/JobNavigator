@@ -240,3 +240,70 @@ weight="bold"` in a 34 px box, was near-correct: the `sm` ring draws 32.7 px at 
 - `scrape_single_career_page` returns early when a company yields **0 jobs**, so `last_scraped_at`
   is not written on empty runs — spotted while reading, not part of any of the six reports, not
   changed.
+
+---
+
+## Metadata collapse
+
+### What the design board actually shows
+
+Searched the whole Claude Design project **"JobNavigator Frontend 2.0 Redesign"**
+(`298bd32b-3761-4d2e-be18-00f51ebc2359`) — `Job Feed 2.0.dc.html` read in full (381 lines) and
+`JobNavigator 2.0.dc.html` read in full (2,910 lines, in windows, then grepped for
+`meta|hide|expand|collapse|toggle` and the caret entities `&#9650; &#9660; &#8249; &#8250;`).
+
+**There is no "hide metadata" control anywhere on the board.** The only collapsible in the Job
+Feed's right panel is the **report strip** we already ship:
+
+- `Job Feed 2.0.dc.html` — `toggleStrip` / `stripOpen`, caret text `expand ▼` / `collapse ▲`
+  (mono 9.5px, `#847d6b`) at the far right of a `padding:7px 24px` row that also carries a 26px
+  score ring and a one-line `reqs · keywords · gap` summary. Keyboard `v` toggles it
+  (`componentDidMount`), and `stripOpen` is **reset to `false`** on every job selection
+  (`select:` and the `j`/`k` handlers) — i.e. the board does *not* persist it across jobs.
+- `JobNavigator 2.0.dc.html` turn **11b** is where that strip was chosen: *"Verdict strip — one
+  collapsible line between header and iframe"*, annotated *"strip collapses to one 26px line when
+  you're just reading"*. 11a (tab swap) and 11c (score-chip drawer) were the rejected alternatives.
+  The only other "collapse" on the board is the **left rail's** `› Collapse` in 6a.
+
+So the board's collapsible **is** the report strip and nothing else. The detail header's crumb /
+title / salary-location-H-1B line / action buttons have no toggle, no `metaOpen`/`headerOpen`
+state, no `style-hover` control and no shortcut on any artboard.
+
+### What was built
+
+The repo already had the control the user is describing — `headOpen` in `JobFeed.jsx`, a `⌄`/`›`
+caret in the detail header's 19px gutter — but collapsing it still left a **second** line (a
+`Helper` with `company · salary · location · H-1B · source · age`), so it was a *smaller* metadata
+block, not a hidden one. Rather than add a second, competing control, the existing header toggle
+was made to do what was asked.
+
+- `frontend/src/v2/JobFeed.jsx` — collapsed is now **title only**: the meta `Helper` line is gone
+  (`headOpen ? (…) : null`). Everything it said moves into the title's tooltip via a new
+  `collapsedMeta` derivation, so nothing becomes unreachable while the block is folded.
+- **Collapsed geometry.** The board gives one number for a collapsed strip — 11b's *"one 26px
+  line"* — and the caret cell in our gutter is already exactly 26px. Measured before → after, with
+  the 1px `HeaderRow` rule included:
+  - open: `20px 30px 15px` pad, unchanged at **142px**.
+  - collapsed **66px → 48px**: pad `11px 30px 12px` → `9px 30px 8px`, and the inner column drops
+    from `20 (title) + 6 (gap) + 16 (Helper) = 42px` to a bare `20px` title line. The row is then
+    governed by the 30px collapsed action buttons: `9 + 30 + 8 + 1 = 48`. **18px handed back** to
+    the posting frame / report band below.
+  - the caret cell is `19x26` open and `19x20` collapsed so its glyph centres on the 20px title
+    line instead of sitting 3px low.
+- **Persistence** moved to its own key, `jobnavigator_v2_feed_meta` (`'1'`/`'0'`), read by
+  `loadMetaOpen()`. It falls back once to the legacy `v2_feed_ui.headOpen` so an existing
+  preference survives, and `headOpen` was dropped from the `v2_feed_ui` blob so there is one
+  source of truth. The choice persists across job selection and reloads — deliberately unlike the
+  board's report strip, which resets per job; this is a reading-mode preference, not per-job state.
+- **No keyboard shortcut.** The board has none for this (its `v` belongs to the report strip), and
+  every free-standing letter that would read naturally is taken: `j k s x a u e o t c r v`,
+  `Enter`, `Escape`. The caret is instead reachable by keyboard as a control: `role="button"`,
+  `tabIndex={0}`, `aria-expanded`, Enter/Space, and a `Hide job details` / `Show job details`
+  title.
+
+**Status**: decided — the board has no metadata-hide control, so the existing header caret was
+made a true title-only collapse rather than inventing a second toggle.
+
+Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 97 allowed, 0 css` (exit 0);
+`npx esbuild@0.21.5 --loader:.jsx=jsx` parses clean; brace/paren/bracket balance net 0, same as
+HEAD. Source-only — nothing rebuilt, restarted or committed.
