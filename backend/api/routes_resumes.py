@@ -1203,19 +1203,33 @@ async def export_pdf(resume_id: str, template: Optional[str] = None, format: Opt
 
 # ── PDF Import ──────────────────────────────────────────────────────────────
 
-@router.post("/import-pdf", status_code=201)
-async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Upload a PDF resume, extract text with pdfplumber, use LLM to parse into structured json_data.
+# One place for the upload ceiling, so every endpoint that accepts a résumé PDF
+# (this one and POST /api/persona/import) enforces the same 10 MB.
+PDF_MAX_BYTES = 10 * 1024 * 1024
 
-    Returns the created Resume with extracted json_data.
-    """
-    if not file.filename.lower().endswith(".pdf"):
+
+def check_pdf_name(filename: str) -> None:
+    """Reject anything that isn't a .pdf before its bytes are read. 400."""
+    if not (filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
-    pdf_bytes = await file.read()
-    if len(pdf_bytes) > 10 * 1024 * 1024:
+
+def check_pdf_size(pdf_bytes: bytes) -> None:
+    """The shared 10 MB ceiling for a résumé PDF upload. 400."""
+    if len(pdf_bytes) > PDF_MAX_BYTES:
         raise HTTPException(status_code=400, detail="PDF too large (max 10 MB)")
 
+
+async def parse_resume_pdf(pdf_bytes: bytes, db: Session) -> dict:
+    """PDF bytes → structured résumé ``json_data``, via pdfplumber + one LLM call.
+
+    The single parser for every "a PDF becomes résumé content" path: the résumé
+    shelf import below and POST /api/persona/import both call it, so they share
+    the schema, the prompt, the fence-stripping and the llm_logger tracking.
+
+    Raises HTTPException — 422 when the PDF yields no usable text or the model
+    returns invalid JSON, 500 when the LLM call itself fails.
+    """
     # Extract text via pdfplumber
     extracted_text = ""
     try:
@@ -1242,6 +1256,7 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
         f"Resume text:\n{extracted_text}"
     )
 
+    raw_response = ""
     try:
         from backend.analyzer.llm_client import call_llm
         from backend.analyzer.llm_logger import track_llm_call
@@ -1264,13 +1279,28 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
             cleaned = cleaned[:-3]
         cleaned = cleaned.strip()
 
-        json_data = json.loads(cleaned)
+        return json.loads(cleaned)
     except json.JSONDecodeError as e:
         logger.error(f"LLM returned invalid JSON for PDF import: {e}\nRaw: {raw_response[:500]}")
         raise HTTPException(status_code=422, detail="LLM returned invalid JSON. Try again or enter data manually.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"LLM call failed during PDF import: {e}")
         raise HTTPException(status_code=500, detail=f"LLM extraction failed: {str(e)}")
+
+
+@router.post("/import-pdf", status_code=201)
+async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Upload a PDF resume, extract text with pdfplumber, use LLM to parse into structured json_data.
+
+    Returns the created Resume with extracted json_data.
+    """
+    check_pdf_name(file.filename)
+    pdf_bytes = await file.read()
+    check_pdf_size(pdf_bytes)
+
+    json_data = await parse_resume_pdf(pdf_bytes, db)
 
     # Create resume with extracted data
     name = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename

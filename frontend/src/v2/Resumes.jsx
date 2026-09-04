@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
-import { useFlashToast } from './hooks'
+import { useFlashToast, useSettled, useWarm, NBSP } from './hooks'
 import { EMPTY } from './ResumeSections'
 import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
@@ -57,7 +57,7 @@ export default function V2Resumes() {
   const [persona, setPersona] = useState(null)
   const [archived, setArchived] = useState([])
   const [totalCopies, setTotalCopies] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [reload, setReload] = useState(0)   // "Try again" re-arms the settle below
   const [q, setQ] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
@@ -83,9 +83,14 @@ export default function V2Resumes() {
       setTotalCopies(data.total_copies || 0)
       setLoadErr(false)
     } catch (e) { console.error('shelf load failed', e); setLoadErr(true) }
-    setLoading(false)
   }, [])
-  useEffect(() => { load() }, [load])
+  // DESIGN-LOAD: one loader, so the whole screen just waits for it — the shelf and
+  // the subtitle appear together instead of "0 bases · 0 copies" jumping to the
+  // real numbers a moment later.
+  const { ready } = useSettled([() => load()], reload)
+  // the subtitle's three numbers are the same on the frame after a refresh as
+  // they were before it: paint them from the cache, reconcile on settle
+  const { warm: sub, style: subStyle } = useWarm('resumes', ready ? { b: bases.length, c: totalCopies, a: archived.length } : null, ready)
 
   // in-flight tailors: poll /monitor/active; refresh the shelf when the set shrinks
   useEffect(() => {
@@ -144,7 +149,7 @@ export default function V2Resumes() {
       <HeaderRow pad="22px 30px 16px 24px" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Résumés</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)' }}>{bases.length} base{bases.length === 1 ? '' : 's'} · {totalCopies} tailored cop{totalCopies === 1 ? 'y' : 'ies'} live under their jobs{archived.length ? ` · ${archived.length} archived` : ''}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...subStyle }}>{sub ? `${sub.b} base${sub.b === 1 ? '' : 's'} · ${sub.c} tailored cop${sub.c === 1 ? 'y' : 'ies'} live under their jobs${sub.a ? ` · ${sub.a} archived` : ''}` : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <SearchInput variant="underline" width="300px" value={q} onChange={(v) => { setQ(v); setShowArchived(false) }}
@@ -154,13 +159,16 @@ export default function V2Resumes() {
       </HeaderRow>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '6px 30px 26px 24px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: searching || showArchived ? 4 : 12 }}>
-        {loading ? <div style={{ padding: 50, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+        {/* DESIGN-LOAD: the shelf keeps its (flex:1) container while the request is
+            in flight and renders nothing inside it — no "Loading…" line to replace
+            a frame later, no empty-state copy that would be wrong. */}
+        {!ready ? null
           /* RES-07: a 500/401 used to render as "No base résumés yet", inviting the
              user to create a résumé they already have. */
           : loadErr ? (
             <Band interactive={false} style={{ padding: '20px 14px', borderColor: 'var(--bad)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
               <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés — the shelf request failed.</span>
-              <Pill size="sm" onClick={() => { setLoading(true); load() }}>Try again</Pill>
+              <Pill size="sm" onClick={() => setReload((n) => n + 1)}>Try again</Pill>
             </Band>
           )
           : searching ? (

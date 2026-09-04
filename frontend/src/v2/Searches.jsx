@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
+import { useSettled, useWarm, NBSP } from './hooks'
 import { Button, Card, Check, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
@@ -335,7 +336,7 @@ export default function Searches() {
   const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
   const [busy, setBusy] = useState(null)      // SRCH-29: 'new' | search id while a POST/PATCH is in flight
   const [testTab, setTestTab] = useState('all')
-  const [loading, setLoading] = useState(true)
+  const [reload, setReload] = useState(0)   // "Try again" re-arms the settle below
   const [loadErr, setLoadErr] = useState(null)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
   const mounted = useRef(true)
@@ -348,23 +349,26 @@ export default function Searches() {
     } catch (e) {
       console.error(e); setLoadErr(errText(e, 'Could not load your searches'))
       pushToast({ kind: 'error', msg: errText(e, 'Could not load your searches') })
-    } finally { setLoading(false) }
+    }
   }, [pushToast])
   // SRCH-24: health + the schedule are re-read after every mutation and whenever
   // a run finishes, not only on mount. Failures stay silent and leave whatever
   // was loaded before in place.
-  const loadAux = useCallback(() => {
-    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => { /* silent: SRCH-24 — re-read after every mutation; a failure leaves the last verdict in place */ })
+  const loadAux = useCallback(() => Promise.all([
+    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => { /* silent: SRCH-24 — re-read after every mutation; a failure leaves the last verdict in place */ }),
     api.get('/scheduler/jobs').then(({ data }) => {
       const j = (data || []).find((x) => x.id === 'scrape_all')
       if (j?.next_run) setNextRun(j.next_run)
-    }).catch(() => { /* silent: SRCH-24 — the “next run” hint keeps its last value */ })
-  }, [])
-  useEffect(() => {
-    load()
-    loadAux()
-    api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => { /* silent: poller — the interval below retries */ })
-  }, [load, loadAux])
+    }).catch(() => { /* silent: SRCH-24 — the “next run” hint keeps its last value */ }),
+  ]), [])
+  // DESIGN-LOAD: cards, health verdicts, the next-sweep time and the running set
+  // settle together. Drawn as they landed, the cards appeared under a "0 configs"
+  // subtitle and then grew their amber warning edges a beat later.
+  const { ready } = useSettled([
+    () => load(),
+    () => loadAux(),
+    () => api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => { /* silent: poller — the interval below retries */ }),
+  ], reload)
 
   // SRCH-28: one interval for the life of the screen. It used to list `running`
   // and `load` as deps, so every tick (which always wrote a fresh object) tore
@@ -445,15 +449,23 @@ export default function Searches() {
   // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
   // the broader warnOf() predicate.
   const nWarn = searches.filter((s) => s.active && downMap[s.id]).length
+  // Warm start: the counts and the next-sweep time are the same on the frame after
+  // a refresh as they were before it (the countdown is recomputed from the cached
+  // timestamp at render, so it stays honest), and reconcile on settle.
+  const { warm: sub, style: subStyle } = useWarm('searches', ready
+    ? { n: searches.length, active: nActive, warn: nWarn, next: nextRun }
+    : null, ready)
   const countLine = useMemo(() => {
-    const nxt = until(nextRun)
+    if (!sub) return NBSP
+    const nxt = until(sub.next)
     return [
-      `${searches.length} config${searches.length === 1 ? '' : 's'}`,
-      `${nActive} active`,
-      ...(nWarn ? [`${nWarn} need attention`] : []),
+      `${sub.n} config${sub.n === 1 ? '' : 's'}`,
+      `${sub.active} active`,
+      ...(sub.warn ? [`${sub.warn} need attention`] : []),
       ...(nxt ? [nxt === 'due now' ? 'next scheduled run due now' : `next scheduled run in ${nxt}`] : []),
     ].join(' · ')
-  }, [searches.length, nActive, nWarn, nextRun, tick])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sub && sub.n, sub && sub.active, sub && sub.warn, sub && sub.next, tick])
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
   const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
@@ -552,7 +564,7 @@ export default function Searches() {
       <HeaderRow as="header" variant="screen" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Searches</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...subStyle }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button onClick={() => { setNewOpen((v) => !v); setEditing(null); setMenuFor(null) }}>+ New search</Button>
@@ -694,19 +706,16 @@ export default function Searches() {
         {/* a failed GET used to fall through to "No searches yet", which reads
             as an empty database; and the empty state flashed on every mount
             before the first response landed. */}
-        {loading && searches.length === 0 && (
-          <Helper style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '44px 30px' }}>
-            <Spinner size={10} color="var(--muted)" />Loading searches…
-          </Helper>
-        )}
-        {!loading && loadErr && searches.length === 0 && (
+        {/* DESIGN-LOAD: no "Loading searches…" row — the scroller keeps its box and
+            the cards draw once, with their warning edges already on. */}
+        {ready && loadErr && searches.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your searches</span>
             <Helper>{loadErr}</Helper>
-            <Link onClick={() => { setLoading(true); load() }} style={{ paddingTop: 2 }}>Try again</Link>
+            <Link onClick={() => setReload((n) => n + 1)} style={{ paddingTop: 2 }}>Try again</Link>
           </div>
         )}
-        {!loading && !loadErr && searches.length === 0 && !newOpen && (
+        {ready && !loadErr && searches.length === 0 && !newOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No searches yet</span>
             <Helper>Create one to start pulling roles into the Job Feed on a schedule.</Helper>

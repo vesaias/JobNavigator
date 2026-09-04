@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
-import { useEscape } from './hooks'
+import { useEscape, useSettled } from './hooks'
 import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
 import { useTheme, MODE_OPTIONS, SKIN_OPTIONS } from './theme'
 import api from '../api'
@@ -182,14 +182,17 @@ export default function Settings() {
     return () => ro.disconnect()
   }, [!!S])
 
-  useEffect(() => {
-    load()
+  // DESIGN-LOAD: the settings blob and the three lists that fill pickers on top of
+  // it settle as one, so the rows are drawn once — never a pane of rows whose
+  // Default-résumé picker and LinkedIn line fill in afterwards.
+  const { ready } = useSettled([
+    () => load(),
     // OPEN-05: converted — this is the Default résumé picker's entire option
     // list. Empty, it looks like a setting with nothing to choose.
-    api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) })
-    api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ })
-    api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => { /* silent: the LinkedIn row reads “unknown” and its own actions report their failures */ })
-  }, [load])
+    () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) }),
+    () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ }),
+    () => api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => { /* silent: the LinkedIn row reads “unknown” and its own actions report their failures */ }),
+  ])
 
   // one timer, not one per flash: two saves inside 2.2 s used to leave the
   // first flash's timer running, which cleared the second message early
@@ -301,7 +304,7 @@ export default function Settings() {
       // They sit first because they change what every screen below looks like.
       ['appearance', 'GENERAL', 'Appearance', 'theme and skin — remembered in this browser, not in the database', [
         { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
-        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Tone 1–3 are the ramp from Default to Board — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts.' },
+        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts.' },
       ]],
       ['models', 'AI', 'Models', 'each individual prompt can be run against different model, if needed', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
@@ -449,20 +452,18 @@ export default function Settings() {
   const visible = sections.filter(matches)
 
   // SET-06: a failed load used to render an empty pane identical to the loading
-  // state, so a hard failure and a hung request were indistinguishable.
-  if (!S) return (
+  // state, so a hard failure and a hung request were indistinguishable. The
+  // failure still says so; the wait is now silent (DESIGN-LOAD) — the pane keeps
+  // its box and the rows appear in one render.
+  if (!ready || !S) return (
     <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {loadErr ? (
+      {ready && loadErr ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
           <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your settings</span>
           <Helper>{loadErr}</Helper>
           <Link onClick={() => { setLoadErr(null); load() }} style={{ paddingTop: 2 }}>Try again</Link>
         </div>
-      ) : (
-        <Helper style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Spinner size={10} color="var(--muted)" />Loading settings…
-        </Helper>
-      )}
+      ) : null}
     </div>
   )
 

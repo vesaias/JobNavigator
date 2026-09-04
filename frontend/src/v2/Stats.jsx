@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { useEscape } from './hooks'
+import { useEscape, useSettled, useWarm, NBSP } from './hooks'
 import { Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, PageTitle, Pill as UiPill, Spinner, TableHead } from './ui'
 import './theme.css'
 
@@ -144,7 +144,6 @@ export default function Stats() {
   const [coreErr, setCoreErr] = useState(false)   // STAT-03: any core stats request failed
   const [schedErr, setSchedErr] = useState(false) // OPEN-06: /scheduler/jobs failed
   const [triggering, setTriggering] = useState(new Set())
-  const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
   const runningRef = useRef(false)
   const qRef = useRef(null)
@@ -218,8 +217,20 @@ export default function Stats() {
       .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the activity log' }) })
   }, [actType, actQuery])
 
-  useEffect(() => { loadCore().finally(() => setLoading(false)); loadLive() }, [loadCore, loadLive])
-  useEffect(() => { api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => setCosts(null)) }, [period])
+  // DESIGN-LOAD: core figures, the live half AND the LLM spend settle as one. The
+  // spend used to arrive on its own and grow a " · $x on LLM calls" tail onto the
+  // header line that was already there, and the health clause behind it.
+  const { ready } = useSettled([
+    () => loadCore(),
+    () => loadLive(),
+    () => api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => setCosts(null)),
+  ])
+  // a later period change is an explicit action, so it reloads on its own
+  const firstCosts = useRef(true)
+  useEffect(() => {
+    if (firstCosts.current) { firstCosts.current = false; return }
+    api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch(() => setCosts(null))
+  }, [period])
   // debounce the company box — v1 fired a request per keystroke
   useEffect(() => { clearTimeout(qRef.current); qRef.current = setTimeout(loadActivity, 300); return () => clearTimeout(qRef.current) }, [loadActivity])
 
@@ -236,7 +247,7 @@ export default function Stats() {
     const ro = new ResizeObserver(([en]) => setSchedW(en.contentRect.width))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [loading])
+  }, [ready])
 
   const refresh = async () => {
     if (refreshing) return
@@ -301,9 +312,9 @@ export default function Stats() {
   // last card on a ~2400px page. It now navigates to /v2/stats#runs; scroll there
   // once the cards exist (before that the ref is null and the page is one screen).
   useEffect(() => {
-    if (loading || hash !== '#runs') return
+    if (!ready || hash !== '#runs') return
     runsCardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [loading, hash])
+  }, [ready, hash])
 
   // ── derived ───────────────────────────────────────────────────────────────
   const st = stats?.application_statuses || {}
@@ -395,25 +406,49 @@ export default function Stats() {
   // widths each column needs, measured against the 250/132/140/132/110 grid + 40px padding
   const showId = schedW >= 830, showSched = schedW >= 700, showNext = schedW >= 560, showStatus = schedW >= 430
 
-  if (loading) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+  // Warm start: the header line — last sweep, sources needing attention, spend —
+  // is the same on the frame after a refresh as it was before it. The timestamp is
+  // cached, not the phrase, so "3h ago" is recomputed at render.
+  const { warm: sub, style: subStyle } = useWarm('stats', ready ? {
+    has: !!sweep, status: sweep?.status || null, at: sweep ? (sweep.finished_at || sweep.started_at) : null,
+    failing, spend: spend == null ? null : spend, period,
+  } : null, ready)
+  const subLine = !sub ? NBSP : (
+    <>
+      {sub.has ? `Last sweep ${sub.status === 'failed' ? 'failed ' : ''}${ago(sub.at) || '—'}` : 'No scrape recorded yet'}
+      {sub.failing > 0 && <> · <span style={{ color: 'var(--warn)' }}>{sub.failing} source{sub.failing === 1 ? ' needs' : 's need'} attention</span></>}
+      {sub.spend != null && <> · {money(sub.spend)} on LLM calls {sub.period ? `in ${sub.period}d` : 'all time'}</>}
+    </>
+  )
+  // Volume, outcomes, scoring and spend each already have a card below, so the
+  // header carries the one thing none of them shows: whether the pipeline ran and
+  // whether anything is broken.
+  // ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the whole
+  // header column is pinned to integer line-heights
+  const subSpan = (
+    <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...subStyle }}>{subLine}</span>
+  )
+
+  // DESIGN-LOAD: the page used to be replaced wholesale by a centred "Loading…".
+  // The header is real chrome and can be drawn at once — with its line warm-started
+  // where there is a cache — while the cards wait for the one settle below.
+  if (!ready) return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+          <PageTitle>Stats</PageTitle>
+          {subSpan}
+        </div>
+      </HeaderRow>
+    </div>
+  )
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Stats</PageTitle>
-          {/* Volume, outcomes, scoring and spend each already have a card below,
-              so the header carries the one thing none of them shows: whether the
-              pipeline ran and whether anything is broken. */}
-          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the whole
-              header column is pinned to integer line-heights */}
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {sweep
-              ? `Last sweep ${sweep.status === 'failed' ? 'failed ' : ''}${ago(sweep.finished_at || sweep.started_at) || '—'}`
-              : 'No scrape recorded yet'}
-            {failing > 0 && <> · <span style={{ color: 'var(--warn)' }}>{failing} source{failing === 1 ? ' needs' : 's need'} attention</span></>}
-            {spend != null && <> · {money(spend)} on LLM calls {period ? `in ${period}d` : 'all time'}</>}
-          </span>
+          {subSpan}
         </div>
         {/* D4f consistency decision: the retry/refresh affordance is a Link on
             Companies, Searches and Settings, so it is one here too — accent
