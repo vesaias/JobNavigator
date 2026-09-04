@@ -320,7 +320,7 @@ async def run_all(force: bool = False):
 
         # Also run Playwright career page scrapes
         from backend.scraper.sources.company_pages import scrape_career_pages
-        await scrape_career_pages(force=force)
+        company_summary = await scrape_career_pages(force=force) or {}
 
         # First-run: mark all jobs as seen so only truly new ones trigger alerts
         if first_run:
@@ -330,6 +330,9 @@ async def run_all(force: bool = False):
             db.commit()
             logger.info(f"First run: marked {len(unseen)} existing jobs as seen")
 
+        # Handed to the caller so a manual run's summary can say what did not run
+        # (companies with no URLs, or — scheduler only — companies not yet due).
+        return {"companies": company_summary}
     finally:
         db.close()
 

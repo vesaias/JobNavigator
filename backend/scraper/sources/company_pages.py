@@ -384,8 +384,8 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
 
 # ── Batch scraper ────────────────────────────────────────────────────────────
 
-async def scrape_career_pages(force: bool = False):
-    """Scrape career pages for all active companies with playwright_enabled=True.
+async def scrape_career_pages(force: bool = False) -> dict:
+    """Scrape career pages for every active company that has scrape URLs.
 
     Per-company intervals: if company.scrape_interval_minutes is set, skip
     companies that were scraped more recently than their interval. Otherwise
@@ -394,6 +394,23 @@ async def scrape_career_pages(force: bool = False):
 
     If force=True, skip interval checks entirely (used by manual triggers).
 
+    The only gates are `active` and "has at least one scrape URL". The old
+    `playwright_enabled == True` filter silently dropped every company the app
+    had created for the user — routes_applications / routes_jobs create a company
+    on "applied" with playwright_enabled=False, and nothing in the UI ever sets
+    it — so a company you activated and gave URLs to was never scraped by
+    run-all, while POST /api/scrape/company/{id} (which never looked at the flag)
+    scraped it fine. Measured on the live DB: run-all 2026-09-04 10:58-11:11
+    wrote ScrapeLog rows for 55 of the 61 eligible companies; the six with
+    playwright_enabled=False (Anthropic, Arize, Scale, Sierra, Snorkelai,
+    Airtable) had to be run one by one afterwards.
+
+    One company's failure never ends the batch: the error is logged and recorded
+    as its own ScrapeLog row, and the loop moves on.
+
+    Returns {"scraped": n, "skipped": [{"name", "reason"}, ...], "failed": n} so
+    the caller's run summary can name what did not run and why.
+
     Launches ONE shared browser for all companies that need Playwright,
     instead of one browser per company.
     """
@@ -401,22 +418,27 @@ async def scrape_career_pages(force: bool = False):
     db = SessionLocal()
     shared_pw = None
     shared_browser = None
+    skipped: list[dict] = []
+    scraped = 0
+    failed = 0
     try:
         # Read global default interval
         global_interval_row = db.query(Setting).filter(Setting.key == "scrape_interval_minutes").first()
         global_interval = int(global_interval_row.value) if global_interval_row else 60
 
-        companies = db.query(Company).filter(
-            Company.active == True,
-            Company.playwright_enabled == True,
-        ).all()
+        active = db.query(Company).filter(Company.active == True).all()
 
-        companies = [
-            c for c in companies
-            if c.scrape_urls and any(u.strip() for u in c.scrape_urls)
-        ]
+        companies = []
+        for c in active:
+            if c.scrape_urls and any((u or "").strip() for u in c.scrape_urls):
+                companies.append(c)
+            else:
+                skipped.append({"name": c.name, "reason": "no scrape URLs"})
 
-        logger.info(f"Playwright: {len(companies)} companies with scrape URLs")
+        logger.info(
+            f"Playwright: {len(companies)} companies with scrape URLs"
+            + (f", {len(skipped)} active without URLs" if skipped else "")
+        )
 
         # Launch shared browser if any company needs it
         any_needs_browser = any(_needs_browser(c.scrape_urls or []) for c in companies)
@@ -432,30 +454,58 @@ async def scrape_career_pages(force: bool = False):
         now = datetime.now(timezone.utc)
         sweep_needed = False
         for company in companies:
-            # Per-company interval check (skipped for manual triggers)
+            # Per-company interval check. A manual run (force=True) runs every
+            # active company with URLs: the interval only paces the scheduler.
             if not force:
                 interval = company.scrape_interval_minutes or global_interval
                 if company.last_scraped_at:
-                    elapsed = (now - company.last_scraped_at).total_seconds() / 60
+                    # a naive timestamp (SQLite, or a legacy row) is UTC
+                    last = company.last_scraped_at
+                    if last.tzinfo is None:
+                        last = last.replace(tzinfo=timezone.utc)
+                    elapsed = (now - last).total_seconds() / 60
                     if elapsed < interval:
                         logger.debug(f"Skipping {company.name}: scraped {elapsed:.0f}m ago (interval={interval}m)")
+                        skipped.append({
+                            "name": company.name,
+                            "reason": f"not due ({elapsed:.0f}m of {interval}m)",
+                        })
                         continue
 
-            result = await scrape_single_career_page(company, shared_browser=shared_browser,
-                                                     known_external_ids=batch_external_ids)
+            # One company must never take the batch down with it. Everything from
+            # here on is contained: the scraper's own errors already come back as
+            # a result dict, and anything it cannot catch (browser death, a DB
+            # error while logging) is recorded as this company's failure and the
+            # loop carries on to the next one.
+            try:
+                result = await scrape_single_career_page(company, shared_browser=shared_browser,
+                                                         known_external_ids=batch_external_ids)
+                record_company_scrape_log(company.id, company.name, result, db=db)
+                scraped += 1
+                if result.get("error"):
+                    failed += 1
 
-            record_company_scrape_log(company.id, company.name, result, db=db)
+                logger.info(
+                    f"Playwright {company.name}: found={result['jobs_found']}, new={result['new_jobs']}"
+                )
 
-            logger.info(
-                f"Playwright {company.name}: found={result['jobs_found']}, new={result['new_jobs']}"
-            )
-
-            # Auto CV-score: mark for ONE pool sweep at batch end. The sweep
-            # itself is a common pool (it picks up any unscored auto-score jobs,
-            # including retries from earlier failed passes) — running it after
-            # every company just re-walked the same pool N times per batch.
-            if company.auto_scoring_depth in ("light", "full") and result.get("new_jobs", 0) > 0:
-                sweep_needed = True
+                # Auto CV-score: mark for ONE pool sweep at batch end. The sweep
+                # itself is a common pool (it picks up any unscored auto-score jobs,
+                # including retries from earlier failed passes) — running it after
+                # every company just re-walked the same pool N times per batch.
+                if company.auto_scoring_depth in ("light", "full") and result.get("new_jobs", 0) > 0:
+                    sweep_needed = True
+            except Exception as e:
+                failed += 1
+                logger.exception(f"Company '{company.name}' failed, batch continues: {e}")
+                try:
+                    db.rollback()
+                    record_company_scrape_log(
+                        company.id, company.name,
+                        {"jobs_found": 0, "new_jobs": 0, "error": f"{type(e).__name__}: {e}", "duration": 0},
+                    )
+                except Exception:
+                    logger.exception(f"Could not record the failure of '{company.name}'")
 
             await asyncio.sleep(2)
 
@@ -466,6 +516,12 @@ async def scrape_career_pages(force: bool = False):
             except Exception as e:
                 logger.exception(f"Post-batch scoring sweep failed (scrape results are saved): {e}")
 
+        if skipped:
+            logger.info(
+                "Company scrapes skipped: "
+                + ", ".join(f"{s['name']} ({s['reason']})" for s in skipped)
+            )
+        return {"scraped": scraped, "failed": failed, "skipped": skipped}
     finally:
         if shared_browser:
             await shared_browser.close()

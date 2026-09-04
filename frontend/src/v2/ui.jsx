@@ -891,6 +891,9 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // same ring scaled to it (see RING_VB). `value` null renders the unscored state:
 // a dashed ring with `label` inside — the label is **"No fit"** at every site, so
 // it is the prop's default and no caller overrides it.
+// `busy` draws the same ring with an indeterminate arc instead of a value — the
+// loading state of a score, in the box the score will land in (the Feed row's own
+// 44px Spinner was 6.5px wider than the ring it stood in for).
 // `children` ride in the ring's own relative box — that is where the Feed's
 // "+N reports" count badge pins itself.
 const RING_SIZE = {
@@ -916,7 +919,7 @@ const RING_R = 35   // the arc radius every ring site drew
 // uniform scale of the same drawing — md is pixel-identical, sm draws a whole
 // ring, and an explicit numeric `size` scales too instead of clipping.
 const RING_VB = 88
-export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', title, ariaLabel, children, style, className }) {
+export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', busy, title, ariaLabel, children, style, className }) {
   const z = typeof size === 'number' ? { ...RING_SIZE.md, box: size } : (RING_SIZE[size] || RING_SIZE.md)
   const t = RING_TONE[tone || scoreTone(value)] || RING_TONE.neutral
   const vb = z.vb || RING_VB  // numeric sizes scale md's ring
@@ -925,7 +928,17 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
   return (
     <div className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
       style={{ position: 'relative', boxSizing: 'border-box', flex: `0 0 ${z.box}px`, width: z.box, height: z.box, ...style }}>
-      {value == null ? (
+      {/* `busy` is the same drawing with an indeterminate quarter-arc spinning on
+          the track: a score that is being computed occupies the box the score will
+          occupy, at the same diameter and band, so nothing shifts when it lands. */}
+      {busy ? (
+        <svg className="v2-spin" viewBox={`0 0 ${vb} ${vb}`} style={{ width: z.box, height: z.box, transformOrigin: '50% 50%' }} aria-hidden="true">
+          <circle cx={vb / 2} cy={vb / 2} r={RING_R} fill="none" stroke="var(--ring-track)" strokeWidth={stroke} />
+          <circle cx={vb / 2} cy={vb / 2} r={RING_R} fill="none" stroke={RING_TONE.accent.arc} strokeWidth={stroke} strokeLinecap="round"
+            strokeDasharray={`${(c * 0.25).toFixed(1)} ${c.toFixed(0)}`}
+            transform={`rotate(-90 ${vb / 2} ${vb / 2})`} />
+        </svg>
+      ) : value == null ? (
         <div style={{
           width: '100%', height: '100%', boxSizing: 'border-box', border: '1px dashed var(--ring-neutral-border)',
           borderRadius: 'var(--radius-control)', background: t.bg,
