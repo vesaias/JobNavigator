@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSettled, useWarm, NBSP } from './hooks'
-import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead } from './ui'
+import { Button, Card, Check as UICheck, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -1010,8 +1010,11 @@ export default function V2JobFeed() {
             <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{firstLoaded ? `${jobs.length} shown · ${total} matching` : NBSP}</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>Shift-click selects a range · {PICK_KEY}-click selects one</span>
-              {/* ui: keep — 16x16 "?" glyph badge; no Pill/IconButton size is this small */}
-              <span onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts" style={{ cursor: 'pointer', width: 16, height: 16, borderRadius: 'var(--radius-control)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)' }}>?</span>
+              {/* ui: keep — the outline tone's edge is --glyph-border (= --edge); this one
+                  has always drawn on --line, one step softer, with no ground and a 10px
+                  glyph against the box's 9.5. Pinned, not drifted — see D-14. */}
+              <GlyphBadge tone="outline" onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts"
+                style={{ background: 'transparent', borderColor: 'var(--head-line)', fontSize: 'var(--t-10)' }}>?</GlyphBadge>
             </div>
             {shortcutsOpen && (
               <>
@@ -1096,8 +1099,10 @@ export default function V2JobFeed() {
                           /* ui: keep — 8.5px dashed uppercase micro-badge filling the 34px score slot (position:absolute inset 0) */
                           <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
                         )}
-                        {/* ui: keep — 16px selected ✓ badge on the score disc, not a control */}
-                        {on && <div style={{ position: 'absolute', left: -4, top: -3, width: 16, height: 16, borderRadius: 'var(--radius-control)', background: 'var(--accent)', border: '2px solid var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>}
+                        {/* ui: keep — the ring it sits on is 9px, half a step under the badge's
+                            own 9.5, and it wears a 2px --surface knock-out ring so it reads
+                            over the disc: two pins on top of the GlyphBadge box. */}
+                        {on && <GlyphBadge style={{ position: 'absolute', left: -4, top: -3, border: '2px solid var(--surface)', fontSize: 'var(--t-9)' }}>✓</GlyphBadge>}
                       </div>
                       {/* text */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1360,12 +1365,14 @@ export default function V2JobFeed() {
                               <span style={{ flex: 1.05 }}>Requirement</span><span style={{ flex: 1.1 }}>Résumé match</span><span style={{ flex: '0 0 34px', textAlign: 'center' }}>Status</span>
                             </TableHead>
                             {reqRows.filter((r) => reqFilter === 'all' || !r.matched).map((r, k) => (
-                              // ui: keep — a requirement table body row, not a head
-                              <div key={k} style={{ display: 'flex', gap: 14, padding: '8px 0', borderBottom: '1px solid var(--line-soft)', fontSize: 12, lineHeight: '18px' }}>
+                              // `align="normal"` because a wrapped requirement must not
+                              // centre against its one-line verdict; `height="auto"` because
+                              // this row is padded, not fixed.
+                              <TableRow key={k} height="auto" pad="8px 0" size="md" align="normal" style={{ gap: 14 }}>
                                 <span style={{ flex: 1.05, minWidth: 0 }}>{r.requirement}</span>
                                 <span style={{ flex: 1.1, minWidth: 0, color: 'var(--muted)' }}>{r.cv_evidence || r.cv_match || '—'}</span>
                                 <span style={{ flex: '0 0 34px', textAlign: 'center', color: r.matched ? 'var(--good)' : 'var(--bad)' }}>{r.matched ? '✓' : '✕'}</span>
-                              </div>
+                              </TableRow>
                             ))}
                             </div>
                             )}
@@ -1536,12 +1543,11 @@ export default function V2JobFeed() {
                 </div>
               </div>
               {/* footer */}
-              {/* ui: keep — a modal footer bar: its rule is on top */}
-              <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
+              <FooterRow variant="wide">
                 <Helper>{cvMode === 'tailor' ? 'Runs the LLM on the résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
-              </div>
+              </FooterRow>
           </ModalPanel>
         )
       })()}
@@ -1593,12 +1599,11 @@ export default function V2JobFeed() {
               </div>
             </div>
             {/* footer */}
-            {/* ui: keep — a modal footer bar: its rule is on top */}
-            <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
+            <FooterRow variant="wide">
               <Helper>Runs in the background</Helper>
               <Button variant="secondary" size="sm" onClick={() => setRescoreJob(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               <Button size="sm" onClick={runRescore} disabled={!rescoreSel.length} title={rescoreSel.length ? undefined : 'Pick at least one résumé'}>Run scoring</Button>
-            </div>
+            </FooterRow>
         </ModalPanel>
       )}
 

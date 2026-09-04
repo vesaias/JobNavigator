@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import axios from 'axios'
-import { Button, Heading, Helper, Label, ModalPanel } from './ui'
+import { Button, GlyphBadge, Heading, Helper, Label, ModalPanel } from './ui'
 import { useTheme, themeAttrs } from './theme'
 import './theme.css'
 
@@ -52,8 +52,7 @@ export default function LoginModal({ onSuccess }) {
       style={{ padding: '26px 26px 22px', gap: 14 }}>
       {success ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>
-          {/* ui: keep — success glyph, not a control (no handler, no hover, 34px round badge) */}
-          <span style={{ width: 34, height: 34, borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 }}>✓</span>
+          <GlyphBadge size={34} line={1}>✓</GlyphBadge>
           <Heading size={19}>Signed in</Heading>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Loading dashboard…</span>
         </div>

@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useFlashToast, useSettled, useWarm, NBSP } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
+import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -184,8 +184,7 @@ export default function V2Resumes() {
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: BADGE[r.kind].bg, color: BADGE[r.kind].fg }}>{r.kind}</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.muted ? 'var(--muted)' : 'var(--text)' }}>{r.name}</span>
                     {r.note && <Helper style={{ flex: '0 0 auto' }}>{r.note}</Helper>}
-                    {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
-                    {r.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(r.score) }}>{r.score}</span>}
+                    {r.score != null && <Mono size="lg" style={{ flex: '0 0 auto', color: scoreColor(r.score) }}>{r.score}</Mono>}
                   </Card>
                 ))}
               {results.length > resLimit && <ShowMore n={Math.min(PAGE, results.length - resLimit)} onClick={() => setResLimit((n) => n + PAGE)} />}
@@ -240,8 +239,7 @@ export default function V2Resumes() {
                         {(expanded.has('persona') ? (persona.copies || []) : (persona.copies || []).slice(0, 6)).map((c) => (
                           <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, 'Persona', persona.avg_fit)} style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
-                            {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
-                            {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {c.score != null && <Mono size="sm" style={{ flex: '0 0 auto', color: scoreColor(c.score) }}>{c.score}</Mono>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                           </Chip>
@@ -289,8 +287,7 @@ export default function V2Resumes() {
                           <Chip key={c.id} onClick={(e) => { e.stopPropagation(); openResume(c.id) }} title={chipTitle(c, b.name, b.avg_fit)}
                             style={{ maxWidth: 250 }}>
                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{copyLabel(c)}</span>
-                            {/* ui: keep — mono score numeral in scoreColor(): the mono-text role, not a helper */}
-                            {c.score != null && <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10, color: scoreColor(c.score) }}>{c.score}</span>}
+                            {c.score != null && <Mono size="sm" style={{ flex: '0 0 auto', color: scoreColor(c.score) }}>{c.score}</Mono>}
                             {/* ui: keep — 6px "unreviewed" dot, not a control */}
                             {c.fresh && <span title="Has tailoring changes you haven't reviewed" style={{ flex: '0 0 auto', width: 6, height: 6, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                           </Chip>

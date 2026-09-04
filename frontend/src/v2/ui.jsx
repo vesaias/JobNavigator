@@ -223,12 +223,33 @@ export function Button({
 // ── Pill ────────────────────────────────────────────────────────────────────
 // canonical: on ? accent-soft/accent : surface/text-2 · 1px border · r99,
 // hover always `v2-bd` (accent border, no wash). sizes md h31/12.5, sm h26/11.5.
+//
+// `xs` (S4, Skins handoff §4.10) is the **25px Run/Test pill**: the row-level
+// action drawn by hand at seven sites (Companies, Searches, Stats) because "Pill
+// sm is 26". Its box is h25 / pad 0 10 / 11.5 with a tighter 5px gap — the glyph
+// and its word sit closer than on the 31px filter pill. Same paint, same tokens.
+// A separate `PillXs` export was the alternative; `size="xs"` won because every
+// one of those seven sites already needs `on` (the Test twin lights accent while
+// it runs) or `disabled` (the quiet siblings), so a second component would have
+// had to re-declare Pill's whole prop surface to say one number.
 const PILL_SIZE = {
   md: { height: 31, fontSize: 'var(--t-12-5)', padding: '0 15px' },
   sm: { height: 26, fontSize: 'var(--t-11-5)', padding: '0 13px' },
+  xs: { height: 25, fontSize: 'var(--t-11-5)', padding: '0 10px', gap: 5 },
 }
+// `hover` names the class the theme's rule hangs on. The default is the role's
+// own `v2-bd` (accent border, no wash); the 25px row pills ask for `v2-act`
+// (border + wash) or `v2-bdc` (border + ink) because that is what they draw
+// today and the three of them disagree — logged as D-13, not silently unified.
+//
+// `line` overrides `v2-ctl`'s `line-height: 1` (an inline value beats the class).
+// It exists for the hand-drawn 25px pills, which never carried `v2-ctl` and
+// centred their glyph inside an INHERITED 1.5 line box; handing them the opt-out
+// re-rounds the half-leading and lifts the glyph a pixel. `line="inherit"` keeps
+// the box they had. See D-16 — adopting `v2-ctl` there is a decision, not a
+// side effect of taking the primitive.
 export function Pill({
-  on, size = 'md', disabled, onClick, title, ariaLabel,
+  on, size = 'md', disabled, hover = 'v2-bd', line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
 }) {
   const s = PILL_SIZE[size] || PILL_SIZE.md
@@ -240,7 +261,7 @@ export function Pill({
       // `v2-raised` is the bevel hook (theme.css --bevel-raised-*): `none` /
       // `transparent` in every theme but win98, and the inline border below beats
       // the rule outright wherever it is inert, so it paints nothing here.
-      className={cx('v2-ctl', 'v2-raised', !disabled && 'v2-bd', className)}
+      className={cx('v2-ctl', 'v2-raised', !disabled && hover, className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
@@ -250,7 +271,7 @@ export function Pill({
         border: `var(--bw-control) solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
         boxShadow: 'var(--pill-shadow)',
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
-        ...s, ...style,
+        ...s, ...(line ? { lineHeight: line } : null), ...style,
       }}>{children}</div>
   )
 }
@@ -260,14 +281,21 @@ export function Pill({
 //      7 sites — the dominant).
 // 36 = the bordered "⋯" head button (1px edge on surface, 15px, hover v2-act,
 //      accent border + accent-soft when `on`).
+// 25 = the SAME bordered look one step down (S4): the ⋯ twin of the 25px row
+//      pill on Companies and Searches, which was hand-drawn because "IconButton's
+//      bordered look is 36". Its glyph keeps the 13px of the small size — a 15px
+//      ⋯ in a 25px box reads as a different control.
+// `hover` overrides the size's default class, the way Pill's does, and `line`
+// is Pill's line-box opt-out for the same reason (the 25×25 ⋯ never carried
+// `v2-ctl`; D-16).
 export function IconButton({
-  size = 26, on, disabled, onClick, title, ariaLabel,
+  size = 26, on, disabled, hover, line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, children, style, className,
 }) {
-  const lg = size === 36
-  const look = lg
+  const bordered = size === 36 || size === 25
+  const look = bordered
     ? {
-      fontSize: 'var(--t-15)', color: on ? 'var(--pill-on-ink)' : 'var(--pill-ink)',
+      fontSize: size === 36 ? 'var(--t-15)' : 'var(--t-13)', color: on ? 'var(--pill-on-ink)' : 'var(--pill-ink)',
       background: on ? 'var(--pill-on-bg)' : 'var(--pill-bg)',
       border: `var(--bw-control) solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
       boxShadow: 'var(--pill-shadow)',
@@ -278,16 +306,16 @@ export function IconButton({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      // the bevel hook goes on the bordered 36 only. The 26 is a bare glyph with
+      // the bevel hook goes on the bordered sizes only. The 26 is a bare glyph with
       // no border of its own, so `v2-raised` would have nothing to beat and would
       // hand it the rule's own `border-color:transparent` — a computed-style move
       // for zero pixels. win98 draws its small glyph buttons flat.
-      className={cx('v2-ctl', lg && 'v2-raised', !disabled && (lg ? 'v2-act' : 'v2-hover-accent'), className)}
+      className={cx('v2-ctl', bordered && 'v2-raised', !disabled && (hover || (bordered ? 'v2-act' : 'v2-hover-accent')), className)}
       style={{
         flex: '0 0 auto', width: size, height: size, borderRadius: 'var(--radius-control)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
-        ...look, ...style,
+        ...look, ...(line ? { lineHeight: line } : null), ...style,
       }}>{children}</div>
   )
 }
@@ -487,6 +515,51 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
   )
 }
 
+// ── ToolbarTrigger ──────────────────────────────────────────────────────────
+// The 24px picker in a PDF-preview toolbar (S4, Skins handoff §4.10 / board
+// `toolbarTrigger`): four hand-drawn sites — the Template and Paper triggers in
+// ResumeEditor and CoverLetterEditor — that exist because "Select's box is 32".
+// h24 · pad 0 8 · 1px --input-border · r6 · 11.5 · a 9px ▾, and **no ground**:
+// it sits directly on the toolbar strip, which is why it is not a short Select.
+// Slots: `label` (the muted caption) · `value` (the picked one) · a caret that
+// is drawn unless `caret={false}`. `open` swings the border accent the way
+// Select's trigger does — none of the four sites passes it today (their border
+// stays at rest while the menu is up), so it is a named variant, not a default.
+// `line` is Pill's line-box opt-out: the cover-letter editor's two triggers carry
+// `v2-ctl` today, the résumé editor's two do not, and the difference is a pixel of
+// half-leading under the glyph (D-16).
+export function ToolbarTrigger({
+  label, value, open, disabled, hover = 'v2-bd', line, caret = true, onClick, title, ariaLabel,
+  ariaExpanded, ariaHaspopup = 'listbox', children, style, className,
+}) {
+  return (
+    <span
+      {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
+      aria-expanded={ariaExpanded !== undefined ? ariaExpanded : (open || undefined)}
+      aria-haspopup={ariaHaspopup} aria-disabled={disabled || undefined}
+      // deliberately NOT `v2-inset`: that hook's hover rule is (0,6,0) with
+      // `!important` and would beat this control's own `v2-bd` / `v2-act` accent
+      // hover, silently replacing it with --input-border-hover. The field-hover
+      // proposal (D-06) has to reach the trigger some other way, or D-13 has to
+      // settle which hover the role wears first.
+      className={cx('v2-ctl', !disabled && hover, className)}
+      style={{
+        height: 24, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 6,
+        borderRadius: 'var(--radius-field)', fontSize: 'var(--t-11-5)',
+        border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
+        // `none` in the default theme — the four sites draw no shadow; saas lifts it
+        boxShadow: 'var(--field-shadow)',
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
+        ...(line ? { lineHeight: line } : null), ...style,
+      }}>
+      {label != null && <span style={{ color: 'var(--label-ink)' }}>{label}</span>}
+      {value != null && <span style={{ color: 'var(--input-ink)' }}>{value}</span>}
+      {children}
+      {caret && <span aria-hidden="true" style={{ color: 'var(--label-ink)', fontSize: 'var(--t-9)' }}>▾</span>}
+    </span>
+  )
+}
+
 // ── Row ─────────────────────────────────────────────────────────────────────
 // canonical: h46 · r7 · pad 0 10 · hover --row-hover · selected = --row-selected.
 // D-POST-07: selection is a **background wash and nothing else**. APPS-20 added a
@@ -520,6 +593,66 @@ export function Row({ selected, divider, flush, onClick, title, ariaLabel, child
         // shorthand). An inert row leaves `cursor` unset so its text keeps the I-beam.
         ...(onClick ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
+  )
+}
+
+// ── TableRow ────────────────────────────────────────────────────────────────
+// The BODY row of a flat table — TableHead's partner, and the role five sites
+// drew by hand (Companies' test list, Stats' schedules / runs / activity, the
+// Feed's requirement table) because "Row is 46px with a hover and a --row-line
+// divider". This one is 32/34/38, its rule is the row divider (--row-line
+// through --row-line-style, so win98 gets its dotted separator), and it has
+// **no hover at all** unless it is given an `onClick`: a table body is read, not
+// picked, and a wash on every line would make the divider the noise.
+// `size` pins the row's own type where the cells inherit it (Stats' two logs run
+// 11.5/18, the Feed's requirement table 12/18); left off, the row inherits.
+// `align` is the one geometry knob: the requirement table tops-aligns its cells
+// because a wrapped requirement must not centre against a one-line verdict.
+const TROW_SIZE = {
+  sm: { fontSize: 'var(--t-11-5)', lineHeight: '18px' },
+  md: { fontSize: 'var(--t-12)', lineHeight: '18px' },
+}
+export function TableRow({
+  height = 34, pad = '0 20px', size, align = 'center', selected, onClick, title, ariaLabel,
+  children, style, className, ...rest
+}) {
+  return (
+    <div {...rest} {...act(onClick, false, 'button')} title={title} aria-label={ariaLabel}
+      aria-current={selected ? 'true' : undefined}
+      className={cx(onClick && 'v2-row', className)}
+      style={{
+        display: 'flex', alignItems: align, height, padding: pad,
+        borderBottom: 'var(--bw-hair) var(--row-line-style) var(--row-line)',
+        ...(selected ? { background: 'var(--row-selected)', color: 'var(--row-selected-ink)', boxShadow: 'var(--row-selected-edge)' } : null),
+        ...(size ? TROW_SIZE[size] : null),
+        ...(onClick ? { cursor: 'pointer' } : null), ...style,
+      }}>{children}</div>
+  )
+}
+
+// ── FooterRow ───────────────────────────────────────────────────────────────
+// HeaderRow's mirror (S4, spec §E.1 "modal / drawer FOOTER bar", 12 sites): the
+// action bar at the bottom of a modal or drawer, whose rule is on TOP. It reads
+// `--divider` — the one name that carries the whole rule (win98's `2px groove`
+// cannot be spelled as a colour) — where HeaderRow reads a colour and writes its
+// own 1px. `soft` is the lighter hairline (WelcomeModal), `bg` the same named
+// ground map HeaderRow uses.
+// It does NOT claim `flex: 0 0 auto` the way HeaderRow does: eight of the twelve
+// sites set it and four do not, and pinning it here would change the computed
+// flex of the four. It stays a layout decision at the call site.
+const FOOT_PAD = { modal: '12px 22px', compact: '11px 22px', wide: '14px 24px 18px' }
+export function FooterRow({
+  as, variant = 'modal', pad, bg, soft, align = 'center', gap = 9,
+  id, children, style, className, ...rest
+}) {
+  const El = as === 'footer' ? 'footer' : 'div'
+  return (
+    <El id={id} className={className} {...rest} style={{
+      padding: pad || FOOT_PAD[variant] || FOOT_PAD.modal,
+      borderTop: soft ? 'var(--bw-hair) solid var(--head-line-soft)' : 'var(--divider)',
+      display: 'flex', alignItems: align, gap,
+      ...(bg ? { background: HEAD_BG[bg] || HEAD_BG.surface } : null), ...style,
+    }}>{children}</El>
   )
 }
 
@@ -788,6 +921,70 @@ export function Dot({ tone = 'neutral', size = 7, title, style, className }) {
         flex: '0 0 auto', display: 'inline-block', width: size, height: size,
         borderRadius: 'var(--radius-control)', background: DOT_TONE[tone] || DOT_TONE.neutral, ...style,
       }} />
+  )
+}
+
+// ── GlyphBadge ──────────────────────────────────────────────────────────────
+// The round box with ONE glyph in it (S4, board `glyphBadge`): the toast's ✓/✕
+// mark, the sign-in tick, the error band's !, the welcome step numeral, the
+// settings "i". Nine hand-drawn sites, because "Dot draws a bare tone disc with
+// no glyph and IconButton's smallest box is 26 and is a control".
+// Four boxes, each with the glyph size its sites already use — the board's
+// `round(size × .58)` is close but not what any of them draw:
+//   15 → 9 · 16 → 9.5 · 22 → 11 · 34 → 16
+// `tone="outline"` is the bordered form (the settings "i"), and `on` gives it the
+// same accent-soft trio a Pill wears. `mono` is the numeral form. `tone="none"`
+// paints nothing at all, for the one caller whose ground is its own (the toast
+// mark, which is tinted per kind).
+const GLYPH_SIZE = { 15: 'var(--t-9)', 16: 'var(--t-9-5)', 22: 'var(--t-11)', 34: 'var(--t-16)' }
+const GLYPH_TONE = {
+  accent: { background: 'var(--glyph-accent-bg)', color: 'var(--glyph-accent-ink)' },
+  bad: { background: 'var(--glyph-bad-bg)', color: 'var(--glyph-bad-ink)' },
+  neutral: { background: 'var(--glyph-neutral-bg)', color: 'var(--glyph-neutral-ink)' },
+  ai: { background: 'var(--ai)', color: 'var(--ai-ink)' },
+  outline: {
+    background: 'var(--glyph-bg)', color: 'var(--glyph-ink)',
+    border: 'var(--bw-hair) solid var(--glyph-border)',
+  },
+  none: {},
+}
+const GLYPH_ON = {
+  background: 'var(--glyph-on-bg)', color: 'var(--glyph-on-ink)',
+  border: 'var(--bw-hair) solid var(--glyph-on-border)',
+}
+// `hover` is opt-in and unset by default: a badge that acts is still a badge, and
+// none of the nine sites draws a hover today — handing one to every clickable
+// GlyphBadge would repaint the settings "i" and the Feed's "?" on the pointer.
+//
+// `line` is opt-in for the same reason, and it is NOT cosmetic. Three of the
+// sites pin `line-height: 1` (the sign-in tick, the welcome step numeral, the
+// toast mark); the other four let the badge inherit its parent's line box — 18px
+// on the settings row, 15px in the Feed's bulk bar. A glyph centred in a flex box
+// sits at the centre of ITS OWN line box, and half-leading rounds differently at
+// 18px than at 9px: writing `1` here lifted the settings "i" by a device pixel.
+// So the primitive writes nothing unless a site asks, and the three that pinned
+// it pass `line={1}`. D-16 covers unifying them.
+export function GlyphBadge({
+  size = 16, tone = 'accent', on, mono, hover, line, onClick, disabled, title, ariaLabel,
+  ariaExpanded, children, style, className,
+}) {
+  const live = !!onClick
+  return (
+    <span
+      {...act(onClick, disabled, 'button')} title={title}
+      aria-label={live ? (ariaLabel || title) : ariaLabel}
+      aria-expanded={ariaExpanded} aria-disabled={disabled || undefined}
+      aria-hidden={!live && !title && !ariaLabel ? 'true' : undefined}
+      className={cx(live && !disabled && hover, className)}
+      style={{
+        width: size, height: size, borderRadius: 'var(--radius-control)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: GLYPH_SIZE[size] || GLYPH_SIZE[16],
+        ...(line ? { lineHeight: line } : null),
+        ...(mono ? { fontFamily: 'var(--font-mono)' } : null),
+        ...(on ? GLYPH_ON : (GLYPH_TONE[tone] || GLYPH_TONE.accent)),
+        ...(live ? { cursor: disabled ? 'default' : 'pointer' } : null), ...style,
+      }}>{children}</span>
   )
 }
 
@@ -1436,9 +1633,13 @@ export function Rule({ tone = 'soft', vertical, length, style, className }) {
 }
 
 // ── Surface ─────────────────────────────────────────────────────────────────
-// A recessed block: --surface-2 with a radius from the same scale everything
-// else uses. `radius="none"` is the full-bleed pane form (the PDF preview
-// column), where the block runs edge to edge and has nothing to round.
+// A recessed block: the recessed ground with a radius from the same scale
+// everything else uses. `radius="none"` is the full-bleed pane form (the PDF
+// preview column), where the block runs edge to edge and has nothing to round.
+// U-16 / handoff §4.11: it read the PALETTE name --surface-2 directly; the
+// semantic name for that ground already existed as --head-bg-recessed (the third
+// entry in HeaderRow's ground map) and points at the same palette token, so this
+// is a same-value re-point, not a repaint.
 const SURFACE_RADIUS = {
   none: undefined, field: 'var(--radius-field)', row: 'var(--radius-row)',
   card: 'var(--radius-card)', menu: 'var(--radius-menu)',
@@ -1447,9 +1648,38 @@ export function Surface({ as, radius = 'card', pad, children, style, className, 
   const El = as === 'section' ? 'section' : 'div'
   return (
     <El className={className} {...rest} style={{
-      background: 'var(--surface-2)', borderRadius: SURFACE_RADIUS[radius],
+      background: 'var(--head-bg-recessed)', borderRadius: SURFACE_RADIUS[radius],
       ...(pad ? { padding: pad } : null), ...style,
     }}>{children}</El>
+  )
+}
+
+// ── Notice ──────────────────────────────────────────────────────────────────
+// The tinted banner with a mark, a body and an action (S4, board `notice`): the
+// company drawer's scrape-warning band is the shipped one — a warn/bad/quiet
+// ground with a ▲, the message, and "Acknowledge" pinned right.
+// The board draws it on --warn-line at --radius-cell; the code draws it on
+// --warn at --radius-card, and the code is what ships, so the tokens point at
+// the code's paint and the difference is logged (D-14) rather than drifted.
+// `action` is rendered as a direct child, not in a wrapper: the CTA brings its
+// own alignment (the acknowledge link tops itself against a two-line body).
+const NOTICE_TONE = {
+  warn: { background: 'var(--notice-warn-bg)', border: 'var(--notice-warn-border)', mark: 'var(--notice-warn-mark)' },
+  bad: { background: 'var(--notice-bad-bg)', border: 'var(--notice-bad-border)', mark: 'var(--notice-bad-mark)' },
+  quiet: { background: 'var(--notice-quiet-bg)', border: 'var(--notice-quiet-border)', mark: 'var(--notice-quiet-mark)' },
+}
+export function Notice({ tone = 'warn', glyph = '▲', action, children, style, className }) {
+  const t = NOTICE_TONE[tone] || NOTICE_TONE.warn
+  return (
+    <div className={className} style={{
+      display: 'flex', gap: 9, padding: '11px 13px',
+      border: `var(--bw-panel) solid ${t.border}`, background: t.background,
+      borderRadius: 'var(--radius-card)', ...style,
+    }}>
+      {glyph && <span aria-hidden="true" style={{ flex: '0 0 auto', fontSize: 'var(--t-12)', color: t.mark }}>{glyph}</span>}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>{children}</div>
+      {action}
+    </div>
   )
 }
 
@@ -1485,6 +1715,34 @@ export function Helper({ size = 'md', mono, onClick, title, ariaLabel, children,
     }}>{children}</span>
   )
 }
+// ── Mono ────────────────────────────────────────────────────────────────────
+// The monospaced RUN — an id, a timestamp, a count, a score numeral (S4, board
+// `textRoles`). Twelve hand-drawn sites and no primitive: "Helper's `mono`
+// covers only --helper-ink", and this role takes five inks.
+// Sizes are the five stops the sites use; `md` (10.5) is the dominant. `line`
+// pins the whole-pixel leading where the run has to sit on a shared baseline
+// (a 16px row, an 18px table line); left off, the run inherits.
+// `tone` is optional on purpose: three of the sites paint from a score colour
+// the caller computes, and they pass it as `style.color` with no tone at all.
+const MONO_SIZE = {
+  xs: 'var(--t-9-5)', sm: 'var(--t-10)', md: 'var(--t-10-5)',
+  lg: 'var(--t-11)', xl: 'var(--t-11-5)',
+}
+const MONO_LINE = { 14: '14px', 16: '16px', 18: '18px' }
+const MONO_TONE = {
+  base: 'var(--mono-ink)', muted: 'var(--mono-ink-muted)', faint: 'var(--mono-ink-faint)',
+  strong: 'var(--mono-ink-strong)', accent: 'var(--mono-ink-accent)',
+}
+export function Mono({ size = 'md', tone, line, title, ariaLabel, children, style, className }) {
+  return (
+    <span title={title} aria-label={ariaLabel} className={className} style={{
+      fontFamily: 'var(--font-mono)', fontSize: MONO_SIZE[size] || MONO_SIZE.md,
+      ...(tone ? { color: MONO_TONE[tone] || MONO_TONE.base } : null),
+      ...(line ? { lineHeight: MONO_LINE[line] || MONO_LINE[16] } : null), ...style,
+    }}>{children}</span>
+  )
+}
+
 // Heading canonical: serif 18 · -.02em · weight 400 (inherited). 19 and 22 are
 // the two larger steps.
 const HEADING_SIZE = {

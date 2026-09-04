@@ -4,7 +4,7 @@ import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, Ca
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import { useEscape, useSettled, useWarm, NBSP } from './hooks'
-import { Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, PageTitle, Pill as UiPill, Spinner, TableHead } from './ui'
+import { Card, GlyphBadge, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, Mono, PageTitle, Pill as UiPill, Spinner, TableHead, TableRow } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -100,7 +100,10 @@ const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpa
 // which is a TableHead at a smaller step (h22 / 9px) than the role's 9.5, inside
 // a scroll-gutter head. The two 26px strips migrated to <TableHead>.
 const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
-// ui: keep — the mono-text role (ids, timestamps, figures), excluded from D4e
+// ui: keep — three sites left: the funnel count, the LLM model cell and the peak
+// caption all set their OWN font size over the role's 10.5 (11.5 / 10 / 10), which
+// is the one thing <Mono size=…> spells as a step rather than a number. Everything
+// else on this screen is a <Mono> now.
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
 const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', lineHeight: '14px', whiteSpace: 'nowrap' }
@@ -464,8 +467,7 @@ export default function Stats() {
       </HeaderRow>
       {coreErr && (
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
-          {/* ui: keep — 16px round "!" glyph in the error band, not a control */}
-          <span style={{ width: 16, height: 16, borderRadius: 'var(--radius-control)', background: 'var(--bad)', color: 'var(--accent-ink)', fontSize: 9.5, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>!</span>
+          <GlyphBadge tone="bad" style={{ flex: '0 0 auto' }}>!</GlyphBadge>
           <span style={{ flex: 1 }}>Some numbers could not be loaded. They show “—” until the backend responds.</span>
           {/* D4f consistency decision: the retry link is a Link everywhere else, so
               it is one here — it leaves the band's --bad run and reads as the
@@ -573,7 +575,7 @@ export default function Stats() {
             <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 14, minHeight: 118, padding: '0 6px' }}>
               {buckets.map((b) => (
                 <div key={b.range} title={`${b.count} jobs scored ${b.range}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                  <span style={{ ...MONO, lineHeight: '14px', color: 'var(--text-2)' }}>{b.count}</span>
+                  <Mono line={14} tone="base">{b.count}</Mono>
                   <div style={{ width: '100%', height: Math.max(2, Math.round((b.count / maxBucket) * 96)), background: BUCKET_COLOR[b.range] || 'var(--accent)', borderRadius: '5px 5px 0 0' }} />
                   {/* ui: keep — an axis tick label under a bar, not body helper text */}
                   <span style={{ fontSize: 10, lineHeight: '14px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{b.range}</span>
@@ -638,9 +640,9 @@ export default function Stats() {
                 <div key={i} style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: '1px solid var(--line-soft)', fontSize: 11, lineHeight: '16px' }}>
                   <span style={{ flex: 1.1, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.purpose}</span>
                   <span title={c.model} style={{ flex: 1.4, ...MONO, fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 6 }}>{c.model || '—'}</span>
-                  <span style={{ flex: '0 0 42px', textAlign: 'right', ...MONO, color: 'var(--text-2)' }}>{c.calls}</span>
-                  <span style={{ flex: '0 0 58px', textAlign: 'right', ...MONO, color: 'var(--text)' }}>{money(c.cost_usd)}</span>
-                  <span style={{ flex: '0 0 44px', textAlign: 'right', ...MONO, color: c.cache_involving ? 'var(--accent)' : 'var(--muted)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</span>
+                  <Mono line={16} tone="base" style={{ flex: '0 0 42px', textAlign: 'right' }}>{c.calls}</Mono>
+                  <Mono line={16} tone="strong" style={{ flex: '0 0 58px', textAlign: 'right' }}>{money(c.cost_usd)}</Mono>
+                  <Mono line={16} style={{ flex: '0 0 44px', textAlign: 'right', color: c.cache_involving ? 'var(--mono-ink-accent)' : 'var(--mono-ink-muted)' }}>{c.cache_involving ? `${Math.round(c.cache_hit_ratio * 100)}%` : '—'}</Mono>
                 </div>
               ))}
               {!(costs?.by_purpose || []).length && <Helper style={{ display: 'block', padding: '14px 0' }}>No LLM calls in this period.</Helper>}
@@ -669,13 +671,11 @@ export default function Stats() {
           {ordered.map((j) => {
             const running = !!j.running || triggering.has(j.id)
             return (
-              // ui: keep — a table *body* row (the scanner files it under header-row by
-              // its bottom rule): its divider is the row's own, not a head's
-              <div key={j.id} style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 20px', borderBottom: '1px solid var(--line-soft)' }}>
+              <TableRow key={j.id} height={38}>
                 <span title={j.name} style={{ flex: '0 1 250px', minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
-                {showId && <span title={j.id} style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</span>}
+                {showId && <Mono title={j.id} line={18} tone="muted" style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</Mono>}
                 {showSched && <span title={j.schedule} style={{ flex: '0 0 140px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>}
-                {showNext && <span style={{ flex: '0 0 132px', ...MONO, lineHeight: '18px', color: 'var(--muted)' }}>{running ? 'now' : when(j.next_run)}</span>}
+                {showNext && <Mono line={18} tone="muted" style={{ flex: '0 0 132px' }}>{running ? 'now' : when(j.next_run)}</Mono>}
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {showStatus && (running
                     ? <Spinner size={9} />
@@ -687,7 +687,10 @@ export default function Stats() {
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    // ui: keep — the 25px scheduler Run pill, matched to the Run/Test pills on Searches and Companies; Pill sm is 26.
+                    // ui: keep — Pill xs is the role, but this one's paint is a FOURTH signature:
+                    // no ground (Searches/Companies sit on --pill-bg), pad 0 11 vs their 0 9 / 0 10,
+                    // gap 6 vs 5, and a running state that quiets the BORDER and the INK
+                    // (--line / --edge) where a Pill dims with opacity. See D-13.
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
                         className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
@@ -696,7 +699,7 @@ export default function Stats() {
                       </span>
                     : <Helper>—</Helper>}
                 </span>
-              </div>
+              </TableRow>
             )
           })}
           </>)}
@@ -750,17 +753,16 @@ export default function Stats() {
               {runs.map((r) => {
                 const failed = r.status === 'failed'
                 return (
-                  // ui: keep — a table body row, not a head (see the schedules row above)
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
-                    <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(r.started_at)}</span>
-                    <span style={{ flex: '0 0 140px', ...MONO, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</span>
+                  <TableRow key={r.id} size="sm">
+                    <Mono line={16} tone="muted" style={{ flex: '0 0 118px' }}>{when(r.started_at)}</Mono>
+                    <Mono line={16} tone="base" style={{ flex: '0 0 140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</Mono>
                     <Helper size="xs" style={{ flex: '0 0 90px' }}>{r.trigger}</Helper>
                     <span style={{ flex: '0 0 100px', display: 'flex' }}>
                       <Pill bg={failed ? 'var(--bad-soft)' : r.status === 'running' ? 'var(--accent-soft)' : 'var(--hover-soft)'} fg={failed ? 'var(--bad)' : 'var(--accent)'}>{r.status}</Pill>
                     </span>
-                    <span style={{ flex: '0 0 76px', ...MONO, color: 'var(--text-2)' }}>{dur(r.duration_seconds)}</span>
+                    <Mono line={16} tone="base" style={{ flex: '0 0 76px' }}>{dur(r.duration_seconds)}</Mono>
                     <span title={r.error || r.result_summary || ''} style={{ flex: 1, minWidth: 0, color: failed ? 'var(--bad)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.error || r.result_summary || '—'}</span>
-                  </div>
+                  </TableRow>
                 )
               })}
               {!runs.length && <Helper style={{ padding: '16px 20px' }}>No runs yet.</Helper>}
@@ -773,15 +775,14 @@ export default function Stats() {
                 <span style={{ flex: 1 }}>Message</span><span style={{ flex: '0 0 130px' }}>Company</span>
               </TableHead>
               {activity.map((a) => (
-                // ui: keep — a table body row, not a head
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 20px', borderBottom: '1px solid var(--line-soft)', fontSize: 11.5, lineHeight: '18px' }}>
-                  <span style={{ flex: '0 0 118px', ...MONO, color: 'var(--muted)' }}>{when(a.created_at)}</span>
+                <TableRow key={a.id} size="sm">
+                  <Mono line={16} tone="muted" style={{ flex: '0 0 118px' }}>{when(a.created_at)}</Mono>
                   <span style={{ flex: '0 0 110px', display: 'flex' }}>
                     <span className={TYPE_CLASS[a.type] || 'sm-extension'} style={BADGE}>{String(a.type || '').replace('_', ' ')}</span>
                   </span>
                   <span title={a.message} style={{ flex: 1, minWidth: 0, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{a.message}</span>
                   <Helper style={{ flex: '0 0 130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</Helper>
-                </div>
+                </TableRow>
               ))}
               {/* STAT-18: an empty log and an over-tight filter are different problems */}
               {!activity.length && <Helper style={{ padding: '16px 20px' }}>{actType || actQuery.trim() ? 'No activity matches these filters.' : 'No activity recorded yet.'}</Helper>}

@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSettled } from './hooks'
-import { Button, Card, Check, DashedAdd, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
+import { Button, Card, Check, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -423,9 +423,7 @@ export default function Applications() {
                   style={{ gap: 8, padding: '12px 8px 5px', lineHeight: '16px' }}>
                   <Dot style={{ background: st.dot }} />
                   <Label>{st.label}</Label>
-                  {/* ui: keep — the band's row count is the mono-id ink (--edge), a
-                      `mono-text` site, not a helper */}
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--edge)' }}>{rows.length}</span>
+                  <Mono tone="faint">{rows.length}</Mono>
                 </SectionHead>
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
@@ -712,14 +710,13 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
             {prep === 'loading' ? 'Building the prep handover…' : prep.text}
           </pre>
         </div>
-        {/* ui: keep — a modal footer bar: its rule is on top */}
-        <div style={{ padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow variant="compact" bg="page">
           <Helper>Edit the questions added at the end in Settings → AI</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
           <Button size="sm" onClick={onCopy} busy={busy}>
             <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </Button>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }
@@ -840,12 +837,11 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
               ariaLabel="Notes" rows={2} style={{ minHeight: 52 }} />
           </div>
         </div>
-        {/* ui: keep — a modal footer bar: its rule is on top */}
-        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow bg="page">
           <Helper>A copy of the posting is saved with the application</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
           <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }

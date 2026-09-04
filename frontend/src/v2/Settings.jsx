@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape, useSettled } from './hooks'
-import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
+import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
 import { useTheme, MODE_OPTIONS, THEME_OPTIONS } from './theme'
 import api from '../api'
 import './theme.css'
@@ -687,8 +687,7 @@ function Row({ r, ctx }) {
         const expired = until && until.getTime() < Date.now()
         return (
           <>
-            {/* ui: keep — a mono value at --text-2 (the mono-text role), not helper ink */}
-            <span style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text-2)' }}>{'•'.repeat(6)}</span>
+            <Mono size="xl" tone="base" style={{ flex: '0 0 auto' }}>{'•'.repeat(6)}</Mono>
             <Helper style={{ flex: 1, minWidth: 0, color: expired ? 'var(--warn)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {until
                 ? (expired ? `expired ${until.toLocaleDateString()} — renewed on the next run`
@@ -730,14 +729,13 @@ function Row({ r, ctx }) {
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '18px', fontWeight: 500 }}>
           {r.label}
           {r.info && (
-            // ui: keep — 15x15 italic-serif "i" glyph badge; no Pill/IconButton size is this small
-            <span onClick={() => setInfo(infoOpen ? null : r.label)} {...kb(() => setInfo(infoOpen ? null : r.label))}
-              aria-label={`More detail about ${r.label}`} aria-expanded={!!infoOpen} title="More detail"
-              style={{ width: 15, height: 15, flex: '0 0 auto', border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--edge)'}`, background: infoOpen ? 'var(--accent-soft)' : 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 400, color: infoOpen ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--serif)', fontStyle: 'italic' }}>
+            <GlyphBadge size={15} tone="outline" on={!!infoOpen} onClick={() => setInfo(infoOpen ? null : r.label)}
+              ariaLabel={`More detail about ${r.label}`} ariaExpanded={!!infoOpen} title="More detail"
+              style={{ flex: '0 0 auto', fontWeight: 400, fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
               {/* the italic serif 'i' has no descender and slants right, so flex
                   centring leaves its ink high and right of the circle's centre */}
               <span style={{ display: 'block', transform: 'translate(-0.9px, 1.4px)' }}>i</span>
-            </span>
+            </GlyphBadge>
           )}
         </span>
         <Helper style={{ textWrap: 'pretty' }}>
@@ -933,12 +931,11 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
           <Textarea value={text} onChange={(v) => { setText(v); commit(v) }} ariaLabel={spec.label} mono
             style={{ flex: 1, minHeight: 440, ...(err ? { borderColor: 'var(--bad)' } : null) }} />
         </div>
-        {/* ui: keep — a modal footer bar: its rule is on top */}
-        <div style={{ flex: '0 0 auto', padding: '11px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow variant="compact" bg="page" style={{ flex: '0 0 auto' }}>
           <Helper style={{ color: err ? 'var(--bad)' : 'var(--muted)' }}>{err || 'Saves automatically as you type'}</Helper>
           <Button variant="secondary" size="sm" onClick={reset} ariaLabel={`Reset ${spec.label} to default`} style={{ marginLeft: 'auto' }}>Reset to default</Button>
           <Button size="sm" onClick={close} ariaLabel={`Done editing ${spec.label}`}>Done</Button>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }
@@ -1060,9 +1057,7 @@ function ModelsModal({ S, save, onClose }) {
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 'var(--radius-mini)', cursor: 'pointer', background: i === hi ? 'var(--accent-soft)' : 'transparent' }}>
-                    {/* ui: keep — the suggestion's mono id at --text/--text-2 (the mono-text
-                        role), keyboard-highlighted with the row; not helper ink */}
-                    <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '16px', color: i === hi ? 'var(--text)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</span>
+                    <Mono size="lg" line={16} tone={i === hi ? 'strong' : 'base'} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</Mono>
                     {i === hi && <span style={{ flex: '0 0 auto', fontSize: 10, lineHeight: '16px', color: 'var(--accent)' }}>↵ to add</span>}
                   </div>
                 ))}
@@ -1080,8 +1075,7 @@ function ModelsModal({ S, save, onClose }) {
             <div key={`${m.provider}/${m.model}`} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, borderBottom: '1px solid var(--line-soft)' }}>
               {/* SET-13: --edge at 10px is under 4.5:1 on --surface in light and dark */}
               <Helper size="xs" mono style={{ flex: '0 0 92px' }}>{m.provider}</Helper>
-              {/* ui: keep — the model id itself: mono at --text (the mono-text role) */}
-              <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</span>
+              <Mono size="xl" tone="strong" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</Mono>
               <Helper size="xs" style={{ flex: '0 0 auto', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</Helper>
               {/* SET-15: the design turns the border --bad on hover too, not just the glyph */}
               {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}

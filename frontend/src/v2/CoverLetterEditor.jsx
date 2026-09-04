@@ -6,7 +6,7 @@ import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './Cover
 import ConfirmDialog from './ConfirmDialog'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface } from './ui'
+import { Button, Card as UiCard, DashedAdd, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface, ToolbarTrigger } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
 import { fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
@@ -515,11 +515,8 @@ export default function CoverLetterEditor() {
                 height is the Download button's, so nothing moves when they land —
                 and the Template trigger never shows a raw id first. */}
             {metaReady && <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32 */}
-              <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Cover letter template" className="v2-bd v2-ctl"
-                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
-                <span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
-              </span>
+              <ToolbarTrigger label="Template" value={tplLabel} onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }}
+                title="Cover letter template" />
               {tplOpen && (
                 <Menu role="listbox" ariaLabel="Cover letter template" className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 210, maxHeight: 300, overflow: 'auto' }}>
                   {templates.map((t) => (
@@ -531,11 +528,8 @@ export default function CoverLetterEditor() {
             </span>}
 
             {metaReady && <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — the paper-size twin of the template trigger above */}
-              <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size — US Letter or A4" className="v2-bd v2-ctl"
-                style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}>
-                <span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{fmtLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span>
-              </span>
+              <ToolbarTrigger label="Paper" value={fmtLabel} onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }}
+                title="Paper size — US Letter or A4" />
               {fmtOpen && (
                 <Menu role="listbox" ariaLabel="Paper size" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40, width: 130 }}>
                   {PAGE_FORMATS.map(([f, label]) => (
@@ -585,8 +579,7 @@ export default function CoverLetterEditor() {
                 <LengthPicker value={rLength} onPick={setRLength} />
               </div>
             </div>
-            {/* ui: keep — a modal footer bar (rule above, --bg ground) */}
-            <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
+            <FooterRow bg="page" style={{ flex: '0 0 auto' }}>
               {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}   {/* CL-14 */}
               <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               {/* RES-17: a disabled primary pill is --line on --muted across the three
@@ -595,7 +588,7 @@ export default function CoverLetterEditor() {
                 {regening && <Spinner color="currentColor" />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </Button>
-            </div>
+            </FooterRow>
         </ModalPanel>
       )}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}

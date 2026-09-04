@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Settings as SettingsIcon, FileUser, Building2, Search } from 'lucide-react'
-import { Button, Helper, ModalPanel } from './ui'
+import { Button, FooterRow, GlyphBadge, Helper, ModalPanel } from './ui'
 import { useTheme, themeAttrs } from './theme'
 import './theme.css'
 
@@ -48,8 +48,7 @@ export default function WelcomeModal({ onClose }) {
         {STEPS.map(([Icon, title, desc, to], i) => (
           <div key={to} onClick={() => go(to)} className="v2-welcomestep"
             style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 2px', borderRadius: 'var(--radius-cell)', cursor: 'pointer' }}>
-            {/* ui: keep — step number badge (mono numeral on --surface-2), not an icon button */}
-            <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1 }}>{i + 1}</span>
+            <GlyphBadge size={22} tone="neutral" mono line={1} style={{ flex: '0 0 auto' }}>{i + 1}</GlyphBadge>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, lineHeight: '18px', fontWeight: 600 }}>
                 {title}<Icon size={15} strokeWidth={1.8} style={{ color: 'var(--muted)', flex: '0 0 auto' }} />
@@ -60,11 +59,11 @@ export default function WelcomeModal({ onClose }) {
         ))}
       </div>
 
-      {/* ui: keep — a modal *footer* bar (rule on top, --bg ground); HeaderRow
-          draws its rule beneath and TableHead is a column strip */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 24px', borderTop: '1px solid var(--line-soft)', background: 'var(--bg)' }}>
+      {/* `gap="normal"` is the initial value, not a zero: this bar holds one
+          button and has never reserved a gap. */}
+      <FooterRow pad="12px 24px" soft bg="page" gap="normal">
         <Button size="xs" onClick={() => go('settings')} style={{ marginLeft: 'auto' }}>Start with Settings →</Button>
-      </div>
+      </FooterRow>
     </ModalPanel>
   )
 }

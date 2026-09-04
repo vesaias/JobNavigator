@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea } from './ui'
+import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, Mono, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea, ToolbarTrigger } from './ui'
 
 // contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
 function wordDiff(a = '', b = '') {
@@ -667,10 +667,12 @@ export default function ResumeEditor() {
             {/* DESIGN-LOAD: both triggers wait for the template list; the row's
                 height is the Download link's, so nothing moves when they land */}
             {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32.
-                  D5 note: the cover-letter editor draws the same trigger with `v2-bd v2-ctl` — the two
-                  hovers are a logged needs-decision, not a licence to add a third. */}
-              <span onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} title="Résumé template" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Template</span><span style={{ color: 'var(--text)' }}>{tplLabel}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
+              {/* ui: keep — `hover="v2-act"` (border + wash) where the cover-letter editor's
+                  twin asks for `v2-bd` (border only). Both are the same role and the two
+                  hovers still disagree — the primitive carries them rather than picking
+                  one; U-31 / D-13 decides. */}
+              <ToolbarTrigger label="Template" value={tplLabel} hover="v2-act" line="inherit" title="Résumé template"
+                onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} />
               {tplOpen && (
                   <Menu role="listbox" ariaLabel="Résumé template" className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto' }}>
                     {templates.map((t) => <MenuItem key={t.id} role="option" ariaSelected={t.id === template} selected={t.id === template} onClick={() => pickTemplate(t.id)}>{t.name}</MenuItem>)}
@@ -679,8 +681,8 @@ export default function ResumeEditor() {
             </div>}
             {/* format */}
             {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — the paper-size twin of the template trigger above */}
-              <span onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} title="Paper size" className="v2-act" style={{ height: 24, padding: '0 8px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, cursor: 'pointer' }}><span style={{ color: 'var(--muted)' }}>Paper</span><span style={{ color: 'var(--text)' }}>{format === 'a4' ? 'A4' : 'US Letter'}</span><span style={{ color: 'var(--muted)', fontSize: 9 }}>▾</span></span>
+              <ToolbarTrigger label="Paper" value={format === 'a4' ? 'A4' : 'US Letter'} hover="v2-act" line="inherit" title="Paper size"
+                onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} />
               {fmtOpen && (
                   <Menu role="listbox" ariaLabel="Paper size" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130 }}>
                     {[['letter', 'US Letter'], ['a4', 'A4']].map(([v, l]) => <MenuItem key={v} role="option" ariaSelected={v === format} selected={v === format} onClick={() => pickFormat(v)}>{l}</MenuItem>)}
@@ -847,8 +849,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
               label={j.title} sub={<>{j.company} · {j.status}</>}
               onClick={() => { setPick(j.id); setJd('') }}
               trail={<>
-                {/* ui: keep — mono-text role (accent ink, not --helper-ink); the step excludes mono ids */}
-                {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)' }}>{sc}</span>}
+                {sc != null && <Mono title="This base's fit on that job" line={16} tone="accent" style={{ flex: '0 0 auto' }}>{sc}</Mono>}
                 {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, lineHeight: '14px', color: 'var(--warn)' }}>✦ exists</span>}
               </>} />
           )
@@ -925,16 +926,14 @@ function ReviewModal({ changes, onClose, onApply }) {
             )
           })}
         </div>
-        {/* ui: keep — a modal *footer* bar: its rule is on top and its ground is
-            the recessed tint; HeaderRow draws its rule beneath */}
-        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <FooterRow bg="recessed">
           {/* R3-B-02: the count line separates what is already in the document from
               what is only proposed, so "Done reviewing" says what it is about to do. */}
           <Helper>{nSuggested
             ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
             : n ? `${n} declined and restored to the base text · the other changes are kept` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} applied · decline one to restore its base text`}</Helper>
           <Button size="sm" onClick={() => onApply(declined)} style={{ marginLeft: 'auto' }}>Done reviewing</Button>
-        </div>
+        </FooterRow>
     </ModalPanel>
   )
 }
