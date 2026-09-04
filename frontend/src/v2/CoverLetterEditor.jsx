@@ -9,7 +9,7 @@ import { useUndoRemove, BandRule } from './ResumeSections'
 import { Button, Card as UiCard, DashedAdd, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
-import { fetchRunOutcome, runFailed, runFailureReason, useSettled } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -304,13 +304,32 @@ export default function CoverLetterEditor() {
   }, [resumes, personaAvailable, doc])
 
   if (!doc) {
+    // the 404 / load-failure page stays exactly as it was
+    if (err) {
+      return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
+          <span>{err}</span>
+          <span style={{ display: 'flex', gap: 14 }}>
+            <Link onClick={() => navigate('/v2/cover-letters')}>‹ Back to cover letters</Link>
+            {!/no longer exists/.test(err) && <Link onClick={() => window.location.reload()}>Try again</Link>}
+          </span>
+        </div>
+      )
+    }
+    // DESIGN-LOAD: reserve the chrome's own shape while the document fetch is in
+    // flight, instead of a bare "Loading…" that collapses the whole screen to one
+    // centred line and then jumps to the real top-bar + two-pane layout once the
+    // doc lands. NBSP holds the top bar's line height; the panes need no content
+    // to reserve theirs — they already flex to fill what's left.
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
-        <span>{err || 'Loading…'}</span>
-        {err && <span style={{ display: 'flex', gap: 14 }}>
-          <Link onClick={() => navigate('/v2/cover-letters')}>‹ Back to cover letters</Link>
-          {!/no longer exists/.test(err) && <Link onClick={() => window.location.reload()}>Try again</Link>}
-        </span>}
+      <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <HeaderRow pad="10px 24px" bg="surface" soft align="center">
+          <span style={{ fontSize: 14, lineHeight: '20px' }}>{NBSP}</span>
+        </HeaderRow>
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          <section style={{ flex: '0 0 47%', borderRight: '1px solid var(--line)' }} />
+          <Surface as="section" radius="none" style={{ flex: 1, minWidth: 0 }} />
+        </div>
       </div>
     )
   }

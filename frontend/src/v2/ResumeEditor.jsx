@@ -501,7 +501,24 @@ export default function ResumeEditor() {
     return `${base}/api/resumes/${id}/pdf?template=${encodeURIComponent(template)}&format=${encodeURIComponent(format)}`
   }, [id, template, format])
 
-  if (!doc || !data) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+  // DESIGN-LOAD: reserve the chrome's own shape while the document fetch is in
+  // flight, instead of a bare "Loading…" that collapses the whole screen to one
+  // centred line and then jumps to the real top-bar + two-pane layout once the
+  // doc lands. NBSP holds the top bar's line height; the panes need no content
+  // to reserve theirs — they already flex to fill what's left.
+  if (!doc || !data) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <HeaderRow pad="10px 24px" bg="surface" soft align="center">
+          <span style={{ fontSize: 14, lineHeight: '20px' }}>{NBSP}</span>
+        </HeaderRow>
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          <section style={{ flex: '0 0 47%', borderRight: '1px solid var(--line)' }} />
+          <Surface as="section" radius="none" style={{ flex: 1, minWidth: 0 }} />
+        </div>
+      </div>
+    )
+  }
 
   const counts = sectionCounts(data)
   const tplLabel = templates.find((t) => t.id === template)?.name || template || 'Template'
@@ -600,8 +617,11 @@ export default function ResumeEditor() {
       ) : (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
           {/* DESIGN-LOAD: the copy count is part of the context settle — it used to
-              push the rest of the line sideways when it landed on its own */}
-          <span>Base résumé · {ctxReady && baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</span>
+              push the rest of the line sideways when it landed on its own. The whole
+              sentence is withheld until ctxReady (not just the copy-count clause), so
+              it paints in one state instead of a bare sentence followed ~100ms later
+              by the same sentence with the clause inserted. */}
+          <span>{!ctxReady ? NBSP : <>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}editing here changes future tailoring only</>}</span>
           <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
               R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
