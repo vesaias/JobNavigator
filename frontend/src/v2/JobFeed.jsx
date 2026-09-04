@@ -4,12 +4,32 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead } from './ui'
+import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, TableHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
 const UI_KEY = 'v2_feed_ui'   // persisted panel open/collapse prefs
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
+// The detail header's metadata block (crumb, title, salary/location/H-1B, actions)
+// collapses to a one-line title strip so the posting frame / report band takes the
+// height back. It is the one panel pref the user flips constantly, so it gets its
+// own key rather than riding inside UI_KEY's blob; the old UI_KEY.headOpen is still
+// read once so an existing preference survives.
+const META_KEY = 'jobnavigator_v2_feed_meta'
+const loadMetaOpen = () => {
+  try { const v = localStorage.getItem(META_KEY); if (v !== null) return v === '1' } catch {}
+  return loadUI().headOpen ?? true
+}
+// F4: per-host frame-check results ({host: 1 embeddable | 0 blocked}). The probe
+// is a server-side fetch of the posting (measured 0.8–1.9 s on a cold host), and
+// v2 used to mount nothing until it answered — v1 never probed at all. A host we
+// have already asked about answers from here, instantly; an unknown host renders
+// the live frame optimistically and only swaps to the "refuses to be framed"
+// panel if its probe comes back blocked.
+const FRAME_KEY = 'v2_feed_frameable'
+const FRAME_CACHE_MAX = 300
+const loadFrameCache = () => { try { return JSON.parse(localStorage.getItem(FRAME_KEY)) || {} } catch { return {} } }
+const hostOf = (u) => { try { return new URL(u, window.location.origin).host } catch { return '' } }
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const timeAgo = (s) => {
@@ -141,7 +161,9 @@ export default function V2JobFeed() {
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
   const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
-  const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? true)
+  const [headOpen, setHeadOpen] = useState(loadMetaOpen)
+  useEffect(() => { try { localStorage.setItem(META_KEY, headOpen ? '1' : '0') } catch {} }, [headOpen])
+  const toggleHead = useCallback(() => setHeadOpen((v) => !v), [])
   const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
   const [reportTab, setReportTab] = useState(0)   // per-job: reports differ per résumé, so this resets
   const [reqFilter, setReqFilter] = useState(() => loadUI().reqFilter ?? 'all')
@@ -149,10 +171,14 @@ export default function V2JobFeed() {
   const [breakdownOpen, setBreakdownOpen] = useState(() => loadUI().breakdownOpen ?? false)
   const [keywordOpen, setKeywordOpen] = useState(() => loadUI().keywordOpen ?? false)
   const [reqOpen, setReqOpen] = useState(() => loadUI().reqOpen ?? false)
-  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
+  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
-  const [frameOk, setFrameOk] = useState(null)          // null=checking, true=embeddable, false=blocked (extension off)
+  const [frameOk, setFrameOk] = useState(true)          // true=render the live frame, false=known-blocked (extension off)
+  const frameCache = useRef(loadFrameCache())
+  // what to show the moment a job is selected: the fallback panel only for a host
+  // we have already measured as blocked; everything else tries the frame at once
+  const frameGuess = useCallback((url) => frameCache.current[hostOf(url)] !== 0, [])
   // The Navigator extension marks the page (data-jn-ext) once its content script
   // runs; its declarativeNetRequest rules strip X-Frame-Options so postings embed.
   // Without it, cross-origin postings (Ashby, Workday, …) return "refused to connect".
@@ -292,16 +318,21 @@ export default function V2JobFeed() {
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 320) loadMore()
   }, [loadMore])
 
-  const focusAt = useCallback((idx) => {
-    const list = jobsRef.current
-    if (idx < 0 || idx >= list.length) return
+  // open one job in the detail panel. `idx` is its row index in the list that is
+  // (or is about to be) on screen — the advance after a triage action passes the
+  // index the row will have once the acted-on rows are gone.
+  const focusJob = useCallback((j, idx) => {
     pinnedRef.current = null                 // picking from the list releases a ?job= pin
     deadPinRef.current = false
     setSel(idx); lastIdx.current = idx
-    const j = list[idx]
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(null)
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(j.url))
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => { /* silent: a background refresh of an already-rendered panel — the row data stays */ })
-  }, [])
+  }, [frameGuess])
+  const focusAt = useCallback((idx) => {
+    const list = jobsRef.current
+    if (idx < 0 || idx >= list.length) return
+    focusJob(list[idx], idx)
+  }, [focusJob])
   useEffect(() => {
     if (loading) return
     if (jobs.length === 0) { setDetail(null); return }
@@ -318,22 +349,45 @@ export default function V2JobFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, loading])
 
-  const patchLocal = useCallback((id, changes) => {
-    // an empty status filter means "the open feed" (new + saved), so skipping or
-    // applying a job drops it from the list + counts, same as under an explicit filter
-    const openSet = filters.status.length ? filters.status : ['new', 'saved']
-    const leaves = !!(changes.status && !openSet.includes(changes.status))
-    setJobs((prev) => {
-      if (leaves) {
-        const next = prev.filter((j) => j.id !== id)
-        setTotal((t) => Math.max(0, t - 1))
-        if (next.length < 12) loadMore()
-        return next
+  // an empty status filter means "the open feed" (new + saved), so skipping or
+  // applying a job drops it from the list + counts, same as under an explicit filter
+  const openStatusRef = useRef(filters.status)
+  useEffect(() => { openStatusRef.current = filters.status }, [filters.status])
+  const leavesView = useCallback((status) => {
+    if (!status) return false
+    const openSet = openStatusRef.current.length ? openStatusRef.current : ['new', 'saved']
+    return !openSet.includes(status)
+  }, [])
+  // F3/F5: one local write for one row or a whole bulk set. When the rows leave
+  // the current view they go now — and, if the open job was one of them, the
+  // panel moves to the next surviving row in the same tick (the `s`/`x` advance).
+  // Before, the click path left the row's replacement to the [jobs] effect, which
+  // hands the panel to a ?job= pin instead whenever one is still held (measured:
+  // detail + ?job= still on the skipped job 3 s after the click).
+  const patchLocalMany = useCallback((ids, changes) => {
+    const idSet = new Set(ids)
+    if (leavesView(changes.status)) {
+      const list = jobsRef.current
+      const gone = list.filter((j) => idSet.has(j.id)).length
+      const remaining = list.filter((j) => !idSet.has(j.id))
+      setJobs((prev) => prev.filter((j) => !idSet.has(j.id)))
+      setTotal((t) => Math.max(0, t - gone))
+      if (remaining.length < 12) loadMore()
+      const cur = detailRef.current
+      if (cur && idSet.has(cur.id)) {
+        const i = list.findIndex((j) => j.id === cur.id)
+        const next = list.slice(i + 1).find((j) => !idSet.has(j.id))
+          || [...list.slice(0, Math.max(0, i))].reverse().find((j) => !idSet.has(j.id))
+          || null
+        if (next) focusJob(next, remaining.findIndex((j) => j.id === next.id))
+        else { pinnedRef.current = null; deadPinRef.current = false; setSel(-1); setDetail(null) }
       }
-      return prev.map((j) => (j.id === id ? { ...j, ...changes } : j))
-    })
-    setDetail((d) => (d && d.id === id ? { ...d, ...changes } : d))
-  }, [filters.status, loadMore])
+      return
+    }
+    setJobs((prev) => prev.map((j) => (idSet.has(j.id) ? { ...j, ...changes } : j)))
+    setDetail((d) => (d && idSet.has(d.id) ? { ...d, ...changes } : d))
+  }, [leavesView, loadMore, focusJob])
+  const patchLocal = useCallback((id, changes) => patchLocalMany([id], changes), [patchLocalMany])
   const patchRemote = useCallback(async (job, changes) => {
     patchLocal(job.id, changes)
     // FEED-07: report the outcome so callers only announce success once the PATCH
@@ -414,10 +468,12 @@ export default function V2JobFeed() {
   }, [pushToast, defaultDepth])
 
   // rescoreJob holds { label, jobs:[...] } — one job or a bulk set
-  const loadRescoreOpts = useCallback(async () => {
+  // `preferDepth` is for the one caller that is asking for a specific depth (the
+  // report band's "Full report" — a Light score has nothing to open)
+  const loadRescoreOpts = useCallback(async (preferDepth) => {
     // OPEN-10: the modal used to open on Full whatever Settings said. Both
     // options are still there and still switchable — only the preselection moved.
-    setRescoreDepth(defaultDepth)
+    setRescoreDepth(preferDepth || defaultDepth)
     try {
       const [rz, st] = await Promise.all([api.get('/resumes?is_base=true'), api.get('/settings')])
       const opts = (rz.data || []).map((r) => ({ id: r.id, name: r.name, note: 'base' }))
@@ -427,12 +483,12 @@ export default function V2JobFeed() {
       setRescoreSel(def && opts.some((o) => o.id === def) ? [def] : opts.map((o) => o.id))
       const depth = st.data?.scoring_default_depth === 'full' ? 'full' : 'light'
       setDefaultDepth(depth)
-      setRescoreDepth(depth)
+      setRescoreDepth(preferDepth || depth)
     // OPEN-05: this list IS the modal — the user opened it to choose résumés, and
     // an empty body with a dead Score button explained nothing.
     } catch (e) { console.error(e); setRescoreOpts([]); setRescoreSel([]); pushToast({ kind: 'error', msg: 'Could not load your résumés — nothing to score against.' }) }
   }, [personaAvailable, defaultDepth, pushToast])
-  const openRescore = useCallback((job) => { setRescoreJob({ verb: scoredCount(job) > 0 ? 'Rescore' : 'Score', title: job.title, company: job.company, jobs: [job] }); loadRescoreOpts() }, [loadRescoreOpts])
+  const openRescore = useCallback((job, preferDepth) => { setRescoreJob({ verb: scoredCount(job) > 0 ? 'Rescore' : 'Score', title: job.title, company: job.company, jobs: [job] }); loadRescoreOpts(preferDepth) }, [loadRescoreOpts])
   const runRescore = useCallback(async () => {
     const target = rescoreJob
     if (!target || !rescoreSel.length) return
@@ -529,8 +585,14 @@ export default function V2JobFeed() {
     const idSet = new Set(ids)
     const prev = jobs.filter((j) => idSet.has(j.id)).map((j) => ({ id: j.id, status: j.status, saved: !!j.saved }))
     const updates = status === 'saved' ? { saved: true, status: 'saved' } : { status }
-    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); setChecked(new Set()); fetchJobs(); refreshStats(); pushToast({ kind: 'undo', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.`, action: 'Undo', onAction: () => bulkUndo(prev) }) }   // FEED-20
-    catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not update ${ids.length} job${ids.length === 1 ? '' : 's'}${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` }) }
+    // F5: write the rows locally first. The old order (POST, then fetchJobs())
+    // blanked the whole list into its "Loading…" state for the round trip —
+    // measured 12 rows → 0 rows 21 ms after the click, back only when the reload
+    // landed. The server response only reconciles now; a failure reloads.
+    setChecked(new Set())
+    patchLocalMany(ids, updates)
+    try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); refreshStats(); pushToast({ kind: 'undo', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.`, action: 'Undo', onAction: () => bulkUndo(prev) }) }   // FEED-20
+    catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not update ${ids.length} job${ids.length === 1 ? '' : 's'}${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` }); fetchJobs() }   // the optimistic write did not stick — take the server's list back
   }
   const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
 
@@ -552,8 +614,11 @@ export default function V2JobFeed() {
       switch (e.key) {
         case 'f': case 'j': case 'ArrowDown': e.preventDefault(); focusAt(Math.min(idx + 1, list.length - 1)); break
         case 'g': case 'k': case 'ArrowUp': e.preventDefault(); focusAt(Math.max(idx - 1, 0)); break
-        case 's': if (job) { saveJob(job); focusAt(Math.min(idx + 1, list.length - 1)) } break
-        case 'x': if (job) { skipJob(job); focusAt(Math.min(idx, list.length - 2)) } break
+        // F3: the advance now lives in patchLocalMany, which knows the list the
+        // row left behind. Only a row that STAYS in view (e.g. saving while the
+        // Status filter still shows "saved") needs the key to step on by hand.
+        case 's': if (job) { const nextStatus = job.saved ? 'new' : 'saved'; saveJob(job); if (!leavesView(nextStatus)) focusAt(Math.min(idx + 1, list.length - 1)) } break
+        case 'x': if (job) { skipJob(job); if (!leavesView('skip')) focusAt(Math.min(idx + 1, list.length - 1)) } break
         case 'a': if (job) applyJob(job); break
         case 'e': case 'o': if (job?.url) window.open(job.url, '_blank', 'noopener,noreferrer'); break
         case 'r': if (job) openRescore(job); break
@@ -581,12 +646,24 @@ export default function V2JobFeed() {
 
   // Extension off: probe whether the posting will embed (X-Frame-Options / CSP
   // frame-ancestors). We still always TRY the live iframe — only a confident block
-  // routes to the extension message.
+  // routes to the extension message. F4: the probe no longer gates the iframe; it
+  // runs once per host, in the background, and its answer is remembered so every
+  // later job on that host resolves with no wait at all.
   useEffect(() => {
-    if (!detail || !detail.url || viewCached || extActive || frameOk !== null) return
+    if (!detail || !detail.url || viewCached || extActive) return
+    const host = hostOf(detail.url)
+    if (!host || frameCache.current[host] !== undefined) return
     const id = detail.id
-    api.get(`/jobs/${id}/frame-check`).then(({ data }) => setFrameOk(data?.embeddable !== false)).catch(() => setFrameOk(true))
-  }, [detail, viewCached, extActive, frameOk])
+    api.get(`/jobs/${id}/frame-check`).then(({ data }) => {
+      const ok = data?.embeddable !== false
+      const next = { ...frameCache.current, [host]: ok ? 1 : 0 }
+      const keys = Object.keys(next)
+      if (keys.length > FRAME_CACHE_MAX) keys.slice(0, keys.length - FRAME_CACHE_MAX).forEach((k) => { delete next[k] })
+      frameCache.current = next
+      try { localStorage.setItem(FRAME_KEY, JSON.stringify(next)) } catch {}
+      if (detailRef.current?.id === id) setFrameOk(ok)
+    }).catch(() => { /* unknown — leave the optimistic frame up, as v1 did */ })
+  }, [detail, viewCached, extActive])
 
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in the score modal */ }) }, [])
@@ -602,7 +679,7 @@ export default function V2JobFeed() {
     pinnedRef.current = jid
     api.get(`/jobs/${jid}`).then(({ data }) => {
       if (pinnedRef.current !== jid) return
-      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(null)
+      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(data.url))
     }).catch(() => {
       if (pinnedRef.current !== jid) return
       pinnedRef.current = null; deadPinRef.current = true   // FEED-09: don't fall through to an unrelated job
@@ -710,6 +787,9 @@ export default function V2JobFeed() {
   const visaText = d ? (H1B[d.h1b_verdict] || H1B.unknown).label : ''
   const visaTitle = d ? (d.h1b_company_lca_count ? `Based on ${d.h1b_company_lca_count} H-1B filings` : 'No H-1B filings on record') : ''
   const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
+  // what the collapsed title strip carries in its tooltip — everything the hidden
+  // metadata block was showing, so nothing is unreachable while it is folded away
+  const collapsedMeta = d ? [d.title, [d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')].join(' — ') : ''
 
   // ── detail report derivation ──
   const reports = d ? scoreEntries(d).map(([name, score]) => ({ name, score, tailored: isTailoredName(name), rpt: (d.scoring_report || {})[name] })).sort((a, b) => b.score - a.score) : []
@@ -725,6 +805,12 @@ export default function V2JobFeed() {
   const bandCov = best?.rpt?.keyword_coverage_pct
   const running = d && (d.in_flight || []).some((o) => o === 'analyze_job')
   const dScored = reports.length > 0 && !running   // FEED-19: the running band replaces the report while a rescore runs
+  // F1: a Light score has a number but no report. `reportOpen` is a persisted
+  // preference, so a job with nothing to show used to open an empty report over
+  // the posting (measured: report body 619px, posting container display:none).
+  // The panel can only be open where there is a report to read.
+  const hasReport = reports.some((r) => !!r.rpt)
+  const reportShown = reportOpen && hasReport
   const dCached = d && d.status === 'applied' && d.has_cached_page
 
   return (
@@ -911,11 +997,14 @@ export default function V2JobFeed() {
                             {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-control)', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
                           </ScoreRing>
                         ) : run ? (
-                          <>
-                            <Spinner size={44} style={{ position: 'absolute', inset: 0 }} />
+                          // F6: the busy state is the ring it replaces — same 44px box,
+                          // same 37.5px arc. It used to be a Spinner drawn to the full
+                          // 44px box, 6.5px wider than the ring beside it in every other
+                          // row, at a 1.5px band against the ring's 2.5px.
+                          <ScoreRing busy size="md" title="Scoring…">
                             {/* ui: keep — 8px accent ··· marker inside the running ring, not a label */}
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent)' }}>···</div>
-                          </>
+                          </ScoreRing>
                         ) : (
                           /* ui: keep — 8.5px dashed uppercase micro-badge filling the 34px score slot (position:absolute inset 0) */
                           <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
@@ -948,7 +1037,9 @@ export default function V2JobFeed() {
                     {/* action column */}
                     <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
                       {/* ui: keep — v2-rail-cell glyph cells (♥ / ✕ / ⋯); rail text is out of scope for this step */}
-                      <div className="v2-rail-save v2-rail-cell" title="Save (s)" onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
+                      {/* F5: the heart carries the saved state itself, so the control the
+                          user clicked answers immediately — not only the title's badge */}
+                      <div className="v2-rail-save v2-rail-cell" title={j.saved ? 'Unsave (s)' : 'Save (s)'} onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: j.saved ? 'var(--accent)' : 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
                       <div className="v2-rail-skip v2-rail-cell" title="Skip (x)" onClick={() => skipJob(j)} style={{ flex: 1, fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line-soft)' }}>✕</div>
                       <div className="v2-rail-copy v2-rail-cell" title="More" onClick={(ev) => {
                         if (rowMenu?.id === j.id) { setRowMenu(null); return }
@@ -983,18 +1074,22 @@ export default function V2JobFeed() {
           {!d ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Select a job.</div> : (
             <>
               {/* header */}
-              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '11px 30px 12px'} style={{ flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
+              {/* Collapsed, the header is a single title strip: 9 + 30 (the action
+                  row) + 8 + 1px rule = 48px, against 66px when it still carried the
+                  one-line meta Helper — 18px handed back to the frame/report below. */}
+              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '9px 30px 8px'} style={{ flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
-                  {/* ui: keep — a bare 19x26 caret cell in the header gutter: it has no label,
-                      so there is no head row for SectionHead to draw (the title beside it is a
-                      separate click target) */}
-                  <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
-                  <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
+                  {/* ui: keep — a bare 19x26 caret cell in the header gutter (19x20 collapsed,
+                      so it centres on the one-line strip's 20px title): it has no label, so
+                      there is no head row for SectionHead to draw, and the title beside it is
+                      a separate click target */}
+                  <div role="button" tabIndex={0} aria-expanded={headOpen} title={headOpen ? 'Hide job details' : 'Show job details'} onClick={toggleHead} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHead() } }} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: headOpen ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
+                  <div onClick={toggleHead} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <Label style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
                     </Label>}
                     {/* ui: keep — the collapsing detail title: serif 26/17, -.025em, line-clamped — outside the 18/19 heading scale */}
-                    <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
+                    <h2 title={headOpen ? d.title : collapsedMeta} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
                         <span style={{ maxWidth: 230, fontFamily: 'var(--mono)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
@@ -1002,7 +1097,10 @@ export default function V2JobFeed() {
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span title={visaTitle} style={{ color: visaCol }}>{visaText}</span>
                       </div>
-                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
+                    ) : null}
+                    {/* Collapsed is title-only: the meta that used to survive as a second
+                        Helper line is what the toggle is asked to hide, so it moves to the
+                        title's tooltip (`collapsedMeta`) and the strip stays one line. */}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1039,22 +1137,32 @@ export default function V2JobFeed() {
 
               {/* report band */}
               {dScored && (
-                <div style={{ position: 'relative', zIndex: 18, flex: reportOpen ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'relative', zIndex: 18, flex: reportShown ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
                   {/* ui: keep — the report *band* header, not a section head: its caret is a
                       fixed 19px gutter aligned to the row rail, it carries a 34px score ring and
                       résumé tabs, and its body text runs at the band's inherited size, which
                       SectionHead's 12.5/18px type box would restyle */}
-                  <div onClick={() => { setReportOpen((v) => !v); if (!reportOpen && best) setReportTab(Math.max(0, reports.indexOf(best))) }} className="v2-hover-accent" style={{ flex: '0 0 auto', padding: '8px 30px 8px 4px', display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                  <div onClick={hasReport ? () => { setReportOpen((v) => !v); if (!reportOpen && best) setReportTab(Math.max(0, reports.indexOf(best))) } : undefined}
+                    className={hasReport ? 'v2-hover-accent' : undefined}
+                    style={{ flex: '0 0 auto', padding: '8px 30px 8px 4px', display: 'flex', alignItems: 'center', gap: 9, cursor: hasReport ? 'pointer' : 'default' }}>
                     {/* ui: keep — the band's caret glyph in a fixed 19px gutter, not helper text */}
-                    <span style={{ flex: '0 0 auto', width: 19, textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>{reportOpen ? '⌄' : '›'}</span>
+                    <span style={{ flex: '0 0 auto', width: 19, textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>{hasReport ? (reportShown ? '⌄' : '›') : ''}</span>
                     <ScoreRing value={best?.score} size="sm" style={{ marginLeft: -4 }} />
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
                     {bandCov != null && <><Rule vertical tone="line" /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{bandCov}% keywords</span></>}
                     {bandReq.length > 0 && <><Rule vertical tone="line" /><span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bandMet} of {bandReq.length} requirements met</span></>}
                     <Rule vertical tone="line" style={{ marginLeft: 'auto' }} />
-                    <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>{reports.length} report{reports.length === 1 ? '' : 's'}</span>
+                    {hasReport
+                      ? <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>{reports.length} report{reports.length === 1 ? '' : 's'}</span>
+                      // F1: a Light score has no report to open — say so on the band line
+                      // and leave the posting below it, instead of covering it with an
+                      // empty panel.
+                      : <>
+                          <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>Score at full depth to see the report</span>
+                          <Button size="xs" onClick={(e) => { e.stopPropagation(); openRescore(d, 'full') }} style={{ flex: '0 0 auto' }}>Full report</Button>
+                        </>}
                   </div>
-                  {reportOpen && (
+                  {reportShown && (
                     <div style={{ borderTop: '2px solid var(--accent)', background: 'var(--surface)', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                       {/* tabs */}
                       <HeaderRow pad="0 30px" align="center" style={{ gap: 0 }}>
@@ -1197,7 +1305,9 @@ export default function V2JobFeed() {
               {running && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
-                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, position: 'relative' }}><Spinner size={28} weight="bold" style={{ position: 'absolute', inset: 3 }} /></div>
+                  {/* F6: the band's busy ring is the same primitive as the row's, so the
+                      two loading states cannot drift apart again */}
+                  <ScoreRing busy size="sm" style={{ marginLeft: -4 }} />
                   <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Scoring in progress</span>
                     <span style={{ color: 'var(--muted)' }}>{' '}This continues in the background if you navigate away.</span>
@@ -1207,7 +1317,7 @@ export default function V2JobFeed() {
 
               {/* posting area — always mounted (display toggled, not unmounted) so the
                   iframe isn't reloaded each time the report is opened/closed */}
-              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportOpen ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
+              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportShown ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
                   {/* live / cached posting — full-bleed iframe */}
                   <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     {dCached && (
@@ -1220,9 +1330,7 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
-                    ) : d.url && !extActive && frameOk === null ? (
-                      <div style={{ flex: 1, minHeight: 0 }} />   /* FEED-22: probing — mount nothing until the frame-check answers */
-                    ) : d.url && (extActive || frameOk) ? (
+                    ) : d.url && (extActive || frameOk !== false) ? (
                       /* optimistic: always try the live frame; only a confirmed block swaps it out */
                       <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                     ) : d.url ? (
