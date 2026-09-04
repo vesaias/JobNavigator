@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { Button, Card, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Select, Spinner, TableHead } from './ui'
+import { Button, Card, Check, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -65,10 +65,14 @@ const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
 const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
 
+// `dots` is a COUNT, not a glyph string: Segmented draws that many accent Dots
+// before the label, and the row badge below draws the same discs. 0 draws
+// nothing at all — the old '' string still rendered an empty span, and the gap
+// it reserved pushed the "Off" label off the cell's centre.
 const DEPTHS = [
-  { id: 'off', label: 'Off', dots: '', hint: 'New results arrive unscored — score them by hand from the feed' },
-  { id: 'light', label: 'Light', dots: '●', hint: 'Score only — cheap enough to leave on' },
-  { id: 'full', label: 'Full', dots: '●●', hint: 'Score plus the full report with keywords and requirements' },
+  { id: 'off', label: 'Off', dots: 0, hint: 'New results arrive unscored — score them by hand from the feed' },
+  { id: 'light', label: 'Light', dots: 1, hint: 'Score only — cheap enough to leave on' },
+  { id: 'full', label: 'Full', dots: 2, hint: 'Score plus the full report with keywords and requirements' },
 ]
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
 const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Applicant']]
@@ -194,24 +198,12 @@ const Chip = ({ on, label, onClick }) => (
     <span>{on ? '✓' : '○'}</span>{label}
   </Pill>
 )
-const Check = ({ on, label, title, onClick }) => (
-  <div onClick={onClick} title={title} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
-    {/* ui: keep — checkbox indicator, not a card */}
-    <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>
-    {label}
-  </div>
-)
+// The two call sites live inside the edit form, whose own wrapper already calls
+// stopPropagation on the clickable card behind it, so the cells need none.
 const DepthPills = ({ value, onPick }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 31 }}>
-    {DEPTHS.map((d) => {
-      const on = value === d.id
-      return (
-        <Pill key={d.id} on={on} title={d.hint} onClick={(e) => { e.stopPropagation(); onPick(d.id) }}>
-          <span>{d.dots}</span>{d.label}
-        </Pill>
-      )
-    })}
-  </div>
+  <Segmented size="sm" ariaLabel="Auto-scoring depth" value={value} onChange={onPick}
+    options={DEPTHS.map((d) => ({ value: d.id, label: d.label, hint: d.hint, dots: d.dots }))}
+    style={{ height: 31 }} />
 )
 
 // ── the shared config form (new + edit) ──────────────────────────────────────
@@ -314,11 +306,11 @@ function ConfigForm({ d, set }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Label>Import rules</Label>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, minHeight: 31 }}>
-            <Check on={d.exclude_active_companies} label="Skip active companies"
+            <Check checked={d.exclude_active_companies} label="Skip active companies"
               title="Their Company scrapes already bring these postings"
-              onClick={() => set({ exclude_active_companies: !d.exclude_active_companies })} />
-            {m === 'jobright' && <Check on={d.require_salary} label="Require salary" title="Drop results without a listed salary"
-              onClick={() => set({ require_salary: !d.require_salary })} />}
+              onChange={(v) => set({ exclude_active_companies: v })} />
+            {m === 'jobright' && <Check checked={d.require_salary} label="Require salary" title="Drop results without a listed salary"
+              onChange={(v) => set({ require_salary: v })} />}
           </div>
         </div>
       </div>
@@ -635,7 +627,10 @@ export default function Searches() {
                     ? 'Full — every new result gets a score plus the full report with keywords and requirements'
                     : 'Light — every new result gets a score only; open a job to generate its report'}
                     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, cursor: 'help' }}>
-                    <span style={{ color: 'var(--accent)', letterSpacing: 2, fontSize: 9 }}>{dep?.dots}</span>{dep?.label}
+                    {/* the same discs the Segmented cells draw — DEPTHS.dots is a count now */}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      {Array.from({ length: dep?.dots || 0 }, (_, k) => <Dot key={k} tone="accent" size={6} />)}
+                    </span>{dep?.label}
                   </Label>
                 )}
                 {/* fixed width so Active matches Paused and both sit on one vertical axis */}

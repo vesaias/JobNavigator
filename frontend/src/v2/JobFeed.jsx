@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Card, Heading, HeaderRow, Helper, Input, Label, Link, Menu, MenuItem, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, SearchInput, SectionHead, Spinner, TableHead } from './ui'
+import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -12,8 +12,6 @@ const UI_KEY = 'v2_feed_ui'   // persisted panel open/collapse prefs
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
 
 // ── helpers ──────────────────────────────────────────────────────────────
-const ROW_C = 2 * Math.PI * 35     // row ring (viewBox 88 @2x → 44px, r35)
-const BAND_C = 2 * Math.PI * 35     // band ring (viewBox 78, r35)
 const timeAgo = (s) => {
   if (!s) return ''
   const diff = Date.now() - new Date(s).getTime()
@@ -23,7 +21,6 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 const isToday = (s) => s && (Date.now() - new Date(s).getTime()) < 86400000
-const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 const scoreEntries = (j) => Object.entries(j.cv_scores || {}).filter(([, v]) => typeof v === 'number')
 const bestScore = (j) => { const e = scoreEntries(j); return e.length ? Math.max(...e.map(([, v]) => v)) : 0 }
 const scoredCount = (j) => scoreEntries(j).length
@@ -99,8 +96,7 @@ function Drop({ label, active, open, onToggle, children, width = 216, trigger, o
 function Check({ on, label, count, onClick }) {
   return (
     <MenuItem ellipsis onClick={onClick} hint={count} hintMono
-      icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-        <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: on ? 'none' : '1px solid var(--line)', background: on ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</span>}>
+      icon={<UICheck checked={on} />}>
       {label}
     </MenuItem>
   )
@@ -695,9 +691,15 @@ export default function V2JobFeed() {
 
   const setF = (patch) => { setFilters((f) => ({ ...f, ...patch })); setSel(0) }
   const togF = (key, val) => setF({ [key]: filters[key].includes(val) ? filters[key].filter((x) => x !== val) : [...filters[key], val] })
+  // the list head's select-all cell: `all` is every shown row picked, `some` is any
+  const allChecked = jobs.length > 0 && checked.size === jobs.length
+  const someChecked = checked.size > 0
 
   const d = detail
-  const visaText = d ? `${(H1B[d.h1b_verdict] || H1B.unknown).label}${d.h1b_company_lca_count ? ` · ${d.h1b_company_lca_count} LCAs` : ' · no LCA records'}` : ''
+  // the verdict is the fact the line carries; the LCA count is the evidence
+  // behind it, so it moves into the title instead of a second clause
+  const visaText = d ? (H1B[d.h1b_verdict] || H1B.unknown).label : ''
+  const visaTitle = d ? (d.h1b_company_lca_count ? `Based on ${d.h1b_company_lca_count} H-1B filings` : 'No H-1B filings on record') : ''
   const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
 
   // ── detail report derivation ──
@@ -757,8 +759,7 @@ export default function V2JobFeed() {
               <>
                 {sorted.map((c) => (
                   <MenuItem key={c.name} ellipsis onClick={() => togF('company', c.name)} hint={c.count} hintMono
-                    icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-                      <span style={{ flex: '0 0 auto', width: 15, height: 15, borderRadius: 'var(--radius-inline)', border: filters.company.includes(c.name) ? 'none' : '1px solid var(--edge)', background: filters.company.includes(c.name) ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{filters.company.includes(c.name) ? '✓' : ''}</span>}>
+                    icon={<UICheck checked={filters.company.includes(c.name)} size="md" />}>
                     {c.name}
                   </MenuItem>
                 ))}
@@ -820,7 +821,8 @@ export default function V2JobFeed() {
         {/* list */}
         <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ position: 'relative', padding: '12px 14px 8px 24px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
-            <div onClick={() => setChecked(checked.size === jobs.length && jobs.length ? new Set() : new Set(jobs.map((j) => j.id)))} title="Select all shown" style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'var(--faint)'}`, background: checked.size === jobs.length && jobs.length ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{checked.size === jobs.length && jobs.length ? '✓' : ''}</div>
+            <UICheck checked={allChecked} indeterminate={someChecked && !allChecked} ariaLabel="Select all shown" title="Select all shown" style={{ flex: '0 0 auto' }}
+              onChange={() => setChecked(allChecked ? new Set() : new Set(jobs.map((j) => j.id)))} />
             <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{jobs.length} shown · {total} matching</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
@@ -889,17 +891,11 @@ export default function V2JobFeed() {
                       {/* ring */}
                       <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>
                         {nsc > 0 ? (
-                          <>
-                            <svg viewBox="0 0 88 88" style={{ width: 44, height: 44 }}>
-                              <circle cx="44" cy="44" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
-                              <circle cx="44" cy="44" r="35" fill="none" stroke={scoreColor(score)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(ROW_C * score / 100).toFixed(1)} ${ROW_C.toFixed(0)}`} transform="rotate(-90 44 44)" />
-                            </svg>
-                            {/* ui: keep — score numeral (serif 19, scoreColor ink, lh 1) centred in the 44px ring: data display, not a heading */}
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1, color: scoreColor(score), transform: 'translateY(1px)' }}>{score}</div>
+                          <ScoreRing value={score} size="md">
                             {/* ui: keep — the “+N reports” count badge pinned to the ring: a 16px min-width
                                 box on --surface with a --line hairline; Tag has no fixed box */}
                             {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-control)', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
-                          </>
+                          </ScoreRing>
                         ) : run ? (
                           <>
                             <Spinner size={44} style={{ position: 'absolute', inset: 0 }} />
@@ -990,7 +986,7 @@ export default function V2JobFeed() {
                         <span style={{ maxWidth: 230, fontFamily: 'var(--mono)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
                         {d.location && <><span style={{ color: 'var(--line)' }}>|</span><span style={{ maxWidth: 270, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location}</span></>}
                         <span style={{ color: 'var(--line)' }}>|</span>
-                        <span style={{ color: visaCol }}>{visaText}</span>
+                        <span title={visaTitle} style={{ color: visaCol }}>{visaText}</span>
                       </div>
                     ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
@@ -1037,14 +1033,7 @@ export default function V2JobFeed() {
                   <div onClick={() => { setReportOpen((v) => !v); if (!reportOpen && best) setReportTab(Math.max(0, reports.indexOf(best))) }} className="v2-hover-accent" style={{ flex: '0 0 auto', padding: '8px 30px 8px 4px', display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
                     {/* ui: keep — the band's caret glyph in a fixed 19px gutter, not helper text */}
                     <span style={{ flex: '0 0 auto', width: 19, textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>{reportOpen ? '⌄' : '›'}</span>
-                    <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px', marginLeft: -4 }}>
-                      <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
-                        <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="5" />
-                        <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(best?.score || 0)} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(BAND_C * (best?.score || 0) / 100).toFixed(1)} 220`} transform="rotate(-90 39 39)" />
-                      </svg>
-                      {/* ui: keep — score numeral (serif 14, scoreColor ink) centred in the 34px band ring: data display, not a heading */}
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 14, letterSpacing: '-.02em', color: scoreColor(best?.score || 0), transform: 'translateY(1px)' }}>{best?.score}</div>
-                    </div>
+                    <ScoreRing value={best?.score} size="sm" style={{ marginLeft: -4 }} />
                     <span title={best?.name} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 220, fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{best?.tailored ? '✦ ' : ''}{best?.name}</span>
                     {bandCov != null && <><Rule vertical tone="line" /><span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{bandCov}% keywords</span></>}
                     {bandReq.length > 0 && <><Rule vertical tone="line" /><span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bandMet} of {bandReq.length} requirements met</span></>}
@@ -1090,8 +1079,7 @@ export default function V2JobFeed() {
                                         {/* ui: keep — serif 15 breakdown numeral and its inline 11px "/20" unit: data display, not a heading or helper */}
                                         <span style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{val}<span style={{ fontSize: 11, color: 'var(--muted)' }}>/20</span></span>
                                       </div>
-                                      {/* ui: keep — a 1px score *meter* (track + accent fill), not a rule */}
-                                      <div style={{ height: 1, background: 'var(--line)' }}><div style={{ height: 1, background: 'var(--accent)', width: `${pct}%` }} /></div>
+                                      <Meter value={pct / 100} height={1} radius="0" />
                                     </div>
                                   )
                                 })}
@@ -1110,8 +1098,7 @@ export default function V2JobFeed() {
                             </SectionHead>
                             {keywordOpen && (
                               <>
-                                {/* ui: keep — 4px keyword-coverage meter, not a control */}
-                                <div style={{ height: 4, borderRadius: 'var(--radius-control)', background: 'var(--line)' }}><div style={{ height: 4, borderRadius: 'var(--radius-control)', background: coverage >= 75 ? 'var(--good)' : coverage >= 50 ? 'var(--warn)' : 'var(--bad)', width: `${coverage}%` }} /></div>
+                                <Meter value={coverage / 100} height={4} tone={coverage >= 75 ? 'good' : coverage >= 50 ? 'warn' : 'bad'} />
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 3 }}>
                                   <Helper>{(rpt.matched_keywords || []).length} matched · {(rpt.missing_keywords || []).length} missing</Helper>
                                   {(rpt.matched_keywords || []).length > 0 && <Link onClick={() => setShowMatched((v) => !v)}>{showMatched ? 'Hide matched' : 'Show matched'}</Link>}
@@ -1184,8 +1171,7 @@ export default function V2JobFeed() {
               {!dScored && !running && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
-                  {/* ui: keep — dashed 34px "no score" badge filling the ring slot, not an add-line */}
-                  <div style={{ flex: '0 0 34px', width: 34, height: 34, marginLeft: -4, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>No fit</div>
+                  <ScoreRing value={null} size="sm" label="No fit" style={{ marginLeft: -4 }} />
                   <div style={{ flex: 1, minWidth: 0, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>Not scored yet</span>
                     <span style={{ color: 'var(--muted)' }}>{' '}Score against your résumés for the </span>
@@ -1213,13 +1199,9 @@ export default function V2JobFeed() {
                     {dCached && (
                       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 30px', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                         <span style={{ fontSize: 12, color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>{viewCached ? 'Cached snapshot · captured when you applied' : 'Live posting'}</span>
-                        {/* ui: keep — a two-cell segmented toggle track (r99, 2px inset), not a card; its Live / Cached cells are toggle cells, not links */}
-                        <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--surface)', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', padding: 2, gap: 2 }}>
-                          {/* ui: keep — Live cell of the segmented toggle above */}
-                          <div onClick={() => setViewCached(false)} style={{ height: 22, padding: '0 10px', borderRadius: 'var(--radius-control)', fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: !viewCached ? 'var(--surface-2)' : 'transparent', color: !viewCached ? 'var(--text)' : 'var(--muted)' }}>Live</div>
-                          {/* ui: keep — Cached cell of the same toggle */}
-                          <div onClick={() => setViewCached(true)} style={{ height: 22, padding: '0 10px', borderRadius: 'var(--radius-control)', fontSize: 11, display: 'flex', alignItems: 'center', cursor: 'pointer', background: viewCached ? 'var(--accent-soft)' : 'transparent', color: viewCached ? 'var(--accent)' : 'var(--muted)' }}>Cached</div>
-                        </div>
+                        <Segmented variant="inset" ariaLabel="Posting view" value={viewCached ? 'cached' : 'live'}
+                          onChange={(v) => setViewCached(v === 'cached')} style={{ marginLeft: 'auto' }}
+                          options={[{ value: 'live', label: 'Live' }, { value: 'cached', label: 'Cached' }]} />
                       </div>
                     )}
                     {viewCached && dCached ? (

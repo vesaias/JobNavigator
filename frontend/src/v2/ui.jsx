@@ -353,7 +353,14 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
         style={{
           flex: 1, minWidth: 0, height: 32, padding: '0 10px',
           border: `1px solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
-          borderRadius: 'var(--radius-field)', background: 'var(--search-bg)',
+          // D-POST-04: the trigger is a *field*, so it takes --input-bg like Input
+          // and Textarea. It shipped on --search-bg (= --surface, white) and any
+          // form that pairs a Select with an Input — Searches' New/Edit grid,
+          // Settings' value rows, Persona's enum fields — drew two backgrounds
+          // for one row of controls. --search-bg stays what it says it is: the
+          // ground of a *search* box (SearchInput boxed), which is a different
+          // control with a different job.
+          borderRadius: 'var(--radius-field)', background: 'var(--input-bg)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7,
           fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', color: 'var(--input-ink)',
           lineHeight: 1, outline: 'none', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'default' : 'pointer',
@@ -367,7 +374,7 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
         <span aria-hidden="true" style={{ flex: '0 0 auto', fontSize: 'var(--t-9)', color: 'var(--icon-btn-ink)' }}>▾</span>
       </div>
       {open && (
-        <div className="v2-scroll" role="listbox" style={{
+        <div className="v2-menu v2-scroll" role="listbox" style={{
           position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40,
           minWidth: '100%', maxWidth: 420, maxHeight: 320, overflow: 'auto',
           background: 'var(--menu-bg)', border: '1px solid var(--menu-border)',
@@ -398,9 +405,11 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
 }
 
 // ── Row ─────────────────────────────────────────────────────────────────────
-// canonical: h46 · r7 · pad 0 10 · hover --row-hover · selected = --row-selected
-// with a 3px --row-selected-mark bar on the left (padding compensates so the
-// content does not shift when a row is picked).
+// canonical: h46 · r7 · pad 0 10 · hover --row-hover · selected = --row-selected.
+// D-POST-07: selection is a **background wash and nothing else**. APPS-20 added a
+// 3px --row-selected-mark bar with a compensating left pad; Applications never
+// had one (nor does any other row list in v2), and the pad swap shifted every
+// cell in the picked row by 3px. The token went with it.
 // `flush` is the named variant for a **full-bleed table row** (Companies): the
 // list has no side padding, so a 7px radius would round the hover fill away from
 // the pane edges and leave a notch under the square sticky actions cell. Radius
@@ -415,9 +424,8 @@ export function Row({ selected, divider, flush, onClick, title, ariaLabel, child
         display: 'flex', alignItems: 'center', gap: 10, height: 46,
         borderRadius: flush ? 0 : 'var(--radius-row)',
         background: selected ? 'var(--row-selected)' : 'transparent',
-        borderLeft: selected ? '3px solid var(--row-selected-mark)' : undefined,
         borderBottom: divider ? '1px solid var(--row-line)' : undefined,
-        padding: selected ? '0 10px 0 7px' : '0 10px',
+        padding: '0 10px',
         // conditional spread, never `cursor: … : undefined`: a present-but-undefined
         // key clears the property (and, where a shorthand set it, half of that
         // shorthand). An inert row leaves `cursor` unset so its text keeps the I-beam.
@@ -491,9 +499,16 @@ export function MenuHead({ children, style }) {
 // `role` is a prop because the same box serves an action menu (role="menu") and
 // an option picker (role="listbox" — Settings' typeahead, the cover-letter
 // template/paper pickers). Positioning is the caller's, passed as `style`.
+// D-POST-01: `v2-menu` is not decoration — theme.css pins `flex-shrink:0` on
+// every direct child. The box is a *column* flex container, so a child's
+// declared height is only a flex-basis: once the menu is taller than its
+// `maxHeight` (the Feed's Company filter lists ~1300 companies), the browser
+// shrinks every shrinkable child to fit, and the in-menu search field collapsed
+// from its canonical 32 px to 17. Menu rows are fixed-height by definition; a
+// scrolling menu scrolls, it never squashes.
 export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
   return (
-    <div role={role} aria-label={ariaLabel} className={className} style={{
+    <div role={role} aria-label={ariaLabel} className={cx('v2-menu', className)} style={{
       background: 'var(--menu-bg)', border: '1px solid var(--menu-border)',
       borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
@@ -668,6 +683,283 @@ export function Dot({ tone = 'neutral', size = 7, title, style, className }) {
         flex: '0 0 auto', display: 'inline-block', width: size, height: size,
         borderRadius: 'var(--radius-control)', background: DOT_TONE[tone] || DOT_TONE.neutral, ...style,
       }} />
+  )
+}
+
+// ── Check / Radio ───────────────────────────────────────────────────────────
+// The tick box and the radio disc that five screens drew by hand (the Feed's row
+// selector and its "select all shown" head cell, the Feed's in-menu company
+// checks, Searches' import-rules checks, the drawer/modal option lists). One
+// indicator, one set of tokens: --check-border at rest, the accent trio when on.
+// `label` is optional — a bare indicator (a table's select cell) passes none and
+// keeps its own `ariaLabel`. `indeterminate` is the "some but not all" tick the
+// select-all cell shows over a partial selection.
+const BOX_SIZE = { sm: 14, md: 15 }
+function Indicator({ round, checked, indeterminate, size }) {
+  const px = BOX_SIZE[size] || BOX_SIZE.sm
+  const on = checked || indeterminate
+  return (
+    <span aria-hidden="true" style={{
+      flex: `0 0 ${px}px`, width: px, height: px,
+      borderRadius: round ? 'var(--radius-control)' : 'var(--radius-inline)',
+      border: on ? 'none' : '1px solid var(--check-border)',
+      background: on ? 'var(--check-on-bg)' : 'var(--check-bg)',
+      color: 'var(--check-on-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 'var(--t-9)', lineHeight: 1,
+    }}>{indeterminate ? '\u2013' : checked ? (round ? '\u25cf' : '\u2713') : ''}</span>
+  )
+}
+function Ticker({ round, checked, indeterminate, onChange, label, title, ariaLabel, size = 'sm', disabled, style, className }) {
+  const fire = onChange ? () => onChange(!checked) : undefined
+  return (
+    // A non-interactive indicator (the tick that rides in a MenuItem's icon
+    // gutter, where the row itself owns the click) still needs its role: act()
+    // hands back an empty object without a handler, and aria-checked on a
+    // role-less span is ignored. Name the role either way, add the tab stop only
+    // when there is something to click.
+    <span role={round ? 'radio' : 'checkbox'} {...act(fire, disabled, round ? 'radio' : 'checkbox')}
+      aria-checked={indeterminate && !round ? 'mixed' : !!checked}
+      aria-label={ariaLabel || (typeof label === 'string' ? label : undefined)}
+      aria-disabled={disabled || undefined} title={title} className={className}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0,
+        fontSize: 'var(--t-12)', color: 'var(--check-label-ink)',
+        opacity: disabled ? 0.5 : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
+      }}>
+      <Indicator round={round} checked={checked} indeterminate={indeterminate} size={size} />
+      {label ? <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span> : null}
+    </span>
+  )
+}
+export function Check(props) { return <Ticker {...props} round={false} /> }
+// The radio disc is the same box at --radius-control with a centred fill instead
+// of a tick — the tick reads as "one of many", the disc as "one of these".
+export function Radio(props) { return <Ticker {...props} round indeterminate={false} /> }
+
+// ── Switch ──────────────────────────────────────────────────────────────────
+// Track + sliding knob, the Settings geometry (26x15 track, 11px knob, 2px
+// inset). SET-14: --switch-knob-on is --surface-2 so the knob reads as a surface
+// disc on the accent track in both themes; OFF keeps --knob on a neutral track.
+const SWITCH_SIZE = {
+  md: { w: 26, h: 15, knob: 11, pad: 2 },
+  sm: { w: 22, h: 13, knob: 9, pad: 2 },
+}
+export function Switch({ on, onChange, label, title, ariaLabel, size = 'md', disabled, style, className }) {
+  const z = SWITCH_SIZE[size] || SWITCH_SIZE.md
+  const fire = onChange ? () => onChange(!on) : undefined
+  return (
+    <span {...act(fire, disabled, 'switch')} aria-checked={!!on} aria-disabled={disabled || undefined}
+      aria-label={ariaLabel || (typeof label === 'string' ? label : undefined)} title={title} className={className}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 7, flex: '0 0 auto',
+        opacity: disabled ? 0.5 : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
+      }}>
+      {label ? <Helper>{label}</Helper> : null}
+      <span aria-hidden="true" style={{
+        flex: '0 0 auto', position: 'relative', width: z.w, height: z.h,
+        borderRadius: 'var(--radius-control)',
+        background: on ? 'var(--switch-track-on)' : 'var(--switch-track-off)',
+      }}>
+        <span style={{
+          position: 'absolute', top: z.pad, left: on ? z.w - z.knob - z.pad : z.pad,
+          width: z.knob, height: z.knob, borderRadius: 'var(--radius-control)',
+          background: on ? 'var(--switch-knob-on)' : 'var(--switch-knob-off)', transition: 'left 150ms',
+        }} />
+      </span>
+    </span>
+  )
+}
+
+// ── Segmented ───────────────────────────────────────────────────────────────
+// A row of equal-flex cells with exactly one picked: the Applications stage
+// stepper and its Log-modal twin, the Cover Letter length picker, Companies'
+// depth/tier cells, Searches' auto-scoring Off/Light/Full. `options` is
+// [{ value, label, hint, dots, dotColor, tone }].
+//   dots      — how many status discs precede the label (Searches: 0/1/2). An
+//                *absent* dot draws nothing at all: an empty span would still eat
+//                a gap and push its label off the cell's centre, which is exactly
+//                what happened to the "Off" cell before this primitive existed.
+//   dotColor  — a fixed disc colour (the stage stepper's per-stage hue), drawn
+//                whether or not the cell is picked.
+//   tone      — 'accent' (default) or 'bad' for the picked look, so the
+//                stepper's Rejected cell can close in red without an inline
+//                exception.
+// `variant="inset"` is the framed two-cell toggle (the Feed's Live / Cached
+// switch): one border run around the group, borderless cells inside it.
+// Keyboard: the group is a radiogroup with a roving tabstop; left/right move and
+// pick, Enter/Space picks the focused cell.
+const SEG_SIZE = {
+  sm: { height: 31, fontSize: 'var(--t-12)' },
+  md: { height: 33, fontSize: 'var(--t-12)' },
+  lg: { height: 34, fontSize: 'var(--t-12-5)' },
+  inset: { height: 22, fontSize: 'var(--t-11)' },
+}
+const SEG_TONE = {
+  accent: { bg: 'var(--seg-on-bg)', ink: 'var(--seg-on-ink)', border: 'var(--seg-on-border)' },
+  bad: { bg: 'var(--seg-on-bad-bg)', ink: 'var(--seg-on-bad-ink)', border: 'var(--seg-on-bad-border)' },
+}
+export function Segmented({
+  options = [], value, onChange, size = 'md', variant, gap = 5, grow = true,
+  ariaLabel, disabled, style, className,
+}) {
+  const inset = variant === 'inset'
+  const z = SEG_SIZE[inset ? 'inset' : size] || SEG_SIZE.md
+  const idx = options.findIndex((o) => o.value === value)
+  const move = (step) => {
+    if (!options.length || !onChange) return
+    const next = options[(Math.max(0, idx) + step + options.length) % options.length]
+    if (next) onChange(next.value)
+  }
+  return (
+    <div role="radiogroup" aria-label={ariaLabel} className={className}
+      style={{
+        display: 'flex', gap: inset ? 2 : gap, minWidth: 0,
+        ...(inset ? {
+          flex: '0 0 auto', padding: 2, background: 'var(--seg-inset-bg)',
+          border: '1px solid var(--seg-border)', borderRadius: 'var(--radius-control)',
+        } : null), ...style,
+      }}>
+      {options.map((o, i) => {
+        const on = o.value === value
+        const t = SEG_TONE[o.tone] || SEG_TONE.accent
+        const pick = onChange && !disabled ? () => { if (!on) onChange(o.value) } : undefined
+        return (
+          <div key={String(o.value)} role="radio" aria-checked={on} aria-disabled={disabled || undefined}
+            title={o.hint || undefined} tabIndex={disabled ? -1 : ((on || (idx < 0 && i === 0)) ? 0 : -1)}
+            className={inset || disabled ? undefined : 'v2-bd'}
+            onClick={pick}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); move(1) }
+              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); move(-1) }
+              else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (pick) pick() }
+            }}
+            style={{
+              flex: grow && !inset ? 1 : '0 0 auto', minWidth: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              height: z.height, padding: inset ? '0 10px' : undefined,
+              borderRadius: inset ? 'var(--radius-control)' : 'var(--radius-cell)',
+              border: inset ? undefined : `1px solid ${on ? t.border : 'var(--seg-border)'}`,
+              background: on ? t.bg : (inset ? 'transparent' : 'var(--seg-bg)'),
+              color: on ? t.ink : (inset ? 'var(--seg-inset-ink)' : 'var(--seg-ink)'),
+              fontFamily: 'var(--font-body)', fontSize: z.fontSize, lineHeight: 1,
+              fontWeight: on && !inset ? 600 : 400, whiteSpace: 'nowrap',
+              opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer',
+            }}>
+            {o.dotColor ? <Dot style={{ background: o.dotColor }} /> : null}
+            {o.dots ? Array.from({ length: o.dots }, (_, k) => (
+              <Dot key={k} tone={on ? 'accent' : 'neutral'} size={6} style={{ marginRight: k === o.dots - 1 ? 0 : -4 }} />
+            )) : null}
+            {o.label}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Meter ───────────────────────────────────────────────────────────────────
+// A horizontal fill on a track: the report's criterion bars (1px), its keyword-
+// coverage bar (4px) and the Stats funnel's stage bars (22px). `value` is 0-1.
+// `tone` is a named fill or a raw `var(--...)` — the funnel colours a bar per
+// stage from tokens that are not part of this scale, so it passes one through.
+const METER_TONE = {
+  accent: 'var(--meter-accent)', good: 'var(--meter-good)',
+  warn: 'var(--meter-warn)', bad: 'var(--meter-bad)', neutral: 'var(--meter-neutral)',
+}
+export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, ariaLabel, title, style, className }) {
+  const pct = Math.max(0, Math.min(1, Number(value) || 0)) * 100
+  const r = radius || (height >= 12 ? 'var(--radius-mini)' : 'var(--radius-control)')
+  const named = METER_TONE[tone]
+  const fill = named || tone
+  return (
+    <div role="meter" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}
+      aria-label={ariaLabel} title={title} className={className}
+      style={{ height, borderRadius: r, background: track || 'var(--meter-track)', overflow: 'hidden', ...style }}>
+      <div style={{ height: '100%', width: `${pct}%`, borderRadius: r, background: fill }} />
+    </div>
+  )
+}
+
+// ── ScoreRing ───────────────────────────────────────────────────────────────
+// The circular fit score: an SVG arc over a --ring-track circle with the numeral
+// centred inside it. Geometry is font-independent — the numeral sits in a
+// flex-centred box at lineHeight 1, with no baseline nudge, so a skin that
+// swaps the display face cannot pull the number off centre (it did, before this
+// primitive: the sites each carried a hand-tuned `translateY(1px)`).
+// `size` is 'sm' (34px, the report band and the resume editor) or 'md' (44px,
+// the Feed row); a number is taken as an explicit box. `value` null renders the
+// unscored state: a dashed ring with `label` inside ("No fit").
+// `children` ride in the ring's own relative box — that is where the Feed's
+// "+N reports" count badge pins itself.
+const RING_SIZE = {
+  sm: { box: 34, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },
+  md: { box: 44, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
+}
+const RING_TONE = {
+  bad: { arc: 'var(--ring-bad-border)', ink: 'var(--ring-bad-ink)', bg: 'var(--ring-bad-bg)' },
+  warn: { arc: 'var(--ring-warn-border)', ink: 'var(--ring-warn-ink)', bg: 'var(--ring-warn-bg)' },
+  good: { arc: 'var(--ring-good-border)', ink: 'var(--ring-good-ink)', bg: 'var(--ring-good-bg)' },
+  accent: { arc: 'var(--ring-accent-border)', ink: 'var(--ring-accent-ink)', bg: 'var(--ring-accent-bg)' },
+  neutral: { arc: 'var(--ring-neutral-border)', ink: 'var(--ring-neutral-ink)', bg: 'var(--ring-neutral-bg)' },
+}
+// the score bands each screen used to re-declare as its own `scoreColor()`
+export const scoreTone = (s) => (s == null ? 'neutral' : s >= 70 ? 'good' : s >= 50 ? 'warn' : 'bad')
+const RING_R = 35   // the arc radius every ring site drew, in a viewBox of 2x box
+export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', title, ariaLabel, children, style, className }) {
+  const z = typeof size === 'number' ? { ...RING_SIZE.md, box: size } : (RING_SIZE[size] || RING_SIZE.md)
+  const t = RING_TONE[tone || scoreTone(value)] || RING_TONE.neutral
+  const vb = z.box * 2
+  const stroke = weight || z.track
+  const c = 2 * Math.PI * RING_R
+  return (
+    <div className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
+      style={{ position: 'relative', flex: `0 0 ${z.box}px`, width: z.box, height: z.box, ...style }}>
+      {value == null ? (
+        <div style={{
+          width: '100%', height: '100%', border: '1px dashed var(--ring-neutral-border)',
+          borderRadius: 'var(--radius-control)', background: t.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+          fontFamily: 'var(--font-body)', fontSize: z.unscored, letterSpacing: '.1em',
+          textTransform: 'uppercase', color: 'var(--ring-neutral-ink)',
+        }}>{label}</div>
+      ) : (
+        <>
+          <svg viewBox={`0 0 ${vb} ${vb}`} style={{ width: z.box, height: z.box }} aria-hidden="true">
+            <circle cx={vb / 2} cy={vb / 2} r={RING_R} fill="none" stroke="var(--ring-track)" strokeWidth={stroke} />
+            <circle cx={vb / 2} cy={vb / 2} r={RING_R} fill="none" stroke={t.arc} strokeWidth={stroke} strokeLinecap="round"
+              strokeDasharray={`${(c * Math.max(0, Math.min(100, value)) / 100).toFixed(1)} ${c.toFixed(0)}`}
+              transform={`rotate(-90 ${vb / 2} ${vb / 2})`} />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            lineHeight: 1, fontFamily: 'var(--font-display)', fontSize: z.num,
+            letterSpacing: z.letterSpacing, color: t.ink,
+          }}>{value}</div>
+        </>
+      )}
+      {children}
+    </div>
+  )
+}
+
+// ── ToastCard ───────────────────────────────────────────────────────────────
+// The toast card's box, moved out of Toast.jsx (which keeps the taxonomy, the
+// TTL table and the stack). `kind` picks the ground: progress / success / error
+// / undo, each a --toast-*-bg / -line / -ink triple.
+const TOAST_KIND = {
+  progress: { bg: 'var(--toast-progress-bg)', line: 'var(--toast-progress-line)', ink: 'var(--toast-progress-ink)' },
+  success: { bg: 'var(--toast-ok-bg)', line: 'var(--toast-ok-line)', ink: 'var(--toast-ok-ink)' },
+  error: { bg: 'var(--toast-bad-bg)', line: 'var(--toast-bad-line)', ink: 'var(--toast-bad-ink)' },
+  undo: { bg: 'var(--toast-undo-bg)', line: 'var(--toast-undo-line)', ink: 'var(--toast-undo-ink)' },
+}
+export function ToastCard({ kind = 'progress', children, style, className }) {
+  const k = TOAST_KIND[kind] || TOAST_KIND.progress
+  return (
+    <div className={className} style={{
+      display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
+      background: k.bg, border: `1px solid ${k.line}`, borderRadius: 'var(--radius-card)', color: k.ink,
+      boxShadow: 'var(--shadow-toast)', ...style,
+    }}>{children}</div>
   )
 }
 

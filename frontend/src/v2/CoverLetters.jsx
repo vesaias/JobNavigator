@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Spinner, Tag } from './ui'
+import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -101,19 +101,8 @@ export function VoicePicker({ presets, value, onPick }) {
 
 export function LengthPicker({ value, onPick }) {
   return (
-    <div style={{ display: 'flex', gap: 5 }}>
-      {LENGTHS.map(([id, name]) => {
-        const on = id === value
-        return (
-          /* ui: keep — a segmented control, not a card: three equal-flex cells
-             that share one border run and swing to accent-soft when picked */
-          <div key={id} onClick={() => onPick(id)} className="v2-bdc v2-ctl"
-            style={{ flex: 1, height: 31, borderRadius: 'var(--radius-cell)', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-              border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)',
-              color: on ? 'var(--accent)' : 'var(--text-2)', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{name}</div>
-        )
-      })}
-    </div>
+    <Segmented size="sm" ariaLabel="Letter length" value={value} onChange={onPick}
+      options={LENGTHS.map(([id, name]) => ({ value: id, label: name }))} />
   )
 }
 

@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Card, DashedAdd, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, SectionHead, Textarea } from './ui'
+import { Button, Card, Check, DashedAdd, Dot, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -373,8 +373,7 @@ export default function Applications() {
                     title={band === 'closed' ? 'Every application here is rejected' : undefined}
                     onClick={() => setCompanies((p) => on ? p.filter((x) => x !== name) : [...p, name])}
                     style={{ ...(band === 'closed' ? { color: 'var(--muted)' } : null), ...(first ? { marginTop: 5, paddingTop: 10 } : null) }}
-                    icon={/* ui: keep — checkbox indicator, not a card; it rides in MenuItem's icon gutter */
-                      <span style={{ width: 14, height: 14, flex: '0 0 14px', borderRadius: 'var(--radius-inline)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>{on ? '✓' : ''}</span>}>
+                    icon={<Check checked={on} />}>
                     {name}
                   </MenuItem>
                 )
@@ -429,9 +428,9 @@ export default function Applications() {
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
-                  // APPS-20: selected and hovered were the same fill, so the selection
-                  // vanished under the pointer. The 3px accent bar carries the
-                  // selection; the 10→7px left pad keeps the text on the same axis.
+                  // D-POST-07: selection is `Row selected` and nothing else — a
+                  // background wash, no accent bar and no left-pad compensation, so
+                  // a picked row's text sits on the same axis as every other row's.
                   return (
                     <Row key={a.id} selected={sel === a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
                       style={{ gap: 8, flex: '0 0 46px', marginBottom: 3 }}>
@@ -551,25 +550,10 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
           </div>
         </div>
 
-        {/* stage stepper */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {STAGES.map((s) => {
-            const on = d.status === s.id
-            const rej = s.id === 'rejected'
-            return (
-              /* ui: keep — a segmented stage stepper, not a card: equal-flex cells
-                 tinted per stage (accent / bad) when current */
-              <div key={s.id} onClick={() => { if (!on) onStage(s.id) }} title={s.hint} className="v2-bd"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, borderRadius: 'var(--radius-cell)', fontSize: 12.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
-                  border: `1px solid ${on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--line)'}`,
-                  background: on ? (rej ? 'var(--bad-soft)' : 'var(--accent-soft)') : 'var(--surface)',
-                  color: on ? (rej ? 'var(--bad)' : 'var(--accent)') : 'var(--text-2)' }}>
-                {/* ui: keep — the stage stepper's own dot, part of the segmented control */}
-                <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: s.dot }} />{s.label}
-              </div>
-            )
-          })}
-        </div>
+        {/* stage stepper — Segmented's lg cells (h34) with the per-stage dot as
+            `dotColor`, and the Rejected cell closing in the `bad` tone */}
+        <Segmented size="lg" gap={6} ariaLabel="Application stage" value={d.status} onChange={onStage}
+          options={STAGES.map((s) => ({ value: s.id, label: s.label, hint: s.hint, dotColor: s.dot, tone: s.id === 'rejected' ? 'bad' : 'accent' }))} />
       </HeaderRow>
 
       {/* body */}
@@ -840,14 +824,8 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <Label>Stage</Label>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {['applied', 'interview', 'offer'].map((id) => {
-                const on = stage === id
-                // ui: keep — a segmented stage cell (equal flex, h33, accent-soft when picked),
-                // the same control as the stepper above; Pill is r99 and Card has no on-state.
-                return <div key={id} onClick={() => setStage(id)} className="v2-bd" style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-cell)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{STAGE[id].label}</div>
-              })}
-            </div>
+            <Segmented value={stage} onChange={setStage} ariaLabel="Stage"
+              options={['applied', 'interview', 'offer'].map((id) => ({ value: id, label: STAGE[id].label }))} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <Label>Applied on</Label>

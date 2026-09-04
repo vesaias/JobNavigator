@@ -153,7 +153,8 @@ Playwright runs inside the backend container: hit `http://caddy/v2/...`, API key
 `frontend/src/v2/ui.jsx` is the one place a v2 control is *drawn*. It exports a
 component per role — `Button`, `Pill`, `IconButton`, `Input`, `Textarea`,
 `SearchInput`, `Select`, `Row`, `Card`, `Band`, `DashedAdd`, `Menu`/`MenuHead`/
-`MenuItem`, `SectionHead`, `Chip`, `Tag`, `Dot`, `Link`/`NavLink`, `ModalPanel`,
+`MenuItem`, `SectionHead`, `Chip`, `Tag`, `Dot`, `Check`/`Radio`, `Switch`,
+`Segmented`, `Meter`, `ScoreRing`, `ToastCard`, `Link`/`NavLink`, `ModalPanel`,
 `Drawer`, `HeaderRow`, `Label`, `Helper`, `Heading`, `PageTitle`, `Spinner`,
 `ShowMore` — each rendering the **canonical signature** for that role: the
 dominant signature the D1 scan found, as approved in
@@ -182,14 +183,32 @@ computed values.
 through `kb()` (tab stop, role, Enter/Space) and carry the right `aria-*`;
 line-heights are whole pixels, and fixed-height flex controls carry `v2-ctl`.
 
-`/v2/ui` (`UiGallery.jsx`, registered in `App.jsx` next to `/v2/toasts`) renders
-every primitive in every variant and state in both themes, with the role name and
-the semantic tokens printed under each block. It is rail-less on purpose: the
-style crawl measures that page against the spec, so nothing but `ui.jsx` should
-be on it. Add a primitive → add it to the gallery in the same pass.
+### The lab pages are local-only
 
-As of D3 **no screen has been migrated yet** — the layer and the gallery exist;
-the call sites are still inline. D4 replaces them one role at a time.
+The two workbench pages — the primitive gallery at **`/v2/ui`** and the toast
+taxonomy lab at **`/v2/toasts`** — live in **`frontend/src/design-base/`**
+(`UiGallery.jsx`, `ToastLab.jsx`). That folder is **git-ignored**: it is a design
+workbench, not shipped source, and a fresh clone will not have it.
+
+`App.jsx` therefore registers the two routes *optionally*, through
+`import.meta.glob('./design-base/*.jsx')` — Vite resolves the glob at build time
+and hands back an empty map when it matches nothing, so a missing folder costs
+the two routes and nothing else. A static `import` would have failed the build.
+Each match is `React.lazy`-loaded behind a `<Suspense>`, so the lab never lands in
+the app's main chunk; `labRoute()` returns `null` when the file is absent and
+`React.Children` skips a null `<Routes>` child. To get the pages back, restore the
+folder — no wiring changes.
+
+`v2-testing/tools/stylelint.py` and `stylescan.py` scan `frontend/src/v2/*.jsx`
+only, so the workbench is out of their reach by construction (`stylelint`'s `SKIP`
+is now just `ui.jsx`).
+
+`/v2/ui` renders every primitive in every variant and state in both themes, with
+the role name and the semantic tokens printed under each block. It is rail-less on
+purpose: the style crawl measures that page against the spec, so nothing but
+`ui.jsx` should be on it. **Add a primitive → add it to the gallery in the same
+pass** — even though the gallery is not committed, the next person's copy is
+seeded from this repo's history.
 
 ## Conventions that took several rounds to settle
 

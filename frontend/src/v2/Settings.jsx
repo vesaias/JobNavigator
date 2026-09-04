@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Textarea } from './ui'
+import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
 import { useTheme, MODE_OPTIONS, SKIN_OPTIONS } from './theme'
 import api from '../api'
 import './theme.css'
@@ -108,23 +108,10 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
 }
 
 function Toggle({ on, label, onPick, ariaLabel }) {
-  return (
-    <span onClick={onPick} {...kb(onPick, 'switch')} aria-checked={on} aria-label={ariaLabel}
-      style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flex: '0 0 auto' }}>
-      <Helper>{label}</Helper>
-      {/* ui: keep — a switch track and its sliding knob, not a status dot: the pair
-          is one control (26x15 track, 11px knob animating between two positions).
-          Dot draws a single tone-coloured disc. */}
-      <span style={{ width: 26, height: 15, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'var(--line-strong)', position: 'relative', flex: '0 0 auto' }}>
-        {/* SET-14: --knob is white in both themes, which is 2.16:1 on the dark
-            theme's light-green track. --surface-2 (user's pick, 2026-09-03) is the ON knob so it reads as a
-            surface disc on the accent track in both themes; OFF keeps --knob
-            against the neutral track. */}
-        {/* ui: keep — the switch knob: an 11px disc that slides inside the track (absolute + transition); Dot is a static status disc */}
-        <span style={{ position: 'absolute', top: 2, left: on ? 13 : 2, width: 11, height: 11, borderRadius: 'var(--radius-control)', background: on ? 'var(--surface-2)' : 'var(--knob)', transition: 'left 150ms' }} />
-      </span>
-    </span>
-  )
+  // SET-14 lives on `Switch` in ui.jsx now (--switch-knob-on = --surface-2 so the
+  // ON knob reads as a surface disc on the accent track in both themes). This
+  // wrapper only keeps the local name + no-arg `onPick` its call sites pass.
+  return <Switch on={on} onChange={() => onPick()} label={label} ariaLabel={ariaLabel} />
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
