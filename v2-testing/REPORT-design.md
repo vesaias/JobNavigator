@@ -35,10 +35,16 @@ Canonical = dominant signature per role (approved as proposed); footers at 33 px
 | DS-B-01 P4 | disabled primitives dropped `role` | role kept, `tabindex -1` |
 Verification: `round-design/verify-final.md` — 10/10 confirmed live on the final build (including the skin fixed-height check: no control differs between skins; the two flagged heights are a wrapped hint label).
 
+## After the report: user-found items and the last primitives (2026-09-05)
+- Fixed and verified live (`round-design/verify-postpass.md` 15/15, plus a spot check after `e91930c`): company-filter search field collapsing to 17 px (menu children never shrink), H-1B filing count moved to hover, `Select` on `--input-bg`, Off/Light/Full dots and centring, Companies row menu above the sticky cells, selected row = accent wash on Feed and Applications (no left bar), Stats type menu Escape, Feed popups on one inner geometry (Salary gained its missing max field), `ScoreRing` viewBox (small ring no longer clipped), unscored label "No fit".
+- New primitives: `ScoreRing`, `Segmented` (5 sites), `Switch`, `Check`/`Radio`, `Meter`, `ToastCard` — every recurring hand-written control is now in `ui.jsx`; the remaining inline sites are one-offs (rail, PDF toolbar, chart fills, a few badges), 97 annotated keeps. Lint still 0.
+- The gallery and the toast lab now live in `frontend/src/design-base/` (git-ignored, local only); their routes register only when the folder exists.
+- Not reproduced: a flush-left text inset in the company search field (measured 16 px, one pixel from the menu items' 17 px).
+- Decisions still open: keyboard access on the kept one-offs (user: ignore unless critical); bulk-checked rows and the open-detail row share the accent wash (say if bulk needs its own tint).
+
 ## Still open after the pass
 - DS-A-01 (P3): the hand-written controls kept inline (row Run/Test/⋯, Feed Sort trigger, row rail ♥/✕/⋯, stage stepper, `Select all shown`, `?` badge) are not keyboard-reachable. Suggested: give them `kb()` or migrate to `IconButton`/`Pill`.
-- DS-S-22 (P3): Stats "Type ▾" menu has no Escape close (one-liner with `useEscape`).
-- DS-S-33 (P4): the `/v2/toasts` lab page's buttons are not keyboard-accessible; the page is marked temporary — delete it or fix it.
+- DS-S-33 (P4): the toast lab page (now local-only in `design-base/`) has no keyboard access; low priority.
 - The prose/`text` role (≈200 plain runs at 12.5–13 px) stays inline by decision; if the type scale ever changes, those move to `--t-*` in one mechanical pass.
 - Persona's Q&A card and the résumé editor's field-shaped prose rows keep their own look (annotated).
 
