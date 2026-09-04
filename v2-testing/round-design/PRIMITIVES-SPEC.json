@@ -1,0 +1,1336 @@
+{
+  "_readme": "Primitive parameter sheet for JobNavigator v2, transcribed from the code at branch v2-redesign, HEAD 539da1e. Read-only capture: every value here is quoted from source, never inferred. Where the code leaves something undefined the value is the literal string \"unspecified\". Paths are repo-relative. Line numbers are from the commit named in meta.",
+
+  "meta": {
+    "repo": "V:/JTrakProject",
+    "branch": "v2-redesign",
+    "head": "539da1e8ab3e977e682904cf83ed6bc3541bed47",
+    "head_short": "539da1e",
+    "tree": "clean",
+    "generated": "2026-09-04",
+    "file_commits": {
+      "frontend/src/v2/ui.jsx": "539da1e",
+      "frontend/src/v2/theme.css": "539da1e",
+      "frontend/src/v2/Toast.jsx": "6010959",
+      "frontend/src/v2/ConfirmDialog.jsx": "5ace038",
+      "frontend/src/v2/hooks.js": "aac3a45",
+      "frontend/src/v2/theme.js": "539da1e",
+      "frontend/index.html": "539da1e"
+    },
+    "file_sizes_lines": {
+      "frontend/src/v2/ui.jsx": 1425,
+      "frontend/src/v2/theme.css": 1033,
+      "frontend/src/v2/Toast.jsx": 96,
+      "frontend/src/v2/ConfirmDialog.jsx": 51,
+      "frontend/src/v2/hooks.js": 217,
+      "frontend/src/v2/theme.js": 178,
+      "frontend/index.html": 76
+    },
+    "exports_in_ui_jsx": [
+      "kb", "Spinner", "Button", "Pill", "IconButton", "Input", "Textarea", "SearchInput",
+      "Select", "Row", "Card", "Band", "DashedAdd", "MenuHead", "Menu", "MenuItem",
+      "SectionHead", "Chip", "Tag", "Dot", "Check", "Radio", "Switch", "Segmented",
+      "Meter", "scoreTone", "ScoreRing", "ToastCard", "Link", "NavLink", "RemoveLink",
+      "RemoveX", "MoveArrows", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Rule",
+      "Surface", "Label", "Helper", "Heading", "PageTitle", "ShowMore", "ChoiceCard",
+      "ChoiceRow", "ChoiceModal"
+    ],
+    "naming_note": "There is no `MenuLabel` export. The menu caption row is `MenuHead` (ui.jsx:491)."
+  },
+
+  "decisions_recorded_verbatim": [
+    "skins may set radius/shadow/border-width: yes — geometry tokens become per-skin, the skin proof becomes 'only tokens may differ'",
+    "new tokens/variants: allowed as additions defaulting to today's values"
+  ],
+
+  "global": {
+    "token_layers": {
+      "model": "theme.css has two layers. (1) A PALETTE block of literal colours/fonts, repeated per theme and per skin. (2) A SEMANTIC block whose every value is `var(--palette-token)`. Primitives read semantic names only; a skin replaces the palette block wholesale. `theme.css` and `ui.jsx` are the only two files where a literal is allowed (enforced by v2-testing/tools/stylelint.py).",
+      "total_distinct_token_names_defined_in_theme_css": 308,
+      "semantic_block_light_selector": ".jn-v2",
+      "semantic_block_dark_selector": ".jn-v2[data-theme=\"dark\"]",
+      "semantic_blocks_are_byte_identical_today": true,
+      "semantic_block_duplication_reason_quoted": "The block is repeated verbatim in the dark selector below: identical by construction today, but the duplication is what lets a future skin re-point a semantic token at a *different* palette token per theme. Change one, change both."
+    },
+
+    "semantic_tokens_read_by_primitives": {
+      "_note": "Deduped `var(--x)` occurrences in ui.jsx, Toast.jsx and ConfirmDialog.jsx. 182 distinct names. `--ring-shift-sm` / `--ring-shift-md` are read through a template literal (`var(--ring-shift-${size === 'sm' ? 'sm' : 'md'}, …)`, ui.jsx:962), so a plain grep shows the stem `--ring-shift-` only.",
+      "count": 182,
+      "ui_jsx": [
+        "--spinner-ink", "--radius-control", "--t-13-5", "--t-13", "--t-12-5",
+        "--btn-primary-bg", "--btn-primary-ink", "--btn-primary-disabled-bg", "--btn-primary-disabled-ink",
+        "--btn-danger-bg", "--btn-danger-ink", "--btn-secondary-bg", "--btn-secondary-ink",
+        "--btn-secondary-border", "--btn-secondary-disabled-ink", "--btn-secondary-disabled-border",
+        "--btn-ghost-ink", "--font-body", "--t-11-5", "--pill-on-bg", "--pill-bg", "--pill-on-ink",
+        "--pill-ink", "--pill-on-border", "--pill-border", "--t-15", "--icon-btn-ink",
+        "--input-border", "--radius-field", "--input-bg", "--input-ink", "--font-mono",
+        "--input-underline", "--search-bg", "--t-12", "--search-glyph", "--input-border-focus",
+        "--input-placeholder", "--t-9", "--menu-bg", "--menu-border", "--radius-menu",
+        "--menu-shadow", "--helper-ink", "--menu-item-on-ink", "--menu-item-ink",
+        "--menu-item-on-bg", "--radius-row", "--row-selected", "--row-line", "--card-bg",
+        "--card-border", "--radius-card", "--band-border", "--dashadd-border", "--dashadd-ink",
+        "--t-9-5", "--label-ink", "--menu-item-danger-ink", "--menu-item-sep", "--t-11", "--t-10",
+        "--section-head-ink", "--chip-bg", "--chip-ink", "--chip-border", "--tag-neutral-bg",
+        "--tag-neutral-ink", "--tag-accent-bg", "--tag-accent-ink", "--tag-good-bg", "--tag-good-ink",
+        "--tag-warn-bg", "--tag-warn-ink", "--tag-bad-bg", "--tag-bad-ink", "--dot-neutral",
+        "--dot-accent", "--dot-good", "--dot-warn", "--dot-bad", "--radius-inline", "--check-border",
+        "--check-on-bg", "--check-bg", "--check-on-ink", "--check-label-ink", "--switch-track-on",
+        "--switch-track-off", "--switch-knob-on", "--switch-knob-off", "--seg-on-bg", "--seg-on-ink",
+        "--seg-on-border", "--seg-on-bad-bg", "--seg-on-bad-ink", "--seg-on-bad-border",
+        "--seg-inset-bg", "--seg-border", "--radius-cell", "--seg-bg", "--seg-inset-ink", "--seg-ink",
+        "--meter-accent", "--meter-good", "--meter-warn", "--meter-bad", "--meter-neutral",
+        "--radius-mini", "--meter-track", "--t-14", "--t-7-5", "--t-19", "--ring-bad-border",
+        "--ring-bad-ink", "--ring-bad-bg", "--ring-warn-border", "--ring-warn-ink", "--ring-warn-bg",
+        "--ring-good-border", "--ring-good-ink", "--ring-good-bg", "--ring-accent-border",
+        "--ring-accent-ink", "--ring-accent-bg", "--ring-neutral-border", "--ring-neutral-ink",
+        "--ring-neutral-bg", "--ring-track", "--ring-label-shift", "--ring-shift-sm", "--ring-shift-md",
+        "--font-display", "--toast-progress-bg", "--toast-progress-line", "--toast-progress-ink",
+        "--toast-ok-bg", "--toast-ok-line", "--toast-ok-ink", "--toast-bad-bg", "--toast-bad-line",
+        "--toast-bad-ink", "--toast-undo-bg", "--toast-undo-line", "--toast-undo-ink", "--shadow-toast",
+        "--link-ink", "--navlink-ink", "--scrim-bg", "--modal-bg", "--modal-border", "--radius-modal",
+        "--modal-shadow", "--drawer-bg", "--drawer-border", "--drawer-shadow", "--head-bg",
+        "--head-bg-page", "--head-bg-recessed", "--head-line", "--head-line-soft", "--head-line-strong",
+        "--bg", "--surface-2", "--t-10-5", "--t-18", "--t-22", "--t-15-5", "--t-16", "--t-17",
+        "--heading-ink", "--t-30", "--choice-on-border", "--choice-border", "--choice-on-bg",
+        "--choice-bg", "--choice-on-ink", "--choice-ink"
+      ],
+      "toast_jsx_extra": ["--accent", "--bad", "--accent-ink", "--rail-accent", "--radius-control"],
+      "confirmdialog_jsx_extra": ["--muted"],
+      "primitive_layer_leaks_palette_tokens": {
+        "_note": "Contrary to the file's own rule (\"Primitives read semantic tokens only; they never read a palette token directly\"), these palette names are read straight out of the primitive layer.",
+        "ui.jsx:1164 TableHead background": "--bg",
+        "ui.jsx:1200 Surface background": "--surface-2",
+        "Toast.jsx:22 success mark badge": "--accent",
+        "Toast.jsx:23 error mark badge": "--bad",
+        "Toast.jsx:73 mark badge ink": "--accent-ink",
+        "Toast.jsx:78 undo action ink": "--rail-accent",
+        "ConfirmDialog.jsx:18,38 body copy ink": "--muted"
+      }
+    },
+
+    "hover_paint_lives_in_css_not_in_jsx": {
+      "_note": "Inline styles cannot express :hover, so every hover swap is a class in theme.css and uses !important to beat the primitive's own inline declaration. These tokens are therefore read by theme.css, not by ui.jsx.",
+      "tokens": [
+        "--row-hover", "--pill-border-hover", "--pill-ink-hover", "--card-border-hover",
+        "--card-bg-hover", "--chip-border-hover", "--chip-bg-hover", "--chip-ink-hover",
+        "--chip-ring-hover", "--dashadd-border-hover", "--dashadd-bg-hover", "--dashadd-ink-hover",
+        "--menu-item-hover", "--hover-wash-bg", "--hover-wash-ink", "--hover-bad-bg",
+        "--hover-bad-ink", "--navlink-hover-bg", "--navlink-hover-ink", "--link-ink-hover",
+        "--anchor-ink-hover", "--focus-ring", "--input-border-focus", "--input-placeholder",
+        "--amber-hover", "--rail-hover", "--line-soft", "--accent-soft", "--warn-soft",
+        "--warn", "--accent", "--text", "--line", "--muted", "--rail-ink", "--row-selected"
+      ]
+    },
+
+    "dead_tokens": {
+      "_method": "Every `--x:` definition in theme.css collected (308 distinct names), then every `var(--x)` occurrence in frontend/src/**/*.{js,jsx,css,html} + frontend/index.html. A token counts as live if it is read by a painting declaration, by JS, or (transitively) by another live token's value. `--ring-shift-sm` / `--ring-shift-md` were added by hand because they are read through a template literal.",
+      "count": 0,
+      "list": [],
+      "alias_only": {
+        "_note": "Live, but never read directly by a paint rule or by any JS — they exist only to feed another token. Candidates if the layer is ever flattened.",
+        "--track": ["--ring-track"],
+        "--ring-accent": ["--chip-ring-hover", "--focus-ring"],
+        "--scrim": ["--scrim-bg"],
+        "--shadow-modal": ["--modal-shadow"],
+        "--shadow-menu": ["--menu-shadow"],
+        "--shadow-drawer": ["--drawer-shadow"],
+        "--knob": ["--switch-knob-off"]
+      },
+      "single_use_tokens": {
+        "--shadow-pop": "JobFeed.jsx:1036 (the floating multi-select bar)",
+        "--faint": "Resumes.jsx:143,203 (back-compat alias for --muted, declared `--faint:var(--muted)`)",
+        "--radius-mark": "ResumeEditor.jsx:917,921 (inline diff highlight)",
+        "--iframe-bg": "JobFeed.jsx:1438,1449 (cached-page iframe ground)",
+        "--ink-2": "JobFeed.jsx:1113 (row company name)",
+        "--bad-faint": "Searches.jsx:843 (failed import-test row)",
+        "--t-16": "ui.jsx:1261 (Heading strong 16)",
+        "--t-17": "ui.jsx:1262 (Heading strong 17)",
+        "--t-7-5": "ui.jsx:900 (ScoreRing sm unscored label)"
+      }
+    },
+
+    "type_scale": {
+      "_source": "theme.css:92-95 (light) and 270-273 (dark), identical",
+      "font_stacks": {
+        "--font-body": "var(--sans)",
+        "--font-display": "var(--serif)",
+        "--font-mono": "var(--mono)",
+        "default_skin_--serif": "'Newsreader',Georgia,serif",
+        "default_skin_--sans": "'Public Sans',system-ui,sans-serif",
+        "default_skin_--mono": "'JetBrains Mono',ui-monospace,monospace",
+        "webfont_loading": "frontend/index.html:13 loads Newsreader + Public Sans + JetBrains Mono from Google Fonts. No other skin loads a webfont — alt/tone*/editorial/cobalt/saas/win98 use system fallbacks (cobalt names IBM Plex but does not load it)."
+      },
+      "sizes": {
+        "--t-7-5": "7.5px", "--t-9": "9px", "--t-9-5": "9.5px", "--t-10": "10px",
+        "--t-10-5": "10.5px", "--t-11": "11px", "--t-11-5": "11.5px", "--t-12": "12px",
+        "--t-12-5": "12.5px", "--t-13": "13px", "--t-13-5": "13.5px", "--t-14": "14px",
+        "--t-15": "15px", "--t-15-5": "15.5px", "--t-16": "16px", "--t-17": "17px",
+        "--t-18": "18px", "--t-19": "19px", "--t-22": "22px", "--t-30": "30px"
+      },
+      "root_font_size": "14px (`.jn-v2 { font-size:14px }`, theme.css:202)",
+      "root_line_height": "unspecified — inherited (Tailwind preflight's 1.5 on the v1 shell). `.v2-ctl { line-height:1 }` is the opt-out for fixed-height controls.",
+      "line_height_rule_quoted": "LINE-HEIGHTS are whole pixels. Fixed-height flex controls carry `v2-ctl` (line-height:1) the way the rest of v2 does; a single line centred in a fixed box renders identically at any line-height, so that is pixel-safe.",
+      "font_smoothing": "-webkit-font-smoothing:antialiased on .jn-v2"
+    },
+
+    "radius_scale": {
+      "_source": "theme.css:102-104 and 280-282",
+      "--radius-mark": "3px — inline diff highlight behind running text",
+      "--radius-inline": "4px — inline mono chip, the 14-16px tick box",
+      "--radius-mini": "5px — the 17-22px square control (checkbox, paragraph button, funnel bar)",
+      "--radius-field": "6px",
+      "--radius-row": "7px",
+      "--radius-cell": "8px — pick cell / small panel between the row and the card",
+      "--radius-card": "9px",
+      "--radius-menu": "10px",
+      "--radius-modal": "12px",
+      "--radius-control": "99px (pill/full)"
+    },
+
+    "shadow_scale": {
+      "light": {
+        "--shadow-modal": "0 18px 50px rgba(0,0,0,.28)",
+        "--shadow-menu": "0 12px 32px rgba(0,0,0,.16)",
+        "--shadow-pop": "0 10px 30px rgba(0,0,0,.28)",
+        "--shadow-toast": "0 8px 24px rgba(20,19,15,.18)",
+        "--shadow-drawer": "-14px 0 40px rgba(0,0,0,.14)"
+      },
+      "dark": {
+        "--shadow-modal": "0 18px 50px rgba(0,0,0,.6)",
+        "--shadow-menu": "0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04)",
+        "--shadow-pop": "0 10px 30px rgba(0,0,0,.6)",
+        "--shadow-toast": "0 8px 24px rgba(0,0,0,.5)",
+        "--shadow-drawer": "-14px 0 40px rgba(0,0,0,.45)"
+      },
+      "semantic_wrappers": {
+        "--modal-shadow": "var(--shadow-modal)",
+        "--menu-shadow": "var(--shadow-menu)",
+        "--drawer-shadow": "var(--shadow-drawer)"
+      },
+      "not_re_skinned": "The --shadow-* family is deliberately excluded from every skin block (black alphas, already theme-neutral; their offsets are part of the geometry the skin gate pins)."
+    },
+
+    "z_index_layers": {
+      "_note": "There is no named z-index scale. Every value is a literal, most of them at the call site rather than in a primitive.",
+      "owned_by_primitives": {
+        "Select listbox": "40 (ui.jsx:378)",
+        "Drawer scrim": "29 (ui.jsx:1103)",
+        "Drawer panel": "30 (ui.jsx:1108)",
+        "ModalPanel scrim (the modal layer)": "70 default, prop `zIndex` (ui.jsx:1075,1085)",
+        "ChoiceModal": "60 default, passed through to ModalPanel (ui.jsx:1396)",
+        "ToastStack": "80 (Toast.jsx:92)",
+        "ConfirmDialog / PromptDialog": "70 — they take ModalPanel's default and rely on DOM order: 'it mounts last in the tree, and equal z-index resolves in DOM order' (ConfirmDialog.jsx:13-15)"
+      },
+      "used_by_screens": {
+        "2": "sticky TableHead inside a modal (Companies.jsx:984, Searches.jsx:830)",
+        "3": "sticky TableHead on a page (Companies.jsx:473)",
+        "18": "Feed detail header block (JobFeed.jsx:1244)",
+        "20": "Feed grab-line strip (JobFeed.jsx:1169); Settings typeahead listbox (Settings.jsx:1054)",
+        "21": "ResumeEditor template/paper pickers (ResumeEditor.jsx:675,685)",
+        "25": "Feed floating multi-select bar (JobFeed.jsx:1036)",
+        "34 / 35": "Feed shortcuts popover backdrop / panel (JobFeed.jsx:1018-1019)",
+        "39": "click-away backdrop under a popover (CoverLetters.jsx:66, Stats.jsx:721)",
+        "40": "popover / row-action Menu (Applications.jsx:58, Companies.jsx:557, CoverLetters.jsx:24, Searches.jsx:678, Stats.jsx:722)",
+        "44 / 45": "click-away backdrop / Menu for header menus (JobFeed.jsx:123-124,1218-1219, ResumeEditor.jsx:599-600,633-634, Companies.jsx:456)",
+        "50": "CoverLetterEditor letter-actions Menu (CoverLetterEditor.jsx:383)",
+        "59 / 60": "Feed row-menu backdrop (59) and every screen modal (60)",
+        "70": "ModalPanel default (ConfirmDialog, PromptDialog, LoginModal panel body)",
+        "80": "ToastStack",
+        "9998": "WelcomeModal (WelcomeModal.jsx:32)",
+        "9999": "LoginModal (LoginModal.jsx:50)"
+      },
+      "documented_ordering_quote": "z-index 80 is what puts a toast over an open modal (70) and drawer (30). (Toast.jsx:89)"
+    },
+
+    "hairline_model": {
+      "border_widths_in_use_across_v2_jsx": {
+        "1px solid": 135,
+        "1px dashed": 7,
+        "2px solid": 5,
+        "1px dotted": 5,
+        "3px solid": 2,
+        "8.5px dashed": 1
+      },
+      "half_pixel_borders": "none — there is no 0.5px border anywhere in v2. The only sub-pixel border value in the primitive layer is the Spinner's 1.5px ring (ui.jsx:87).",
+      "half_pixel_avoidance_rule": "Line-heights are pinned to whole pixels precisely so a 1px border never lands on a half pixel; see the Heading-strong table (ui.jsx:1258-1265) and the `useSnapTop` translateY correction (hooks.js:60-83) that pulls a flex-centred modal panel back onto the pixel grid.",
+      "borderWidth_shorthand_property": "never used — every border is written as the `border`/`borderTop`… shorthand string",
+      "1_5px_sites": ["ui.jsx:87 Spinner default band (SPIN_WEIGHT.bold = '2px')"],
+      "2px_sites": ["theme.css:912 .v2-chip:hover box-shadow 0 0 0 2px var(--chip-ring-hover)", "theme.css:1024 [tabindex=\"0\"]:focus-visible box-shadow 0 0 0 2px var(--focus-ring)", "theme.css:997 .v2-scroll thumb border 2px solid var(--bg)"],
+      "3px_sites": ["theme.css:879 .v2-grab > span box-shadow 0 0 0 3px var(--surface)"]
+    },
+
+    "focus_recipe": {
+      "fields": {
+        "css": ".jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--input-border-focus) !important; outline:none; }",
+        "line": "theme.css:1018",
+        "reason_quoted": "The 2px ring is gone: browsers apply :focus-visible to text inputs on *mouse* focus too, so every click drew a rectangle — and on the borderless inputs (Applications, Settings, Resumes, Cover Letters) it floated around nothing. A field now signals focus the way it draws itself at rest: a bordered box turns its border accent, an underline input turns its underline accent."
+      },
+      "field_wrapper": {
+        "css": ".jn-v2 .v2-fieldwrap:focus-within { border-color:var(--input-border-focus) !important; }",
+        "line": "theme.css:1021",
+        "sites": "13 uses of `v2-fieldwrap` across frontend/src/v2/*.jsx"
+      },
+      "keyboard_ring_non_input_controls": {
+        "css": ".jn-v2 [tabindex=\"0\"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--focus-ring); }",
+        "line": "theme.css:1024",
+        "token": "--focus-ring = var(--ring-accent) — light rgba(63,107,82,.22), dark rgba(141,187,159,.24)",
+        "reason_quoted": "Keyboard-only ring on non-input controls — :focus-visible never fires on these from a mouse click, so this one stays as it was.",
+        "consequence": "The ring selector keys on `[tabindex=\"0\"]`, so any control that act() has switched to tabIndex -1 (every disabled/busy primitive) loses the ring while remaining focusable."
+      },
+      "placeholder": ".jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--input-placeholder) !important; opacity:1; } (theme.css:1010)",
+      "focus_trap": "unspecified — no primitive traps focus, sets initial focus, or restores focus on close. ModalPanel and Drawer only wire Escape and a scrim click.",
+      "select_trigger": "The Select trigger is a div with tabIndex 0, so it takes the keyboard ring, not the field border-accent."
+    },
+
+    "keyboard_helper_kb": {
+      "source": "ui.jsx:56-60",
+      "code": "export const kb = (fn, role = 'button') => ({ tabIndex: 0, role, onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) } } })",
+      "duplicates": "Same contract is re-declared in ResumeSections.jsx and Settings.jsx — 'declared here rather than imported so `ui.jsx` stays a leaf of the v2 import graph'.",
+      "act_wrapper": {
+        "source": "ui.jsx:72-74",
+        "code": "const act = (fn, off, role) => (fn ? (off ? { role: role || 'button', tabIndex: -1 } : { onClick: fn, ...kb(fn, role) }) : {})",
+        "semantics": "No handler at all when there is nothing to click (an inert Card is not a button). A disabled/busy control KEEPS its role and its aria-disabled/aria-busy, and loses only the interactivity: no handlers, tabIndex -1 so it leaves the tab order while staying focusable (and focused, if it already was) — DS-B-01."
+      }
+    },
+
+    "disabled_recipe_per_primitive": {
+      "_note": "There is no single disabled token or opacity. Five different opacities are in use plus one token-swap variant.",
+      "Button": "token swap, no opacity: primary/danger → --btn-primary-disabled-bg on --btn-primary-disabled-ink; secondary → --btn-secondary-disabled-ink + --btn-secondary-disabled-border; ghost → --btn-secondary-disabled-ink on transparent. `opacity: busy && !disabled ? 0.6 : 1` — so a *busy* button dims, a *disabled* one does not. Hover class dropped. cursor default. aria-disabled. tabIndex -1.",
+      "Pill": "opacity 0.5, cursor default, hover class dropped, aria-disabled, tabIndex -1",
+      "IconButton": "opacity 0.5, cursor default, hover class dropped, aria-disabled, tabIndex -1",
+      "Input": "opacity 0.6, native `disabled` attribute",
+      "Textarea": "opacity 0.6, native `disabled` attribute",
+      "Select": "opacity 0.6, cursor default, aria-disabled, tabIndex -1 (act)",
+      "DashedAdd": "opacity 0.5, cursor default, hover class dropped, aria-disabled",
+      "MenuItem": "opacity 0.5, cursor default, hover class dropped, aria-disabled; the <a> form drops onClick",
+      "Chip": "opacity 0.5, cursor default, hover class dropped, aria-disabled",
+      "Check/Radio": "opacity 0.5, cursor default, aria-disabled",
+      "Switch": "opacity 0.5, cursor default, aria-disabled",
+      "Segmented": "opacity 0.5 on every cell, cursor default, hover class dropped, all cells tabIndex -1, no pick handler",
+      "ChoiceCard": "opacity 0.45, cursor default, hover class dropped, aria-disabled",
+      "ChoiceRow": "opacity 0.45, cursor default, hover class dropped, aria-disabled",
+      "MoveArrows": "opacity 0.35 per arrow (upOff/downOff), cursor default, v2-navlink class dropped, aria-disabled",
+      "Row / Card / Band / Tag / Dot / Meter / Rule / Surface / Label / Helper / Heading / PageTitle / HeaderRow / TableHead / ShowMore / Link / NavLink / RemoveX / RemoveLink / Spinner / ScoreRing / ToastCard / Menu / MenuHead / SectionHead / SearchInput / ModalPanel / Drawer / ChoiceModal": "no disabled prop — unspecified"
+    },
+
+    "motion": {
+      "durations_found": {
+        ".12s": "the standard hover/idle transition — .v2-card, .v2-chip, .v2-dashadd, .v2-navlink, .v2-navdark, .v2-tab, .v2-welcomestep, .v2-grab > span, .v2-fold",
+        "150ms": "Switch knob (`transition: 'left 150ms'`, ui.jsx:766)",
+        "250ms ease": "Toast enter/leave opacity + translateY (Toast.jsx:65)",
+        "260ms": "Toast leave-to-unmount timer (Toast.jsx:39) — deliberately 10ms longer than the 250ms transition",
+        ".15s": "useWarm cross-fade (hooks.js:165)",
+        ".2s": "screen-level opacity fades (5 sites in screens)",
+        ".32s ease": "rail expand/collapse padding + width (V2App)",
+        ".9s linear infinite": "@keyframes v2-spin (theme.css:1000-1001)"
+      },
+      "transitions_declared_in_theme_css": [
+        ".v2-grab > span { transition:background .12s,width .12s; }",
+        ".v2-fold { transition:grid-template-rows .12s ease,opacity .12s ease; }",
+        ".v2-fold[data-collapsed=\"true\"] { transition:grid-template-rows .12s ease,opacity .12s ease,visibility 0s linear .12s; }",
+        ".v2-navlink { transition:background .12s,color .12s; }",
+        ".v2-navdark { transition:color .12s,border-color .12s,background .12s; }",
+        ".v2-card { transition:border-color .12s,background .12s; }",
+        ".v2-chip { transition:border-color .12s,background .12s,box-shadow .12s,color .12s; }",
+        ".v2-dashadd { transition:border-color .12s,background .12s; }",
+        ".v2-tab { transition:color .12s; }",
+        ".v2-welcomestep { transition:background .12s; }",
+        ".v2-spin { animation:v2-spin .9s linear infinite; }"
+      ],
+      "hover_classes_with_NO_transition": [
+        ".v2-act (Card interactive, Band, IconButton 36, ChoiceCard, ChoiceRow)",
+        ".v2-bd (Pill, Segmented cell)",
+        ".v2-bdc (Button secondary, ShowMore)",
+        ".v2-row / .v2-crow / .v2-arow (list rows)",
+        ".v2-menuitem (MenuItem, Select option)",
+        ".v2-hover-accent (Button ghost, IconButton 26, SectionHead)",
+        ".v2-hover-bad / .v2-hover-bad-text / .v2-hover-accent-text (RemoveX, RemoveLink, danger MenuItem, Link)",
+        ".v2-clhead / .v2-qahead / .v2-parabtn / .v2-parabtn-bad / .v2-anchor / .v2-hover-bad-bdc"
+      ],
+      "reduced_motion": {
+        "css": "@media (prefers-reduced-motion: reduce) { .v2-grab > span { transition:none; } .v2-fold, .v2-fold[data-collapsed=\"true\"] { transition:none; } }",
+        "line": "theme.css:893-896",
+        "gap": "The spinner animation, the Switch knob, the toast enter/leave and the warm-start fade are NOT covered."
+      }
+    },
+
+    "theme_and_skin_mechanism": {
+      "store": "frontend/src/v2/theme.js — a `useSyncExternalStore` singleton. Nothing reads localStorage from a component.",
+      "axes": {
+        "mode": { "values": ["light", "dark", "system"], "storage_key": "jobnavigator_theme", "legacy_key_migrated_once": "jobnavigator_dark_mode (boolean)" },
+        "skin": { "values": ["default", "tone1", "tone2", "tone3", "editorial", "alt", "cobalt", "saas", "win98"], "storage_key": "jobnavigator_skin", "constant": "SKINS (theme.js:50)" }
+      },
+      "resolved": "`system` resolves live from `prefers-color-scheme` via matchMedia; `resolved` is light|dark, `mode` is what the user picked.",
+      "attribute_hosts": {
+        "<html>": "data-theme, data-skin, plus the classic shell's `.dark` class — stamped by the inline boot script in index.html BEFORE React mounts, re-stamped by theme.js apply() on every change. Boot copy only, not a second source of truth.",
+        "every .jn-v2 root": "the same two attributes, mirrored through React props via `themeAttrs(state)`. theme.css selects on the .jn-v2 root itself."
+      },
+      "no_flash_boot": {
+        "script": "frontend/index.html:22-42 — reads jobnavigator_theme (migrating the old boolean), resolves `system` through matchMedia, sets data-theme/data-skin on <html> and toggles `.dark`, all inside a try/catch so a blocked localStorage falls back to the default light theme.",
+        "ground_rules": "frontend/index.html:51-70 — a `:root[data-skin=…][data-theme=…] { background: <hex> }` pair per skin, 18 rules, so the pre-mount ground already matches. This is the ONLY place a palette value is written outside theme.css.",
+        "specificity_note_quoted": "`:root[...]` is (0,2,0), which beats index.css's `html.dark` (0,1,1) deterministically whatever order Vite emits the stylesheets in."
+      },
+      "what_a_skin_block_may_contain_today": {
+        "shape": "Two CSS blocks per skin — `.jn-v2[data-skin=\"X\"]` and `.jn-v2[data-skin=\"X\"][data-theme=\"dark\"]` — each declaring the IDENTICAL set of 60 token names.",
+        "verified": "All 8 non-default skins × both modes declare exactly the same 60 names (checked programmatically at this commit).",
+        "the_60_names": [
+          "--ring-shift-sm", "--ring-shift-md", "--ring-label-shift",
+          "--bg", "--surface", "--surface-2", "--line", "--line-soft", "--line-strong", "--edge", "--track",
+          "--text", "--text-2", "--muted", "--ink-2",
+          "--accent", "--accent-ink", "--accent-soft",
+          "--good", "--warn", "--warn-soft", "--warn-line", "--bad", "--bad-soft", "--bad-faint",
+          "--change-soft", "--change-bg", "--hover-soft", "--ring-accent", "--scrim", "--recessed",
+          "--stage-applied", "--stage-interview", "--stage-offer", "--stage-rejected", "--stage-new", "--series-new",
+          "--amber-bg", "--amber-line", "--amber-line-soft", "--amber-hover",
+          "--sand", "--gold", "--funnel-low", "--funnel-mid",
+          "--toast-ok-bg", "--toast-ok-line", "--toast-ok-ink",
+          "--toast-bad-bg", "--toast-bad-line", "--toast-bad-ink",
+          "--rail", "--rail-text", "--rail-dim", "--rail-accent", "--rail-line", "--rail-ink",
+          "--serif", "--sans", "--mono"
+        ],
+        "composition": "54 palette colours + 3 ScoreRing optical-centring offsets + 3 font stacks.",
+        "identical_set_rule_quoted": "The two blocks MUST declare the identical set of names. `[data-skin=\"alt\"]` and `.jn-v2[data-theme=\"dark\"]` weigh the same (0,2,0), so a token that the light skin block sets and the dark one forgets would beat the default dark value and leak a light colour into the dark skin.",
+        "deliberately_not_re_skinned": [
+          "the --cc-* ATS badge family (17 pairs) and --sm-* search-mode family (6 pairs) — 'an identity taxonomy, not theme colour'",
+          "the --shadow-* family — 'black alphas, already theme-neutral — and their offsets are part of the geometry the gate pins'",
+          "--rail-active, --rail-hover, --on-rail-line, --on-rail-dim, --on-rail-sep — 'white alphas that work on any dark rail'",
+          "--knob, --iframe-bg — 'a switch knob and an embedded document are white in either theme'"
+        ],
+        "what_a_skin_CANNOT_express_today": "--radius-*, --shadow-*, --t-* and every primitive's border width live in the shared semantic layer, not in the skin block. theme.css:670-678 records that the cobalt/saas/win98 boards change radii, border widths, bevels, shadows and the type scale, and that 'that is the part a skin cannot express'; v2-testing/round-design/skins-boards.md lists the delta per board.",
+        "current_gate": "v2-testing/round-design/expected-D6.md + tools/stylecrawl.py + stylediff.py — 'switching data-skin may change colour and font family and nothing else: sizes, padding, radii, line-heights, border widths and shadow offsets are untouched by construction'."
+      },
+      "skin_labels": {
+        "default": "Default — warm paper",
+        "tone1": "Tone 1 — ¼ toward Editorial",
+        "tone2": "Tone 2 — ½ toward Editorial",
+        "tone3": "Tone 3 — ¾ toward Editorial",
+        "editorial": "Editorial — original board tones",
+        "alt": "Alt — cool slate",
+        "cobalt": "Cobalt — IBM Plex blue",
+        "saas": "SaaS — system neutral",
+        "win98": "Win98 — desktop grey"
+      },
+      "ring_offsets_per_skin": {
+        "_why": "The ScoreRing numeral is optically centred per skin because the display face's figure metrics differ.",
+        "default / tone1 / tone2 / tone3 / editorial / cobalt / saas / win98": { "--ring-shift-sm": "2px", "--ring-shift-md": "1px", "--ring-label-shift": "0px" },
+        "alt": { "--ring-shift-sm": "1.25px", "--ring-shift-md": ".42px", "--ring-label-shift": "1.58px", "note": "Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default skin, see v2-testing/round-design/ring-sizes.md" },
+        "board_skins_note_quoted": "all three boards put a SANS with lining figures in the display slot (IBM Plex Sans / system-ui / Tahoma)… So all three seed at the DEFAULT offsets and the ink measurement re-run after the build sets the final values."
+      }
+    },
+
+    "scrollbar": {
+      ".v2-scroll::-webkit-scrollbar": "width:9px; height:9px",
+      ".v2-scroll::-webkit-scrollbar-thumb": "background:var(--muted); border-radius:99px; border:2px solid var(--bg)",
+      ".v2-scroll::-webkit-scrollbar-track": "background:transparent",
+      ".v2-gutter": "scrollbar-gutter:stable",
+      ".v2-gutter-head": "overflow:hidden; scrollbar-gutter:stable",
+      ".v2-railscroll": "scrollbar-width:none; -ms-overflow-style:none; ::-webkit-scrollbar width:0 height:0"
+    },
+
+    "global_resets": {
+      ".jn-v2 *, ::before, ::after": "box-sizing:border-box",
+      ".jn-v2 a": "color:var(--accent); text-decoration:none",
+      ".jn-v2 a:hover": "color:var(--text)",
+      ".jn-v2 input, .jn-v2 select": "color:var(--text); background:transparent",
+      ".jn-v2 .v2-menu > *": "flex-shrink:0 — 'Menu rows are fixed-height by definition; a scrolling menu scrolls, it never squashes.'"
+    }
+  },
+
+  "primitives": {
+    "Button": {
+      "source": "ui.jsx:97-168",
+      "element": "div by default; `as=\"button\"` renders a real <button type={type}> for the one case where the element IS the semantics (a form submit — LoginModal). The UA button styles are reset first: margin 0, border none, appearance none, WebkitAppearance none; tabIndex stays 0.",
+      "variants": {
+        "primary": { "rest": { "background": "--btn-primary-bg", "color": "--btn-primary-ink" }, "disabled": { "background": "--btn-primary-disabled-bg", "color": "--btn-primary-disabled-ink" }, "hover_class": "(none)" },
+        "danger": { "rest": { "background": "--btn-danger-bg", "color": "--btn-danger-ink" }, "disabled": { "background": "--btn-primary-disabled-bg", "color": "--btn-primary-disabled-ink" }, "hover_class": "(none)" },
+        "secondary": { "rest": { "background": "--btn-secondary-bg", "color": "--btn-secondary-ink", "border": "1px solid --btn-secondary-border" }, "disabled": { "background": "--btn-secondary-bg", "color": "--btn-secondary-disabled-ink", "border": "1px solid --btn-secondary-disabled-border" }, "hover_class": "v2-bdc" },
+        "ghost": { "rest": { "background": "transparent", "color": "--btn-ghost-ink" }, "disabled": { "background": "transparent", "color": "--btn-secondary-disabled-ink" }, "hover_class": "v2-hover-accent" }
+      },
+      "sizes": {
+        "md": { "height": 36, "fontSize": "--t-13-5", "padding": "0 18px" },
+        "sm": { "height": 33, "fontSize": "--t-13", "padding": "0 15px" },
+        "xs": { "height": 28, "fontSize": "--t-12-5", "padding": "0 14px" }
+      },
+      "geometry": { "min_width": "unspecified", "gap": 8, "radius": "--radius-control", "border_width": "1px (secondary only; none on primary/danger/ghost)", "flex": "0 0 auto", "display": "flex, centred both axes", "icon_size": "unspecified — an icon is just a child glyph" },
+      "type": { "fontFamily": "--font-body", "fontWeight": 500, "whiteSpace": "nowrap", "letterSpacing": "unspecified", "textTransform": "unspecified", "lineHeight": "1 via the `v2-ctl` class" },
+      "states": {
+        "rest": "variant.rest tokens",
+        "hover": "secondary → .v2-bdc:hover { border-color:var(--pill-border-hover) !important; color:var(--pill-ink-hover) !important; }  ·  ghost → .v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }  ·  primary and danger have NO hover rule — BTN_LOOK.primary.hover and .danger.hover are the empty string",
+        "active": "unspecified — no :active rule anywhere",
+        "selected_on": "n/a",
+        "disabled": "variant.off tokens, cursor default, hover class dropped, aria-disabled, role kept, tabIndex -1",
+        "busy": "same as disabled for interactivity, plus opacity 0.6 and a leading <Spinner size={12} color=\"currentColor\" />, aria-busy true",
+        "focus_visible": "box-shadow 0 0 0 2px var(--focus-ring) via [tabindex=\"0\"]:focus-visible — lost when disabled/busy (tabIndex -1)"
+      },
+      "motion": "none — v2-bdc and v2-hover-accent carry no transition",
+      "composition": "children render inline after the optional spinner; fixed height, content width",
+      "accessibility": { "role": "button (native <button> when as=\"button\")", "aria": ["aria-label", "aria-expanded", "aria-haspopup", "aria-busy (busy || the explicit ariaBusy override)", "aria-disabled (div form)"], "kb": "Enter/Space via kb()", "tab_stop": "yes when live, tabIndex -1 when off", "min_hit_size": "28px tall at xs — below the 44px WCAG target size, unspecified as a rule" }
+    },
+
+    "Pill": {
+      "source": "ui.jsx:173-198",
+      "element": "div",
+      "variants": { "off (default)": { "background": "--pill-bg", "color": "--pill-ink", "border": "1px solid --pill-border" }, "on": { "background": "--pill-on-bg", "color": "--pill-on-ink", "border": "1px solid --pill-on-border" } },
+      "sizes": { "md": { "height": 31, "fontSize": "--t-12-5", "padding": "0 15px" }, "sm": { "height": 26, "fontSize": "--t-11-5", "padding": "0 13px" } },
+      "geometry": { "gap": 7, "radius": "--radius-control", "border_width": "1px", "flex": "0 0 auto", "display": "flex centred" },
+      "type": { "fontFamily": "--font-body", "fontWeight": "unspecified (inherited)", "whiteSpace": "nowrap", "lineHeight": "1 via v2-ctl" },
+      "states": {
+        "rest": "pill tokens",
+        "hover": ".v2-bd:hover { border-color:var(--pill-border-hover) !important; } — border only, no wash. An ON pill's border is already --pill-on-border (= --accent) and --pill-border-hover is also --accent, so an ON pill has NO visible hover feedback.",
+        "active": "unspecified",
+        "selected_on": "the `on` prop — the on-trio above, aria-pressed true",
+        "disabled": "opacity 0.5, cursor default, v2-bd dropped, aria-disabled, tabIndex -1",
+        "focus_visible": "keyboard ring"
+      },
+      "motion": "none",
+      "accessibility": { "role": "button", "aria": ["aria-pressed (only when `on` is not undefined)", "aria-label", "aria-expanded", "aria-haspopup", "aria-busy", "aria-disabled"], "kb": "Enter/Space" }
+    },
+
+    "IconButton": {
+      "source": "ui.jsx:205-230",
+      "element": "div",
+      "variants": {
+        "26 (default, the bare glyph button)": { "fontSize": "--t-13", "color": "--icon-btn-ink", "background": "none", "border": "none", "hover_class": "v2-hover-accent" },
+        "36 (the bordered ⋯ head button)": { "fontSize": "--t-15", "off": { "color": "--pill-ink", "background": "--pill-bg", "border": "1px solid --pill-border" }, "on": { "color": "--pill-on-ink", "background": "--pill-on-bg", "border": "1px solid --pill-on-border" }, "hover_class": "v2-act" }
+      },
+      "geometry": { "width_and_height": "= the `size` prop (26 or 36; any other number keeps the small look at that box)", "radius": "--radius-control", "display": "flex centred", "flex": "0 0 auto" },
+      "states": {
+        "hover": "26 → .v2-hover-accent:hover (bg --hover-wash-bg, ink --hover-wash-ink)  ·  36 → .v2-act:hover (border-color --card-border-hover, background --card-bg-hover)",
+        "active": "unspecified",
+        "selected_on": "`on` (36 only in practice — at 26 the `on` prop is ignored by the look map), aria-pressed",
+        "disabled": "opacity 0.5, cursor default, hover class dropped, aria-disabled, tabIndex -1",
+        "focus_visible": "keyboard ring"
+      },
+      "motion": "none",
+      "accessibility": { "role": "button", "aria": ["aria-label (falls back to `title`)", "aria-expanded", "aria-haspopup", "aria-pressed", "aria-disabled"], "min_hit_size": "26×26 at the default size" },
+      "known_gap": "A size other than 26 or 36 gets the small look at that box — the intermediate is undefined."
+    },
+
+    "Input": {
+      "source": "ui.jsx:243-261 (the shared FIELD map at 243-247)",
+      "element": "native <input type={type}>",
+      "variants": { "text (default)": {}, "mono": "fontFamily → --font-mono" },
+      "geometry": { "height": 32, "padding": "0 9px", "width": "100%", "minWidth": 0, "border": "1px solid --input-border", "radius": "--radius-field" },
+      "type": { "fontFamily": "--font-body (or --font-mono)", "fontSize": "--t-12-5", "lineHeight": "unspecified (UA default for an input)" },
+      "paint": { "background": "--input-bg", "color": "--input-ink", "placeholder": "--input-placeholder (theme.css:1010, !important, opacity 1)", "outline": "none" },
+      "states": {
+        "hover": "unspecified — no hover rule for fields",
+        "focus_visible": "border-color:var(--input-border-focus) !important; outline:none (theme.css:1018). No ring.",
+        "disabled": "opacity 0.6 + the native `disabled` attribute",
+        "readOnly": "passes through to the element; no distinct paint — unspecified",
+        "invalid/error": "unspecified — no error token or state exists"
+      },
+      "composition": "Controlled by `value`; passing `defaultValue` instead renders it uncontrolled (Applications' autosaving notes box). `...rest` forwards any extra DOM prop (autoFocus, onKeyDown, onFocus — all used by PromptDialog).",
+      "accessibility": { "aria": ["aria-label", "title"], "label_element": "not rendered — a caller pairs it with `Label htmlFor`" }
+    },
+
+    "Textarea": {
+      "source": "ui.jsx:262-275",
+      "element": "native <textarea>",
+      "geometry": {
+        "height": "intrinsic to `rows` — no fixed height",
+        "padding": "5.5px 9px",
+        "lineHeight": "19px",
+        "minHeight": "rows * 19 + 13  (rows default 3 → 70px)",
+        "single_line_basis": "19px line + 2×5.5px padding + 2×1px border = 32px, the same box a one-line Input draws",
+        "resize": "vertical",
+        "border": "1px solid --input-border",
+        "radius": "--radius-field"
+      },
+      "type": { "fontFamily": "--font-body (or --font-mono when `mono`)", "fontSize": "--t-12-5" },
+      "states": "identical to Input (focus border-accent, disabled opacity 0.6)",
+      "accessibility": "aria-label, title; `...rest` passthrough"
+    },
+
+    "SearchInput": {
+      "source": "ui.jsx:284-314",
+      "element": "span wrapper + native <input type=\"text\">",
+      "variants": {
+        "boxed (default)": { "height": 32, "padding": "0 12px 0 29px", "border": "1px solid --input-border", "radius": "--radius-control", "background": "--search-bg", "fontSize": "--t-12", "glyph": "⌕, absolute left 12, top 50% translateY(-50%), fontSize --t-12, color --search-glyph, pointer-events none, aria-hidden" },
+        "underline": { "height": 36, "padding": "0 13px", "border": "none", "borderBottom": "1px solid --input-underline", "background": "transparent", "fontSize": "--t-13", "glyph": "none" }
+      },
+      "geometry_wrapper": { "position": "relative", "display": "flex", "alignItems": "center", "minWidth": 0, "width": "the `width` prop, default 226", "flex": "0 1 auto" },
+      "wrapper_width_reason_quoted": "the wrapper carries a real `width`, not just a flex-basis. A flex item's *intrinsic contribution* to its parent is measured from its content, and the content here is a bare <input> whose default intrinsic width is ~178px…",
+      "paint": { "color": "--input-ink", "outline": "none" },
+      "states": { "focus_visible": "border-color (boxed) / border-bottom-color (underline) → --input-border-focus, from the same theme.css:1018 rule", "disabled": "unspecified — SearchInput takes no `disabled` prop", "hover": "unspecified" },
+      "accessibility": { "aria-label": "falls back to `placeholder` (default 'Search…')", "role": "native searchless textbox — `type=\"search\"` is not used" }
+    },
+
+    "Select": {
+      "source": "ui.jsx:320-405",
+      "element": "span wrapper (position relative, stopPropagation on click) + a div trigger + a div listbox panel",
+      "variants": { "default": {}, "mono": "value text → --font-mono at --t-11-5 instead of --font-body at --t-12-5" },
+      "trigger_geometry": { "height": 32, "padding": "0 10px", "gap": 7, "border": "1px solid --input-border (open → --input-border-focus)", "radius": "--radius-field", "flex": "1, minWidth 0", "wrapper_flex": "0 1 ${width || '220px'}" },
+      "trigger_paint": { "background": "--input-bg", "color": "--input-ink", "value_when_empty": "--input-placeholder", "caret": "▾ at --t-9 in --icon-btn-ink, aria-hidden", "lineHeight": 1, "outline": "none" },
+      "trigger_bg_note_quoted": "the trigger is a *field*, so it takes --input-bg like Input and Textarea. It shipped on --search-bg (= --surface, white) and any form that pairs a Select with an Input… drew two backgrounds for one row of controls.",
+      "listbox_geometry": { "position": "absolute, top 100%, left 0, marginTop 4", "zIndex": 40, "minWidth": "100%", "maxWidth": 420, "maxHeight": 320, "overflow": "auto", "padding": 5, "gap": 1, "radius": "--radius-menu", "border": "1px solid --menu-border", "background": "--menu-bg", "boxShadow": "--menu-shadow", "classes": "v2-menu v2-scroll" },
+      "option_geometry": { "padding": "7px 9px", "radius": "--radius-field", "fontSize": "--t-12-5", "truncation": "nowrap + overflow hidden + text-overflow ellipsis" },
+      "option_paint": { "rest": { "color": "--menu-item-ink", "background": "transparent" }, "selected": { "color": "--menu-item-on-ink", "background": "--menu-item-on-bg" }, "hover": ".v2-menuitem:hover { background:var(--menu-item-hover) !important; }" },
+      "empty_state": { "padding": "7px 9px", "fontSize": "--t-11-5", "lineHeight": "16px", "color": "--helper-ink", "text": "the `emptyText` prop, default 'Nothing to pick yet.'" },
+      "states": { "disabled": "opacity 0.6, cursor default, aria-disabled, tabIndex -1", "focus_visible": "keyboard ring on the trigger (it is a div with tabIndex 0, not an <input>)", "hover_on_trigger": "unspecified" },
+      "behaviour": {
+        "open_close": "click toggles; a document-level click listener closes it",
+        "escape": "a CAPTURE-phase keydown listener, registered only while open, calls preventDefault + stopPropagation and closes the listbox only — so a Select inside a modal does not take the modal down with it (useEscape listens in the bubble phase, and capture always runs first)"
+      },
+      "accessibility": { "trigger": "role button (via act), aria-haspopup=\"listbox\", aria-expanded, aria-label, aria-disabled", "panel": "role=\"listbox\"", "options": "role=\"option\" + aria-selected, each its own tab stop via kb()", "gaps": "no arrow-key navigation, no typeahead, no aria-activedescendant, no aria-controls, no focus move into the panel — unspecified" },
+      "options_shape": "[[value, label], …]"
+    },
+
+    "Row": {
+      "source": "ui.jsx:419-435",
+      "element": "div",
+      "variants": { "default": { "radius": "--radius-row" }, "flush": { "radius": 0, "why": "a full-bleed table row (Companies): the list has no side padding, so a 7px radius would round the hover fill away from the pane edges" } },
+      "geometry": { "height": 46, "padding": "0 10px", "gap": 10, "display": "flex, alignItems center", "border": "none; `divider` adds borderBottom 1px solid --row-line" },
+      "paint": { "rest": "transparent", "selected": "--row-selected", "hover": ".v2-row:hover { background:var(--row-hover) !important; }", "selected_hover": ".v2-row[aria-current=\"true\"]:hover { background:var(--row-selected) !important; }" },
+      "selection_rule_quoted": "selection is a **background wash and nothing else**. APPS-20 added a 3px --row-selected-mark bar with a compensating left pad; Applications never had one (nor does any other row list in v2), and the pad swap shifted every cell in the picked row by 3px. The token went with it.",
+      "states": { "active": "unspecified", "disabled": "unspecified — Row takes no disabled prop", "focus_visible": "keyboard ring when onClick is set" },
+      "motion": "none (.v2-row has no transition)",
+      "composition": "`...rest` carries the data-* hooks a screen relies on (the Feed keys scroll-into-view and its harness selectors off data-row={i}). Fixed height. cursor:pointer only when onClick is present — 'an inert row leaves `cursor` unset so its text keeps the I-beam'.",
+      "accessibility": { "role": "button when onClick, else none", "aria": ["aria-current=\"true\" when selected", "aria-label", "title"], "kb": "Enter/Space" },
+      "sibling_row_classes_in_theme_css": [".v2-crow (Companies) → --row-hover", ".v2-arow (Applications) → --row-hover", ".v2-cactions (Companies pinned actions cell) → --bg at rest, --row-hover under .v2-crow:hover"]
+    },
+
+    "Card": {
+      "source": "ui.jsx:443-459 (React.forwardRef)",
+      "element": "div",
+      "variants": { "static (default)": { "cursor": "unset — inherited, so card text keeps the I-beam" }, "interactive": { "class": "v2-act", "cursor": "pointer" } },
+      "geometry": { "padding": "10px 14px", "border": "1px solid --card-border", "radius": "--radius-card" },
+      "paint": { "background": "--card-bg", "hover": ".v2-card / .v2-act:hover { border-color:var(--card-border-hover) !important; background:var(--card-bg-hover) !important; }" },
+      "note": "`interactive` (or any onClick) applies `v2-act`, which has NO transition. The `v2-card` class — same hover paint but WITH `transition:border-color .12s,background .12s` — is a separate class applied by screens, not by the primitive.",
+      "states": { "active": "unspecified", "selected": "unspecified", "disabled": "unspecified", "focus_visible": "keyboard ring when onClick" },
+      "composition": "`id` and a forwarded ref are zero-pixel pass-throughs (Stats scrolls two cards into view and deep-links one by #runs)."
+    },
+
+    "Band": {
+      "source": "ui.jsx:460-470",
+      "element": "div",
+      "geometry": { "padding": "10px 14px", "border": "1px dashed --band-border", "radius": "--radius-card" },
+      "paint": { "background": "none (transparent)", "hover": ".v2-act:hover — border-color --card-border-hover, background --card-bg-hover" },
+      "variants": { "interactive": "defaults to TRUE (unlike Card) — pass interactive={false} for an inert band" },
+      "states": { "active": "unspecified", "disabled": "unspecified" }
+    },
+
+    "DashedAdd": {
+      "source": "ui.jsx:475-486",
+      "element": "div",
+      "variants": { "default": { "height": 28, "fontSize": "--t-11-5", "fontWeight": 400 }, "big": { "height": 32, "fontSize": "--t-12", "fontWeight": 500 } },
+      "geometry": { "border": "1px dashed --dashadd-border", "radius": "--radius-field", "gap": 6, "display": "flex centred", "padding": "unspecified — none set; the box is height-only, width is the parent's" },
+      "paint": { "color": "--dashadd-ink", "hover": ".v2-dashadd:hover { border-color:var(--dashadd-border-hover) !important; background:var(--dashadd-bg-hover) !important; color:var(--dashadd-ink-hover) !important; }" },
+      "type": { "fontFamily": "--font-body", "lineHeight": "1 via v2-ctl" },
+      "motion": ".v2-dashadd { transition:border-color .12s,background .12s; } — note the hover also moves `color`, which is NOT in the transition list",
+      "states": { "disabled": "opacity 0.5, cursor default, v2-dashadd dropped, aria-disabled", "focus_visible": "keyboard ring", "active": "unspecified" }
+    },
+
+    "Menu": {
+      "source": "ui.jsx:509-517",
+      "element": "div",
+      "geometry": { "padding": 5, "gap": 1, "display": "flex column", "border": "1px solid --menu-border", "radius": "--radius-menu" },
+      "paint": { "background": "--menu-bg", "boxShadow": "--menu-shadow" },
+      "class": "v2-menu — theme.css pins `.jn-v2 .v2-menu > * { flex-shrink:0 }`",
+      "flex_shrink_reason_quoted": "The box is a *column* flex container, so a child's declared height is only a flex-basis: once the menu is taller than its `maxHeight` (the Feed's Company filter lists ~1300 companies), the browser shrinks every shrinkable child to fit, and the in-menu search field collapsed from its canonical 32 px to 17.",
+      "composition": "Positioning is entirely the caller's, passed as `style` (usually position absolute under a trigger, with an explicit zIndex — 40/45/50 in the screens).",
+      "accessibility": { "role": "`role` prop, default 'menu'; 'listbox' for an option picker (Settings typeahead, the cover-letter template/paper pickers)", "aria-label": "prop", "gaps": "no roving focus, no arrow-key navigation, no focus trap, no return-focus — each MenuItem is its own tab stop. Escape is not wired inside Menu; callers wire their own click-away backdrop div." }
+    },
+
+    "MenuHead": {
+      "source": "ui.jsx:491-498",
+      "element": "div",
+      "geometry": { "padding": "4px 11px 3px" },
+      "type": { "fontSize": "--t-9-5", "lineHeight": "14px", "letterSpacing": ".13em", "textTransform": "uppercase" },
+      "paint": { "color": "--label-ink" },
+      "props": "children, style only — no className, no id, no role"
+    },
+
+    "MenuItem": {
+      "source": "ui.jsx:531-579",
+      "element": "div; `href` renders a real <a> (textDecoration none, rel=\"noreferrer\" when target=\"_blank\") so a navigating row stays ⌘/middle-clickable",
+      "variants": {
+        "default": { "color": "--menu-item-ink", "hover_class": "v2-menuitem" },
+        "selected": { "color": "--menu-item-on-ink", "background": "--menu-item-on-bg", "fontWeight": 500 },
+        "danger": { "color": "--menu-item-danger-ink", "hover_class": "v2-hover-bad", "divider": "defaults to TRUE — a borderTop 1px solid --menu-item-sep above it; pass divider={false} for a danger item that is not the last of its menu" }
+      },
+      "geometry": { "padding": "7px 11px", "gap": 9, "radius": "--radius-field", "display": "flex alignItems center", "icon_gutter": "flex 0 0 16px, flex-centred, fontSize --t-11, color --label-ink (no colour when danger)", "hint": "trailing <Helper size=\"xs\" mono={hintMono}> at flex 0 0 auto; colour becomes `inherit` when the row is selected" },
+      "type": { "fontSize": "--t-12-5", "lineHeight": "unspecified (inherited)", "fontWeight": "400, or 500 when selected" },
+      "states": { "hover": ".v2-menuitem:hover { background:var(--menu-item-hover) !important; }  ·  danger → .v2-hover-bad:hover { background:var(--hover-bad-bg) !important; }", "active": "unspecified", "disabled": "opacity 0.5, cursor default, hover class dropped, aria-disabled; the <a> form drops onClick but keeps the href", "focus_visible": "keyboard ring (div form). The <a> form has no tabIndex from act() — it is focusable as a link." },
+      "motion": "none",
+      "composition": { "slots": ["icon (fixed 16px gutter, a flex box so a 14/15px checkbox centres in it)", "children (flex 1, minWidth 0)", "hint (trailing)"], "truncation": "`ellipsis` prop turns on nowrap/overflow hidden/text-overflow ellipsis on the label slot only", "height": "content-driven" },
+      "accessibility": { "role": "`role` prop, default 'menuitem'; 'option' inside a listbox Menu", "aria": ["aria-selected (explicit prop)", "aria-disabled", "aria-label", "title"] }
+    },
+
+    "SectionHead": {
+      "source": "ui.jsx:599-632",
+      "element": "div",
+      "variants": {
+        "default": { "color": "--section-head-ink", "gap": 6 },
+        "boxed": { "radius": "--radius-field", "padding": "2px 4px", "why": "a hover target slightly larger than the label — the form the Feed's report heads use" },
+        "card": { "gap": 9, "radius": "--radius-card", "colour": "inherited from the card, NOT --section-head-ink", "padding": "layout — passed in `style`" }
+      },
+      "caret": { "glyphs": "open '⌄' / closed '›'", "positions": "'start' (default) · 'end' (last, adjacent to the last child) · 'pin' (last, marginLeft auto) · false (none — the caller draws its own, e.g. the cover-letter editor's rotating SVG chevron)", "style": "flex 0 0 auto, fontSize --t-10, lineHeight 1, color --label-ink, aria-hidden", "lineHeight_reason_quoted": "without one the caret box is the row's 18px line-height, and in a `alignItems:'baseline'` head a 10px glyph in an 18px box sits at a font-dependent offset from the shared baseline, so the head grew 36→37px under the alt skin", "rendered_only_when": "onToggle is present AND caret is truthy" },
+      "geometry": { "display": "flex alignItems center", "height": "content-driven" },
+      "type": { "fontSize": "--t-12-5", "lineHeight": "18px" },
+      "states": { "hover": "class from the `hover` prop, default 'v2-hover-accent' → background --hover-wash-bg, color --hover-wash-ink; applied only when onToggle is present", "active": "unspecified", "disabled": "unspecified", "focus_visible": "keyboard ring when onToggle" },
+      "composition": "children render as-is; `count` appends a <Helper size=\"xs\"> at flex 0 0 auto after the children and before an end/pin caret",
+      "accessibility": { "role": "button when onToggle", "aria": ["aria-expanded (only when onToggle)", "aria-label", "title"] }
+    },
+
+    "Chip": {
+      "source": "ui.jsx:638-650",
+      "element": "div",
+      "geometry": { "height": 26, "padding": "0 10px", "gap": 6, "radius": "--radius-control", "border": "1px solid --chip-border", "display": "inline-flex", "flex": "0 0 auto" },
+      "paint": { "background": "--chip-bg", "color": "--chip-ink" },
+      "type": { "fontFamily": "--font-body", "fontSize": "--t-11-5", "whiteSpace": "nowrap", "lineHeight": "1 via v2-ctl" },
+      "states": { "hover": ".v2-chip:hover { border-color:var(--chip-border-hover) !important; background:var(--chip-bg-hover) !important; color:var(--chip-ink-hover) !important; box-shadow:0 0 0 2px var(--chip-ring-hover) !important; } — applied only when onClick is present and not disabled", "active": "unspecified", "disabled": "opacity 0.5, cursor default, hover class dropped, aria-disabled", "focus_visible": "keyboard ring when onClick" },
+      "motion": ".v2-chip { transition:border-color .12s,background .12s,box-shadow .12s,color .12s; }",
+      "accessibility": { "role": "button when onClick, none otherwise", "cursor": "pointer only when onClick && !disabled" }
+    },
+
+    "Tag": {
+      "source": "ui.jsx:657-674",
+      "element": "span (never interactive)",
+      "variants": {
+        "neutral (default)": { "background": "--tag-neutral-bg", "color": "--tag-neutral-ink" },
+        "accent": { "background": "--tag-accent-bg", "color": "--tag-accent-ink" },
+        "good": { "background": "--tag-good-bg", "color": "--tag-good-ink" },
+        "warn": { "background": "--tag-warn-bg", "color": "--tag-warn-ink" },
+        "bad": { "background": "--tag-bad-bg", "color": "--tag-bad-ink" },
+        "none": { "sets": "no colour at all", "why_quoted": "the ATS / search-mode / tier badges are a separate hue taxonomy that theme.css paints from a `cc-*` / `sm-*` class, and an inline tone would beat that class" }
+      },
+      "geometry": { "padding": "2px 8px", "radius": "--radius-control", "display": "inline-flex alignItems center", "flex": "0 0 auto" },
+      "type": { "fontSize": "--t-10", "lineHeight": "15px", "letterSpacing": ".06em", "textTransform": "uppercase", "whiteSpace": "nowrap", "fontFamily": "unspecified (inherited)", "fontWeight": "unspecified (inherited)" },
+      "external_hue_taxonomy": { "classes": "cc-greenhouse · cc-workday · cc-lever · cc-ashby · cc-phenom · cc-oraclehcm · cc-smartrecruiters · cc-rippling · cc-eightfold · cc-talentbrew · cc-meta · cc-google · cc-generic · cc-tier1 · cc-tier2 · cc-tier3 · cc-tiernone · sm-keyword · sm-levels · sm-lipersonal · sm-jobright · sm-freehire · sm-extension", "rule_shape": ".jn-v2 .cc-X { background:var(--cc-X-bg); color:var(--cc-X-fg) }", "recipe_quoted": "Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode. light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA. Tier chips are a separate taxonomy and are not part of that badge set.", "skinnable": "no — the cc-* and sm-* families are deliberately excluded from every skin block" },
+      "states": "none — Tag has no hover, active, disabled or focus state"
+    },
+
+    "Dot": {
+      "source": "ui.jsx:675-687",
+      "element": "span",
+      "variants": { "neutral (default)": "--dot-neutral", "accent": "--dot-accent", "good": "--dot-good", "warn": "--dot-warn", "bad": "--dot-bad" },
+      "geometry": { "size": "the `size` prop, default 7 (a raw px number, not a token)", "radius": "--radius-control", "display": "inline-block", "flex": "0 0 auto" },
+      "accessibility": { "aria-hidden": "true unless a `title` is given", "with_title": "role=\"img\" + aria-label={title}" },
+      "states": "none"
+    },
+
+    "Check": {
+      "source": "ui.jsx:697-734 (Indicator + Ticker; Check = Ticker round={false})",
+      "element": "span (role=\"checkbox\") wrapping an aria-hidden indicator span + an optional label span",
+      "sizes": { "sm (default)": 14, "md": 15 },
+      "indicator_geometry": { "width/height": "14 or 15", "radius": "--radius-inline (4px)", "border": "1px solid --check-border at rest; NO border when on/indeterminate", "display": "flex centred", "flex": "0 0 <px>" },
+      "indicator_paint": { "rest": { "background": "--check-bg (transparent)" }, "on": { "background": "--check-on-bg", "color": "--check-on-ink" }, "glyph": "'✓' U+2713 checked · '–' U+2013 indeterminate · '' at rest", "glyph_type": { "fontSize": "--t-9", "lineHeight": 1 } },
+      "wrapper": { "display": "inline-flex alignItems center", "gap": 7, "fontSize": "--t-12", "color": "--check-label-ink", "minWidth": 0, "label_truncation": "nowrap + overflow hidden + ellipsis" },
+      "states": { "hover": "unspecified", "active": "unspecified", "disabled": "opacity 0.5, cursor default, aria-disabled, tabIndex -1", "focus_visible": "keyboard ring on the wrapper when onChange is present" },
+      "accessibility": { "role": "checkbox — named even when there is no onChange, because 'aria-checked on a role-less span is ignored'", "aria-checked": "'mixed' when indeterminate && !round, else !!checked", "aria-label": "falls back to `label` when it is a string", "tab_stop": "only when onChange is present", "min_hit_size": "14–15px — well under any target-size guidance; unspecified as a rule" }
+    },
+
+    "Radio": {
+      "source": "ui.jsx:737 (Ticker round, indeterminate forced false)",
+      "differences_from_Check": { "radius": "--radius-control instead of --radius-inline", "glyph": "'●' U+25CF instead of '✓'", "role": "radio", "indeterminate": "not available" },
+      "why_quoted": "The radio disc is the same box at --radius-control with a centred fill instead of a tick — the tick reads as \"one of many\", the disc as \"one of these\".",
+      "note": "There is no radiogroup wrapper for Radio — the caller owns grouping. Segmented is the primitive that ships role=\"radiogroup\"."
+    },
+
+    "Switch": {
+      "source": "ui.jsx:743-771",
+      "element": "span (role=\"switch\") + an aria-hidden track span + a knob span",
+      "sizes": { "md (default)": { "track_w": 26, "track_h": 15, "knob": 11, "inset_pad": 2 }, "sm": { "track_w": 22, "track_h": 13, "knob": 9, "inset_pad": 2 } },
+      "geometry": { "track_radius": "--radius-control", "knob_radius": "--radius-control", "knob_position": "top = pad; left = pad when off, (w - knob - pad) when on", "wrapper": "flex alignItems center, gap 7, flex 0 0 auto" },
+      "paint": { "track_on": "--switch-track-on", "track_off": "--switch-track-off", "knob_on": "--switch-knob-on", "knob_off": "--switch-knob-off" },
+      "token_note_quoted": "SET-14: --switch-knob-on is --surface-2 so the knob reads as a surface disc on the accent track in both themes; OFF keeps --knob on a neutral track.",
+      "composition": "`label` renders as a <Helper> BEFORE the track (label-left, control-right)",
+      "motion": "transition: 'left 150ms' on the knob — not covered by the reduced-motion media query",
+      "states": { "hover": "unspecified", "active": "unspecified", "disabled": "opacity 0.5, cursor default, aria-disabled, tabIndex -1", "focus_visible": "keyboard ring on the wrapper" },
+      "accessibility": { "role": "switch", "aria-checked": "!!on", "aria-label": "falls back to `label` when it is a string", "min_hit_size": "26×15 track plus the label — unspecified as a rule" }
+    },
+
+    "Segmented": {
+      "source": "ui.jsx:791-858",
+      "element": "div role=\"radiogroup\" with div role=\"radio\" cells",
+      "sizes": { "sm": { "height": 31, "fontSize": "--t-12" }, "md (default)": { "height": 33, "fontSize": "--t-12" }, "lg": { "height": 34, "fontSize": "--t-12-5" }, "inset": { "height": 22, "fontSize": "--t-11" } },
+      "variants": {
+        "default (bordered cells)": { "cell_border": "1px solid --seg-border (picked → the tone's border)", "cell_radius": "--radius-cell", "cell_bg_rest": "--seg-bg", "cell_ink_rest": "--seg-ink", "group_gap": "the `gap` prop, default 5", "cell_flex": "1 when grow (default), else 0 0 auto", "hover_class": "v2-bd" },
+        "inset (the framed two-cell toggle — the Feed's Live/Cached switch)": { "group": "flex 0 0 auto, padding 2, background --seg-inset-bg, border 1px solid --seg-border, radius --radius-control, gap 2", "cell_border": "none", "cell_radius": "--radius-control", "cell_padding": "0 10px", "cell_bg_rest": "transparent", "cell_ink_rest": "--seg-inset-ink", "cell_flex": "0 0 auto", "hover_class": "none" }
+      },
+      "tones_for_the_picked_cell": { "accent (default)": { "bg": "--seg-on-bg", "ink": "--seg-on-ink", "border": "--seg-on-border" }, "bad": { "bg": "--seg-on-bad-bg", "ink": "--seg-on-bad-ink", "border": "--seg-on-bad-border" } },
+      "cell_type": { "fontFamily": "--font-body", "lineHeight": 1, "fontWeight": "600 when picked and not inset, else 400", "whiteSpace": "nowrap" },
+      "cell_slots": { "gap": 7, "dotColor": "a fixed disc colour drawn whether or not the cell is picked (<Dot style={{background: o.dotColor}} />, default size 7)", "dots": "N status discs at size 6, overlapped with marginRight -4 except the last; tone accent when picked, neutral otherwise. An absent dot draws NOTHING — 'an empty span would still eat a gap and push its label off the cell's centre'", "label": "o.label", "hint": "o.hint → the cell's `title` attribute" },
+      "options_shape": "[{ value, label, hint, dots, dotColor, tone }]",
+      "states": { "hover": ".v2-bd:hover { border-color:var(--pill-border-hover) !important; } — bordered cells only; inset cells have no hover", "active": "unspecified", "selected_on": "value === o.value", "disabled": "opacity 0.5 per cell, cursor default, hover class dropped, all cells tabIndex -1, no pick handler; aria-disabled per cell", "focus_visible": "keyboard ring on the focused cell" },
+      "accessibility": { "role": "radiogroup / radio", "aria": ["aria-checked per cell", "aria-label on the group", "aria-disabled per cell"], "keyboard": "roving tabstop — the picked cell (or cell 0 when nothing is picked) is tabIndex 0 and the rest are -1; ArrowRight/ArrowDown moves +1 and picks, ArrowLeft/ArrowUp moves -1 and picks (wrapping), Enter/Space picks the focused cell", "note": "arrow keys change the value as they move (select-follows-focus)" }
+    },
+
+    "Meter": {
+      "source": "ui.jsx:865-881",
+      "element": "div role=\"meter\" with a single fill div",
+      "variants": { "accent (default)": "--meter-accent", "good": "--meter-good", "warn": "--meter-warn", "bad": "--meter-bad", "neutral": "--meter-neutral", "raw pass-through": "any unrecognised `tone` string is used verbatim as the fill — the Stats funnel passes `var(--stage-applied)` etc." },
+      "geometry": { "height": "the `height` prop, default 4 (sites in use: 1px criterion bars, 4px keyword coverage, 22px funnel bars)", "radius": "the `radius` prop, else --radius-mini when height >= 12, else --radius-control", "overflow": "hidden", "fill": "height 100%, width `${pct}%`, the same radius" },
+      "paint": { "track": "the `track` prop, else --meter-track" },
+      "value": "0–1, clamped: Math.max(0, Math.min(1, Number(value) || 0)) * 100",
+      "states": "none — no hover, active, disabled or focus",
+      "accessibility": { "role": "meter", "aria": ["aria-valuenow (rounded percent)", "aria-valuemin 0", "aria-valuemax 100", "aria-label", "title"] }
+    },
+
+    "ScoreRing": {
+      "source": "ui.jsx:899-969",
+      "element": "a relative div box holding an <svg> plus an absolutely positioned numeral div (or, unscored, a single dashed div)",
+      "sizes": {
+        "sm": { "box": 34, "viewBox": 78, "numeral_shift_fallback": "2px", "numeral_font": "--t-14", "stroke": 5, "letterSpacing": "-.02em", "unscored_font": "--t-7-5", "comment": "vb 78: the pre-pass band ring (r 15.26 px, stroke 2.18) — fits a 34 box without clipping" },
+        "md (default)": { "box": 44, "viewBox": 88, "numeral_shift_fallback": "1px", "numeral_font": "--t-19", "stroke": 5, "letterSpacing": "undefined", "unscored_font": "--t-9-5" },
+        "numeric size": "taken as an explicit box; the md map is used with `box` overridden and viewBox = RING_VB (88), so the drawing scales uniformly"
+      },
+      "arc_geometry": { "RING_R": 35, "circumference": "2πR = 219.9", "stroke": "the `weight` prop, else the size's `track` (5)", "cx/cy": "viewBox/2", "rotation": "rotate(-90 cx cy)", "strokeLinecap": "round", "dasharray_value": "(c * clamp(value,0,100) / 100).toFixed(1) + ' ' + c.toFixed(0)", "dasharray_busy": "(c * 0.25).toFixed(1) + ' ' + c.toFixed(0)" },
+      "viewbox_reason_quoted": "the viewBox is a **constant**, not `2 x box`. With a per-size viewBox, `r=35 + stroke/2` is a *fixed 37.5px* outer radius whatever the box is: it fits md's 44px box (37.5 < 44) and overflowed sm's 34px one, where the SVG root's UA `overflow:hidden` sliced 1.75px off all four sides — the ring rendered as a squircle.",
+      "tones": {
+        "bad": { "arc": "--ring-bad-border", "ink": "--ring-bad-ink", "bg": "--ring-bad-bg" },
+        "warn": { "arc": "--ring-warn-border", "ink": "--ring-warn-ink", "bg": "--ring-warn-bg" },
+        "good": { "arc": "--ring-good-border", "ink": "--ring-good-ink", "bg": "--ring-good-bg" },
+        "accent": { "arc": "--ring-accent-border", "ink": "--ring-accent-ink", "bg": "--ring-accent-bg" },
+        "neutral": { "arc": "--ring-neutral-border", "ink": "--ring-neutral-ink", "bg": "--ring-neutral-bg" },
+        "track": "--ring-track",
+        "bands": "scoreTone(s): null → neutral · >= 70 → good · >= 50 → warn · else bad (exported, ui.jsx:911)"
+      },
+      "numeral": { "position": "absolute inset 0, flex centred, lineHeight 1", "fontFamily": "--font-display", "fontSize": "the size's `num` token", "letterSpacing": "the size's letterSpacing", "color": "the tone's ink", "transform": "translateY(var(--ring-shift-sm | --ring-shift-md, <size fallback>)) — the per-skin optical centring token" },
+      "unscored_state": { "trigger": "value == null && !busy", "box": "100%×100%, border 1px dashed --ring-neutral-border, radius --radius-control, background the tone's bg", "type": { "fontFamily": "--font-body", "fontSize": "the size's `unscored` token", "letterSpacing": ".1em", "textTransform": "uppercase", "lineHeight": 1 }, "color": "--ring-neutral-ink", "transform": "translateY(var(--ring-label-shift, 0px))", "label": "the `label` prop, default 'No fit' — 'the label is \"No fit\" at every site, so it is the prop's default and no caller overrides it'" },
+      "busy_state": { "drawing": "the same track + an indeterminate quarter arc in RING_TONE.accent.arc", "class": "v2-spin on the <svg>, transformOrigin '50% 50%'", "why_quoted": "a score that is being computed occupies the box the score will occupy, at the same diameter and band, so nothing shifts when it lands" },
+      "composition": "`children` ride in the ring's own relative box — that is where the Feed's '+N reports' count badge pins itself",
+      "states": { "hover": "unspecified", "active": "unspecified", "disabled": "unspecified", "focus_visible": "n/a — not a tab stop" },
+      "accessibility": { "role": "img only when ariaLabel is given", "aria-label": "prop", "title": "prop" }
+    },
+
+    "Spinner": {
+      "source": "ui.jsx:82-92",
+      "element": "span, aria-hidden",
+      "geometry": { "size": "the `size` prop, default 9 (raw px)", "border": "SPIN_WEIGHT[weight] || '1.5px' solid <color>; weight=\"bold\" → 2px", "borderTopColor": "transparent", "radius": "--radius-control", "display": "inline-block", "flex": "0 0 auto" },
+      "paint": { "color": "the `color` prop, else --spinner-ink; Button passes 'currentColor' so it spins in the button's own ink" },
+      "motion": ".v2-spin { animation:v2-spin .9s linear infinite; } with @keyframes v2-spin { to { transform:rotate(360deg); } } — NOT covered by the reduced-motion media query",
+      "known_sizes_in_use": "9 (default), 11 (Toast), 12 (Button busy)",
+      "states": "none",
+      "weight_reason_quoted": "the Feed's 28px score ring is drawn heavy on purpose (user decision) — a hairline reads as a different control at that diameter"
+    },
+
+    "ShowMore": {
+      "source": "ui.jsx:1289-1299",
+      "element": "a centring div + an inner span control",
+      "geometry": { "outer": "flex, justifyContent center, padding '10px 20px 12px'", "inner": { "height": 26, "padding": "0 13px", "gap": 6, "border": "1px solid --pill-border", "radius": "--radius-control", "display": "flex alignItems center" } },
+      "type": { "fontSize": "--t-11-5", "lineHeight": "1 via v2-ctl" },
+      "paint": { "color": "--pill-ink", "background": "none (transparent)", "hover": ".v2-bdc:hover { border-color:var(--pill-border-hover) !important; color:var(--pill-ink-hover) !important; }" },
+      "label": "the `label` prop, else `Show ${n} more`",
+      "states": { "disabled": "unspecified — no disabled prop", "focus_visible": "keyboard ring", "active": "unspecified" },
+      "accessibility": { "role": "button via act()", "aria-label": "unspecified — ShowMore takes none" },
+      "note": "This is Pill's paint at Pill-sm's height with Button-secondary's hover — it is not built from either primitive."
+    },
+
+    "Link": {
+      "source": "ui.jsx:998-1008",
+      "element": "<a> when `href`, else a span with role=\"link\"",
+      "geometry": { "padding": "none", "display": "inline (default)" },
+      "type": { "fontSize": "--t-11-5", "lineHeight": "17px", "fontWeight": 500 },
+      "paint": { "color": "--link-ink", "hover": ".v2-hover-accent-text:hover { color:var(--link-ink-hover) !important; }" },
+      "note": "--link-ink and --link-ink-hover both resolve to --accent today, so the hover is currently a no-op on the ink. The global `.jn-v2 a:hover { color:var(--text) }` is beaten by the class's !important.",
+      "rel": "`rel` prop overrides the default; without it, target=\"_blank\" gets rel=\"noreferrer\"",
+      "states": { "active": "unspecified", "disabled": "unspecified", "focus_visible": "keyboard ring on the span form; the <a> form is natively focusable and does NOT carry tabindex=\"0\", so it gets no ring from theme.css:1024" },
+      "motion": "none"
+    },
+
+    "NavLink": {
+      "source": "ui.jsx:1009-1017",
+      "element": "span with role=\"link\"",
+      "geometry": { "padding": "the `pad` prop (undefined by default)" },
+      "type": { "fontSize": "--t-12", "lineHeight": "18px", "fontWeight": "unspecified (inherited)" },
+      "paint": { "color": "--navlink-ink", "hover": ".v2-navlink:hover { background:var(--navlink-hover-bg) !important; color:var(--navlink-hover-ink) !important; }", "radius": "unspecified — the hover wash has no radius unless the caller passes one" },
+      "motion": ".v2-navlink { transition:background .12s,color .12s; }",
+      "states": { "active": "unspecified", "disabled": "unspecified", "focus_visible": "keyboard ring" }
+    },
+
+    "Label": {
+      "source": "ui.jsx:1208-1219",
+      "element": "span, or <label htmlFor> when `htmlFor` is given",
+      "sizes": { "md (default)": { "fontSize": "--t-10", "lineHeight": "15px" }, "lg": { "fontSize": "--t-11", "lineHeight": "16px" } },
+      "type": { "letterSpacing": ".13em", "textTransform": "uppercase", "fontWeight": "unspecified (inherited)", "fontFamily": "unspecified (inherited)" },
+      "paint": { "color": "--label-ink" },
+      "states": "none"
+    },
+
+    "Helper": {
+      "source": "ui.jsx:1221-1236",
+      "element": "span",
+      "sizes": { "md (default)": { "fontSize": "--t-11-5", "lineHeight": "16px" }, "xs": { "fontSize": "--t-10-5", "lineHeight": "16px" } },
+      "type": { "fontFamily": "--font-mono when `mono`, else unspecified (inherited)" },
+      "paint": { "color": "--helper-ink" },
+      "interactive": "`onClick` makes the sub-line itself the control — it gets act()/kb() and cursor pointer. Inert helpers get no cursor and no tab stop.",
+      "states": { "hover": "unspecified — no hover class even when clickable", "focus_visible": "keyboard ring when onClick" }
+    },
+
+    "Heading": {
+      "source": "ui.jsx:1237-1275",
+      "element": "span (never a heading element — PageTitle is the only <h1>)",
+      "families": {
+        "display (default, weight inherited ≈400)": { "letterSpacing": "-.02em", "sizes": { "18 (default)": { "fontSize": "--t-18", "lineHeight": "27px" }, "19": { "fontSize": "--t-19", "lineHeight": "26px" }, "22": { "fontSize": "--t-22", "lineHeight": "30px" } } },
+        "strong (v2's SECOND serif family — the card / column / drawer-section title)": { "fontWeight": "500, or 600 when strong={600}", "sizes": { "15": { "fontSize": "--t-15", "lineHeight": "22px", "letterSpacing": "-.01em" }, "15.5 (default)": { "fontSize": "--t-15-5", "lineHeight": "23px", "letterSpacing": "-.01em" }, "16": { "fontSize": "--t-16", "lineHeight": "24px", "letterSpacing": "-.01em" }, "17": { "fontSize": "--t-17", "lineHeight": "25px", "letterSpacing": "-.015em" }, "18": { "fontSize": "--t-18", "lineHeight": "27px", "letterSpacing": "-.015em" }, "19": { "fontSize": "--t-19", "lineHeight": "26px", "letterSpacing": "-.015em" } } }
+      },
+      "line_height_rule_quoted": "Its line-height is **pinned to a whole pixel per size**… Left unset these titles inherited preflight's 1.5, so 15/15.5/17/19 landed on 22.5/23.25/25.5/28.5 and every card that holds one measured x.5 — the height Chrome rounds a 1px border away from. 19 takes 26 so the two 19s (400- and 500-weight) share a box.",
+      "sanctioned_exceptions_quoted": "A card that has to hold a *different* integer height still passes its own line-height in `style`, with the reason at the call site: the cover-letter row (22) and the Feed's two-line title block (1.15) are the two that do.",
+      "paint": { "fontFamily": "--font-display", "color": "--heading-ink" },
+      "states": "none"
+    },
+
+    "PageTitle": {
+      "source": "ui.jsx:1277-1284",
+      "element": "<h1>",
+      "type": { "fontFamily": "--font-display", "fontSize": "--t-30", "fontWeight": 400, "lineHeight": 1, "letterSpacing": "-.02em" },
+      "paint": { "color": "--heading-ink" },
+      "geometry": { "margin": 0 },
+      "states": "none"
+    },
+
+    "HeaderRow": {
+      "source": "ui.jsx:1128-1150",
+      "element": "div, or <header> when as=\"header\" ('a screen title deserves its element')",
+      "padding_variants": { "modal (default)": "16px 22px 13px", "screen": "22px 30px 16px", "compact": "15px 22px 12px", "pad prop": "the escape hatch for heads whose gutter is set by the pane they sit in (a toolbar inset to a list's 24/30px rails, the PDF preview strip)" },
+      "line_variants": { "line (default)": "1px solid --head-line", "soft": "1px solid --head-line-soft", "strong": "1px solid --head-line-strong", "none": "no border at all — the screen head whose filter bar draws the only line under the title block" },
+      "background_variants": { "unset (default)": "transparent", "surface": "--head-bg", "page": "--head-bg-page", "recessed": "--head-bg-recessed" },
+      "geometry": { "display": "flex", "alignItems": "the `align` prop, default 'flex-start'", "gap": 12, "flex": "0 0 auto", "height": "content-driven unless the `height` prop is given" },
+      "composition": "`id` is a zero-pixel passthrough (the Feed's sticky head is measured by id); `...rest` forwards anything else",
+      "states": "none"
+    },
+
+    "TableHead": {
+      "source": "ui.jsx:1158-1170",
+      "element": "div — deliberately no role: 'these strips are flex boxes, not rows of a role=\"table\", and an orphan row role is worse than none'",
+      "geometry": { "height": "the `height` prop, default 28", "padding": "the `pad` prop, default '0 22px'", "display": "flex alignItems center", "flex": "0 0 auto", "borderBottom": "1px solid --head-line-strong, or --head-line-soft when `soft`", "borderTop": "1px solid --head-line-soft when `top`" },
+      "type": { "fontSize": "--t-9-5", "lineHeight": "14px", "letterSpacing": ".11em", "textTransform": "uppercase" },
+      "paint": { "background": "--bg (a PALETTE token read directly by the primitive)", "color": "--label-ink" },
+      "states": "none"
+    },
+
+    "Rule": {
+      "source": "ui.jsx:1177-1186",
+      "element": "span, aria-hidden, display block",
+      "variants": { "soft (default)": "--head-line-soft", "line": "--head-line", "strong": "--head-line-strong" },
+      "geometry": { "horizontal": "height 1", "vertical": "flex 0 0 auto, width 1, height = the `length` prop ?? 14" },
+      "states": "none"
+    },
+
+    "Surface": {
+      "source": "ui.jsx:1192-1204",
+      "element": "div, or <section> when as=\"section\"",
+      "paint": { "background": "--surface-2 (a PALETTE token read directly by the primitive)" },
+      "radius_variants": { "card (default)": "--radius-card", "none": "undefined — the full-bleed pane form (the PDF preview column)", "field": "--radius-field", "row": "--radius-row", "menu": "--radius-menu" },
+      "geometry": { "padding": "the `pad` prop, unset by default", "border": "none" },
+      "composition": "`...rest` forwards any DOM prop",
+      "states": "none"
+    },
+
+    "ModalPanel": {
+      "source": "ui.jsx:1074-1096",
+      "scrim": { "element": "div", "position": "fixed, inset 0", "background": "--scrim-bg", "layout": "flex, alignItems center, justifyContent center", "zIndex": "the `zIndex` prop, default 70", "click": "calls onClose", "scrimProps": "extra attributes for the two GLOBAL overlays that mount outside the v2 shell (className=\"jn-v2\" + data-theme), because they must bring the theme with them", "scrimStyle": "merged last" },
+      "panel": { "element": "div, or <form> when as=\"form\" (LoginModal — Enter-in-the-field must submit)", "width": "the `width` prop, default 480 (screens also pass strings: 'min(920px, 94vw)', 'min(1020px, 94vw)')", "background": "--modal-bg", "border": "1px solid --modal-border", "radius": "--radius-modal", "boxShadow": "--modal-shadow", "layout": "flex column, minHeight 0", "click": "stopPropagation, so a click inside never reaches the scrim" },
+      "behaviour": { "escape": "useEscape(onClose, escape && !!onClose) — a panel with no onClose (sign-in) takes no listener at all, 'rather than one that swallows the key and does nothing'. `escape={false}` is for a screen that already owns Escape for its whole modal set and guards it (Applications, Settings).", "pixel_snap": "useSnapTop(panelRef) — measures the panel's natural top after layout and applies translateY(round(top) - top) so every 1px border inside lands on a device row. Re-runs after every render and on resize.", "focus": "unspecified — no focus trap, no initial focus, no focus restore", "scroll_lock": "unspecified — the body is not locked" },
+      "accessibility": { "role": "dialog", "aria-modal": "true", "aria-labelledby": "the `labelledBy` prop (ChoiceModal wires it to its Heading's id)" }
+    },
+
+    "Drawer": {
+      "source": "ui.jsx:1099-1112",
+      "positioning": "against its PANE, not the viewport — 'the rail stays reachable while a company is open', so the scrim is `position: absolute` too",
+      "scrim": { "position": "absolute, inset 0", "background": "--scrim-bg", "zIndex": 29, "click": "onClose" },
+      "panel": { "position": "absolute, right 0, top 0, bottom 0", "width": "the `width` prop, default 720", "background": "--drawer-bg", "borderLeft": "1px solid --drawer-border", "boxShadow": "--drawer-shadow", "layout": "flex column", "zIndex": 30 },
+      "behaviour": { "escape": "useEscape(onClose) — always active, no opt-out", "motion": "unspecified — the drawer does not slide; it appears", "focus": "unspecified — no trap, no initial focus, no restore" },
+      "accessibility": { "role": "dialog", "aria-modal": "true", "aria-labelledby": "the `labelledBy` prop" }
+    },
+
+    "ChoiceCard": {
+      "source": "ui.jsx:1322-1343",
+      "element": "div role=\"radio\"",
+      "geometry": { "flex": "1, minWidth 0", "padding": "9px 11px", "border": "1px solid --choice-border (on → --choice-on-border)", "radius": "--radius-cell", "layout": "flex column, gap 2" },
+      "paint": { "background": "--choice-bg (transparent) → --choice-on-bg when on", "label_color": "--choice-ink → --choice-on-ink when on" },
+      "label_type": { "fontSize": "--t-12-5", "lineHeight": "18px", "fontWeight": 500 },
+      "hint": "<Helper size=\"xs\" style={{ textWrap: 'pretty' }}>",
+      "states": { "hover": ".v2-act:hover — border-color --card-border-hover, background --card-bg-hover (note: NOT the choice tokens)", "selected_on": "the on-trio above + aria-checked", "disabled": "opacity 0.45, cursor default, v2-act dropped, aria-disabled", "focus_visible": "keyboard ring", "active": "unspecified" },
+      "motion": "none"
+    },
+
+    "ChoiceRow": {
+      "source": "ui.jsx:1346-1389",
+      "element": "div role=\"radio\"",
+      "geometry": { "display": "flex alignItems center", "gap": 9, "padding": "8px 11px", "border": "1px solid --choice-border (on → --choice-on-border)", "radius": "--radius-cell" },
+      "disc": { "outer": "14×14, radius --radius-control, border 1px solid --choice-border (on → --choice-on-border), flex centred, aria-hidden", "inner": "7×7, radius --radius-control, background --choice-on-border when on, else transparent" },
+      "label_type": { "fontSize": "--t-12-5", "lineHeight": "18px", "fontWeight": 500, "color": "unspecified — inherited from the panel; ChoiceCard sets --choice-ink/--choice-on-ink here and ChoiceRow does not", "truncation": "nowrap + overflow hidden + ellipsis" },
+      "slots": { "children": "replaces the label/sub pair for a body that is not two lines of text", "sub": "<Helper size=\"xs\"> with ellipsis", "hint": "<Helper size=\"xs\"> at flex 0 0 auto", "trail": "whatever sits right of the hint (a score, an '✦ exists' mark)" },
+      "states": "identical to ChoiceCard (v2-act hover, opacity 0.45 disabled, aria-checked, keyboard ring)",
+      "note": "The disc here is hand-drawn from --choice-* tokens — it is NOT the `Radio` primitive, which uses --check-* tokens and a ● glyph."
+    },
+
+    "ChoiceModal": {
+      "source": "ui.jsx:1393-1424",
+      "shell": "ModalPanel with style {{ overflow: 'hidden' }}",
+      "geometry_quoted": "The geometry below IS the Re-tailor modal's, to the pixel — 480 panel · modal head (16/22/13) · body 14/22 on a 460 cap · footer 12/22 over a --modal-border rule.",
+      "width": "the `width` prop, default 480",
+      "zIndex": "the `zIndex` prop, default 60",
+      "head": "<HeaderRow align=\"stretch\" style={{ flexDirection:'column', gap:3 }}> with <Heading id={labelledBy}> (display 18) and an optional <Helper> sub; `subClamp` truncates the sub to one line. HeaderRow's `modal` padding (16px 22px 13px) and --head-line rule apply.",
+      "body": { "class": "v2-scroll", "padding": "14px 22px", "layout": "flex column", "gap": "the `bodyGap` prop, default 13 ('the one dimension the two résumé modals already disagreed on — Re-tailor 13, Tailor 12')", "maxHeight": "the `bodyMax` prop, default 460", "overflow": "auto" },
+      "footer": { "padding": "12px 22px", "borderTop": "1px solid --modal-border", "layout": "flex alignItems center, gap 9", "note_column": "flex column gap 1, minWidth 0 — 'a fragment of Helpers, not a string'", "buttons": "Cancel = Button variant=\"secondary\" size=\"sm\" with marginLeft auto; then the action = Button size=\"sm\" with variant/busy/disabled from props. Cancel is ALWAYS left of the action." },
+      "button_order": "note (left) … Cancel … action (right)",
+      "disabled_action_quoted": "RES-17: a disabled primary is --line on --muted (Button's own `off` look)"
+    },
+
+    "RemoveLink": {
+      "source": "ui.jsx:1029-1032",
+      "element": "span",
+      "type": { "fontSize": "--t-11-5", "lineHeight": "17px", "whiteSpace": "nowrap" },
+      "paint": { "color": "--helper-ink", "hover": "class 'v2-hover-bad v2-hover-bad-text' → background --hover-bad-bg + color --hover-bad-ink, both !important" },
+      "default_children": "'Remove'",
+      "geometry": { "padding": "none — the hover wash has no padding and no radius" },
+      "states": { "disabled": "unspecified — no prop", "focus_visible": "keyboard ring", "active": "unspecified" },
+      "props": "onClick, children only — no style, no className",
+      "note": "Re-exported from ResumeSections.jsx so existing imports are untouched."
+    },
+
+    "RemoveX": {
+      "source": "ui.jsx:1033-1036",
+      "element": "span",
+      "glyph": "✕",
+      "type": { "fontSize": "the `size` prop, default 11 — a RAW px number, outside the --t-* scale", "lineHeight": "the `lh` prop, undefined by default" },
+      "paint": { "color": "--helper-ink", "hover": "'v2-hover-bad v2-hover-bad-text' — same as RemoveLink" },
+      "geometry": { "flex": "0 0 auto", "padding": "none" },
+      "accessibility": { "title": "prop, default 'Remove'", "aria-label": "= title", "role": "button via act()" },
+      "props": "onClick, title, size, lh only — no style, no className"
+    },
+
+    "MoveArrows": {
+      "source": "ui.jsx:1041-1055",
+      "element": "span column of two arrow spans",
+      "glyphs": "▲ (Move up) / ▼ (Move down)",
+      "geometry": { "display": "flex column", "gap": 1, "flex": "0 0 auto" },
+      "type": { "fontSize": "8 — a RAW px number, outside the --t-* scale" },
+      "paint": { "color": "--helper-ink", "hover": "each arrow carries `v2-navlink` → background --navlink-hover-bg, color --navlink-hover-ink, with transition background .12s, color .12s" },
+      "states": { "off (upOff / downOff)": "opacity 0.35, cursor default, v2-navlink dropped, aria-disabled — 'the cover-letter editor's contact rows need that, the résumé's never do'", "focus_visible": "keyboard ring per arrow" },
+      "accessibility": { "title": "'Move up' / 'Move down'", "role": "button per arrow via act()", "min_hit_size": "an 8px glyph — the smallest hit target in the layer" }
+    },
+
+    "ToastCard": {
+      "source": "ui.jsx:975-990",
+      "element": "div",
+      "kinds": {
+        "progress (default)": { "background": "--toast-progress-bg", "border": "--toast-progress-line", "color": "--toast-progress-ink" },
+        "success": { "background": "--toast-ok-bg", "border": "--toast-ok-line", "color": "--toast-ok-ink" },
+        "error": { "background": "--toast-bad-bg", "border": "--toast-bad-line", "color": "--toast-bad-ink" },
+        "undo": { "background": "--toast-undo-bg", "border": "--toast-undo-line", "color": "--toast-undo-ink" }
+      },
+      "geometry": { "display": "flex alignItems center", "gap": 10, "maxWidth": 380, "padding": "10px 13px", "border": "1px solid <kind line>", "radius": "--radius-card", "boxShadow": "--shadow-toast" },
+      "states": "none — the enter/leave animation is Toast.jsx's, passed in `style`"
+    }
+  },
+
+  "toasts": {
+    "source": "frontend/src/v2/Toast.jsx (card box in ui.jsx ToastCard)",
+    "kinds": {
+      "progress": { "ttl_ms": 4000, "spins": true, "mark": null, "description_quoted": "quiet paper card + spinner. Ambient status, not news.", "spinner": "<Spinner size={11} color=\"currentColor\" />, suppressed by `spin: false` on the toast (DS-B-02: a progress card is also the quiet ground for a neutral *result*, which must not keep spinning)" },
+      "success": { "ttl_ms": 4000, "spins": false, "mark": "✓", "markBg": "var(--accent)", "description_quoted": "green tint, solid ✓ roundel. The only green toast." },
+      "error": { "ttl_ms": null, "spins": false, "mark": "!", "markBg": "var(--bad)", "description_quoted": "red tint, ! roundel. Stays until dismissed: a failure that evaporates before you read it may as well not exist." },
+      "undo": { "ttl_ms": 5000, "spins": false, "mark": null, "description_quoted": "the one dark toast. Dark means \"still actionable\", which is why progress must NOT be dark." }
+    },
+    "ttl_band_quoted": "RES-25: 2.5 s was not long enough to read a success toast, let alone act on the \"Open ↗\" it carries. One 3–5 s band across the app: 4 s for the two that only report, 5 s for undo (which asks for a decision), errors until dismissed.",
+    "ttl_override": "`t.ttl` on the pushed toast overrides the table (including 0/null for sticky)",
+    "max_stack": 3,
+    "stack_overflow_behaviour": "`setToasts((p) => [...p.slice(-(MAX - 1)), next])` — the oldest is dropped immediately, without a leave animation",
+    "position": "fixed, right 16, bottom 16, zIndex 80, flex column, gap 8, alignItems flex-end — 'newest at the bottom'",
+    "mark_roundel": { "size": "16×16", "radius": "--radius-control", "background": "the kind's markBg", "color": "--accent-ink", "fontSize": "9.5 (a raw number)", "lineHeight": 1, "flex_centred": true, "marked_ui_keep": "// ui: keep — a 16px filled glyph badge (✓ / ✕ on the toast tint), not a status dot: Dot draws a bare tone disc with no glyph" },
+    "message": { "fontSize": "12.5 (a raw number, not --t-12-5)", "lineHeight": 1.45, "minWidth": 0 },
+    "action_slot": { "prop": "`action` or `actionLabel`", "style": "fontSize 12 (raw), fontWeight 600, cursor pointer, borderBottom '1px dotted currentColor', color = --rail-accent for the `undo` kind and `inherit` otherwise", "behaviour": "fires t.onAction() then closes the toast", "accessibility": "unspecified — a bare span, no role, no tab stop, no keyboard handler" },
+    "dismiss": { "control": "a trailing ✕ span, fontSize 11 (raw), opacity 0.55, cursor pointer", "reason_quoted": "the design gives each kind its own dimmed ✕; a tint of the ink is the same thing and survives dark mode without four more tokens", "accessibility": "unspecified — no role, no aria-label, no tab stop" },
+    "motion": { "enter": "opacity 0→1 and translateY(10px)→0 over 'opacity 250ms ease, transform 250ms ease', started on the first requestAnimationFrame after mount", "leave": "the same transition backwards; the node is removed 260ms after `dismiss` is called", "reduced_motion": "not covered" },
+    "cross_screen": { "flash": "setFlashToast(t) writes to sessionStorage key `jobnavigator_v2_flash`; useFlashToast(push) reads and clears it once on mount — 'a toast pushed immediately before navigate() dies with the screen that pushed it'" },
+    "aria": "unspecified — the stack has no role=\"status\"/\"alert\", no aria-live region"
+  },
+
+  "dialogs": {
+    "ConfirmDialog": {
+      "source": "frontend/src/v2/ConfirmDialog.jsx:10-25",
+      "shell": "ModalPanel width={400} onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}",
+      "width": 400,
+      "zIndex": "70 — ModalPanel's default, chosen so 'a confirm raised from inside a drawer (z 30) or another modal still lands on top — it mounts last in the tree, and equal z-index resolves in DOM order'",
+      "scrim": "--scrim-bg, click cancels",
+      "escape": "cancels (ModalPanel's useEscape)",
+      "header": "<Heading size={19}> — the display serif at --t-19 / 26px, no HeaderRow, no rule",
+      "body": "an optional span: fontSize 12.5 (raw), lineHeight '18px', color var(--muted) (a palette token)",
+      "footer": "a flex row, justifyContent flex-end, gap 8, marginTop 10 — no rule, no separate padding",
+      "button_order": "Cancel (secondary, sm) then the confirm (danger when `danger`, else primary; sm)",
+      "autofocus": "deliberately none — 'the confirm side never auto-focuses, so Enter can't destroy anything by reflex'",
+      "aria": "role=\"dialog\" aria-modal=\"true\" from ModalPanel; aria-labelledby is NOT wired (the Heading has no id)"
+    },
+    "PromptDialog": {
+      "source": "frontend/src/v2/ConfirmDialog.jsx:31-51",
+      "shell": "ModalPanel width={440} onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}",
+      "width": 440,
+      "zIndex": 70,
+      "header": "<Heading size={19}>",
+      "body": "the same span as ConfirmDialog (12.5 / 18px / --muted)",
+      "field": "<Input autoFocus mono={mono} readOnly={readOnly} ariaLabel={title} style={{ marginTop: 4 }}>; Enter submits (onKeyDown preventDefault + onSubmit); a readOnly field selects all on focus",
+      "footer": "flex alignItems center, gap 8, marginTop 10",
+      "button_order": {
+        "editable": "Cancel (secondary, sm, marginLeft auto) then OK (primary, sm)",
+        "readOnly reveal-and-copy": "'⧉ Copy' / 'Copied ✓' (secondary, sm) on the left, then Done/label (primary, sm) with marginLeft auto"
+      },
+      "clipboard": "navigator.clipboard.writeText in a try/catch — 'silent: clipboard blocked — the value is selectable in the field'",
+      "aria": "role=\"dialog\" aria-modal=\"true\"; aria-labelledby not wired"
+    },
+    "ModalPanel": "see primitives.ModalPanel — scrim --scrim-bg at zIndex 70 (prop), panel --modal-bg / 1px --modal-border / --radius-modal / --modal-shadow, Escape + scrim click, useSnapTop pixel correction, no focus trap",
+    "ChoiceModal": "see primitives.ChoiceModal — 480 panel at zIndex 60, HeaderRow `modal` head with a --head-line rule, v2-scroll body 14/22 capped at 460, footer 12/22 over a 1px --modal-border rule, note … Cancel … action",
+    "Drawer": "see primitives.Drawer — pane-relative, scrim zIndex 29, panel zIndex 30, Escape always on",
+    "scrim_token": "--scrim-bg → --scrim: light rgba(20,19,15,.42) · dark rgba(0,0,0,.58) · alt light rgba(17,20,27,.46)",
+    "global_overlays": {
+      "LoginModal": "ModalPanel as=\"form\" width={360} zIndex={9999} — mounts outside the v2 shell, so it passes `scrimProps` (className=\"jn-v2\" + data-theme) to bring the theme with it, and takes no Escape (there is nowhere to go)",
+      "WelcomeModal": "ModalPanel width={420} zIndex={9998}"
+    }
+  },
+
+  "known_exceptions": {
+    "_method": "Two sweeps across frontend/src/v2/*.jsx (excluding ui.jsx). (a) every `ui: keep` marker — a role the primitive layer deliberately does NOT cover, each with the reason written at the site. (b) every `style={{…}}` passed INTO a primitive that sets geometry or colour (height, minHeight/maxHeight, padding, border*, radius, background, color, boxShadow, fontSize/Weight/Family, lineHeight, letterSpacing, textTransform, opacity). Pure-layout overrides (margin, flex, gap, position, zIndex, overflow, minWidth:0, textAlign, cursor) are not exceptions and are not listed.",
+
+    "ui_keep_markers": {
+      "total": 172,
+      "per_file": {
+        "JobFeed.jsx": 37, "Settings.jsx": 20, "Companies.jsx": 18, "Stats.jsx": 17,
+        "Applications.jsx": 15, "ResumeEditor.jsx": 10, "Resumes.jsx": 10, "ResumeSections.jsx": 8,
+        "Searches.jsx": 7, "CoverLetterEditor.jsx": 6, "Persona.jsx": 6, "CoverLetters.jsx": 4,
+        "LoginModal.jsx": 4, "V2App.jsx": 4, "WelcomeModal.jsx": 4, "Toast.jsx": 2,
+        "ConfirmDialog.jsx": 0
+      },
+      "recurring_categories": {
+        "modal_and_drawer_FOOTER_bar": {
+          "count": 11,
+          "shape": "padding '11px 22px' | '12px 22px' | '12px 24px' | '14px 24px 18px', borderTop 1px solid --line (or --line-soft), background --bg (ResumeEditor uses --surface-2)",
+          "reason_quoted": "a modal *footer* bar: its rule is on top and its ground is the recessed tint; HeaderRow draws its rule beneath",
+          "sites": ["Applications.jsx:714", "Applications.jsx:842", "Companies.jsx:778", "Companies.jsx:884", "Companies.jsx:1012", "CoverLetterEditor.jsx:588", "JobFeed.jsx:1539", "JobFeed.jsx:1596", "ResumeEditor.jsx:928", "Searches.jsx:882", "Settings.jsx:936", "WelcomeModal.jsx:63"],
+          "gap": "there is no `FooterRow` primitive — HeaderRow's rule is always beneath"
+        },
+        "Tag_role_drawn_by_hand": {
+          "count": 12,
+          "shape": "uppercase badge, r99, a background + ink pair, at 9.5 or 10px with .06em/.08em/.1em and padding 1px 5px | 1px 7px | 2px 7px | 3px 8px — always OFF Tag's own 10 / .06em / 2px 8px box",
+          "sites": ["Applications.jsx:585", "Companies.jsx:498", "Companies.jsx:843", "Companies.jsx:999", "JobFeed.jsx:1109", "JobFeed.jsx:1332", "JobFeed.jsx:1334", "ResumeEditor.jsx:532", "ResumeEditor.jsx:907", "Resumes.jsx:183", "Resumes.jsx:202", "Searches.jsx:812", "Searches.jsx:867", "Settings.jsx:619"],
+          "gap": "Tag has one fixed box (10 / 15px / .06em / 2px 8px) and five tones. Every other badge size, tracking, mono face or bordered form is drawn by hand."
+        },
+        "mono_text_role": {
+          "count": 12,
+          "shape": "fontFamily --mono at 9.5 / 10 / 10.5 / 11 / 11.5, ink --edge, --text-2, --text, --accent or a score colour",
+          "sites": ["Applications.jsx:425", "Companies.jsx:996", "CoverLetters.jsx:386", "JobFeed.jsx:1082", "ResumeEditor.jsx:850", "Resumes.jsx:187", "Resumes.jsx:243", "Resumes.jsx:292", "Settings.jsx:690", "Settings.jsx:1063", "Settings.jsx:1083", "Stats.jsx:103 (the shared MONO const)"],
+          "gap": "there is no `Mono` / `Code` primitive. Helper's `mono` prop covers only --helper-ink at 11.5 or 10.5."
+        },
+        "serif_sizes_outside_the_Heading_scale": {
+          "count": 8,
+          "sizes_used": [12, 15, 17, 20, 21, 23, 26, 27],
+          "sites": ["Applications.jsx:518 (serif 23/26px detail title)", "Companies.jsx:665 (serif 20 drawer title)", "JobFeed.jsx:1196 (serif 26↔17 collapsing title, -.025em)", "JobFeed.jsx:1305 (serif 15 breakdown numeral + nested sans 11 unit)", "LoginModal.jsx:63 (serif 23/28px wordmark)", "Resumes.jsx:222 and :269 (serif 17 score numeral + nested sans-10 unit)", "Settings.jsx:550 (serif 12 wordmark)", "Stats.jsx:490 (serif 27/30px KPI numeral)", "Stats.jsx:623 (serif 23/28px figure)", "WelcomeModal.jsx:38 (serif 21/26px title)"],
+          "gap": "Heading offers 18/19/22 at weight 400 and 15/15.5/16/17/18/19 at 500-600. 12, 20, 21, 23, 26, 27 and 30-in-a-span are not in either table, and there is no `unit` slot for a nested sans figure inside a serif numeral."
+        },
+        "glyph_badge_role": {
+          "count": 9,
+          "shape": "a small round filled or bordered box holding one glyph — 15px 'i', 15px ✓, 16px ✓/!/?, 16px count, 22px step number, 34px ✓",
+          "sites": ["JobFeed.jsx:1013 (16px ? badge)", "JobFeed.jsx:1082 (16px min-width count badge)", "JobFeed.jsx:1099 (16px selected ✓ on the score disc, border 2px --surface)", "LoginModal.jsx:55 (34px ✓ badge)", "Persona.jsx:138 (15px checkbox indicator)", "Settings.jsx:733 (15px italic-serif i)", "Stats.jsx:467 (16px ! in the error band)", "Toast.jsx:71 (16px ✓/! toast roundel)", "WelcomeModal.jsx:51 (22px mono step number)"],
+          "gap": "Dot draws a bare tone disc with no glyph; IconButton's smallest box is 26 and is a control."
+        },
+        "the_25px_Run_Test_pill_family": {
+          "count": 6,
+          "shape": "height 25, padding '0 9px'|'0 10px'|'0 11px', r99, 1px --edge on --surface, fontSize 11.5, plus a 25×25 ⋯ twin",
+          "sites": ["Companies.jsx:540", "Companies.jsx:548", "Companies.jsx:553", "Searches.jsx:659", "Searches.jsx:666", "Searches.jsx:674", "Stats.jsx:690"],
+          "reason_quoted": "25px Run/Test pills sized to the 46px row; Pill sm is 26",
+          "gap": "Pill has md 31 and sm 26 — no 25. IconButton's bordered look is 36 — no 25."
+        },
+        "the_24px_PDF_toolbar_trigger": {
+          "count": 4,
+          "shape": "height 24, padding '0 8px', 1px --edge, --radius-field, fontSize 11.5 + a 9px ▾",
+          "sites": ["CoverLetterEditor.jsx:518", "CoverLetterEditor.jsx:534", "ResumeEditor.jsx:670", "ResumeEditor.jsx:682"],
+          "reason_quoted": "a 24px PDF-toolbar dropdown trigger (h24 · pad 0 8 · r6 · 11.5); Select's box is 32",
+          "logged_drift": "the cover-letter editor uses `v2-bd v2-ctl` and the résumé editor uses `v2-act` for the same control — 'the two hovers are a logged needs-decision, not a licence to add a third' (ResumeEditor.jsx:670)"
+        },
+        "v2_fieldwrap_composites": {
+          "count": 9,
+          "shape": "a bordered box that holds a BARE <input> plus adornments (⌕ glyph, show/hide toggle, ✕, an error tint), with `.v2-fieldwrap:focus-within` carrying the focus signal instead of the input",
+          "sites": ["Applications.jsx:352 (h32, r99 search)", "LoginModal.jsx:73 (API key + show/hide + --bad error)", "Settings.jsx:85 (the BOX value row)", "Settings.jsx:488 (h32 r99 settings search)", "Settings.jsx:788 (secret show/hide)", "Settings.jsx:843 (120px PIN)", "Settings.jsx:1037 (model typeahead)", "Stats.jsx:731 (h26 transparent log search)", "ResumeSections.jsx:368/372 (h29 field box + bare input + ✦/added/↩)"],
+          "gap": "Input draws its own box, so it cannot render a composite. SearchInput's boxed variant is h32 on --search-bg only."
+        },
+        "prose_rows_and_bare_textareas": {
+          "count": 7,
+          "shape": "a textarea or input with border none, background transparent, resize none, autosizing — the parent row supplies the box",
+          "sites": ["CoverLetterEditor.jsx:488 (¶ paragraph)", "ResumeSections.jsx:100 (BulletText)", "ResumeSections.jsx:276", "ResumeSections.jsx:288", "ResumeSections.jsx:318", "ResumeSections.jsx:372", "ResumeSections.jsx:445"],
+          "reason_quoted": "a bullet is flowing text, not a field: no border, no background, no padding, resize:none + overflow:hidden for the autosize, and the row around it supplies the box. Textarea would have to be overridden away entirely."
+        },
+        "table_BODY_rows": {
+          "count": 6,
+          "shape": "flex row, fixed height 32/34/38, padding '0 20px'|'0 22px', borderBottom 1px --line-soft",
+          "sites": ["Companies.jsx:994", "JobFeed.jsx:1363", "Searches.jsx:843", "Settings.jsx:719", "Stats.jsx:672", "Stats.jsx:753", "Stats.jsx:776"],
+          "reason_quoted": "a table body row, not a head: its rule is the row divider",
+          "gap": "Row is 46px with a --row-line divider and a hover; these are 32-38px, dividerless-hover rows"
+        },
+        "native_anchors_that_must_stay_anchors": {
+          "count": 5,
+          "sites": ["Applications.jsx:534 (three ACT_BTN header actions, two of them <a>)", "JobFeed.jsx:1209 (Open ↗, h36↔30)", "JobFeed.jsx:1466 (Open in new tab ↗, h34)", "ResumeEditor.jsx:690 (↓ Download PDF, h29 accent)", "MenuItem's own `href` form (ui.jsx:571) is the one primitive that solves this"],
+          "reason_quoted": "native <a href target=_blank> download link; Button renders a div and would drop the anchor",
+          "gap": "Button has `as=\"button\"` but no `as=\"a\"` / `href`"
+        },
+        "on_rail_controls": {
+          "count": 6,
+          "shape": "controls drawn on the dark --rail ground: --rail-ink on a 1px --on-rail-line hairline, with the v2-navdark / v2-themebtn / v2-rail-* hovers",
+          "sites": ["JobFeed.jsx:72 (the RAIL_BTN const)", "JobFeed.jsx:1034 (the floating pill-shaped bar on --rail with --shadow-pop)", "JobFeed.jsx:1040", "JobFeed.jsx:1042", "V2App.jsx:187 (rail hairline on --rail-line)", "V2App.jsx:252 (rail theme toggle)"],
+          "reason_quoted": "Pill and Button paint for light surfaces, so these keep their own look",
+          "gap": "no primitive has an on-dark variant; the rail palette (--rail, --rail-ink, --rail-text, --rail-dim, --rail-accent, --rail-line, --on-rail-*) has no semantic wrappers at all"
+        },
+        "quiet_inline_actions": {
+          "count": 5,
+          "shape": "a clickable span at --muted 11 / 12.5 at weight 400 that must run inline inside a sentence",
+          "sites": ["Applications.jsx:389 (Sort trigger)", "Companies.jsx:688 (Acknowledge)", "JobFeed.jsx:993 (Sort trigger)", "JobFeed.jsx:1054 (Try again inside a 13px sentence)", "Searches.jsx:629 (Acknowledge)"],
+          "reason_quoted": "muted 11 inline action, not the Link signature (accent 11.5/500); its 17px line-height is the card's row rhythm"
+        },
+        "one_off_composites": {
+          "CoverLetters.jsx:28 + :70": "a two-line Select/Picker (label over `sub`) that also claims Escape — 'ui.jsx's Select renders single-line [value, label] rows'",
+          "Settings.jsx:1055": "typeahead rows whose highlight is keyboard-driven, so a row turns its own v2-menuitem hover OFF when highlighted and needs onMouseEnter/onMouseDown — 'MenuItem owns its hover class and takes neither'",
+          "JobFeed.jsx:1163 + :1170": "the 12px grab-strip and its 52×4 handle — 'not a Pill (no text, no padding, no border) and not a Rule (which draws a 1px line token)'",
+          "JobFeed.jsx:1245 + :1252": "the report BAND header — 'its caret is a fixed 19px gutter aligned to the row rail, it carries a 34px score ring and résumé tabs… which SectionHead's 12.5/18px type box would restyle'",
+          "JobFeed.jsx:1350": "a two-cell segmented filter track with ONE shared border run and overflow hidden — predates Segmented's `inset` variant",
+          "JobFeed.jsx:1527 + :1570": "selectable choice cards with a radio / tick slot at fontSize 13.5 — predate ChoiceCard/ChoiceRow",
+          "JobFeed.jsx:1096": "an 8.5px dashed uppercase micro-badge filling the 34px score slot",
+          "JobFeed.jsx:1188": "a bare 19×26 caret cell with no label — 'there is no head row for SectionHead to draw'",
+          "JobFeed.jsx:1211 + :1214": "header actions whose height tracks the collapsing detail header (36↔30) — 'Button's sizes are fixed'",
+          "Persona.jsx:424 + :437": "the amber Q&A card — 'the only amber-tinted card in v2… Card renders --card-bg/--card-border and has no tone variant'",
+          "Applications.jsx:64": "the ACT_BTN const — h30 · 13 · pad 0 14, where 'Pill md is 31/12.5/pad 0 15'",
+          "Applications.jsx:588": "a ✕ with a padded, rounded hover box — 'RemoveX draws no box'",
+          "Companies.jsx:440 + :445 + :780": "accent-ink and --warn-ink actions — 'Pill has no tinted variant'",
+          "ResumeEditor.jsx:912": "a control whose border+ink swing --accent/--warn with state — 'Pill has no tinted variant'",
+          "Settings.jsx:23": "the BOX const — 'ui.jsx's Select trigger, to the pixel… Change this only alongside Select in ui.jsx' (note: BOX paints --surface, whereas Select now paints --input-bg — the two have drifted)",
+          "Settings.jsx:505": "the settings anchor rail — h29 nav rows with a 3px accent border-left selected state",
+          "Settings.jsx:1087": "a 22×22 bordered × with the SET-15 --bad border+glyph hover",
+          "Stats.jsx:94 + :99 + :103": "the surviving TITLE / COL / MONO consts — COL is a TableHead at h22 / 9px, below the role's 9.5",
+          "Persona.jsx:578 + Resumes.jsx:375": "hidden <input type=\"file\">",
+          "LoginModal.jsx:79": "a show/hide toggle deliberately OUT of the tab order (tabIndex -1) — 'Link is a tab stop with role=\"link\"'",
+          "WelcomeModal.jsx:40": "the modal's own ✕ — muted 13 on the title's 26px line box; 'IconButton is a 26px round box'",
+          "Companies.jsx:975": "a band head at --accent weight 600 — 'Label is --label-ink at 400'",
+          "JobFeed.jsx:1377": "--bad 10/600 uppercase at .15em — 'neither the ink nor the weight Label carries'",
+          "JobFeed.jsx:1020": "a MenuHead at 10.5 / .12em with marginBottom 6, where MenuHead is 9.5 / .13em / pad 4 11 3"
+        }
+      }
+    },
+
+    "inline_geometry_or_colour_passed_into_a_primitive": {
+      "_note": "These are `style` overrides on the primitives themselves — the sites a new parameter would absorb. Layout-only overrides are excluded.",
+      "Card": {
+        "count": 23,
+        "keys": ["padding (dominant — `padding: 0`, `padding: 11`, `padding: '16px 20px'`)", "height (Stats' fixed-height chart cards: 230, 300)", "borderColor (accent / warn / archived)", "background", "lineHeight"],
+        "sites_first_12": ["Applications.jsx:580 (padding, borderColor, background)", "Applications.jsx:631 (borderColor, padding)", "CoverLetters.jsx:311 (padding, borderColor, background)", "JobFeed.jsx:1383 (padding, background --surface-2)", "Persona.jsx:406 (padding 0)", "ResumeSections.jsx:148 (padding 0)", "ResumeSections.jsx:249 (padding 0)", "ResumeSections.jsx:412 (padding 11)", "ResumeSections.jsx:436 (padding 11)", "ResumeSections.jsx:472 (padding 11)", "Resumes.jsx:182 (lineHeight 20px)", "Resumes.jsx:201 (lineHeight 20px)"],
+        "sites_remaining": ["Resumes.jsx:217", "Resumes.jsx:264", "Searches.jsx:580 (padding 0, borderColor --accent)", "Searches.jsx:615 (padding 0, borderColor --warn-line/--accent)", "Stats.jsx:480", "Stats.jsx:507 (height 230)", "Stats.jsx:559", "Stats.jsx:588", "Stats.jsx:606 (height 300)", "Stats.jsx:653", "Stats.jsx:706"],
+        "missing_parameter": "Card has no `pad` and no `tone` prop"
+      },
+      "Helper": {
+        "count": 29,
+        "keys": ["color (the dominant — --bad, --warn, --good, --accent, --text-2, --edge)", "padding (empty-state / footer helpers)", "borderBottom (dotted underline for a help affordance)"],
+        "sites_first_12": ["Applications.jsx:447 (color --edge)", "Applications.jsx:450 (color --warn)", "Companies.jsx:511 (color --text-2)", "Companies.jsx:519", "Companies.jsx:523", "Companies.jsx:742 (color --bad/--warn)", "Companies.jsx:771 (color --good)", "Companies.jsx:787 (color --bad)", "Companies.jsx:847 (color --warn)", "Companies.jsx:881 (paddingTop 2)", "CoverLetterEditor.jsx:357 (color --bad)", "CoverLetterEditor.jsx:590 (color --bad)"],
+        "sites_remaining": ["JobFeed.jsx:944 (padding)", "JobFeed.jsx:1154 (padding)", "JobFeed.jsx:1155 (padding)", "LoginModal.jsx:85 (color --bad)", "Persona.jsx:165 (borderBottom 1px dotted --line-strong)", "Persona.jsx:410 (color --accent)", "Searches.jsx:855 (color --bad)", "Settings.jsx:548 (padding)", "Settings.jsx:692 (color --warn)", "Settings.jsx:836 (color = a computed tone)", "Settings.jsx:938 (color --bad)", "Settings.jsx:1069 (padding, borderTop)", "Settings.jsx:1085 (color --accent)", "Stats.jsx:610 (borderBottom dotted)", "Stats.jsx:646 (padding)", "Stats.jsx:766 (padding)", "Stats.jsx:787 (padding)"],
+        "missing_parameter": "Helper has `size` and `mono` but NO tone/ink prop — the single largest source of inline colour in v2"
+      },
+      "ModalPanel": {
+        "count": 12,
+        "keys": ["padding", "maxHeight", "height"],
+        "sites": ["ConfirmDialog.jsx:16 (padding '22px 24px 18px')", "ConfirmDialog.jsx:36 (padding '22px 24px 18px')", "LoginModal.jsx:52 (padding '26px 26px 22px')", "Resumes.jsx:361 (padding 22)", "Companies.jsx:900 (padding 22)", "Companies.jsx:942 (maxHeight 660)", "Applications.jsx:703 (maxHeight 640)", "Searches.jsx:793 (maxHeight 660)", "Settings.jsx:925 (maxHeight 'min(1280px, 92vh)')", "Settings.jsx:1028 (maxHeight 620)", "ResumeEditor.jsx:883 (height 'min(760px, 90vh)')", "WelcomeModal.jsx:34 (scrimStyle padding 16)"],
+        "missing_parameter": "ModalPanel takes `width` and `zIndex` but no `pad` and no `maxHeight`"
+      },
+      "Menu": {
+        "count": 6,
+        "keys": ["maxHeight", "padding"],
+        "sites": ["JobFeed.jsx:124 (maxHeight 360)", "JobFeed.jsx:1019 (padding 10 — overrides Menu's own 5)", "Applications.jsx:368 (maxHeight 340)", "CoverLetters.jsx:68 via the POPOVER const at CoverLetters.jsx:24 (maxHeight 300)", "CoverLetterEditor.jsx:524 (maxHeight 300)", "ResumeEditor.jsx:675 (maxHeight 300)"],
+        "note": "`width` on ~10 further Menu sites is not counted — Menu has no intrinsic width"
+      },
+      "Band": {
+        "count": 8,
+        "keys": ["padding", "borderColor", "background", "fontSize", "color"],
+        "sites": ["CoverLetters.jsx:396 (padding, borderColor --accent, background --recessed)", "Persona.jsx:554 (padding 12)", "ResumeEditor.jsx:776 (padding 12)", "ResumeEditor.jsx:856 (padding 12)", "ResumeSections.jsx:130 (padding '16px 12px')", "Resumes.jsx:169 (padding, borderColor --bad, fontSize 12.5, color --muted)", "Resumes.jsx:180 (padding, fontSize 12.5, color --muted)", "Resumes.jsx:199 (padding, fontSize 12.5, color --muted)"],
+        "missing_parameter": "Band has no `pad` and no `tone`"
+      },
+      "SectionHead": {
+        "count": 6,
+        "keys": ["padding", "lineHeight", "borderRadius"],
+        "sites": ["Applications.jsx:422 (padding '12px 8px 5px', lineHeight 16px)", "CoverLetterEditor.jsx:34 (padding '10px 14px', borderRadius '9px 9px 0 0')", "Persona.jsx:407 (padding '11px 14px')", "Persona.jsx:430 (padding '11px 14px')", "ResumeSections.jsx:149 (padding '10px 14px')", "ResumeSections.jsx:254 (padding '9px 11px')"],
+        "note": "documented as intended — 'Its padding is layout and is passed in `style`' (ui.jsx:596). The top-corner-only radius at CoverLetterEditor.jsx:34 is not."
+      },
+      "Input": {
+        "count": 6,
+        "keys": ["width", "padding", "paddingLeft", "fontWeight"],
+        "sites": ["JobFeed.jsx:930 (width calc, paddingLeft 12)", "ResumeSections.jsx:213 (padding '0 6px')", "ResumeSections.jsx:404 (fontWeight 500)", "Searches.jsx:303 (width 110)", "CoverLetterEditor.jsx:435 (padding '0 6px')"],
+        "missing_parameter": "Input has no `width` and no `pad`"
+      },
+      "Textarea": {
+        "count": 4,
+        "keys": ["minHeight", "borderColor", "borderStyle"],
+        "sites": ["Applications.jsx:668 (minHeight 64)", "Applications.jsx:839 (minHeight 52)", "Settings.jsx:934 (minHeight 440, borderColor --bad on error)", "ResumeEditor.jsx:862 (borderStyle dashed)"],
+        "missing_parameter": "no error/invalid state; minHeight is derived from `rows` only"
+      },
+      "Label": { "count": 5, "keys": ["padding"], "sites": ["Companies.jsx:870 (paddingTop 8)", "JobFeed.jsx:1384 (paddingTop 2)", "Resumes.jsx:216 (padding '4px 2px 0')", "Resumes.jsx:257 (padding '4px 2px 0')", "Settings.jsx:504 (padding '14px 26px 6px 30px')"] },
+      "Link": {
+        "count": "4 colour/type + 7 `paddingTop: 2`",
+        "keys": ["fontSize", "fontWeight", "lineHeight", "color", "borderBottom", "paddingTop"],
+        "sites": ["Companies.jsx:1004 (fontSize 11, fontWeight 400, lineHeight inherit)", "Settings.jsx:558 (color --muted, fontSize inherit, lineHeight inherit, fontWeight 400)", "Settings.jsx:560 (same)", "Stats.jsx:473 (borderBottom 1px dotted currentColor)", "the shared paddingTop:2 idiom at Companies.jsx:578, Companies.jsx:585, Applications.jsx:462, Settings.jsx:464, Searches.jsx:715, Searches.jsx:722, CoverLetters.jsx:427"],
+        "missing_parameter": "Link has one fixed type step (11.5 / 500 / 17px); a link that must run inline inside a sentence has to override all of it — which is also why five sites (see `quiet_inline_actions` above) do not use Link at all"
+      },
+      "TableHead": { "count": 4, "keys": ["background: 'transparent'"], "sites": ["JobFeed.jsx:1359", "Stats.jsx:661", "Stats.jsx:746", "Stats.jsx:771"], "missing_parameter": "TableHead hard-codes `background: var(--bg)`; there is no `bg=\"none\"` option, so a strip inside a --surface card must clear it inline" },
+      "HeaderRow": { "count": 3, "keys": ["maxHeight", "fontSize", "color"], "sites": ["Companies.jsx:963 (maxHeight 280)", "ResumeEditor.jsx:618 (fontSize 12.5, color --text-2)", "Searches.jsx:804 (fontSize 11, color --text-2)"] },
+      "Dot": { "count": 3, "keys": ["background — defeating the `tone` prop"], "sites": ["Applications.jsx:423 (background st.dot)", "Applications.jsx:678 (background h.dot)", "Companies.jsx:507 (background h.dot)"], "note": "Segmented does the same internally for `dotColor` (ui.jsx:848). The --stage-* colours are outside DOT_TONE's five-name scale." },
+      "Chip": { "count": 3, "keys": ["color"], "sites": ["Resumes.jsx:236 (color --muted)", "Resumes.jsx:283 (color --muted, maxWidth 250)", "Resumes.jsx:241 / :290 set maxWidth only"] },
+      "Heading": { "count": 2, "keys": ["lineHeight", "color"], "sites": ["CoverLetters.jsx:316 (lineHeight 22px, color --text-2)", "JobFeed.jsx:1107 (lineHeight 1.15)"], "note": "both are the two sanctioned exceptions named in ui.jsx:1256-1257" },
+      "NavLink": { "count": 2, "keys": ["color", "height", "padding"], "sites": ["JobFeed.jsx:1283 (color --muted)", "V2App.jsx:224 (color --rail-ink/--rail-text, plus a spread of the `base` const at V2App.jsx:197 carrying height 34 and padding)"] },
+      "Surface": { "count": 1, "keys": ["fontSize", "lineHeight", "color"], "sites": ["Settings.jsx:747 (fontSize 11, lineHeight 17px, color --text-2)"] },
+      "MenuItem": { "count": 1, "keys": ["color", "paddingTop"], "sites": ["Applications.jsx:376 (color --muted, paddingTop 10)"] },
+      "Row": { "count": 2, "keys": ["padding", "height", "backgroundColor", "backgroundImage"], "sites": ["Companies.jsx:493 (padding '0 30px 0 24px')", "JobFeed.jsx:1076 (height auto, padding 0, backgroundColor, backgroundImage — a diagonal hatch for ignored rows)"] },
+      "Segmented": { "count": 1, "keys": ["height 31 — overriding size=\"sm\"'s own 31"], "sites": ["Searches.jsx:207"] },
+      "DashedAdd": { "count": 1, "keys": ["padding '0 11px'"], "sites": ["Persona.jsx:569"], "note": "DashedAdd sets no padding of its own" },
+      "ToastCard": { "count": 1, "keys": ["opacity"], "sites": ["Toast.jsx:63 — documented at the site as mount state, not design"] },
+      "primitives_with_zero_geometry_or_colour_overrides": [
+        "Button", "Pill", "IconButton", "SearchInput", "Select", "MenuHead", "Tag", "Check",
+        "Radio", "Switch", "Meter", "ScoreRing", "Spinner", "ShowMore", "PageTitle", "Rule",
+        "Drawer", "ChoiceCard", "ChoiceRow", "ChoiceModal", "RemoveX", "RemoveLink", "MoveArrows"
+      ],
+      "spread_constants_that_smuggle_geometry": {
+        "Applications.jsx:58 POPOVER": "{ position, top, zIndex } — layout only, clean",
+        "CoverLetters.jsx:24 POPOVER": "carries maxHeight 300 into Menu at CoverLetters.jsx:68",
+        "V2App.jsx:197 base": "carries height 34 and padding into NavLink at V2App.jsx:224",
+        "Applications.jsx:64 ACT_BTN": "a whole hand-drawn control (h30 · 13 · pad 0 14 · r99 · 1px --edge)",
+        "JobFeed.jsx:72 RAIL_BTN": "a whole hand-drawn on-rail control (h27 · 11.5 · pad 0 11 · r99 · 1px --on-rail-line · --rail-ink)",
+        "Settings.jsx:23 BOX": "a hand-drawn copy of Select's trigger — and it has drifted: BOX paints --surface where Select now paints --input-bg",
+        "Stats.jsx:99 COL": "a TableHead at 9.5 / 14px / .11em, used at h22",
+        "Stats.jsx:103 MONO": "the mono-text role — --mono / 10.5 / 16px"
+      }
+    }
+  },
+
+  "unspecified_for_claude_design_to_fill": [
+    { "id": "U-01", "area": "state", "gap": "There is no `:active` / pressed paint anywhere in v2 — no primitive, no theme.css rule. Every control goes rest → hover → (focus ring) with nothing in between." },
+    { "id": "U-02", "area": "state", "gap": "Button `primary` and `danger` have NO hover at all (BTN_LOOK.primary.hover and .danger.hover are the empty string), so the app's two loudest controls are the only ones that do not react to the pointer." },
+    { "id": "U-03", "area": "motion", "gap": "Hover transitions are inconsistent: .v2-card / .v2-chip / .v2-dashadd / .v2-navlink animate at .12s, while .v2-act, .v2-bd, .v2-bdc, .v2-row, .v2-menuitem, .v2-hover-accent and .v2-hover-bad swap instantly. There is no motion token (`--dur-fast`, easing) — .12s is a literal repeated 11 times." },
+    { "id": "U-04", "area": "motion", "gap": "`prefers-reduced-motion` covers only .v2-grab and .v2-fold. The spinner animation, the Switch knob (150ms), the toast enter/leave (250ms) and the warm-start fade (.15s) are not covered." },
+    { "id": "U-05", "area": "state", "gap": "The disabled recipe has six different treatments — Button (token swap, no dim), Input/Textarea/Select (0.6), Pill/IconButton/Chip/DashedAdd/MenuItem/Check/Radio/Switch/Segmented (0.5), ChoiceCard/ChoiceRow (0.45), MoveArrows (0.35), busy Button (0.6). No `--disabled-opacity` token exists, and there is no disabled ink token for a field." },
+    { "id": "U-06", "area": "state", "gap": "No error / invalid / warning state exists for Input, Textarea or Select. There is no --input-border-error token; the three sites that need one set `borderColor: 'var(--bad)'` inline (Settings.jsx:934, LoginModal.jsx:73, and the Settings BOX)." },
+    { "id": "U-07", "area": "state", "gap": "readOnly on Input/Textarea passes through to the element with no distinct paint." },
+    { "id": "U-08", "area": "state", "gap": "No loading/skeleton/empty-state primitive. Only Button and ScoreRing have a `busy`; `useSettled` explicitly ships no spinner ('the wait is a few hundred ms… a spinner would be one more thing appearing and disappearing')." },
+    { "id": "U-09", "area": "accessibility", "gap": "No focus trap, no initial focus and no focus restore in ModalPanel, Drawer, ChoiceModal, ConfirmDialog or PromptDialog. Only Escape and a scrim click are wired. The body is not scroll-locked." },
+    { "id": "U-10", "area": "accessibility", "gap": "Select has no arrow-key navigation, typeahead, aria-activedescendant or aria-controls, and the trigger is a div rather than a combobox. Menu has no roving focus, no arrow keys, no Escape of its own — each row is an independent tab stop, and callers hand-roll a click-away backdrop div at a hand-picked z-index." },
+    { "id": "U-11", "area": "accessibility", "gap": "No minimum hit-target rule. Present sizes: MoveArrows 8px glyphs, RemoveX 11px, Check/Radio 14-15px, Switch track 26×15, Button xs 28px tall, IconButton 26×26. Nothing in the layer declares a floor." },
+    { "id": "U-12", "area": "accessibility", "gap": "The toast stack has no aria-live region and no role=\"status\"/\"alert\"; its action link and its ✕ are bare spans with no role, no aria-label, no tab stop and no keyboard handler." },
+    { "id": "U-13", "area": "accessibility", "gap": "ConfirmDialog and PromptDialog do not wire aria-labelledby (their Heading has no id), so the dialog is announced without its title." },
+    { "id": "U-14", "area": "tokens", "gap": "There is no ink/tone parameter on Helper (29 inline colour sites), Card (borderColor/background), Band, Link or Chip. Helper alone accounts for the largest single family of inline colour in v2." },
+    { "id": "U-15", "area": "tokens", "gap": "There is no `pad` / `size` parameter on Card, Band, ModalPanel or Input, so padding is set inline at 23 + 8 + 12 + 5 sites respectively." },
+    { "id": "U-16", "area": "tokens", "gap": "Four primitives read PALETTE tokens directly, breaking the layer's own rule: TableHead (--bg), Surface (--surface-2), Toast.jsx (--accent, --bad, --accent-ink, --rail-accent), ConfirmDialog.jsx (--muted). And Toast.jsx / ConfirmDialog.jsx set raw px font sizes (9.5, 11, 12, 12.5) instead of --t-* tokens." },
+    { "id": "U-17", "area": "tokens", "gap": "RemoveX (default 11) and MoveArrows (8) set raw px font sizes outside the --t-* scale; Dot's `size` (7) and Spinner's `size` (9) are raw numbers too." },
+    { "id": "U-18", "area": "tokens", "gap": "The rail has no semantic layer at all — --rail, --rail-ink, --rail-text, --rail-dim, --rail-accent, --rail-line and the --on-rail-* / --rail-active / --rail-hover overlays are palette names read straight by V2App and JobFeed. Six `ui: keep` sites exist purely because no primitive has an on-dark variant." },
+    { "id": "U-19", "area": "tokens", "gap": "The ATS/search-mode hue taxonomy (--cc-* × 17, --sm-* × 6) is painted by a class, sits outside the semantic layer, and is deliberately excluded from every skin — so a skin cannot restyle a third of the badges on screen. Tag's `tone=\"none\"` exists only to get out of its way." },
+    { "id": "U-20", "area": "layering", "gap": "z-index has no named scale. Twenty distinct literals are in use (2, 3, 18, 20, 21, 25, 29, 30, 34, 35, 39, 40, 44, 45, 50, 59, 60, 70, 80, 9998, 9999), most of them at a call site. ConfirmDialog stacking above a modal relies on DOM order at equal z-index." },
+    { "id": "U-21", "area": "geometry", "gap": "A skin cannot express geometry today: --radius-*, --shadow-*, --t-* and every border width live in the shared semantic layer. Under the recorded decision ('skins may set radius/shadow/border-width: yes'), the per-skin set has to grow from 60 names to include the radius scale (10), the shadow scale (5), the type scale (20) and a border-width family that does not exist yet — and the skin proof has to be restated as 'only tokens may differ'." },
+    { "id": "U-22", "area": "geometry", "gap": "There is no border-width token of any kind. `1px` is written as a literal 135 times in the screens and 20 times in ui.jsx; the Spinner's 1.5px, the focus ring's 2px, the chip halo's 2px and the grab handle's 3px are all literals too." },
+    { "id": "U-23", "area": "roles", "gap": "Sizes the primitives do not offer, each drawn by hand at multiple sites: a 25px pill (7 sites), a 24px toolbar trigger (4), a 25×25 and 22×22 and 16×16 and 15×15 icon box (9), a table BODY row at 32/34/38px (7), a modal FOOTER bar (11), a two-line option row (2), an on-dark control (6)." },
+    { "id": "U-24", "area": "roles", "gap": "Two roles have no primitive at all: `Mono` (ids, timestamps, figures — 12 hand-drawn sites at 9.5/10/10.5/11/11.5 in five different inks) and `FooterRow` (the mirror of HeaderRow, rule on top)." },
+    { "id": "U-25", "area": "type", "gap": "Serif sizes 12, 20, 21, 23, 26 and 27 are drawn at 10 sites outside Heading's 18/19/22 (weight 400) and 15/15.5/16/17/18/19 (weight 500-600) tables, and there is no slot for a nested sans unit inside a serif numeral (Resumes' `17` + `/100`, JobFeed's `15` + `/20`)." },
+    { "id": "U-26", "area": "type", "gap": "The root line-height is inherited from the v1 shell's Tailwind preflight (1.5) rather than declared. Every fixed-height control opts out with `.v2-ctl { line-height:1 }` and every text role pins an integer line-height by hand." },
+    { "id": "U-27", "area": "composition", "gap": "Button has `as=\"button\"` but no `as=\"a\"` / `href`, so five sites that must stay real anchors (⌘/middle-click) hand-draw the button. MenuItem is the only primitive that solved this." },
+    { "id": "U-28", "area": "composition", "gap": "Input draws its own box, so nine composite fields (a bare input plus a ⌕, a show/hide toggle, an error tint, a ✦/↩ affordance) use a `v2-fieldwrap` div instead. There is no `Field` primitive with an adornment slot." },
+    { "id": "U-29", "area": "consistency", "gap": "ChoiceRow's own radio disc is drawn from --choice-* tokens with no label colour, while the Radio primitive uses --check-* and a ● glyph, and JobFeed.jsx:1529 draws a third version. Three radio discs, three token families." },
+    { "id": "U-30", "area": "consistency", "gap": "Settings.jsx:23's BOX const claims to be 'ui.jsx's Select trigger, to the pixel' but paints --surface where Select now paints --input-bg. The two have drifted and the comment has not." },
+    { "id": "U-31", "area": "consistency", "gap": "The two 24px PDF-toolbar triggers use different hover classes for the same control — `v2-bd v2-ctl` in CoverLetterEditor, `v2-act` in ResumeEditor. Logged in-code as 'a needs-decision, not a licence to add a third'." },
+    { "id": "U-32", "area": "skins", "gap": "The light and dark semantic blocks are byte-identical, so no semantic token has ever been re-pointed per theme. The mechanism exists but has never been exercised — its behaviour under a skin that needs it is untested." },
+    { "id": "U-33", "area": "skins", "gap": "The board skins (cobalt, saas, win98) are palette-only imports of designs that also changed radii, bevels, shadows and the type scale. win98 additionally records two things a palette cannot fix: --bg is a DESKTOP colour, not a text ground (black ink reads 1.46:1 on the dark one), and its rail is LIGHT, so the white-alpha --rail-active / --rail-hover / --on-rail-* overlays vanish." },
+    { "id": "U-34", "area": "responsive", "gap": "There are no breakpoints and no responsive tokens in theme.css. The only viewport-aware values are three `min(px, vh|vw)` literals in modal widths/heights, and one recorded fix for ≤1024px (the .v2-cactions pinned column)." },
+    { "id": "U-35", "area": "misc", "gap": "IconButton at a size other than 26 or 36 gets the small look at that box — the intermediate is undefined. Meter's `tone` accepts an arbitrary `var(--…)` pass-through, an un-named escape from its five-name scale, and Dot is overridden the same way at three sites." }
+  ]
+}
