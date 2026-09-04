@@ -88,3 +88,24 @@ sub-pixel rendering path is linear in the shift, which it should be for a
 plain `transform: translateY()` — no rebuild was performed to re-verify
 visually; flag if the built app still looks off after the next frontend
 build and a re-measurement pass should follow.
+
+## Re-measurement on rebuilt bundle (HEAD 03806a0)
+
+Same method, same reference jobs, same validated mask radii (stable across
+the full swept range — see sweep results below) — re-run against the live
+rebuilt frontend after the token values above shipped.
+
+| ring | default ink offset | alt ink offset (after) | delta (default − alt) | within ±0.25px? |
+|---|---|---|---|---|
+| `md` (44px box) | -0.58px | -0.50px | -0.08px | yes |
+| `sm` (34px box) | 0.00px | 0.08px | -0.08px | yes |
+| "No fit" label (34px box) | -0.75px | -0.83px | +0.08px | yes |
+
+Radius sweep (md 11.5–16.0px, sm 10.0–12.5px, label 13.0–15.5px) gave the
+identical delta at every step for all three — no boundary artifacts, no
+further contamination from the arc/badge/dashed-border.
+
+**Verdict: no further token change needed.** All three alt-skin offsets land
+within 0.08px of the default reference, well inside the ±0.25px tolerance.
+`--ring-shift-sm: 1.25px`, `--ring-shift-md: .42px`, `--ring-label-shift: 1.58px`
+stand as shipped in both alt blocks.
