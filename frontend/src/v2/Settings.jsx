@@ -304,7 +304,7 @@ export default function Settings() {
       // They sit first because they change what every screen below looks like.
       ['appearance', 'GENERAL', 'Appearance', 'theme and skin — remembered in this browser, not in the database', [
         { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
-        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts.' },
+        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts. Cobalt, SaaS and Win98 are the palettes of the three deep-reskin boards; their shape languages (radii, bevels, shadows) are not part of a skin, so those three read as recolours, not as the boards.' },
       ]],
       ['models', 'AI', 'Models', 'each individual prompt can be run against different model, if needed', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',

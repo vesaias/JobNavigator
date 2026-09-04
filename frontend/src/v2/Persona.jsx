@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import { useSettled } from './hooks'
-import { Button, Card, Heading, HeaderRow, Helper, Input, Label, Menu, MenuItem, ModalPanel, PageTitle, Pill, SectionHead, Select } from './ui'
-import ConfirmDialog from './ConfirmDialog'
+import { Band, Button, Card, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
 import { ago } from './time'
 import './theme.css'
 import {
@@ -292,33 +291,21 @@ export default function Persona() {
   // an import means (POST /api/persona/import replaces `contact` and
   // `resume_content` and leaves the five autofill nodes alone); everything here
   // picks the source, warns once, and re-seats the editor on the response.
-  const [importMenu, setImportMenu] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [bases, setBases] = useState(null)      // null while the list is in flight
-  const [pending, setPending] = useState(null)  // { label, run } waiting on the confirm
+  //
+  // DESIGN-CONSISTENCY: this used to be a Menu → a picker ModalPanel → a
+  // ConfirmDialog, three overlays for one decision, none of them shaped like the
+  // Tailor modal the résumé editor uses for exactly the same job ("pick one
+  // source, read what it costs, commit"). It is now the *same* shell —
+  // ui.jsx's ChoiceModal — with the two sources where Tailor puts its mode
+  // choice, the bases as ChoiceRows, and the replace warning in the footer slot
+  // that carries Tailor's chain-score line.
+  const [importOpen, setImportOpen] = useState(false)
   const [importing, setImporting] = useState(false)
-  const fileRef = useRef(null)
 
-  const openPicker = () => {
-    setImportMenu(false)
-    setBases(null)
-    setPickerOpen(true)
-    api.get('/resumes', { params: { is_base: true } })
-      .then(({ data }) => setBases(Array.isArray(data) ? data : []))
-      .catch((e) => {
-        console.error('persona import: list résumés', e)
-        setPickerOpen(false)
-        pushToast({ kind: 'error', msg: 'Could not list your résumés' + errDetail(e) })
-      })
-  }
-
-  const runImport = async () => {
-    const job = pending
-    setPending(null)
-    if (!job) return
+  const runImport = useCallback(async ({ label, run }) => {
     setImporting(true)
     try {
-      const { data } = await job.run()
+      const { data } = await run()
       // The import replaced both nodes outright, so a debounced PATCH still
       // holding the *pre-import* value would land on top of it a moment later.
       ;['contact', 'resume_content'].forEach((k) => {
@@ -329,29 +316,17 @@ export default function Persona() {
       const s = data.summary || {}
       pushToast({
         kind: 'success',
-        msg: `Imported ${plural(s.roles, 'role')} · ${plural(s.bullets, 'bullet')} · ${plural(s.skill_groups, 'skill group')} from ${job.label}`,
+        msg: `Imported ${plural(s.roles, 'role')} · ${plural(s.bullets, 'bullet')} · ${plural(s.skill_groups, 'skill group')} from ${label}`,
       })
+      setImportOpen(false)
     } catch (e) {
+      // the modal stays up on a failure: the source is still picked, so
+      // "Replace" is one click away again (the ConfirmDialog used to vanish and
+      // leave the user to walk the whole menu → picker → confirm path anew)
       console.error('persona import', e)
       pushToast({ kind: 'error', msg: 'Import failed' + errDetail(e) })
     } finally { setImporting(false) }
-  }
-
-  const pickResume = (r) => {
-    setPickerOpen(false)
-    setPending({ label: r.name, run: () => api.post('/persona/import', { resume_id: r.id }) })
-  }
-  const pickPdf = (f) => {
-    if (!f) return
-    setPending({
-      label: f.name,
-      run: () => {
-        const fd = new FormData()
-        fd.append('file', f)
-        return api.post('/persona/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      },
-    })
-  }
+  }, [pushToast])
 
   const toggler = (setter, storeKey) => (name) => setter((prev) => {
     const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name)
@@ -395,26 +370,9 @@ export default function Persona() {
         {/* ui: keep — an accent-ink save indicator, not a link and not a muted
             helper; Link would add cursor:pointer + a hover class to inert text */}
         <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
-        <div style={{ position: 'relative', flex: '0 0 auto' }}>
-          <Button variant="secondary" size="sm" busy={importing}
-            ariaExpanded={importMenu} ariaHaspopup="menu"
-            title="Fill contact details and résumé content from an existing résumé"
-            onClick={() => setImportMenu((v) => !v)}>{importing ? 'Parsing…' : 'Import ↑'}</Button>
-          {importMenu && (
-            <>
-              <div onClick={() => setImportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
-              <Menu ariaLabel="Import persona from" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, zIndex: 45, width: 226 }}>
-                <MenuItem icon="☰" onClick={openPicker}>From a résumé…</MenuItem>
-                <MenuItem icon="↑" onClick={() => { setImportMenu(false); fileRef.current?.click() }}>From a PDF…</MenuItem>
-              </Menu>
-            </>
-          )}
-        </div>
-        {/* clear the value after every pick, or choosing the same PDF twice in a
-            row fires no change event at all (RES-28) */}
-        {/* ui: keep — hidden <input type="file">, not a rendered field */}
-        <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
-          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; pickPdf(f) }} />
+        <Button variant="secondary" size="sm" busy={importing} ariaHaspopup="dialog"
+          title="Fill contact details and résumé content from a base résumé or a PDF"
+          onClick={() => setImportOpen(true)}>{importing ? 'Parsing…' : 'Import ↑'}</Button>
       </HeaderRow>
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -505,31 +463,123 @@ export default function Persona() {
         </div>
       </div>
 
-      {pickerOpen && (
-        <ModalPanel width={430} onClose={() => setPickerOpen(false)} style={{ padding: '22px 24px 18px', gap: 8, maxHeight: '70vh' }}>
-          <Heading size={19}>Import from a résumé</Heading>
-          <Helper>Its header becomes your contact details; its sections become your résumé content.</Helper>
-          {/* DESIGN-LOAD: nothing is drawn while the list is in flight — the rows
-              land once rather than replacing a "Loading…" line. */}
-          <div className="v2-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'auto', minHeight: 0, margin: '6px -6px 0', padding: '0 6px' }}>
-            {(bases || []).map((r) => (
-              <MenuItem key={r.id} ellipsis icon="☰" hint={ago(r.updated_at)} onClick={() => pickResume(r)}>{r.name}</MenuItem>
-            ))}
-            {bases && bases.length === 0 && <Helper>No base résumés yet — import a PDF instead.</Helper>}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-            <Button variant="secondary" size="sm" onClick={() => setPickerOpen(false)}>Cancel</Button>
-          </div>
-        </ModalPanel>
-      )}
-
-      {pending && (
-        <ConfirmDialog danger title="Replace persona content?"
-          body={`Contact and résumé content will be replaced by ${pending.label}. Work authorization, demographics, compensation, preferences and the Q&A bank stay as they are.`}
-          label="Replace" onConfirm={runImport} onCancel={() => setPending(null)} />
-      )}
+      {importOpen && <ImportModal busy={importing} onClose={() => setImportOpen(false)} onRun={runImport} pushToast={pushToast} />}
 
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
+  )
+}
+
+// ── Import ──────────────────────────────────────────────────────────────────
+// The résumé editor's Tailor modal, with this screen's two sources in place of
+// its mode choice: same ChoiceModal shell (480 · head · 14/22 body · 12/22
+// footer), same ChoiceCards, same ChoiceRows, and the replace warning sitting
+// where Tailor writes its chain-score line. Escape closes (ModalPanel's
+// useEscape) and Enter picks a row (ChoiceRow's kb()).
+const IMPORT_SOURCES = [
+  ['resume', '☰ From a résumé', 'Copies a base résumé’s header and sections — no LLM call'],
+  ['pdf', '↑ From a PDF', 'The AI reads the file — one LLM call; nothing is stored as a résumé'],
+]
+
+function ImportModal({ busy, onClose, onRun, pushToast }) {
+  const [source, setSource] = useState('resume')
+  const [bases, setBases] = useState(null)   // null while the list is in flight
+  const [pick, setPick] = useState(null)
+  const [file, setFile] = useState(null)
+  const [dropping, setDropping] = useState(false)
+  const fileRef = useRef(null)
+
+  useEffect(() => {
+    // OPEN-05: the user opened this to pick a source; an empty list with a dead
+    // button says nothing about why. The panel stays open either way — the PDF
+    // half of it still works when the résumé list is the thing that failed.
+    api.get('/resumes', { params: { is_base: true } })
+      .then(({ data }) => setBases(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        console.error('persona import: list résumés', e)
+        setBases([])
+        pushToast({ kind: 'error', msg: 'Could not list your résumés' + errDetail(e) })
+      })
+  }, [pushToast])
+
+  const chosen = (bases || []).find((r) => String(r.id) === String(pick))
+  const takePdf = (f) => { if (f) { setFile(f); setSource('pdf') } }
+  const canRun = source === 'pdf' ? !!file : !!chosen
+  const run = () => {
+    if (!canRun) return
+    if (source === 'pdf') {
+      onRun({
+        label: file.name,
+        run: () => {
+          const fd = new FormData()
+          fd.append('file', file)
+          return api.post('/persona/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        },
+      })
+    } else {
+      onRun({ label: chosen.name, run: () => api.post('/persona/import', { resume_id: chosen.id }) })
+    }
+  }
+
+  return (
+    <ChoiceModal
+      title="Import persona content"
+      sub="Fills your contact block and résumé content from one source."
+      onClose={onClose}
+      note={<Helper style={{ textWrap: 'pretty' }}>
+        Replaces contact and résumé content. Work authorization, demographics, compensation, preferences and the Q&amp;A bank stay.
+      </Helper>}
+      action={busy ? 'Parsing…' : 'Replace'} actionVariant="danger" actionBusy={busy}
+      actionDisabled={!canRun} onAction={run}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Label>Where from</Label>
+        <div style={{ display: 'flex', gap: 7 }}>
+          {IMPORT_SOURCES.map(([id, label, hint]) => (
+            <ChoiceCard key={id} on={source === id} label={label} hint={hint} title={hint}
+              onClick={() => setSource(id)} />
+          ))}
+        </div>
+      </div>
+
+      {source === 'resume' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Label>Which base résumé</Label>
+          {/* DESIGN-LOAD: nothing is drawn while the list is in flight — the rows
+              land once rather than replacing a "Loading…" line. */}
+          {(bases || []).map((r) => (
+            <ChoiceRow key={r.id} on={String(pick) === String(r.id)} label={r.name}
+              hint={ago(r.updated_at)} onClick={() => setPick(r.id)} />
+          ))}
+          {bases && bases.length === 0 && (
+            <Band interactive={false} style={{ padding: 12 }}><Helper>No base résumés yet — import a PDF instead.</Helper></Band>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+          onDragOver={(e) => { e.preventDefault(); setDropping(true) }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(e) => {
+            e.preventDefault(); setDropping(false)
+            const f = e.dataTransfer?.files?.[0]
+            if (f && /\.pdf$/i.test(f.name)) takePdf(f)
+            else if (f) pushToast({ kind: 'error', msg: 'That is not a PDF.' })
+          }}>
+          <Label>Which PDF</Label>
+          <DashedAdd big title="Choose a résumé PDF, or drop one here"
+            onClick={() => fileRef.current?.click()} style={{ padding: '0 11px' }}>
+            {/* a picked file writes its own name here, and a résumé PDF's name is
+                routinely longer than the row — clip it rather than blow the row out */}
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {dropping ? 'Drop the PDF here' : file ? file.name : 'Choose a PDF…'}
+            </span>
+          </DashedAdd>
+          {/* clear the value after every pick, or choosing the same PDF twice in a
+              row fires no change event at all (RES-28) */}
+          {/* ui: keep — hidden <input type="file">, not a rendered field */}
+          <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; takePdf(f) }} />
+        </div>
+      )}
+    </ChoiceModal>
   )
 }

@@ -33,7 +33,7 @@
             ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
             : m;
           d.setAttribute('data-theme', r);
-          var skins = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt'];
+          var skins = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98'];
           var k = s.getItem('jobnavigator_skin');
           d.setAttribute('data-skin', skins.indexOf(k) >= 0 ? k : 'default');
           d.classList.toggle('dark', r === 'dark');
@@ -61,6 +61,12 @@
       :root[data-skin="editorial"][data-theme="dark"] { background: #15140f }
       :root[data-skin="alt"][data-theme="light"] { background: #f7f8fa }
       :root[data-skin="alt"][data-theme="dark"] { background: #161a21 }
+      :root[data-skin="cobalt"][data-theme="light"] { background: #f4f5f7 }
+      :root[data-skin="cobalt"][data-theme="dark"] { background: #0f1115 }
+      :root[data-skin="saas"][data-theme="light"] { background: #f9fafb }
+      :root[data-skin="saas"][data-theme="dark"] { background: #111827 }
+      :root[data-skin="win98"][data-theme="light"] { background: #008080 }
+      :root[data-skin="win98"][data-theme="dark"] { background: #1f2b3a }
     </style>
   </head>
   <body>

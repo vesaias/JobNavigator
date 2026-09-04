@@ -133,6 +133,12 @@
   --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
   --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
   --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
+  /* ChoiceCard / ChoiceRow — the "pick one" cells the Tailor, Re-tailor and
+     Persona Import modals draw. Same on-trio as Pill and Segmented; the rest
+     state is a bare --edge outline on whatever ground the modal already paints,
+     which is why --choice-bg is transparent rather than a surface. */
+  --choice-bg:transparent; --choice-ink:var(--text); --choice-border:var(--edge);
+  --choice-on-bg:var(--accent-soft); --choice-on-ink:var(--accent); --choice-on-border:var(--accent);
   /* Meter — track + fill, one name per band */
   --meter-track:var(--line); --meter-accent:var(--accent); --meter-good:var(--good);
   --meter-warn:var(--warn); --meter-bad:var(--bad); --meter-neutral:var(--line-strong);
@@ -305,6 +311,12 @@
   --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
   --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
   --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
+  /* ChoiceCard / ChoiceRow — the "pick one" cells the Tailor, Re-tailor and
+     Persona Import modals draw. Same on-trio as Pill and Segmented; the rest
+     state is a bare --edge outline on whatever ground the modal already paints,
+     which is why --choice-bg is transparent rather than a surface. */
+  --choice-bg:transparent; --choice-ink:var(--text); --choice-border:var(--edge);
+  --choice-on-bg:var(--accent-soft); --choice-on-ink:var(--accent); --choice-on-border:var(--accent);
   /* Meter — track + fill, one name per band */
   --meter-track:var(--line); --meter-accent:var(--accent); --meter-good:var(--good);
   --meter-warn:var(--warn); --meter-bad:var(--bad); --meter-neutral:var(--line-strong);
@@ -649,6 +661,196 @@
   --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#66604f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* — Board skins: cobalt · saas · win98 -------------------------------------
+   Three deep-reskin boards from the Claude Design project, brought across as
+   what a skin can carry today: PALETTE + the three font stacks, nothing else.
+   Sources: "Feed - Cobalt.dc.html", "Feed - SaaS.dc.html", "Feed - Win98.dc.html"
+   (each board's own `:root` / `[data-theme="dark"]` block in its helmet), plus
+   "Cobalt Elements.dc.html" for the Cobalt primitive-by-primitive swap. Every
+   board ships BOTH modes, so no mode is derived here.
+
+   The boards also change GEOMETRY — radii, border widths, bevels, shadows and
+   the type scale — and that is the part a skin cannot express: --radius-*,
+   --shadow-*, --t-* and the primitives' border widths live in the shared
+   semantic layer by design. v2-testing/round-design/skins-boards.md lists the
+   delta per board and what would have to become per-skin to close it.
+
+   Same two rules as the alt skin above: palette tokens and the three font
+   stacks only, and the light block and the dark block declare the IDENTICAL
+   set of names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]` both weigh
+   (0,2,0), so a name set in one and forgotten in the other leaks a light value
+   into dark. Not re-skinned here either: the --cc- and --sm- badge families,
+   the --shadow- family and the on-rail white overlays.
+
+   Ring offsets: all three boards put a SANS with lining figures in the display
+   slot (IBM Plex Sans / system-ui / Tahoma), where the default has Newsreader
+   and alt has Georgia — both serifs. The one calibrated cross-face measurement
+   we have (ring-sizes.md) shows the whole default→alt move, 2px→1.25px at sm,
+   is explained by Georgia's OLD-STYLE figures riding ~0.05em lower; cap-height
+   and ascent/descent differences between the sans faces here and Public Sans
+   are under 0.03em, i.e. under 0.25px at the 14/19px numeral sizes — inside the
+   +-0.25px tolerance that pass used. So all three seed at the DEFAULT offsets
+   and the ink measurement re-run after the build sets the final values. */
+
+.jn-v2[data-skin="cobalt"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f7f8fa; --line:#e3e5ea; --line-soft:#eef0f3;
+  --line-strong:#c8ccd6; --edge:#d7dae1; --track:#eef0f3;
+  --text:#16181d; --text-2:#5b6270; --muted:#707887; --ink-2:#2f353f;
+  --accent:#2d5be3; --accent-ink:#ffffff; --accent-soft:#e7edfd;
+  --good:#157a43; --warn:#946c07; --warn-soft:#fbf2d7; --warn-line:#ecd9a0;
+  --bad:#c23b32; --bad-soft:#fdeaea; --bad-faint:#fef6f6;
+  --change-soft:#c9e7d6; --change-bg:#f5fbf7; --hover-soft:#f2f6fe;
+  --ring-accent:rgba(45,91,227,.22); --scrim:rgba(15,17,21,.46); --recessed:#fafbfc;
+  /* the board's accent IS the blue the default gives to `applied`, so applied
+     moves to a deep teal (the alt skin does the same for its indigo) */
+  --stage-applied:#0b5570; --stage-interview:#946c07; --stage-offer:#157a43;
+  --stage-rejected:#c23b32; --stage-new:#c8ccd6;
+  --series-new:#b8822b;
+  --amber-bg:#fffdf4; --amber-line:#ecd9a0; --amber-line-soft:#f5ead0; --amber-hover:#fbf5e2;
+  --sand:#ccd2de; --gold:#c08a2e; --funnel-low:#8fa5e2; --funnel-mid:#4a6fd0;
+  --toast-ok-bg:#e2f5e9; --toast-ok-line:#bfe3cc; --toast-ok-ink:#157a43;
+  --toast-bad-bg:#fdeaea; --toast-bad-line:#efb3b0; --toast-bad-ink:#a8322a;
+  --rail:#16181d; --rail-text:#8d95a6; --rail-dim:#6b7280; --rail-accent:#7f9cf5;
+  --rail-line:#232a38; --rail-ink:#ffffff;
+  --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+}
+.jn-v2[data-skin="cobalt"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#0f1115; --surface:#16181d; --surface-2:#1c1f26; --line:#2a2f3a; --line-soft:#22262f;
+  --line-strong:#3f4653; --edge:#3a4050; --track:#2a2f3a;
+  --text:#e8eaf0; --text-2:#b3bac7; --muted:#8d95a6; --ink-2:#d5dae3;
+  --accent:#4d79f6; --accent-ink:#ffffff; --accent-soft:#1c2b4d;
+  --good:#5fd394; --warn:#e8c46a; --warn-soft:#2b2410; --warn-line:#6a5a2e;
+  --bad:#f28b82; --bad-soft:#3c1a1a; --bad-faint:#2a1614;
+  --change-soft:#28503b; --change-bg:#14211a; --hover-soft:#1a1f29;
+  --ring-accent:rgba(77,121,246,.24); --scrim:rgba(0,0,0,.58); --recessed:#121419;
+  --stage-applied:#6fc3dd; --stage-interview:#e8c46a; --stage-offer:#5fd394;
+  --stage-rejected:#f28b82; --stage-new:#3f4653;
+  --series-new:#9c6f22;
+  --amber-bg:#231e12; --amber-line:#453c25; --amber-line-soft:#332c1c; --amber-hover:#2b2517;
+  --sand:#5a6070; --gold:#c9a35a; --funnel-low:#4a6fd0; --funnel-mid:#8fa5e2;
+  --toast-ok-bg:#123723; --toast-ok-line:#2a7d4d; --toast-ok-ink:#5fd394;
+  --toast-bad-bg:#3c1a1a; --toast-bad-line:#8a3d38; --toast-bad-ink:#f28b82;
+  --rail:#090c12; --rail-text:#8d95a6; --rail-dim:#5b6270; --rail-accent:#7f9cf5;
+  --rail-line:#1a1f2b; --rail-ink:#ffffff;
+  --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+}
+
+/* saas — the "Feed - SaaS" board: Tailwind's gray/blue ladder on a pure system
+   font stack (the board loads no webfont at all), rail on slate-900. */
+.jn-v2[data-skin="saas"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#f9fafb; --surface:#ffffff; --surface-2:#f3f4f6; --line:#e5e7eb; --line-soft:#f3f4f6;
+  --line-strong:#9ca3af; --edge:#d1d5db; --track:#e5e7eb;
+  --text:#111827; --text-2:#4b5563; --muted:#6b7280; --ink-2:#1f2937;
+  --accent:#1d4ed8; --accent-ink:#ffffff; --accent-soft:#eff6ff;
+  --good:#15803d; --warn:#b45309; --warn-soft:#fffbeb; --warn-line:#dda85c;
+  --bad:#b91c1c; --bad-soft:#fef2f2; --bad-faint:#fef7f7;
+  --change-soft:#bbf7d0; --change-bg:#f7fdf9; --hover-soft:#f5f8ff;
+  --ring-accent:rgba(29,78,216,.22); --scrim:rgba(17,24,39,.46); --recessed:#fbfcfd;
+  --stage-applied:#155e75; --stage-interview:#b45309; --stage-offer:#15803d;
+  --stage-rejected:#b91c1c; --stage-new:#9ca3af;
+  --series-new:#b8801f;
+  --amber-bg:#fffbeb; --amber-line:#d9b675; --amber-line-soft:#f0e2bd; --amber-hover:#fdf6e3;
+  --sand:#cbd5e1; --gold:#c08a2e; --funnel-low:#93b4f0; --funnel-mid:#3b6ad4;
+  --toast-ok-bg:#ecfdf5; --toast-ok-line:#86c9a4; --toast-ok-ink:#15803d;
+  --toast-bad-bg:#fef2f2; --toast-bad-line:#e2a3a3; --toast-bad-ink:#a01818;
+  --rail:#0f172a; --rail-text:#cbd5e1; --rail-dim:#94a3b8; --rail-accent:#93c5fd;
+  --rail-line:#1e293b; --rail-ink:#ffffff;
+  --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.jn-v2[data-skin="saas"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#111827; --surface:#1f2937; --surface-2:#273244; --line:#374151; --line-soft:#2c3646;
+  --line-strong:#55606f; --edge:#4b5563; --track:#272b34;
+  --text:#f3f4f6; --text-2:#d1d5db; --muted:#9ca3af; --ink-2:#e5e7eb;
+  --accent:#60a5fa; --accent-ink:#0b1220; --accent-soft:#1e3a5f;
+  --good:#4ade80; --warn:#fbbf24; --warn-soft:#241d0e; --warn-line:#6b5524;
+  --bad:#f87171; --bad-soft:#2a1512; --bad-faint:#241413;
+  --change-soft:#2f5c42; --change-bg:#18261e; --hover-soft:#232f42;
+  --ring-accent:rgba(96,165,250,.24); --scrim:rgba(0,0,0,.58); --recessed:#182131;
+  --stage-applied:#5ec8dd; --stage-interview:#fbbf24; --stage-offer:#4ade80;
+  --stage-rejected:#f87171; --stage-new:#55606f;
+  --series-new:#9d6d1c;
+  --amber-bg:#241d0e; --amber-line:#4a3d1c; --amber-line-soft:#352c15; --amber-hover:#2c2412;
+  --sand:#5b6472; --gold:#c9a35a; --funnel-low:#3b6ad4; --funnel-mid:#93b4f0;
+  --toast-ok-bg:#16281f; --toast-ok-line:#2f6b4a; --toast-ok-ink:#4ade80;
+  --toast-bad-bg:#2a1512; --toast-bad-line:#7d3b36; --toast-bad-ink:#f87171;
+  --rail:#0a0c10; --rail-text:#9aa3b2; --rail-dim:#6f7684; --rail-accent:#93c5fd;
+  --rail-line:#1a2030; --rail-ink:#ffffff;
+  --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* win98 — the "Feed - Win98" board. The one skin whose surface is DARKER than
+   its second surface: the window chrome is #c0c0c0 and the client area is
+   white, which is exactly how the era worked, and it happens to map cleanly
+   onto --surface / --surface-2. Two things this palette cannot fix, both
+   recorded in skins-boards.md: (1) --bg is a DESKTOP colour (teal in light,
+   navy in dark), not a text ground, so the black ink the rest of the skin uses
+   reads 4.40:1 on the light desktop and 1.46:1 on the dark one — wherever v2
+   paints --bg under --text (--head-bg-page, --chip-bg) it is the board's own
+   ground, and fixing it needs per-skin semantic re-pointing, which a skin block
+   may not do; (2) the rail is LIGHT here, so --rail-active / --rail-hover /
+   --on-rail-* (white alphas, deliberately not re-skinned) all but vanish.
+   Two board values were moved, both below 3:1 as ink on --surface: --good
+   #008000 -> #006000 (2.82 -> 4.32) and --warn #808000 -> #575700 (2.31 ->
+   4.17) in light. Everything else is the board's own VGA palette. */
+.jn-v2[data-skin="win98"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#008080; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
+  --line-strong:#404040; --edge:#404040; --track:#808080;
+  --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000;
+  --accent:#000080; --accent-ink:#ffffff; --accent-soft:#c0c0c0;
+  --good:#006000; --warn:#575700; --warn-soft:#ffffcc; --warn-line:#808000;
+  --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0;
+  --change-soft:#008000; --change-bg:#e4ffe4; --hover-soft:#d4d4d4;
+  --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#b4b4b4;
+  --stage-applied:#000080; --stage-interview:#575700; --stage-offer:#006000;
+  --stage-rejected:#800000; --stage-new:#808080;
+  --series-new:#8f4a00;
+  --amber-bg:#ffffe4; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc;
+  --sand:#a0a0a0; --gold:#808000; --funnel-low:#8080c0; --funnel-mid:#000080;
+  --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#006000;
+  --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000;
+  --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080;
+  --rail-line:#808080; --rail-ink:#000000;
+  --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
+  --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
+  --mono:'Lucida Console','Courier New',Consolas,monospace;
+}
+.jn-v2[data-skin="win98"][data-theme="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#1f2b3a; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
+  --line-strong:#404040; --edge:#404040; --track:#808080;
+  --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000;
+  --accent:#2b3a5c; --accent-ink:#ffffff; --accent-soft:#c0c0c0;
+  --good:#006400; --warn:#7a5a00; --warn-soft:#ffffcc; --warn-line:#7a5a00;
+  --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0;
+  --change-soft:#006400; --change-bg:#e4ffe4; --hover-soft:#d4d4d4;
+  --ring-accent:rgba(43,58,92,.22); --scrim:rgba(0,0,0,.58); --recessed:#b4b4b4;
+  --stage-applied:#2b3a5c; --stage-interview:#7a5a00; --stage-offer:#006400;
+  --stage-rejected:#800000; --stage-new:#808080;
+  --series-new:#a15300;
+  --amber-bg:#ffffe4; --amber-line:#7a5a00; --amber-line-soft:#c0c080; --amber-hover:#ffffcc;
+  --sand:#a0a0a0; --gold:#7a5a00; --funnel-low:#8090b8; --funnel-mid:#2b3a5c;
+  --toast-ok-bg:#e4ffe4; --toast-ok-line:#006400; --toast-ok-ink:#006400;
+  --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000;
+  --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#2b3a5c;
+  --rail-line:#808080; --rail-ink:#000000;
+  --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
+  --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
+  --mono:'Lucida Console','Courier New',Consolas,monospace;
 }
 
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }

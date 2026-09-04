@@ -1297,3 +1297,128 @@ export function ShowMore({ n, onClick, label, style, className }) {
     </div>
   )
 }
+
+// ── ChoiceCard / ChoiceRow / ChoiceModal ────────────────────────────────────
+// The "pick one thing, then commit" modal three screens draw identically: the
+// résumé editor's Tailor and Re-tailor modals and the Persona's Import. The
+// shell was copied between the first two and the Persona import used a Menu +
+// a picker panel + a ConfirmDialog instead; naming the shape here is what stops
+// the three drifting again. The geometry below IS the Re-tailor modal's, to the
+// pixel — 480 panel · modal head (16/22/13) · body 14/22 on a 460 cap · footer
+// 12/22 over a --modal-border rule.
+//
+//   ChoiceCard  — the option cards at the top of the body ("✦ Tailor" vs
+//     "Copy", "From a résumé" vs "From a PDF"): a padded cell with a title and
+//     a hint, accent-soft when picked. A row of them sits in one flex line.
+//   ChoiceRow   — one candidate in the list below (a base résumé, a job): radio
+//     disc · name (+ optional sub-line) · trailing hint · `trail` extras.
+//   ChoiceModal — the shell: head (title + sub), the scrolling body, and the
+//     footer whose left column carries the consequence note ("Runs in the
+//     background", the chain-score line, the Persona's replace warning) beside
+//     Cancel + the one action.
+//
+// Both cells are keyboard-operable through act(): Enter/Space picks, and the
+// panel's own useEscape (ModalPanel) closes.
+export function ChoiceCard({ on, disabled, label, hint, onClick, title, ariaLabel, style, className }) {
+  return (
+    <div {...act(onClick, disabled, 'radio')} title={title} aria-label={ariaLabel}
+      aria-checked={!!on} aria-disabled={disabled || undefined}
+      className={cx(!disabled && 'v2-act', className)}
+      style={{
+        flex: 1, minWidth: 0, padding: '9px 11px',
+        border: `1px solid ${on ? 'var(--choice-on-border)' : 'var(--choice-border)'}`,
+        background: on ? 'var(--choice-on-bg)' : 'var(--choice-bg)',
+        borderRadius: 'var(--radius-cell)', display: 'flex', flexDirection: 'column', gap: 2,
+        opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
+      }}>
+      <span style={{
+        fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 500,
+        color: on ? 'var(--choice-on-ink)' : 'var(--choice-ink)',
+      }}>{label}</span>
+      {hint != null && hint !== false && hint !== '' && (
+        <Helper size="xs" style={{ textWrap: 'pretty' }}>{hint}</Helper>
+      )}
+    </div>
+  )
+}
+// `children` replaces the label/sub pair for a body that is not two lines of
+// text; `trail` is whatever sits right of the hint (a score, an "✦ exists" mark).
+export function ChoiceRow({
+  on, disabled, label, sub, hint, trail, onClick, title, ariaLabel, children, style, className,
+}) {
+  return (
+    <div {...act(onClick, disabled, 'radio')} title={title} aria-label={ariaLabel}
+      aria-checked={!!on} aria-disabled={disabled || undefined}
+      className={cx(!disabled && 'v2-act', className)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px',
+        border: `1px solid ${on ? 'var(--choice-on-border)' : 'var(--choice-border)'}`,
+        background: on ? 'var(--choice-on-bg)' : 'var(--choice-bg)',
+        borderRadius: 'var(--radius-cell)',
+        opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
+      }}>
+      <span aria-hidden="true" style={{
+        flex: '0 0 auto', width: 14, height: 14, borderRadius: 'var(--radius-control)',
+        border: `1px solid ${on ? 'var(--choice-on-border)' : 'var(--choice-border)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{
+          width: 7, height: 7, borderRadius: 'var(--radius-control)',
+          background: on ? 'var(--choice-on-border)' : 'transparent',
+        }} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {children === undefined ? (
+          <>
+            <span style={{
+              fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 500,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{label}</span>
+            {sub != null && sub !== false && sub !== '' && (
+              <Helper size="xs" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</Helper>
+            )}
+          </>
+        ) : children}
+      </div>
+      {hint != null && hint !== false && hint !== '' && (
+        <Helper size="xs" style={{ flex: '0 0 auto' }}>{hint}</Helper>
+      )}
+      {trail}
+    </div>
+  )
+}
+// `bodyGap` is the one dimension the two résumé modals already disagreed on
+// (Re-tailor 13, Tailor 12); it stays a prop so naming the shell moves no pixel.
+// `note` is the footer's left column — a fragment of Helpers, not a string.
+export function ChoiceModal({
+  width = 480, title, sub, subClamp, labelledBy, note,
+  cancel = 'Cancel', action, actionVariant, actionDisabled, actionBusy, onAction,
+  bodyGap = 13, bodyMax = 460, onClose, zIndex = 60, children, style, className,
+}) {
+  return (
+    <ModalPanel width={width} onClose={onClose} zIndex={zIndex} labelledBy={labelledBy}
+      className={className} style={{ overflow: 'hidden', ...style }}>
+      <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
+        <Heading id={labelledBy}>{title}</Heading>
+        {sub != null && sub !== false && (
+          <Helper style={subClamp ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : undefined}>{sub}</Helper>
+        )}
+      </HeaderRow>
+      <div className="v2-scroll" style={{
+        padding: '14px 22px', display: 'flex', flexDirection: 'column',
+        gap: bodyGap, maxHeight: bodyMax, overflow: 'auto',
+      }}>{children}</div>
+      <div style={{
+        padding: '12px 22px', borderTop: '1px solid var(--modal-border)',
+        display: 'flex', alignItems: 'center', gap: 9,
+      }}>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{note}</div>
+        <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>{cancel}</Button>
+        {action != null && action !== false && (
+          // RES-17: a disabled primary is --line on --muted (Button's own `off` look)
+          <Button size="sm" variant={actionVariant} busy={actionBusy} disabled={actionDisabled} onClick={onAction}>{action}</Button>
+        )}
+      </div>
+    </ModalPanel>
+  )
+}

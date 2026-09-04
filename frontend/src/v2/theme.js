@@ -4,7 +4,7 @@
 // preference, not a setting the backend acts on):
 //   mode  light | dark | system   → localStorage `jobnavigator_theme`
 //   skin  default | tone1 | tone2 | tone3 | editorial | alt
-//                                 → localStorage `jobnavigator_skin`
+//         | cobalt | saas | win98    → localStorage `jobnavigator_skin`
 //
 // `default` and `alt` are the two designed skins. `editorial` is the palette of
 // the DirectionC-Editorial direction board — the one the shipped default
@@ -12,8 +12,12 @@
 // between the two: every palette token interpolated in OKLab from default to
 // editorial at ¼, ½ and ¾, light and dark separately, on the default's fonts —
 // so the six can be looked at side by side on the monitor and the middle of the
-// ramp picked by eye. Adding one is still two palette blocks in theme.css plus a
-// line here — nothing else.
+// ramp picked by eye. `cobalt`, `saas` and `win98` come from the three deep-reskin
+// Feed boards; each carries the board's own light AND dark palette plus its font
+// stacks, and nothing else — the boards' geometry (radii, bevels, shadows, type
+// scale) is out of a skin's reach, see v2-testing/round-design/skins-boards.md.
+// Adding one is still two palette blocks in theme.css plus a line here — nothing
+// else.
 //
 // `system` follows `prefers-color-scheme` live, so a mode is not the same thing
 // as the colour that ends up on screen. `resolved` is that colour (light|dark);
@@ -43,7 +47,7 @@ const SKIN_KEY = 'jobnavigator_skin'
 const LEGACY_KEY = 'jobnavigator_dark_mode'   // the pre-D6 boolean, migrated once
 
 export const MODES = ['light', 'dark', 'system']
-export const SKINS = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt']
+export const SKINS = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98']
 
 // The rail's ◐ is a three-state control, so it needs three glyphs (Nav Rail spec:
 // "cycles Light → Dark → System, tooltip names the current mode").
@@ -57,6 +61,9 @@ export const SKIN_LABEL = {
   tone3: 'Tone 3 — ¾ toward Editorial',
   editorial: 'Editorial — original board tones',
   alt: 'Alt — cool slate',
+  cobalt: 'Cobalt — IBM Plex blue',
+  saas: 'SaaS — system neutral',
+  win98: 'Win98 — desktop grey',
 }
 export const SKIN_OPTIONS = SKINS.map((s) => [s, SKIN_LABEL[s]])
 
