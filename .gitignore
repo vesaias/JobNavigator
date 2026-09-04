@@ -164,3 +164,7 @@ instance2/
 # v2 testing pass: decoded design boards stay local
 v2-testing/design/
 v2-testing/artifacts/
+
+# v2 design workbench: the lab pages (/v2/ui gallery, /v2/toasts lab) are local-only.
+# App.jsx registers them through import.meta.glob, so the app builds without them.
+frontend/src/design-base/

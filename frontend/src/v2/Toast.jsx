@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Spinner } from './ui'
+import { Spinner, ToastCard } from './ui'
 import './theme.css'
 
 // Toast taxonomy (Toasts.dc.html): one accent per meaning, so a glance from the
@@ -13,11 +13,15 @@ import './theme.css'
 //              is why progress must NOT be dark.                            5s
 //
 // Stack bottom-right, newest at the bottom, at most three visible.
+// The card's ground/edge/ink per kind now live on ui.jsx's `ToastCard`
+// (--toast-{progress,ok,bad,undo}-bg/-line/-ink, the same values this table held);
+// what stays here is what the taxonomy owns: whether the card spins, and the
+// glyph roundel it carries.
 const KINDS = {
-  progress: { bg: 'var(--recessed)', bd: 'var(--line)', fg: 'var(--text-2)', spin: true },
-  success: { bg: 'var(--toast-ok-bg)', bd: 'var(--toast-ok-line)', fg: 'var(--toast-ok-ink)', mark: '✓', markBg: 'var(--accent)' },
-  error: { bg: 'var(--toast-bad-bg)', bd: 'var(--toast-bad-line)', fg: 'var(--toast-bad-ink)', mark: '!', markBg: 'var(--bad)' },
-  undo: { bg: 'var(--rail)', bd: 'var(--rail)', fg: 'var(--rail-ink)' },
+  progress: { spin: true },
+  success: { mark: '✓', markBg: 'var(--accent)' },
+  error: { mark: '!', markBg: 'var(--bad)' },
+  undo: {},
 }
 // RES-25: 2.5 s was not long enough to read a success toast, let alone act on the
 // "Open ↗" it carries. One 3–5 s band across the app: 4 s for the two that only
@@ -54,15 +58,9 @@ function Toast({ t, onClose }) {
   const k = KINDS[t.kind] || KINDS.progress
   const label = t.action || t.actionLabel
   return (
-    // ui: keep — this *is* the toast primitive. D1-D2 files `toast` as "already
-    // single" (one site, one signature) and D4f names no `Toast` in ui.jsx, so the
-    // card stays where its taxonomy, TTL table and stack live rather than being
-    // relocated object-for-object. It is not a ModalPanel (no scrim, no Escape, no
-    // dialog role) and not a Surface (four tinted grounds, its own r9 + shadow).
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
-      background: k.bg, border: `1px solid ${k.bd}`, borderRadius: 'var(--radius-card)', color: k.fg,
-      boxShadow: 'var(--shadow-toast)',
+    // the show/hide animation stays at the site: it is this toast's own mount
+    // state, not design. Everything else about the box is `ToastCard`'s.
+    <ToastCard kind={t.kind} style={{
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(10px)',
       transition: 'opacity 250ms ease, transform 250ms ease',
     }}>
@@ -82,7 +80,7 @@ function Toast({ t, onClose }) {
       {/* the design gives each kind its own dimmed ✕; a tint of the ink is the
           same thing and survives dark mode without four more tokens */}
       <span onClick={onClose} style={{ flex: '0 0 auto', fontSize: 11, cursor: 'pointer', opacity: 0.55 }}>✕</span>
-    </div>
+    </ToastCard>
   )
 }
 

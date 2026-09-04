@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, PageTitle, Pill as UiPill, Spinner, TableHead } from './ui'
+import { useEscape } from './hooks'
+import { Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, PageTitle, Pill as UiPill, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // Stats reads the pipeline back to you: what's in the funnel, how the scorer is
@@ -157,6 +158,10 @@ export default function Stats() {
   const schedRef = useRef(null)
   const [schedW, setSchedW] = useState(1200)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
+  // DS-S-22: the Type ▾ menu only had a click-catching backdrop, so it was the
+  // one dropdown in v2 that survived Escape. Same shared hook every other
+  // overlay uses; the second argument gates the listener on the menu being open.
+  useEscape(() => setTypeOpen(false), typeOpen)
 
   const loadCore = useCallback(async () => {
     let anyFailed = false
@@ -361,9 +366,11 @@ export default function Stats() {
       { label: 'Rejected', ...pick('rejected'), color: 'var(--stage-rejected)' },
     ]
     const base = Math.max(1, applied)
+    // `frac` is what Meter takes (0–1); the 2% floor keeps a non-zero row visible
+    // and an empty row at nothing, exactly as the percentage string did.
     return rows.map((r) => ({
       ...r,
-      w: `${Math.min(100, Math.max(r.count ? 2 : 0, Math.round((r.count / base) * 100)))}%`,
+      frac: Math.min(100, Math.max(r.count ? 2 : 0, Math.round((r.count / base) * 100))) / 100,
     }))
   }, [stats, st, reached])
   const conv = (a, b) => (a ? `${Math.round((b / a) * 100)}%` : '—')
@@ -490,9 +497,8 @@ export default function Stats() {
               {funnel.map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ flex: '0 0 76px', fontSize: 12, lineHeight: '18px', color: 'var(--text-2)' }}>{f.label}</span>
-                  <div style={{ flex: 1, height: 22, background: 'var(--surface-2)', borderRadius: 'var(--radius-mini)', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: f.w, background: f.color, borderRadius: 'var(--radius-mini)' }} />
-                  </div>
+                  <Meter value={f.frac} height={22} tone={f.color} track="var(--surface-2)" radius="var(--radius-mini)"
+                    style={{ flex: 1 }} ariaLabel={`${f.label}: ${f.count}`} />
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
                   {/* ui: keep — 9.5 is below Helper's 10.5 xs step, and the 18px
                       line-height baselines it against the 22px funnel bar beside it */}

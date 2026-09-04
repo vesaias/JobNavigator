@@ -12,9 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, Spinner, Surface, Textarea } from './ui'
-
-const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
+import { Band, Button, Check, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea } from './ui'
 
 // contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
 function wordDiff(a = '', b = '') {
@@ -497,14 +495,7 @@ export default function ResumeEditor() {
       {isCopy ? (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13 }}>
           {scores.tailored != null && (
-            <div style={{ position: 'relative', width: 34, height: 34, flex: '0 0 34px' }}>
-              <svg viewBox="0 0 78 78" style={{ width: 34, height: 34 }}>
-                <circle cx="39" cy="39" r="35" fill="none" stroke="var(--track)" strokeWidth="6" />
-                <circle cx="39" cy="39" r="35" fill="none" stroke={scoreColor(scores.tailored)} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(219.9 * scores.tailored / 100).toFixed(1)} 219.9`} transform="rotate(-90 39 39)" />
-              </svg>
-              {/* ui: keep — score numeral: serif 13.5 in scoreColor(), centred in the ring; data display, not a Heading */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 13.5, color: scoreColor(scores.tailored), transform: 'translateY(1px)' }}>{scores.tailored}</div>
-            </div>
+            <ScoreRing value={scores.tailored} size="sm" />
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>
@@ -802,10 +793,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
           <Helper>Changes land automatically — you review and decline afterwards.</Helper>
         </HeaderRow>
         <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={personaBase} onChange={(e) => setPersonaBase(e.target.checked)} />
-            Tailor from Persona instead of this base
-          </label>
+          <Check checked={personaBase} onChange={setPersonaBase} label="Tailor from Persona instead of this base" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <Label>Pick a job · saved and scored first</Label>
             <Input value={q} onChange={setQ} placeholder="Search jobs…" ariaLabel="Search jobs" />

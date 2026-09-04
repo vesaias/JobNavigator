@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Outlet, Navigate } from 'react-router-dom'
 import { Briefcase, LayoutDashboard, Building2, Search, Settings, BarChart3, FileCode2, FileText, User, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
 import JobFeed from './components/JobFeed'
@@ -26,11 +26,24 @@ import V2CoverLetterEditor from './v2/CoverLetterEditor'
 import V2Settings from './v2/Settings'
 import V2Persona from './v2/Persona'
 import V2Stats from './v2/Stats'
-import V2ToastLab from './v2/ToastLab'   // TEMP: /v2/toasts debug page
-import V2UiGallery from './v2/UiGallery'   // /v2/ui — the primitive gallery (design pass D3)
 import axios from 'axios'
 import { useTheme } from './v2/theme'
 import { TitleSync } from './useTitle'
+
+// Lab pages (the primitive gallery at /v2/ui, the toast taxonomy lab at
+// /v2/toasts) live in `frontend/src/design-base/`, which is git-ignored: they are
+// a local design workbench, not shipped source, and a clone may simply not have
+// the folder. `import.meta.glob` is resolved by Vite at build time and yields an
+// EMPTY map when it matches nothing, so an absent folder costs the two routes
+// rather than breaking the build the way a static `import` would. Each match is
+// loaded lazily, so the lab never lands in the app's main chunk either.
+const LAB_PAGES = import.meta.glob('./design-base/*.jsx')
+const labRoute = (name, path) => {
+  const load = LAB_PAGES[`./design-base/${name}.jsx`]
+  if (!load) return null   // folder (or file) absent — no route, no error
+  const Page = lazy(load)
+  return <Route path={path} element={<Suspense fallback={null}><Page /></Suspense>} />
+}
 
 const NAV_ITEMS = [
   { to: '/', icon: Briefcase, label: 'Jobs' },
@@ -165,13 +178,11 @@ function App() {
           <Route path="persona" element={<V2Persona />} />
           <Route path="stats" element={<V2Stats />} />
         </Route>
-
-        {/* TEMP: toast taxonomy lab — delete with v2/ToastLab.jsx */}
-        <Route path="/v2/toasts" element={<V2ToastLab />} />
-
-        {/* Primitive gallery (design pass D3) — rail-less, outside the v2 shell so
-            nothing but ui.jsx is on screen for the style crawl. */}
-        <Route path="/v2/ui" element={<V2UiGallery />} />
+        {/* The two lab pages are optional: `labRoute` returns null when
+            frontend/src/design-base/ is not present (it is git-ignored), and
+            React.Children skips a null child, so the route simply does not exist. */}
+        {labRoute('ToastLab', '/v2/toasts')}
+        {labRoute('UiGallery', '/v2/ui')}
 
         {/* classic shell */}
         <Route element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>

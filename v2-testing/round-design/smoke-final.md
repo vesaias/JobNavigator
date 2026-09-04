@@ -942,3 +942,360 @@ and the test measures the wrong thing.
 
 - `backend/api/routes_searches.py` — **backend container restart** (uvicorn runs without `--reload`). Handing this to the coordinator rather than restarting it here, since flow agents are live.
 - `frontend/src/v2/Applications.jsx`, `Searches.jsx`, `ui.jsx`, `theme.css` — frontend rebuild.
+
+
+---
+
+## Post-pass fixes
+
+Seven user-reported defects from the design pass, plus `DS-S-22` off the open list
+and three user decisions taken after it (`ScoreRing`; the remaining recurring
+families; the lab pages out of shipped source). Repo `V:\JTrakProject`, branch
+`v2-redesign`, HEAD `e1e2621`.
+
+**Source-only.** Nothing was rebuilt, no container restarted, nothing committed —
+so none of this is on screen until the frontend is rebuilt.
+
+Every defect that could be measured was measured **live first** — Playwright in the
+`backend` container against `http://caddy`, driving HEAD `e1e2621`'s deployed
+bundle across `light|dark x default|alt` — rather than reasoned about from the
+source. That is how D-POST-01 and D-POST-02 both turned out to be mis-diagnosed in
+the report, in opposite directions.
+
+### id -> file:line -> change
+
+| id | file:line | change |
+|---|---|---|
+| D-POST-01 | `frontend/src/v2/ui.jsx:502-514` + `theme.css:553-559` | `Menu` carries `v2-menu`; `.jn-v2 .v2-menu > * { flex-shrink:0 }` |
+| D-POST-02 | — (`frontend/src/v2/JobFeed.jsx:773-795`) | **not reproducible**; measured `padding: 0px 9px`, the canonical value, in all four combos |
+| D-POST-03 | `frontend/src/v2/JobFeed.jsx:701-702, 989` | verdict line loses the LCA count; count moves to `title` |
+| D-POST-04 | `frontend/src/v2/ui.jsx:356-363` | `Select` trigger ground `--search-bg` -> `--input-bg` |
+| D-POST-05 | `frontend/src/v2/Searches.jsx:68-72, 201-207, 626-635` | Off/Light/Full is a `Segmented`; dots are real `Dot`s |
+| D-POST-06 | `frontend/src/v2/Companies.jsx:512-518` | open row menu raises its sticky cell to `z-index: 28` |
+| D-POST-07 | `frontend/src/v2/ui.jsx:407-429` + `theme.css:119, 290` | selected `Row` is a background wash only; `--row-selected-mark` deleted |
+| DS-S-22 | `frontend/src/v2/Stats.jsx:6, 161-164` | `useEscape(() => setTypeOpen(false), typeOpen)` |
+| D-POST-08 | `frontend/src/v2/ui.jsx:883-943` + 4 sites | `ScoreRing` primitive, font-independent geometry |
+| D-POST-09 | `frontend/src/design-base/` + `App.jsx:33-46, 181-185` | lab pages out of shipped source, routes registered optionally |
+| D-POST-10 | `frontend/src/v2/ui.jsx:773-858` + 6 sites | `Segmented` |
+| D-POST-11 | `frontend/src/v2/ui.jsx:739-771` + 1 site | `Switch` |
+| D-POST-12 | `frontend/src/v2/ui.jsx:689-737` + 7 sites | `Check` / `Radio` |
+| D-POST-13 | `frontend/src/v2/ui.jsx:860-881` + 3 sites | `Meter` |
+| D-POST-14 | `frontend/src/v2/ui.jsx:945-964` + 1 site | `ToastCard` |
+
+### The seven reports, one at a time
+
+#### D-POST-01 (P1) · Feed > Company filter: the in-menu search field is tiny
+
+**Report** "the inner `SearchInput` lost its width in D4b/the DS-S-11 fix (wrapper
+now `width: width || 226`)".
+
+**Measured** The field is not a `SearchInput` — it is `Input`
+(`JobFeed.jsx:750-751`) — and its **width is fine** (236px in a 248px menu). What
+collapsed is its **height: 32px -> 17px**, identically in all four theme/skin
+combos. DS-S-11 is innocent.
+
+**Root cause** `Menu` is `display:flex; flex-direction:column`, so a child's
+declared height is only a *flex-basis*. The Company menu lists ~1300 companies and
+overflows its `maxHeight: 360`, so the browser shrinks every shrinkable child to
+fit — and the field, being the only child that *can* shrink, absorbs all of it.
+The Score >= / Salary menus do not overflow, which is why their fields kept their
+32px and D-POST-02 looked like a separate bug.
+
+**Fix, at the source rather than the site** `Menu` now renders
+`className={cx('v2-menu', className)}` (`ui.jsx:509-512`), the hand-rolled listbox
+inside `Select` takes the same class (`ui.jsx:377`), and `theme.css:559` adds
+`.jn-v2 .v2-menu > * { flex-shrink:0 }`. Menu rows are fixed-height by definition:
+a scrolling menu scrolls, it never squashes. Isolated repro in the container's
+Chromium — same box, one with the rule and one without: **19px vs 32px**.
+
+**Every other in-menu search, checked** There are none. The other three named in
+the report are not in menus and not `SearchInput`: the Applications company filter
+(`Applications.jsx:353-358`), the Stats activity filter (`Stats.jsx:693-698`) and
+the Settings header (`Settings.jsx:502-507`) are each a bespoke `v2-fieldwrap` with
+an explicit width in a toolbar or header row — unaffected by DS-S-11 and unaffected
+by this. `ResumeEditor.jsx:811` is an `Input` in a panel, not a menu.
+
+#### D-POST-02 (P2) · Feed > Score >= and Salary popups: no internal padding
+
+**Report** "those popups' `Input`s render with `padding: 0` (an override at the
+site or an `Input` prop)".
+
+**Measured** `padding: 0px 9px` — the canonical field padding — on both fields, in
+`light|dark x default|alt`, with `paddingLeft` computed at 9px and a 4x screenshot
+of the filled field showing the number inset from the border as designed. There is
+no `padding: 0` at the site, none on the prop, and none in `theme.css`; `Input`'s
+own `padding: '0 9px'` (`ui.jsx:258`) is spread before the caller's `style`, which
+carries only `{ flex: 1, minWidth: 0 }`. The pre-D4b code
+(`git show bc3d351`) also had `0 9px`, so nothing was lost in the migration either.
+
+**Status** No change made. The most likely explanation is that this and D-POST-01
+were seen in the same session and read as two symptoms: the two popups sit in the
+same `Drop` menus as the Company filter, and it is the Company one whose field is
+visibly wrong. If the field still looks unpadded after the rebuild, the thing to
+capture is a screenshot with the numeral in it — the measurement says the box is
+right.
+
+#### D-POST-03 (P3) · Feed · "N LCAs" in the H-1B info line
+
+`JobFeed.jsx:701-702`. `visaText` concatenated the verdict with its evidence count,
+so a one-fact line read as two. It is now the verdict label alone, with a sibling
+`visaTitle` (`Based on N H-1B filings` / `No H-1B filings on record`) applied as
+`title` on the expanded span at `:989`. The collapsed `Helper` at `:991` joins
+`visaText` into its one-line summary and picks up the shorter text unchanged.
+
+#### D-POST-04 (P3) · Searches > New/Edit · dropdowns and text fields disagree
+
+`ui.jsx:363`. The `Select` trigger drew on `--search-bg` (`= --surface`, white)
+while `Input`/`Textarea` draw on `--input-bg` (`= --surface-2`), so every form that
+pairs the two — Searches' New/Edit grid, Settings' value rows, Persona's enum
+fields — showed two grounds in one row of controls. The trigger is a *field*, so it
+now takes `--input-bg`. `--search-bg` stays what its name says: the ground of a
+search box (`SearchInput` boxed), a different control. Settings' selects re-read
+correctly — they sit on `--bg`/`--surface` panels, and `--surface-2` is the same
+`BOX` ground the pre-primitive Settings dropdown used.
+
+#### D-POST-05 (P3) · Searches · auto-scoring Off / Light / Full
+
+Two defects, both confirmed live (`/v2/searches` -> New search):
+
+- **"Off" off-centre.** `<Pill …><span>{d.dots}</span>{d.label}</Pill>` rendered an
+  **empty** `<span>` for the `off` row, and `Pill`'s `gap: 7` still reserved a
+  gutter for it — measured: the Off cell's first child is a 0px-wide span with a
+  7px gap after it. The pre-design-pass code had the guard
+  (`{d.dots && <span>…</span>}`, `git show 4c794b4`); it was lost in the migration
+  to `Pill`.
+- **The dots.** They were `●` glyphs inheriting the pill's ink, so they were grey
+  on the unpicked cells and their size and baseline moved with the display face.
+
+`DepthPills` (`Searches.jsx:204-207`) is now a `Segmented` and keeps its name and
+`({ value, onPick })` signature, so the call site is untouched. `DEPTHS.dots`
+(`:68-72`) changed from `''`/`'●'`/`'●●'` to `0`/`1`/`2`; a cell with no dots draws
+**nothing at all**, so its label is centred by the same flex rule as its siblings,
+and the dots are real 6px `Dot`s — `--dot-accent` when picked, `--dot-neutral`
+otherwise. The one other reader of `DEPTHS.dots`, the row badge at `:626-635`, was
+migrated to the same discs (it would otherwise have printed the literal "1"/"2").
+The old per-cell `stopPropagation` was dead — the edit form's own wrapper
+(`Searches.jsx:678`) already blocks the clickable summary row — and was dropped.
+
+**Companies' identical control, checked.** Companies has no dots. Its `Seg` helper
+(`Companies.jsx:115-120`) is now the `Segmented` primitive behind the same
+`({ opts, value, onPick, valueKey })` signature, so its three call sites (depth
+`:711`, drawer tier `:731`, add-modal tier `:844`) are untouched.
+
+#### D-POST-06 (P1) · Companies · the row ... menu renders behind the table
+
+**Measured** Screenshot of `/v2/companies` with a row menu open: the rows *below*
+paint their Run/Test pills straight over it.
+
+**Root cause** `position: sticky` creates a stacking context **unconditionally**,
+z-index or not. The menu is `position:absolute; z-index:40` inside the sticky
+`.v2-cactions` cell (`Companies.jsx:518`), so its 40 is confined to that one cell;
+every later row's `.v2-cactions` is a sibling stacking context at `z-index: auto`,
+painted after it, on an opaque `background: var(--bg)` (`theme.css:582`).
+
+**Fix** Raise the cell itself while its own menu is open:
+`zIndex: menuId === c.id ? 28 : undefined`. **28**, not 30 — it clears the sticky
+column head (`TableHead … zIndex: 3`, `:458`) and every row cell, and stays under
+the drawer scrim (29) and the drawer (30) in `ui.jsx`'s `Drawer`, so an open drawer
+always covers it. The Feed's `Drop` menus were checked as the alternative model:
+they already escape by computing the trigger rect and rendering `position: fixed`
+(`JobFeed.jsx:67-96`), which is the heavier fix and was not needed here. Isolated
+repro in the container's Chromium — same markup with and without the z-index:
+`elementFromPoint` over the menu returns the *later row's cell* without it and the
+**menu** with it.
+
+**Not fixed, out of scope (pre-existing):** for rows near the bottom of the
+viewport the menu is still clipped by the table scroller's `overflow: auto`. That
+one does want the `position: fixed` treatment.
+
+#### D-POST-07 (P2) · Applications · the selected row must not have the accent bar
+
+`ui.jsx:407-429`. APPS-20 gave `Row selected` a `3px solid var(--row-selected-mark)`
+left border with a compensating `padding: '0 10px 0 7px'`, which shifted every cell
+in the picked row by 3px. Selection is now the `--row-selected` wash and nothing
+else; padding is `'0 10px'` unconditionally. `--row-selected-mark` is deleted from
+both theme blocks (`theme.css:119`, `:290`) — nothing else read it. The
+Applications *site* was already clean: its rows carry no `borderLeft` and no
+selection-dependent padding of their own, so the bar lived entirely in the
+primitive. The `/v2/ui` gallery's `Row` sample and its token list were updated so
+the palette now shows the true selected state.
+
+**Follow-up the coordinator should decide (not changed here):** `--row-hover` and
+`--row-selected` are both `var(--surface-2)` in both themes, so with the mark gone
+a hovered row and a selected row are now visually identical — which is the symptom
+APPS-20 added the bar for. It affects every v2 row list. The options are a distinct
+`--row-selected` value or a `--row-hover` that stacks over it; both are colour
+decisions, so they were left alone.
+
+#### DS-S-22 (P3, from the open list) · Stats "Type" menu closes on Escape
+
+`Stats.jsx:161-164`, import at `:6`. `hooks.js:19` is
+`useEscape(onClose, active = true)` — the second argument *is* an enabled flag — so
+`useEscape(() => setTypeOpen(false), typeOpen)` sits with the other hooks and the
+click backdrop stays for click-outside.
+
+### The three post-report decisions
+
+#### D-POST-08 · `ScoreRing`
+
+`ui.jsx:883-943`. Four sites drew the same ring by hand — an SVG arc over a
+`--track` circle with an absolutely-positioned numeral — each with its own
+hand-tuned `transform: translateY(1px)`, which is exactly why the numeral drifts
+off centre when the alt skin swaps the display face. `ScoreRing` fixes the geometry
+and drops the nudge: the numeral sits in a flex-centred box at `lineHeight: 1`,
+integer box sizes, arc `r=35` in a `2x box` viewBox.
+
+Real sizes, read from the sites: **`md` = 44px** (Feed row, display 19) and
+**`sm` = 34px** (report band + resume editor, display 14 at `-.02em`); a number is
+taken as an explicit box. `tone` defaults to the exported
+`scoreTone(s)` — `>=70 good`, `>=50 warn`, else `bad`, `null -> neutral` — the
+bands three screens each re-declared as a local `scoreColor()`. `value={null}`
+draws the dashed unscored ring with `label` inside ("No fit"). `children` ride in
+the ring's own relative box, which is where the Feed pins its "+N reports" badge.
+Colours come from new tokens `--ring-track` and
+`--ring-{good,warn,bad,accent,neutral}-{border,ink,bg}`.
+
+Migrated: `JobFeed.jsx:894` (md, with the badge as children), `:1036` (sm),
+`:1174` (unscored), `ResumeEditor.jsx:498` (sm). `ROW_C`, `BAND_C` and both
+`scoreColor()` helpers in those two files became unused and were deleted.
+`Resumes.jsx` was checked and left alone: its five `scoreColor` sites are bare
+numerals in a colour, not rings.
+
+#### D-POST-09 · lab pages out of shipped source
+
+`UiGallery.jsx` and `ToastLab.jsx` moved to **`frontend/src/design-base/`**
+(git-ignored, `.gitignore` tail; `git rm --cached` staged, so they are untracked
+local files on disk). Their imports were rewritten `./x` -> `../v2/x`.
+
+**Mechanism for the optional routes** — `App.jsx:33-46, 181-185`:
+
+```js
+const LAB_PAGES = import.meta.glob('./design-base/*.jsx')
+const labRoute = (name, path) => {
+  const load = LAB_PAGES[`./design-base/${name}.jsx`]
+  if (!load) return null
+  const Page = lazy(load)
+  return <Route path={path} element={<Suspense fallback={null}><Page /></Suspense>} />
+}
+```
+…with `{labRoute('ToastLab', '/v2/toasts')}` and `{labRoute('UiGallery', '/v2/ui')}`
+as `<Routes>` children. Vite resolves `import.meta.glob` at build time and returns
+an **empty map** when it matches nothing, so a missing folder costs the two routes
+and nothing else — where a static `import` would have failed the build.
+`React.Children` skips a `null` `<Routes>` child, and `React.lazy` keeps the lab out
+of the app's main chunk. Restoring the folder restores the routes with no wiring
+change.
+
+`v2-testing/tools/stylelint.py` `SKIP` is now just `{"ui.jsx"}` (the lab is outside
+the scanned folder), `PRIMS` gained the seven new primitives, and
+`stylescan.py`'s `ROOT` carries a note saying the workbench is deliberately not
+scanned. `HANDOVER.md`'s "Primitive layer" section documents where the lab lives
+and that it is local-only.
+
+#### D-POST-10..14 · the remaining recurring families
+
+| primitive | `ui.jsx` | migrated sites |
+|---|---|---|
+| `Segmented` | `773-858` | Applications stage stepper `:552`, Log-modal stage `:825`; `CoverLetters.LengthPicker:102`; `Companies.Seg:115` (3 call sites) + add-modal depth `:854`; `Searches.DepthPills:204`; Feed Live/Cached `:1202` (`variant="inset"`) |
+| `Switch` | `739-771` | `Settings.Toggle:110` |
+| `Check`/`Radio` | `689-737` | Feed select-all `:824`, Feed in-menu company check `:762`, Feed filter-row `Check:99`; `Applications.jsx:376`; `Searches.jsx:301-309` (local helper deleted); `ResumeEditor.jsx:793` (was a native UA checkbox) |
+| `Meter` | `860-881` | Feed criterion bar `:1082` (1px), Feed keyword coverage `:1101` (4px), Stats funnel `:498` (22px) |
+| `ToastCard` | `945-964` | `Toast.jsx:61` — `KINDS` keeps `spin`/`mark`/`markBg`, the colour keys move to tokens; `useToasts`/`ToastStack` API unchanged |
+
+`Segmented` renders `role="radiogroup"`/`role="radio"` with `aria-checked`, a roving
+tabstop and arrow-key/Enter/Space selection; `Switch` is `role="switch"`;
+`Check`/`Radio` are `role="checkbox"`/`"radio"` (`aria-checked="mixed"` when
+indeterminate); `Meter` is `role="meter"` with `aria-valuenow`. None of the
+hand-rolled originals had any of that.
+
+**Where the new tokens live.** All of them are semantic names in the light and dark
+blocks of `theme.css` only (`:120-146`, `:291-317`), each pointing at a palette
+token. The two `[data-skin="alt"]` blocks hold **palette tokens and font stacks
+only, by construction** — that is the D6 contract, restated in the comment above
+them — so the new families re-skin for free and adding names there would have
+broken it. Two type-scale entries were added to both theme blocks: `--t-7-5` and
+`--t-14`.
+
+### Drift introduced (default skin, light)
+
+Zero-pixel unless listed. Where a migration moved a value onto the canonical token,
+that is the drift.
+
+- **Rest borders onto `--seg-border` / `--check-border` (= `--edge`).** Applications'
+  stage stepper was `--line`; the Feed's select-all was `--faint`; the Feed's filter-row
+  check was `--line`. All three darken slightly.
+- **Segmented radius.** Companies' `Seg` cells `--radius-row` (7px) -> `--radius-cell`
+  (8px). Searches' depth cells move from `Pill`'s r99 to `--radius-cell` and their
+  picked cell gains weight 600.
+- **Searches depth dots.** `●` glyph in the pill's ink -> two 6px `Dot`s overlapping
+  by 4px, accent when picked; the row badge (`:626`) likewise. Font-independent now.
+- **Companies add-modal depth.** 3 x `Pill size="sm"` (h26, r99, auto width) ->
+  `Segmented size="sm"` (h31, equal-flex cells). A deliberate unification: the same
+  `auto_scoring_depth` field wore `Seg` cells three sections away in the drawer.
+- **Feed Live/Cached.** The *selected* cell now paints `--seg-on-bg`/`--seg-on-ink`
+  (accent-soft/accent) for **both** cells, where "Live" selected previously painted
+  `--surface-2`/`--text`. Frame, 2px inset, 22px cell and 10px padding all match.
+- **Ring numerals.** `translateY(1px)` gone at all four sites (the point of the
+  primitive). `ResumeEditor`'s ring additionally goes stroke 6 -> 5 (~2.61px ->
+  ~2.18px rendered) and numeral 13.5 -> 14, making it identical to the report band's
+  `sm` ring. Face and colours are unchanged (`--font-display` = `--serif`;
+  `--ring-*` alias `--track`/`--good`/`--warn`/`--bad`).
+- **Feed select-all** gains a real indeterminate dash on a partial selection, where
+  it previously drew an empty box.
+- **`LengthPicker` hover** `v2-bdc` (border **and** ink) -> `v2-bd` (border only),
+  matching every other segmented control.
+- **`ResumeEditor` "Tailor from Persona"** native UA checkbox (~13px, OS-drawn) ->
+  the v2 tick box (14px); label gap 8 -> 7.
+- **In-menu company check** rest ground `--surface` -> `--check-bg` (`transparent`);
+  identical in light, shows the menu's own fill in dark.
+- **Applications stage stepper / Log-modal cells** pick up `font-family:
+  var(--font-body)` and `lineHeight: 1` explicitly where they used to inherit; the
+  cell heights are fixed either way, so the box does not move.
+
+**Deliberately not migrated** (reported rather than forced):
+
+- `ResumeEditor`'s three choice-card "radio slots" (`:698`, `:715`, `:803`) draw an
+  *outlined* 14px disc with a 7px accent dot; `Radio`'s on-state is a solid disc.
+  That is a visible shape change, and it would nest a `role="radio"` tab stop inside
+  an already-clickable card. It wants an outline variant on `Radio` first.
+- `Stats`' score-distribution chart (`:542`) is a hand-drawn **vertical** column
+  chart with a top-only radius; `Meter` is a horizontal fill and cannot express it.
+- `CoverLetters`' `Picker`/`VoicePicker`, Searches' `Chip` and its TestModal tabs,
+  Companies' tier-filter and `ResumeChips`: dropdown-listbox or multi-select roles,
+  not segmented controls; most already sit on `Pill`/`Menu` primitives.
+
+### Gates
+
+- `py v2-testing/tools/stylelint.py` -> **`0 findings ({}), 97 allowed, 0 css`**, exit 0.
+  (109 -> 97 allowed: twelve `ui: keep` exemptions retired with the hand-rolled
+  markup they exempted.)
+- `npx esbuild@0.21.5 --loader:.jsx=jsx` on all 18 touched or dependent JSX files,
+  `frontend/src/App.jsx` and both `design-base/*.jsx` included -> all parse clean.
+- Brace balance vs HEAD, every file balanced `{`=`}` and `(`=`)`:
+
+| file | HEAD `{`/`(` | now `{`/`(` | why |
+|---|---|---|---|
+| `App.jsx` | 103 / 56 | 107 / 63 | the `labRoute` helper and the glob |
+| `ui.jsx` | 510 / 511 | 679 / 691 | seven new primitives |
+| `theme.css` | 86 / 393 | 87 / 485 | +1 rule (`.v2-menu > *`), +92 `var()` in the new token block |
+| `JobFeed.jsx` | 1465 / 1729 | 1432 / 1662 | two SVG rings, two meters, three tick boxes and the Live/Cached track out |
+| `Applications.jsx` | 734 / 775 | 715 / 743 | three map-and-return blocks -> primitive calls |
+| `Stats.jsx` | 723 / 676 | 727 / 679 | `useEscape` + `Meter` props + the `frac` field |
+| `Companies.jsx` | 988 / 964 | 980 / 955 | `Seg` body and the add-modal map -> two `Segmented` calls |
+| `Searches.jsx` | 766 / 773 | 754 / 762 | local `Check` deleted, `DepthPills` body -> one call |
+| `Settings.jsx` | 782 / 906 | 772 / 898 | `Toggle` body -> one `Switch` |
+| `CoverLetters.jsx` | 314 / 362 | 308 / 353 | `LengthPicker` body -> one `Segmented` |
+| `ResumeEditor.jsx` | 802 / 965 | 790 / 948 | ring + numeral + `scoreColor` + native checkbox out |
+| `Toast.jsx` | 51 / 88 | 52 / 72 | 14 `var()` colour keys leave for tokens |
+
+`Resumes.jsx`, `CoverLetterEditor.jsx`, `Persona.jsx`, `V2App.jsx` and
+`ResumeSections.jsx` are byte-unchanged.
+
+### Rebuild needed
+
+**Frontend rebuild** — `App.jsx`, `v2/ui.jsx`, `v2/theme.css`, `v2/JobFeed.jsx`,
+`v2/Applications.jsx`, `v2/Stats.jsx`, `v2/Companies.jsx`, `v2/Searches.jsx`,
+`v2/Settings.jsx`, `v2/CoverLetters.jsx`, `v2/ResumeEditor.jsx`, `v2/Toast.jsx`,
+`v2/HANDOVER.md` (docs only), plus the moved `design-base/*.jsx`. No backend file
+was touched, so no container restart is needed. Handing the rebuild to the
+coordinator rather than doing it here, per the pass's source-only rule.

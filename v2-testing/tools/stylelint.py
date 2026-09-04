@@ -1,7 +1,8 @@
 """D5 lint: fail on styling that bypasses the primitive layer.
 
 Usage: py v2-testing/tools/stylelint.py [--strict]
-Checks frontend/src/v2/*.jsx (except ui.jsx, UiGallery.jsx, ToastLab.jsx) and theme.css:
+Checks frontend/src/v2/*.jsx (except ui.jsx) and theme.css. The lab pages live in
+frontend/src/design-base/ (git-ignored) and are outside the scanned folder:
   1. raw colours (#hex, rgb(/rgba(/hsl() in JSX  → only theme.css may hold them
   2. fontFamily / fontSize literals in JSX style objects (numbers or px strings) outside ui.jsx
   3. borderRadius / boxShadow literals in JSX outside ui.jsx (var(--radius-*) / var(--*-shadow) are fine)
@@ -14,9 +15,12 @@ Exit 1 on any finding unless every finding is allowed.
 import re, os, sys, io, collections
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "v2")
-SKIP = {"ui.jsx", "UiGallery.jsx", "ToastLab.jsx"}
+# The lab pages moved out of the scanned folder entirely (frontend/src/design-base/,
+# git-ignored, wired up through import.meta.glob in App.jsx), so the folder itself
+# is the skip now and only the primitive layer needs naming.
+SKIP = {"ui.jsx"}
 HOVER = re.compile(r"\bv2-(bdc?|act|row|crow|arow|card|chip|menuitem|hover-[a-z-]+|dashadd|navlink|clhead)\b")
-PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface"}
+PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface", "Check", "Radio", "Switch", "Segmented", "Meter", "ScoreRing", "ToastCard"}
 
 def strip_block_comments(lines):
     """Blank out every `/* … */` span (the `{/* … */}` JSX form included) while

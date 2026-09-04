@@ -5,7 +5,7 @@ import { useToasts, ToastStack } from './Toast'
 // RES-16: this dialog started here (COMP-28) and now serves the résumé and
 // cover-letter deletes too, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
-import { Button, DashedAdd, Dot, Drawer as UiDrawer, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, Rule, SearchInput, ShowMore, Spinner, TableHead, Tag } from './ui'
+import { Button, DashedAdd, Dot, Drawer as UiDrawer, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -112,19 +112,12 @@ function UrlEditor({ urls, onChange }) {
   )
 }
 
+// `opts` keeps this screen's two shapes — DEPTHS keys on `id`, TIER_BTNS on `v`
+// — so the three call sites stay as they were; the cells themselves are the
+// Segmented primitive now.
 const Seg = ({ opts, value, onPick, valueKey = 'id' }) => (
-  <div style={{ display: 'flex', gap: 5 }}>
-    {opts.map((o) => {
-      const v = o[valueKey] !== undefined ? o[valueKey] : o.v
-      const on = value === v
-      return (
-        /* ui: keep — a segmented control, not a card: equal-flex cells that swing
-           to accent-soft when picked */
-        <div key={String(v)} onClick={() => onPick(v)} title={o.hint || ''} className="v2-bd"
-          style={{ flex: 1, height: 33, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'var(--surface)', color: on ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-row)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: on ? 600 : 400, cursor: 'pointer' }}>{o.label}</div>
-      )
-    })}
-  </div>
+  <Segmented value={value} onChange={onPick}
+    options={opts.map((o) => ({ value: o[valueKey] !== undefined ? o[valueKey] : o.v, label: o.label, hint: o.hint }))} />
 )
 
 const ResumeChips = ({ resumes, personaPopulated, selected, toggle }) => (
@@ -516,7 +509,13 @@ export default function Companies() {
               </span>
               {/* actions — R2-S-01: pinned to the right edge of the scroller so the
                   ⋯ stays reachable when the row is wider than the pane at 1024px */}
-              <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8 }} onClick={(e) => e.stopPropagation()}>
+              {/* `position: sticky` makes this cell its own stacking context, so the
+                  menu's z-index 40 is trapped inside it and every later row's cell —
+                  a sibling context at z-index auto, painted after it, on an opaque
+                  --bg ground — covered the open menu. Raise the cell itself while its
+                  menu is open: 28 clears the sticky column head (3) and every row,
+                  and stays under the drawer scrim (29) and the drawer (30). */}
+              <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8, zIndex: menuId === c.id ? 28 : undefined }} onClick={(e) => e.stopPropagation()}>
                 {/* ui: keep — 25px Run/Test pills sized to the 46px row; Pill sm is 26 */}
                 <span onClick={testBusy ? undefined : () => runScrape(c.id)} title={testBusy ? 'A test is already running' : 'Scrape this company now'} className={testBusy ? undefined : 'v2-act'}
                   style={{ flex: '0 0 auto', height: 25, padding: '0 10px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.5 : 1 }}>
@@ -854,11 +853,11 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
             <ResumeChips resumes={resumes} personaPopulated={personaPopulated} selected={selected} toggle={toggle} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 2 }}>
               <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Depth</span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {DEPTHS.map((d) => { const on = depth === d.id; return (
-                  <Pill key={d.id} size="sm" on={on} onClick={() => setDepth(d.id)} title={d.hint}>{d.label}</Pill>
-                ) })}
-              </div>
+              {/* the same auto_scoring_depth control the drawer draws with Seg — it
+                  was the one place this field wore Pills instead of segmented cells */}
+              <Segmented size="sm" ariaLabel="Auto-scoring depth" value={depth} onChange={setDepth}
+                options={DEPTHS.map((d) => ({ value: d.id, label: d.label, hint: d.hint }))}
+                style={{ flex: 1 }} />
             </div>
           </div>
           <Helper style={{ paddingTop: 2 }}>{scoreNote}</Helper>

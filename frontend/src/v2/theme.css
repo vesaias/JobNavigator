@@ -77,7 +77,7 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
 
 
-  /* -- Semantic layer (design pass D2) ---------------------------------------
+  /* — Semantic layer (design pass D2) ---------------------------------------
      Every primitive in ui.jsx reads ONLY these names; none of them holds a
      literal. Each points at a palette token above, so a new skin stays a
      wholesale replacement of the palette block and nothing else. The block is
@@ -86,8 +86,8 @@
      token at a *different* palette token per theme. Change one, change both. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
-  --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
-  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   /* radii — the whole scale, smallest first. --radius-mark is the inline diff
@@ -116,7 +116,34 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2); --row-selected-mark:var(--accent);
+  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
+  --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
+  --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
+  /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
+     track so it reads in both themes; OFF keeps --knob on a neutral track. */
+  --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
+  --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
+  /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
+     Applications stage stepper in red. `inset` is the framed two-cell toggle. */
+  --seg-bg:var(--surface); --seg-ink:var(--text-2); --seg-border:var(--edge);
+  --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
+  --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
+  --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
+  /* Meter — track + fill, one name per band */
+  --meter-track:var(--line); --meter-accent:var(--accent); --meter-good:var(--good);
+  --meter-warn:var(--warn); --meter-bad:var(--bad); --meter-neutral:var(--line-strong);
+  /* ScoreRing — arc (-border), numeral (-ink) and ground (-bg) per score band */
+  --ring-track:var(--track);
+  --ring-good-border:var(--good); --ring-good-ink:var(--good); --ring-good-bg:transparent;
+  --ring-warn-border:var(--warn); --ring-warn-ink:var(--warn); --ring-warn-bg:transparent;
+  --ring-bad-border:var(--bad); --ring-bad-ink:var(--bad); --ring-bad-bg:transparent;
+  --ring-accent-border:var(--accent); --ring-accent-ink:var(--accent); --ring-accent-bg:transparent;
+  --ring-neutral-border:var(--edge); --ring-neutral-ink:var(--muted); --ring-neutral-bg:transparent;
+  /* Toast card grounds — the two the taxonomy had no tokens for (progress is the
+     quiet paper card, undo the one dark card) join the ok/bad pair above */
+  --toast-progress-bg:var(--recessed); --toast-progress-line:var(--line); --toast-progress-ink:var(--text-2);
+  --toast-undo-bg:var(--rail); --toast-undo-line:var(--rail); --toast-undo-ink:var(--rail-ink);
   --row-line:var(--line-soft);
   /* cards, bands, dashed adds */
   --card-bg:var(--surface); --card-border:var(--line); --card-border-hover:var(--accent); --card-bg-hover:var(--hover-soft);
@@ -221,7 +248,7 @@
   --shadow-toast:0 8px 24px rgba(0,0,0,.5);
   --shadow-drawer:-14px 0 40px rgba(0,0,0,.45);
 
-  /* -- Semantic layer (design pass D2) ---------------------------------------
+  /* — Semantic layer (design pass D2) ---------------------------------------
      Every primitive in ui.jsx reads ONLY these names; none of them holds a
      literal. Each points at a palette token above, so a new skin stays a
      wholesale replacement of the palette block and nothing else. The block is
@@ -230,8 +257,8 @@
      token at a *different* palette token per theme. Change one, change both. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
-  --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
-  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-15:15px; --t-15-5:15.5px;
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
+  --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   /* radii — the whole scale, smallest first. --radius-mark is the inline diff
@@ -260,7 +287,34 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2); --row-selected-mark:var(--accent);
+  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
+  --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
+  --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
+  /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
+     track so it reads in both themes; OFF keeps --knob on a neutral track. */
+  --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
+  --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
+  /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
+     Applications stage stepper in red. `inset` is the framed two-cell toggle. */
+  --seg-bg:var(--surface); --seg-ink:var(--text-2); --seg-border:var(--edge);
+  --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
+  --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
+  --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
+  /* Meter — track + fill, one name per band */
+  --meter-track:var(--line); --meter-accent:var(--accent); --meter-good:var(--good);
+  --meter-warn:var(--warn); --meter-bad:var(--bad); --meter-neutral:var(--line-strong);
+  /* ScoreRing — arc (-border), numeral (-ink) and ground (-bg) per score band */
+  --ring-track:var(--track);
+  --ring-good-border:var(--good); --ring-good-ink:var(--good); --ring-good-bg:transparent;
+  --ring-warn-border:var(--warn); --ring-warn-ink:var(--warn); --ring-warn-bg:transparent;
+  --ring-bad-border:var(--bad); --ring-bad-ink:var(--bad); --ring-bad-bg:transparent;
+  --ring-accent-border:var(--accent); --ring-accent-ink:var(--accent); --ring-accent-bg:transparent;
+  --ring-neutral-border:var(--edge); --ring-neutral-ink:var(--muted); --ring-neutral-bg:transparent;
+  /* Toast card grounds — the two the taxonomy had no tokens for (progress is the
+     quiet paper card, undo the one dark card) join the ok/bad pair above */
+  --toast-progress-bg:var(--recessed); --toast-progress-line:var(--line); --toast-progress-ink:var(--text-2);
+  --toast-undo-bg:var(--rail); --toast-undo-line:var(--rail); --toast-undo-ink:var(--rail-ink);
   --row-line:var(--line-soft);
   /* cards, bands, dashed adds */
   --card-bg:var(--surface); --card-border:var(--line); --card-border-hover:var(--accent); --card-bg-hover:var(--hover-soft);
@@ -299,7 +353,7 @@
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 }
-/* -- Skin: alt (design pass D6) ---------------------------------------------
+/* — Skin: alt (design pass D6) ---------------------------------------------
    The proof that the semantic layer is a layer. Two blocks, one per theme,
    holding ONLY palette tokens and the three font stacks — no semantic token, no
    --radius-*, no --t-*. Every primitive keeps reading the same semantic names,
@@ -497,6 +551,13 @@
 @keyframes v2-spin { to { transform:rotate(360deg); } }
 .v2-spin { animation:v2-spin .9s linear infinite; }
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
+/* D-POST-01: a Menu is a *column* flex box, so a child's height is only a
+   flex-basis. Once the list is taller than the menu's maxHeight the browser
+   shrinks every shrinkable child to fit, and the in-menu search field on the
+   Feed's Company filter collapsed from 32px to 17. Menu rows are fixed-height by
+   definition: a scrolling menu scrolls, it never squashes. */
+.jn-v2 .v2-menu > * { flex-shrink:0; }
+
 .jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--input-placeholder) !important; opacity:1; }
 .jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }
 /* CL-21: keyboard focus is visible on every field; inline borders need !important.
