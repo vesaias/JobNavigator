@@ -454,6 +454,10 @@
 .v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
 .v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour (APPS-10) */
+/* The Feed detail's grab-line: it rests on --surface-2, which is what the wash
+   hovers to, so it needs the next step down instead — one notch darker in both
+   themes, as the board draws it. The strip sets its background inline. */
+.v2-grab:hover { background:var(--line-soft) !important; }
 .v2-hover-bad:hover { background:var(--hover-bad-bg) !important; }
 .v2-x:hover { background:var(--line); color:var(--text); }
 .v2-pill { cursor:pointer; }

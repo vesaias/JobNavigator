@@ -243,67 +243,147 @@ weight="bold"` in a 34 px box, was near-correct: the `sm` ring draws 32.7 px at 
 
 ---
 
-## Metadata collapse
+## Right-side collapse (per design)
 
-### What the design board actually shows
+The earlier read of this was wrong. It searched the **old** Claude Design project
+("JobNavigator Frontend 2.0 Redesign", `298bd32b-…`), concluded the board had no
+whole-panel collapse, and instead turned the *header caret* into a title-only 48px
+strip. The current board is in **"JobNavigator redesign approach"**
+(`4d073a40-62f3-4af1-adc2-4f5acbae6a31`), file **`JobNavigator Redesign.dc.html`**
+(2,272 lines), and it does have the control — it is not the header caret.
 
-Searched the whole Claude Design project **"JobNavigator Frontend 2.0 Redesign"**
-(`298bd32b-3761-4d2e-be18-00f51ebc2359`) — `Job Feed 2.0.dc.html` read in full (381 lines) and
-`JobNavigator 2.0.dc.html` read in full (2,910 lines, in windows, then grepped for
-`meta|hide|expand|collapse|toggle` and the caret entities `&#9650; &#9660; &#8249; &#8250;`).
+### What the board shows
 
-**There is no "hide metadata" control anywhere on the board.** The only collapsible in the Job
-Feed's right panel is the **report strip** we already ship:
+A **grab-line**: a full-width strip at the very top of the detail `<section>`, *above*
+the metadata header, that folds the **whole top of the right side** away — the header
+**and** the score/report band together — so the posting iframe rises to the top of the
+pane.
 
-- `Job Feed 2.0.dc.html` — `toggleStrip` / `stripOpen`, caret text `expand ▼` / `collapse ▲`
-  (mono 9.5px, `#847d6b`) at the far right of a `padding:7px 24px` row that also carries a 26px
-  score ring and a one-line `reqs · keywords · gap` summary. Keyboard `v` toggles it
-  (`componentDidMount`), and `stripOpen` is **reset to `false`** on every job selection
-  (`select:` and the `j`/`k` handlers) — i.e. the board does *not* persist it across jobs.
-- `JobNavigator 2.0.dc.html` turn **11b** is where that strip was chosen: *"Verdict strip — one
-  collapsible line between header and iframe"*, annotated *"strip collapses to one 26px line when
-  you're just reading"*. 11a (tab swap) and 11c (score-chip drawer) were the rejected alternatives.
-  The only other "collapse" on the board is the **left rail's** `› Collapse` in 6a.
+Markup, `JobNavigator Redesign.dc.html` **l.252-254** (first flex child of the detail
+section, after the absolutely-positioned "Nothing to show" overlay):
 
-So the board's collapsible **is** the report strip and nothing else. The detail header's crumb /
-title / salary-location-H-1B line / action buttons have no toggle, no `metaOpen`/`headerOpen`
-state, no `style-hover` control and no shortcut on any artboard.
+```html
+<div onClick="{{ toggleAnalysis }}" title="{{ analysisHint }}"
+     style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+            height:11px;background:var(--surface-2);border-bottom:1px solid var(--line);
+            cursor:pointer"
+     style-hover="background:var(--line-soft)">
+  <span style="width:44px;height:3px;border-radius:99px;background:var(--edge)"></span>
+</div>
+```
+
+- **Where / what it looks like.** Not a caret and not a labelled control: an 11px band
+  (12px with its 1px rule) spanning the full width of the detail pane, carrying a bare
+  44 x 3 px rounded handle centred in it. No glyph, no text, no border of its own.
+- **Colours → our tokens** (the board's palette block is the same one `theme.css`
+  carries): band `var(--surface-2)`, rule `var(--line)`, handle `var(--edge)`, handle
+  radius `99px` → `var(--radius-control)`. Hover: the band goes to `var(--line-soft)`
+  — one notch darker in both themes.
+- **What collapses.** Exactly two elements, both bound to the same flag:
+  - **l.255** the header wrapper — `display:{{ headWrapDisplay }}` — the eyebrow, the
+    title, the salary/location/H-1B line **and** the Open ↗ / Tailor résumé / ⋯ action
+    row. The whole metadata header, at whatever size its own caret left it.
+  - **l.301** the `dScored` wrapper — `display:{{ analysisWrapDisplay }}` — the score
+    band line **and** the expanded report inside it. **Yes, the report strip goes too.**
+  - `l.1734-1735` sets both from one value: `anaCollapsed ? "none" : "flex"`.
+  - The board does **not** bind the two placeholder bands — the unscored "Score this
+    role" line (**l.418**) and the "Scoring in progress" line (**l.429**) both keep a
+    plain `display:flex`.
+- **Collapsed state.** Nothing above the posting but the 12px grab-line itself. No
+  one-line summary strip, no floating pill: **the grab-line is the re-expand
+  affordance**, and it is the only thing that survives.
+- **Collapsed height of the top area: 12px** (11 + 1px rule).
+- **Hint text** (`analysisHint`, l.1736), used verbatim:
+  `"Hide job details & analysis — posting only"` / `"Show job details & analysis"`.
+- **Persistence.** `localStorage` key **`jn_feed_analysis_collapsed`** (`'1'`/`'0'`),
+  read at l.1403-1404, written in `toggleAnalysis` at l.1737-1741 — its own key,
+  deliberately outside the panel-prefs blob. It survives reloads **and job selection**:
+  the board's select handler (**l.1545**) resets `report / menuFor / headMenu / checked
+  / filterOpen / viewCached` and never touches this or `headOpen`.
+- **Keyboard shortcut: none.** The board's whole `Component` has one lifecycle hook
+  (`componentDidMount`, l.1388) and no key handler at all — no shortcut for this or for
+  anything else on the Feed.
+
+**Origin — `PanelB-CollapseAll.dc.html`** (193 lines). The concept was a "View" segmented
+picker with three modes (l.150): `Everything` (head + report), `Report only`, and
+**`Focus posting`** (`head:false, report:false`) — with a live *"Posting height {{ h }}"*
+readout in its top bar (l.33, l.145: `900 - 42 - (head?96:56) - 54 - (report?300:0) - 36`).
+The point of the artboard was that folding both bands is what buys the posting its
+height. The final board keeps the outcome and drops the mode picker in favour of the
+one grab-line.
+
+### What was reverted
+
+`646f8ee`'s metadata-collapse part, and only that part — the six bug fixes F1-F6 from the
+same commit are untouched. `git diff 4c02e3e -- frontend/src/v2/JobFeed.jsx` now shows no
+`headOpen` change at all; the header caret is byte-identical to its pre-commit form:
+
+- `META_KEY` / `loadMetaOpen()` (the `jobnavigator_v2_feed_meta` key) removed; `headOpen`
+  is back to `loadUI().headOpen ?? true` and rides in the `v2_feed_ui` blob again.
+- the `toggleHead` callback and its `localStorage` effect removed.
+- the `collapsedMeta` derivation removed.
+- header pad back to `11px 30px 12px` collapsed, the caret cell back to a fixed `19x26`,
+  the title's tooltip back to `d.title`, and the collapsed **`Helper` meta line is back**
+  (`company · salary · location · H-1B · source · age`).
+
+So the header caret is again a *shrink to two lines* (26px title + meta block → 17px
+title + one Helper line), which is what the board's own `headOpen` does (l.259-276:
+`headTitleSize` 26/17, `headBtnH` 36/30, and an `sc-if headClosed` summary span at
+l.275). The two collapses are independent and stack, exactly as on the board.
 
 ### What was built
 
-The repo already had the control the user is describing — `headOpen` in `JobFeed.jsx`, a `⌄`/`›`
-caret in the detail header's 19px gutter — but collapsing it still left a **second** line (a
-`Helper` with `company · salary · location · H-1B · source · age`), so it was a *smaller* metadata
-block, not a hidden one. Rather than add a second, competing control, the existing header toggle
-was made to do what was asked.
+`frontend/src/v2/JobFeed.jsx`:
 
-- `frontend/src/v2/JobFeed.jsx` — collapsed is now **title only**: the meta `Helper` line is gone
-  (`headOpen ? (…) : null`). Everything it said moves into the title's tooltip via a new
-  `collapsedMeta` derivation, so nothing becomes unreachable while the block is folded.
-- **Collapsed geometry.** The board gives one number for a collapsed strip — 11b's *"one 26px
-  line"* — and the caret cell in our gutter is already exactly 26px. Measured before → after, with
-  the 1px `HeaderRow` rule included:
-  - open: `20px 30px 15px` pad, unchanged at **142px**.
-  - collapsed **66px → 48px**: pad `11px 30px 12px` → `9px 30px 8px`, and the inner column drops
-    from `20 (title) + 6 (gap) + 16 (Helper) = 42px` to a bare `20px` title line. The row is then
-    governed by the 30px collapsed action buttons: `9 + 30 + 8 + 1 = 48`. **18px handed back** to
-    the posting frame / report band below.
-  - the caret cell is `19x26` open and `19x20` collapsed so its glyph centres on the 20px title
-    line instead of sitting 3px low.
-- **Persistence** moved to its own key, `jobnavigator_v2_feed_meta` (`'1'`/`'0'`), read by
-  `loadMetaOpen()`. It falls back once to the legacy `v2_feed_ui.headOpen` so an existing
-  preference survives, and `headOpen` was dropped from the `v2_feed_ui` blob so there is one
-  source of truth. The choice persists across job selection and reloads — deliberately unlike the
-  board's report strip, which resets per job; this is a reading-mode preference, not per-job state.
-- **No keyboard shortcut.** The board has none for this (its `v` belongs to the report strip), and
-  every free-standing letter that would read naturally is taken: `j k s x a u e o t c r v`,
-  `Enter`, `Escape`. The caret is instead reachable by keyboard as a control: `role="button"`,
-  `tabIndex={0}`, `aria-expanded`, Enter/Space, and a `Hide job details` / `Show job details`
-  title.
+- `ANA_KEY = 'jn_feed_analysis_collapsed'` + `loadAnaCollapsed()` — the board's key and
+  its `'1'`/`'0'` encoding.
+- `anaCollapsed` state, a write-through effect, and `toggleAna`.
+- the grab-line as the first child of the detail pane's `d` branch — 11px band,
+  `var(--surface-2)` on `var(--line)`, a 44x3 `var(--edge)` handle at
+  `var(--radius-control)`. Keyboard-reachable through `kb(toggleAna)` (tabIndex 0,
+  `role="button"`, Enter/Space) plus `aria-expanded={!anaCollapsed}` and the board's
+  `title`. **No shortcut** — the board has none, and every free letter is taken
+  (`j k s x a u e o t c r v`, Enter, Escape).
+- `HeaderRow` gets `display: anaCollapsed ? 'none' : 'flex'` (it spreads the caller's
+  `style` last, so this wins over its own `display:flex`).
+- the `dScored` band wrapper gets the same `display` binding — band line and expanded
+  report together.
+- the unscored and "Scoring in progress" bands keep their line, as on the board.
+- `theme.css`: `.v2-grab:hover { background:var(--line-soft) !important; }`, next to the
+  other rail hovers. It needs its own rule because the strip already *rests* on
+  `--surface-2`, which is what `--hover-wash-bg` hovers to — `v2-hover-accent` would be
+  invisible here. `!important` for the usual reason: the strip sets its background
+  inline.
 
-**Status**: decided — the board has no metadata-hide control, so the existing header caret was
-made a true title-only collapse rather than inventing a second toggle.
+**One deliberate departure from the board.** The board computes
+`postingDisplay: dScored && S.reportOpen ? "none" : "flex"` (l.1766) from `reportOpen`
+alone, so collapsing while the report is open hides the band *and* the posting and
+renders an empty pane. Here the posting is gated on a new `reportCovers = reportShown &&
+!anaCollapsed`, so the report only covers the posting while the top is actually standing.
 
-Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 97 allowed, 0 css` (exit 0);
-`npx esbuild@0.21.5 --loader:.jsx=jsx` parses clean; brace/paren/bracket balance net 0, same as
-HEAD. Source-only — nothing rebuilt, restarted or committed.
+### Expected measurements
+
+Computed from the padding, not measured — this was a source-only pass, nothing was
+rebuilt, restarted or committed.
+
+| Detail pane, top area | Open | Collapsed |
+|---|---|---|
+| grab-line | 12px (11 + 1 rule) | 12px |
+| metadata header, `headOpen` | 142px | 0 |
+| metadata header, header caret closed | 66px | 0 |
+| score band line (scored job, report closed) | 51px (8 + 34 ring + 8 + 1 rule) | 0 |
+| **total, scored job, head open, report closed** | **205px** | **12px** |
+| **total, scored job, header caret already closed** | **129px** | **12px** |
+| **total, unscored job** (its band stays) | 205px | 63px |
+
+So on a scored job with the header open the posting frame gains **193px**; with the
+header caret already closed it gains **117px**. Open ↔ collapsed is one click on the
+grab-line, and the choice survives job selection and reload.
+
+**Status**: fixed — the last commit's title-only header collapse was reverted, and the
+board's actual control (the 11px grab-line that folds header + report band together)
+was built in its place.
+
+Verified: `py v2-testing/tools/stylelint.py` → `0 findings, 98 allowed, 0 css` (exit 0);
+`npx esbuild@0.21.5 --loader:.jsx=jsx` parses clean; brace/paren/bracket balance net 0
+against HEAD. Source-only — nothing rebuilt, restarted or committed.
