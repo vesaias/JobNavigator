@@ -302,11 +302,11 @@ export default function Settings() {
       // The one group that isn't a DB setting: both rows live in this browser's
       // localStorage (theme.js), so they take no `key` and never PATCH /settings.
       // They sit first because they change what every screen below looks like.
-      ['appearance', 'GENERAL', 'Appearance', 'theme and skin — remembered in this browser, not in the database', [
+      ['appearance', 'GENERAL', 'Appearance', '', [
         { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
         { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts. Cobalt, SaaS and Win98 are the palettes of the three deep-reskin boards; their shape languages (radii, bevels, shadows) are not part of a skin, so those three read as recolours, not as the boards.' },
       ]],
-      ['models', 'AI', 'Models', 'each prompt can use its own model if needed', [
+      ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model',
           info: "Providers: Claude API, Claude Code, OpenAI, Ollama (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount." },
@@ -321,7 +321,7 @@ export default function Settings() {
         { kind: 'models', label: 'Model catalog', help: 'Add new or unlisted models and remove your additions.',
           info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI and Claude. For Ollama, type the local model name. Removed models stay removed.' },
       ]],
-      ['scoring', '', 'Scoring behavior', 'which résumé gets scored, how deep, and when it runs', [
+      ['scoring', '', 'Scoring behavior', '', [
         SEL('Default résumé', 'Used when a company has no résumés of its own selected.', 'default_resume_id', resumeOpts, { w: '260px' }),
         B('Max parallel jobs', 'Extra requests wait in a queue to limit database load.', 'scoring_max_concurrent', { mono: true, int: true, w: '135px' }),
         SEL('Default depth', 'Used when neither the company nor the search sets its own.', 'scoring_default_depth',
@@ -335,31 +335,31 @@ export default function Settings() {
         E('Light output schema', 'JSON shape for Light runs.', 'scoring_output_light', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
         E('Full output schema', 'JSON shape for Full runs.', 'scoring_output_full', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
       ]],
-      ['tailoring', '', 'Tailoring', 'AI-rewritten résumés', [
+      ['tailoring', '', 'Tailoring', '', [
         E('Résumé tailoring prompt', 'Default: rewrites only bullets that the job description makes relevant.', 'cv_tailor_prompt', { sub: 'placeholders: {job_description} {resume_json}' }),
         E('Persona tailoring prompt', 'Default: uses the Persona résumé content; falls back to the résumé prompt if empty.', 'persona_tailor_prompt', { sub: 'placeholders: {job_description} {persona_json}' }),
         B('Max parallel tailors', 'Tailoring and cover-letter generation share this limit.', 'tailoring_max_concurrent', { mono: true, int: true, w: '135px' }),
         SEL('Auto-score after tailoring', 'Scores a tailored résumé as soon as tailoring finishes.', 'tailor_auto_quick_score',
           [['off', "Off — don't score after tailoring"], ['light', 'Light — score only'], ['full', 'Full — score + keywords + report']], { w: '260px', dflt: 'light' }),
       ]],
-      ['letters', '', 'Cover letters', 'AI-written based on Persona or résumé', [
+      ['letters', '', 'Cover letters', '', [
         SEL('Default voice', 'The list comes from the voice presets below.', 'cover_letter_default_voice', voiceOpts, { w: '260px' }),
         E('Voice presets', 'One label and prompt per voice. Add more if you want.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
         E('Cover letter prompt', 'The generation instruction.', 'cover_letter_prompt', { sub: 'placeholders: {voice_instruction} {length_instruction} {job_description}' }),
       ]],
-      ['autofill', '', 'Autofill', 'used by the Chrome extension on ATS forms', [
+      ['autofill', '', 'Autofill', '', [
         B('Default answer length', 'Target length for form answers, in characters.', 'autofill_default_length', { mono: true, int: true, w: '135px' }),
         E('Autofill prompt', 'Answers as the candidate, from Persona autofill content only.', 'autofill_prompt', { sub: 'placeholders: {persona} {qa_bank} {company} {position} {question} {max_chars}' }),
         E('Field patterns', 'Maps form-field names to Persona fields.', 'autofill_field_patterns', { json: true, sub: 'JSON — Persona field → name patterns' }),
         E('Option synonyms', 'Normalises dropdown options.', 'autofill_option_synonyms', { json: true, sub: 'JSON — canonical option → synonyms' }),
       ]],
-      ['prep', '', 'Interview prep', 'the prep handover that Applications builds for an AI chat', [
+      ['prep', '', 'Interview prep', '', [
         E('"What I need from you" section', 'The questions added at the end of the prep handover.', 'prep_ask', { sub: 'plain text, no placeholders' }),
         SEL('Include by default', 'Sections included in the prep handover. The questions are always included.', 'prep_include',
           [['resume,posting,notes', 'Résumé · posting · notes'], ['resume,posting', 'Résumé · posting'],
             ['posting,notes', 'Posting · notes'], ['resume', 'Résumé only'], ['posting', 'Posting only']], { w: '260px', dflt: 'resume,posting,notes' }),
       ]],
-      ['emailclass', '', 'Email classification', 'reads Gmail replies', [
+      ['emailclass', '', 'Email classification', '', [
         SW('LLM classification', 'Replies are auto-classified into interview / rejection / offer and attached to the right application.', 'Disabled — replies only show as raw snippets.', 'email_llm_enabled'),
         B('Confidence threshold', '0–100 — below this, the email is flagged for manual review instead.', 'email_llm_confidence_threshold', { mono: true, int: true, w: '135px' }),
         E('Classification prompt', 'Labels + confidence + application hint.', 'email_llm_prompt', { sub: 'placeholders: {applications} {from} {subject} {body}' }),
@@ -379,16 +379,16 @@ export default function Settings() {
         B('H-1B refresh · cron', 'Re-imports and re-scans the sponsorship dataset.', 'h1b_cron', { mono: true, cron: true, w: '135px' }),
         B('Job cleanup · cron', 'Purges expired postings.', 'cleanup_cron', { mono: true, cron: true, w: '135px' }),        
       ]],
-      ['exclude', '', 'Global exclude', 'titles, companies and body phrases dropped before anything else runs', [
+      ['exclude', '', 'Global exclude', '', [
         E('Body phrases', 'Skip postings whose description contains any of these phrases.', 'body_exclusion_phrases', { list: true, sub: 'one phrase per line · case-insensitive' }),
         E('Title exclude', 'Skip jobs whose title matches any of these words.', 'title_exclude_global', { list: true, sub: 'one phrase per line · case-insensitive' }),
         E('Company exclude', 'Skip jobs from these companies (exact name).', 'company_exclude_global', { list: true, sub: 'one company per line · exact match' }),
       ]],
-      ['dedup', '', 'Dedup tracking params', "so the same job from two sources isn't saved twice", [
-        E('Stripped params', 'Query params removed from job URLs. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
+      ['dedup', '', 'Dedup tracking params', '', [
+        E('Stripped params', 'Query params removed from job URLs before duplicate detection. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
       ]],
-      ['notifications', 'INTEGRATIONS', 'Notifications', 'Telegram bot · digest schedule is under Scheduler', [
-        SW('Telegram', 'New high-scoring jobs and the daily digest are sent to your chat.', 'Off — no push notifications.', 'telegram_enabled'),
+      ['notifications', 'INTEGRATIONS', 'Notifications', '', [
+        SW('Telegram', 'New high-scoring jobs and the daily digest are sent to your chat. The digest schedule is under Scheduler.', 'Off — no push notifications.', 'telegram_enabled'),
         B('Chat ID', 'Your Telegram chat — get it by messaging @userinfobot.', 'telegram_chat_id', { mono: true, w: '135px' }),
         B('Score threshold', 'Only jobs scoring at or above this trigger an instant alert.', 'fit_score_threshold', { mono: true, int: true, w: '135px' }),
         BT('Test', 'Confirms the bot token and chat ID work end to end.', 'Send test message', () => api.post('/telegram/test')),
@@ -412,15 +412,15 @@ export default function Settings() {
           flash(failed ? (data.description || data.error || 'Registration failed') : 'Webhook registered', failed)
         }),
       ]],
-      ['tracer', '', 'Tracked links', 'short links that record when a recruiter opens them', [
-        SW('Rewrite links', 'Résumé and letter links route through your domain.', 'Off — documents keep their original links.', 'tracer_links_enabled',
+      ['tracer', '', 'Tracked links', '', [
+        SW('Rewrite links', 'Résumé and letter links become short links on your domain that record when a recruiter opens them.', 'Off — documents keep their original links.', 'tracer_links_enabled',
           { info: 'Each application gets its own short link for every document link. When a recruiter opens one, it is recorded in Stats for that application.' }),
         B('Base URL', 'Your tracked link domain.', 'tracer_links_base_url', { mono: true, w: '260px', placeholder: 'https://yourdomain.com' }),
         SEL('URL style', 'Your domain must support the selected link style.', 'tracer_links_url_style',
           [['path', 'Path + random (/cv/a7x2kp)'], ['param', 'Param + random (?cv=a7x2kp)'],
             ['path_jobid', 'Path + job ID (/cv/142li)'], ['param_jobid', 'Param + job ID (?cv=142li)']], { w: '260px', dflt: 'path' }),
       ]],
-      ['jobright', '', 'Jobright.ai', 'credentials for the Jobright search mode', [
+      ['jobright', '', 'Jobright.ai', '', [
         B('Email', 'Your Jobright account.', 'jobright_email', { w: '260px' }),
         B('Password', 'Stored locally.', 'jobright_password', { secret: true, w: '260px' }),
         RO('Session', 'Signed in automatically the first time a Jobright search runs.', 'jobright_session_id',
@@ -429,7 +429,7 @@ export default function Settings() {
             emptyText: 'Not signed in — the next Jobright run signs in for you.',
             info: 'Jobright hands out a 60-day cookie. The scraper stores it, reuses it across restarts and renews it on its own when it expires or is rejected; nothing here needs doing unless you want to force a fresh sign-in.' }),
       ]],
-      ['linkedin', '', 'LinkedIn', "personal scraping + the extension's separate mock account", [
+      ['linkedin', '', 'LinkedIn', '', [
         B('Personal email', 'Used by LinkedIn Personal collections.', 'linkedin_email', { w: '260px' }),
         B('Personal password', 'Stored locally.', 'linkedin_password', { secret: true, w: '260px' }),
         { kind: 'linkedin', label: 'Session cookie', help: 'The extension import reuses a signed-in session. LinkedIn asks for an emailed PIN at login.' },
@@ -437,7 +437,7 @@ export default function Settings() {
           info: 'The extension captures jobs while you browse LinkedIn collections. Use a separate account so rate limits, CAPTCHAs or bans affect it and not your real profile.' }),
         B('Mock account password', 'Stored locally only.', 'linkedin_mock_password', { secret: true, w: '260px' }),
       ]],
-      ['advanced', 'SYSTEM', 'Advanced', 'rarely needed settings', [
+      ['advanced', 'SYSTEM', 'Advanced', '', [
         B('Proxy URL', 'Used by scrapes that hit rate limits or geo-blocks. Empty = direct.', 'proxy_url', { mono: true, w: '340px', placeholder: 'socks5://127.0.0.1:9050' }),
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup')),
