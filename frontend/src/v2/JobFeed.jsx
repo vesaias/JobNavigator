@@ -1371,7 +1371,7 @@ export default function V2JobFeed() {
               </div>
 
               {/* unscored band — mirrors the report band's placement + height */}
-              {!dScored && !running && (
+              {!dScored && !running && !anaCollapsed && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
                   <ScoreRing value={null} size="sm" label="No fit" style={{ marginLeft: -4 }} />
@@ -1383,7 +1383,7 @@ export default function V2JobFeed() {
                   <Button size="xs" onClick={() => openRescore(d)}>Score this role</Button>
                 </div>
               )}
-              {running && (
+              {running && !anaCollapsed && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
                   {/* F6: the band's busy ring is the same primitive as the row's, so the
