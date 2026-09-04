@@ -191,6 +191,53 @@
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 
+  /* — Skins layer (round-design "Skins handoff" §1) --------------------------
+     The geometry and state names a per-skin block may now carry on top of the
+     60 palette names, so cobalt/saas/win98 can express radii, bevels, control
+     shadows, a type scale and a selection model instead of colour alone.
+     EVERY VALUE HERE IS TODAY'S PAINT: the border widths are the 1px the
+     primitives hard-code, the five control shadows are `none`, the weights and
+     the tracking are what ui.jsx already writes inline, and the pressed, hover,
+     disabled and error names are the handoff's proposed recipe for states that
+     do not exist yet. Nothing moves until a primitive starts reading a name or
+     a skin block overrides one — the theme-skins.css rules that would repaint
+     the default skin (pressed wash, aria-disabled, field hover, the global
+     transition and the reduced-motion sweep) are held back for the ui.jsx pass.
+     Names that already existed above keep their values and are not restated:
+     the radii, the type stops, the five panel shadows, --row-selected and the
+     pill on-trio.
+     One deviation from theme-skins.css: it redefines --focus-ring as a
+     box-shadow VALUE (and self-referentially at that), but that name is the
+     ring COLOUR here and the [tabindex="0"] focus rule reads it as one. The
+     shadow-valued token is --focus-shadow instead; --focus-ring is unchanged. */
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --radius-rail-item:0;
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --btn-weight:500; --title-weight:400; --label-weight:400;
+  --label-tracking:.13em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
+  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
+  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
+  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-hover:var(--line-strong);
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
+  --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
+  --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
+  --divider:1px solid var(--line);
+  --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
+  --rail-active-mark:2px solid var(--rail-accent); --rail-item-inset:0;
+  --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
+  --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
+  --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ring;
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
+
   --serif:'Newsreader',Georgia,serif;
   --sans:'Public Sans',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -368,6 +415,41 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+
+  /* — Skins layer (round-design "Skins handoff" §1) — the light block's twin.
+     Same names, same values (every one of them is a var() or a mode-neutral
+     number, so the two blocks are identical by construction); the rationale is
+     written out once, above. The duplication is not redundant: this block and
+     `[data-skin="x"]` both weigh (0,2,0), so a name the light block sets and
+     this one forgets would leak a light value into dark. Change one, change
+     both. */
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --radius-rail-item:0;
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --btn-weight:500; --title-weight:400; --label-weight:400;
+  --label-tracking:.13em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
+  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
+  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
+  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-hover:var(--line-strong);
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
+  --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
+  --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
+  --divider:1px solid var(--line);
+  --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
+  --rail-active-mark:2px solid var(--rail-accent); --rail-item-inset:0;
+  --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
+  --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
+  --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ring;
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 /* — Skin: alt (design pass D6) ---------------------------------------------
    The proof that the semantic layer is a layer. Two blocks, one per theme,
@@ -664,25 +746,37 @@
 }
 
 /* — Board skins: cobalt · saas · win98 -------------------------------------
-   Three deep-reskin boards from the Claude Design project, brought across as
-   what a skin can carry today: PALETTE + the three font stacks, nothing else.
-   Sources: "Feed - Cobalt.dc.html", "Feed - SaaS.dc.html", "Feed - Win98.dc.html"
+   Three deep-reskin boards from the Claude Design project. Sources:
+   "Feed - Cobalt.dc.html", "Feed - SaaS.dc.html", "Feed - Win98.dc.html"
    (each board's own `:root` / `[data-theme="dark"]` block in its helmet), plus
    "Cobalt Elements.dc.html" for the Cobalt primitive-by-primitive swap. Every
    board ships BOTH modes, so no mode is derived here.
 
-   The boards also change GEOMETRY — radii, border widths, bevels, shadows and
-   the type scale — and that is the part a skin cannot express: --radius-*,
-   --shadow-*, --t-* and the primitives' border widths live in the shared
-   semantic layer by design. v2-testing/round-design/skins-boards.md lists the
-   delta per board and what would have to become per-skin to close it.
+   These three carry more than a palette. The recorded decision behind the
+   "Skins handoff" widened the contract (U-21): a skin block may also set the
+   geometry and state names the base blocks now declare — radii, the three
+   border widths, the panel and control shadows, the type scale, the control
+   weights and tracking, the selection and rail models, the bevels and the
+   ScoreRing variant. The palette lines below are byte-identical to what they
+   were when a skin was palette-only; everything under the fonts is the new
+   layer, transcribed from v2-testing/round-design/design-in/theme-skins.css
+   (generated from skins.js, so the two stay in step). Nothing reads the new
+   names yet outside the state rules at the foot of this file — the primitives
+   pick them up in the ui.jsx pass, and until then these skins move only the
+   names ui.jsx already reads (the radii, the type stops, the shadows,
+   --row-selected and the pill on-trio).
 
-   Same two rules as the alt skin above: palette tokens and the three font
-   stacks only, and the light block and the dark block declare the IDENTICAL
-   set of names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]` both weigh
-   (0,2,0), so a name set in one and forgotten in the other leaks a light value
-   into dark. Not re-skinned here either: the --cc- and --sm- badge families,
-   the --shadow- family and the on-rail white overlays.
+   Two deviations from the generated file: --focus-ring is the ring COLOUR here
+   (the [tabindex="0"] rule reads it as one), so the shadow-valued token is
+   --focus-shadow; and win98 takes the handoff §5 re-point of --head-bg-page and
+   --chip-bg onto --surface, because its --bg is a desktop colour, not a text
+   ground.
+
+   Same rule as the alt skin above: the light block and the dark block declare
+   the IDENTICAL set of names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]`
+   both weigh (0,2,0), so a name set in one and forgotten in the other leaks a
+   light value into dark. Not re-skinned here either: the --cc- and --sm- badge
+   families and the on-rail white overlays.
 
    Ring offsets: all three boards put a SANS with lining figures in the display
    slot (IBM Plex Sans / system-ui / Tahoma), where the default has Newsreader
@@ -718,6 +812,26 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
+  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:#eef3fe; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:#7b3ff2; --ai-ink:#ffffff;
+  --sc-hi-bg:#e2f5e9; --sc-hi:#157a43; --sc-mid-bg:#fbf2d7; --sc-mid:#946c07; --sc-lo-bg:#fdeaea; --sc-lo:#c23b32; --sc-none-bg:#eef0f3; --sc-none:#707887;
+  --ring-variant:pill;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 .jn-v2[data-skin="cobalt"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -741,6 +855,26 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
+  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:#1a2334; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:#a375f5; --ai-ink:#14101f;
+  --sc-hi-bg:#173226; --sc-hi:#5fd394; --sc-mid-bg:#2b2410; --sc-mid:#e8c46a; --sc-lo-bg:#3c1a1a; --sc-lo:#f28b82; --sc-none-bg:#1c1f26; --sc-none:#8d95a6;
+  --ring-variant:pill;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 
 /* saas — the "Feed - SaaS" board: Tailwind's gray/blue ladder on a pure system
@@ -767,6 +901,26 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
+  --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:var(--accent-soft); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:var(--accent); --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:bar;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 .jn-v2[data-skin="saas"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -790,6 +944,26 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
+  --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
+  --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
+  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
+  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  --row-selected:var(--accent-soft); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:var(--accent); --rail-active-ink:#ffffff; --rail-active-mark:none; --rail-item-inset:0 10px;
+  --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:bar;
+  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 
 /* win98 — the "Feed - Win98" board. The one skin whose surface is DARKER than
@@ -798,10 +972,11 @@
    onto --surface / --surface-2. Two things this palette cannot fix, both
    recorded in skins-boards.md: (1) --bg is a DESKTOP colour (teal in light,
    navy in dark), not a text ground, so the black ink the rest of the skin uses
-   reads 4.40:1 on the light desktop and 1.46:1 on the dark one — wherever v2
-   paints --bg under --text (--head-bg-page, --chip-bg) it is the board's own
-   ground, and fixing it needs per-skin semantic re-pointing, which a skin block
-   may not do; (2) the rail is LIGHT here, so --rail-active / --rail-hover /
+   reads 4.40:1 on the light desktop and 1.46:1 on the dark one — the two places
+   v2 paints --bg under --text (--head-bg-page and --chip-bg) now re-point to
+   --surface inside this block, which is exactly the per-skin semantic re-point
+   the widened contract allows (handoff §5); (2) the rail is LIGHT here, so
+   --rail-active / --rail-hover /
    --on-rail-* (white alphas, deliberately not re-skinned) all but vanish.
    Two board values were moved, both below 3:1 as ink on --surface: --good
    #008000 -> #006000 (2.82 -> 4.32) and --warn #808000 -> #575700 (2.31 ->
@@ -828,6 +1003,27 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
+  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
+  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --motion-fast:0s; --motion-mid:0s; --ease:linear;
+  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
+  --input-border-error:var(--bad); --input-ring-error:none;
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
+  --focus-shadow:none; --focus-outline:1px dotted #000000;   /* the generated file says `transparent`, which is not a valid box-shadow on its own; `none` is the same intent, valid */
+  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ascii;
+  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
 }
 .jn-v2[data-skin="win98"][data-theme="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -851,6 +1047,27 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
+  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
+  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
+  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
+  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --motion-fast:0s; --motion-mid:0s; --ease:linear;
+  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
+  --input-border-error:var(--bad); --input-ring-error:none;
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
+  --focus-shadow:none; --focus-outline:1px dotted #000000;   /* the generated file says `transparent`, which is not a valid box-shadow on its own; `none` is the same intent, valid */
+  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --ai:var(--accent); --ai-ink:var(--accent-ink);
+  --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
+  --ring-variant:ascii;
+  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
 }
 
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
@@ -1020,8 +1237,13 @@
    carries the signal instead. */
 .jn-v2 .v2-fieldwrap:focus-within { border-color:var(--input-border-focus) !important; }
 /* Keyboard-only ring on non-input controls — :focus-visible never fires on these
-   from a mouse click, so this one stays as it was. */
-.jn-v2 [tabindex="0"]:focus-visible { outline:none; box-shadow:0 0 0 2px var(--focus-ring); }
+   from a mouse click, so the rule itself is unchanged; only its two values are
+   tokens now (theme-skins.css line 198). In every skin that ships today
+   --focus-outline is `none` and --focus-shadow is the 2px --focus-ring this rule
+   drew literally, so the paint is identical; win98 swaps them for its 1px dotted
+   outline and saas/cobalt for a 3px halo. outline-offset only bites once an
+   outline exists. */
+.jn-v2 [tabindex="0"]:focus-visible { outline:var(--focus-outline); outline-offset:-4px; box-shadow:var(--focus-shadow); }
 
 /* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
    Run/Test pills scrolled off the viewport. Pin the actions column to the right
@@ -1030,3 +1252,46 @@
    row now hovers to. */
 .v2-cactions { background:var(--bg); }
 .v2-crow:hover .v2-cactions { background:var(--row-hover); }
+
+/* — Skins layer, state rules (theme-skins.css lines 190-205) -----------------
+   Only the rules that are INERT for the default skin today: three hang on
+   classes ui.jsx does not write yet (v2-btn-primary, v2-btn-danger, v2-raised /
+   v2-inset), one on an attribute nothing sets yet (aria-invalid, and the
+   matching data-invalid on a field wrapper), and the selected-row rule resolves
+   to the paint Row and the Feed row already write inline. They land now so the
+   ui.jsx pass is a change of markup, not of markup AND cascade.
+   `!important` for the same reason every hover rule above needs it: the
+   primitives set the property inline.
+
+   HELD BACK for that pass, because each one repaints the default skin the
+   moment it lands (they are listed here so the next agent does not have to
+   re-derive the set):
+     · .v2-bd/.v2-bdc/.v2-act :active — a pressed wash and a 1px shift on pills
+       and icon buttons that have no pressed state today.
+     · [aria-disabled="true"] — every disabled primitive in v2 already carries
+       the attribute, and the rule would swap their token-based dimming for a
+       blanket .5 opacity.
+     · the transition rule — it would give .v2-row, .v2-menuitem, .v2-bd, .v2-bdc
+       and .v2-act hover fades they do not have.
+     · the field hover rule (--input-border-hover) — a new resting-to-hover
+       border on every input and field wrapper.
+     · .v2-pill[aria-pressed="true"]:hover and .v2-chip[aria-pressed="true"] —
+       both marked P (proposed) in the handoff, and Pill/Chip already carry
+       aria-pressed, so both would repaint on contact.
+     · the prefers-reduced-motion sweep — `animation-duration:0s` on `.jn-v2 *`
+       also stops .v2-spin, and a spinner is a progress indicator, not decoration.
+       It needs a carve-out before it can land. */
+.jn-v2 .v2-btn-primary:hover { background:var(--btn-primary-hover-bg) !important; }
+.jn-v2 .v2-btn-primary:active { background:var(--btn-primary-pressed-bg) !important; transform:var(--pressed-shift); }
+.jn-v2 .v2-btn-danger:hover { background:var(--btn-danger-hover-bg) !important; }
+.jn-v2 [aria-invalid="true"], .jn-v2 .v2-fieldwrap[data-invalid="true"] { border-color:var(--input-border-error) !important; box-shadow:var(--input-ring-error) !important; }
+/* the picked row's paint as a token trio: --row-selected is what Row and the
+   Feed row already set inline, --row-selected-ink is `inherit` and
+   --row-selected-edge `none` in every skin but cobalt (a 3px inset accent bar)
+   and win98 (a navy fill with white ink). */
+.jn-v2 .v2-row[aria-current="true"] { background:var(--row-selected) !important; color:var(--row-selected-ink); box-shadow:var(--row-selected-edge); }
+/* win98 bevels: raised on controls, inset on fields/lists/pressed. Both sides
+   are `none`/`transparent` in every other skin, so the two rules paint nothing
+   until a primitive asks for the class. */
+.jn-v2 .v2-raised { border:var(--bevel-raised-border); border-color:var(--bevel-raised-color); box-shadow:var(--bevel-raised-shadow); }
+.jn-v2 .v2-inset, .jn-v2 .v2-raised:active { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
