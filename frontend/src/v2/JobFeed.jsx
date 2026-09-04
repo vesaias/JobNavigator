@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, TableHead } from './ui'
+import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -29,6 +29,12 @@ const loadAnaCollapsed = () => { try { return localStorage.getItem(ANA_KEY) === 
 // panel if its probe comes back blocked.
 const FRAME_KEY = 'v2_feed_frameable'
 const FRAME_CACHE_MAX = 300
+// F7: how long the live frame may stay under the loading cover before the pane
+// gives up on it and shows the "refuses to be framed" panel instead.
+const FRAME_LOAD_MS = 8000
+// The grab-line fold runs at .12s (theme.css `.v2-fold`, the board's own timing);
+// this is that travel plus slack, the window the wrapper clips for.
+const FOLD_MS = 200
 const loadFrameCache = () => { try { return JSON.parse(localStorage.getItem(FRAME_KEY)) || {} } catch { return {} } }
 const hostOf = (u) => { try { return new URL(u, window.location.origin).host } catch { return '' } }
 
@@ -167,7 +173,16 @@ export default function V2JobFeed() {
   // the board persists it on its own, outside the panel-prefs blob.
   const [anaCollapsed, setAnaCollapsed] = useState(loadAnaCollapsed)
   useEffect(() => { try { localStorage.setItem(ANA_KEY, anaCollapsed ? '1' : '0') } catch {} }, [anaCollapsed])
-  const toggleAna = useCallback(() => setAnaCollapsed((v) => !v), [])
+  // The fold animates (theme.css `.v2-fold`), so for the length of the travel the
+  // wrapper has to clip — and only then: left clipping, it would cut the header's
+  // ⋯ menu, which hangs below the header on top:100%.
+  const [folding, setFolding] = useState(false)
+  const toggleAna = useCallback(() => { setFolding(true); setAnaCollapsed((v) => !v) }, [])
+  useEffect(() => {
+    if (!folding) return
+    const t = setTimeout(() => setFolding(false), FOLD_MS)
+    return () => clearTimeout(t)
+  }, [folding, anaCollapsed])
   const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
   const [reportTab, setReportTab] = useState(0)   // per-job: reports differ per résumé, so this resets
   const [reqFilter, setReqFilter] = useState(() => loadUI().reqFilter ?? 'all')
@@ -179,6 +194,17 @@ export default function V2JobFeed() {
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
   const [frameOk, setFrameOk] = useState(true)          // true=render the live frame, false=known-blocked (extension off)
+  // F7: changing `src` on one long-lived <iframe> keeps the OLD document on
+  // screen until the new one paints, so switching jobs showed the previous
+  // posting for as long as the next one took. The frame is remounted per job
+  // instead (key), which tears the old document down at once, and these two
+  // hold job ids so a fast j/k run can only ever act on the newest job:
+  //   frameLoadId — its frame is still loading (the neutral cover is up)
+  //   frameDeadId — its frame never fired load inside FRAME_LOAD_MS, so the pane
+  //                 falls through to the existing "refuses to be framed" panel
+  const [frameLoadId, setFrameLoadId] = useState(null)
+  const [frameDeadId, setFrameDeadId] = useState(null)
+  const frameDoneRef = useRef(false)                    // did the mounted frame settle (load or error)?
   const frameCache = useRef(loadFrameCache())
   // what to show the moment a job is selected: the fallback panel only for a host
   // we have already measured as blocked; everything else tries the frame at once
@@ -329,7 +355,7 @@ export default function V2JobFeed() {
     pinnedRef.current = null                 // picking from the list releases a ?job= pin
     deadPinRef.current = false
     setSel(idx); lastIdx.current = idx
-    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(j.url))
+    setDetail(j); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(j.url)); setFrameDeadId(null)
     api.get(`/jobs/${j.id}`).then(({ data }) => setDetail((c) => (c && c.id === data.id ? data : c))).catch(() => { /* silent: a background refresh of an already-rendered panel — the row data stays */ })
   }, [frameGuess])
   const focusAt = useCallback((idx) => {
@@ -669,6 +695,35 @@ export default function V2JobFeed() {
     }).catch(() => { /* unknown — leave the optimistic frame up, as v1 did */ })
   }, [detail, viewCached, extActive])
 
+  // F7: the src the live posting frame gets, and the job it belongs to. Every
+  // route away from the live frame (the cached snapshot, a confirmed block, a
+  // load that never arrived) makes it null, and the pane renders the cached or
+  // fallback branch exactly as before.
+  const cachedAvail = !!(detail && detail.status === 'applied' && detail.has_cached_page)
+  const frameJobId = detail?.id || null
+  const frameSrc = (detail?.url && !(viewCached && cachedAvail) && (extActive || frameOk !== false) && frameDeadId !== detail.id) ? detail.url : null
+  // the cover goes up the moment a frame mounts (or its src changes) and comes
+  // down on load/error — or on the safety timeout, which also retires a frame
+  // that never answered. The id in the closure is the guard: a timer left over
+  // from a job we have already stepped past can no longer clear the new cover.
+  // Layout effect, not a plain one: the cover has to be painted with the frame's
+  // first frame, or the empty iframe flashes --iframe-bg for one paint.
+  useLayoutEffect(() => {
+    if (!frameSrc) { setFrameLoadId(null); return }
+    const id = frameJobId
+    frameDoneRef.current = false
+    setFrameLoadId(id)
+    const t = setTimeout(() => {
+      setFrameLoadId((c) => (c === id ? null : c))
+      if (!frameDoneRef.current) setFrameDeadId(id)
+    }, FRAME_LOAD_MS)
+    return () => clearTimeout(t)
+  }, [frameSrc, frameJobId])
+  const settleFrame = useCallback((id) => {
+    frameDoneRef.current = true
+    setFrameLoadId((c) => (c === id ? null : c))
+  }, [])
+
   // persona availability (adds a "Persona" option to score/tailor)
   useEffect(() => { api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in the score modal */ }) }, [])
   // OPEN-10: `scoring_default_depth` is the setting the scorer itself falls back
@@ -683,7 +738,7 @@ export default function V2JobFeed() {
     pinnedRef.current = jid
     api.get(`/jobs/${jid}`).then(({ data }) => {
       if (pinnedRef.current !== jid) return
-      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(data.url))
+      setDetail(data); setReportTab(0); setViewCached(false); setCachedHtml(null); setFrameOk(frameGuess(data.url)); setFrameDeadId(null)
     }).catch(() => {
       if (pinnedRef.current !== jid) return
       pinnedRef.current = null; deadPinRef.current = true   // FEED-09: don't fall through to an unrelated job
@@ -818,7 +873,7 @@ export default function V2JobFeed() {
   // (l.1766) and so renders an empty panel in that combination.
   const reportCovers = reportShown && !anaCollapsed
   const anaHint = anaCollapsed ? 'Show job details & analysis' : 'Hide job details & analysis — posting only'
-  const dCached = d && d.status === 'applied' && d.has_cached_page
+  const dCached = cachedAvail   // hoisted above the frame effects, which need it too
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -1080,20 +1135,30 @@ export default function V2JobFeed() {
         <section style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface)', minHeight: 0 }}>
           {!d ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Select a job.</div> : (
             <>
-              {/* ui: keep — the board's grab-line (l.252-254): a full-width 11px band
-                  holding a bare 44x3 handle, sitting above the detail header. It is
-                  the single control that folds the whole top of the right side away,
-                  and it is not a Row/Button/SectionHead: it has no label, no padding
-                  box, no border of its own and no head row to draw. */}
+              {/* ui: keep — the board's grab-line (l.252-254): 12px of hit area that
+                  FLOATS over the top of the pane (absolute, z-20, no background and no
+                  border of its own) holding a bare 52x4 handle. It is the single
+                  control that folds the whole top of the right side away, and it is not
+                  a Row/Button/SectionHead: no label, no padding box, no head row. */}
               <div {...kb(toggleAna)} onClick={toggleAna} aria-expanded={!anaCollapsed} title={anaHint} className="v2-grab"
-                style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 11, background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}>
-                {/* ui: keep — the 44x3 handle itself: a rounded rule, not a Pill (no text,
-                    no padding, no border) and not a Rule (which draws a 1px line token) */}
-                <span style={{ width: 44, height: 3, borderRadius: 'var(--radius-control)', background: 'var(--edge)' }} />
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                {/* ui: keep — the 52x4 handle itself: a rounded rule, not a Pill (no text,
+                    no padding, no border) and not a Rule (which draws a 1px line token).
+                    Its --surface ring, its hover (--accent, 64px) and the .12s transition
+                    are `.v2-grab` rules in theme.css, where a shadow may be spelled out. */}
+                <span style={{ width: 52, height: 4, borderRadius: 'var(--radius-control)', background: 'var(--edge)' }} />
               </div>
 
+              {/* The fold the grab-line drives: the header and the score band travel
+                  together (the board binds both to `analysisWrapDisplay`, l.1734-1735) on
+                  one grid row — see `.v2-fold`. It carries the flex the report band used
+                  to take, so an open report still fills the pane. */}
+              <div className="v2-fold" data-collapsed={anaCollapsed ? 'true' : 'false'}
+                style={{ flex: reportCovers ? '1 1 0%' : '0 0 auto', minHeight: 0 }}>
+              <div className="v2-foldbody" style={{ overflow: anaCollapsed || folding ? 'hidden' : 'visible' }}>
+
               {/* header */}
-              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '11px 30px 12px'} style={{ display: anaCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
+              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '11px 30px 12px'} style={{ flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
                   {/* ui: keep — a bare 19x26 caret cell in the header gutter: it has no label,
                       so there is no head row for SectionHead to draw (the title beside it is a
@@ -1147,11 +1212,11 @@ export default function V2JobFeed() {
                 </div>
               </HeaderRow>
 
-              {/* report band — the grab-line folds this whole wrapper away with the
-                  header: the band line AND the expanded report (board l.301 binds
-                  its display to analysisWrapDisplay, the same flag as the header) */}
+              {/* report band — inside the fold with the header: the band line AND the
+                  expanded report (board l.301 binds its display to analysisWrapDisplay,
+                  the same flag as the header) */}
               {dScored && (
-                <div style={{ position: 'relative', zIndex: 18, flex: reportShown ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: anaCollapsed ? 'none' : 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'relative', zIndex: 18, flex: reportShown ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
                   {/* ui: keep — the report *band* header, not a section head: its caret is a
                       fixed 19px gutter aligned to the row rail, it carries a 34px score ring and
                       résumé tabs, and its body text runs at the band's inherited size, which
@@ -1302,6 +1367,8 @@ export default function V2JobFeed() {
                   )}
                 </div>
               )}
+              </div>
+              </div>
 
               {/* unscored band — mirrors the report band's placement + height */}
               {!dScored && !running && (
@@ -1344,9 +1411,24 @@ export default function V2JobFeed() {
                     )}
                     {viewCached && dCached ? (
                       <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
-                    ) : d.url && (extActive || frameOk !== false) ? (
-                      /* optimistic: always try the live frame; only a confirmed block swaps it out */
-                      <iframe title="posting" src={d.url} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
+                    ) : frameSrc ? (
+                      /* optimistic: always try the live frame; only a confirmed block swaps it out.
+                         F7: `key` remounts the frame per job/src, so the previous posting is gone
+                         the instant the selection changes; the cover below fills the gap until
+                         onLoad fires. The frame keeps its own size underneath (the cover is
+                         absolute inside the pane), so nothing shifts and load still fires. */
+                      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
+                        <iframe key={`${frameJobId}|${frameSrc}`} title="posting" src={frameSrc}
+                          onLoad={() => settleFrame(frameJobId)} onError={() => settleFrame(frameJobId)}
+                          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                          style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
+                        {frameLoadId === frameJobId && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <Spinner size={12} />
+                            <Helper>{`Loading ${hostOf(frameSrc).replace(/^www\./, '')} …`}</Helper>
+                          </div>
+                        )}
+                      </div>
                     ) : d.url ? (
                       /* frame-blocked — canonical design panel */
                       <div style={{ flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 30px', minHeight: 0 }}>

@@ -3,7 +3,13 @@
 // Two independent axes, both stored per browser (never in the DB — a skin is a
 // preference, not a setting the backend acts on):
 //   mode  light | dark | system   → localStorage `jobnavigator_theme`
-//   skin  default | alt           → localStorage `jobnavigator_skin`
+//   skin  default | alt | board | ink | paper | soft
+//                                 → localStorage `jobnavigator_skin`
+//
+// `default` and `alt` are the two designed skins; the last four are tone
+// comparisons of the default palette (same hues, same fonts, different
+// contrast) so they can be looked at side by side on the monitor. Adding one is
+// still two palette blocks in theme.css plus a line here — nothing else.
 //
 // `system` follows `prefers-color-scheme` live, so a mode is not the same thing
 // as the colour that ends up on screen. `resolved` is that colour (light|dark);
@@ -33,14 +39,21 @@ const SKIN_KEY = 'jobnavigator_skin'
 const LEGACY_KEY = 'jobnavigator_dark_mode'   // the pre-D6 boolean, migrated once
 
 export const MODES = ['light', 'dark', 'system']
-export const SKINS = ['default', 'alt']
+export const SKINS = ['default', 'alt', 'board', 'ink', 'paper', 'soft']
 
 // The rail's ◐ is a three-state control, so it needs three glyphs (Nav Rail spec:
 // "cycles Light → Dark → System, tooltip names the current mode").
 export const MODE_ICON = { light: '◐', dark: '◑', system: '◒' }
 export const MODE_LABEL = { light: 'Light', dark: 'Dark', system: 'System' }
 export const MODE_OPTIONS = MODES.map((m) => [m, MODE_LABEL[m]])
-export const SKIN_LABEL = { default: 'Default — warm paper', alt: 'Alt — cool slate' }
+export const SKIN_LABEL = {
+  default: 'Default — warm paper',
+  alt: 'Alt — cool slate',
+  board: 'Board — original tones',
+  ink: 'Ink — darker text and lines',
+  paper: 'Paper — darker ground',
+  soft: 'Soft — lighter',
+}
 export const SKIN_OPTIONS = SKINS.map((s) => [s, SKIN_LABEL[s]])
 
 const ls = (fn, fallback) => { try { return fn(window.localStorage) } catch { return fallback } }
@@ -58,7 +71,8 @@ function readMode() {
   return migrated
 }
 function readSkin() {
-  return ls((s) => s.getItem(SKIN_KEY), null) === 'alt' ? 'alt' : 'default'
+  const raw = ls((s) => s.getItem(SKIN_KEY), null)
+  return SKINS.includes(raw) ? raw : 'default'
 }
 
 const mq = () => {
