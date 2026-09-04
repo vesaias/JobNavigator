@@ -887,8 +887,10 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // swaps the display face cannot pull the number off centre (it did, before this
 // primitive: the sites each carried a hand-tuned `translateY(1px)`).
 // `size` is 'sm' (34px, the report band and the resume editor) or 'md' (44px,
-// the Feed row); a number is taken as an explicit box. `value` null renders the
-// unscored state: a dashed ring with `label` inside ("No fit").
+// the Feed row); a number is taken as an explicit box, and every size draws the
+// same ring scaled to it (see RING_VB). `value` null renders the unscored state:
+// a dashed ring with `label` inside — the label is **"No fit"** at every site, so
+// it is the prop's default and no caller overrides it.
 // `children` ride in the ring's own relative box — that is where the Feed's
 // "+N reports" count badge pins itself.
 const RING_SIZE = {
@@ -904,19 +906,28 @@ const RING_TONE = {
 }
 // the score bands each screen used to re-declare as its own `scoreColor()`
 export const scoreTone = (s) => (s == null ? 'neutral' : s >= 70 ? 'good' : s >= 50 ? 'warn' : 'bad')
-const RING_R = 35   // the arc radius every ring site drew, in a viewBox of 2x box
+const RING_R = 35   // the arc radius every ring site drew
+// D-POST-16: the viewBox is a **constant**, not `2 x box`. With a per-size
+// viewBox, `r=35 + stroke/2` is a *fixed 37.5px* outer radius whatever the box
+// is: it fits md's 44px box (37.5 < 44) and overflowed sm's 34px one, where the
+// SVG root's UA `overflow:hidden` sliced 1.75px off all four sides — the ring
+// rendered as a squircle (measured on the Feed's report band: viewBox 0 0 68 68,
+// r 35, stroke 5, svg 34x34). Pinning the viewBox to md's 88 makes every size a
+// uniform scale of the same drawing — md is pixel-identical, sm draws a whole
+// ring, and an explicit numeric `size` scales too instead of clipping.
+const RING_VB = 88
 export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', title, ariaLabel, children, style, className }) {
   const z = typeof size === 'number' ? { ...RING_SIZE.md, box: size } : (RING_SIZE[size] || RING_SIZE.md)
   const t = RING_TONE[tone || scoreTone(value)] || RING_TONE.neutral
-  const vb = z.box * 2
+  const vb = RING_VB
   const stroke = weight || z.track
   const c = 2 * Math.PI * RING_R
   return (
     <div className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
-      style={{ position: 'relative', flex: `0 0 ${z.box}px`, width: z.box, height: z.box, ...style }}>
+      style={{ position: 'relative', boxSizing: 'border-box', flex: `0 0 ${z.box}px`, width: z.box, height: z.box, ...style }}>
       {value == null ? (
         <div style={{
-          width: '100%', height: '100%', border: '1px dashed var(--ring-neutral-border)',
+          width: '100%', height: '100%', boxSizing: 'border-box', border: '1px dashed var(--ring-neutral-border)',
           borderRadius: 'var(--radius-control)', background: t.bg,
           display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
           fontFamily: 'var(--font-body)', fontSize: z.unscored, letterSpacing: '.1em',

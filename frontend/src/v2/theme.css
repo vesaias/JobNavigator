@@ -116,7 +116,7 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  --row-hover:var(--surface-2); --row-selected:var(--accent-soft);
   /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
@@ -287,7 +287,7 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  --row-hover:var(--surface-2); --row-selected:var(--accent-soft);
   /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
@@ -440,6 +440,11 @@
 
 /* interactive (inline styles can't do :hover) */
 .v2-row:hover { background:var(--row-hover) !important; }
+/* D-POST-17: the picked row is an --accent-soft wash now, not the same grey as
+   the hover, so the hover rule above must not wipe it out when the pointer
+   crosses the selected row. `aria-current` is what Row (and the Feed row,
+   which paints its own background) marks the picked row with. */
+.v2-row[aria-current="true"]:hover { background:var(--row-selected) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
 .v2-rail-copy:hover { background:var(--line-soft) !important; color:var(--text) !important; }   /* the cells set inline colour (FEED-12) */
 .v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
