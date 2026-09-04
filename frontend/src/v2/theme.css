@@ -214,21 +214,31 @@
   --radius-rail-item:0;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --btn-weight:500; --title-weight:400; --label-weight:400;
-  --label-tracking:.13em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
-  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
-  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
-  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
+  --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
+  --label-case:uppercase; --display-tracking:-.02em;
+  /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
+     pressed cell "P"), so in the base blocks each name resolves to the paint the
+     default theme already has: a primary button does not darken on hover, and
+     nothing shifts or washes on :active. The rules that read them are therefore
+     no-ops here and live only in cobalt/saas/win98, which carry the handoff
+     values. Accepting the proposal is four values, not a code change:
+       hover  color-mix(in oklab, var(--btn-primary-bg) 90%, black)
+       press  color-mix(in oklab, var(--btn-primary-bg) 82%, black)
+       shift  translateY(1px)      wash  var(--surface-2)  */
+  --btn-primary-hover-bg:var(--btn-primary-bg);
+  --btn-primary-pressed-bg:var(--btn-primary-bg);
+  --btn-danger-hover-bg:var(--btn-danger-bg);
+  --pressed-shift:none; --pressed-wash:transparent;
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
-  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
-  --input-border-hover:var(--line-strong);
+  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* D-08 open: .5 IS the inline dim every primitive writes today, so the token can be read inline; the ink stays inherited so the class rule cannot repaint a control that sets no colour of its own */
+  --input-border-hover:var(--input-border);   /* D-06 open: = the rest border, so field hover is a no-op in the default theme (handoff proposes var(--line-strong)) */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:2px solid var(--rail-accent); --rail-item-inset:0;
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* 3px, not the handoff 2px: V2App widened the accent and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -427,21 +437,31 @@
   --radius-rail-item:0;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --btn-weight:500; --title-weight:400; --label-weight:400;
-  --label-tracking:.13em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
-  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
-  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
-  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
+  --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
+  --label-case:uppercase; --display-tracking:-.02em;
+  /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
+     pressed cell "P"), so in the base blocks each name resolves to the paint the
+     default theme already has: a primary button does not darken on hover, and
+     nothing shifts or washes on :active. The rules that read them are therefore
+     no-ops here and live only in cobalt/saas/win98, which carry the handoff
+     values. Accepting the proposal is four values, not a code change:
+       hover  color-mix(in oklab, var(--btn-primary-bg) 90%, black)
+       press  color-mix(in oklab, var(--btn-primary-bg) 82%, black)
+       shift  translateY(1px)      wash  var(--surface-2)  */
+  --btn-primary-hover-bg:var(--btn-primary-bg);
+  --btn-primary-pressed-bg:var(--btn-primary-bg);
+  --btn-danger-hover-bg:var(--btn-danger-bg);
+  --pressed-shift:none; --pressed-wash:transparent;
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
-  --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
-  --input-border-hover:var(--line-strong);
+  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* D-08 open: .5 IS the inline dim every primitive writes today, so the token can be read inline; the ink stays inherited so the class rule cannot repaint a control that sets no colour of its own */
+  --input-border-hover:var(--input-border);   /* D-06 open: = the rest border, so field hover is a no-op in the default theme (handoff proposes var(--line-strong)) */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:2px solid var(--rail-accent); --rail-item-inset:0;
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* 3px, not the handoff 2px: V2App widened the accent and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -818,7 +838,7 @@
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
   --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
   --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
@@ -861,7 +881,7 @@
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
   --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
+  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
   --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
@@ -907,7 +927,7 @@
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
   --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
   --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
@@ -950,7 +970,7 @@
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
   --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
+  --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
   --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
@@ -1009,7 +1029,7 @@
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0;
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
@@ -1053,7 +1073,7 @@
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0;
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
@@ -1243,7 +1263,7 @@
    drew literally, so the paint is identical; win98 swaps them for its 1px dotted
    outline and saas/cobalt for a 3px halo. outline-offset only bites once an
    outline exists. */
-.jn-v2 [tabindex="0"]:focus-visible { outline:var(--focus-outline); outline-offset:-4px; box-shadow:var(--focus-shadow); }
+.jn-v2 [tabindex="0"]:focus-visible { outline:var(--focus-outline); outline-offset:-4px; box-shadow:var(--focus-shadow) !important; }
 
 /* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
    Run/Test pills scrolled off the viewport. Pin the actions column to the right
@@ -1266,21 +1286,31 @@
    HELD BACK for that pass, because each one repaints the default theme the
    moment it lands (they are listed here so the next agent does not have to
    re-derive the set):
-     · .v2-bd/.v2-bdc/.v2-act :active — a pressed wash and a 1px shift on pills
-       and icon buttons that have no pressed state today.
-     · [aria-disabled="true"] — every disabled primitive in v2 already carries
-       the attribute, and the rule would swap their token-based dimming for a
-       blanket .5 opacity.
-     · the transition rule — it would give .v2-row, .v2-menuitem, .v2-bd, .v2-bdc
-       and .v2-act hover fades they do not have.
-     · the field hover rule (--input-border-hover) — a new resting-to-hover
-       border on every input and field wrapper.
-     · .v2-pill[aria-pressed="true"]:hover and .v2-chip[aria-pressed="true"] —
-       both marked P (proposed) in the handoff, and Pill/Chip already carry
-       aria-pressed, so both would repaint on contact.
-     · the prefers-reduced-motion sweep — `animation-duration:0s` on `.jn-v2 *`
-       also stops .v2-spin, and a spinner is a progress indicator, not decoration.
-       It needs a carve-out before it can land. */
+     · .v2-bd/.v2-bdc/.v2-act :active — landed below, but INERT: --pressed-wash is
+       `transparent` and --pressed-shift `none` in the base blocks (D-07 is open),
+       so only cobalt/saas/win98 draw a pressed state. The wash is painted as a
+       background-IMAGE overlay rather than `background:`, so a transparent wash
+       leaves the control's own ground alone instead of erasing it.
+     · [aria-disabled="true"] — landed below. Every disabled primitive writes
+       `opacity:var(--disabled-opacity)` inline (= .5, today's number), so the
+       rule only reaches the handful of hand-rolled disabled spans in the screens;
+       --disabled-ink is `inherit` here so it cannot repaint one of them.
+     · the field hover rule (--input-border-hover) — landed below, pointed at the
+       field's own rest border (D-06 open). The SearchInput underline variant is
+       carved out (.v2-underline): its rest border is --input-underline, not
+       --input-border, so the shared token would repaint it.
+     · the prefers-reduced-motion sweep — landed below as TRANSITIONS ONLY
+       (D-05): `animation-duration:0s` on `.jn-v2 *` would also stop .v2-spin and
+       the ScoreRing busy arc, and a spinner is a progress indicator.
+
+   STILL held back:
+     · the blanket transition rule — it would give .v2-row, .v2-menuitem, .v2-bd,
+       .v2-bdc and .v2-act hover fades they do not have.
+     · .v2-pill[aria-pressed="true"]:hover — marked P, and Pill carries
+       aria-pressed, so it would repaint an ON pill on contact. Pill deliberately
+       does NOT carry the `v2-pill` class, which is what keeps it inert.
+     · .v2-chip[aria-pressed="true"] — Chip reads --chip-on-* inline instead
+       (same tokens, no cascade surprise). */
 .jn-v2 .v2-btn-primary:hover { background:var(--btn-primary-hover-bg) !important; }
 .jn-v2 .v2-btn-primary:active { background:var(--btn-primary-pressed-bg) !important; transform:var(--pressed-shift); }
 .jn-v2 .v2-btn-danger:hover { background:var(--btn-danger-hover-bg) !important; }
@@ -1295,3 +1325,37 @@
    until a primitive asks for the class. */
 .jn-v2 .v2-raised { border:var(--bevel-raised-border); border-color:var(--bevel-raised-color); box-shadow:var(--bevel-raised-shadow); }
 .jn-v2 .v2-inset, .jn-v2 .v2-raised:active { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
+
+/* U-01 / D-07 — pressed. Inert in the default theme: --pressed-shift is `none`
+   and --pressed-wash `transparent` there. The wash is a background-image overlay
+   (a flat two-stop gradient) rather than `background:`, so `transparent` leaves
+   the control's own ground visible; `background: transparent !important` would
+   erase a Card's surface for as long as the mouse is down. Opaque skin washes
+   paint identically either way. */
+.jn-v2 .v2-bd:active, .jn-v2 .v2-bdc:active, .jn-v2 .v2-act:active {
+  background-image:linear-gradient(var(--pressed-wash), var(--pressed-wash)) !important;
+  transform:var(--pressed-shift);
+}
+/* U-05 / D-08 — disabled. Every primitive writes `opacity:var(--disabled-opacity)`
+   inline (.5 = today), so this rule is the fallback for hand-rolled disabled spans
+   in the screens; --disabled-ink is `inherit` and --disabled-engrave `none` in the
+   base blocks, and win98 swaps both for its engraved grey. */
+.jn-v2 [aria-disabled="true"] { opacity:var(--disabled-opacity); color:var(--disabled-ink); text-shadow:var(--disabled-engrave); }
+/* U-06 field hover (D-06 open). --input-border-hover is the field's own rest
+   border in the base blocks, so this repaints nothing in the default theme.
+   It hangs on `.v2-inset` — the fields ui.jsx draws (Input, Textarea, the boxed
+   SearchInput, the Select trigger) — rather than on `input`, so the borderless
+   raw inputs the screens put inside a v2-fieldwrap keep their (invisible) border
+   colour and the crawl has nothing to report. Three carve-outs:
+     .v2-underline          SearchInput's underline variant rests on
+                            --input-underline, not --input-border.
+     [aria-expanded="true"] an OPEN Select trigger already wears the accent
+                            (--input-border-focus); hover must not take it back.
+     :focus                 same reason for a focused field.
+   Field WRAPPERS are out too: LoginModal paints its wrapper --bad while an error
+   stands, and a shared hover token would wipe it. */
+.jn-v2 .v2-inset:not(.v2-underline):not([aria-expanded="true"]):hover:not(:focus) { border-color:var(--input-border-hover) !important; }
+/* U-03 / D-05 — reduced motion, TRANSITIONS ONLY. The handoff also zeroes
+   animation-duration on `.jn-v2 *`; that would stop .v2-spin and the ScoreRing's
+   busy arc, which are progress indicators rather than decoration. */
+@media (prefers-reduced-motion: reduce) { .jn-v2 * { transition-duration:0s !important; } }

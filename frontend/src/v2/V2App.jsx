@@ -201,8 +201,16 @@ export default function V2App() {
                   // left padding is 1px short of its old value so widening the
                   // accent from 2px to 3px doesn't shift the label
                   padding: open ? `0 ${padX}px 0 ${padX - 1}px` : '0 13px 0 10px',
-                  fontSize: 14, whiteSpace: 'nowrap', borderLeft: `3px solid ${active ? 'var(--rail-accent)' : 'transparent'}`,
-                  background: active ? 'var(--rail-active)' : 'transparent', transition: 'padding .32s ease',
+                  fontSize: 14, whiteSpace: 'nowrap',
+                  // the active item is a token set, not a hard-coded bar: the
+                  // default theme keeps its 3px accent edge on a faint wash
+                  // (--rail-active-mark / --rail-active-bg), saas and cobalt swap
+                  // the mark for `none` and fill an inset, rounded tile instead.
+                  // The inactive item holds the same 3px in transparent so the
+                  // labels stay on one axis whichever the theme picks.
+                  borderLeft: active ? 'var(--rail-active-mark)' : '3px solid transparent',
+                  borderRadius: 'var(--radius-rail-item)', margin: 'var(--rail-item-inset)',
+                  background: active ? 'var(--rail-active-bg)' : 'transparent', transition: 'padding .32s ease',
                 }
                 const inner = (
                   <>
@@ -221,7 +229,7 @@ export default function V2App() {
                 )
                 if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" title={tip} className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
                 if (!it.ready) return <div key={it.to} title={tip || 'Coming in the redesign'} style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
-                return <NavLink key={it.to} to={it.to} title={tip} className="v2-navdark" style={{ ...base, color: active ? 'var(--rail-ink)' : 'var(--rail-text)' }}>{inner}</NavLink>
+                return <NavLink key={it.to} to={it.to} title={tip} className="v2-navdark" style={{ ...base, color: active ? 'var(--rail-active-ink)' : 'var(--rail-text)' }}>{inner}</NavLink>
               })}
             </div>
           ))}
