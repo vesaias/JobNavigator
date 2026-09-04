@@ -18,7 +18,7 @@ KEEP = ["background", "backgroundColor", "color", "border", "borderColor", "bord
         "letterSpacing", "textTransform", "opacity", "cursor"]
 HOVER_CLASSES = ["v2-bdc", "v2-bd", "v2-act", "v2-row", "v2-crow", "v2-arow", "v2-card", "v2-chip", "v2-menuitem",
                  "v2-hover-accent", "v2-hover-accent-text", "v2-hover-bad", "v2-hover-bad-text", "v2-hover-bad-bdc",
-                 "v2-navlink", "v2-navdark", "v2-anchor", "v2-dashadd", "v2-clhead", "v2-themebtn", "v2-rail", "v2-welcomestep"]
+                 "v2-navlink", "v2-navdark", "v2-anchor", "v2-dashadd", "v2-clhead", "v2-appearancebtn", "v2-rail", "v2-welcomestep"]
 
 def norm(v):
     v = v.strip()

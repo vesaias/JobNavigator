@@ -1,13 +1,13 @@
 """D0/D4 computed-style baseline. Run inside the backend container:
 python /tmp/v2t/stylecrawl.py <stage>  →  /tmp/v2t/shots/<stage>/styles.json
-For every visible element on every v2 route (both themes, 1440×900): a stable key
+For every visible element on every v2 route (light and dark, 1440×900): a stable key
 (route, theme, DOM path with classes, text head) → rest tuple + hover tuple (for elements with cursor:pointer or a v2-* class).
 """
 import sys, os, json
 sys.path.insert(0, '/tmp/v2t')
 from h import *
 stage = sys.argv[1] if len(sys.argv) > 1 else 'D0'
-SKIN = sys.argv[sys.argv.index('--skin') + 1] if '--skin' in sys.argv else None  # e.g. --skin alt (sets localStorage jobnavigator_skin before load)
+THEME = sys.argv[sys.argv.index('--theme') + 1] if '--theme' in sys.argv else None  # e.g. --theme alt (sets localStorage jobnavigator_theme before load)
 OUT = f'/tmp/v2t/shots/{stage}'; os.makedirs(OUT, exist_ok=True)
 PROPS = ['backgroundColor', 'color', 'borderTopWidth', 'borderTopColor', 'borderBottomColor', 'borderTopStyle', 'borderRadius', 'boxShadow', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'paddingTop', 'paddingLeft', 'height', 'letterSpacing', 'textTransform', 'opacity', 'cursor']
 JS_REST = """(props) => {
@@ -37,7 +37,7 @@ with browser() as b:
     for th in ('light', 'dark'):
         for r in ROUTES:
             pg = page(b, th)
-            if SKIN: pg.add_init_script(f"localStorage.setItem('jobnavigator_skin', '{SKIN}')")
+            if THEME: pg.add_init_script(f"localStorage.setItem('jobnavigator_theme', '{THEME}')")
             try: pg.clock.set_fixed_time('2026-09-04T12:00:00Z')
             except Exception: pass
             go(pg, r); pg.add_style_tag(content='*, *::before, *::after { transition: none !important; animation: none !important; }'); pg.mouse.move(0, 0); pg.wait_for_timeout(300)

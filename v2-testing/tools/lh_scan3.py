@@ -105,7 +105,7 @@ if cl_id:
 
 results = {}
 with browser() as b:
-    pg = page(b, theme='light')
+    pg = page(b, appearance='light')
     for name, route, action in ROUTES:
         try:
             go(pg, route, settle=1400)

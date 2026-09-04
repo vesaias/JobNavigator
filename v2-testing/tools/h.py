@@ -3,7 +3,7 @@
 Usage inside a test script:
     import sys; sys.path.insert(0, '/tmp/v2t'); from h import *
     with browser() as b:
-        pg = page(b, theme='dark')           # authed context, warmed up
+        pg = page(b, appearance='dark')           # authed context, warmed up
         go(pg, '/v2/feed')
         r = rect(pg, 'text=Jobs')            # {'x','y','w','h','top','bottom'}
         cs = style(pg, '.v2-card >> nth=0', ['borderColor','backgroundColor'])
@@ -57,9 +57,9 @@ def browser(headless=True):
             b.close()
 
 
-def context(b, theme="light", width=1440, height=900, dsf=1, key=KEY, extra_ls=None):
+def context(b, appearance="light", width=1440, height=900, dsf=1, key=KEY, extra_ls=None):
     ctx = b.new_context(viewport={"width": width, "height": height}, device_scale_factor=dsf)
-    ls = {"jobnavigator_api_key": key, "jobnavigator_dark_mode": "true" if theme == "dark" else "false",
+    ls = {"jobnavigator_api_key": key, "jobnavigator_dark_mode": "true" if appearance == "dark" else "false",
           "jobnavigator_welcome_seen": "true", "jobnavigator_v2_welcome_seen": "true"}
     ls.update(extra_ls or {})
     ctx.add_init_script("try{" + "".join(f"localStorage.setItem({json.dumps(k)},{json.dumps(v)});" for k, v in ls.items()) + "}catch(e){}")
@@ -68,9 +68,9 @@ def context(b, theme="light", width=1440, height=900, dsf=1, key=KEY, extra_ls=N
     return ctx
 
 
-def page(b, theme="light", **kw):
+def page(b, appearance="light", **kw):
     """Fresh page with console/network capture attached at pg.jn_log."""
-    ctx = context(b, theme=theme, **kw)
+    ctx = context(b, appearance=appearance, **kw)
     pg = ctx.new_page()
     attach_log(pg)
     return pg
@@ -92,8 +92,8 @@ def go(pg, route, settle=800, wait="networkidle", timeout=45000):
     return pg
 
 
-def set_theme(pg, theme):
-    pg.evaluate(f"localStorage.setItem('jobnavigator_dark_mode', '{'true' if theme == 'dark' else 'false'}')")
+def set_appearance(pg, appearance):
+    pg.evaluate(f"localStorage.setItem('jobnavigator_dark_mode', '{'true' if appearance == 'dark' else 'false'}')")
     pg.reload(wait_until="networkidle"); pg.wait_for_timeout(600)
 
 

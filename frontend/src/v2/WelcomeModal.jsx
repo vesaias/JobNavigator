@@ -21,7 +21,7 @@ export default function WelcomeModal({ onClose }) {
   const base = useLocation().pathname.startsWith('/v2') ? '/v2/' : '/'
   // mounts outside the v2 shell like the sign-in overlay, so it brings the theme
   // with it — from the shared store (SHELL-02)
-  const theme = useTheme()
+  const look = useTheme()
   const go = (slug) => { onClose?.(); navigate(base + slug) }
 
   return (
@@ -30,7 +30,7 @@ export default function WelcomeModal({ onClose }) {
     // in-shell modal). The scrim click still closes; Escape now closes too,
     // which it did not before — ModalPanel's RES-15 contract.
     <ModalPanel width={420} onClose={onClose} zIndex={9998}
-      scrimProps={{ className: 'jn-v2', ...themeAttrs(theme) }}
+      scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       scrimStyle={{ padding: 16 }}
       style={{ maxWidth: '100%', overflow: 'hidden' }}>
       <div style={{ padding: '22px 24px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>

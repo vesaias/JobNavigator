@@ -35,7 +35,7 @@
 // **Never inline a colour, radius, shadow, font family or font size in a
 // screen.** Those live in `theme.css` as semantic tokens (`--btn-primary-bg`,
 // `--radius-card`, `--menu-shadow`, `--font-body`, `--t-12-5`, …), each of which
-// points at a palette token, so a new skin is a wholesale replacement of the
+// points at a palette token, so a new theme is a wholesale replacement of the
 // palette block and nothing else. Primitives read semantic tokens only; they
 // never read a palette token (`--accent`, `--line`, …) directly. D5's
 // `tools/stylelint.py` enforces this — `theme.css` and this file are the only
@@ -604,7 +604,7 @@ export function SectionHead({
     // explicit lineHeight: without one the caret box is the row's 18px line-height,
     // and in a `alignItems:'baseline'` head (ResumeSections' entry heads) a 10px
     // glyph in an 18px box sits at a font-dependent offset from the shared
-    // baseline, so the head grew 36→37px under the alt skin. `1` pins the box to
+    // baseline, so the head grew 36→37px under the alt theme. `1` pins the box to
     // the glyph's own 10px; with `center` the content area stays centred, so the
     // glyph does not move in either alignment.
     <span aria-hidden="true" style={{
@@ -739,7 +739,7 @@ export function Radio(props) { return <Ticker {...props} round indeterminate={fa
 // ── Switch ──────────────────────────────────────────────────────────────────
 // Track + sliding knob, the Settings geometry (26x15 track, 11px knob, 2px
 // inset). SET-14: --switch-knob-on is --surface-2 so the knob reads as a surface
-// disc on the accent track in both themes; OFF keeps --knob on a neutral track.
+// disc on the accent track in light and dark; OFF keeps --knob on a neutral track.
 const SWITCH_SIZE = {
   md: { w: 26, h: 15, knob: 11, pad: 2 },
   sm: { w: 22, h: 13, knob: 9, pad: 2 },
@@ -883,7 +883,7 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // ── ScoreRing ───────────────────────────────────────────────────────────────
 // The circular fit score: an SVG arc over a --ring-track circle with the numeral
 // centred inside it. Geometry is font-independent — the numeral sits in a
-// flex-centred box at lineHeight 1, with no baseline nudge, so a skin that
+// flex-centred box at lineHeight 1, with no baseline nudge, so a theme that
 // swaps the display face cannot pull the number off centre (it did, before this
 // primitive: the sites each carried a hand-tuned `translateY(1px)`).
 // `size` is 'sm' (34px, the report band and the resume editor) or 'md' (44px,
@@ -959,7 +959,7 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             lineHeight: 1, fontFamily: 'var(--font-display)', fontSize: z.num,
             letterSpacing: z.letterSpacing, color: t.ink,
-            transform: `translateY(var(--ring-shift-${size === 'sm' ? 'sm' : 'md'}, ${z.shift || 0}px))`,  // optical centre per skin (font metrics differ): tokens in theme.css
+            transform: `translateY(var(--ring-shift-${size === 'sm' ? 'sm' : 'md'}, ${z.shift || 0}px))`,  // optical centre per theme (font metrics differ): tokens in theme.css
           }}>{value}</div>
         </>
       )}
@@ -1062,8 +1062,9 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 // `as="form"` + `onSubmit` renders the panel as a real <form>, for the sign-in
 // overlay where Enter-in-the-field must submit. `scrimProps` carries the two
 // attributes the two *global* overlays put on the scrim (`className="jn-v2"` +
-// `data-theme`), because they mount outside the v2 shell and have to bring the
-// theme with them; `zIndex` is theirs too — they sit above everything, including
+// the pair `themeAttrs()` spreads, `data-appearance` and `data-theme`), because
+// they mount outside the v2 shell and have to bring the look with them;
+// `zIndex` is theirs too — they sit above everything, including
 // an open modal. A panel with no `onClose` (sign-in: there is nowhere to go) also
 // takes no Escape listener, rather than one that swallows the key and does
 // nothing.

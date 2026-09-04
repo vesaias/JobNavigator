@@ -91,13 +91,13 @@ def lint_jsx(fn, text):
 
 def lint_css(text):
     out = []
-    blocks = re.findall(r"\.jn-v2(\[data-theme=\"dark\"\])?\s*\{([^}]*)\}", text, re.S)
+    blocks = re.findall(r"\.jn-v2(\[data-appearance=\"dark\"\])?\s*\{([^}]*)\}", text, re.S)
     names = []
     for dark, body in blocks:
         names.append((bool(dark), set(re.findall(r"(--[a-z0-9-]+)\s*:", body))))
     light = set().union(*[n for d, n in names if not d]) if any(not d for d, _ in names) else set()
     dark = set().union(*[n for d, n in names if d]) if any(d for d, _ in names) else set()
-    INVARIANT = {"--sans", "--serif", "--mono", "--knob", "--faint", "--iframe-bg", "--rail-active", "--rail-hover", "--rail-ink", "--rail-line", "--on-rail-dim", "--on-rail-line", "--on-rail-sep"}  # same in both themes by design
+    INVARIANT = {"--sans", "--serif", "--mono", "--knob", "--faint", "--iframe-bg", "--rail-active", "--rail-hover", "--rail-ink", "--rail-line", "--on-rail-dim", "--on-rail-line", "--on-rail-sep"}  # same in light and dark by design
     sem = {n for n in light | dark if not re.match(r"--(t-|radius-)", n) and n not in INVARIANT}
     only_light = sorted(n for n in sem if n in light and n not in dark and not n.startswith("--t-"))
     only_dark = sorted(n for n in sem if n in dark and n not in light)

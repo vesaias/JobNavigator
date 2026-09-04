@@ -38,12 +38,12 @@ IGNORE_SUBSTR = ["favicon", "Download the React DevTools"]
 results = []
 with sync_playwright() as p:
     browser = p.chromium.launch()
-    for theme in ("light", "dark"):
+    for appearance in ("light", "dark"):
         ctx = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1)
         ctx.add_init_script(f"""
             try {{
               localStorage.setItem('jobnavigator_api_key', '{KEY}');
-              localStorage.setItem('jobnavigator_dark_mode', '{'true' if theme == 'dark' else 'false'}');
+              localStorage.setItem('jobnavigator_dark_mode', '{'true' if appearance == 'dark' else 'false'}');
               localStorage.setItem('jobnavigator_welcome_seen', 'true');
               localStorage.setItem('jobnavigator_v2_welcome_seen', 'true');
             }} catch (e) {{}}
@@ -51,7 +51,7 @@ with sync_playwright() as p:
         warm = ctx.new_page(); warm.goto(BASE + "/v2/feed", wait_until="networkidle"); warm.wait_for_timeout(800); warm.close()
         for name, route in ROUTES:
             page = ctx.new_page()
-            rec = {"name": name, "route": route, "theme": theme, "console": [], "pageerrors": [], "http": [], "reqfailed": []}
+            rec = {"name": name, "route": route, "appearance": appearance, "console": [], "pageerrors": [], "http": [], "reqfailed": []}
             page.on("console", lambda m, rec=rec: rec["console"].append({"type": m.type, "text": m.text[:400], "loc": (m.location or {}).get("url", "")[-80:]}) if m.type in ("error", "warning") and not any(s in m.text for s in IGNORE_SUBSTR) else None)
             page.on("pageerror", lambda e, rec=rec: rec["pageerrors"].append(str(e)[:400]))
             page.on("response", lambda r, rec=rec: rec["http"].append({"status": r.status, "url": r.url[-120:]}) if r.status >= 400 else None)
@@ -66,16 +66,16 @@ with sync_playwright() as p:
             rec["final_url"] = page.url
             rec["title"] = page.title()
             try:
-                rec["v2_theme_attr"] = page.eval_on_selector(".jn-v2", "el => el.getAttribute('data-theme')")
+                rec["v2_appearance_attr"] = page.eval_on_selector(".jn-v2", "el => el.getAttribute('data-appearance')")
             except Exception:
-                rec["v2_theme_attr"] = None
+                rec["v2_appearance_attr"] = None
             try:
                 rec["html_dark_class"] = page.evaluate("document.documentElement.classList.contains('dark')")
             except Exception:
                 rec["html_dark_class"] = None
             rec["body_text_len"] = page.evaluate("document.body.innerText.length")
             rec["bg"] = page.evaluate("getComputedStyle(document.querySelector('.jn-v2') || document.body).backgroundColor")
-            page.screenshot(path=f"{OUT}/shots/{name}_{theme}.png", full_page=False)
+            page.screenshot(path=f"{OUT}/shots/{name}_{appearance}.png", full_page=False)
             results.append(rec)
             page.close()
         ctx.close()
@@ -84,4 +84,4 @@ with sync_playwright() as p:
 json.dump({"ids": {"resume": rid, "cover_letter": clid, "job": jid}, "results": results}, open(f"{OUT}/console.json", "w"), indent=1)
 for r in results:
     flag = "!!" if (r["console"] or r["pageerrors"] or r["http"] or r["reqfailed"] or r.get("goto_error")) else "ok"
-    print(f"{flag:2} {r['theme']:5} {r['name']:24} {r['ms']:5}ms text={r['body_text_len']:6} theme={r['v2_theme_attr']} dark={r['html_dark_class']} con={len(r['console'])} err={len(r['pageerrors'])} http={len(r['http'])} rf={len(r['reqfailed'])}")
+    print(f"{flag:2} {r['appearance']:5} {r['name']:24} {r['ms']:5}ms text={r['body_text_len']:6} appearance={r['v2_appearance_attr']} dark={r['html_dark_class']} con={len(r['console'])} err={len(r['pageerrors'])} http={len(r['http'])} rf={len(r['reqfailed'])}")

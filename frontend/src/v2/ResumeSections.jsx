@@ -258,7 +258,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
               <Helper style={{ flex: '0 0 auto' }}>{nb} bullet{nb === 1 ? '' : 's'}</Helper>
               {/* lineHeight 1: this head is baseline-aligned, so a 10px glyph left on
                   the row's 18px line-height rides a font-dependent offset from the
-                  shared baseline — it grew the head 36→37px under the alt skin */}
+                  shared baseline — it grew the head 36→37px under the alt theme */}
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, lineHeight: 1, color: 'var(--warn)' }}>●</span>}
             </SectionHead>
             {isOpen && (

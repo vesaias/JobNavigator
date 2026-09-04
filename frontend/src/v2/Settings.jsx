@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape, useSettled } from './hooks'
 import { Button, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
-import { useTheme, MODE_OPTIONS, SKIN_OPTIONS } from './theme'
+import { useTheme, MODE_OPTIONS, THEME_OPTIONS } from './theme'
 import api from '../api'
 import './theme.css'
 
@@ -109,7 +109,7 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
 
 function Toggle({ on, label, onPick, ariaLabel }) {
   // SET-14 lives on `Switch` in ui.jsx now (--switch-knob-on = --surface-2 so the
-  // ON knob reads as a surface disc on the accent track in both themes). This
+  // ON knob reads as a surface disc on the accent track in light and dark). This
   // wrapper only keeps the local name + no-arg `onPick` its call sites pass.
   return <Switch on={on} onChange={() => onPick()} label={label} ariaLabel={ariaLabel} />
 }
@@ -122,7 +122,7 @@ export default function Settings() {
   const [personaAvailable, setPersonaAvailable] = useState(false)
   const [query, setQuery] = useState('')
   // the anchor rail highlights where the scroller is parked, and it opens at the
-  // top — which is now Appearance, the first section
+  // top — which is now Display, the first section
   const [active, setActive] = useState('appearance')
   const [info, setInfo] = useState(null)      // which row's info panel is open
   const [ovr, setOvr] = useState({})          // which override rows are expanded
@@ -302,9 +302,9 @@ export default function Settings() {
       // The one group that isn't a DB setting: both rows live in this browser's
       // localStorage (theme.js), so they take no `key` and never PATCH /settings.
       // They sit first because they change what every screen below looks like.
-      ['appearance', 'GENERAL', 'Appearance', '', [
-        { kind: 'theme', label: 'Theme', help: 'System follows your OS setting and changes with it. The rail’s ◐ cycles the same three.' },
-        { kind: 'skin', label: 'Skin', help: 'Swaps the palette and the font stacks. Sizes, spacing and radii are identical in all of them. Editorial is the direction board this palette came from, before it was lightened; Tone 1–3 are the ramp to it — every colour interpolated a quarter, a half and three quarters of the way, on the default’s fonts. Cobalt, SaaS and Win98 are the palettes of the three deep-reskin boards; their shape languages (radii, bevels, shadows) are not part of a skin, so those three read as recolours, not as the boards.' },
+      ['appearance', 'GENERAL', 'Display', '', [
+        { kind: 'appearance', label: 'Appearance', help: 'Light, dark, or follow your OS. Saved in this browser.' },
+        { kind: 'theme', label: 'Theme', help: 'The app’s look: colours, fonts and, for Cobalt, SaaS and Win98, shapes too. Saved in this browser.' },
       ]],
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
@@ -519,9 +519,9 @@ export default function Settings() {
               <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
                 {/* alignItems center, not baseline: both children are exactly 26px tall
                     (the shared line-height below), so centring places them identically
-                    to baseline in the default skin — but baseline made the row's height
+                    to baseline in the default theme — but baseline made the row's height
                     the union of two font-dependent baseline offsets, which grew the head
-                    56→59px under the alt skin. Centring pins it to the 26px line. */}
+                    56→59px under the alt theme. Centring pins it to the 26px line. */}
                 <div data-sec={`sec-${id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '26px 0 4px' }}>
                   {/* integer line-heights: at the inherited 1.5 these are 28.5 and
                       17.25, which puts every row below the header on a half pixel
@@ -587,10 +587,10 @@ function Row({ r, ctx }) {
       // write it directly instead of going through `save` (there is nothing on
       // the server to save) — hence their own components, which can hold the
       // subscription without dragging it into the sections useMemo.
+      case 'appearance':
+        return <AppearanceRow label={r.label} />
       case 'theme':
         return <ThemeRow label={r.label} />
-      case 'skin':
-        return <SkinRow label={r.label} />
       case 'switch': {
         const on = isOn(r.key, r.dflt)
         return <Toggle on={on} label={on ? 'On' : 'Off'} onPick={() => save(r.key, on ? 'false' : 'true')} ariaLabel={r.label} />
@@ -752,8 +752,8 @@ function Row({ r, ctx }) {
   )
 }
 
-// ── appearance rows (localStorage, not settings) ─────────────────────────────
-function ThemeRow({ label }) {
+// ── Display rows (localStorage, not settings) ────────────────────────────────
+function AppearanceRow({ label }) {
   const { mode, resolved, setMode } = useTheme()
   return (
     <>
@@ -762,9 +762,9 @@ function ThemeRow({ label }) {
     </>
   )
 }
-function SkinRow({ label }) {
-  const { skin, setSkin } = useTheme()
-  return <Select value={skin} options={SKIN_OPTIONS} onPick={setSkin} width="260px" ariaLabel={label} />
+function ThemeRow({ label }) {
+  const { theme, setTheme } = useTheme()
+  return <Select value={theme} options={THEME_OPTIONS} onPick={setTheme} width="260px" ariaLabel={label} />
 }
 
 function ActionBtn({ label, state, onClick, ariaLabel }) {
@@ -1078,7 +1078,7 @@ function ModelsModal({ S, save, onClose }) {
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '6px 22px 14px' }}>
           {list.map((m) => (
             <div key={`${m.provider}/${m.model}`} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, borderBottom: '1px solid var(--line-soft)' }}>
-              {/* SET-13: --edge at 10px is under 4.5:1 on --surface in both themes */}
+              {/* SET-13: --edge at 10px is under 4.5:1 on --surface in light and dark */}
               <Helper size="xs" mono style={{ flex: '0 0 92px' }}>{m.provider}</Helper>
               {/* ui: keep — the model id itself: mono at --text (the mono-text role) */}
               <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</span>
