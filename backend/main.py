@@ -364,10 +364,19 @@ async def trigger_all_scrapes():
         from backend.scheduler import _scrape_summary
         started = _dt.now(_tz.utc)
         from backend.scraper.orchestrator import run_all as run_all_searches
-        await run_all_searches(force=True)
+        outcome = await run_all_searches(force=True) or {}
         from backend.analyzer.cv_scorer import analyze_unscored_jobs
         await analyze_unscored_jobs()
-        return _scrape_summary(started)
+        summary = _scrape_summary(started)
+        # Name what did not run, so a company missing from the sweep is visible in
+        # the run history instead of only in the container log.
+        skipped = ((outcome.get("companies") or {}).get("skipped")) or []
+        if skipped:
+            shown = ", ".join(f"{s['name']} ({s['reason']})" for s in skipped[:4])
+            if len(skipped) > 4:
+                shown += f", +{len(skipped) - 4} more"
+            summary += f" - {len(skipped)} skipped: {shown}"
+        return summary
 
     try:
         run_id = launch_background("scrape_all", _do, trigger="manual")
