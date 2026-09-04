@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, Check, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea } from './ui'
+import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea } from './ui'
 
 // contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
 function wordDiff(a = '', b = '') {
@@ -745,63 +745,37 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   ]
 
   return (
-    <ModalPanel width={480} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
-        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-          <Heading>Re-tailor for this job</Heading>
-          <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy
-          </Helper>
-        </HeaderRow>
-
-        <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 13, maxHeight: 460, overflow: 'auto' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Label>How</Label>
-            <div style={{ display: 'flex', gap: 7 }}>
-              {MODES.map(([id, label, hint]) => {
-                const on = mode === id
-                return (
-                  // ui: keep — a selectable choice card (padded block, title + helper, accent-soft when
-                  // picked, v2-act hover); Card carries no on-state and Pill is a r99 control.
-                  <div key={id} onClick={() => setMode(id)} title={hint} className="v2-act"
-                    style={{ flex: 1, padding: '9px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
-                    <Helper size="xs" style={{ textWrap: 'pretty' }}>{hint}</Helper>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Label>From which base</Label>
-            {options.map((o) => {
-              const on = String(baseId) === String(o.id), off = disabled(o.id)
-              return (
-                // ui: keep — a selectable choice card with a radio slot; v2-act is the choice-card hover.
-                <div key={o.id} onClick={() => !off && setBaseId(o.id)} className={off ? undefined : 'v2-act'}
-                  title={off ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: off ? 'default' : 'pointer', opacity: off ? 0.45 : 1 }}>
-                  {/* ui: keep — radio indicator, not a status dot */}
-                  <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 'var(--radius-control)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'transparent' }} /></span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                  <Helper size="xs" style={{ flex: '0 0 auto' }}>{String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}</Helper>
-                </div>
-              )
-            })}
-            {options.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No base résumés yet.</Helper></Band>}
-          </div>
+    <ChoiceModal
+      title="Re-tailor for this job"
+      sub={<>{job?.company ? `${job.company}${job.title ? ` — ${job.title}` : ''}` : 'the job this copy is for'} · adds a new copy</>}
+      subClamp onClose={onClose}
+      note={<>
+        <Helper>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</Helper>
+        {mode === 'tailor' && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
+      </>}
+      action={mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'} actionDisabled={!canRun}
+      onAction={() => onRun({ mode, baseId })}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Label>How</Label>
+        <div style={{ display: 'flex', gap: 7 }}>
+          {MODES.map(([id, label, hint]) => (
+            <ChoiceCard key={id} on={mode === id} label={label} hint={hint} title={hint} onClick={() => setMode(id)} />
+          ))}
         </div>
+      </div>
 
-        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Helper>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</Helper>
-            {mode === 'tailor' && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
-          </div>
-          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
-          {/* RES-17: disabled is --line on --muted (the design's disabled Tailor button) */}
-          <Button size="sm" onClick={() => onRun({ mode, baseId })} disabled={!canRun}>{mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'}</Button>
-        </div>
-    </ModalPanel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Label>From which base</Label>
+        {options.map((o) => (
+          <ChoiceRow key={o.id} on={String(baseId) === String(o.id)} disabled={disabled(o.id)}
+            title={disabled(o.id) ? 'Persona has no résumé row to copy — tailor from it instead' : undefined}
+            label={o.name}
+            hint={String(doc.parent_id || 'persona') === String(o.id) ? 'current base' : o.note}
+            onClick={() => setBaseId(o.id)} />
+        ))}
+        {options.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No base résumés yet.</Helper></Band>}
+      </div>
+    </ChoiceModal>
   )
 }
 
@@ -849,54 +823,45 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   const run = () => onRun({ baseId: personaBase ? 'persona' : baseId, jobId: pick, jobDescription: pick ? '' : jd.trim(), company: chosen?.company })
 
   return (
-    <ModalPanel width={480} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
-        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-          <Heading>Tailor {doc.name} for a job</Heading>
-          <Helper>Changes land automatically — you review and decline afterwards.</Helper>
-        </HeaderRow>
-        <div className="v2-scroll" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 460, overflow: 'auto' }}>
-          <Check checked={personaBase} onChange={setPersonaBase} label="Tailor from Persona instead of this base" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Label>Pick a job · saved and scored first</Label>
-            <Input value={q} onChange={setQ} placeholder="Search jobs…" ariaLabel="Search jobs" />
-            {list.slice(0, 40).map((j) => {
-              const on = String(pick) === String(j.id), sc = jobScore(j), has = existing.has(String(j.id))
-              return (
-                // ui: keep — a selectable choice card with a radio slot; v2-act is the choice-card hover.
-                <div key={j.id} onClick={() => { setPick(j.id); setJd('') }} className="v2-act" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer' }}>
-                  {/* ui: keep — radio indicator, not a status dot */}
-                  <span style={{ flex: '0 0 auto', width: 14, height: 14, borderRadius: 'var(--radius-control)', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: on ? 'var(--accent)' : 'transparent' }} /></span>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <span style={{ fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</span>
-                    <Helper size="xs" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company} · {j.status}</Helper>
-                  </div>
-                  {/* ui: keep — mono-text role (accent ink, not --helper-ink); the step excludes mono ids */}
-                  {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)' }}>{sc}</span>}
-                  {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, lineHeight: '14px', color: 'var(--warn)' }}>✦ exists</span>}
-                </div>
-              )
-            })}
-            {list.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No jobs match — paste a description below instead.</Helper></Band>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <Label>…or a freeform job description</Label>
-            <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
-              placeholder="Paste any JD — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
-              style={{ borderStyle: 'dashed' }} />
-          </div>
-        </div>
-        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Helper>Runs in the background</Helper>
-            {/* the chain only fires for a job-linked tailor (routes_resumes.py:
-                `if chain_depth and job_id`), so a freeform run says nothing */}
-            {pick && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
-          </div>
-          <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
-          {/* RES-17 */}
-          <Button size="sm" onClick={run} disabled={!canRun}>✦ Tailor</Button>
-        </div>
-    </ModalPanel>
+    // bodyGap 12 (not the shell's 13) is this modal's own spacing, kept so
+    // naming the shared shell moved no pixel here.
+    <ChoiceModal
+      title={<>Tailor {doc.name} for a job</>}
+      sub="Changes land automatically — you review and decline afterwards."
+      bodyGap={12} onClose={onClose}
+      note={<>
+        <Helper>Runs in the background</Helper>
+        {/* the chain only fires for a job-linked tailor (routes_resumes.py:
+            `if chain_depth and job_id`), so a freeform run says nothing */}
+        {pick && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
+      </>}
+      action="✦ Tailor" actionDisabled={!canRun} onAction={run}>
+      <Check checked={personaBase} onChange={setPersonaBase} label="Tailor from Persona instead of this base" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Label>Pick a job · saved and scored first</Label>
+        <Input value={q} onChange={setQ} placeholder="Search jobs…" ariaLabel="Search jobs" />
+        {list.slice(0, 40).map((j) => {
+          const sc = jobScore(j), has = existing.has(String(j.id))
+          return (
+            <ChoiceRow key={j.id} on={String(pick) === String(j.id)}
+              label={j.title} sub={<>{j.company} · {j.status}</>}
+              onClick={() => { setPick(j.id); setJd('') }}
+              trail={<>
+                {/* ui: keep — mono-text role (accent ink, not --helper-ink); the step excludes mono ids */}
+                {sc != null && <span title="This base's fit on that job" style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px', color: 'var(--accent)' }}>{sc}</span>}
+                {has && <span title="A tailored copy already exists — tailoring again adds another" style={{ flex: '0 0 auto', fontSize: 9, lineHeight: '14px', color: 'var(--warn)' }}>✦ exists</span>}
+              </>} />
+          )
+        })}
+        {list.length === 0 && <Band interactive={false} style={{ padding: 12 }}><Helper>No jobs match — paste a description below instead.</Helper></Band>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <Label>…or a freeform job description</Label>
+        <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
+          placeholder="Paste any JD — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
+          style={{ borderStyle: 'dashed' }} />
+      </div>
+    </ChoiceModal>
   )
 }
 
