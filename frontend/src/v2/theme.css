@@ -1,9 +1,9 @@
 /* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
    Scoped to .jn-v2 so it never touches the classic UI. Light + dark + an `alt`
-   skin (D6) + the default→editorial tone ramp at the bottom of the palette
+   theme (D6) + the default→editorial tone ramp at the bottom of the palette
    section (tone1, tone2, tone3, editorial). Every .jn-v2 root carries
-   `data-theme` (light|dark, the *resolved* mode — `system` follows
-   prefers-color-scheme) and `data-skin` (default|tone1|tone2|tone3|editorial|alt),
+   `data-appearance` (light|dark, the *resolved* mode — `system` follows
+   prefers-color-scheme) and `data-theme` (default|tone1|tone2|tone3|editorial|alt),
    both from the single store in theme.js; <html> carries a boot copy of the same
    two attributes, stamped by the inline script in index.html before React mounts
    so the page ground never flashes. The palette selectors below stay on the
@@ -82,10 +82,10 @@
 
   /* — Semantic layer (design pass D2) ---------------------------------------
      Every primitive in ui.jsx reads ONLY these names; none of them holds a
-     literal. Each points at a palette token above, so a new skin stays a
+     literal. Each points at a palette token above, so a new theme stays a
      wholesale replacement of the palette block and nothing else. The block is
      repeated verbatim in the dark selector below: identical by construction
-     today, but the duplication is what lets a future skin re-point a semantic
+     today, but the duplication is what lets a future theme re-point a semantic
      token at a *different* palette token per theme. Change one, change both. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
@@ -124,7 +124,7 @@
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
   /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
-     track so it reads in both themes; OFF keeps --knob on a neutral track. */
+     track so it reads in light and dark; OFF keeps --knob on a neutral track. */
   --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
   --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
   /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
@@ -191,8 +191,8 @@
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 
-  /* — Skins layer (round-design "Skins handoff" §1) --------------------------
-     The geometry and state names a per-skin block may now carry on top of the
+  /* — Themes layer (round-design "Skins handoff" §1) --------------------------
+     The geometry and state names a per-theme block may now carry on top of the
      60 palette names, so cobalt/saas/win98 can express radii, bevels, control
      shadows, a type scale and a selection model instead of colour alone.
      EVERY VALUE HERE IS TODAY'S PAINT: the border widths are the 1px the
@@ -200,8 +200,8 @@
      the tracking are what ui.jsx already writes inline, and the pressed, hover,
      disabled and error names are the handoff's proposed recipe for states that
      do not exist yet. Nothing moves until a primitive starts reading a name or
-     a skin block overrides one — the theme-skins.css rules that would repaint
-     the default skin (pressed wash, aria-disabled, field hover, the global
+     a theme block overrides one — the theme-skins.css rules that would repaint
+     the default theme (pressed wash, aria-disabled, field hover, the global
      transition and the reduced-motion sweep) are held back for the ui.jsx pass.
      Names that already existed above keep their values and are not restated:
      the radii, the type stops, the five panel shadows, --row-selected and the
@@ -248,7 +248,7 @@
   font-family:var(--sans); color:var(--text); background:var(--bg);
   -webkit-font-smoothing:antialiased; font-size:14px;
 }
-.jn-v2[data-theme="dark"] {
+.jn-v2[data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#1e1c17; --surface:#28251b; --surface-2:#322f24; --line:#3e3b32; --line-soft:#2c2a20; --edge:#7f7a66; --track:#8c8672;
   --text:#d9d7d0; --text-2:#cbc7bf; --muted:#a8a49d; --ink-2:#d1cec6; --accent:#8dbb9f; --accent-ink:#15140f; --accent-soft:#243029;
@@ -307,10 +307,10 @@
 
   /* — Semantic layer (design pass D2) ---------------------------------------
      Every primitive in ui.jsx reads ONLY these names; none of them holds a
-     literal. Each points at a palette token above, so a new skin stays a
+     literal. Each points at a palette token above, so a new theme stays a
      wholesale replacement of the palette block and nothing else. The block is
      repeated verbatim in the dark selector below: identical by construction
-     today, but the duplication is what lets a future skin re-point a semantic
+     today, but the duplication is what lets a future theme re-point a semantic
      token at a *different* palette token per theme. Change one, change both. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
@@ -349,7 +349,7 @@
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
   /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
-     track so it reads in both themes; OFF keeps --knob on a neutral track. */
+     track so it reads in light and dark; OFF keeps --knob on a neutral track. */
   --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
   --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
   /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
@@ -416,11 +416,11 @@
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
 
-  /* — Skins layer (round-design "Skins handoff" §1) — the light block's twin.
+  /* — Themes layer (round-design "Skins handoff" §1) — the light block's twin.
      Same names, same values (every one of them is a var() or a mode-neutral
      number, so the two blocks are identical by construction); the rationale is
      written out once, above. The duplication is not redundant: this block and
-     `[data-skin="x"]` both weigh (0,2,0), so a name the light block sets and
+     `[data-theme="x"]` both weigh (0,2,0), so a name the light block sets and
      this one forgets would leak a light value into dark. Change one, change
      both. */
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
@@ -451,23 +451,23 @@
   --ring-variant:ring;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
-/* — Skin: alt (design pass D6) ---------------------------------------------
+/* — Theme: alt (design pass D6) ---------------------------------------------
    The proof that the semantic layer is a layer. Two blocks, one per theme,
    holding ONLY palette tokens and the three font stacks — no semantic token, no
    --radius-*, no --t-*. Every primitive keeps reading the same semantic names,
-   so switching data-skin may change colour and font family and nothing else:
+   so switching data-theme may change colour and font family and nothing else:
    sizes, padding, radii, line-heights, border widths and shadow offsets are
    untouched by construction (the gate is v2-testing/round-design/expected-D6.md).
 
    Palette: cool slate ground, indigo accent, Georgia/Inter stacks (system
-   fallbacks only — no webfont is loaded, so a skin switch costs no request).
+   fallbacks only — no webfont is loaded, so a theme switch costs no request).
    Contrast was matched to the default, not merely to AA. On --surface:
    light --text 17.4 (default 17.4), --text-2 7.6 (7.7), --muted 5.6 (5.5),
    --accent 7.0 (6.1); dark 11.4 (10.6) / 9.8 (9.1) / 6.2 (6.2) / 7.2 (7.1).
    The two chart constraints hold too: --series-new keeps >=2:1 on
    --stage-applied (2.16 light / 2.05 dark) and >=3:1 on --bg (3.10 / 4.45).
 
-   Deliberately NOT re-skinned: the --cc- and --sm- families (the ATS and
+   Deliberately NOT re-themed: the --cc- and --sm- families (the ATS and
    search-mode badge hues are an identity taxonomy, not theme colour), --shadow-*
    (black alphas, already theme-neutral — and their offsets are part of the
    geometry the gate pins), and the on-rail overlays --rail-active,
@@ -477,16 +477,16 @@
    slash and `--sm-*` here. The star and the slash together end this comment
    fifteen lines early; the remaining prose then reads as a selector prelude
    that swallows the whole
-   .jn-v2[data-skin="alt"] rule below, and the browser drops it as invalid —
+   .jn-v2[data-theme="alt"] rule below, and the browser drops it as invalid —
    silently, because the correct bytes still ship in the built CSS. Write the
    family names out, or separate the glob from the next `/` with a space.
 
-   The two blocks MUST declare the identical set of names. `[data-skin="alt"]`
-   and `.jn-v2[data-theme="dark"]` weigh the same (0,2,0), so a token that the
-   light skin block sets and the dark one forgets would beat the default dark
-   value and leak a light colour into the dark skin. */
-.jn-v2[data-skin="alt"] {
-  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default skin, see v2-testing/round-design/ring-sizes.md */
+   The two blocks MUST declare the identical set of names. `[data-theme="alt"]`
+   and `.jn-v2[data-appearance="dark"]` weigh the same (0,2,0), so a token that the
+   light theme block sets and the dark one forgets would beat the default dark
+   value and leak a light colour into the dark theme. */
+.jn-v2[data-theme="alt"] {
+  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default theme, see v2-testing/round-design/ring-sizes.md */
   --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
   --line-strong:#c3cad6; --edge:#7c8698; --track:#828c9e;
   --text:#161a21; --text-2:#4b5468; --muted:#5f6878; --ink-2:#2a3140;
@@ -510,7 +510,7 @@
   --sans:'Inter','Source Sans 3','Segoe UI',system-ui,sans-serif;
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="alt"][data-theme="dark"] {
+.jn-v2[data-theme="alt"][data-appearance="dark"] {
   --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;
   --bg:#161a21; --surface:#1d222b; --surface-2:#262c37; --line:#343b47; --line-soft:#232830;
   --line-strong:#454d5b; --edge:#737d8f; --track:#7d8798;
@@ -537,7 +537,7 @@
 /* — Tone ramp: default → editorial (tone1 · tone2 · tone3 · editorial) ------
    `editorial` is the palette of the DirectionC-Editorial direction board — the
    board the shipped v2 palette descends from, before it was lightened. The three
-   `tone` skins are the straight line from today's default to it, sampled at ¼,
+   `tone` themes are the straight line from today's default to it, sampled at ¼,
    ½ and ¾. Every palette token — grounds, surfaces, lines, edges, ink steps, the
    accent family, the states, the stage colours, the rail and the chart series —
    is the default value and the editorial value interpolated in OKLab, separately
@@ -571,17 +571,17 @@
    are untouched.
 
    The dark endpoint is the *effective* default dark palette — the light block
-   overridden by `.jn-v2[data-theme="dark"]`. That block does not restate
+   overridden by `.jn-v2[data-appearance="dark"]`. That block does not restate
    --rail-line or --rail-ink, so those two ramp from the light block's values.
 
-   Same rules as the alt skin above: palette tokens and the three font stacks
+   Same rules as the alt theme above: palette tokens and the three font stacks
    only, and the light block and the dark block declare the IDENTICAL set of
-   names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]` both weigh (0,2,0),
+   names — `[data-theme="x"]` and `.jn-v2[data-appearance="dark"]` both weigh (0,2,0),
    so a name set in one and forgotten in the other leaks a light value into dark.
-   Not re-skinned here either: the --cc- and --sm- badge families, the --shadow-
+   Not re-themed here either: the --cc- and --sm- badge families, the --shadow-
    family and the on-rail white overlays. */
 
-.jn-v2[data-skin="tone1"] {
+.jn-v2[data-theme="tone1"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#fbfaf6; --surface:#ffffff; --surface-2:#f5f3ec; --line:#e2ddd0; --line-soft:#eeeae0;
   --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
@@ -600,7 +600,7 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#88816f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="tone1"][data-theme="dark"] {
+.jn-v2[data-theme="tone1"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#1c1a15; --surface:#25221a; --surface-2:#2e2c21; --line:#3b382f; --line-soft:#2a291f;
   --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
@@ -619,7 +619,7 @@
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#817a68; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="tone2"] {
+.jn-v2[data-theme="tone2"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#fbf9f5; --surface:#ffffff; --surface-2:#f4f2eb; --line:#e2ddd0; --line-soft:#eeeae0;
   --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
@@ -638,7 +638,7 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#7d7664; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="tone2"][data-theme="dark"] {
+.jn-v2[data-theme="tone2"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#191813; --surface:#222019; --surface-2:#2a281e; --line:#38352c; --line-soft:#29271e;
   --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
@@ -657,7 +657,7 @@
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#787160; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="tone3"] {
+.jn-v2[data-theme="tone3"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#faf9f4; --surface:#ffffff; --surface-2:#f4f1e9; --line:#e2ddd0; --line-soft:#eeeae0;
   --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
@@ -676,7 +676,7 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#716b59; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="tone3"][data-theme="dark"] {
+.jn-v2[data-theme="tone3"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#171611; --surface:#1f1d17; --surface-2:#27251c; --line:#353329; --line-soft:#27261e;
   --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
@@ -699,14 +699,14 @@
 /* editorial — the far end of the ramp: the direction board's own tones.
    Light is DirectionC-Editorial's :root as drawn — #faf8f3 paper, #f3f0e8
    surface-2, #8f8a7d muted — with everything else already matching what
-   shipped. Dark is the board's own [data-theme="dark"] block: the #15140f /
+   shipped. Dark is the board's own [data-appearance="dark"] block: the #15140f /
    #1c1b16 / #232219 ladder, the #323026 / #26251d lines, #efeade ink over
    #b8b2a3 over #807b6e, the #1f2a23 accent wash, and the #100f0b rail. Note
    what this costs at the endpoint: --muted is 3.44:1 on --surface in light and
    4.09:1 in dark (the default is 5.52 / 6.17), and --rail-dim is 2.57:1 on the
    rail. Those are the board's own numbers — it used --muted for 11-13px
    secondary lines only. */
-.jn-v2[data-skin="editorial"] {
+.jn-v2[data-theme="editorial"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#faf8f3; --surface:#ffffff; --surface-2:#f3f0e8; --line:#e2ddd0; --line-soft:#eeeae0;
   --line-strong:#c9c3b4; --edge:#8a826e; --track:#8d8571;
@@ -725,7 +725,7 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#66604f; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
-.jn-v2[data-skin="editorial"][data-theme="dark"] {
+.jn-v2[data-theme="editorial"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
   --line-strong:#4a4638; --edge:#7f7a66; --track:#8c8672;
@@ -745,24 +745,24 @@
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 
-/* — Board skins: cobalt · saas · win98 -------------------------------------
-   Three deep-reskin boards from the Claude Design project. Sources:
+/* — Board themes: cobalt · saas · win98 -------------------------------------
+   Three deep-retheme boards from the Claude Design project. Sources:
    "Feed - Cobalt.dc.html", "Feed - SaaS.dc.html", "Feed - Win98.dc.html"
-   (each board's own `:root` / `[data-theme="dark"]` block in its helmet), plus
+   (each board's own `:root` / `[data-appearance="dark"]` block in its helmet), plus
    "Cobalt Elements.dc.html" for the Cobalt primitive-by-primitive swap. Every
    board ships BOTH modes, so no mode is derived here.
 
    These three carry more than a palette. The recorded decision behind the
-   "Skins handoff" widened the contract (U-21): a skin block may also set the
+   "Skins handoff" widened the contract (U-21): a theme block may also set the
    geometry and state names the base blocks now declare — radii, the three
    border widths, the panel and control shadows, the type scale, the control
    weights and tracking, the selection and rail models, the bevels and the
    ScoreRing variant. The palette lines below are byte-identical to what they
-   were when a skin was palette-only; everything under the fonts is the new
+   were when a theme was palette-only; everything under the fonts is the new
    layer, transcribed from v2-testing/round-design/design-in/theme-skins.css
    (generated from skins.js, so the two stay in step). Nothing reads the new
    names yet outside the state rules at the foot of this file — the primitives
-   pick them up in the ui.jsx pass, and until then these skins move only the
+   pick them up in the ui.jsx pass, and until then these themes move only the
    names ui.jsx already reads (the radii, the type stops, the shadows,
    --row-selected and the pill on-trio).
 
@@ -772,10 +772,10 @@
    --chip-bg onto --surface, because its --bg is a desktop colour, not a text
    ground.
 
-   Same rule as the alt skin above: the light block and the dark block declare
-   the IDENTICAL set of names — `[data-skin="x"]` and `.jn-v2[data-theme="dark"]`
+   Same rule as the alt theme above: the light block and the dark block declare
+   the IDENTICAL set of names — `[data-theme="x"]` and `.jn-v2[data-appearance="dark"]`
    both weigh (0,2,0), so a name set in one and forgotten in the other leaks a
-   light value into dark. Not re-skinned here either: the --cc- and --sm- badge
+   light value into dark. Not re-themed here either: the --cc- and --sm- badge
    families and the on-rail white overlays.
 
    Ring offsets: all three boards put a SANS with lining figures in the display
@@ -788,7 +788,7 @@
    +-0.25px tolerance that pass used. So all three seed at the DEFAULT offsets
    and the ink measurement re-run after the build sets the final values. */
 
-.jn-v2[data-skin="cobalt"] {
+.jn-v2[data-theme="cobalt"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f7f8fa; --line:#e3e5ea; --line-soft:#eef0f3;
   --line-strong:#c8ccd6; --edge:#d7dae1; --track:#eef0f3;
@@ -799,7 +799,7 @@
   --change-soft:#c9e7d6; --change-bg:#f5fbf7; --hover-soft:#f2f6fe;
   --ring-accent:rgba(45,91,227,.22); --scrim:rgba(15,17,21,.46); --recessed:#fafbfc;
   /* the board's accent IS the blue the default gives to `applied`, so applied
-     moves to a deep teal (the alt skin does the same for its indigo) */
+     moves to a deep teal (the alt theme does the same for its indigo) */
   --stage-applied:#0b5570; --stage-interview:#946c07; --stage-offer:#157a43;
   --stage-rejected:#c23b32; --stage-new:#c8ccd6;
   --series-new:#b8822b;
@@ -812,7 +812,7 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
@@ -833,7 +833,7 @@
   --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
-.jn-v2[data-skin="cobalt"][data-theme="dark"] {
+.jn-v2[data-theme="cobalt"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#0f1115; --surface:#16181d; --surface-2:#1c1f26; --line:#2a2f3a; --line-soft:#22262f;
   --line-strong:#3f4653; --edge:#3a4050; --track:#2a2f3a;
@@ -855,7 +855,7 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
@@ -879,7 +879,7 @@
 
 /* saas — the "Feed - SaaS" board: Tailwind's gray/blue ladder on a pure system
    font stack (the board loads no webfont at all), rail on slate-900. */
-.jn-v2[data-skin="saas"] {
+.jn-v2[data-theme="saas"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#f9fafb; --surface:#ffffff; --surface-2:#f3f4f6; --line:#e5e7eb; --line-soft:#f3f4f6;
   --line-strong:#9ca3af; --edge:#d1d5db; --track:#e5e7eb;
@@ -901,7 +901,7 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
@@ -922,7 +922,7 @@
   --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
-.jn-v2[data-skin="saas"][data-theme="dark"] {
+.jn-v2[data-theme="saas"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#111827; --surface:#1f2937; --surface-2:#273244; --line:#374151; --line-soft:#2c3646;
   --line-strong:#55606f; --edge:#4b5563; --track:#272b34;
@@ -944,7 +944,7 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
@@ -966,22 +966,22 @@
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 
-/* win98 — the "Feed - Win98" board. The one skin whose surface is DARKER than
+/* win98 — the "Feed - Win98" board. The one theme whose surface is DARKER than
    its second surface: the window chrome is #c0c0c0 and the client area is
    white, which is exactly how the era worked, and it happens to map cleanly
    onto --surface / --surface-2. Two things this palette cannot fix, both
    recorded in skins-boards.md: (1) --bg is a DESKTOP colour (teal in light,
-   navy in dark), not a text ground, so the black ink the rest of the skin uses
+   navy in dark), not a text ground, so the black ink the rest of the theme uses
    reads 4.40:1 on the light desktop and 1.46:1 on the dark one — the two places
    v2 paints --bg under --text (--head-bg-page and --chip-bg) now re-point to
-   --surface inside this block, which is exactly the per-skin semantic re-point
+   --surface inside this block, which is exactly the per-theme semantic re-point
    the widened contract allows (handoff §5); (2) the rail is LIGHT here, so
    --rail-active / --rail-hover /
-   --on-rail-* (white alphas, deliberately not re-skinned) all but vanish.
+   --on-rail-* (white alphas, deliberately not re-themed) all but vanish.
    Two board values were moved, both below 3:1 as ink on --surface: --good
    #008000 -> #006000 (2.82 -> 4.32) and --warn #808000 -> #575700 (2.31 ->
    4.17) in light. Everything else is the board's own VGA palette. */
-.jn-v2[data-skin="win98"] {
+.jn-v2[data-theme="win98"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#008080; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
   --line-strong:#404040; --edge:#404040; --track:#808080;
@@ -1003,7 +1003,7 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
   --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
@@ -1025,7 +1025,7 @@
   --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
 }
-.jn-v2[data-skin="win98"][data-theme="dark"] {
+.jn-v2[data-theme="win98"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#1f2b3a; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
   --line-strong:#404040; --edge:#404040; --track:#808080;
@@ -1047,7 +1047,7 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a skin may now carry beyond the palette */
+  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
   --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
@@ -1118,7 +1118,7 @@
 .v2-navlink:hover { background:var(--navlink-hover-bg) !important; color:var(--navlink-hover-ink) !important; }
 .v2-navdark { text-decoration:none; cursor:pointer; transition:color .12s,border-color .12s,background .12s; }
 .v2-navdark:hover { color:var(--rail-ink) !important; }   /* inline colour on every rail control beats a bare rule */
-.v2-themebtn:hover { background:var(--rail-hover) !important; }
+.v2-appearancebtn:hover { background:var(--rail-hover) !important; }
 /* inline styles set border/background on these, so :hover must use !important to win */
 .v2-card { transition:border-color .12s,background .12s; }
 /* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other
@@ -1238,7 +1238,7 @@
 .jn-v2 .v2-fieldwrap:focus-within { border-color:var(--input-border-focus) !important; }
 /* Keyboard-only ring on non-input controls — :focus-visible never fires on these
    from a mouse click, so the rule itself is unchanged; only its two values are
-   tokens now (theme-skins.css line 198). In every skin that ships today
+   tokens now (theme-skins.css line 198). In every theme that ships today
    --focus-outline is `none` and --focus-shadow is the 2px --focus-ring this rule
    drew literally, so the paint is identical; win98 swaps them for its 1px dotted
    outline and saas/cobalt for a 3px halo. outline-offset only bites once an
@@ -1253,8 +1253,8 @@
 .v2-cactions { background:var(--bg); }
 .v2-crow:hover .v2-cactions { background:var(--row-hover); }
 
-/* — Skins layer, state rules (theme-skins.css lines 190-205) -----------------
-   Only the rules that are INERT for the default skin today: three hang on
+/* — Themes layer, state rules (theme-skins.css lines 190-205) -----------------
+   Only the rules that are INERT for the default theme today: three hang on
    classes ui.jsx does not write yet (v2-btn-primary, v2-btn-danger, v2-raised /
    v2-inset), one on an attribute nothing sets yet (aria-invalid, and the
    matching data-invalid on a field wrapper), and the selected-row rule resolves
@@ -1263,7 +1263,7 @@
    `!important` for the same reason every hover rule above needs it: the
    primitives set the property inline.
 
-   HELD BACK for that pass, because each one repaints the default skin the
+   HELD BACK for that pass, because each one repaints the default theme the
    moment it lands (they are listed here so the next agent does not have to
    re-derive the set):
      · .v2-bd/.v2-bdc/.v2-act :active — a pressed wash and a 1px shift on pills
@@ -1287,11 +1287,11 @@
 .jn-v2 [aria-invalid="true"], .jn-v2 .v2-fieldwrap[data-invalid="true"] { border-color:var(--input-border-error) !important; box-shadow:var(--input-ring-error) !important; }
 /* the picked row's paint as a token trio: --row-selected is what Row and the
    Feed row already set inline, --row-selected-ink is `inherit` and
-   --row-selected-edge `none` in every skin but cobalt (a 3px inset accent bar)
+   --row-selected-edge `none` in every theme but cobalt (a 3px inset accent bar)
    and win98 (a navy fill with white ink). */
 .jn-v2 .v2-row[aria-current="true"] { background:var(--row-selected) !important; color:var(--row-selected-ink); box-shadow:var(--row-selected-edge); }
 /* win98 bevels: raised on controls, inset on fields/lists/pressed. Both sides
-   are `none`/`transparent` in every other skin, so the two rules paint nothing
+   are `none`/`transparent` in every other theme, so the two rules paint nothing
    until a primitive asks for the class. */
 .jn-v2 .v2-raised { border:var(--bevel-raised-border); border-color:var(--bevel-raised-color); box-shadow:var(--bevel-raised-shadow); }
 .jn-v2 .v2-inset, .jn-v2 .v2-raised:active { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }

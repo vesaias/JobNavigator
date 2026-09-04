@@ -15,7 +15,7 @@ export default function LoginModal({ onSuccess }) {
   const [success, setSuccess] = useState(false)
   // this overlay mounts outside the v2 shell, so it carries the theme itself —
   // from the shared store, not a private read of the flag (SHELL-02)
-  const theme = useTheme()
+  const look = useTheme()
 
   const submit = async (e) => {
     e.preventDefault()
@@ -43,12 +43,12 @@ export default function LoginModal({ onSuccess }) {
 
   return (
     // The sign-in overlay mounts outside the v2 shell, so the scrim carries the
-    // theme root (`jn-v2` + data-theme) and its own z-index; the panel is a real
+    // look root (`jn-v2` + data-appearance + data-theme) and its own z-index; the panel is a real
     // <form> so Enter in the key field submits. No `onClose`: there is nothing
     // behind this overlay to go back to, so it takes no Escape/scrim dismissal —
     // the same as before.
     <ModalPanel as="form" onSubmit={submit} width={360} zIndex={9999}
-      scrimProps={{ className: 'jn-v2', ...themeAttrs(theme) }}
+      scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       style={{ padding: '26px 26px 22px', gap: 14 }}>
       {success ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0' }}>

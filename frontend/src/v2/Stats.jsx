@@ -563,7 +563,7 @@ export default function Stats() {
               {scores?.avg != null && (
                 // lineHeight 1: this head is baseline-aligned, so an 11px span left on the
                 // row's 24px line-height rides a font-dependent offset from the shared
-                // baseline and grew the head 25→27px under the alt skin
+                // baseline and grew the head 25→27px under the alt theme
                 <span style={{ fontSize: 11, lineHeight: 1, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
                   avg {scores.avg}
                   {scores.tailored_avg != null && <> · <span title={`Average score after tailoring, across the ${scores.tailored_count} jobs with a tailored copy`} style={{ color: 'var(--accent)', cursor: 'help' }}>tailored {scores.tailored_avg}</span></>}

@@ -170,7 +170,7 @@ token layer** added to `theme.css` (`--btn-primary-bg`, `--pill-on-border`,
 `--modal-bg`, `--tag-*-bg/-ink`, `--dot-*`, `--font-body/-display/-mono`,
 `--t-9 … --t-30`, `--radius-field/-row/-card/-menu/-modal/-control`, …). Each
 semantic token points at a palette token, and the block is repeated verbatim in
-the dark selector — identical by construction today, so that a future skin can
+the dark selector — identical by construction today, so that a future theme can
 re-point a semantic name at a *different* palette token per theme. **Change one
 block, change both.** Hover and focus still ride the existing class mechanism
 (`v2-bd`, `v2-bdc`, `v2-act`, `v2-row`, `v2-menuitem`, `v2-chip`, `v2-dashadd`,
@@ -203,7 +203,7 @@ folder — no wiring changes.
 only, so the workbench is out of their reach by construction (`stylelint`'s `SKIP`
 is now just `ui.jsx`).
 
-`/v2/ui` renders every primitive in every variant and state in both themes, with
+`/v2/ui` renders every primitive in every variant and state in light and dark, with
 the role name and the semantic tokens printed under each block. It is rail-less on
 purpose: the style crawl measures that page against the spec, so nothing but
 `ui.jsx` should be on it. **Add a primitive → add it to the gallery in the same
@@ -285,7 +285,7 @@ the warm one.
   Outstanding for real theming: one source of truth for the mode (the boolean
   `jobnavigator_dark_mode` is read independently in four components), a System
   option, a no-flash boot script in `index.html`, and a primitive layer so a
-  skin is ~15 values rather than ~96. `Skin B - Swiss Ink.dc.html` and
+  theme is ~15 values rather than ~96. `Skin B - Swiss Ink.dc.html` and
   `Skin C - Warm Plum.dc.html` in the design project are the target.
 - The third System Overlays panel ("What's new · this release") was skipped —
   only the two requested screens were built.
