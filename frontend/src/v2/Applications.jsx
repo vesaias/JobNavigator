@@ -46,7 +46,7 @@ const STAGES = [
   { id: 'applied', label: 'Applied', dot: 'var(--stage-applied)', hint: 'Waiting on a first response' },
   { id: 'interview', label: 'Interview', dot: 'var(--stage-interview)', hint: 'In the interview loop' },
   { id: 'offer', label: 'Offer', dot: 'var(--stage-offer)', hint: 'Offer received' },
-  { id: 'rejected', label: 'Rejected', dot: 'var(--stage-rejected)', hint: 'Closed — kept for the Stats funnel' },
+  { id: 'rejected', label: 'Rejected', dot: 'var(--stage-rejected)', hint: 'Closed — kept in Stats' },
 ]
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
 // APPS-22: legacy rows (ghosted / withdrawn) have no stage of their own — they are closed, so they list under Rejected
@@ -298,8 +298,8 @@ export default function Applications() {
     try { const { data } = await api.get(`/applications/${d.id}/prep`); setPrep({ text: data.text }) }
     catch (e) {
       console.error(e)
-      setPrep({ text: `Could not build the prep bundle: ${e.message}${errSuffix(e)}`, failed: true })
-      pushToast({ kind: 'error', msg: 'Could not build the prep bundle' + errSuffix(e) })
+      setPrep({ text: `Could not build the prep handover: ${e.message}${errSuffix(e)}`, failed: true })
+      pushToast({ kind: 'error', msg: 'Could not build the prep handover' + errSuffix(e) })
     }
   }
   // APPS-05: "Copied ✓" only after the write actually resolved; nothing to copy
@@ -708,7 +708,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
         </HeaderRow>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '14px 22px', background: 'var(--bg)' }}>
           <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {prep === 'loading' ? 'Building the bundle…' : prep.text}
+            {prep === 'loading' ? 'Building the prep handover…' : prep.text}
           </pre>
         </div>
         {/* ui: keep — a modal footer bar: its rule is on top */}

@@ -899,7 +899,7 @@ export default function V2JobFeed() {
       {/* header */}
       <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <PageTitle>The Feed</PageTitle>
+          <PageTitle>Jobs</PageTitle>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...headStyle }}>{head ? `${head.total} open roles · ${head.arrived} arrived today · ${head.unscored} not yet scored` : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1222,7 +1222,7 @@ export default function V2JobFeed() {
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
                               ['Cover letter ↗', 'c', () => navigate(`/v2/cover-letters?job=${d.id}`)],
-                              ['Copy résumé with tracers', '', () => setPicker({ mode: 'copy', jobs: [d] })],
+                              ['Copy résumé with tracked links', '', () => setPicker({ mode: 'copy', jobs: [d] })],
                             ].map(([label, key, act, bold]) => (
                               <MenuItem key={label} hint={key} hintMono onClick={() => { setHeadMenu(false); act() }}
                                 style={bold ? { color: 'var(--text)', fontWeight: 600 } : undefined}>{label}</MenuItem>
@@ -1386,7 +1386,7 @@ export default function V2JobFeed() {
                           </Card>
                         )}
                         {(d.fit_gaps || []).length > 0 && !reqRows.length && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_gaps || []).map((g, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--bad)' }}>✕</span><span>{g}</span></div>)}</div>}
-                        {!rpt && !(d.fit_gaps || []).length && !(d.fit_strengths || []).length && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>This report was quick-scored — rescore at full depth for the keyword and requirement breakdown.</span>}
+                        {!rpt && !(d.fit_gaps || []).length && !(d.fit_strengths || []).length && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>This report was scored at Light depth — rescore at Full depth for the keyword and requirement breakdown.</span>}
                       </div>
                     </div>
                   )}
@@ -1507,10 +1507,10 @@ export default function V2JobFeed() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <Label>Method</Label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run'], ['copy', '⧉ Copy with tracers', 'Exact duplicate with tracking links · instant']].map(([m, label, help]) => {
+                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets against the report · LLM run', undefined], ['copy', '⧉ Copy with tracked links', 'Exact duplicate with tracked links · instant', 'tracked links — short links that record when a recruiter opens them']].map(([m, label, help, tip]) => {
                       const on = cvMode === m
                       return (
-                        <div key={m} onClick={() => pickMethod(m)} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div key={m} onClick={() => pickMethod(m)} title={tip} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
                           <Helper>{help}</Helper>
                         </div>
@@ -1538,7 +1538,7 @@ export default function V2JobFeed() {
               {/* footer */}
               {/* ui: keep — a modal footer bar: its rule is on top */}
               <div style={{ padding: '14px 24px 18px', display: 'flex', alignItems: 'center', gap: 9, borderTop: '1px solid var(--line)' }}>
-                <Helper>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · lands in Résumés'}</Helper>
+                <Helper>{cvMode === 'tailor' ? 'Runs an LLM pass against résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
               </div>

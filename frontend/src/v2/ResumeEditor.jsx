@@ -581,7 +581,7 @@ export default function ResumeEditor() {
               {jobErr ? 'Couldn’t load the linked job.'
                 : jobless && !freeformJd ? 'No job or description linked, so this copy can’t be scored.'
                   : (changes.length && !reviewed ? `${changes.length} reviewable change${changes.length === 1 ? '' : 's'}` : scores.tailored == null ? 'not scored yet' : 'ready')}
-              {tracers.length > 0 && <> · tracers: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
+              {tracers.length > 0 && <> · tracked links: {tracers.map((t) => `${t.source_label} ${t.clicks}`).join(' · ')}</>}
               </>}
             </Helper>
           </div>
@@ -741,7 +741,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
 
   const MODES = [
     ['tailor', '✦ Tailor', 'Rewrites bullets against this job description'],
-    ['copy', 'Copy', 'Exact copy of the base, with its own tracer links'],
+    ['copy', 'Copy', 'Exact copy of the base, with its own tracked links'],
   ]
 
   return (
@@ -827,7 +827,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
     // naming the shared shell moved no pixel here.
     <ChoiceModal
       title={<>Tailor {doc.name} for a job</>}
-      sub="Changes land automatically — you review and decline afterwards."
+      sub="Changes are applied automatically — you review and decline afterwards."
       bodyGap={12} onClose={onClose}
       note={<>
         <Helper>Runs in the background</Helper>
@@ -858,7 +858,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Label>…or a freeform job description</Label>
         <Textarea value={jd} onChange={(v) => { setJd(v); if (v.trim()) setPick(null) }} rows={3}
-          placeholder="Paste any JD — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
+          placeholder="Paste any job description — the copy won't be linked to a feed job" ariaLabel="Freeform job description"
           style={{ borderStyle: 'dashed' }} />
       </div>
     </ChoiceModal>
@@ -887,7 +887,7 @@ function ReviewModal({ changes, onClose, onApply }) {
             <Helper>
               {nSuggested
                 ? `${nApplied ? 'Applied changes are already in the document — decline any and the base text comes back. ' : ''}Suggested bullets are not in it yet: they are added when you finish reviewing.`
-                : "These landed automatically. Decline any you don't want; the base text comes back."}
+                : "These were applied automatically. Decline any you don't want; the base text comes back."}
             </Helper>
           </div>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>

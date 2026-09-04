@@ -386,7 +386,7 @@ export default function Persona() {
                 <SectionEditor name={name} data={resume} setField={setField} mutate={mutate}
                   onError={(msg) => pushToast({ kind: 'error', msg })}
                   onRemoved={(msg, undo) => pushToast({ kind: 'undo', msg, action: 'Undo', onAction: undo })}
-                  pageHint={false} emptyNote="Tailored résumés draw from whatever you add here." />
+                  pageHint={false} emptyNote="Tailored résumés use whatever you add here." />
               </SectionShell>
             ))}
           </div>

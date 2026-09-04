@@ -546,7 +546,7 @@ export default function Companies() {
                   {scraping[c.id] ? 'Running' : 'Run'}
                 </span>
                 {/* ui: keep — the Test twin of the 25px Run pill above (COMP-26: the running test names itself, every other pill goes quiet) */}
-                <span onClick={testBusy ? undefined : () => runTest(c.id)} title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Dry run — shows what would be kept, writes nothing'} className={testBusy ? undefined : 'v2-act'}
+                <span onClick={testBusy ? undefined : () => runTest(c.id)} title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'} className={testBusy ? undefined : 'v2-act'}
                   style={{ height: 25, padding: '0 10px', borderRadius: 'var(--radius-control)', border: '1px solid ' + (testingId === c.id ? 'var(--accent)' : 'var(--edge)'), background: testingId === c.id ? 'var(--accent-soft)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: testingId === c.id ? 'var(--accent)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBusy ? 'default' : 'pointer', opacity: testBusy && testingId !== c.id ? 0.5 : 1 }}>
                   {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </span>
@@ -581,7 +581,7 @@ export default function Companies() {
         {ready && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
-            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs land in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>   {/* COMP-29 */}
+            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs appear in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>   {/* COMP-29 */}
             {companies.length > 0 && <Link onClick={clearFilters} style={{ paddingTop: 2 }}>Clear filters</Link>}
           </div>
         )}
@@ -616,7 +616,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   const nUrl = draft.scrape_urls.filter(Boolean).length, nApp = company.application_count || 0
   const subtitle = `${tierLabel(draft.tier, { long: true })} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
   const lca = company.h1b_lca_count
-  const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is drawn from these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
+  const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is based on these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
   const resumeHelp = selNames.length ? `New jobs are scored against ${selNames.join(', ')}.` : 'Nothing selected, so new jobs use your default résumé from Settings.'
   const bannerText = warnTextOf(company, downReason)

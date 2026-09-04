@@ -313,7 +313,7 @@ export default function Settings() {
         B('API key', 'Key for the Primary provider API model.', 'llm_api_key', { secret: true, mono: true, w: '340px', hide: () => KEYLESS.includes(val('llm_provider', 'claude_api')) }),
         LLM('Scoring', 'Model that scores new jobs against your résumés.', 'scoring_llm'),
         LLM('Scoring fallback', 'Retries scoring once on error or rate limit — scoring only.', 'llm_fallback',
-          { info: 'Fires only when the scoring call errors or hits a rate limit; one retry, then the job is left unscored for the next sweep. Pick a cheap, reliable model from a different provider than the Primary so one outage can’t take both down.' }),
+          { info: 'Fires only when the scoring call errors or hits a rate limit; one retry, then the job is left unscored for the next scrape run. Pick a cheap, reliable model from a different provider than the Primary so one outage can’t take both down.' }),
         LLM('Tailoring', 'Model that rewrites résumé bullets for a posting.', 'cv_tailor_llm'),
         LLM('Cover letters', 'Model that drafts letters from résumé + posting + Persona.', 'cover_letter_llm'),
         LLM('Autofill', 'Model that answers application-form questions in the extension.', 'autofill_llm'),
@@ -353,9 +353,9 @@ export default function Settings() {
         E('Field patterns', 'Maps form-field names to Persona fields.', 'autofill_field_patterns', { json: true, sub: 'JSON — Persona field → name patterns' }),
         E('Option synonyms', 'Normalises dropdown options.', 'autofill_option_synonyms', { json: true, sub: 'JSON — canonical option → synonyms' }),
       ]],
-      ['prep', '', 'Interview prep', 'the handover bundle Applications exports for your LLM of choice', [
-        E('"What I need from you" section', 'The hardcoded ask appended to the handover.', 'prep_ask', { sub: 'plain text, no placeholders' }),
-        SEL('Include by default', 'Sections the handover carries. Ask is always included.', 'prep_include',
+      ['prep', '', 'Interview prep', 'the prep handover Applications exports for your LLM of choice', [
+        E('"What I need from you" section', 'The hardcoded ask appended to the prep handover.', 'prep_ask', { sub: 'plain text, no placeholders' }),
+        SEL('Include by default', 'Sections the prep handover carries. Ask is always included.', 'prep_include',
           [['resume,posting,notes', 'Résumé · posting · notes'], ['resume,posting', 'Résumé · posting'],
             ['posting,notes', 'Posting · notes'], ['resume', 'Résumé only'], ['posting', 'Posting only']], { w: '260px', dflt: 'resume,posting,notes' }),
       ]],
@@ -372,7 +372,7 @@ export default function Settings() {
         B('Email check', 'Polls Gmail for replies to your applications.', 'email_check_interval_minutes', { mono: true, int: true, w: '135px' }),
         B('Cleanup after', 'Days before ignored and skipped job postings are removed.', 'job_archive_after_days', { mono: true, int: true, w: '135px' }),
         B('Auto-reject threshold', 'Days of silence before an application is auto-moved to Rejected.', 'auto_reject_after_days', { mono: true, int: true, w: '135px',
-          info: 'Counts from the last activity on the application (stage change, email, note). Auto-rejected applications keep their history and stay in the Stats funnel — nothing is deleted.' }),
+          info: 'Counts from the last activity on the application (stage change, email, note). Auto-rejected applications keep their history and stay in Stats — nothing is deleted.' }),
         B('Auto-reject · cron', 'Applies the auto-reject threshold.', 'reject_cron', { mono: true, cron: true, w: '135px' }),
 		B('DB backup · cron', 'Database snapshot.', 'backup_cron', { mono: true, cron: true, w: '135px' }),
         B('Telegram digest · cron', 'Summary of new high-fit jobs.', 'digest_cron', { mono: true, cron: true, w: '135px' }),
@@ -387,7 +387,7 @@ export default function Settings() {
       ['dedup', '', 'Dedup tracking params', "so the same job from two sources isn't saved twice", [
         E('Stripped params', 'Query params removed from job URLs. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
       ]],
-      ['notifications', 'INTEGRATIONS', 'Notifications', 'Telegram bot · digest schedule lives under Scheduler', [
+      ['notifications', 'INTEGRATIONS', 'Notifications', 'Telegram bot · digest schedule is under Scheduler', [
         SW('Telegram', 'High-fit arrivals and the daily digest go to your chat.', 'Off — no push notifications.', 'telegram_enabled'),
         B('Chat ID', 'Your Telegram chat — get it by messaging @userinfobot.', 'telegram_chat_id', { mono: true, w: '135px' }),
         B('Score threshold', 'Only jobs scoring at or above this trigger an instant alert.', 'fit_score_threshold', { mono: true, int: true, w: '135px' }),
@@ -412,10 +412,10 @@ export default function Settings() {
           flash(failed ? (data.description || data.error || 'Registration failed') : 'Webhook registered', failed)
         }),
       ]],
-      ['tracer', '', 'Tracer links', 'per-application link click tracking', [
+      ['tracer', '', 'Tracked links', 'short links that record when a recruiter opens them', [
         SW('Rewrite links', 'Résumé and letter links route through your domain.', 'Off — documents keep their original links.', 'tracer_links_enabled',
-          { info: 'Each application gets its own short link per document link. When a recruiter opens one, the hit lands in Stats against that application.' }),
-        B('Base URL', 'Your tracer domain.', 'tracer_links_base_url', { mono: true, w: '260px', placeholder: 'https://yourdomain.com' }),
+          { info: 'Each application gets its own short link per document link. When a recruiter opens one, the hit is recorded in Stats against that application.' }),
+        B('Base URL', 'Your tracked link domain.', 'tracer_links_base_url', { mono: true, w: '260px', placeholder: 'https://yourdomain.com' }),
         SEL('URL style', 'Your domain needs to support selected style.', 'tracer_links_url_style',
           [['path', 'Path + random (/cv/a7x2kp)'], ['param', 'Param + random (?cv=a7x2kp)'],
             ['path_jobid', 'Path + job ID (/cv/142li)'], ['param_jobid', 'Param + job ID (?cv=142li)']], { w: '260px', dflt: 'path' }),

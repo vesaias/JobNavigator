@@ -429,8 +429,8 @@ export default function CoverLetterEditor() {
                       onChange={(v) => update((d) => { d.header.contact_items[i].url = v })}
                       style={{ flex: 1, minWidth: 0 }} />
                     {tracked && (
-                      <Input value={ct.stub || ''} placeholder="id" mono ariaLabel="Tracer link stub"
-                        title="Short stub for the tracer link id (e.g. l, w, gh)"
+                      <Input value={ct.stub || ''} placeholder="id" mono ariaLabel="Tracked link stub"
+                        title="Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them"
                         onChange={(v) => update((d) => { d.header.contact_items[i].stub = v })}
                         style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center', minWidth: 0 }} />
                     )}
@@ -572,7 +572,7 @@ export default function CoverLetterEditor() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>From résumé</Label>
                 <Picker value={rSource} options={sourceOpts} placeholder="Select a source…" onPick={setRSource} />
-                <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona — switch to draw on different achievements.</Helper>
+                <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona — switch to use different achievements.</Helper>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Voice</Label>

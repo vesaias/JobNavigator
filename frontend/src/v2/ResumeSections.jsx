@@ -210,7 +210,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
               </div>
               <div style={{ flex: '55 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>   {/* url + stub: 55 % */}
               <Input value={it.url || ''} onChange={(v) => setField(`header.contact_items.${i}.url`, v)} placeholder="URL (optional)" ariaLabel="Contact item URL" style={{ flex: 1, minWidth: 0 }} />
-              {showStub && <Input value={it.stub || ''} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" mono ariaLabel="Tracer link stub" title="Short stub for the tracer link id (e.g. l, w, gh)" style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center' }} />}
+              {showStub && <Input value={it.stub || ''} onChange={(v) => setField(`header.contact_items.${i}.stub`, v)} placeholder="id" mono ariaLabel="Tracked link stub" title="Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them" style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center' }} />}
               <RemoveX onClick={() => undoRemove('Removed contact item',
                 (d) => d.header.contact_items.splice(i, 1),
                 (d) => { d.header = d.header || {}; (d.header.contact_items = d.header.contact_items || []).splice(i, 0, it) })} />
