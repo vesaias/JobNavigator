@@ -48,6 +48,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import './theme.css'
 import { useEscape, useSnapTop } from './hooks'
+import { useTheme } from './theme'
 
 // PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them would be
 // focusable or operable from the keyboard. Spread `kb(fn)` onto such an element.
@@ -72,6 +73,37 @@ const cx = (...v) => v.filter(Boolean).join(' ')
 const act = (fn, off, role) => (
   fn ? (off ? { role: role || 'button', tabIndex: -1 } : { onClick: fn, ...kb(fn, role) }) : {}
 )
+
+// ── theme variables a primitive has to READ, not write ──────────────────────
+// Two of the theme names are not paint but *shape*: `--ring-variant` picks which
+// drawing ScoreRing renders (ring · bar · pill · ascii) and `--title-bar` decides
+// whether a panel wears a window chrome bar. Neither can be expressed as a value
+// on a style object, so both have to come back out of the cascade.
+//
+// One getComputedStyle per (theme, appearance, name) — cached, NOT one per mount:
+// a Feed page holds fifty rings and a layout read per ring on every render is a
+// forced reflow each time. The read happens in an effect, never during render:
+// theme.js stamps <html> synchronously, but every `.jn-v2` root takes the two
+// attributes as React props, so during the render that follows a theme change the
+// DOM still carries the old ones and the palette cascade is a commit behind.
+const VAR_CACHE = new Map()
+const readThemeVar = (name) => {
+  try {
+    const el = document.querySelector('.jn-v2') || document.documentElement
+    return getComputedStyle(el).getPropertyValue(name).trim()
+  } catch { return '' }
+}
+function useThemeVar(name, fallback) {
+  const look = useTheme()
+  const key = `${look.theme}|${look.resolved}|${name}`
+  const [val, setVal] = useState(() => VAR_CACHE.get(key))
+  useEffect(() => {
+    let v = VAR_CACHE.get(key)
+    if (v === undefined) { v = readThemeVar(name); VAR_CACHE.set(key, v) }
+    setVal(v)
+  }, [key, name])
+  return val || fallback
+}
 
 // ── Spinner ─────────────────────────────────────────────────────────────────
 // dominant: 1.5px accent · r99 · 9px (9 sites). `color` lets a button spin in
@@ -99,20 +131,35 @@ const BTN_SIZE = {
   sm: { height: 33, fontSize: 'var(--t-13)', padding: '0 15px' },
   xs: { height: 28, fontSize: 'var(--t-12-5)', padding: '0 14px' },
 }
+// `state` is the class the theme's own hover/pressed rules hang on
+// (theme.css: `.v2-btn-primary:hover` → --btn-primary-hover-bg, `:active` →
+// --btn-primary-pressed-bg + --pressed-shift). Both names resolve to the button's
+// own rest paint in the default theme — U-02/D-07 are proposals — so the class is
+// inert here and only cobalt/saas/win98 darken. It is dropped while the button is
+// off: a disabled control has no hover.
+//
+// `ai` is the tailoring button (Skins handoff §4.1): primary's geometry on the
+// --ai / --ai-ink pair, which is the accent in every theme that has no violet of
+// its own. It takes primary's state class the way the board does.
 const BTN_LOOK = {
   primary: {
     rest: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-ink)' },
     off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
-    hover: '',
+    hover: '', state: 'v2-btn-primary',
+  },
+  ai: {
+    rest: { background: 'var(--ai)', color: 'var(--ai-ink)' },
+    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
+    hover: '', state: 'v2-btn-primary',
   },
   danger: {
     rest: { background: 'var(--btn-danger-bg)', color: 'var(--btn-danger-ink)' },
     off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
-    hover: '',
+    hover: '', state: 'v2-btn-danger',
   },
   secondary: {
-    rest: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)', border: '1px solid var(--btn-secondary-border)' },
-    off: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-disabled-ink)', border: '1px solid var(--btn-secondary-disabled-border)' },
+    rest: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)', border: 'var(--bw-control) solid var(--btn-secondary-border)' },
+    off: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-disabled-ink)', border: 'var(--bw-control) solid var(--btn-secondary-disabled-border)' },
     hover: 'v2-bdc',
   },
   ghost: {
@@ -142,11 +189,17 @@ export function Button({
     // DS-B-01: `busy` is the state a screen reader needs; the prop stays an
     // explicit override for the callers that set it themselves.
     'aria-busy': ariaBusy !== undefined ? ariaBusy : (busy || undefined),
-    className: cx('v2-ctl', !off && look.hover, className),
+    className: cx('v2-ctl', !off && look.state, !off && look.hover, className),
     style: {
       flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 500,
+      borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 'var(--btn-weight)',
+      // `none` in the default theme; saas lifts every button 1px and cobalt gives
+      // the filled ones a tinted drop. A disabled button never floats.
+      boxShadow: off ? 'none' : 'var(--btn-shadow)',
       whiteSpace: 'nowrap', cursor: off ? 'default' : 'pointer',
+      // the explicit 1 matters: theme.css dims `[aria-disabled="true"]` to
+      // --disabled-opacity, and Button keeps its token swap (--btn-*-disabled-*)
+      // instead — the decision recorded in the design pass, D-08 in DECISIONS.md.
       opacity: busy && !disabled ? 0.6 : 1,
       ...(native ? { margin: 0, border: 'none', appearance: 'none', WebkitAppearance: 'none' } : null),
       ...s, ...(off ? look.off : look.rest), ...style,
@@ -184,14 +237,19 @@ export function Pill({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      className={cx('v2-ctl', !disabled && 'v2-bd', className)}
+      // `v2-raised` is the bevel hook (theme.css --bevel-raised-*): `none` /
+      // `transparent` in every theme but win98, and the inline border below beats
+      // the rule outright wherever it is inert, so it paints nothing here.
+      className={cx('v2-ctl', 'v2-raised', !disabled && 'v2-bd', className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
+        // the on-trio is the same one Segmented and ChoiceCard read; win98 fills it navy
         background: on ? 'var(--pill-on-bg)' : 'var(--pill-bg)',
         color: on ? 'var(--pill-on-ink)' : 'var(--pill-ink)',
-        border: `1px solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
-        opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer',
+        border: `var(--bw-control) solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
+        boxShadow: 'var(--pill-shadow)',
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
         ...s, ...style,
       }}>{children}</div>
   )
@@ -211,7 +269,8 @@ export function IconButton({
     ? {
       fontSize: 'var(--t-15)', color: on ? 'var(--pill-on-ink)' : 'var(--pill-ink)',
       background: on ? 'var(--pill-on-bg)' : 'var(--pill-bg)',
-      border: `1px solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
+      border: `var(--bw-control) solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
+      boxShadow: 'var(--pill-shadow)',
     }
     : { fontSize: 'var(--t-13)', color: 'var(--icon-btn-ink)' }
   return (
@@ -219,11 +278,15 @@ export function IconButton({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      className={cx('v2-ctl', !disabled && (lg ? 'v2-act' : 'v2-hover-accent'), className)}
+      // the bevel hook goes on the bordered 36 only. The 26 is a bare glyph with
+      // no border of its own, so `v2-raised` would have nothing to beat and would
+      // hand it the rule's own `border-color:transparent` — a computed-style move
+      // for zero pixels. win98 draws its small glyph buttons flat.
+      className={cx('v2-ctl', lg && 'v2-raised', !disabled && (lg ? 'v2-act' : 'v2-hover-accent'), className)}
       style={{
         flex: '0 0 auto', width: size, height: size, borderRadius: 'var(--radius-control)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
         ...look, ...style,
       }}>{children}</div>
   )
@@ -240,31 +303,42 @@ export function IconButton({
 // *single-line* basis: 19 px line + 2×5.5 px padding + 2×1 px border = 32, the
 // same box a one-line `Input` draws. `minHeight` then equals that intrinsic
 // height exactly (rows·19 + 13) instead of being a dead floor.
+//
+// `invalid` is the error state (U-06): it writes `aria-invalid="true"`, and
+// theme.css repaints the border with --input-border-error and adds
+// --input-ring-error. The attribute is the whole implementation — no second set
+// of style props — so Textarea and Select get the state for free.
+// `v2-inset` is the bevel hook (theme.css --bevel-inset-*): inert everywhere but
+// win98, where a field is sunk instead of outlined. The inline border and shadow
+// below beat the rule wherever it is inert.
 const FIELD = {
-  width: '100%', minWidth: 0, border: '1px solid var(--input-border)',
+  width: '100%', minWidth: 0, border: 'var(--bw-control) solid var(--input-border)',
   borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', color: 'var(--input-ink)',
+  boxShadow: 'var(--field-shadow)',
   fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', outline: 'none',
 }
 // `defaultValue` (instead of `value`) renders the field *uncontrolled* — the shape
 // Applications' autosaving notes box needs, where every keystroke must not round-trip
 // through React state. Zero-pixel either way.
-export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, invalid, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
   const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
   return (
     <input
       type={type} {...bind} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
-      aria-label={ariaLabel} title={title} className={className}
+      aria-invalid={invalid ? 'true' : undefined}
+      aria-label={ariaLabel} title={title} className={cx('v2-inset', className)}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{ ...FIELD, height: 32, padding: '0 9px', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
       {...rest} />
   )
 }
-export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3, mono, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3, mono, invalid, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
   const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
   return (
     <textarea
       {...bind} placeholder={placeholder} rows={rows} disabled={disabled} readOnly={readOnly}
-      aria-label={ariaLabel} title={title} className={className}
+      aria-invalid={invalid ? 'true' : undefined}
+      aria-label={ariaLabel} title={title} className={cx('v2-inset', className)}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{
         ...FIELD, padding: '5.5px 9px', minHeight: rows * 19 + 13, lineHeight: '19px', resize: 'vertical',
@@ -281,17 +355,17 @@ export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3,
 // The boxed one is a *box* like Input/Select and moved 30 → 32 with them (D4b
 // fix-up); the underline one is a visually different control — no box at all —
 // and keeps its own 36.
-export function SearchInput({ value, onChange, placeholder = 'Search…', variant = 'boxed', width, ariaLabel, style, className }) {
+export function SearchInput({ value, onChange, placeholder = 'Search…', variant = 'boxed', width, invalid, ariaLabel, style, className }) {
   const under = variant === 'underline'
   const field = under
     ? {
       width: '100%', height: 36, padding: '0 13px', border: 'none',
-      borderBottom: '1px solid var(--input-underline)', background: 'transparent',
+      borderBottom: 'var(--bw-control) solid var(--input-underline)', background: 'transparent',
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-13)', outline: 'none',
     }
     : {
-      width: '100%', height: 32, padding: '0 12px 0 29px', border: '1px solid var(--input-border)',
-      borderRadius: 'var(--radius-control)', background: 'var(--search-bg)',
+      width: '100%', height: 32, padding: '0 12px 0 29px', border: 'var(--bw-control) solid var(--input-border)',
+      borderRadius: 'var(--radius-control)', background: 'var(--search-bg)', boxShadow: 'var(--field-shadow)',
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', outline: 'none',
     }
   return (
@@ -307,7 +381,11 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
       {!under && (
         <span aria-hidden="true" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 'var(--t-12)', color: 'var(--search-glyph)', pointerEvents: 'none' }}>⌕</span>
       )}
+      {/* `v2-underline` is a carve-out, not decoration: theme.css's field-hover
+          rule reads --input-border-hover, which is the BOXED field's rest border,
+          and this variant rests on --input-underline instead. */}
       <input type="text" value={value ?? ''} placeholder={placeholder} aria-label={ariaLabel || placeholder}
+        aria-invalid={invalid ? 'true' : undefined} className={cx('v2-inset', under && 'v2-underline')}
         onChange={onChange ? (e) => onChange(e.target.value, e) : undefined} style={field} />
     </span>
   )
@@ -317,7 +395,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
 // Same semantics as the Settings dropdown it generalises: a box + caret that
 // announces aria-haspopup="listbox"/aria-expanded, and a role="listbox" panel of
 // role="option" rows. `options` is [[value, label], …].
-export function Select({ value, options = [], onPick, width, mono, placeholder, ariaLabel, emptyText, disabled, style, className }) {
+export function Select({ value, options = [], onPick, width, mono, placeholder, invalid, ariaLabel, emptyText, disabled, style, className }) {
   const [open, setOpen] = useState(false)
   // DS-S-21/DS-S-32: Escape closes the listbox — and only the listbox, so a
   // Select inside a modal doesn't take the modal down with it. The key listener
@@ -349,10 +427,15 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
   return (
     <span className={className} onClick={(e) => e.stopPropagation()}
       style={{ position: 'relative', display: 'flex', flex: `0 1 ${width || '220px'}`, minWidth: 0, ...style }}>
+      {/* `v2-select-trigger` is what theme.css's field-hover rule targets — the
+          trigger is a field, but it is a div, so `input:hover` never reaches it.
+          `v2-inset` is the win98 bevel hook, inert elsewhere. */}
       <div {...act(toggle, disabled)} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-disabled={disabled || undefined}
+        aria-invalid={invalid ? 'true' : undefined} className="v2-inset v2-select-trigger"
         style={{
           flex: 1, minWidth: 0, height: 32, padding: '0 10px',
-          border: `1px solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
+          border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
+          boxShadow: 'var(--field-shadow)',
           // D-POST-04: the trigger is a *field*, so it takes --input-bg like Input
           // and Textarea. It shipped on --search-bg (= --surface, white) and any
           // form that pairs a Select with an Input — Searches' New/Edit grid,
@@ -377,7 +460,7 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
         <div className="v2-menu v2-scroll" role="listbox" style={{
           position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 40,
           minWidth: '100%', maxWidth: 420, maxHeight: 320, overflow: 'auto',
-          background: 'var(--menu-bg)', border: '1px solid var(--menu-border)',
+          background: 'var(--menu-bg)', border: 'var(--bw-panel) solid var(--menu-border)',
           borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
           display: 'flex', flexDirection: 'column', gap: 1,
         }}>
@@ -423,8 +506,14 @@ export function Row({ selected, divider, flush, onClick, title, ariaLabel, child
       style={{
         display: 'flex', alignItems: 'center', gap: 10, height: 46,
         borderRadius: flush ? 0 : 'var(--radius-row)',
+        // the picked row is a token TRIO, not just a wash: theme.css's
+        // `.v2-row[aria-current="true"]` writes the same three names (it has to,
+        // because the Feed draws its own row), and the two agree by construction —
+        // --row-selected-ink is `inherit` and --row-selected-edge `none` in every
+        // theme but cobalt (a 3px inset accent bar) and win98 (navy fill, white ink).
         background: selected ? 'var(--row-selected)' : 'transparent',
-        borderBottom: divider ? '1px solid var(--row-line)' : undefined,
+        ...(selected ? { color: 'var(--row-selected-ink)', boxShadow: 'var(--row-selected-edge)' } : null),
+        borderBottom: divider ? 'var(--bw-hair) var(--row-line-style) var(--row-line)' : undefined,
         padding: '0 10px',
         // conditional spread, never `cursor: … : undefined`: a present-but-undefined
         // key clears the property (and, where a shorthand set it, half of that
@@ -448,8 +537,10 @@ export const Card = React.forwardRef(function Card(
     <div ref={ref} id={id} {...act(onClick, false)} title={title} aria-label={ariaLabel}
       className={cx(live && 'v2-act', className)}
       style={{
-        background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+        background: 'var(--card-bg)', border: 'var(--bw-panel) solid var(--card-border)',
         borderRadius: 'var(--radius-card)', padding: '10px 14px',
+        // `none` here; saas is the one board that lifts its cards off the page
+        boxShadow: 'var(--card-shadow)',
         // `cursor` is inherited: setting `default` on a *static* card pushed the plain
         // arrow down through every text node inside it, so selectable card text lost
         // its I-beam hint. Only an interactive card claims a cursor.
@@ -463,7 +554,7 @@ export function Band({ interactive = true, onClick, title, ariaLabel, children, 
     <div {...act(onClick, false)} title={title} aria-label={ariaLabel}
       className={cx(live && 'v2-act', className)}
       style={{
-        border: '1px dashed var(--band-border)', borderRadius: 'var(--radius-card)',
+        border: 'var(--bw-panel) dashed var(--band-border)', borderRadius: 'var(--radius-card)',
         padding: '10px 14px', ...(live ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
@@ -480,7 +571,7 @@ export function DashedAdd({ big, disabled, onClick, title, ariaLabel, children, 
         height: big ? 32 : 28, border: '1px dashed var(--dashadd-border)',
         borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         fontFamily: 'var(--font-body)', fontSize: big ? 'var(--t-12)' : 'var(--t-11-5)', fontWeight: big ? 500 : 400,
-        color: 'var(--dashadd-ink)', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
+        color: 'var(--dashadd-ink)', opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer', ...style,
       }}>{children}</div>
   )
 }
@@ -492,7 +583,8 @@ export function MenuHead({ children, style }) {
   return (
     <div style={{
       padding: '4px 11px 3px', fontSize: 'var(--t-9-5)', lineHeight: '14px',
-      letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--label-ink)', ...style,
+      letterSpacing: 'var(--label-tracking)', textTransform: 'var(--label-case)',
+      fontWeight: 'var(--label-weight)', color: 'var(--label-ink)', ...style,
     }}>{children}</div>
   )
 }
@@ -508,8 +600,8 @@ export function MenuHead({ children, style }) {
 // scrolling menu scrolls, it never squashes.
 export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
   return (
-    <div role={role} aria-label={ariaLabel} className={cx('v2-menu', className)} style={{
-      background: 'var(--menu-bg)', border: '1px solid var(--menu-border)',
+    <div role={role} aria-label={ariaLabel} className={cx('v2-menu', 'v2-raised', className)} style={{
+      background: 'var(--menu-bg)', border: 'var(--bw-panel) solid var(--menu-border)',
       borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
     }}>{children}</div>
@@ -545,7 +637,7 @@ export function MenuItem({
       color: danger ? 'var(--menu-item-danger-ink)' : selected ? 'var(--menu-item-on-ink)' : 'var(--menu-item-ink)',
       ...(selected ? { background: 'var(--menu-item-on-bg)', fontWeight: 500 } : null),
       ...(sep ? { borderTop: '1px solid var(--menu-item-sep)' } : null),
-      opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
+      opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer', ...style,
     },
   }
   const body = (
@@ -635,16 +727,25 @@ export function SectionHead({
 // the shelf copy chip: --chip-bg · 1px --chip-border · r99 · 11.5 · h26.
 // hover (v2-chip) turns the border accent, the ink --chip-ink-hover and adds a
 // 2px --chip-ring-hover halo.
-export function Chip({ disabled, onClick, title, ariaLabel, children, style, className }) {
+// `on` is the picked chip (Skins handoff §2): the same accent-soft fill Pill and
+// Segmented use, and a navy fill in win98. It is written inline from the
+// --chip-on-* trio rather than through the `[aria-pressed]` rule the generated
+// stylesheet proposes, so the state is a prop like every other on-state here and
+// no cascade fires for a chip that never sets it.
+export function Chip({ on, disabled, onClick, title, ariaLabel, children, style, className }) {
   return (
     <div {...act(onClick, disabled)} title={title} aria-label={ariaLabel} aria-disabled={disabled || undefined}
-      className={cx('v2-ctl', !disabled && onClick && 'v2-chip', className)}
+      aria-pressed={on === undefined ? undefined : !!on}
+      className={cx('v2-ctl', 'v2-raised', !disabled && onClick && 'v2-chip', className)}
       style={{
         flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', gap: 6,
         height: 26, padding: '0 10px', borderRadius: 'var(--radius-control)',
-        background: 'var(--chip-bg)', color: 'var(--chip-ink)', border: '1px solid var(--chip-border)',
+        background: on ? 'var(--chip-on-bg)' : 'var(--chip-bg)',
+        color: on ? 'var(--chip-on-ink)' : 'var(--chip-ink)',
+        border: `var(--bw-control) solid ${on ? 'var(--chip-on-border)' : 'var(--chip-border)'}`,
+        boxShadow: 'var(--pill-shadow)',
         fontFamily: 'var(--font-body)', fontSize: 'var(--t-11-5)', whiteSpace: 'nowrap',
-        opacity: disabled ? 0.5 : 1, cursor: onClick && !disabled ? 'pointer' : 'default', ...style,
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: onClick && !disabled ? 'pointer' : 'default', ...style,
       }}>{children}</div>
   )
 }
@@ -667,7 +768,11 @@ export function Tag({ tone = 'neutral', title, children, style, className }) {
     <span title={title} className={className} style={{
       flex: '0 0 auto', display: 'inline-flex', alignItems: 'center',
       borderRadius: 'var(--radius-control)', fontSize: 'var(--t-10)', lineHeight: '15px',
-      padding: '2px 8px', letterSpacing: '.06em', textTransform: 'uppercase',
+      // Tag is tracked TIGHTER than Label (.06em vs .13em) and always was; the two
+      // are not one caps scale, so the badge keeps a name of its own rather than
+      // being folded into --label-tracking (Skins handoff §4.7, "do not unify").
+      padding: '2px 8px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)',
+      fontWeight: 'var(--label-weight)',
       whiteSpace: 'nowrap', ...(TAG_TONE[tone] || TAG_TONE.neutral), ...style,
     }}>{children}</span>
   )
@@ -724,7 +829,7 @@ function Ticker({ round, checked, indeterminate, onChange, label, title, ariaLab
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0,
         fontSize: 'var(--t-12)', color: 'var(--check-label-ink)',
-        opacity: disabled ? 0.5 : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
       }}>
       <Indicator round={round} checked={checked} indeterminate={indeterminate} size={size} />
       {label ? <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span> : null}
@@ -752,7 +857,7 @@ export function Switch({ on, onChange, label, title, ariaLabel, size = 'md', dis
       aria-label={ariaLabel || (typeof label === 'string' ? label : undefined)} title={title} className={className}
       style={{
         display: 'flex', alignItems: 'center', gap: 7, flex: '0 0 auto',
-        opacity: disabled ? 0.5 : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
+        opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
       }}>
       {label ? <Helper>{label}</Helper> : null}
       <span aria-hidden="true" style={{
@@ -816,7 +921,7 @@ export function Segmented({
         display: 'flex', gap: inset ? 2 : gap, minWidth: 0,
         ...(inset ? {
           flex: '0 0 auto', padding: 2, background: 'var(--seg-inset-bg)',
-          border: '1px solid var(--seg-border)', borderRadius: 'var(--radius-control)',
+          border: 'var(--bw-control) solid var(--seg-border)', borderRadius: 'var(--radius-control)',
         } : null), ...style,
       }}>
       {options.map((o, i) => {
@@ -826,7 +931,10 @@ export function Segmented({
         return (
           <div key={String(o.value)} role="radio" aria-checked={on} aria-disabled={disabled || undefined}
             title={o.hint || undefined} tabIndex={disabled ? -1 : ((on || (idx < 0 && i === 0)) ? 0 : -1)}
-            className={inset || disabled ? undefined : 'v2-bd'}
+            // the bevel hook rides the bordered cells only — an `inset` cell is
+            // borderless inside one shared frame, so the rule would have nothing
+            // to beat and would recolour a border that is not drawn
+            className={cx(!inset && 'v2-raised', !inset && !disabled && 'v2-bd')}
             onClick={pick}
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); move(1) }
@@ -838,12 +946,14 @@ export function Segmented({
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               height: z.height, padding: inset ? '0 10px' : undefined,
               borderRadius: inset ? 'var(--radius-control)' : 'var(--radius-cell)',
-              border: inset ? undefined : `1px solid ${on ? t.border : 'var(--seg-border)'}`,
+              border: inset ? undefined : `var(--bw-control) solid ${on ? t.border : 'var(--seg-border)'}`,
               background: on ? t.bg : (inset ? 'transparent' : 'var(--seg-bg)'),
               color: on ? t.ink : (inset ? 'var(--seg-inset-ink)' : 'var(--seg-ink)'),
+              // the picked cell is the only one a theme may lift (`none` here)
+              ...(on && !inset ? { boxShadow: 'var(--seg-on-shadow)' } : null),
               fontFamily: 'var(--font-body)', fontSize: z.fontSize, lineHeight: 1,
               fontWeight: on && !inset ? 600 : 400, whiteSpace: 'nowrap',
-              opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer',
+              opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
             }}>
             {o.dotColor ? <Dot style={{ background: o.dotColor }} /> : null}
             {o.dots ? Array.from({ length: o.dots }, (_, k) => (
@@ -919,12 +1029,94 @@ const RING_R = 35   // the arc radius every ring site drew
 // uniform scale of the same drawing — md is pixel-identical, sm draws a whole
 // ring, and an explicit numeric `size` scales too instead of clipping.
 const RING_VB = 88
-export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', busy, title, ariaLabel, children, style, className }) {
+// ── the three non-ring variants (Skins handoff §3, Primitives Board `ring()`) ──
+// A theme may replace the DRAWING, not just its colours: `--ring-variant` names
+// one of a closed set and ScoreRing renders it. The ring is the default and is
+// untouched; the other three are the boards' own score marks —
+//   pill   a 40x44 tile, mono numeral over a small "fit" cap (cobalt)
+//   bar    a mono numeral over a 32x3 track (saas)
+//   ascii  `87 [████████░░]`, the bar filled from Math.round(score/10) (win98)
+// Each carries the same three states the ring does: a value, unscored, and busy.
+// The tone tokens are shared with the ring (--ring-*-ink); `pill` is the one that
+// needs a ground as well, which is what the --sc-* pairs are for.
+const SC_KEY = (s) => (s == null ? 'none' : s >= 70 ? 'hi' : s >= 50 ? 'mid' : 'lo')
+function ScorePill({ value, busy }) {   // the tile paints from --sc-*, not the ring's ink
+  const k = SC_KEY(value)
+  return (
+    <span style={{
+      flex: '0 0 40px', width: 40, height: 44, borderRadius: 'var(--radius-field)',
+      background: `var(--sc-${busy ? 'none' : k}-bg)`, color: `var(--sc-${k})`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 'var(--t-14)',
+      lineHeight: 1, letterSpacing: '-.01em',
+    }}>
+      {busy ? <Spinner size={12} /> : (
+        <>
+          {value == null ? '—' : value}
+          <span style={{
+            fontFamily: 'var(--font-body)', fontSize: 'var(--t-9)', fontWeight: 600,
+            letterSpacing: '.08em', textTransform: 'uppercase', opacity: 0.7, marginTop: 2,
+          }}>fit</span>
+        </>
+      )}
+    </span>
+  )
+}
+function ScoreBar({ value, busy, ink }) {
+  return (
+    <span style={{
+      flex: '0 0 40px', width: 40, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 4,
+    }}>
+      {busy ? <Spinner size={12} /> : (
+        <>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 'var(--t-16)',
+            lineHeight: 1, color: ink, fontVariantNumeric: 'tabular-nums',
+          }}>{value == null ? '—' : value}</span>
+          <Meter value={(value || 0) / 100} tone={ink} height={3} radius="var(--radius-mark)" style={{ width: 32 }} />
+        </>
+      )}
+    </span>
+  )
+}
+function ScoreAscii({ value, busy, ink }) {
+  const n = value == null ? 0 : Math.max(0, Math.min(10, Math.round(value / 10)))
+  return (
+    <span style={{
+      flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 2,
+      fontFamily: 'var(--font-mono)', lineHeight: 1,
+      color: busy ? 'var(--ring-neutral-ink)' : ink,
+    }}>
+      {busy ? <span style={{ fontSize: 'var(--t-9)' }}>[..........]</span> : (
+        <>
+          <span style={{ fontSize: 'var(--t-13)', fontWeight: 700 }}>{value == null ? '--' : value}</span>
+          <span style={{ fontSize: 'var(--t-9)', letterSpacing: '-.02em' }}>{`[${'█'.repeat(n)}${'░'.repeat(10 - n)}]`}</span>
+        </>
+      )}
+    </span>
+  )
+}
+const SCORE_VARIANT = { pill: ScorePill, bar: ScoreBar, ascii: ScoreAscii }
+// `variant` is an override for the gallery, which shows all four side by side;
+// every real call site leaves it out and takes the theme's own.
+export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', busy, variant, title, ariaLabel, children, style, className }) {
   const z = typeof size === 'number' ? { ...RING_SIZE.md, box: size } : (RING_SIZE[size] || RING_SIZE.md)
   const t = RING_TONE[tone || scoreTone(value)] || RING_TONE.neutral
+  const themeVariant = useThemeVar('--ring-variant', 'ring')
+  const Alt = SCORE_VARIANT[variant || themeVariant]
   const vb = z.vb || RING_VB  // numeric sizes scale md's ring
   const stroke = weight || z.track
   const c = 2 * Math.PI * RING_R
+  if (Alt) {
+    return (
+      <span className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
+        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}>
+        <Alt value={value} busy={busy} ink={t.ink} />
+        {children}
+      </span>
+    )
+  }
   return (
     <div className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
       style={{ position: 'relative', boxSizing: 'border-box', flex: `0 0 ${z.box}px`, width: z.box, height: z.box, ...style }}>
@@ -981,9 +1173,9 @@ const TOAST_KIND = {
 export function ToastCard({ kind = 'progress', children, style, className }) {
   const k = TOAST_KIND[kind] || TOAST_KIND.progress
   return (
-    <div className={className} style={{
+    <div className={cx('v2-raised', className)} style={{
       display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
-      background: k.bg, border: `1px solid ${k.line}`, borderRadius: 'var(--radius-card)', color: k.ink,
+      background: k.bg, border: `var(--bw-panel) solid ${k.line}`, borderRadius: 'var(--radius-card)', color: k.ink,
       boxShadow: 'var(--shadow-toast)', ...style,
     }}>{children}</div>
   )
@@ -1072,13 +1264,17 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 // set and guards it (Applications and Settings both close every overlay from one
 // handler that stands down while a ConfirmDialog is up). A second, unguarded
 // listener here would close the modal *under* that confirm.
+// `titlebar` is the caption a themed window chrome shows. The strip mounts only
+// where `--title-bar` is a gradient (win98); everywhere else useTitleBar() is
+// false and the panel is exactly the box it has always been.
 export function ModalPanel({
-  width = 480, as, onSubmit, onClose, escape = true, labelledBy, zIndex = 70,
+  width = 480, as, onSubmit, onClose, escape = true, labelledBy, zIndex = 70, titlebar,
   children, style, className, scrimStyle, scrimProps,
 }) {
   useEscape(onClose, escape && !!onClose)
   const panel = useRef(null)
   useSnapTop(panel)
+  const chrome = useTitleBar()
   const Panel = as === 'form' ? 'form' : 'div'
   return (
     <div onClick={onClose} {...scrimProps} style={{
@@ -1086,28 +1282,39 @@ export function ModalPanel({
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex, ...scrimStyle,
     }}>
       <Panel ref={panel} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
-        onSubmit={onSubmit} onClick={(e) => e.stopPropagation()} className={className}
+        onSubmit={onSubmit} onClick={(e) => e.stopPropagation()} className={cx('v2-raised', className)}
         style={{
-          width, background: 'var(--modal-bg)', border: '1px solid var(--modal-border)',
+          width, background: 'var(--modal-bg)', border: 'var(--bw-panel) solid var(--modal-border)',
           borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)',
           display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
-        }}>{children}</Panel>
+        }}>
+        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar}</HeaderRow>}
+        {children}
+      </Panel>
     </div>
   )
 }
 // The drawer is positioned against its *pane*, not the viewport, so its scrim is
 // absolute too (COMP: the rail stays reachable while a company is open).
-export function Drawer({ width = 720, onClose, labelledBy, children, style, className }) {
+export function Drawer({ width = 720, onClose, labelledBy, titlebar, children, style, className }) {
   useEscape(onClose)
+  const chrome = useTitleBar()
   return (
     <>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'var(--scrim-bg)', zIndex: 29 }} />
+      {/* no `v2-raised` here: the drawer's only border is its left edge, and the
+          bevel rule writes the `border` shorthand — in a theme where it is inert
+          that hands the other three sides `border-color:transparent` for nothing.
+          win98's drawer keeps its hard --shadow-drawer offset instead. */}
       <div role="dialog" aria-modal="true" aria-labelledby={labelledBy} className={className}
         style={{
           position: 'absolute', right: 0, top: 0, bottom: 0, width,
-          background: 'var(--drawer-bg)', borderLeft: '1px solid var(--drawer-border)',
+          background: 'var(--drawer-bg)', borderLeft: 'var(--bw-panel) solid var(--drawer-border)',
           boxShadow: 'var(--drawer-shadow)', display: 'flex', flexDirection: 'column', zIndex: 30, ...style,
-        }}>{children}</div>
+        }}>
+        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar}</HeaderRow>}
+        {children}
+      </div>
     </>
   )
 }
@@ -1133,12 +1340,50 @@ const HEAD_BG = { surface: 'var(--head-bg)', page: 'var(--head-bg-page)', recess
 // `line="none"` is the screen head that carries no rule at all (the four list
 // screens whose filter bar draws the only line under the title block).
 const HEAD_LINE = { line: 'var(--head-line)', soft: 'var(--head-line-soft)', strong: 'var(--head-line-strong)' }
+// `--title-bar` is `none` in every theme but win98, where it is the two-stop
+// gradient of a Windows caption bar. A panel asks this hook whether the chrome
+// exists before it mounts a `variant="titlebar"` head — the one *composition*
+// change a theme is allowed to make (Skins handoff §4.8), so it must be a
+// question about the cascade rather than a style value.
+export function useTitleBar() {
+  const bar = useThemeVar('--title-bar', 'none')
+  return !!bar && bar !== 'none'
+}
 export function HeaderRow({
   as, variant = 'modal', pad, bg, line, soft, strong, height, align = 'flex-start',
-  id, children, style, className, ...rest
+  onClose, id, children, style, className, ...rest
 }) {
   const tone = line || (strong ? 'strong' : soft ? 'soft' : 'line')
   const El = as === 'header' ? 'header' : 'div'
+  // The caption bar: 22px, the caption on the gradient, and the _ □ × group of
+  // bevelled glyph boxes pinned right (only × acts — a modal has no minimise or
+  // maximise, and a dead control is worse than none, so the other two are inert
+  // and hidden from the accessibility tree with the group).
+  if (variant === 'titlebar') {
+    return (
+      <El id={id} className={className} {...rest} style={{
+        flex: '0 0 auto', height: 22, padding: '0 3px 0 6px',
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: 'var(--title-bar)', color: 'var(--title-bar-ink)',
+        fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', fontWeight: 'var(--label-weight)',
+        lineHeight: 1, ...style,
+      }}>
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
+        <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
+          {['_', '□', '×'].map((g) => (
+            <span key={g} className="v2-raised"
+              {...(g === '×' && onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
+              style={{
+                width: 16, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)',
+                fontFamily: 'var(--font-mono)', fontSize: 'var(--t-9)', lineHeight: 1,
+                cursor: g === '×' && onClose ? 'pointer' : 'default',
+              }}>{g}</span>
+          ))}
+        </span>
+      </El>
+    )
+  }
   return (
     <El id={id} className={className} {...rest} style={{
       flex: '0 0 auto', padding: pad || HEAD_PAD[variant] || HEAD_PAD.modal,
@@ -1162,10 +1407,14 @@ export function TableHead({ height = 28, pad = '0 22px', soft, top, children, st
     // and an orphan row role is worse than none
     <div className={className} style={{
       flex: '0 0 auto', display: 'flex', alignItems: 'center', height, padding: pad,
-      background: 'var(--bg)', color: 'var(--label-ink)',
-      fontSize: 'var(--t-9-5)', lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase',
-      borderBottom: `1px solid ${soft ? 'var(--head-line-soft)' : 'var(--head-line-strong)'}`,
-      ...(top ? { borderTop: '1px solid var(--head-line-soft)' } : null), ...style,
+      background: 'var(--head-bg-page)', color: 'var(--label-ink)',
+      // .11em, between Label's .13 and Tag's .06 — a third value, kept as a third
+      // name (--label-tracking-strip) instead of being rounded into --label-tracking
+      fontSize: 'var(--t-9-5)', lineHeight: '14px',
+      letterSpacing: 'var(--label-tracking-strip)', textTransform: 'var(--label-case)',
+      fontWeight: 'var(--label-weight)',
+      borderBottom: `var(--bw-hair) solid ${soft ? 'var(--head-line-soft)' : 'var(--head-line-strong)'}`,
+      ...(top ? { borderTop: 'var(--bw-hair) solid var(--head-line-soft)' } : null), ...style,
     }}>{children}</div>
   )
 }
@@ -1212,7 +1461,8 @@ const LABEL_SIZE = {
 }
 export function Label({ size = 'md', htmlFor, title, children, style, className }) {
   const st = {
-    letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--label-ink)',
+    letterSpacing: 'var(--label-tracking)', textTransform: 'var(--label-case)',
+    fontWeight: 'var(--label-weight)', color: 'var(--label-ink)',
     ...(LABEL_SIZE[size] || LABEL_SIZE.md), ...style,
   }
   if (htmlFor) return <label htmlFor={htmlFor} title={title} className={className} style={st}>{children}</label>
@@ -1265,9 +1515,13 @@ const HEADING_STRONG = {
   19: { fontSize: 'var(--t-19)', lineHeight: '26px', letterSpacing: '-.015em' },
 }
 export function Heading({ size, strong, id, title, children, style, className }) {
+  // `strong` is v2's second display family and keeps its OWN weight and tracking
+  // (500/600 at -.01/-.015em, per size): --title-weight/--display-tracking are the
+  // 400-weight display scale's names, and unifying the two would collapse a
+  // distinction the design makes. Only the plain scale reads them.
   const look = strong
     ? { fontWeight: strong === 600 ? 600 : 500, ...(HEADING_STRONG[size ?? 15.5] || HEADING_STRONG[15.5]) }
-    : { letterSpacing: '-.02em', ...(HEADING_SIZE[size ?? 18] || HEADING_SIZE[18]) }
+    : { fontWeight: 'var(--title-weight)', letterSpacing: 'var(--display-tracking)', ...(HEADING_SIZE[size ?? 18] || HEADING_SIZE[18]) }
   return (
     <span id={id} title={title} className={className} style={{
       fontFamily: 'var(--font-display)', color: 'var(--heading-ink)', ...look, ...style,
@@ -1278,8 +1532,8 @@ export function Heading({ size, strong, id, title, children, style, className })
 export function PageTitle({ id, children, style, className }) {
   return (
     <h1 id={id} className={className} style={{
-      margin: 0, fontFamily: 'var(--font-display)', fontSize: 'var(--t-30)', fontWeight: 400,
-      lineHeight: 1, letterSpacing: '-.02em', color: 'var(--heading-ink)', ...style,
+      margin: 0, fontFamily: 'var(--font-display)', fontSize: 'var(--t-30)', fontWeight: 'var(--title-weight)',
+      lineHeight: 1, letterSpacing: 'var(--display-tracking)', color: 'var(--heading-ink)', ...style,
     }}>{children}</h1>
   )
 }
