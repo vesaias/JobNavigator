@@ -4,7 +4,7 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, setFlashToast } from './hooks'
+import { useEscape, setFlashToast, fetchRunOutcome, runFailed, runFailureReason } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -148,7 +148,12 @@ export default function ResumeEditor() {
       if (!done.length) return
       let list = []
       try { const { data } = await api.get('/resumes', { params: { is_base: false } }); list = data || [] } catch {}
-      done.forEach((p) => {
+      // DS-B-02: the scope leaving /monitor/active only means the run ENDED. It
+      // used to be read as "succeeded", so a tailor that raised in the backend
+      // arrived as a green ✓ and the user hunted for a copy that never existed
+      // — and 'Tailoring finished.' (the copy-not-found branch) is exactly the
+      // failure case. Ask the run for its status and let that pick the toast.
+      for (const p of done) {
         const since = p.since - 1000
         const mine = list.filter((r) => new Date(r.updated_at).getTime() >= since)
         // a job-linked run is identified by its job; a freeform one by being the
@@ -156,10 +161,17 @@ export default function ResumeEditor() {
         const hit = p.jobId
           ? mine.find((r) => String(r.job_id) === String(p.jobId))
           : mine.filter((r) => !r.job_id).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0]
+        const run = await fetchRunOutcome(p.runId, 'tailor_resume')
+        if (runFailed(run)) {
+          pushToast({ kind: 'error', msg: `Tailoring failed — ${runFailureReason(run)}` })
+          continue
+        }
         const msg = p.company ? `Tailored copy for ${p.company} is ready.` : 'Tailored copy from your pasted description is ready.'
         if (hit) pushToast({ kind: 'success', msg, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) })
-        else pushToast({ kind: 'success', msg: 'Tailoring finished.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
-      })
+        else if (run) pushToast({ kind: 'success', msg: 'Tailoring finished.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
+        // run unknown and no copy found: say exactly that rather than claim either way
+        else pushToast({ kind: 'progress', spin: false, ttl: 6000, msg: 'Tailoring finished, but the copy could not be located.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
+      }
     }, 3000)
     return () => clearInterval(iv)
   }, [pushToast, navigate])
@@ -167,8 +179,9 @@ export default function ResumeEditor() {
   const runTailor = useCallback(async ({ baseId, jobId, jobDescription, company }) => {
     setTailorOpen(false)
     try {
-      await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: jobId || undefined, job_description: jobDescription || undefined })
-      pendingRef.current.push({ scope: `${baseId}:${jobId || 'freeform'}`, jobId: jobId || null, company: company || null, since: Date.now() })
+      const { data: started } = await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: jobId || undefined, job_description: jobDescription || undefined })
+      // DS-B-02: the run_id is what lets the watcher read the run's real status
+      pendingRef.current.push({ scope: `${baseId}:${jobId || 'freeform'}`, runId: started?.run_id || null, jobId: jobId || null, company: company || null, since: Date.now() })
       // RES-26: the old string interpolated an empty slot where the company goes
       pushToast({ kind: 'progress', msg: company ? `Tailoring for ${company}… runs in the background.` : 'Tailoring from a pasted description… runs in the background.' })
     } catch (e) {
@@ -188,8 +201,8 @@ export default function ResumeEditor() {
         const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: doc.job_id })
         pushToast({ kind: 'success', msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
       } else {
-        await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
-        pendingRef.current.push({ scope: `${baseId}:${doc.job_id}`, jobId: doc.job_id, company, since: Date.now() })
+        const { data: started } = await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
+        pendingRef.current.push({ scope: `${baseId}:${doc.job_id}`, runId: started?.run_id || null, jobId: doc.job_id, company, since: Date.now() })
         pushToast({ kind: 'progress', msg: `Tailoring for ${company}… runs in the background.` })
       }
     } catch (e) {
@@ -302,7 +315,8 @@ export default function ResumeEditor() {
     // is gone; the base is read at that moment too, never captured in this closure.
     const scope = doc.job_id ? `${doc.job_id}:resume:${id}` : `resume:${id}`
     try {
-      await api.post(`/resumes/${id}/score-check`, { depth })
+      const { data: started } = await api.post(`/resumes/${id}/score-check`, { depth })
+      const runId = started?.run_id || null   // DS-B-02: identifies the run below
       pushToast({ kind: 'progress', msg: `Scoring (${depth}) — runs in the background.` })
       const t0 = Date.now()
       let seen = false
@@ -314,6 +328,12 @@ export default function ResumeEditor() {
           if (live) { seen = true; return }
           if (!seen && Date.now() - t0 < 8000) return   // not started yet ≠ finished
           clearInterval(iv); setScoring(false)
+          // DS-B-02: the run leaving /monitor/active is not "it worked". Read the
+          // run's status before the score — a failed re-score leaves the PREVIOUS
+          // score sitting on the job, which this poll would have re-announced as a
+          // fresh success.
+          const run = await fetchRunOutcome(runId, 'score_resume')
+          if (runFailed(run)) { pushToast({ kind: 'error', msg: `Scoring failed — ${runFailureReason(run)}` }); return }
           if (!doc.job_id) {
             // the score of a job-less copy lands on the copy itself — merge just that
             // key back so edits made while it ran are not overwritten

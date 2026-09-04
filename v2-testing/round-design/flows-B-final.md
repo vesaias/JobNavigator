@@ -323,3 +323,57 @@ Earlier round-2 items confirmed still fixed: **R2-H-09** (the chain-score line, 
 - Settings: full-blob diff **empty**; scheduler table equal to the pre-flow table.
 - Scratch rows: **0 `ZZB`** on every endpoint. Résumé shelf identical to baseline. The target job is byte-equal to its baseline (`status=new`, `cv_scores={"PM":40}`, `tailored_resume_id=null`) — **nothing left behind at all**.
 - No commits, no rebuilds, no restarts, no source edits.
+
+---
+
+## Fixes (source, unbuilt)
+
+Applied 2026-09-04 on `v2-redesign` from the design-final flow-B findings. **Source only** — no rebuild, no container restart, no commit, so the running frontend bundle and the live backend process still hold the old code. Line numbers are post-fix.
+
+### DS-B-02 (P2) — a failed background run is no longer reported as a success
+
+The root cause was shared by three pollers: each treated "the run vanished from `GET /monitor/active`" as "the run succeeded". The registry only says a run **ended**. Every launcher already returns a `run_id` (`POST /resumes/tailor` → `routes_resumes.py:777`, `POST /resumes/{id}/score-check` → `:1460`, `POST /cover-letters/generate` → `routes_cover_letters.py:366`) and `GET /api/monitor/run/{run_id}` (`main.py:1040`) carries the real `status` + `error`, so the fix is to keep the id and ask.
+
+| file:lines | change |
+|---|---|
+| `frontend/src/v2/hooks.js:99-134` | **new** `fetchRunOutcome(runId, jobType)` — `GET /monitor/run/{id}`, falling back to `GET /monitor/history?job_type=…&limit=10` matched on `id`; returns `null` for "cannot tell". Plus `runFailed(run)` (terminal and not `completed`; `running` is *not* a failure — the in-memory registry drops a run a moment before its row is finalised) and `runFailureReason(run)` (`error` → `result_summary` → bare status). `hooks.js:2` now imports `api`. |
+| `frontend/src/v2/ResumeEditor.jsx:151-173` | tailor watcher: `done.forEach` → `for…of` (it awaits now). Three-way outcome — `failed` → `error` toast `Tailoring failed — <error/summary>` and **no "finished" wording**; `completed` → the existing success toast, with `Open ↗` when the copy is found and the `Tailoring finished. / Résumés ↗` fallback when it isn't; run **not found** → a neutral (non-green, non-spinning) toast `Tailoring finished, but the copy could not be located.` |
+| `frontend/src/v2/ResumeEditor.jsx:182-184, 204-205` | `runTailor` and `runRetailor` keep `run_id` from the 202 on the `pendingRef` entry (`runId`). |
+| `frontend/src/v2/ResumeEditor.jsx:318-336` | **score poll — same rule, and it fixes a second lie.** The run's status is read *before* the score, because a failed **re-score** leaves the previous `cv_scores.Tailored` on the job and this poll would have re-announced that stale number as a fresh `✓ Scored: N`. Failure → `Scoring failed — <reason>`; otherwise the existing score / `Scoring finished without a score` branches are untouched. |
+| `frontend/src/v2/CoverLetterEditor.jsx:213, 222, 242-254` | **regenerate poll — it inferred completion the same way and said nothing at all.** A failed regenerate closed the modal over an unchanged draft, indistinguishable from a rewrite. The run_id is held in `regenRun`; on failure the poll stops, keeps the modal open, and shows `Regeneration failed — <reason>` both inline (`--bad`) and as an error toast, so it can be retried. Success path unchanged. |
+| `frontend/src/v2/CoverLetters.jsx:221-232` | list poll: the CL-06 history lookup already caught `status === 'failed'`, but pushed `✓ Cover letter ready.` whenever the run was **not found** in the 20-row window. Now on the shared helper and three-way: failed → error, completed → success, unknown → neutral `Generation finished — check the list for the letter.` |
+| `frontend/src/v2/Toast.jsx:69-72` | `spin: false` opts one `progress` card out of the spinner, so a *neutral result* ("finished, but …") does not keep spinning. No other toast changes. |
+
+Checked and deliberately left alone: `Resumes.jsx:90-111` polls the same `tailor_resume` runs but only reloads the shelf — it makes no claim, so it cannot lie.
+
+### DS-B-03 (P3) — the JSON envelope can no longer be served as the answer
+
+`backend/api/routes_autofill.py` — the old salvage was one regex (`r'\{[\s\S]*\}'`, which ran to the *last* brace anywhere in the reply) with `answer = raw` as the fallback.
+
+- **new `_extract_answer(raw)` (`:136-186`)**, widest-net-last: strip a code fence (`_strip_code_fences`, `:54`) → `json.loads` the whole reply → `json.loads` the **first balanced** `{…}` (`_first_json_object`, `:65` — a depth scan that understands strings and escapes) → salvage a truncated `{"answer": "…` by hand (cut at the last *unescaped* quote, `_last_unescaped_quote` `:101`, then `_unescape_json_fragment` `:121`) → accept plain prose. It returns `""` rather than anything starting with `{`.
+- **`:319-325`** the endpoint now calls it and raises `ValueError` on an empty result, which the existing handler turns into the **502** it already raises for LLM errors — a wrapper pasted into a real application form is worse than an error the user can retry.
+- `import re as _re` moved to module scope (`:4`); the inline `import json/re` inside the request path is gone.
+
+**Tests** — `backend/tests/test_autofill_extract.py` (**new**, 17 cases, pure function, no container): clean JSON (incl. preamble before the object, prose *after* it — the case the old regex broke on, and escaped quotes/braces inside the answer), fenced JSON (`json` tag, bare fence, fenced prose), truncated envelope (the exact 460-char shape that leaked, one with escapes, one with the closing quote but no brace, and unsalvageable wrappers → `""`), plain text, and the invariant `no output ever begins with a brace`. `backend/tests/test_autofill_endpoint.py:41-74` adds two end-to-end cases (truncated envelope → 200 with clean prose; answer-less wrapper → 502); those need the app import (`apscheduler`), so they run in the container.
+
+### DS-B-01 (P4) — a disabled/busy control keeps its role
+
+`frontend/src/v2/ui.jsx:65-74` — `act()` now returns `{ role: role || 'button', tabIndex: -1 }` while `off`, instead of `{}`. The control keeps its role and the caller's `aria-disabled`, loses only its handlers, and leaves the tab order while staying focusable, so focus that was on it is not dropped. This covers every non-native `Button`, `Pill`, `Select`, `MenuItem` (which passes `role="menuitem"`, preserved), `IconButton`, `DashedAdd` and `MoveArrows` in one place.
+Two supporting lines: `ui.jsx:142-144` — a `busy` Button now announces `aria-busy` without every caller restating it (the `ariaBusy` prop still overrides); `ui.jsx:725` — `MoveArrows`' dimmed arrow gets `aria-disabled`, since it now carries a role.
+The `Status` line in DS-B-01 asked keep-or-restore: **restored**, per ARIA's guidance that a disabled control stays discoverable. Nothing visual changes (`off` styling, opacity and cursor are untouched).
+
+### Verification
+
+| check | result |
+|---|---|
+| `py v2-testing/tools/stylelint.py` | **exit 0** — `0 findings ({}), 109 allowed, 0 css` |
+| `npx esbuild@0.21.5 --loader:.jsx=jsx` on all six touched frontend files | all parse (`ResumeEditor` 55.3 kb · `CoverLetterEditor` 35.8 kb · `CoverLetters` 21.9 kb · `Toast` 4.0 kb · `ui` 36.2 kb · `hooks` 2.2 kb) |
+| `py -3.10 -m pytest backend/tests/test_autofill_extract.py -q` | **17 passed** (with `test_autofill_trim.py`: 27 passed) |
+| whole autofill/qa-bank slice, host | 41 passed, 1 skipped; the 6 `api_client` tests error on `ModuleNotFoundError: apscheduler` (host has no deps — container-only, as before) |
+| `pytest test_autofill_endpoint.py test_autofill_extract.py` **in the backend container** | **21 passed** |
+| full `pytest backend/tests` in the backend container | **880 passed** (test run only — the uvicorn process was *not* restarted, so the live API still serves the pre-fix code) |
+| brace balance vs `HEAD` | all six frontend files `(0,0,0)` before and after. `routes_autofill.py` reads `+6 {` on a raw character count — those braces are inside the new docstrings (`{"answer": …` examples); the tokenised code-only balance is `(0,0,0)` before and after |
+
+**Files touched — Python:** `backend/api/routes_autofill.py`, `backend/tests/test_autofill_endpoint.py`, `backend/tests/test_autofill_extract.py` (new). Nothing else under `v2-testing/` was modified.
+
+**Still unverified in a browser** (no rebuild): the three DS-B-02 toast paths and the DS-B-01 `role`/`tabIndex` assertion. The existing repro scripts still apply — `zzbd_04h_falsetoast.py` (stub `POST /resumes/tailor` → `202`, `GET /monitor/active` → `[]`, plus `GET /monitor/run/*` → `404` and `/monitor/history` → `[]`) should now produce the neutral "could not be located" toast rather than the green `✓`, and stubbing the run row as `{"status":"failed","error":"boom"}` should produce `Tailoring failed — boom`.

@@ -66,7 +66,10 @@ function Toast({ t, onClose }) {
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(10px)',
       transition: 'opacity 250ms ease, transform 250ms ease',
     }}>
-      {k.spin && <Spinner size={11} color="currentColor" />}
+      {/* DS-B-02: a `progress` card is also the quiet ground for a neutral
+          *result* ("finished, but …"), which must not keep spinning. `spin: false`
+          on the toast opts that one card out; nothing else changes. */}
+      {k.spin && t.spin !== false && <Spinner size={11} color="currentColor" />}
       {/* ui: keep — a 16px filled glyph badge (✓ / ✕ on the toast tint), not a status dot: Dot draws a bare tone disc with no glyph */}
       {k.mark && (
         <span style={{ flex: '0 0 auto', width: 16, height: 16, borderRadius: 'var(--radius-control)', background: k.markBg, color: 'var(--accent-ink)', fontSize: 9.5, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{k.mark}</span>
