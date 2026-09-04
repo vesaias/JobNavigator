@@ -85,7 +85,7 @@ const SORT_OPTIONS = [
   { id: 'tier', label: 'Priority tier', hint: 'Tier A first, untiered last' },
   { id: 'open', label: 'Open roles', hint: 'Most roles in the feed first' },
   { id: 'fit', label: 'Average fit', hint: 'Best-scoring companies first' },
-  { id: 'run', label: 'Last scrape', hint: 'Longest since a run first' },
+  { id: 'run', label: 'Last scrape', hint: 'Longest since last run' },
 ]
 const DEPTHS = [
   { id: 'off', label: 'Off', hint: 'New jobs are stored unscored' },
@@ -282,7 +282,7 @@ export default function Companies() {
   const inactiveInFilter = filtered.filter((c) => !c.active)
   const activeInFilter = filtered.filter((c) => c.active)
   const bulkHint = tiers.length || query.trim()
-    ? `Applies to the ${filtered.length} companies in the current filter · jobs already found are kept`
+    ? `Applies to the ${filtered.length} companies shown. Jobs already found are kept.`
     : `Applies to all ${filtered.length} companies · jobs already found are kept`
 
   // ── actions ──
@@ -428,7 +428,7 @@ export default function Companies() {
           const on = tiers.includes(t)
           return (
             <Pill key={t} on={on} onClick={() => setTiers((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t])}
-              title="Add/remove from filter · multi-select, remembered per browser">
+              title="Add to or remove from the filter. Multiple allowed. Saved in this browser.">
               {/* the count comes from the warm snapshot until the list settles, so
                   the pill is its final width on the first frame */}
               <span>{t === 'none' ? 'Untiered' : tierLabel(t, { long: true })}<span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7, marginLeft: 6, ...warmStyle }}>{warmTier(t) != null ? warmTier(t) : NBSP}</span></span>
@@ -494,7 +494,7 @@ export default function Companies() {
               {/* company */}
               <span style={{ flex: 1, minWidth: 118, display: 'flex', alignItems: 'center', gap: 7, paddingRight: 10 }}>
                 {isAlarming(c, downMap[c.id]) && <span title={`Needs attention — ${warnTextOf(c, downMap[c.id])}`} style={{ flex: '0 0 auto', fontSize: 11, color: c.last_error ? 'var(--bad)' : 'var(--warn)' }}>▲</span>}
-                <span title={c.h1b_lca_count ? `${c.name} · ${c.h1b_lca_count} H-1B filings on record${c.h1b_approval_rate ? `, ${c.h1b_approval_rate}% approved` : ''} — feeds the verdict on each job` : c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                <span title={c.h1b_lca_count ? `${c.name} · ${c.h1b_lca_count} H-1B filings${c.h1b_approval_rate ? `, ${c.h1b_approval_rate}% approved` : ''}. Used for each job's H-1B verdict.` : c.name} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                 {/* ui: keep — the “+N aliases” count badge: 9.5 on --surface-2, pad 1 5; Tag is 10/pad 2 8 uppercase */}
                 {aliases.length > 0 && <span title={`Also scraped as ${aliases.join(', ')}`} style={{ flex: '0 0 auto', position: 'relative', top: 1, fontSize: 9.5, padding: '1px 5px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>+{aliases.length}</span>}
               </span>
@@ -511,7 +511,7 @@ export default function Companies() {
               {showResumes && <Helper title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10, ...(rn ? { color: 'var(--text-2)' } : null) }}>{rn || 'Default'}</Helper>}
               {/* ats */}
               {showAts && <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
-                {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `H-1B slug · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{firstAts}</span>}
+                {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `MyVisaJobs company id · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{firstAts}</span>}
                 {urls.length > 1 && <Helper size="xs" title={urls.join('\n')} style={{ flex: '0 0 auto' }}>+{urls.length - 1}</Helper>}
                 {urls.length === 0 && <Helper>—</Helper>}
               </span>}
@@ -616,7 +616,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   const nUrl = draft.scrape_urls.filter(Boolean).length, nApp = company.application_count || 0
   const subtitle = `${tierLabel(draft.tier, { long: true })} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
   const lca = company.h1b_lca_count
-  const lcaLine = lca ? `${lca} filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''} — each job's H-1B verdict is based on these.` : 'No filings on record, so jobs here show H-1B Unknown. Blank auto-detects from the company name.'
+  const lcaLine = lca ? `${lca} H-1B filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''}. Each job's H-1B verdict is based on these.` : 'No H-1B filings on record, so jobs show H-1B Unknown. Leave blank to detect the company from its name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
   const resumeHelp = selNames.length ? `New jobs are scored against ${selNames.join(', ')}.` : 'Nothing selected, so new jobs use your default résumé from Settings.'
   const bannerText = warnTextOf(company, downReason)
@@ -678,7 +678,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 12, color: bannerMuted ? 'var(--text-2)' : 'var(--text)', lineHeight: 1.5 }}>{bannerText}</span>
               <Helper size="xs">
-                {company.last_error ? 'Last scrape run' : 'Detected on the recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
+                {company.last_error ? 'Last scrape run' : 'Detected in recent runs'} · last ran {ago(company.last_run_at || company.last_scraped_at)}
                 {bannerMuted
                   ? ` · ${company.active ? `acknowledged ${ago(company.warning_acknowledged_at)}` : 'paused, so it is not counted'}`
                   : null}
@@ -704,7 +704,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={fieldLabel}>Also known as</span>
             <Input value={draft.aliases} onChange={(v) => set({ aliases: v })} placeholder="Alt names, comma-separated" ariaLabel="Also known as" />
-            <Helper size="xs">Postings under these names collapse into this company.</Helper>
+            <Helper size="xs">Postings under these names are matched to this company.</Helper>
           </div>
           <UrlEditor urls={draft.scrape_urls} onChange={(u) => set({ scrape_urls: u })} />
         </div>
@@ -762,7 +762,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={fieldLabel}>Pages to read</span>
                   <Input type="number" min={1} max={20} value={draft.max_pages} onChange={(v) => set({ max_pages: v })} ariaLabel="Pages to read" />
-                  <Helper size="xs">Stops paging after this many.</Helper>
+                  <Helper size="xs">Maximum number of result pages to read.</Helper>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -805,7 +805,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
   const known = ats !== 'Generic'
   const atsNote = !url ? 'The ATS is detected once you paste a URL.'
     : known ? "Jobs are read from the board's API, so no page settings are needed."
-      : 'No known ATS — the page is loaded and read as HTML. If it lists nothing, set a wait-for selector in the company config.'
+      : 'Unknown job board. The page is read as HTML. If no jobs are found, set a wait-for selector in the company settings.'
   const selNames = [...resumes.filter((r) => selected.includes(r.id)).map((r) => r.name), ...(selected.includes('persona') ? ['Persona'] : [])]
   const scoreNote = depth === 'off' ? 'New jobs arrive unscored — you can score them by hand from the feed.'
     : `New jobs are scored against ${selNames.length ? selNames.join(', ') : 'your default résumé from Settings'} as they arrive.`
@@ -879,7 +879,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
             </div>
           </div>
           <Helper style={{ paddingTop: 2 }}>{scoreNote}</Helper>
-          <Helper>Title filters, wait-for selector and max pages use the defaults — change them in the company config when a board needs it.</Helper>
+          <Helper>Title filters, wait-for selector and max pages use the defaults. Change them in the company settings if needed.</Helper>
         </div>
         {/* ui: keep — a modal footer bar: its rule is on top */}
         <div style={{ flex: '0 0 auto', padding: '12px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -917,10 +917,10 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   const bodyExcluded = test.body_excluded_count ?? 0
   const bodyUnchecked = test.body_unchecked_count ?? 0
   const bodyPhrases = test.body_phrase_count ?? 0
-  const summary = `${kept} kept · ${Math.max(0, found - kept - bodyExcluded)} title-filtered`
+  const summary = `${found + rejected} found · ${kept} kept · ${Math.max(0, found - kept - bodyExcluded)} removed by title filter`
     + (bodyExcluded ? ` · ${bodyExcluded} would be ignored (body phrases)` : '')
-    + ` · ${rejected} validation-rejected · ${found + rejected} extracted`
-    + (passCo != null && passCo !== kept ? ` · ${passCo} pass this company's filters · ${Math.max(0, passCo - kept - bodyExcluded)} removed by the global list` : '')
+    + ` · ${rejected} invalid`
+    + (passCo != null && passCo !== kept ? ` · ${passCo} pass this company's filters · ${Math.max(0, passCo - kept - bodyExcluded)} removed by the global exclude list` : '')
     + (bodyUnchecked ? ` · ${bodyUnchecked} not body-checked (needs the description)` : '')
   const urls = test.urls_scraped || []
   const pag = test.pagination_debug || []
@@ -973,7 +973,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
         {pag.length > 0 && (
           <HeaderRow align="stretch" pad="10px 22px" bg="recessed" soft style={{ flexDirection: 'column', gap: 3 }}>
             {/* ui: keep — the debug band's head is accent at weight 600; Label is --label-ink at 400 */}
-            <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>Pagination debug</span>
+            <span style={{ fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>Page-by-page details</span>
             {pag.map((p, i) => (
               <span key={i} style={{ fontSize: 11, color: p.clicked ? 'var(--good)' : 'var(--bad)' }}>Page {p.page} · {p.clicked ? `Clicked ${p.clicked_via?.selector || ''} — ${p.clicked_via?.text || ''}` : 'No next button found'}</span>
             ))}

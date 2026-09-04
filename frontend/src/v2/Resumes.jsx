@@ -149,7 +149,7 @@ export default function V2Resumes() {
       <HeaderRow pad="22px 30px 16px 24px" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Résumés</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...subStyle }}>{sub ? `${sub.b} base${sub.b === 1 ? '' : 's'} · ${sub.c} tailored cop${sub.c === 1 ? 'y' : 'ies'} are under their jobs${sub.a ? ` · ${sub.a} archived` : ''}` : NBSP}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...subStyle }}>{sub ? `${sub.b} base${sub.b === 1 ? '' : 's'} · ${sub.c} tailored cop${sub.c === 1 ? 'y' : 'ies'}, listed under their jobs${sub.a ? ` · ${sub.a} archived` : ''}` : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <SearchInput variant="underline" width="300px" value={q} onChange={(v) => { setQ(v); setShowArchived(false) }}
@@ -167,7 +167,7 @@ export default function V2Resumes() {
              user to create a résumé they already have. */
           : loadErr ? (
             <Band interactive={false} style={{ padding: '20px 14px', borderColor: 'var(--bad)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
-              <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés — the shelf request failed.</span>
+              <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés. Retry, or check that the backend is running.</span>
               <Pill size="sm" onClick={() => setReload((n) => n + 1)}>Try again</Pill>
             </Band>
           )
@@ -196,7 +196,7 @@ export default function V2Resumes() {
                 <NavLink onClick={() => setShowArchived(false)}>‹ Back</NavLink>
                 <Label size="lg">Archived · {archived.length} from rejected or stale applications</Label>
               </div>
-              {archived.length === 0 && <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing archived yet — copies appear here when their application is rejected or goes stale.</Band>}
+              {archived.length === 0 && <Band interactive={false} style={{ padding: '20px 14px', fontSize: 12.5, color: 'var(--muted)' }}>Nothing archived yet. A copy is archived when its application is rejected or has had no activity for a long time.</Band>}
               {archived.slice(0, archLimit).map((c) => (
                 <Card key={c.id} onClick={() => openResume(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, lineHeight: '20px' }}>
                   {/* ui: keep — uppercase "archived" badge (bg + r99): the Tag role, not Label */}
@@ -350,7 +350,7 @@ function AddModal({ onClose, onCreated }) {
       }
       const { data } = await api.post('/resumes', { name: name.trim() || file.name.replace(/\.pdf$/i, ''), is_base: true, json_data: parsed.json_data || parsed })
       onCreated(data.id)
-    } catch (e) { setErr(e.response?.data?.detail || 'Import failed — is it a text PDF?'); setBusy('') }
+    } catch (e) { setErr(e.response?.data?.detail || 'Import failed. The PDF must contain selectable text, not a scanned image.'); setBusy('') }
   }
 
   const canCreate = !!name.trim() && !busy

@@ -90,7 +90,7 @@ export default function LoginModal({ onSuccess }) {
           </Button>
 
           <Helper style={{ textWrap: 'pretty' }}>
-            First run with no key configured? Leave the field blank and sign in — you’ll set one in Settings › Advanced.
+            If no API key is set yet, leave this blank and sign in. You can add a key later in Settings › Advanced.
           </Helper>
         </>
       )}

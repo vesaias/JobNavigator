@@ -65,7 +65,7 @@ const GROUPS = [
     ['demographics', 'sexual_orientation', 'Sexual orientation', 'enum', { options: ORIENT }],
     ['demographics', 'decline_demographics', '', 'check', {
       wide: true, uncounted: true,
-      text: 'Prefer not to answer demographic questions — autofill picks “decline” where the form allows it',
+      text: 'Decline demographic questions where the form allows it',
     }],
   ]],
   ['workauth', 'Work authorization', [
@@ -379,7 +379,7 @@ export default function Persona() {
         {/* left — résumé content, edited with the Résumé editor's own components */}
         <div style={{ flex: 1.1, minWidth: 0, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ColumnHead title="Résumé content"
-            help="Your full work history, summary, skills and achievements. The AI uses this as the source pool for tailored résumés, as raw material for cover-letter anecdotes, and as the candidate profile when scoring jobs." />
+            help="Your full work history, summary, skills and achievements. Used for tailored résumés, cover letters and job scoring." />
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 26px 24px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             {SECTION_ORDER.map((name) => (
               <SectionShell key={name} name={name} count={counts[name]} open={sections.has(name)} onToggle={() => toggleSection(name)}>
@@ -395,7 +395,7 @@ export default function Persona() {
         {/* right — the autofill nodes + the Q&A bank */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ColumnHead title="Autofill content"
-            help="Personal info used to auto-fill application forms — contact details, work authorization, EEO answers, salary expectations and reusable screener answers. Not used by the AI for résumé generation or scoring." />
+            help="Details used to fill application forms: contact, work authorization, EEO answers, salary and reusable screener answers. Not used for résumés or scoring." />
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 26px 24px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
             {GROUPS.map(([id, title, fields]) => {
               const open = groups.has(id)

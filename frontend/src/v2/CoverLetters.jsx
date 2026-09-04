@@ -140,7 +140,7 @@ export default function CoverLetters() {
       setLetters(data || []); setLoadErr(null)
     } catch (e) {
       console.error(e)
-      setLoadErr(e?.response?.status ? `The server answered ${e.response.status}.` : (e.message || 'Network error'))
+      setLoadErr(e?.response?.status ? `The server returned error ${e.response.status}. Try again.` : (e.message || 'Network error'))
     }
   }, [])
 
@@ -262,7 +262,7 @@ export default function CoverLetters() {
   // reachable once the letters are in hand anyway
   const { warm: sub, style: subStyle } = useWarm('cover-letters', ready ? { n: letters.length, live } : null, ready)
   const countLine = ready && query.trim()
-    ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} live application${live === 1 ? '' : 's'}`   // CL-23
+    ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} open application${live === 1 ? '' : 's'}`   // CL-23
     : sub ? `${sub.n} letter${sub.n === 1 ? '' : 's'} · ${sub.live} live application${sub.live === 1 ? '' : 's'}` : NBSP
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''

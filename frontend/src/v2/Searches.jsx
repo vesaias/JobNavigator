@@ -72,7 +72,7 @@ const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'fre
 // it reserved pushed the "Off" label off the cell's centre.
 const DEPTHS = [
   { id: 'off', label: 'Off', dots: 0, hint: 'New results arrive unscored — score them by hand from the feed' },
-  { id: 'light', label: 'Light', dots: 1, hint: 'Score only — cheap enough to leave on' },
+  { id: 'light', label: 'Light', dots: 1, hint: 'Score only. Low cost.' },
   { id: 'full', label: 'Full', dots: 2, hint: 'Score plus the full report with keywords and requirements' },
 ]
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
@@ -80,10 +80,10 @@ const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Appl
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
-  if (mode === 'levels_fyi') return ['Configure filters on levels.fyi, then paste the URL here — location, job family, salary and recency are all encoded in it.', 'sm-levels']
-  if (mode === 'jobright') return ['Personalized AI recommendations from your Jobright.ai account. A search term switches it to search mode; credentials are in Settings.', 'sm-jobright']
-  if (mode === 'extension') return ['Jobs arrive via the “Save to Job Feed” button on any website. Set auto-score depth and the filters below — they apply as each job is saved.', 'sm-levels']
-  if (mode === 'linkedin_extension') return ['Jobs import via passive capture on linkedin.com/jobs/collections/* pages. The filters below auto-filter during import.', 'sm-levels']
+  if (mode === 'levels_fyi') return ['Set your filters on levels.fyi and paste the URL here. The URL contains location, job family, salary and date filters.', 'sm-levels']
+  if (mode === 'jobright') return ['Recommendations from your Jobright.ai account. Enter a search term to search instead. Credentials are in Settings › Accounts.', 'sm-jobright']
+  if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
+  if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
 }
 
@@ -252,10 +252,10 @@ function ConfigForm({ d, set }) {
   } else if (m === 'freehire') {
     fields.push(
       <Cell key="term" label="Search term · optional" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. golang backend"
-        sub="ANDed with the URL — must appear in the posting text" />,
+        sub="Added to the URL filters. Must appear in the posting text." />,
       <Cell key="url" label="freehire.me URL · filters forwarded" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
         placeholder="https://freehire.me/?role=backend&seniority=senior&countries=us"
-        sub="Role, seniority, countries, posted_within_days… pass straight through" />,
+        sub="Role, seniority, countries and posting age are taken from the URL as is" />,
       <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
   }
@@ -585,7 +585,7 @@ export default function Searches() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-                <Helper>Runs on the next scheduled run once created</Helper>
+                <Helper>Runs at the next scheduled scrape after you create it</Helper>
                 <Button variant="secondary" size="sm" onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>
@@ -604,7 +604,7 @@ export default function Searches() {
           const isOpen = editing === s.id
           const testBlocked = !!testingId && testingId !== s.id   // SRCH-23
           const mutedWarn = mutedWarnOf(s)
-          const summary = spin ? 'running now — results appear in the Job Feed as they arrive…' : (warn || mutedWarn || summaryOf(s))
+          const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (warn || mutedWarn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
             /* same card hover as Résumés and Cover Letters. Not while open — the
@@ -637,7 +637,7 @@ export default function Searches() {
                 {depth !== 'off' && (
                   <Label title={depth === 'full'
                     ? 'Full — every new result gets a score plus the full report with keywords and requirements'
-                    : 'Light — every new result gets a score only; open a job to generate its report'}
+                    : 'Light: each new job gets a score. Open the job to generate a full report.'}
                     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, cursor: 'help' }}>
                     {/* the same discs the Segmented cells draw — DEPTHS.dots is a count now */}
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
@@ -647,7 +647,7 @@ export default function Searches() {
                 )}
                 {/* fixed width so Active matches Paused and both sit on one vertical axis */}
                 <Pill size="sm" on={s.active} onClick={(e) => { e.stopPropagation(); toggleActive(s) }}
-                  title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause — leaves the schedule, config is kept' : 'Resume the schedule')}
+                  title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause. Removed from the schedule, settings kept.' : 'Resume the schedule')}
                   style={{ flex: '0 0 62px' }}>
                   {s.active ? 'Active' : 'Paused'}
                 </Pill>
@@ -666,7 +666,7 @@ export default function Searches() {
                     {/* ui: keep — 25px Run/Test pills sized to their row siblings; Pill sm is 26 */}
                     {TESTABLE.includes(s.search_mode) && (
                       <span onClick={testBlocked ? undefined : () => runTest(s)} className={testBlocked ? undefined : 'v2-bdc'}
-                        title={testBlocked ? 'A test is already running' : 'Preview run — shows results and per-job filter reasons, saves nothing'}
+                        title={testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.'}
                         style={{ height: 25, padding: '0 9px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testBlocked ? 'default' : 'pointer', opacity: testBlocked ? .5 : 1 }}>
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </span>
@@ -718,7 +718,7 @@ export default function Searches() {
         {ready && !loadErr && searches.length === 0 && !newOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>No searches yet</span>
-            <Helper>Create one to start pulling roles into the Job Feed on a schedule.</Helper>
+            <Helper>Create one to add jobs to the Job Feed on a schedule.</Helper>
             <Link onClick={() => setNewOpen(true)} style={{ paddingTop: 2 }}>+ New search</Link>
           </div>
         )}
@@ -892,7 +892,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                   </>
                 )}
                 {nBodyExcluded > 0 && <> · <b style={{ color: 'var(--warn)' }}>{nBodyExcluded} would be ignored (body phrases)</b></>}
-                {' · '}{nRaw} raw{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
+                {' · '}{nRaw} found{d.duration != null && <span style={{ color: 'var(--muted)' }}> · {d.duration}s</span>}
                 {nBodyUnchecked > 0 && <span style={{ color: 'var(--muted)' }}> · {nBodyUnchecked} not body-checked (needs the description)</span>}
               </span>
               <Pill onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Pill>

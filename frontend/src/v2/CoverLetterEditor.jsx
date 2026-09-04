@@ -339,7 +339,7 @@ export default function CoverLetterEditor() {
   const badge = stage ? stage.toUpperCase() : 'DRAFT'
   const voiceLabel = presets.find((p) => p.id === doc.voice)?.label || doc.voice
   const lengthLabel = LENGTHS.find(([lid]) => lid === doc.length)?.[1] || doc.length
-  const voiceLen = [voiceLabel, lengthLabel].filter(Boolean).join(' · ') || 'voice and length not recorded'
+  const voiceLen = [voiceLabel, lengthLabel].filter(Boolean).join(' · ') || 'voice and length unknown for this letter'
   const tplLabel = templates.find((t) => t.id === template)?.name || template || 'Template'
   const fmtLabel = PAGE_FORMATS.find(([f]) => f === format)?.[1] || format
 
@@ -430,7 +430,7 @@ export default function CoverLetterEditor() {
                       style={{ flex: 1, minWidth: 0 }} />
                     {tracked && (
                       <Input value={ct.stub || ''} placeholder="id" mono ariaLabel="Tracked link stub"
-                        title="Short stub for the tracked link id (e.g. l, w, gh) — tracked links are short links that record when a recruiter opens them"
+                        title="Short stub used in the tracked link, e.g. l, w, gh"
                         onChange={(v) => update((d) => { d.header.contact_items[i].stub = v })}
                         style={{ flex: '0 0 34px', padding: '0 6px', textAlign: 'center', minWidth: 0 }} />
                     )}
@@ -546,7 +546,7 @@ export default function CoverLetterEditor() {
               )}
             </span>}
 
-            {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed — showing the last render · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
+            {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed. Showing the previous version · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
             <Button size="xs" onClick={download} style={{ marginLeft: 'auto' }}>↓ Download PDF</Button>
           </HeaderRow>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -572,7 +572,7 @@ export default function CoverLetterEditor() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>From résumé</Label>
                 <Picker value={rSource} options={sourceOpts} placeholder="Select a source…" onPick={setRSource} />
-                <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona — switch to use different achievements.</Helper>
+                <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona. Switch to use a different set of achievements.</Helper>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Voice</Label>
