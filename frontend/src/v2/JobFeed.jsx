@@ -4,22 +4,23 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape } from './hooks'
-import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, TableHead } from './ui'
+import { Button, Card, Check as UICheck, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, TableHead } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
 const UI_KEY = 'v2_feed_ui'   // persisted panel open/collapse prefs
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
-// The detail header's metadata block (crumb, title, salary/location/H-1B, actions)
-// collapses to a one-line title strip so the posting frame / report band takes the
-// height back. It is the one panel pref the user flips constantly, so it gets its
-// own key rather than riding inside UI_KEY's blob; the old UI_KEY.headOpen is still
-// read once so an existing preference survives.
-const META_KEY = 'jobnavigator_v2_feed_meta'
-const loadMetaOpen = () => {
-  try { const v = localStorage.getItem(META_KEY); if (v !== null) return v === '1' } catch {}
-  return loadUI().headOpen ?? true
-}
+// The board's whole-top collapse ("JobNavigator Redesign.dc.html" §Feed, l.252-255,
+// l.301, l.1403-1404 and l.1732-1741): an 11px grab-line above the detail header
+// folds the ENTIRE top of the right side away — the metadata header AND the
+// score/report band together — so the posting frame rises to the top of the panel.
+// It is its own key, `jn_feed_analysis_collapsed` ('1'/'0'), exactly as the board
+// names it, and it is deliberately NOT part of the UI_KEY blob: the board reads it
+// straight from localStorage, and it survives both reloads and job selection (the
+// board's select handler, l.1545, resets report/menuFor/headMenu/checked/
+// filterOpen/viewCached — never this).
+const ANA_KEY = 'jn_feed_analysis_collapsed'
+const loadAnaCollapsed = () => { try { return localStorage.getItem(ANA_KEY) === '1' } catch { return false } }
 // F4: per-host frame-check results ({host: 1 embeddable | 0 blocked}). The probe
 // is a server-side fetch of the posting (measured 0.8–1.9 s on a cold host), and
 // v2 used to mount nothing until it answered — v1 never probed at all. A host we
@@ -161,9 +162,12 @@ export default function V2JobFeed() {
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
   const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
-  const [headOpen, setHeadOpen] = useState(loadMetaOpen)
-  useEffect(() => { try { localStorage.setItem(META_KEY, headOpen ? '1' : '0') } catch {} }, [headOpen])
-  const toggleHead = useCallback(() => setHeadOpen((v) => !v), [])
+  const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? true)
+  // whole-top collapse (header + score/report band). Its own key, its own effect:
+  // the board persists it on its own, outside the panel-prefs blob.
+  const [anaCollapsed, setAnaCollapsed] = useState(loadAnaCollapsed)
+  useEffect(() => { try { localStorage.setItem(ANA_KEY, anaCollapsed ? '1' : '0') } catch {} }, [anaCollapsed])
+  const toggleAna = useCallback(() => setAnaCollapsed((v) => !v), [])
   const [reportOpen, setReportOpen] = useState(() => loadUI().reportOpen ?? false)
   const [reportTab, setReportTab] = useState(0)   // per-job: reports differ per résumé, so this resets
   const [reqFilter, setReqFilter] = useState(() => loadUI().reqFilter ?? 'all')
@@ -171,7 +175,7 @@ export default function V2JobFeed() {
   const [breakdownOpen, setBreakdownOpen] = useState(() => loadUI().breakdownOpen ?? false)
   const [keywordOpen, setKeywordOpen] = useState(() => loadUI().keywordOpen ?? false)
   const [reqOpen, setReqOpen] = useState(() => loadUI().reqOpen ?? false)
-  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
+  useEffect(() => { try { localStorage.setItem(UI_KEY, JSON.stringify({ headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched })) } catch {} }, [headOpen, reportOpen, breakdownOpen, keywordOpen, reqOpen, reqFilter, showMatched])
   const [viewCached, setViewCached] = useState(false)
   const [cachedHtml, setCachedHtml] = useState(null)
   const [frameOk, setFrameOk] = useState(true)          // true=render the live frame, false=known-blocked (extension off)
@@ -787,9 +791,6 @@ export default function V2JobFeed() {
   const visaText = d ? (H1B[d.h1b_verdict] || H1B.unknown).label : ''
   const visaTitle = d ? (d.h1b_company_lca_count ? `Based on ${d.h1b_company_lca_count} H-1B filings` : 'No H-1B filings on record') : ''
   const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
-  // what the collapsed title strip carries in its tooltip — everything the hidden
-  // metadata block was showing, so nothing is unreachable while it is folded away
-  const collapsedMeta = d ? [d.title, [d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')].join(' — ') : ''
 
   // ── detail report derivation ──
   const reports = d ? scoreEntries(d).map(([name, score]) => ({ name, score, tailored: isTailoredName(name), rpt: (d.scoring_report || {})[name] })).sort((a, b) => b.score - a.score) : []
@@ -811,6 +812,12 @@ export default function V2JobFeed() {
   // The panel can only be open where there is a report to read.
   const hasReport = reports.some((r) => !!r.rpt)
   const reportShown = reportOpen && hasReport
+  // The report only *covers* the posting while the top is standing. Collapsed, the
+  // whole band is display:none, so a still-set `reportOpen` must not keep hiding
+  // the posting too — the board binds its `postingDisplay` to `reportOpen` alone
+  // (l.1766) and so renders an empty panel in that combination.
+  const reportCovers = reportShown && !anaCollapsed
+  const anaHint = anaCollapsed ? 'Show job details & analysis' : 'Hide job details & analysis — posting only'
   const dCached = d && d.status === 'applied' && d.has_cached_page
 
   return (
@@ -1073,23 +1080,31 @@ export default function V2JobFeed() {
         <section style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface)', minHeight: 0 }}>
           {!d ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Select a job.</div> : (
             <>
+              {/* ui: keep — the board's grab-line (l.252-254): a full-width 11px band
+                  holding a bare 44x3 handle, sitting above the detail header. It is
+                  the single control that folds the whole top of the right side away,
+                  and it is not a Row/Button/SectionHead: it has no label, no padding
+                  box, no border of its own and no head row to draw. */}
+              <div {...kb(toggleAna)} onClick={toggleAna} aria-expanded={!anaCollapsed} title={anaHint} className="v2-grab"
+                style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 11, background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}>
+                {/* ui: keep — the 44x3 handle itself: a rounded rule, not a Pill (no text,
+                    no padding, no border) and not a Rule (which draws a 1px line token) */}
+                <span style={{ width: 44, height: 3, borderRadius: 'var(--radius-control)', background: 'var(--edge)' }} />
+              </div>
+
               {/* header */}
-              {/* Collapsed, the header is a single title strip: 9 + 30 (the action
-                  row) + 8 + 1px rule = 48px, against 66px when it still carried the
-                  one-line meta Helper — 18px handed back to the frame/report below. */}
-              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '9px 30px 8px'} style={{ flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
+              <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '11px 30px 12px'} style={{ display: anaCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
-                  {/* ui: keep — a bare 19x26 caret cell in the header gutter (19x20 collapsed,
-                      so it centres on the one-line strip's 20px title): it has no label, so
-                      there is no head row for SectionHead to draw, and the title beside it is
-                      a separate click target */}
-                  <div role="button" tabIndex={0} aria-expanded={headOpen} title={headOpen ? 'Hide job details' : 'Show job details'} onClick={toggleHead} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHead() } }} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: headOpen ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
-                  <div onClick={toggleHead} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
+                  {/* ui: keep — a bare 19x26 caret cell in the header gutter: it has no label,
+                      so there is no head row for SectionHead to draw (the title beside it is a
+                      separate click target) */}
+                  <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
+                  <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <Label style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
                     </Label>}
                     {/* ui: keep — the collapsing detail title: serif 26/17, -.025em, line-clamped — outside the 18/19 heading scale */}
-                    <h2 title={headOpen ? d.title : collapsedMeta} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
+                    <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
                         <span style={{ maxWidth: 230, fontFamily: 'var(--mono)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
@@ -1097,10 +1112,7 @@ export default function V2JobFeed() {
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span title={visaTitle} style={{ color: visaCol }}>{visaText}</span>
                       </div>
-                    ) : null}
-                    {/* Collapsed is title-only: the meta that used to survive as a second
-                        Helper line is what the toggle is asked to hide, so it moves to the
-                        title's tooltip (`collapsedMeta`) and the strip stays one line. */}
+                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1135,9 +1147,11 @@ export default function V2JobFeed() {
                 </div>
               </HeaderRow>
 
-              {/* report band */}
+              {/* report band — the grab-line folds this whole wrapper away with the
+                  header: the band line AND the expanded report (board l.301 binds
+                  its display to analysisWrapDisplay, the same flag as the header) */}
               {dScored && (
-                <div style={{ position: 'relative', zIndex: 18, flex: reportShown ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'relative', zIndex: 18, flex: reportShown ? '1 1 0%' : '0 0 auto', minHeight: 0, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)', display: anaCollapsed ? 'none' : 'flex', flexDirection: 'column' }}>
                   {/* ui: keep — the report *band* header, not a section head: its caret is a
                       fixed 19px gutter aligned to the row rail, it carries a 34px score ring and
                       résumé tabs, and its body text runs at the band's inherited size, which
@@ -1317,7 +1331,7 @@ export default function V2JobFeed() {
 
               {/* posting area — always mounted (display toggled, not unmounted) so the
                   iframe isn't reloaded each time the report is opened/closed */}
-              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportShown ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
+              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: reportCovers ? 'none' : 'flex', flexDirection: 'column' }} className="v2-scroll">
                   {/* live / cached posting — full-bleed iframe */}
                   <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     {dCached && (
