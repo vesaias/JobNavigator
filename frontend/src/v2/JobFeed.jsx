@@ -914,7 +914,7 @@ export default function V2JobFeed() {
             <Input type="number" mono value={numDraft.min_score} onChange={(v) => setNum('min_score', v)}
               ariaLabel="Minimum score" style={{ flex: 1, minWidth: 0 }} />
           </div>
-          <Helper size="xs" style={{ marginTop: 8 }}>Also hides unscored jobs — they have no score to compare</Helper>
+          <Helper size="xs" style={{ marginTop: 8 }}>Also hides unscored jobs</Helper>
         </Drop>
         <Drop inset label={filters.min_salary && filters.max_salary ? `$${filters.min_salary}K–$${filters.max_salary}K` : filters.min_salary ? `Salary ≥ $${filters.min_salary}K` : filters.max_salary ? `Salary ≤ $${filters.max_salary}K` : 'Salary'} active={!!(filters.min_salary || filters.max_salary)} onClear={() => setF({ min_salary: '', max_salary: '' })} open={menu === 'salary'} onToggle={() => setMenu(menu === 'salary' ? null : 'salary')} width={288}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
