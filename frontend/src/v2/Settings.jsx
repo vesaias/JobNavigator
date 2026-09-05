@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape, useSettled } from './hooks'
-import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea } from './ui'
+import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
 import { useTheme, MODE_OPTIONS, THEME_OPTIONS } from './theme'
+import { describeCron, whenShort, CRON_PRESETS } from './time'
 import api from '../api'
 import './theme.css'
 
@@ -60,10 +61,16 @@ const asJson = (v) => {
 // revealing must not leave the mask in the box (typing after it used to PATCH
 // "••••••<typed>", and the server only drops an exact mask — that silently
 // destroyed the stored secret), and clearing the box must not wipe the secret.
-function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, int, cron, onInvalid }) {
+function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, int, cron, onInvalid, onLocal }) {
   const [shown, setShown] = useState(false)
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => { setLocal(value ?? '') }, [value])
+  // SET-CRON: the cron rows read their expression back as it is TYPED, not only
+  // after it is saved, so the box publishes its local value. Held in a ref so an
+  // inline arrow at the call site can't re-fire this effect on every render.
+  const localCb = useRef(onLocal)
+  localCb.current = onLocal
+  useEffect(() => { if (localCb.current) localCb.current(local) }, [local])
   const isMask = value === MASK
   const masked = secret && !shown && !!value
   const reveal = () => { setShown(true); if (local === MASK) setLocal('') }
@@ -104,6 +111,78 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
         </Link>
       )}
     </span>
+  )
+}
+
+// ── cron row ─────────────────────────────────────────────────────────────────
+// SET-27 stopped a malformed cron from reaching configure_scheduler(); it did not
+// help anyone write a correct one. Five raw expressions with nothing but a
+// "5 fields" rule behind them is the least legible row on this screen, so the
+// field now carries two things: a line saying what the expression MEANS and when
+// it next fires (live, from the box's own value — not only after a save), and a
+// picker for the six schedules people actually want.
+//
+// `describeCron` lives in time.js and is documented there. The one thing to know
+// at this call site: it reads the fifth field the way the BACKEND does
+// (APScheduler numbers weekdays 0 = Monday), so `0 9 * * 1-5` reads back as
+// "every Tue, Wed, Thu, Fri, Sat" rather than "weekdays" — which is what that
+// expression actually schedules. The presets are written with names for exactly
+// that reason (DECISIONS D-20).
+function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
+  const [live, setLive] = useState(value ?? '')
+  const [open, setOpen] = useState(false)
+  useEscape(() => setOpen(false), open)
+  // the closer the PDF-preview pickers use (RES-28): the trigger's own container
+  // swallows its clicks, so any click elsewhere in the document closes the menu
+  useEffect(() => {
+    if (!open) return undefined
+    const close = () => setOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [open])
+
+  const expr = (live || '').trim()
+  // the same five-part gate TextBox refuses to save on, so the line agrees with
+  // what the blur will do
+  const parsed = expr && expr.split(/\s+/).length === 5 ? describeCron(expr) : null
+  const bad = !!expr && !parsed
+  const line = !expr ? 'off'
+    : bad ? 'invalid expression'
+      // no `next` means one of two different things: an expression that can never
+      // fire (31 February), or one describeCron chose not to evaluate (an
+      // APScheduler extension it echoes back). Only the first is a warning.
+      : `${parsed.text} UTC${parsed.next ? ` · next ${whenShort(parsed.next)} (your time)`
+        : (parsed.unparsed ? '' : ' · never fires')}`
+
+  return (
+    // the description reserves its own line, so the row's height is the same
+    // whether the box holds a schedule, a typo or nothing
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <TextBox value={value} onSave={onSave} onLocal={setLive} width={width} mono cron
+          ariaLabel={ariaLabel} onInvalid={onInvalid} />
+        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+          {/* the picker role, at ToolbarTrigger's canonical 24 next to a 32px
+              field — the size disagreement is D-21, not a local override */}
+          <ToolbarTrigger label="Preset" open={open} ariaExpanded={open} title="Common schedules"
+            ariaLabel={`${ariaLabel} — pick a common schedule`} onClick={() => setOpen((v) => !v)} />
+          {open && (
+            <Menu role="listbox" ariaLabel="Common schedules" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 232 }}>
+              <MenuHead>Presets</MenuHead>
+              {CRON_PRESETS.map(([label, preset]) => (
+                <MenuItem key={label} role="option" ariaSelected={preset === expr} selected={preset === expr}
+                  hint={preset} hintMono
+                  // through `save`, exactly like a blur: one PATCH, one flash, and
+                  // the row re-reads the stored value (so a failed PATCH rolls the
+                  // box back the way a typed one does)
+                  onClick={() => { setOpen(false); if (preset !== (value ?? '')) onSave(preset) }}>{label}</MenuItem>
+              ))}
+            </Menu>
+          )}
+        </div>
+      </div>
+      <Helper style={bad ? { color: 'var(--bad)' } : undefined}>{line}</Helper>
+    </div>
   )
 }
 
@@ -579,6 +658,9 @@ function Row({ r, ctx }) {
   const right = (() => {
     switch (r.kind) {
       case 'box':
+        // a cron box is the same field plus its description line and preset
+        // picker — same `save`, same five-part gate
+        if (r.cron) return <CronBox value={val(r.key)} onSave={(v) => save(r.key, v)} width={r.w} ariaLabel={r.label} onInvalid={(m) => flash(m, true)} />
         return <TextBox value={val(r.key)} onSave={(v) => save(r.key, v)} width={r.w} mono={r.mono} secret={r.secret} placeholder={r.placeholder}
           ariaLabel={r.label} int={r.int} cron={r.cron} onInvalid={(m) => flash(m, true)} />
       case 'select':
