@@ -607,8 +607,7 @@ export default function ResumeEditor() {
             {/* ui: keep — the two 9px muted ▾ carets below are the PDF-preview toolbar's own paper scale (below Helper's tolerance) */}
             {/* both triggers wait for the template list; the row's height is the Download link's, so nothing moves when they land */}
             {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — `hover="v2-act"` here vs `v2-bd` on the cover-letter editor's identical trigger; same role, hovers intentionally differ */}
-              <ToolbarTrigger label="Template" value={tplLabel} hover="v2-act" line="inherit" title="Résumé template"
+              <ToolbarTrigger label="Template" value={tplLabel} line="inherit" title="Résumé template"
                 onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} />
               {tplOpen && (
                   <Menu role="listbox" ariaLabel="Résumé template" className="v2-scroll" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 190, maxHeight: 300, overflow: 'auto' }}>
@@ -618,7 +617,7 @@ export default function ResumeEditor() {
             </div>}
             {/* format */}
             {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-              <ToolbarTrigger label="Paper" value={format === 'a4' ? 'A4' : 'US Letter'} hover="v2-act" line="inherit" title="Paper size"
+              <ToolbarTrigger label="Paper" value={format === 'a4' ? 'A4' : 'US Letter'} line="inherit" title="Paper size"
                 onClick={() => { setFmtOpen((v) => !v); setTplOpen(false) }} />
               {fmtOpen && (
                   <Menu role="listbox" ariaLabel="Paper size" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 130 }}>

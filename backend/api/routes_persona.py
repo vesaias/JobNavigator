@@ -78,7 +78,8 @@ def update_persona(updates: dict, db: Session = Depends(get_db)):
 # the other five nodes are never touched since nothing in a résumé answers them.
 
 # The header fills contact's name/email/phone/location/social keys; `current_company`
-# has no résumé source and there's no title key (see autofill_schema.py ANSWER_SCHEMA), so `title` is dropped.
+# comes from the latest role in `experience` (see _current_company_from below), and
+# there's no title key (see autofill_schema.py ANSWER_SCHEMA), so `title` is dropped.
 _EMAIL_RE = re.compile(r"[\w.+%-]+@[\w-]+\.[\w.-]+")
 # a phone is digits with the usual separators — no letters, at least 7 digits
 _PHONE_RE = re.compile(r"^\+?[\d][\d\s().+/-]{5,}$")
@@ -169,6 +170,42 @@ def _resume_content_from(json_data: dict) -> dict:
             for k, default in _CONTENT_DEFAULTS}
 
 
+# ── current employer ─────────────────────────────────────────────────────────
+# The one contact key a résumé answers outside its header: the company of the
+# latest role in `experience`. An open-ended role ("2021 – Present") outranks
+# every dated one; ties keep the résumé's own order, which lists newest first.
+_PRESENT_WORDS = ("present", "current", "now", "ongoing", "to date")
+_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+_MONTHS = {m: i for i, m in enumerate(
+    ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"), start=1)}
+# en dash, em dash, minus, hyphen or the word "to" — the separators résumé date ranges use
+_RANGE_SPLIT_RE = re.compile(r"\s*(?:[–—−-]|\bto\b)\s*")
+
+
+def _role_end(entry: dict):
+    """(year, month) the role ended, as a sort key; (9999, 12) for an open-ended one and (0, 0) when the date names no year."""
+    text = str((entry or {}).get("date") or "")
+    tail = _RANGE_SPLIT_RE.split(text)[-1].strip().lower()
+    if any(w in tail for w in _PRESENT_WORDS):
+        return (9999, 12)
+    years = _YEAR_RE.findall(tail) or _YEAR_RE.findall(text)
+    if not years:
+        return (0, 0)
+    month = next((n for m, n in _MONTHS.items() if m in tail), 0)
+    return (int(years[-1]), month)
+
+
+def _current_company_from(content: dict) -> str:
+    """The employer of the most recent role in `resume_content`, for contact.current_company; empty when no role names a company."""
+    rows = [e for e in (content or {}).get("experience") or []
+            if isinstance(e, dict) and str(e.get("company") or "").strip()]
+    if not rows:
+        return ""
+    # -i breaks a tie toward the earlier row, i.e. the one the résumé lists first
+    best = max(range(len(rows)), key=lambda i: (_role_end(rows[i]), -i))
+    return str(rows[best]["company"]).strip()
+
+
 def _import_summary(contact: dict, content: dict, source: str) -> dict:
     exp = content.get("experience") or []
     bullets = sum(len(e.get("bullets") or []) for e in exp if isinstance(e, dict))
@@ -219,6 +256,9 @@ async def import_persona(request: Request, file: Optional[UploadFile] = File(Non
 
     contact = _contact_from_header(json_data.get("header") or {})
     content = _resume_content_from(json_data)
+    employer = _current_company_from(content)
+    if employer:
+        contact["current_company"] = employer
 
     p.contact = contact
     p.resume_content = content

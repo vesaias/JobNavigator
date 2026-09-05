@@ -207,18 +207,19 @@ const PILL_SIZE = {
   sm: { height: 26, fontSize: 'var(--t-11-5)', padding: '0 13px' },
   xs: { height: 25, fontSize: 'var(--t-11-5)', padding: '0 10px', gap: 5 },
 }
-// `hover` names the class the theme's rule hangs on. The default is the role's
-// own `v2-bd` (accent border, no wash); the 25px row pills ask for `v2-act`
-// (border + wash) or `v2-bdc` (border + ink) since those sites disagree on the look.
+// `hover` names the class the theme's rule hangs on. md/sm use the role's own
+// `v2-bd` (accent border); `xs` uses `v2-bdc` (border + ink) — D-13 made that the
+// one paint every small row control shares with IconButton 25 and ToolbarTrigger.
 //
 // `line` opts a pill out of `v2-ctl`'s line-height:1 — needed for the
 // hand-drawn 25px pills, which centre their glyph inside an inherited 1.5 line
 // box; `line="inherit"` keeps that box instead of re-rounding it.
 export function Pill({
-  on, size = 'md', disabled, hover = 'v2-bd', line, onClick, title, ariaLabel,
+  on, size = 'md', disabled, hover, line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
 }) {
   const s = PILL_SIZE[size] || PILL_SIZE.md
+  const hoverClass = hover || (size === 'xs' ? 'v2-bdc' : 'v2-bd')
   return (
     <div
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel}
@@ -227,7 +228,7 @@ export function Pill({
       // `v2-raised` is the bevel hook (theme.css --bevel-raised-*), scoped to
       // bevelled skins with `!important` there since the inline border/shadow
       // below would otherwise beat it; a no-op in every other theme.
-      className={cx('v2-ctl', 'v2-raised', !disabled && hover, className)}
+      className={cx('v2-ctl', 'v2-raised', !disabled && hoverClass, className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
@@ -249,7 +250,8 @@ export function Pill({
 //      Searches; keeps the 13px glyph since 15px reads as a different control
 //      at that size.
 // `hover` overrides the size's default class, like Pill's; `line` is Pill's
-// line-box opt-out for the same reason.
+// line-box opt-out for the same reason. The 25 defaults to `v2-bdc`, the small
+// row control's shared paint (D-13); the 36 keeps its own `v2-act`.
 export function IconButton({
   size = 26, on, disabled, hover, line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, children, style, className,
@@ -270,7 +272,7 @@ export function IconButton({
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
       // bevel hook goes on the bordered sizes only — the 26 is a bare glyph with
       // no border, so win98 draws it flat instead.
-      className={cx('v2-ctl', bordered && 'v2-raised', !disabled && (hover || (bordered ? 'v2-act' : 'v2-hover-accent')), className)}
+      className={cx('v2-ctl', bordered && 'v2-raised', !disabled && (hover || (size === 25 ? 'v2-bdc' : bordered ? 'v2-act' : 'v2-hover-accent')), className)}
       style={{
         flex: '0 0 auto', width: size, height: size, borderRadius: 'var(--radius-control)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -458,27 +460,33 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
 }
 
 // ── ToolbarTrigger ──────────────────────────────────────────────────────────
-// The 24px picker in a PDF-preview toolbar (Template/Paper triggers in
-// ResumeEditor and CoverLetterEditor). h24 · pad 0 8 · 1px --input-border · r6 ·
-// 11.5 · a 9px ▾, and no ground — it sits directly on the toolbar strip, unlike
-// a short Select. Slots: `label` (muted caption), `value` (picked one), a caret
-// unless `caret={false}`. `open` swings the border accent like Select's
+// The picker in a toolbar strip: 1px --input-border · r6 (a field's radius and
+// border) · 11.5 · a 9px ▾, and no ground — it sits directly on the strip,
+// unlike a short Select. Slots: `label` (muted caption), `value` (picked one), a
+// caret unless `caret={false}`. `open` swings the border accent like Select's
 // trigger, as a named variant since none of the four sites passes it today.
+//
+// Two sizes, mirroring Pill's: `sm` is the canonical 24 in a PDF-preview toolbar
+// (ResumeEditor, CoverLetterEditor); `md` is 32, the field height, for a row that
+// pairs the trigger with an Input or Select (Settings' cron presets, D-21).
+// Hover is `v2-bdc`, the small row control's shared paint (D-13).
 // `line` is Pill's line-box opt-out.
+const TRIGGER_SIZE = { sm: { height: 24, padding: '0 8px' }, md: { height: 32, padding: '0 10px' } }
 export function ToolbarTrigger({
-  label, value, open, disabled, hover = 'v2-bd', line, caret = true, onClick, title, ariaLabel,
+  label, value, size = 'sm', open, disabled, hover = 'v2-bdc', line, caret = true, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup = 'listbox', children, style, className,
 }) {
+  const s = TRIGGER_SIZE[size] || TRIGGER_SIZE.sm
   return (
     <span
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
       aria-expanded={ariaExpanded !== undefined ? ariaExpanded : (open || undefined)}
       aria-haspopup={ariaHaspopup} aria-disabled={disabled || undefined}
       // deliberately NOT `v2-inset`: that hook's hover rule carries `!important`
-      // and would beat this control's own `v2-bd`/`v2-act` accent hover.
+      // and would beat this control's own `v2-bdc` accent hover.
       className={cx('v2-ctl', !disabled && hover, className)}
       style={{
-        height: 24, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 6,
+        ...s, display: 'flex', alignItems: 'center', gap: 6,
         borderRadius: 'var(--radius-field)', fontSize: 'var(--t-11-5)',
         border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
         boxShadow: 'var(--field-shadow)',

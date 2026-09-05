@@ -70,6 +70,8 @@ def test_import_from_base_resume_maps_contact_and_content(api_client, test_db):
     assert contact["linkedin"] == "https://linkedin.com/in/vesadze"
     assert contact["github"] == "https://github.com/vesadze"
     assert contact["portfolio"] == "https://vesadze.dev"
+    # seeded from the latest role in `experience`, not the header
+    assert contact["current_company"] == "Acme Inc."
 
     content = data["persona"]["resume_content"]
     assert content["summary"] == RESUME_JSON["summary"]
@@ -108,7 +110,8 @@ def test_import_overwrites_and_leaves_other_nodes_alone(api_client, test_db):
 
     # replaced, not merged
     assert got["contact"]["first_name"] == "Viktor"
-    assert "current_company" not in got["contact"]
+    # replaced too — the old value is gone, the imported résumé's latest role stands
+    assert got["contact"]["current_company"] == "Acme Inc."
     assert got["resume_content"]["summary"] == RESUME_JSON["summary"]
     assert got["resume_content"]["experience"] == RESUME_JSON["experience"]
 
@@ -167,6 +170,41 @@ def test_import_tailored_copy_rejected(api_client, test_db):
     # nothing was written
     p = test_db.query(Persona).filter(Persona.id == 1).first()
     assert (p.contact or {}) == {}
+
+
+# ── contact.current_company, from the latest role ───────────────────────────
+
+@pytest.mark.parametrize("experience,expected", [
+    # ordinary résumé order (newest first) — the 2024 end wins over the 2020 one
+    ([{"company": "Acme Inc.", "date": "2020–2024"}, {"company": "Globex", "date": "2017–2020"}], "Acme Inc."),
+    # an open-ended role outranks a later closing year wherever it sits in the list
+    ([{"company": "Acme Inc.", "date": "2018–2024"}, {"company": "Globex", "date": "Mar 2016 – Present"}], "Globex"),
+    # month resolves a same-year tie
+    ([{"company": "Acme Inc.", "date": "Jan 2019 – Mar 2021"}, {"company": "Globex", "date": "2015 – Nov 2021"}], "Globex"),
+    # "to" as the range separator, and a bare year
+    ([{"company": "Acme Inc.", "date": "2019 to 2023"}, {"company": "Globex", "date": "2021"}], "Acme Inc."),
+    # no parsable dates at all → the résumé's own order decides
+    ([{"company": "Acme Inc."}, {"company": "Globex"}], "Acme Inc."),
+    # rows without a company name are skipped
+    ([{"title": "Consultant", "date": "2022–Present"}, {"company": "Globex", "date": "2017–2020"}], "Globex"),
+])
+def test_import_sets_current_company_from_latest_role(api_client, test_db, experience, expected):
+    _seed(test_db)
+    base = _make_base(test_db, json_data={**RESUME_JSON, "experience": experience})
+
+    resp = api_client.post("/api/persona/import", json={"resume_id": str(base.id)})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["persona"]["contact"]["current_company"] == expected
+
+
+def test_import_without_experience_leaves_current_company_unset(api_client, test_db):
+    """No role to read it off — the key is absent rather than blank, so the editor shows an empty field."""
+    _seed(test_db)
+    base = _make_base(test_db, json_data={**RESUME_JSON, "experience": []})
+
+    resp = api_client.post("/api/persona/import", json={"resume_id": str(base.id)})
+    assert resp.status_code == 200, resp.text
+    assert "current_company" not in resp.json()["persona"]["contact"]
 
 
 def test_import_unknown_resume_404(api_client, test_db):

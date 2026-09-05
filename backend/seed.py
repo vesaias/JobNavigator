@@ -17,7 +17,8 @@ DEFAULT_SETTINGS = {
     "telegram_chat_id": ("", "Your Telegram chat ID"),
     "telegram_webhook_secret": ("", "Auto-generated secret token validated on every /api/telegram/webhook call. Rotate from the Telegram settings tab."),
     "body_exclusion_phrases": (json.dumps([]), "JD phrases that flag exclusion (H-1B, language, etc.). Add phrases to auto-skip jobs containing them."),
-    "h1b_cron": ("0 2 * * 0", "H-1B refresh cron (min hour day month dow). Empty = disabled"),
+    # weekday NAME, not a digit: APScheduler numbers 0 = Monday (vixie cron 0 = Sunday), so "0" fired Monday
+    "h1b_cron": ("0 2 * * sun", "H-1B refresh cron (min hour day month dow). Empty = disabled"),
     "cleanup_cron": ("0 4 * * *", "Job cleanup cron (min hour day month dow). Empty = disabled"),
     "job_archive_after_days": ("90", "Delete skipped jobs older than N days (used by cleanup job)"),
     "auto_reject_after_days": ("0", "Reject applications older than N days, 0 = disabled (used by reject job)"),

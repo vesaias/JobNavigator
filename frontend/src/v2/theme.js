@@ -1,7 +1,8 @@
 // The one place the app decides what it looks like. Two independent axes, stored
 // per browser (never the DB): appearance (light|dark|system, `jobnavigator_appearance`) and theme (the palette, `jobnavigator_theme`).
 //
-// default/alt are the two designed themes; tone1-3 ramp toward editorial in OKLab.
+// default/board are the shipped paper themes, cobalt/saas/win98 the three deep
+// reskins; alt and the tone1-3 ramp stay valid but are off the picker (THEME_PICKER).
 // Adding a theme is two palette blocks in theme.css plus one line here — nothing else.
 //
 // `resolved` is the light|dark actually painted (system follows prefers-color-scheme
@@ -19,7 +20,12 @@ const LEGACY_KEY = 'jobnavigator_dark_mode'   // legacy boolean, migrated once
 const LEGACY_THEME_KEY = 'jobnavigator_skin'  // old name for THEME_KEY
 
 export const MODES = ['light', 'dark', 'system']
-export const THEMES = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98']
+// THEMES is the validation set — every name theme.css carries a block for, so a
+// stored value keeps painting. THEME_PICKER is the shipped subset the Settings
+// row offers; the rest (tone1-3, editorial, alt) are development stops that stay
+// reachable from the /v2/ui gallery and by a stored key, but are not on offer.
+export const THEMES = ['default', 'board', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98']
+export const THEME_PICKER = ['default', 'board', 'cobalt', 'saas', 'win98']
 
 // Three-state control (Light → Dark → System), so it needs three glyphs.
 export const MODE_ICON = { light: '◐', dark: '◑', system: '◒' }
@@ -27,6 +33,7 @@ export const MODE_LABEL = { light: 'Light', dark: 'Dark', system: 'System' }
 export const MODE_OPTIONS = MODES.map((m) => [m, MODE_LABEL[m]])
 export const THEME_LABEL = {
   default: 'Default — warm paper',
+  board: 'Board — original design tones',
   tone1: 'Tone 1 — ¼ toward Editorial',
   tone2: 'Tone 2 — ½ toward Editorial',
   tone3: 'Tone 3 — ¾ toward Editorial',
@@ -36,7 +43,9 @@ export const THEME_LABEL = {
   saas: 'SaaS — system neutral',
   win98: 'Win98 — desktop grey',
 }
-export const THEME_OPTIONS = THEMES.map((s) => [s, THEME_LABEL[s]])
+/** Options for the Settings picker: the shipped five, plus `current` when it is one of the hidden stops, so the box never reads blank on a machine that stored one. */
+export const themeOptions = (current) =>
+  (THEME_PICKER.includes(current) ? THEME_PICKER : [current, ...THEME_PICKER]).map((s) => [s, THEME_LABEL[s] || s])
 
 const ls = (fn, fallback) => { try { return fn(window.localStorage) } catch { return fallback } }
 
