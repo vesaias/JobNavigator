@@ -49,17 +49,22 @@ def _default_template_id() -> str:
     return templates[0]["id"] if templates else "garamond"
 
 
+def _validate_template(name) -> str:
+    """422 unless `name` is a real folder directly under cover_letter_templates/ (R4-T5-01)."""
+    from backend.api.routes_resumes import validate_template_name
+    return validate_template_name(name, TEMPLATES_DIR)
+
+
 def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     """Render a cover letter to HTML via its Jinja2 template (fonts base64-embedded)."""
     import re as _re
     from jinja2 import Environment, FileSystemLoader
     from markupsafe import Markup
 
-    from backend.api.routes_resumes import _load_template_fonts
+    from backend.api.routes_resumes import _load_template_fonts, validate_template_name
 
-    template_dir = TEMPLATES_DIR / template_name
-    if not template_dir.exists():
-        raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found")
+    # Same folder-name whitelist the résumé renderer uses (R4-T5-01).
+    template_dir = TEMPLATES_DIR / validate_template_name(template_name, TEMPLATES_DIR)
 
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     env.filters['bold'] = lambda text: Markup(
@@ -160,6 +165,8 @@ def list_cover_letters(job_id: Optional[str] = None, db: Session = Depends(get_d
 def create_cover_letter(body: dict, db: Session = Depends(get_db)):
     # See R4-T1-20: a non-string name used to raise AttributeError -> 500.
     name = str_field(body, "name", required=True)
+    if "template" in body:
+        _validate_template(body["template"])
     cl = CoverLetter(
         name=name,
         job_id=body.get("job_id"),
@@ -189,6 +196,8 @@ def update_cover_letter(cl_id: str, body: dict, db: Session = Depends(get_db)):
         raise HTTPException(404, "Cover letter not found")
     allowed = {"name", "template", "page_format", "json_data", "job_id", "resume_id",
                "voice", "length"}
+    if "template" in body:
+        _validate_template(body["template"])
     for k, v in body.items():
         if k in allowed:
             setattr(cl, k, v)
@@ -304,6 +313,9 @@ async def generate_cover_letter(body: dict, db: Session = Depends(get_db)):
     job_id = body.get("job_id")
     if not resume_id or not job_id:
         raise HTTPException(400, "resume_id and job_id are required")
+
+    if body.get("template") is not None:
+        _validate_template(body["template"])
 
     target_id = body.get("cover_letter_id")
     if target_id:

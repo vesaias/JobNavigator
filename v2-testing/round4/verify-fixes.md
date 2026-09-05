@@ -1,0 +1,71 @@
+# Round 4 — re-verification of `fixed` findings (frontend + PDF)
+
+Tested 2026-09-05 against HEAD `7bdd1bf`, frontend rebuilt and backend restarted with the round-4
+fixes (containers confirmed fresh: `backend` up 13 min, `frontend` up 11 min at test start).
+Playwright ran inside `jtrakproject-backend-1` against `http://caddy` via a copy of
+`v2-testing/tools/h.py` (already carries the `jobnavigator_welcomed` seed from the T0-02 fix).
+API key `pick-a-password`. Live DB, read-mostly; the only writes were a scratch cover letter
+`ZZR4V-Letter-NoJob` (created via API, verified deleted) and read-only mocked routes elsewhere —
+no other row was created, edited or deleted. `backend/tests` was not re-run (out of scope per the
+brief: T1/backend is covered by the passing suite).
+
+Scope: every finding whose `**Status**` line starts with `fixed` in `T0.md`, `T2a.md`, `T2b.md`,
+`T3.md` — 27 findings. **R4-T0-01 is out of scope and not re-verified**: it is a backend-only
+Postgres migration fix (`seed.py`'s `run_migration_statements`), reachable only from a brand-new
+empty database volume, not from the frontend/PDF surface this pass covers; the task framed this
+round as "frontend + PDF" and explicitly told me to skip the backend (T1) lane, which this finding
+belongs to in substance even though it is filed under T0.
+
+Scripts: `scratchpad/r4v_*.py` (this session's scratchpad), copied to `backend:/tmp/v2t/r4v/`.
+Screenshots: `v2-testing/artifacts/round4/verify/` (43 PNGs, `r4v-<id>-*.png` plus the two
+rendered PDF pages for T3-01).
+
+## Result table
+
+| id | verdict | evidence |
+|---|---|---|
+| R4-T0-02 | **confirmed** | Fresh context, only `jobnavigator_api_key` seeded, no welcome flags: first load shows "Welcome to JobNavigator" (count 1); clicking `✕` writes `jobnavigator_welcomed:"1"`; a second context seeded with that resulting storage shows the modal 0 times. `r4v-t0-02-{first-visit,after-dismiss,second-visit}.png`. |
+| R4-T2A-01 | **confirmed** (minor note) | At 1024×860 the detail `<section>` measures exactly 420px (604→1024), matching the fix's `flex:'1 0 420px'`. `Open ↗` and the row `⋯` are fully within the viewport; `Tailor résumé`'s outer div right edge is 1036.5 (≈12.5px past the window), but that overflow is trailing padding only — the label is fully legible and the whole visible ~106px of the control is clickable in the screenshot. This is a large improvement on the pre-fix bug ("Ta" clipped mid-word, controls entirely unreachable) but not literally zero overflow. `r4v-t2a-01-feed-1024.png`. |
+| R4-T2A-02 | **confirmed** | `GET /api/applications` held open (route captured, not fulfilled): at 250ms the literal text node "Applications" (the page title) is present in the DOM. `r4v-t2a-02-loading-200ms.png`. |
+| R4-T2A-05 | **confirmed** (Companies; mechanism shared by all 6 sites) | Companies row `⋯` opened (`[role=menu]` count 1); clicking over a second row: menu count → 0 **and** no drawer opened (`[role=dialog]` count 0). Spot-checked the mandatory case only; the fix is one shared primitive (`Menu`'s `onDismiss` backdrop in `ui.jsx`) applied identically at all 6 call sites named in the finding (Companies Sort + row menu, Searches card menu, Applications Company filter + Sort + detail menu), so this one confirmation is representative. `r4v-t2a-05-after-outside-click.png`. |
+| R4-T2A-07 | **confirmed** (frontend half, as scoped) | Seeded `sessionStorage['jobnavigator_v2_searchtest']` with a real testable search id (`levels_fyi` mode) + a fake `run_id`, mocked `/api/searches/test-result/**` to stay pending, loaded `/v2/searches` fresh: the Test pill's `.v2-spin` spinner is present on mount (1), i.e. the run is resumed from session storage as designed. The backend half (registering with `job_monitor`) is explicitly not done, per the finding's own text — not re-tested. `r4v-t2a-07-searches-test-resume-fixed.png`. |
+| R4-T2A-08 | **confirmed** | Searches and Companies list endpoints mocked to 500: no `"0 configs"` / `"0 companies"` / `"Tier A 0"` zero-pattern anywhere, and an em dash renders in the count line. (Résumés' identical mechanism is also directly confirmed under T2B-03 below, which shows the literal text `Résumés — + New résumé Couldn't load…`.) `r4v-t2a-08-{searches,companies}-err500.png`. |
+| R4-T2A-09 | **confirmed** | All `**/api/**` aborted (network error, no response): rail reads "Backend unreachable" (text count 1) with the dot's `background-color` = `rgb(156,59,48)` (`--bad`, red), not green. `r4v-t2a-09-backend-down.png`. |
+| R4-T2A-11 | **confirmed, with the gap explained (as the finding itself anticipates)** | Real 19190-row data can't be scrolled to completion in a test run, so `/api/jobs` was mocked with a deterministic 200-row set that reproduces the exact bug shape: offset=80 always returns the same already-seen page (simulating a duplicate-only page from an unstable `ORDER BY`). Scrolling repeatedly: rows grew 80→120→160 then plateaued at 160 once `hasMore` correctly went false — **zero duplicate job numbers ever rendered in the DOM**, and the scroll never stalled (each user scroll made progress, including the one that silently skipped the poisoned page via the loop's internal retry). Final count (160/200) does not reach the mocked total because my scenario deliberately makes ids 81–120 permanently unrecoverable (the same offset always returns the same stale window) — this is exactly the server-side non-determinism gap the finding says needs a backend `ORDER BY` tiebreaker (explicitly not fixed this round); the client-side fix's job was only to stop the scroll from stalling and never show a duplicate, and both hold. `r4v-t2a-11-scrolled-mocked.png`. |
+| R4-T2A-12 | **confirmed** | `/v2/applications` renders with no literal `⧉` (U+29C9) character anywhere in `body.innerText`; 10 `<svg>` elements present (the drawn `CopyGlyph` primitive), consistent with the fix replacing the typeset character. |
+| R4-T2A-14 | **confirmed** | Selected an application, opened `+ Add interview` (`input[aria-label="What"]` count 1), pressed Escape: count → 0. `r4v-t2a-14-after-escape.png`. |
+| R4-T2A-15 | **confirmed** | Row `⋯` → "Delete company": menu count went from 1 to 0 at the same moment the confirm dialog opened (`Delete` text visible) — the menu is gone, not just hidden under the scrim. Cancelled without deleting. `r4v-t2a-15-menu-vs-confirm.png`. |
+| R4-T2B-01 | **confirmed, 20/20** | 20 cold loads of `/v2/settings` at 1024×820: **20/20 narrow** (`flexDirection:'column'`, row height 97px, pane width 216 — identical every single time). Zero wide-layout flakes, matching the callback-ref fix. `r4v-t2b-01-load{0,1,2}.png`. |
+| R4-T2B-02 | **confirmed** | Mocked `GET /api/monitor/active` to report a live `generate_cover_letter` run scoped `cl:<real letter id>`, loaded that letter's editor fresh: the toolbar's "Regenerate…" button shows its `.v2-spin` spinner on mount (count 1) — the in-flight run is picked up without the user having started it in this session. `r4v-t2b-02-spinner-on-mount.png`. |
+| R4-T2B-03 | **confirmed** | Healthy load first (cache: `{"b":4,"c":49,"a":299}`), then `GET /api/resumes/shelf` mocked to 500 and reloaded: cache **unchanged** (`cache_matches_pre_failure: true`), header shows `Résumés — + New résumé` (em dash, not zeros) alongside "Couldn't load your résumés." After unmocking and reloading on a healthy backend: header reads the real `4 bases · 49 tailored copies, listed under their jobs · 299 archived` again, cache intact. `r4v-t2b-03-{during-500,after-reload,subtitle-during-fail}.png`. |
+| R4-T2B-04 | **confirmed (as scoped: "fixed in part")** | Live `/v2/stats` LLM-cost table head: `Purpose` renders as its own text node, not run together with `Model` (`purpose_model_joined: false`). The finding's own status already says the 900px reflow work is deferred — not re-tested since it's explicitly out of scope of the "fixed" claim. |
+| R4-T2B-05 | **confirmed** | Opened a résumé's `⋯` menu (`[title="More"]`): menu text is `Cover letter / Open in feed / Mark applied / Delete copy` with no bare trailing `c`/`e`/`a` hint characters (the sibling items' prose hints — "adds a copy", "score only", etc. — are untouched). `r4v-t2b-05-resume-menu.png`. |
+| R4-T2B-06 | **confirmed** | `GET /api/settings` and `GET /api/persona` each held open: at 300ms the literal page-title text ("Settings" / "Persona") is already present in the DOM for both screens. `r4v-t2b-06-{settings,persona}-loading.png`. |
+| R4-T2B-07 | **confirmed** | First Tab stop on `/v2/feed` lands on the rail's active nav link (`<a class="v2-navdark active">`) with `outline: rgb(141,187,159) solid 2px` — a real, visible ring (the `--rail-focus`/`--rail-accent` token), not the old 1px near-black UA hairline. `r4v-t2b-07-rail-focus.png`. |
+| R4-T2B-08 | **confirmed** | Cover letter PDF mocked to 500 on first load: the failure line reads "Preview failed — the PDF could not be rendered. · Retry" (no false claim of "Showing the previous version" when `pdfUrl` is null). `r4v-t2b-08-cl-preview-fail.png`. |
+| R4-T2B-09 | **confirmed** | Created a scratch letter with no `job_id` (`ZZR4V-Letter-NoJob`) via the API: it appears in the default **live** list on `/v2/cover-letters` (not filed under the archived band). Deleted afterward; confirmed 0 `ZZR4V` rows remain. `r4v-t2b-09-draft-letter-visible.png`. |
+| R4-T2B-10 | **confirmed** | `/api/stats/score-distribution` and `/api/scheduler/jobs` mocked to empty: page text contains both "No scored jobs yet." and "No scheduled jobs." (previously blank cards). `r4v-t2b-10-stats-empty.png`. |
+| R4-T3-01 | **confirmed** | `GET /api/resumes/22ce0e5b-8b9b-4ea5-b34a-b9b6f9e3a51a/pdf?template=inter` → 1 page (was 2, orphaning "Bachelor of Science, Information Systems"). `GET /api/resumes/8fc47571-7abb-4693-88a8-9d436aa5f1a7/pdf?template=helvetica` → 1 page. Both rendered via PyMuPDF inside the container. `22ce0e5b…_inter_p1.png`, `8fc47571…_helvetica_p1.png`. |
+| R4-T3-02 | **confirmed** | `getComputedStyle('.v2-scroll').scrollbarColor`: default theme = `rgb(109,104,98) transparent` (unchanged `--muted`/transparent pair); win98 = `rgb(128,128,128) rgb(192,192,192)` (`#808080`/`#c0c0c0`, the chrome's own two greys), both at `scrollbar-width:thin`. `r4v-t3-02-scrollbar-{default,win98}.png`. |
+| R4-T3-03 | **confirmed** | Win98's resolved `--link-ink:#0000ff` / `--link-ink-hover:#000080`, distinct from `--accent:#000080` — the bright classic link blue is no longer the same navy as the title bar/selection. Default theme's `--link-ink` still equals `--accent` (unaffected, as intended). |
+| R4-T3-06 | **confirmed** | `/v2/toasts` under the SaaS skin: the `<h1>` "Toast lab" now renders at `font-weight: 750` (SaaS's `--title-weight`), matching every other route's title instead of the old hardcoded `fontWeight:400`. `r4v-t3-06-toastlab-saas.png`. |
+| R4-T3-08 | **confirmed, all 4 sites** | Under win98 (`--label-case:none`): Settings' left-nav headers render `General / AI / Pipeline / Integrations / System` (sentence case, not `GENERAL`/etc.); Feed's unscored "Score" chip has `textTransform:none` (was hardcoded `uppercase`); Stats' LLM-cost head text-node reads `Purpose` with `textTransform:none`; a cover letter's stage badge reads `Draft`. `r4v-t3-08-{settings-nav,feed-score-chip,stats-head,cl-badge}-win98.png`. |
+| R4-T3-09 | **confirmed for the `Button` primitive (primary/secondary/danger); one caveat** | Under win98, three real `<Button>`-primitive instances all show the correct 2-tone raised bevel (`border-top/left:#fff`, `border-bottom/right:#404040`, plus the inset `#dfdfdf`/`#808080` double box-shadow): the Feed detail's primary "Tailor résumé" (`v2-btn-primary`), a picker modal's secondary "Cancel" (`v2-bdc`), and the Companies delete-confirm's danger "Delete" button. This is exactly what the mandatory check asked for and it holds on all three variants. **Caveat, not a regression of this fix**: the finding's own repro named "the secondary 'Open' and the '…' icon button" in Feed's detail header as pre-fix examples of the un-bevelled `Button` primitive; on inspection those two controls (`JobFeed.jsx:1153`/`:1160`) are actually hand-rolled `<a className="v2-act">`/`<div className="v2-act">` elements, not `Button`/`IconButton` instances — they were never going to be touched by a `Button`-scoped fix, and indeed still measure a flat, single-tone `#404040` border on every edge (unbevelled) in this pass. The fix is correctly scoped and does what it says for the `Button` primitive; the finding's diagnosis conflated two hand-rolled `v2-act` controls with "the Button primitive," so those two specific controls remain visually as before — worth a follow-up note, not a "not fixed" for this finding as filed. `r4v-t3-09-{feed-detail-buttons,secondary-cancel,companies-danger-confirm}-win98.png`. |
+| R4-T3-10 | **confirmed** | Win98 dark: selected Feed row background = `rgb(74,106,153)` (`#4a6a99`, the new token) against desktop/unselected `rgba(0,0,0,0)` (transparent, showing the dark desktop through) — a clear jump, not the old near-1.3:1 navy-on-navy. Win98 light unaffected: selected row still `rgb(0,0,128)` (`#000080`/`--accent`). `r4v-t3-10-win98-{light,dark}-selected-row.png`. |
+
+## Status-line changes
+
+No `fixed` status is flipped. All 26 in-scope findings (27 total `fixed` lines minus the
+out-of-scope R4-T0-01) hold up under live re-verification — including the two with pre-declared
+partial scope (R4-T2A-07 frontend-only half, R4-T2B-04 partial column fix, R4-T3-01's 8-of-23
+case count), which are re-confirmed exactly as scoped, not as fully closed. R4-T3-09 gets a
+caveat noted above (a documentation nuance in the original finding's own diagnosis, not a
+functional gap in what its "fixed" line actually claims) but is not flipped either, since the
+Button primitive itself — the thing the fix and the mandatory check are both about — is
+verifiably bevelled on primary/secondary/danger.
+
+## Not re-verified (out of scope)
+
+- **R4-T0-01** (backend seed-migration savepoint fix) — backend-only, needs a fresh empty
+  Postgres volume; out of scope per the "frontend + PDF, skip backend" framing of this pass.
+- All T1 backend findings — explicitly covered by the passing pytest suite per the task.

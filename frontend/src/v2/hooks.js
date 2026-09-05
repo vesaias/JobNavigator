@@ -6,7 +6,14 @@ import api from '../api'
 
 // Escape closes v2 modals from one place. Ignores events another handler
 // already claimed, so an inner dropdown/menu can swallow Escape without closing everything above it.
-export function useEscape(onClose, active = true) {
+//
+// `capture` is for the two overlays that mount OUTSIDE the v2 shell (Welcome,
+// sign-in) and therefore sit above every screen: document-level listeners run in
+// registration order, and the screen behind mounts first, so a bubble-phase
+// listener there loses the key to whatever the screen registered — and to the
+// preventDefault() above. A capture-phase listener runs before all of them and
+// stops the event dead, so the topmost overlay wins (R4-E2E-01).
+export function useEscape(onClose, active = true, capture = false) {
   const cb = useRef(onClose) // ref so an inline arrow doesn't re-register the listener every render
   cb.current = onClose
   useEffect(() => {
@@ -14,11 +21,12 @@ export function useEscape(onClose, active = true) {
     const onKey = (e) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       e.preventDefault()
+      if (capture) e.stopPropagation()   // nothing underneath closes with us
       cb.current?.()
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [active])
+    document.addEventListener('keydown', onKey, capture)
+    return () => document.removeEventListener('keydown', onKey, capture)
+  }, [active, capture])
 }
 
 // Nudges a flex-centred modal panel whose fractional top blurs 1px borders back

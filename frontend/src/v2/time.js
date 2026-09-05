@@ -26,8 +26,9 @@ export const agoShort = (iso) => {
 // ORed (`next` follows APScheduler). `next` is computed in UTC (the scheduler has
 // no timezone) and returned as a Date; callers render it in the reader's own
 // zone via `whenShort`. Returns `{ text, next }`, or null if unreadable;
-// an APScheduler-only extension (`last`, `fri#3`) this parser doesn't evaluate
-// is echoed as `{ text: <raw line>, unparsed: true }` rather than called invalid.
+// a five-field APScheduler-only extension (`last`, `fri#3`) this parser doesn't
+// evaluate is echoed as `{ text: <raw line>, unparsed: true }` rather than called
+// invalid — see CRON_DAY_EXTRA for exactly which ones, and why the rest are not.
 const DOW_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']   // APScheduler order: index 0 = Monday
 const DOW_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DOW_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -166,9 +167,26 @@ function cronNext(M, H, D, MO, W, from) {
   return null
 }
 
-// APScheduler's own extras (`last`, `last sun`, `fri#3`, `?`) are legal on the
-// backend but not evaluated here, so the line falls back to echoing the expression.
-const CRON_EXTRAS = /[#?]|(^|[^a-z])(last|w)([^a-z]|$)/i
+// The extras APScheduler really accepts through `CronTrigger.from_crontab` (what
+// backend/seed.py `_cron_error` validates a saved value with) but this parser does
+// not evaluate: `last` / `lastw` / `last-5` in the day field, and `fri#3` in
+// day-of-week. Those are echoed rather than called invalid.
+//
+// Everything the old regex ALSO caught is refused by from_crontab, so it stays
+// invalid on this side too — the field-level check is what keeps the two answers
+// the same (R4-E2E-05). Verified against apscheduler 3.10.4 in the container:
+//   `0 3 ? * *`         Unrecognized expression "?" for field "day"
+//   `0 3 5w * *`        Unrecognized expression "5w" for field "day"
+//   `0 3 * * last`      Invalid weekday name "last"      (`last` is day-of-MONTH)
+//   `0 3 * * 4#2`       Unrecognized expression "4#2"    (`#` needs a weekday NAME)
+//   `0 3 1st * *`       Unrecognized expression "1st"
+// A SPACED extension (`0 3 * * last sun`) is six fields, and from_crontab rejects
+// any count but five — so the five-field guard below returning null is the right
+// answer for it, not an echo.
+const CRON_DAY_EXTRA = /^last/i         // day of month: last, lastw, last-5
+const CRON_DOW_EXTRA = /^[a-z]{3}#/i    // day of week: fri#3 — nth weekday of the month
+const cronExtras = (day, dow) => day.split(',').some((t) => CRON_DAY_EXTRA.test(t.trim()))
+                              || dow.split(',').some((t) => CRON_DOW_EXTRA.test(t.trim()))
 
 export function describeCron(expr, opts = {}) {
   const raw = String(expr == null ? '' : expr).trim()
@@ -177,7 +195,7 @@ export function describeCron(expr, opts = {}) {
   if (parts.length !== 5) return null
   // `unparsed` separates "we did not read this" from "this can never fire" —
   // both carry a null `next`, and the row must not call the first one dead
-  if (CRON_EXTRAS.test(raw)) return { text: raw, next: null, unparsed: true }
+  if (cronExtras(parts[2], parts[4])) return { text: raw, next: null, unparsed: true }
   const M = parseField(parts[0], 0, 59)
   const H = parseField(parts[1], 0, 23)
   const D = parseField(parts[2], 1, 31)
@@ -236,3 +254,8 @@ export const CRON_PRESETS = [
 // 18  5 4 * * sun             every Sunday at 04:05                                   2026-09-06 04:05
 // 19  0 3 last * *            0 3 last * *                 (extension, echoed)        null
 // 20  99 3 * * *              NULL (minute out of range)                              —
+// 21  0 3 lastw * *           0 3 lastw * *                (extension, echoed)        null
+// 22  0 3 * * fri#3           0 3 * * fri#3                (extension, echoed)        null
+// 23  0 3 ? * *               NULL (from_crontab refuses "?")                          —
+// 24  0 3 * * last            NULL ("last" is day-of-month, not a weekday)             —
+// 25  0 3 * * last sun        NULL (six fields; from_crontab wants five)               —

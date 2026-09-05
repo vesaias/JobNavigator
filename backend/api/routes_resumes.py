@@ -190,6 +190,29 @@ def _default_template_id() -> str:
     return templates[0]["id"] if templates else "garamond"
 
 
+# A template name is a folder name, never a path: `pathlib` joins an absolute or
+# `../`-prefixed value by escaping the base directory, and the reachable set was the
+# whole container filesystem (R4-T5-01). Everything that renders or stores a template
+# name goes through validate_template_name().
+_TEMPLATE_NAME_RE = re.compile(r"^[a-z0-9_]+$")
+
+
+def validate_template_name(name, templates_dir: Path) -> str:
+    """Return `name` when it is a real template folder directly under `templates_dir`; 422 otherwise (never 500, never a path escape)."""
+    if not isinstance(name, str) or not _TEMPLATE_NAME_RE.match(name):
+        raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
+    candidate = templates_dir / name
+    try:
+        resolved = candidate.resolve()
+        base = templates_dir.resolve()
+    except OSError:
+        raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
+    # Belt-and-braces against a symlinked folder inside the template tree.
+    if resolved.parent != base or not (resolved / "template.html.j2").is_file():
+        raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
+    return name
+
+
 def _discover_templates() -> list[dict]:
     """Scan resume_templates/ for folders containing template.html.j2; each folder can optionally include meta.json with 'name' and 'description'."""
     templates = []
@@ -231,9 +254,7 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     """Render a resume to HTML using its Jinja2 template."""
     from jinja2 import Environment, FileSystemLoader
 
-    template_dir = TEMPLATES_DIR / template_name
-    if not template_dir.exists():
-        raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found")
+    template_dir = TEMPLATES_DIR / validate_template_name(template_name, TEMPLATES_DIR)
 
     import re as _re
     env = Environment(loader=FileSystemLoader(str(template_dir)))
@@ -256,10 +277,31 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     return html
 
 
+# Anything that already names a scheme: `tel:`, `mailto:`, `sms:`, `skype:`…
+_SCHEME_RE = re.compile(r'^([a-zA-Z][a-zA-Z0-9+.\-]*):')
+
+
+def _is_traceable_url(url: str) -> bool:
+    """True only for a web address a tracer link can stand in for.
+
+    A non-web scheme used to be prefixed with `https://` (`https://tel:+1555…`), and a
+    bare address became `https://someone@gmail.com` — valid-looking tracer links whose
+    destination cannot resolve (R4-T5-12). Those values pass through untouched.
+    """
+    url = (url or "").strip()
+    if not url:
+        return False
+    m = _SCHEME_RE.match(url)
+    if m:
+        return m.group(1).lower() in ("http", "https")
+    # No scheme: an email address (`@` before any path separator) is not a URL.
+    return "@" not in url.split("/", 1)[0]
+
+
 def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
                                cover_letter_id: str = None, job_id=None) -> dict:
     """Replace header contact URLs with tracer redirect URLs, returning a modified copy; owner is exactly one of a resume (resume_id) or a cover letter (cover_letter_id), with job_id resolving the short_id for job_id token styles."""
-    import string, random, json as _json
+    import secrets, json as _json
 
     enabled_row = db.query(Setting).filter(Setting.key == "tracer_links_enabled").first()
     if not enabled_row or enabled_row.value != "true":
@@ -312,11 +354,12 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
     items = header.get("contact_items", [])
     for i, item in enumerate(items):
         url = item.get("url")
-        if not url or not url.strip() or url.startswith("mailto:"):
+        if not url or not url.strip() or not _is_traceable_url(url):
             continue
 
+        url = url.strip()
         label = item.get("text", f"Link {i+1}")
-        dest_url = url if url.startswith("http") else f"https://{url}"
+        dest_url = url if url.lower().startswith(("http://", "https://")) else f"https://{url}"
         # Suffix for per-link distinction in job_id modes (user stub or first 3 chars)
         stub = item.get("stub")
         label_suffix = stub or label.lower()[:3]
@@ -378,9 +421,10 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
                             _repoint(winner, dest_url, label)
                             db.commit()
             if not token:
-                chars = string.ascii_lowercase + string.digits
+                # secrets, not random: the fallback token is the only entropy a
+                # link without a job short_id has (R4-T5-07). 8 bytes ≈ 11 chars.
                 for _ in range(100):
-                    token = ''.join(random.choices(chars, k=6))
+                    token = secrets.token_urlsafe(8)
                     if db.query(TracerLink).filter(TracerLink.token == token).first():
                         continue
                     try:
@@ -594,6 +638,8 @@ def create_resume(body: dict, db: Session = Depends(get_db)):
     # str_field turns a wrongly typed name into the same 400 a blank one already
     # gets, instead of an AttributeError 500 (R4-T1-20).
     name = str_field(body, "name", required=True)
+    if "template" in body:
+        validate_template_name(body["template"], TEMPLATES_DIR)
 
     resume = Resume(
         name=name,
@@ -921,6 +967,10 @@ def update_resume(resume_id: str, body: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Resume not found")
 
     allowed = {"name", "is_base", "parent_id", "job_id", "template", "page_format", "json_data"}
+    # Validate before the first setattr so a bad template can't be half-applied
+    # (it is also the value every later render reads — R4-T5-01).
+    if "template" in body:
+        validate_template_name(body["template"], TEMPLATES_DIR)
     for key, value in body.items():
         if key in allowed:
             setattr(resume, key, value)

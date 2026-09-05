@@ -2,6 +2,11 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     environment:
       POSTGRES_USER: jobnavigator
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
@@ -21,6 +26,11 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     env_file: .env
     environment:
       DATABASE_URL: postgresql://jobnavigator:${POSTGRES_PASSWORD:-password}@db:5432/jobnavigator
@@ -40,6 +50,11 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     ports:
       - "3000:80"
     depends_on:
@@ -48,6 +63,11 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     ports:
       - "80:80"
       - "443:443"

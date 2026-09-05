@@ -512,9 +512,15 @@ def run_migration_statements(db, statements) -> list:
                 db.execute(text(sql))
         except Exception as e:
             failed.append(sql)
+            # str(sql): the formatter must not be the thing that raises. A
+            # non-string statement (a TextClause, or anything a caller passes by
+            # mistake) already failed above; calling .split() on it here would
+            # throw out of the except block and abandon every statement left in
+            # the list — the exact silent no-op this per-statement loop exists to
+            # prevent (R4-E2E-03).
             logger.warning(
                 "Migration skipped: %s -- statement: %s",
-                str(e).strip()[:300], " ".join(sql.split())[:120],
+                str(e).strip()[:300], " ".join(str(sql).split())[:120],
             )
     db.commit()
     return failed

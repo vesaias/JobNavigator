@@ -1378,11 +1378,14 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 // the modal under that confirm.
 // `titlebar` is the caption a themed window chrome shows, mounted only where
 // `--title-bar` is a gradient (win98).
+// `escapeCapture` belongs to those same two global overlays: they sit above
+// every screen, so they take Escape in the capture phase and keep it, instead of
+// losing it to the screen that mounted first (see useEscape).
 export function ModalPanel({
-  width = 480, as, onSubmit, onClose, escape = true, labelledBy, zIndex = 70, titlebar,
+  width = 480, as, onSubmit, onClose, escape = true, escapeCapture = false, labelledBy, zIndex = 70, titlebar,
   children, style, className, scrimStyle, scrimProps,
 }) {
-  useEscape(onClose, escape && !!onClose)
+  useEscape(onClose, escape && !!onClose, escapeCapture)
   const panel = useRef(null)
   useSnapTop(panel)
   const chrome = useTitleBar()

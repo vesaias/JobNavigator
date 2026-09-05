@@ -1,4 +1,14 @@
 :80 {
+    # Baseline response headers for everything this site serves — frontend and API
+    # alike (R4-T5-08). No HSTS: this stack is plain http on localhost.
+    # The leading ? sets the header only when the response does not already carry
+    # one, so the cached-page reader CSP (sandbox; ...) is never overwritten.
+    header {
+        X-Content-Type-Options nosniff
+        ?Content-Security-Policy "frame-ancestors 'self'"
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
     # API routes to backend (8 min timeout for long-running scrape tests)
     handle /api/* {
         reverse_proxy backend:8000 {

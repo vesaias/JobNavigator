@@ -17,6 +17,22 @@ def pytest_configure(config):
     )
 
 
+@pytest.fixture(autouse=True)
+def _clean_auth_throttle():
+    """The per-IP auth failure counter (R4-T5-06) is process-global by design, so a test
+    that posts wrong keys would otherwise lock out the tests that follow it."""
+    import sys
+
+    def _reset():
+        mod = sys.modules.get("backend.main")
+        if mod is not None:
+            mod._reset_auth_throttle()
+
+    _reset()
+    yield
+    _reset()
+
+
 # ── Anthropic mock fixtures ───────────────────────────────────────────────
 
 @pytest.fixture

@@ -1029,7 +1029,11 @@
 /* visibility flips only after the row finishes travelling, so the folded header
    stays out of the tab order (like display:none) but the fade still plays. */
 .v2-fold[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .12s ease,opacity .12s ease,visibility 0s linear .12s; }
-.v2-foldbody { min-height:0; display:flex; flex-direction:column; }
+/* min-width:0 — a grid item's automatic minimum is its min-content width, and the
+   detail header's actions plus the score band's fixed run add up to more than the
+   420px pane at 1024 (R4-E2E-02): the body grew to 507px and pushed the page
+   sideways. Wider viewports are unaffected — the body was never at its minimum there. */
+.v2-foldbody { min-height:0; min-width:0; max-width:100%; display:flex; flex-direction:column; }
 @media (prefers-reduced-motion: reduce) {
   .v2-grab > span { transition:none; }
   .v2-fold, .v2-fold[data-collapsed="true"] { transition:none; }
