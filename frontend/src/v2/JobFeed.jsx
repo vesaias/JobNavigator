@@ -3,8 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSettled, useWarm, NBSP } from './hooks'
-import { Button, Card, Check as UICheck, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
+import { useEscape, useSettled, useWarm, NBSP, DASH } from './hooks'
+import { Button, Card, Check as UICheck, CopyGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -268,9 +268,11 @@ export default function V2JobFeed() {
   // Warm start: header counters and facet lists paint from cache, then reconcile (rail's .15s fade)
   // once facets and the first page of jobs have both answered.
   const headReady = facetsReady && firstLoaded
+  // `!loadError`: a settled-but-failed load carries `total: 0`, and neither the
+  // warm cache nor the subtitle may claim it (R4-T2A-08 / R4-T2B-03).
   const { warm: head, style: headStyle } = useWarm('feed', headReady
     ? { total, arrived: stats.arrived_today, unscored: stats.unscored, sources: sourceList, sourceCounts, verdicts: verdictList, verdictCounts }
-    : null, headReady)
+    : null, headReady, !loadError)
   const facetSources = (head && head.sources) || []
   const facetSourceCounts = (head && head.sourceCounts) || {}
   const facetVerdicts = (head && head.verdicts) || []
@@ -320,13 +322,31 @@ export default function V2JobFeed() {
     if (loadingMoreRef.current || !hasMoreRef.current) return
     loadingMoreRef.current = true; setLoadingMore(true)
     try {
-      const off = offsetRef.current
-      const { data } = await api.get('/jobs', { params: buildParams(off) })
-      const fetched = data.jobs || []
-      setJobs((prev) => { const seen = new Set(prev.map((j) => j.id)); const fresh = fetched.filter((j) => !seen.has(j.id)); return fresh.length ? [...prev, ...fresh] : prev })
-      setTotal(data.total || 0)
-      setOffset(off + fetched.length)
-      setHasMore(off + fetched.length < (data.total || 0) && fetched.length > 0)
+      // The backend orders by ONE column with no tiebreaker (routes_jobs.py:122-129),
+      // so LIMIT/OFFSET over a tie-heavy sort is not stable in Postgres: a page can
+      // hand back rows we already hold, and every duplicate means a row that was
+      // never returned and could not be reached by scrolling (R4-T2A-11). Adding
+      // `Job.id` as a final ORDER BY would fix it at the source and is the right
+      // repair; from the client the fix is to keep asking for the next page until
+      // one actually lands new rows, so a scroll never stalls on a page of dupes.
+      let off = offsetRef.current
+      const seen = new Set(jobsRef.current.map((j) => j.id))
+      let added = 0
+      let more = true
+      for (let page = 0; page < 6 && added === 0 && more; page += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const { data } = await api.get('/jobs', { params: buildParams(off) })
+        const fetched = data.jobs || []
+        const grand = data.total || 0
+        setTotal(grand)
+        off += fetched.length
+        const fresh = fetched.filter((j) => !seen.has(j.id))
+        fresh.forEach((j) => seen.add(j.id))
+        if (fresh.length) { added += fresh.length; setJobs((prev) => [...prev, ...fresh]) }
+        more = fetched.length > 0 && off < grand
+      }
+      setOffset(off)
+      setHasMore(more)
     } catch (e) { console.error('load more failed', e) }
     loadingMoreRef.current = false; setLoadingMore(false)
   }, [buildParams])
@@ -832,7 +852,7 @@ export default function V2JobFeed() {
       <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Jobs</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...headStyle }}>{head ? `${head.total} open roles · ${head.arrived} arrived today · ${head.unscored} not yet scored` : NBSP}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...headStyle }}>{head ? `${head.total} open roles · ${head.arrived} arrived today · ${head.unscored} not yet scored` : loadError ? DASH : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           {head && head.unscored > 0 && <Button onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={headStyle}>Score {head.unscored} unscored jobs</Button>}
@@ -934,12 +954,18 @@ export default function V2JobFeed() {
       {/* body */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
-        <section style={{ position: 'relative', width: 472, flex: '0 0 472px', borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* 472 is still the resting width and nothing moves at 1440 (the two bases
+            sum to 892, well under the pane), but below ~1100 the list is the column
+            that yields: it used to be `0 0 472px`, so every lost pixel came out of
+            the detail pane and at 1024 its header actions were cut off the screen
+            with no way to scroll to them (R4-T2A-01). The detail's `1 0 420px` basis
+            is the width its three header controls need; the list floors at 340. */}
+        <section style={{ position: 'relative', width: 472, flex: '0 1 472px', minWidth: 340, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ position: 'relative', padding: '12px 14px 8px 24px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
             <UICheck checked={allChecked} indeterminate={someChecked && !allChecked} ariaLabel="Select all shown" title="Select all shown" style={{ flex: '0 0 auto' }}
               onChange={() => setChecked(allChecked ? new Set() : new Set(jobs.map((j) => j.id)))} />
             {/* the count line keeps its box until the first page answers */}
-            <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{firstLoaded ? `${jobs.length} shown · ${total} matching` : NBSP}</span>
+            <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{!firstLoaded ? NBSP : loadError ? DASH : `${jobs.length} shown · ${total} matching`}</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
               {/* ui: keep — 10px glyph vs the box's 9.5; the paint is the primitive's outline tone (D-14) */}
@@ -1021,7 +1047,7 @@ export default function V2JobFeed() {
                           </ScoreRing>
                         ) : (
                           /* ui: keep — 8.5px dashed uppercase micro-badge filling the 34px score slot (position:absolute inset 0) */
-                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
+                          <div className="v2-bdc" onClick={(e) => { e.stopPropagation(); scoreJob(j) }} title={defaultDepth === 'full' ? 'Score this role — full (score + keywords + report)' : 'Score this role — light (score only). Change the default in Settings › Scoring, or press r to pick.'} style={{ position: 'absolute', inset: 0, border: '1px dashed var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 600, letterSpacing: '.09em', textTransform: 'var(--label-case)', color: 'var(--muted)', cursor: 'pointer' }}>Score</div>
                         )}
                         {/* ui: keep — 9px ring underneath, plus a 2px --surface knock-out ring so it reads over the disc */}
                         {on && <GlyphBadge style={{ position: 'absolute', left: -4, top: -3, border: '2px solid var(--surface)', fontSize: 'var(--t-9)' }}>✓</GlyphBadge>}
@@ -1085,7 +1111,7 @@ export default function V2JobFeed() {
         </section>
 
         {/* detail */}
-        <section style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface)', minHeight: 0 }}>
+        <section style={{ position: 'relative', flex: '1 0 420px', minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--surface)', minHeight: 0 }}>
           {!d ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>Select a job.</div> : (
             <>
               {/* ui: keep — 12px hit area FLOATING over the pane top (absolute, z-20, no bg/border) holding a bare 52x4 handle; not a Row/Button/SectionHead */}
@@ -1415,11 +1441,11 @@ export default function V2JobFeed() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <Label>Method</Label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets to match the posting · uses the LLM', undefined], ['copy', '⧉ Copy with tracked links', 'Exact duplicate with tracked links · instant', 'tracked links — short links that record when a recruiter opens them']].map(([m, label, help, tip]) => {
+                    {[['tailor', '✦ Tailor with AI', 'Rewrites bullets to match the posting · uses the LLM', undefined], ['copy', <><CopyGlyph />Copy with tracked links</>, 'Exact duplicate with tracked links · instant', 'tracked links — short links that record when a recruiter opens them']].map(([m, label, help, tip]) => {
                       const on = cvMode === m
                       return (
                         <div key={m} onClick={() => pickMethod(m)} title={tip} style={{ flex: 1, padding: '10px 12px', border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent-soft)' : 'transparent', borderRadius: 'var(--radius-cell)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: on ? 'var(--accent)' : 'var(--text)' }}>{label}</span>
                           <Helper>{help}</Helper>
                         </div>
                       )

@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 // shared dialog also serves résumé and cover-letter deletes, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
-import { useSettled, useWarm, NBSP } from './hooks'
+import { useSettled, useWarm, NBSP, DASH } from './hooks'
 import { Button, DashedAdd, Dot, Drawer as UiDrawer, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
 import './theme.css'
 
@@ -254,10 +254,12 @@ export default function Companies() {
   // Warm start: the subtitle's three numbers and the tier pills' counts are the
   // same on the frame after a refresh as they were before it. They paint from the
   // cache and reconcile (with the rail's .15s fade) when the settle disagrees.
+  // `!loadErr`: a settled-but-failed load carries zeroes, and neither the cache
+  // nor the subtitle may claim them (R4-T2A-08 / R4-T2B-03).
   const { warm, style: warmStyle } = useWarm('companies', ready
     ? { n: companies.length, active: activeCount, down: downCount, tiers: tierCounts }
-    : null, ready)
-  const countLine = warm ? `${warm.n} tracked · ${warm.active} active · ${warm.down} need attention` : NBSP
+    : null, ready, !loadErr)
+  const countLine = warm ? `${warm.n} tracked · ${warm.active} active · ${warm.down} need attention` : loadErr ? DASH : NBSP
   const warmTier = (t) => (warm && warm.tiers ? warm.tiers[t] : undefined)
   const inactiveInFilter = filtered.filter((c) => !c.active)
   const activeInFilter = filtered.filter((c) => c.active)
@@ -313,6 +315,9 @@ export default function Companies() {
     catch (e) { setTest({ error: e.response?.data?.detail || e.message }) }
     setTestingId(null)
   }
+  // the row menu is cleared BEFORE the dialog goes up (the Feed already does this):
+  // left mounted, it sat under the confirm's scrim as clutter, and cancelling with
+  // the button left it open (R4-T2A-15).
   const deleteCompany = (c) => setConfirm({ title: `Delete ${c.name}?`, body: 'Jobs already found are kept.', label: 'Delete', danger: true, onConfirm: async () => {   // styled, not window.confirm
     setConfirm(null)
     try { await api.delete(`/companies/${c.id}`); setMenuId(null); setDrawer(null); fetchCompanies(); pushToast({ kind: 'success', msg: `${c.name} deleted` }) }
@@ -429,7 +434,7 @@ export default function Companies() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORT_OPTIONS.find((s) => s.id === sortBy)?.label}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {sortOpen && (
-              <Menu ariaLabel="Row order" className="v2-scroll" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172 }}>
+              <Menu ariaLabel="Row order" className="v2-scroll" onDismiss={() => setSortOpen(false)} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 172 }}>
                 {SORT_OPTIONS.map((so) => {
                   const on = so.id === sortBy
                   return (
@@ -524,12 +529,12 @@ export default function Companies() {
                 <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
                   title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>
                 {menuId === c.id && (
-                  <Menu ariaLabel={`${c.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
+                  <Menu ariaLabel={`${c.name} actions`} onDismiss={() => setMenuId(null)} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                     <MenuItem icon="✎" onClick={() => { setMenuId(null); openDrawer(c) }}>Edit config</MenuItem>
                     {urls.length > 0 && <MenuItem icon="↗" onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }}>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</MenuItem>}
                     <MenuItem icon="☰" href={`/v2/feed?company=${encodeURIComponent(c.name)}`}
                       onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/v2/feed?company=${encodeURIComponent(c.name)}`) }}>View jobs in feed</MenuItem>
-                    <MenuItem danger icon="✕" onClick={() => deleteCompany(c)}>Delete company</MenuItem>
+                    <MenuItem danger icon="✕" onClick={() => { setMenuId(null); deleteCompany(c) }}>Delete company</MenuItem>
                   </Menu>
                 )}
               </span>

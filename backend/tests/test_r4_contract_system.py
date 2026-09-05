@@ -81,7 +81,6 @@ def test_verify_bad_body_never_500(client, body):
 
 
 @pytest.mark.parametrize("body", [{"api_key": 5}, {"api_key": [1]}, {"api_key": {"a": 1}}])
-@pytest.mark.xfail(strict=True, reason="R4-T1-24")
 def test_verify_wrongly_typed_key_is_401_not_500(client, body):
     """`hmac.compare_digest(5, expected)` raises TypeError."""
     assert client.post("/api/auth/verify", json=body,
@@ -95,7 +94,6 @@ def test_verify_wrongly_typed_key_never_leaks_internals(client, body):
 
 
 @pytest.mark.parametrize("body", [{"api_key": 5}, {"api_key": [1]}])
-@pytest.mark.xfail(strict=True, reason="R4-T1-24")
 def test_set_session_wrongly_typed_key_is_401_not_500(client, body):
     assert client.post("/api/auth/set-session", json=body,
                        headers={"X-API-Key": API_KEY}).status_code in (401, 422)
@@ -189,7 +187,6 @@ def test_analyze_trigger_with_a_malformed_job_id_never_500s(client):
     assert_no_leak(client.post("/api/analyze/not-a-uuid"))
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-23")
 def test_analyze_trigger_with_a_malformed_job_id_is_404_or_422(client):
     assert client.post("/api/analyze/not-a-uuid").status_code in (404, 422)
 
@@ -274,7 +271,6 @@ def test_monitor_history_query_contract(client, qs):
     assert_clean(client.get(f"/api/monitor/history?{qs}"), 200)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-07")
 def test_monitor_history_rejects_a_negative_limit(client):
     assert client.get("/api/monitor/history?limit=-5").status_code == 422
 
@@ -319,7 +315,6 @@ def test_llm_costs_negative_days_means_all_time(client):
         .json()["window_days"] == -1
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-08")
 def test_timeline_rejects_an_out_of_range_day_count(client):
     """999999999 days overflows timedelta and escapes as a bare 500."""
     assert client.get("/api/stats/timeline?days=999999999").status_code == 422
@@ -329,7 +324,6 @@ def test_timeline_out_of_range_day_count_never_leaks_internals(client):
     assert_no_leak(client.get("/api/stats/timeline?days=999999999"))
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-10")
 def test_health_entities_rejects_a_non_positive_window(client, test_db):
     """window=0 flags every active company with "No results in the last 0 scrapes"."""
     make_company(test_db, name="Acme", active=True)
@@ -424,3 +418,65 @@ def test_telegram_webhook_null_message_never_leaks_internals(client, test_db):
     assert_no_leak(client.post("/api/telegram/webhook",
                                json={"callback_query": {"message": None}},
                                headers={"X-Telegram-Bot-Api-Secret-Token": "s3cret"}))
+
+
+# ── R4 fix-loop regressions ──────────────────────────────────────────────────
+
+@pytest.mark.parametrize("path", [
+    "/api/monitor/history?limit=-5", "/api/monitor/finished?limit=-5",
+    "/api/activity-log?limit=-3", "/api/scrape-log?limit=-3",
+])
+def test_negative_limit_is_422_on_every_system_listing(client, path):
+    """R4-T1-07: a plain `int` limit reached Postgres as LIMIT -5."""
+    assert_clean(client.get(path), 422)
+
+
+@pytest.mark.parametrize("path", [
+    "/api/monitor/history?offset=-5", "/api/activity-log?offset=-5",
+])
+def test_negative_offset_stays_clamped_not_rejected(client, path):
+    """`offset` was already clamped with max(0, …) and keeps that contract."""
+    assert_clean(client.get(path), 200)
+
+
+@pytest.mark.parametrize("days", [0, -5, 1, 30, 3650])
+def test_timeline_still_accepts_the_windows_the_ui_uses(client, days):
+    """R4-T1-08 bounds only the top: days<=0 is a legal empty window."""
+    assert_clean(client.get(f"/api/stats/timeline?days={days}"), 200)
+
+
+@pytest.mark.parametrize("days", [3651, 999999999, 10**12])
+def test_timeline_rejects_a_window_that_overflows_timedelta(client, days):
+    assert_clean(client.get(f"/api/stats/timeline?days={days}"), 422)
+
+
+@pytest.mark.parametrize("window", [0, -1, -100])
+def test_health_entities_rejects_a_non_positive_window_value(client, test_db, window):
+    """R4-T1-10: window=0 made all([]) true and flagged every active entity."""
+    make_company(test_db, name="Acme", active=True)
+    assert_clean(client.get(f"/api/health/entities?window={window}"), 422)
+
+
+def test_health_entities_still_answers_for_a_sane_window(client, test_db):
+    make_company(test_db, name="Acme", active=True)
+    r = assert_clean(client.get("/api/health/entities?window=3"), 200)
+    assert r.json()["count"] == 0
+
+
+@pytest.mark.parametrize("bad", ["not-a-uuid", "1", "abc-def"])
+def test_analyze_trigger_malformed_job_id_is_404(client, bad):
+    """R4-T1-23: uuid.UUID(job_id) ran inside the launch call, before any lookup."""
+    assert_clean(client.post(f"/api/analyze/{bad}"), 404)
+
+
+@pytest.mark.parametrize("path", ["/api/auth/verify", "/api/auth/set-session"])
+@pytest.mark.parametrize("key", [5, 1.5, [1], {"a": 1}, True])
+def test_auth_wrongly_typed_key_is_401(client, path, key):
+    """R4-T1-24: hmac.compare_digest(5, expected) raised TypeError on a public route."""
+    assert_clean(client.post(path, json={"api_key": key},
+                             headers={"X-API-Key": API_KEY}), 401)
+
+
+def test_auth_still_accepts_the_real_key(client):
+    assert_clean(client.post("/api/auth/verify", json={"api_key": API_KEY},
+                             headers={"X-API-Key": API_KEY}), 200)

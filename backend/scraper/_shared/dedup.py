@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 import re
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import urlparse, parse_qs, parse_qsl, urlencode, urlunparse
 
 logger = logging.getLogger("jobnavigator.dedup")
 
@@ -117,7 +117,10 @@ def _normalize_url(url: str) -> str:
         cleaned = {k: v for k, v in qs.items()
                    if k.lower() in keep
                    or (k.lower() not in params and not k.lower().startswith("utm_"))}
-        # Sort params for stable hashing
+        # Param ORDER is deliberately preserved here: this value is stored as
+        # Job.url by the company-page scraper, and a board can be picky about the
+        # URL it handed out. Order-independence belongs to the hash, and is done
+        # in _canonical_for_hash() below.
         new_query = urlencode(cleaned, doseq=True)
         # Remove fragment (anchors are display-only)
         return urlunparse(parsed._replace(path=path, query=new_query, fragment=""))
@@ -125,17 +128,55 @@ def _normalize_url(url: str) -> str:
         return url
 
 
+_ATS_SUFFIXES = ("/application", "/apply", "/thanks")
+
+
+def _fold_path(path: str) -> str:
+    """Drop a trailing slash and any ATS apply/thanks suffix it was hiding.
+
+    `_normalize_url` only strips a suffix that ends the path, so
+    `…/4012345/apply/` keeps its `/apply`. Folding the slash first, then the
+    suffix, then the slash the suffix exposed, collapses both spellings.
+    """
+    for _ in range(2):
+        before = path
+        if len(path) > 1 and path.endswith("/"):
+            path = path[:-1]
+        for suffix in _ATS_SUFFIXES:
+            if path.endswith(suffix):
+                path = path[:-len(suffix)]
+                break
+        if path == before:
+            break
+    return path
+
+
 def _canonical_for_hash(url: str) -> str:
-    """Hash-only canonical form: stripped URL with host+path lowercased (but not query values) so case-divergent slugs converge while the stored URL keeps its original case."""
+    """Hash-only canonical form.
+
+    Folds everything that spells the same posting two ways — scheme (http vs
+    https), a leading `www.`, host/path case, a trailing slash, and query-param
+    order — so twenty spellings of one job collapse onto one `external_id`. The
+    stored `Job.url` is untouched by this: it keeps the bytes the board handed us
+    (some ATS WAFs 403 without the exact path they linked).
+    """
     if not url:
         return ""
     stripped = _normalize_url(url)
     try:
         parsed = urlparse(stripped)
-        return urlunparse(parsed._replace(
-            netloc=(parsed.netloc or "").lower(),
-            path=(parsed.path or "").lower(),
-        ))
+        # http and https serve the same posting; a board upgrading its scheme
+        # must not re-import its whole catalogue.
+        scheme = (parsed.scheme or "").lower()
+        if scheme in ("http", "https"):
+            scheme = "https"
+        netloc = (parsed.netloc or "").lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        path = _fold_path((parsed.path or "").lower())
+        # Sorted so ?a=1&b=2 and ?b=2&a=1 hash alike.
+        query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=False)))
+        return urlunparse((scheme, netloc, path, parsed.params, query, ""))
     except Exception:
         return stripped
 

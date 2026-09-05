@@ -1,5 +1,6 @@
 """Job execution monitor — tracks running state and run history (Hangfire-style)."""
 import asyncio
+import contextvars
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -39,6 +40,33 @@ def _make_key(job_type: str, scope_key: Optional[str] = None) -> str:
     if scope_key:
         return f"{job_type}:{scope_key}"
     return job_type
+
+
+# ── "Finished, but it did not work" ────────────────────────────────────────
+# Some tracked coroutines swallow their own exception and return a human summary
+# instead ("Scoring failed" when the LLM provider is down). The run then reads as
+# `completed` in Stats and as an OK toast in the dashboard, and the outage is
+# only visible in llm_call_log (R4-T1-28). A coroutine calls mark_run_failed()
+# to say "keep my summary, but this run failed, and here is why".
+#
+# A ContextVar keeps it per-task: launch_background's wrapper runs in its own
+# task context, and each scheduled job owns its own too, so two concurrent runs
+# never see each other's reason.
+_run_failure: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "jn_run_failure", default=None
+)
+
+
+def mark_run_failed(reason: str) -> None:
+    """Flag the currently tracked run as failed while still returning a summary."""
+    if reason:
+        _run_failure.set(str(reason)[:1000])
+
+
+def _take_run_failure() -> Optional[str]:
+    reason = _run_failure.get()
+    _run_failure.set(None)
+    return reason
 
 
 class JobAlreadyRunningError(Exception):
@@ -182,8 +210,11 @@ async def tracked_run(
     _running[key] = running_job
 
     try:
+        _run_failure.set(None)
         yield running_job
-        _finish_job_run(run_id, "completed", running_job.summary, None)
+        reason = _take_run_failure()
+        _finish_job_run(run_id, "failed" if reason else "completed",
+                        running_job.summary, reason)
     except Exception as e:
         _finish_job_run(run_id, "failed", None, str(e))
         raise
@@ -220,10 +251,13 @@ def launch_background(
 
     async def _wrapper():
         try:
+            _run_failure.set(None)
             result = await coro_func(*(func_args or ()), **(func_kwargs or {}))
             # A coroutine that returns a string is describing what it did.
             summary = result.strip() if isinstance(result, str) and result.strip() else None
-            _finish_job_run(run_id, "completed", summary, None)
+            # …but it may also have reported a failure it handled itself.
+            reason = _take_run_failure()
+            _finish_job_run(run_id, "failed" if reason else "completed", summary, reason)
         except Exception as e:
             logger.error(f"Background job {job_type} failed: {e}")
             _finish_job_run(run_id, "failed", None, str(e))

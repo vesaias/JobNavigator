@@ -71,19 +71,27 @@ export function useSettled(loaders, key = '') {
 // then reconciles silently when live data settles, cross-fading (.15s) like a rail badge.
 const WARM_NS = 'jobnavigator_v2_warm:'
 export const NBSP = '\u00A0'
+// The count line's "we don't know" mark. NBSP is the *loading* state (the shell
+// holds its box); a load that FAILED says so with an em dash rather than
+// asserting zeroes next to an error message (R4-T2A-08).
+export const DASH = '\u2014'
 const readWarm = (screen) => {
   try {
     const v = JSON.parse(localStorage.getItem(WARM_NS + screen) || 'null')
     return v && typeof v === 'object' ? v : null
   } catch { return null }
 }
-export function useWarm(screen, live, ready) {
+// `ok` is the load's own verdict: a settled-but-FAILED load carries zeroes, and
+// writing those to the cache made the next visit open by asserting "0 bases · 0
+// tailored copies" (R4-T2B-03). A failed load neither writes the cache nor hands
+// back a snapshot — callers render `—` from a null `warm` instead of zeroes.
+export function useWarm(screen, live, ready, ok = true) {
   const [boot] = useState(() => readWarm(screen))
   const [fade, setFade] = useState(false)
   const raf = useRef([])
   const last = useRef(boot === null ? null : JSON.stringify(boot))
   useEffect(() => () => { raf.current.forEach((id) => cancelAnimationFrame(id)) }, [])
-  const json = ready && live != null ? JSON.stringify(live) : null
+  const json = ready && ok && live != null ? JSON.stringify(live) : null
   useEffect(() => {
     if (json === null || json === last.current) return   // the cache was right: no render, no fade
     const warmed = last.current !== null                 // nothing to cross-fade from on a first visit
@@ -96,7 +104,7 @@ export function useWarm(screen, live, ready) {
     // the transition back up (one frame alone can be coalesced away)
     raf.current = [requestAnimationFrame(() => { raf.current = [requestAnimationFrame(() => setFade(false))] })]
   }, [json, screen])
-  return { warm: ready ? live : boot, fade, style: { opacity: fade ? 0.6 : 1, transition: 'opacity .15s' } }
+  return { warm: ok ? (ready ? live : boot) : null, fade, style: { opacity: fade ? 0.6 : 1, transition: 'opacity .15s' } }
 }
 
 const FLASH_KEY = 'jobnavigator_v2_flash'

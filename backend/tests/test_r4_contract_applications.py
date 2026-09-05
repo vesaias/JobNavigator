@@ -262,7 +262,6 @@ def test_list_applications_query_contract(client, qs, expected):
     assert_clean(client.get(f"/api/applications?{qs}"), expected)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-07")
 def test_list_applications_rejects_negative_limit(client):
     assert client.get("/api/applications?limit=-5").status_code == 422
 
@@ -316,3 +315,10 @@ def test_extract_refuses_or_fails_cleanly_on_hostile_urls(client, url):
 
 def test_extract_requires_a_url_field(client):
     assert_clean(client.post("/api/applications/extract", json={}), 422)
+
+
+# ── R4 fix-loop regression (R4-T1-07) ────────────────────────────────────────
+
+@pytest.mark.parametrize("qs", ["limit=-5", "limit=-1"])
+def test_list_applications_negative_limit_is_422(client, qs):
+    assert_clean(client.get(f"/api/applications?{qs}"), 422)

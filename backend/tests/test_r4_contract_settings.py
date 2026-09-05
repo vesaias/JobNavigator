@@ -305,7 +305,6 @@ def test_autofill_missing_prompt_setting_is_500_with_a_reason(client, test_db):
     assert "autofill_prompt" in r.text
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-22")
 def test_autofill_stream_uses_the_editable_prompt_setting(client, test_db):
     """The SSE path hardcodes its own prompt, so an edited `autofill_prompt` is
     silently ignored by the variant the extension actually streams from."""
@@ -390,3 +389,43 @@ def test_linkedin_pin_without_digits_is_rejected(client, pin):
 @pytest.mark.parametrize("body", [{}, {"pin": None}, {"pin": 1234}, [1], "x"])
 def test_linkedin_pin_bad_body_never_500(client, body):
     assert_clean(client.post("/api/linkedin/session/pin", json=body), 200, 400, 422)
+
+
+# ── R4 fix-loop regression (R4-T1-22) ────────────────────────────────────────
+
+def test_autofill_stream_and_answer_read_the_same_prompt_setting(client, test_db, monkeypatch):
+    """Both variants must build their prompt from the editable `autofill_prompt`."""
+    import backend.api.routes_autofill as ra
+    make_persona(test_db)
+    set_setting(test_db, "autofill_prompt",
+                "PROFILE {persona}\nSENTINEL-TOKEN\n{company} {position} {question}")
+
+    seen = {}
+
+    async def _stream(suffix, system, max_tokens=None, cached_prefix=None):
+        seen["prefix"] = cached_prefix
+        seen["suffix"] = suffix
+        yield "ok"
+
+    monkeypatch.setattr(ra, "call_autofill_llm_stream", _stream)
+    r = client.post("/api/autofill/answer/stream",
+                    json={"question": "Why us?", "company": "Acme"})
+    assert r.status_code == 200
+    assert "SENTINEL-TOKEN" in (seen["prefix"] or "")
+    assert "Why us?" in seen["suffix"] and "Acme" in seen["suffix"]
+
+
+def test_autofill_stream_still_suppresses_the_json_envelope(client, test_db, monkeypatch):
+    """The template steers toward {"answer": …}; the streamed variant must not."""
+    import backend.api.routes_autofill as ra
+    make_persona(test_db)
+    set_setting(test_db, "autofill_prompt", "{persona}{company}{position}{question}")
+    seen = {}
+
+    async def _stream(suffix, system, max_tokens=None, cached_prefix=None):
+        seen["suffix"] = suffix
+        yield "ok"
+
+    monkeypatch.setattr(ra, "call_autofill_llm_stream", _stream)
+    client.post("/api/autofill/answer/stream", json={"question": "Why us?"})
+    assert "no JSON" in seen["suffix"]

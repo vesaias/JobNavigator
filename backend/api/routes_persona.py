@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from backend.models.db import get_db, Persona, Resume, utcnow
+from backend.api._input import str_field
 
 logger = logging.getLogger("jobnavigator.persona")
 
@@ -280,8 +281,10 @@ async def import_persona(request: Request, file: Optional[UploadFile] = File(Non
 @router.post("/qa-bank")
 def append_qa_bank(body: dict, db: Session = Depends(get_db)):
     """Append one {question, answer} entry to the singleton Persona's qa_bank, creating the Persona row if missing (empty question/answer -> 400); used by the extension's autofill review popover to save edited answers back into the bank."""
-    question = (body.get("question") or "").strip()
-    answer = (body.get("answer") or "").strip()
+    # str_field 400s a wrongly typed field the same way a blank one is already
+    # rejected, instead of an AttributeError 500 (R4-T1-20).
+    question = str_field(body, "question")
+    answer = str_field(body, "answer")
     if not question or not answer:
         raise HTTPException(status_code=400, detail="question and answer are required")
 

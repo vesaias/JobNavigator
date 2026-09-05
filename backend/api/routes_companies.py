@@ -325,7 +325,13 @@ def bulk_activate(data: BulkActivate, db: Session = Depends(get_db)):
     """Set companies active or inactive, optionally filtered by tiers."""
     q = db.query(Company)
     if data.tiers:
-        tier_ints = [int(t) for t in data.tiers if t != 'none']
+        # `tiers` is List[str] on the wire, so int() on a free-text value was an
+        # unguarded ValueError -> 500 (R4-T1-19).
+        try:
+            tier_ints = [int(t) for t in data.tiers if t != 'none']
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422,
+                                detail="tiers must be numbers or 'none'")
         has_none = 'none' in data.tiers
         if tier_ints and has_none:
             q = q.filter((Company.tier.in_(tier_ints)) | (Company.tier.is_(None)))

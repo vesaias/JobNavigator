@@ -154,6 +154,10 @@ Open `http://localhost`. On first run, click "Sign In" with a blank API key to p
 
 PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Easy wins: new ATS scrapers, new resume templates, UI polish.
 
+## Backups
+
+The scheduled `db_backup` job writes a `pg_dump` of the whole database into `backups/` (five kept, on the `backup_cron` schedule); you can also trigger one from the dashboard. **Those dumps contain the `settings` table verbatim, and JobNavigator is configured from the dashboard — so the dump holds your LLM API key (`llm_api_key`) and your dashboard key (`dashboard_api_key`) in clear text.** `GET /api/settings` redacts both and no route serves a dump file, so this is an at-rest concern only, but treat a dump exactly as you would treat `.env`: local-only, never committed, never shared. `backups/` is in `.gitignore` for that reason — keep it there, and re-check it if you move the directory or change your backup path.
+
 ## Security
 
 Found a vulnerability? See [SECURITY.md](SECURITY.md). Please don't open public issues for security bugs.

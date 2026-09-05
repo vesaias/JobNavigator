@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Setting, Job, Application, SessionLocal, utcnow, Persona
+from backend.api._input import str_field
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 
 
@@ -590,9 +591,9 @@ def resume_shelf(db: Session = Depends(get_db)):
 @router.post("", status_code=201)
 def create_resume(body: dict, db: Session = Depends(get_db)):
     """Create a new resume from name/is_base/parent_id/job_id/template/page_format/json_data."""
-    name = body.get("name", "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name is required")
+    # str_field turns a wrongly typed name into the same 400 a blank one already
+    # gets, instead of an AttributeError 500 (R4-T1-20).
+    name = str_field(body, "name", required=True)
 
     resume = Resume(
         name=name,

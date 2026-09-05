@@ -1,6 +1,6 @@
 """Application management endpoints."""
 import logging
-from typing import Optional
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -311,8 +311,8 @@ def create_application(
 @router.get("")
 def list_applications(
     status: Optional[str] = None,
-    limit: int = Query(200, le=2000),
-    offset: int = Query(0, ge=0),
+    limit: Annotated[int, Query(ge=0, le=2000)] = 200,
+    offset: Annotated[int, Query(ge=0)] = 0,
     db: Session = Depends(get_db),
 ):
     from sqlalchemy.orm import selectinload

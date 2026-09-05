@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { useSettled } from './hooks'
+import { useSettled, NBSP } from './hooks'
 import { Band, Button, Card, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
 import { ago } from './time'
 import './theme.css'
@@ -294,15 +294,40 @@ export default function Persona() {
   const toggleSection = toggler(setSections, 'jobnavigator_v2_persona_sections')
   const toggleGroup = toggler(setGroups, 'jobnavigator_v2_persona_groups')
 
+  // Hoisted so the LOADING frame paints the same chrome the settled one does —
+  // this screen used to render a bare centred div, indistinguishable from a broken
+  // route on a slow link (R4-T2B-06). Only the two columns wait.
+  const header = (
+    <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+        <PageTitle>Persona</PageTitle>
+        {/* integer line-heights: at the inherited 1.5, 13px would be 19.5px, landing
+            rows below the header on a half pixel where Chrome rounds borders away */}
+        {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance; needed for whole-pixel rows */}
+        <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {ready && p ? `Saves automatically · autofill ${filled} of ${ANSWERABLE} set` : NBSP}
+        </span>
+      </div>
+      {/* ui: keep — accent-ink save indicator, not a Link (would add cursor:pointer + hover) */}
+      <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
+      <Button variant="secondary" size="sm" busy={importing} disabled={!ready || !p} ariaHaspopup="dialog"
+        title="Fill contact details and résumé content from a base résumé or a PDF"
+        onClick={() => setImportOpen(true)}>{importing ? 'Parsing…' : 'Import ↑'}</Button>
+    </HeaderRow>
+  )
+
   // A 500 ("singleton missing — restart to re-seed") or a `200 null` needs a retry, not an infinite "Loading…".
   if (!ready || !p) return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 13 }}>
-      {ready && loadErr ? (
-        <>
-          <span>Couldn’t load your persona.</span>
-          <Pill size="sm" onClick={() => { setLoadErr(false); setReload((n) => n + 1) }}>Try again</Pill>
-        </>
-      ) : null}
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {header}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 13 }}>
+        {ready && loadErr ? (
+          <>
+            <span>Couldn’t load your persona.</span>
+            <Pill size="sm" onClick={() => { setLoadErr(false); setReload((n) => n + 1) }}>Try again</Pill>
+          </>
+        ) : null}
+      </div>
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
@@ -311,22 +336,7 @@ export default function Persona() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <PageTitle>Persona</PageTitle>
-          {/* integer line-heights: at the inherited 1.5, 13px would be 19.5px, landing
-              rows below the header on a half pixel where Chrome rounds borders away */}
-          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance; needed for whole-pixel rows */}
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Saves automatically · autofill {filled} of {ANSWERABLE} set
-          </span>
-        </div>
-        {/* ui: keep — accent-ink save indicator, not a Link (would add cursor:pointer + hover) */}
-        <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
-        <Button variant="secondary" size="sm" busy={importing} ariaHaspopup="dialog"
-          title="Fill contact details and résumé content from a base résumé or a PDF"
-          onClick={() => setImportOpen(true)}>{importing ? 'Parsing…' : 'Import ↑'}</Button>
-      </HeaderRow>
+      {header}
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* left — résumé content, edited with the Résumé editor's own components */}

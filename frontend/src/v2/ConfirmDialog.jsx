@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import './theme.css'
-import { Button, Heading, Input, ModalPanel } from './ui'
+import { Button, CopyGlyph, Heading, Input, ModalPanel } from './ui'
 
 // The one destructive-confirm dialog for v2, so deletes stop falling back to
 // window.confirm. Escape and the scrim both cancel; the confirm side never
@@ -37,7 +37,7 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
         onFocus={(e) => readOnly && e.target.select()}
         style={{ marginTop: 4 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        {readOnly && <Button variant="secondary" size="sm" onClick={copy}>{copied ? 'Copied ✓' : '⧉ Copy'}</Button>}
+        {readOnly && <Button variant="secondary" size="sm" onClick={copy}>{copied ? 'Copied ✓' : <><CopyGlyph />Copy</>}</Button>}
         {!readOnly && <Button variant="secondary" size="sm" onClick={onCancel} style={{ marginLeft: 'auto' }}>Cancel</Button>}
         <Button size="sm" onClick={() => onSubmit(v)} style={{ marginLeft: readOnly ? 'auto' : 0 }}>{label || 'OK'}</Button>
       </div>

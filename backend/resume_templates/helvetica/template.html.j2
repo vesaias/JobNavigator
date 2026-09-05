@@ -30,6 +30,16 @@ html, body {
   margin: 0 auto;
 }
 
+/* R4-T3-01: the trailing whitespace of the flow (the page block's bottom padding
+   and the last entry's bottom margin) is counted against the final line at a page
+   break, pushing it onto a near-blank second page. None of it paints, so drop it
+   when paginating; the HTML preview keeps its bottom gutter. */
+@media print {
+  .page { padding-bottom: 0; }
+  .entry:last-child, .edu-entry:last-child, .skill-line:last-child { margin-bottom: 0; }
+  .section-title { break-after: avoid; }
+}
+
 /* --- Header --- */
 .header {
   margin-bottom: 8pt;

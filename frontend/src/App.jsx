@@ -40,6 +40,20 @@ const labRoute = (name, path) => {
   return <Route path={path} element={<Suspense fallback={null}><Page /></Suspense>} />
 }
 
+// Set once the onboarding overlay has been dismissed; its absence is what makes
+// a browser profile a "first visit" (R4-T0-02).
+const WELCOMED_KEY = 'jobnavigator_welcomed'
+// Two keys an older build wrote for the same fact (and the ones the Playwright
+// harness seeds). Either one means the tour has already been seen, so neither an
+// upgrade nor a test run replays it.
+const LEGACY_WELCOMED = ['jobnavigator_v2_welcome_seen', 'jobnavigator_welcome_seen']
+const alreadyWelcomed = () => {
+  try {
+    if (localStorage.getItem(WELCOMED_KEY) === '1') return true
+    return LEGACY_WELCOMED.some((k) => localStorage.getItem(k) === 'true')
+  } catch { return true }   // storage blocked: never strand someone behind a modal that can't record its own dismissal
+}
+
 const NAV_ITEMS = [
   { to: '/', icon: Briefcase, label: 'Jobs' },
   { to: '/applications', icon: LayoutDashboard, label: 'Applications' },
@@ -118,8 +132,13 @@ function App() {
   const darkMode = resolved === 'dark'
   const setDarkMode = (v) => setMode(v ? 'dark' : 'light')
   const [showLogin, setShowLogin] = useState(false)
+  // Two ways in, one modal. LoginModal writes the session flag on a successful
+  // sign-in (the key-set install), but a keyless first run never sees that
+  // modal — so a *first visit* with no `jobnavigator_welcomed` mark shows the
+  // onboarding too, which is the install it was written for (R4-T0-02).
   const [showWelcome, setShowWelcome] = useState(() => {
-    try { return sessionStorage.getItem('jn:welcome') === '1' } catch { return false }
+    try { if (sessionStorage.getItem('jn:welcome') === '1') return true } catch { /* ignore */ }
+    return !alreadyWelcomed()
   })
 
   // Handle ?cv= query param tracer links — redirect to /cv/{token} on backend
@@ -192,6 +211,8 @@ function App() {
       {showWelcome && !showLogin && (
         <WelcomeModal onClose={() => {
           try { sessionStorage.removeItem('jn:welcome') } catch {}
+          // durable, so the tour does not come back on the next visit
+          try { localStorage.setItem(WELCOMED_KEY, '1') } catch {}
           setShowWelcome(false)
         }} />
       )}

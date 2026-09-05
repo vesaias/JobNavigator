@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from backend.models.db import get_db, CoverLetter, Resume, Job, Setting, Persona, TracerLink, TracerClickEvent, SessionLocal
+from backend.api._input import str_field, uuid_filter
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 from backend.api.routes_resumes import _get_browser, _rewrite_urls_with_tracers  # shared with resumes
 
@@ -144,6 +145,10 @@ def _build_ctx(rows: list[CoverLetter], db: Session) -> dict:
 @router.get("")
 def list_cover_letters(job_id: Optional[str] = None, db: Session = Depends(get_db)):
     q = db.query(CoverLetter).order_by(CoverLetter.updated_at.desc())
+    # A malformed filter value is a request error (422), not a missing resource —
+    # the global DataError handler would otherwise call this list "Not found"
+    # (R4-T1-09). Path ids keep their 404.
+    job_id = uuid_filter(job_id, "job_id")
     if job_id:
         q = q.filter(CoverLetter.job_id == job_id)
     rows = q.all()
@@ -153,9 +158,8 @@ def list_cover_letters(job_id: Optional[str] = None, db: Session = Depends(get_d
 
 @router.post("", status_code=201)
 def create_cover_letter(body: dict, db: Session = Depends(get_db)):
-    name = (body.get("name") or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name is required")
+    # See R4-T1-20: a non-string name used to raise AttributeError -> 500.
+    name = str_field(body, "name", required=True)
     cl = CoverLetter(
         name=name,
         job_id=body.get("job_id"),

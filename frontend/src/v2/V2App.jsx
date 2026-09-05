@@ -68,6 +68,9 @@ export default function V2App() {
   const [counts, setCounts] = useState(() => obj(boot.counts))
   const [warn, setWarn] = useState(() => obj(boot.warn))
   const [health, setHealth] = useState(() => slimHealth(boot.health))
+  // "unknown", the third state the dot used to be missing: an unreachable
+  // backend read as green, indistinguishable from a healthy fresh install.
+  const [down, setDown] = useState(false)
   // a badge that changes from its cached value fades in (renders at .6 for one
   // frame, then transitions to 1); unchanged badges never dim.
   const [fade, setFade] = useState(false)
@@ -122,6 +125,11 @@ export default function V2App() {
       api.get('/health/entities'),
       api.get('/monitor/history', { params: { limit: 1, job_type: 'scrape_all' } }),
     ]).then(([w, h]) => {
+      // A rejection carrying a `response` is the server answering (500, 401…) —
+      // the screen behind the rail owns that. Only a rejection with NO response
+      // at all is "we could not reach the backend", and it has to be both.
+      const netErr = (r) => r.status === 'rejected' && !r.reason?.response
+      setDown(netErr(w) && netErr(h))
       if (w.status === 'fulfilled') {
         const d = w.value?.data
         const nw = { companies: (d?.companies || []).length, searches: (d?.searches || []).length }
@@ -139,19 +147,23 @@ export default function V2App() {
   useEffect(() => { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ counts, warn, health })) } catch {} }, [counts, warn, health])
 
   const failing = (warn.companies || 0) + (warn.searches || 0)
-  const healthy = failing === 0 && health?.status !== 'failed'
+  const healthy = !down && failing === 0 && health?.status !== 'failed'
   // rail gives this line ~166px at 11.5px; unhealthy variant drops the
   // timestamp rather than ellipsing away the part that matters
-  const healthText = failing
-    ? `${failing} source${failing === 1 ? ' needs' : 's need'} attention`
-    : health
-      ? `Scraper ${health.status === 'failed' ? 'run failed' : 'healthy'} · ${ago(health.finished_at || health.started_at) || '—'}`
-      : 'No scrape recorded yet'
+  const healthText = down
+    ? 'Backend unreachable'
+    : failing
+      ? `${failing} source${failing === 1 ? ' needs' : 's need'} attention`
+      : health
+        ? `Scraper ${health.status === 'failed' ? 'run failed' : 'healthy'} · ${ago(health.finished_at || health.started_at) || '—'}`
+        : 'No scrape recorded yet'
   // label merges both signals into one number; tooltip names them separately
   const nC = warn.companies || 0
   const nS = warn.searches || 0
   const lastSweep = health ? (ago(health.finished_at || health.started_at) || '—') : 'no scrape run recorded yet'
-  const healthTip = failing
+  const healthTip = down
+    ? 'The dashboard could not reach the backend. Nothing below is live — check that the server is running.'
+    : failing
     ? `${nC} compan${nC === 1 ? 'y' : 'ies'} and ${nS} search${nS === 1 ? '' : 'es'} need attention. Click to open Run history.`
     : health?.status === 'failed'
       ? `All companies and searches are healthy, but the last scrape run failed ${lastSweep}. Click to open Run history.`
@@ -229,7 +241,7 @@ export default function V2App() {
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
               /* ui: keep — 7px scrape-health rail dot, not a control */
-              ? <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: healthy ? 'var(--rail-accent)' : 'var(--warn)' }} />
+              ? <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-control)', background: healthy ? 'var(--rail-accent)' : down ? 'var(--bad)' : 'var(--warn)' }} />
               /* the ◐ cycles Light -> Dark -> System; glyph names the current
                  mode, tooltip spells it out */
               : <span onClick={(e) => { e.stopPropagation(); look.cycle() }} title={appearanceTip} style={{ fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer' }}>{MODE_ICON[look.mode]}</span>}

@@ -163,6 +163,12 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* The rail is dark in every appearance, so the content ring (--focus-ring on
+     a light ground) is invisible there; the rail's own accent is the ring. */
+  --rail-focus:var(--rail-accent);
+  /* .v2-scroll's own bar. Base = the values it has always drawn (a --muted thumb
+     on nothing); a theme may re-point both, but the bar stays slim. */
+  --scroll-thumb:var(--muted); --scroll-track:transparent;
   /* Mono · GlyphBadge · Notice · toast marks: semantic names for roles the
      primitive layer had no tokens for. */
   --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
@@ -379,6 +385,12 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* The rail is dark in every appearance, so the content ring (--focus-ring on
+     a light ground) is invisible there; the rail's own accent is the ring. */
+  --rail-focus:var(--rail-accent);
+  /* .v2-scroll's own bar. Base = the values it has always drawn (a --muted thumb
+     on nothing); a theme may re-point both, but the bar stays slim. */
+  --scroll-thumb:var(--muted); --scroll-track:transparent;
   /* Mono · GlyphBadge · Notice · toast marks — light block's twin, kept
      identical so no light value leaks into dark. */
   --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
@@ -933,6 +945,12 @@
   /* `none` is not a valid border-colour, so field-hover would fall back to
      currentColor (a flat black box) — use the inset bevel's own colour instead. */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  /* 98.css's --link-blue. Falling through to --accent drew links in the same
+     navy as the title bar and the selection fill, so a link read as chrome. */
+  --link-ink:#0000ff; --link-ink-hover:#000080;
+  /* No bevel is expressible through scrollbar-color, so the bar keeps the
+     chrome's two greys (button-shadow thumb on button-face trough) and stays slim. */
+  --scroll-thumb:#808080; --scroll-track:#c0c0c0;
   --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
 }
@@ -969,7 +987,9 @@
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
   --input-border-error:var(--bad); --input-ring-error:none;
-  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  /* the dark desktop (#1f2b3a) and --accent (#2b3a5c) sit ~1.3:1 apart, so a
+     picked row was hard to spot; the title bar's own light stop separates them. */
+  --row-selected:#4a6a99; --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
   --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
   --focus-shadow:none; --focus-outline:1px dotted #000000;   /* the generated file says `transparent`, which is not a valid box-shadow on its own; `none` is the same intent, valid */
   --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
@@ -979,6 +999,8 @@
   /* `none` is not a valid border-colour, so field-hover would fall back to
      currentColor (a flat black box) — use the inset bevel's own colour instead. */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --link-ink:#0000ff; --link-ink-hover:#000080;
+  --scroll-thumb:#808080; --scroll-track:#c0c0c0;
   --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
 }
@@ -1102,9 +1124,14 @@
    the axis, so it scrolls with no gutter at all. */
 .v2-railscroll { scrollbar-width:none; -ms-overflow-style:none; }
 .v2-railscroll::-webkit-scrollbar { width:0; height:0; }
+/* Two spellings of one bar. Chromium >=121 and Firefox honour the standard pair
+   and ignore the -webkit- pseudos; older Chromium takes the pseudos. Both read
+   the same two tokens, so a theme reskins the bar once (win98: chrome greys,
+   still slim — a bevelled 16px thumb is not expressible either way). */
+.v2-scroll { scrollbar-width:thin; scrollbar-color:var(--scroll-thumb) var(--scroll-track); }
 .v2-scroll::-webkit-scrollbar { width:9px; height:9px; }
-.v2-scroll::-webkit-scrollbar-thumb { background:var(--muted); border-radius:99px; border:2px solid var(--bg); }
-.v2-scroll::-webkit-scrollbar-track { background:transparent; }
+.v2-scroll::-webkit-scrollbar-thumb { background:var(--scroll-thumb); border-radius:var(--radius-control); border:2px solid var(--bg); }
+.v2-scroll::-webkit-scrollbar-track { background:var(--scroll-track); }
 
 @keyframes v2-spin { to { transform:rotate(360deg); } }
 .v2-spin { animation:v2-spin .9s linear infinite; }
@@ -1124,6 +1151,10 @@
 /* Keyboard-only ring on non-input controls. win98 swaps --focus-outline/-shadow
    for a 1px dotted outline; saas/cobalt for a 3px halo. */
 .jn-v2 [tabindex="0"]:focus-visible { outline:var(--focus-outline); outline-offset:-4px; box-shadow:var(--focus-shadow) !important; }
+/* The rail's nav items are real <a> elements, so the rule above (which matches
+   an explicit tabindex) never reached them and Tab left only the UA hairline —
+   ~1.1:1 on the dark rail. The rail rings in its own accent instead. */
+.jn-v2 .v2-navdark:focus-visible { outline:2px solid var(--rail-focus); outline-offset:-2px; }
 
 /* At <=1024px the Companies row is wider than its pane, so pin the actions
    column to the scroller's right edge; backgrounds mirror .v2-crow's rest/hover. */

@@ -46,6 +46,7 @@ with sync_playwright() as p:
               localStorage.setItem('jobnavigator_dark_mode', '{'true' if appearance == 'dark' else 'false'}');
               localStorage.setItem('jobnavigator_welcome_seen', 'true');
               localStorage.setItem('jobnavigator_v2_welcome_seen', 'true');
+              localStorage.setItem('jobnavigator_welcomed', '1');
             }} catch (e) {{}}
         """)
         warm = ctx.new_page(); warm.goto(BASE + "/v2/feed", wait_until="networkidle"); warm.wait_for_timeout(800); warm.close()

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
-import { useEscape, useSettled } from './hooks'
+import { useEscape, useSettled, NBSP } from './hooks'
 import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
 import { useTheme, MODE_OPTIONS, themeOptions } from './theme'
 import { describeCron, whenShort, CRON_PRESETS } from './time'
@@ -207,16 +207,28 @@ export default function Settings() {
 
   // Row is label(340) + gap(24) + controls; the pill + Override toggle on the six LLM rows are flex:0 0 auto, so a narrow pane clips the toggle off the right edge.
   // Below 720px (~1150px window with the nav rail expanded), the label moves above the controls instead of beside them.
-  useEffect(() => {
-    const el = scrollRef.current
+  //
+  // A CALLBACK REF, not an effect keyed on the data. `load()`'s setS and
+  // useSettled's setDone can commit as two renders; on the first the component is
+  // still returning the `!ready` placeholder, so `scrollRef.current` was null, the
+  // old `[!!S]` effect hit its guard and never re-ran (its dependency never changed
+  // again). ~1 load in 7 came up with no observer at all and stayed in the wide
+  // layout at 1024, clipping the LLM rows' Override switches off the right edge —
+  // exactly what `narrow` exists to prevent (R4-T2B-01). A ref callback runs on the
+  // commit that actually mounts the node, so it cannot be missed.
+  const roRef = useRef(null)
+  const attachScroller = useCallback((el) => {
+    scrollRef.current = el
+    if (roRef.current) { roRef.current.disconnect(); roRef.current = null }
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect?.width
       if (typeof w === 'number') setNarrow(w < 720)
     })
     ro.observe(el)
-    return () => ro.disconnect()
-  }, [!!S])
+    roRef.current = ro
+  }, [])
+  useEffect(() => () => { roRef.current?.disconnect() }, [])
 
   // Settings blob + the three list fetches that fill pickers settle together, so rows draw once instead of the
   // Default-résumé picker/LinkedIn line filling in after.
@@ -326,7 +338,7 @@ export default function Settings() {
     return [
       // The one group that isn't a DB setting: both rows live in this browser's localStorage (theme.js), so they take no `key` and never PATCH /settings.
       // They sit first because they change what every screen below looks like.
-      ['appearance', 'GENERAL', 'Display', '', [
+      ['appearance', 'General', 'Display', '', [
         { kind: 'appearance', label: 'Appearance', help: 'Light, dark, or follow your OS. Saved in this browser.' },
         { kind: 'theme', label: 'Theme', help: 'The app’s look: colours, fonts and, for Cobalt, SaaS and Win98, shapes too. Saved in this browser.' },
       ]],
@@ -391,7 +403,7 @@ export default function Settings() {
         E('Gmail query · senders', 'Extra sender domains treated as job-related email.', 'email_gmail_query_senders', { list: true, sub: 'one domain per line' }),
         E('Gmail query · exclusions', 'Ignore newsletters and job-alert email.', 'email_gmail_query_exclusions', { list: true, sub: 'one term per line · appended as -term' }),
       ]],
-      ['scheduler', 'PIPELINE', 'Scheduler', 'intervals in minutes (0 = off) · crons empty = off', [
+      ['scheduler', 'Pipeline', 'Scheduler', 'intervals in minutes (0 = off) · crons empty = off', [
         B('Scrape all companies', 'Runs every active company scrape on this interval.', 'scrape_interval_minutes', { mono: true, int: true, w: '135px' }),
         B('Email check', 'Polls Gmail for replies to your applications.', 'email_check_interval_minutes', { mono: true, int: true, w: '135px' }),
         B('Cleanup after', 'Days before ignored and skipped job postings are removed.', 'job_archive_after_days', { mono: true, int: true, w: '135px' }),
@@ -411,7 +423,7 @@ export default function Settings() {
       ['dedup', '', 'Dedup tracking params', '', [
         E('Stripped params', 'Query params removed from job URLs before duplicate detection. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),
       ]],
-      ['notifications', 'INTEGRATIONS', 'Notifications', '', [
+      ['notifications', 'Integrations', 'Notifications', '', [
         SW('Telegram', 'New high-scoring jobs and the daily digest are sent to your chat. The digest schedule is under Scheduler.', 'Off — no push notifications.', 'telegram_enabled'),
         B('Chat ID', 'Your Telegram chat — get it by messaging @userinfobot.', 'telegram_chat_id', { mono: true, w: '135px' }),
         B('Score threshold', 'Only jobs scoring at or above this trigger an instant alert.', 'fit_score_threshold', { mono: true, int: true, w: '135px' }),
@@ -461,7 +473,7 @@ export default function Settings() {
           info: 'The extension captures jobs while you browse LinkedIn collections. Use a separate account so rate limits, CAPTCHAs or bans affect it and not your real profile.' }),
         B('Mock account password', 'Stored locally only.', 'linkedin_mock_password', { secret: true, w: '260px' }),
       ]],
-      ['advanced', 'SYSTEM', 'Advanced', '', [
+      ['advanced', 'System', 'Advanced', '', [
         B('Proxy URL', 'Used by scrapes that hit rate limits or geo-blocks. Empty = direct.', 'proxy_url', { mono: true, w: '340px', placeholder: 'socks5://127.0.0.1:9050' }),
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup')),
@@ -475,17 +487,42 @@ export default function Settings() {
     sec[4].some((r) => `${r.label} ${r.help || ''}`.toLowerCase().includes(q))
   const visible = sections.filter(matches)
 
+  // Hoisted so the LOADING frame paints the same chrome the settled one does —
+  // this screen used to render a bare centred div, so on a slow link it was
+  // indistinguishable from a broken route for as long as the request took
+  // (R4-T2B-06). Only the rows wait; the title, subtitle and search field don't.
+  const header = (
+    <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+        <PageTitle>Settings</PageTitle>
+        <span style={{ fontSize: 13, lineHeight: '20px', color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color .15s' }}>
+          {toast ? toast.msg : (ready ? 'Saves automatically · everything stays on this machine' : NBSP)}
+        </span>
+      </div>
+      {/* ui: keep — settings search field wrapper (Input role), not a pill; h32 tracks ui.jsx's boxed SearchInput */}
+      <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
+        {/* ui: keep — the field's search glyph (an icon adornment), not a helper sub-line; Helper's 11.5 would grow the glyph */}
+        <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
+          style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
+      </div>
+    </HeaderRow>
+  )
+
   // A failed load must not render the same empty pane as the loading state — a hard failure and a hung request would be indistinguishable.
   // The wait itself is silent; rows appear in one render once settled.
   if (!ready || !S) return (
-    <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {ready && loadErr ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
-          <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your settings</span>
-          <Helper>{loadErr}</Helper>
-          <Link onClick={() => { setLoadErr(null); load() }} style={{ paddingTop: 2 }}>Try again</Link>
-        </div>
-      ) : null}
+    <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {header}
+      <div style={{ flex: 1, minHeight: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {ready && loadErr ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
+            <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your settings</span>
+            <Helper>{loadErr}</Helper>
+            <Link onClick={() => { setLoadErr(null); load() }} style={{ paddingTop: 2 }}>Try again</Link>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 
@@ -500,21 +537,7 @@ export default function Settings() {
 
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <PageTitle>Settings</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: toast?.bad ? 'var(--bad)' : (toast ? 'var(--accent)' : 'var(--muted)'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color .15s' }}>
-            {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
-          </span>
-        </div>
-        {/* ui: keep — settings search field wrapper (Input role), not a pill; h32 tracks ui.jsx's boxed SearchInput */}
-        <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
-          {/* ui: keep — the field's search glyph (an icon adornment), not a helper sub-line; Helper's 11.5 would grow the glyph */}
-          <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
-            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
-        </div>
-      </HeaderRow>
+      {header}
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* anchor rail */}
@@ -532,7 +555,7 @@ export default function Settings() {
         </div>
 
         {/* rows */}
-        <div ref={scrollRef} className="v2-scroll" style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '0 40px 40px', minHeight: 0 }}>
+        <div ref={attachScroller} className="v2-scroll" style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '0 40px 40px', minHeight: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 980 }}>
             {visible.map(([id, , title, sub, rows]) => (
               <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>

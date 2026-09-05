@@ -7,7 +7,7 @@ import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 import { ago, agoShort } from './time'
-import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useWarm, NBSP } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useWarm, NBSP, DASH } from './hooks'
 
 export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['detailed', 'Detailed']]
 
@@ -236,17 +236,21 @@ export default function CoverLetters() {
   // Active = still in play: a live application, or a draft whose job is still new/saved.
   // Only rejected applications and letters for skipped/gone jobs sink into the archive.
   const LIVE_JOB = ['new', 'saved', 'applied']
-  const isActive = (c) => (c.stage ? c.stage !== 'rejected' : LIVE_JOB.includes(c.job_status))
+  // No stage AND no job status = a draft written five seconds ago (or one whose
+  // job row the cleanup job removed) — it used to fall through to "Archived · from
+  // rejected applications & skipped jobs", which was untrue (R4-T2B-09).
+  const isActive = (c) => (c.stage ? c.stage !== 'rejected' : (c.job_status ? LIVE_JOB.includes(c.job_status) : true))
   const active = useMemo(() => visible.filter(isActive), [visible])
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
   const live = letters.filter((c) => c.stage && c.stage !== 'rejected').length
   // The resting line ("N letters · M live applications") is unchanged by a refresh, so it's
   // warm-started; the search form is only reachable once the letters are in hand anyway.
-  const { warm: sub, style: subStyle } = useWarm('cover-letters', ready ? { n: letters.length, live } : null, ready)
+  // `!loadErr` — see R4-T2B-03: a failed load must not cache or claim zeroes.
+  const { warm: sub, style: subStyle } = useWarm('cover-letters', ready ? { n: letters.length, live } : null, ready, !loadErr)
   const countLine = ready && query.trim()
     ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} open application${live === 1 ? '' : 's'}`
-    : sub ? `${sub.n} letter${sub.n === 1 ? '' : 's'} · ${sub.live} live application${sub.live === 1 ? '' : 's'}` : NBSP
+    : sub ? `${sub.n} letter${sub.n === 1 ? '' : 's'} · ${sub.live} live application${sub.live === 1 ? '' : 's'}` : loadErr ? DASH : NBSP
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
   const voiceLabel = presets.find((p) => p.id === genVoice)?.label || genVoice

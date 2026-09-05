@@ -52,7 +52,6 @@ def test_list_jobs_huge_filter_string_is_not_an_error(client):
     assert_clean(client.get("/api/jobs?title_search=" + "a" * 6000), 200, 414, 431)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-07")
 def test_list_jobs_rejects_negative_limit(client):
     """`limit` has le=200 but no lower bound; a negative one reaches LIMIT -5."""
     assert client.get("/api/jobs?limit=-5").status_code == 422
@@ -112,7 +111,6 @@ def test_patch_job_unknown_status_value_is_accepted_verbatim(client, test_db):
     assert r.json()["status"] == "banana"
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-11")
 def test_patch_job_rejects_a_wrongly_typed_value(client, test_db):
     """`saved` is a Boolean column; a string reaches the driver and blows up."""
     job = make_job(test_db)
@@ -174,7 +172,6 @@ def test_bulk_update_missing_keys_is_a_noop(client):
     assert_clean(client.post("/api/jobs/bulk-update", json={}), 200)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-12")
 def test_bulk_update_reports_a_malformed_id_instead_of_aborting(client, test_db):
     """The endpoint promises a `not_found` list; one junk id must not kill the batch."""
     job = make_job(test_db)
@@ -213,7 +210,6 @@ def test_save_from_extension_requires_title_company_url(client, body):
 
 
 @pytest.mark.parametrize("bad", [5, ["T"], {"t": 1}, True])
-@pytest.mark.xfail(strict=True, reason="R4-T1-20")
 def test_save_from_extension_wrongly_typed_title_is_400_not_500(client, bad):
     """`(body.get("title") or "").strip()` raises AttributeError on a non-string."""
     r = client.post("/api/jobs/save-from-extension",
@@ -291,7 +287,6 @@ def test_linkedin_import_filters_falsy_ids(client, monkeypatch):
     assert r.json()["accepted"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-13")
 def test_linkedin_import_non_json_body_is_422_not_500(client):
     """The handler does a bare `await request.json()` — a junk body is an unhandled 500."""
     r = client.post("/api/jobs/linkedin-import", content=b"not json",
@@ -299,7 +294,6 @@ def test_linkedin_import_non_json_body_is_422_not_500(client):
     assert r.status_code in (400, 422)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-14")
 def test_linkedin_import_non_iterable_ids_is_422_not_500(client, monkeypatch):
     """`{"linkedin_ids": 5}` reaches a for-loop over an int."""
     import backend.api.routes_jobs as rj
@@ -311,7 +305,6 @@ def test_linkedin_import_non_iterable_ids_is_422_not_500(client, monkeypatch):
                        json={"linkedin_ids": 5}).status_code in (400, 422)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-14")
 def test_linkedin_import_string_ids_is_rejected_not_split_into_characters(client, monkeypatch):
     """A bare string is iterated per character — seven bogus "ids" for one job."""
     import backend.api.routes_jobs as rj
@@ -354,3 +347,110 @@ def test_unscored_ids_default_limit_is_fine(client):
     """Postgres-only SQL (`cv_scores::text`) — only the shape is asserted here."""
     r = client.get("/api/jobs/unscored-ids")
     assert_no_leak(r)
+
+
+# ── R4 fix-loop regressions ──────────────────────────────────────────────────
+
+@pytest.mark.parametrize("path", ["/api/jobs?limit=-5", "/api/jobs?limit=-1",
+                                  "/api/jobs/unscored-ids?limit=-5"])
+def test_negative_limit_is_422_on_every_job_listing(client, path):
+    """R4-T1-07: `limit` had le= but no ge=, so LIMIT -5 reached Postgres."""
+    assert_clean(client.get(path), 422)
+
+
+@pytest.mark.parametrize("path", ["/api/jobs?limit=0", "/api/jobs/unscored-ids?limit=0"])
+def test_zero_limit_stays_legal(client, path):
+    """The floor is 0, not 1 — an empty page is a valid request."""
+    assert_no_leak(client.get(path))
+
+
+def test_malformed_search_id_filter_is_422_not_404(client):
+    """R4-T1-09: a bad *filter* is a request error; a bad path id stays 404."""
+    assert_clean(client.get("/api/jobs?search_id=not-a-uuid"), 422)
+    assert_clean(client.get(f"/api/jobs/{MISSING_UUID}"), 404)
+
+
+def test_a_valid_search_id_filter_still_filters(client, test_db):
+    search = make_search(test_db)
+    make_job(test_db, search_id=search.id)
+    make_job(test_db, url="https://x.com/other")
+    r = assert_clean(client.get(f"/api/jobs?search_id={search.id}"), 200)
+    assert r.json()["total"] == 1
+
+
+@pytest.mark.parametrize("updates", [
+    {"saved": "banana"}, {"saved": 1}, {"seen": "yes"}, {"seen": []},
+    {"status": 5}, {"status": ["skip"]}, {"status": {"to": "skip"}},
+])
+def test_patch_job_rejects_every_wrongly_typed_column(client, test_db, updates):
+    """R4-T1-11: the handler used to copy any allowed key straight onto the model."""
+    job = make_job(test_db)
+    assert_clean(client.patch(f"/api/jobs/{job.id}", json=updates), 400)
+
+
+@pytest.mark.parametrize("updates", [{"saved": True}, {"seen": False},
+                                     {"status": "skip"}, {"saved": None}])
+def test_patch_job_still_accepts_correctly_typed_values(client, test_db, updates):
+    job = make_job(test_db)
+    assert_clean(client.patch(f"/api/jobs/{job.id}", json=updates), 200)
+
+
+def test_bulk_update_rejects_a_wrongly_typed_column(client, test_db):
+    """The same type guard covers the batch writer."""
+    job = make_job(test_db)
+    assert_clean(client.post("/api/jobs/bulk-update", json={
+        "job_ids": [str(job.id)], "updates": {"saved": "banana"},
+    }), 400)
+
+
+def test_bulk_update_keeps_going_past_several_malformed_ids(client, test_db):
+    """R4-T1-12: one junk id used to abort the batch and drop every valid write."""
+    from backend.models.db import Job
+    a = make_job(test_db)
+    b = make_job(test_db, url="https://x.com/jobs/2")
+    r = assert_clean(client.post("/api/jobs/bulk-update", json={
+        "job_ids": ["nope", str(a.id), "", str(b.id), MISSING_UUID],
+        "updates": {"status": "skip"},
+    }), 200)
+    assert r.json()["updated"] == 2
+    assert set(r.json()["not_found"]) == {"nope", "", MISSING_UUID}
+    test_db.expire_all()
+    assert test_db.get(Job, a.id).status == "skip"
+    assert test_db.get(Job, b.id).status == "skip"
+
+
+@pytest.mark.parametrize("body", [{"job_ids": "abc"}, {"job_ids": 5},
+                                  {"job_ids": [], "updates": "x"}])
+def test_bulk_update_rejects_wrongly_shaped_payloads(client, body):
+    assert_clean(client.post("/api/jobs/bulk-update", json=body), 422)
+
+
+@pytest.mark.parametrize("payload", [b"not json", b"", b"{", b"<html></html>"])
+def test_linkedin_import_junk_body_is_422(client, payload):
+    """R4-T1-13: a bare `await request.json()` made this an unhandled 500."""
+    assert_clean(client.post("/api/jobs/linkedin-import", content=payload,
+                             headers={"Content-Type": "application/json"}), 422)
+
+
+@pytest.mark.parametrize("ids", ["4012345", 5, 1.5, {"a": 1}, True])
+def test_linkedin_import_rejects_non_list_ids(client, ids):
+    """R4-T1-14: a bare string was iterated per character into junk ids."""
+    assert_clean(client.post("/api/jobs/linkedin-import",
+                             json={"linkedin_ids": ids}), 422)
+
+
+@pytest.mark.parametrize("ids", [[], None])
+def test_linkedin_import_empty_ids_stays_a_200_noop(client, ids):
+    """The documented zero-id path must not become a 422."""
+    r = assert_clean(client.post("/api/jobs/linkedin-import",
+                                 json={"linkedin_ids": ids}), 200)
+    assert r.json()["accepted"] == 0
+
+
+@pytest.mark.parametrize("field", ["title", "company", "url", "description"])
+@pytest.mark.parametrize("bad", [5, ["x"], {"x": 1}, True])
+def test_save_from_extension_rejects_every_wrongly_typed_string(client, field, bad):
+    """R4-T1-20: `(body.get(k) or "").strip()` raised AttributeError on all of these."""
+    body = {"title": "T", "company": "C", "url": "https://x.com/1"}
+    body[field] = bad
+    assert_clean(client.post("/api/jobs/save-from-extension", json=body), 400)

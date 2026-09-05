@@ -165,7 +165,12 @@ export function Button({
     // `busy` is the state a screen reader needs; the prop stays an explicit
     // override for callers that set it themselves.
     'aria-busy': ariaBusy !== undefined ? ariaBusy : (busy || undefined),
-    className: cx('v2-ctl', !off && look.state, !off && look.hover, className),
+    // `v2-raised` is the bevel hook every other control already carries: without
+    // it win98 drew a secondary button as one flat stroke and a primary with no
+    // border pixel at all, in a skin whose whole idiom is "raised = clickable"
+    // (R4-T3-09). Scoped `[data-theme="win98"]` in theme.css — inert elsewhere,
+    // and kept on a disabled button too, since a win98 button is still a button.
+    className: cx('v2-ctl', 'v2-raised', !off && look.state, !off && look.hover, className),
     style: {
       flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 'var(--btn-weight)',
@@ -653,13 +658,26 @@ export function MenuHead({ children, style }) {
 // `v2-menu` is not decoration — theme.css pins `flex-shrink:0` on every direct
 // child, since without it a menu taller than its `maxHeight` (the Feed's
 // Company filter with ~1300 rows) shrinks the search field from 32px to 17.
-export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
-  return (
+// `onDismiss` mounts the backdrop the Feed's `Drop` has always drawn: a fixed,
+// transparent sheet one z-step under the panel, so the click that closes the
+// menu is SWALLOWED instead of also firing the row/card underneath it (a Sort
+// menu dismissed over a company row used to open that row's drawer — R4-T2A-05).
+// The panel's own `style.zIndex` sets the sheet's; `backdropZ` overrides.
+export function Menu({ role = 'menu', onDismiss, backdropZ, children, ariaLabel, style, className }) {
+  const panel = (
     <div role={role} aria-label={ariaLabel} className={cx('v2-menu', 'v2-raised', className)} style={{
       background: 'var(--menu-bg)', border: 'var(--bw-panel) solid var(--menu-border)',
       borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
     }}>{children}</div>
+  )
+  if (!onDismiss) return panel
+  const z = typeof style?.zIndex === 'number' ? style.zIndex - 1 : 44
+  return (
+    <>
+      <div aria-hidden="true" onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: backdropZ ?? z }} />
+      {panel}
+    </>
   )
 }
 // canonical: text-2 · r6 · 12.5 · pad 7 11 · hover v2-menuitem.
@@ -879,6 +897,24 @@ export function GlyphBadge({
         ...(on ? GLYPH_ON : (GLYPH_TONE[tone] || GLYPH_TONE.accent)),
         ...(live ? { cursor: disabled ? 'default' : 'pointer' } : null), ...style,
       }}>{children}</span>
+  )
+}
+
+// ── CopyGlyph ───────────────────────────────────────────────────────────────
+// The "duplicate / copy to clipboard" mark. It used to be the character ⧉
+// (U+29C9), which none of the app's font stacks covers on Linux/Chromium — it
+// fell through to .notdef and drew an empty box in five places (R4-T2A-12).
+// Drawn instead: two sheets, the back one an L so the front never overlaps a
+// line. `currentColor`, so it inherits whatever ink its label uses; the 12px box
+// matches the 11px glyph it replaces.
+export function CopyGlyph({ size = 12, title, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className}
+      role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'}
+      style={{ flex: '0 0 auto', display: 'block', ...style }}>
+      <path d="M3.5 2.5V0.5h8v8h-2" fill="none" stroke="currentColor" />
+      <rect x="0.5" y="3.5" width="8" height="8" fill="none" stroke="currentColor" />
+    </svg>
   )
 }
 

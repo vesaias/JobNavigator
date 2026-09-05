@@ -60,7 +60,8 @@ def browser(headless=True):
 def context(b, appearance="light", width=1440, height=900, dsf=1, key=KEY, extra_ls=None):
     ctx = b.new_context(viewport={"width": width, "height": height}, device_scale_factor=dsf)
     ls = {"jobnavigator_api_key": key, "jobnavigator_dark_mode": "true" if appearance == "dark" else "false",
-          "jobnavigator_welcome_seen": "true", "jobnavigator_v2_welcome_seen": "true"}
+          "jobnavigator_welcome_seen": "true", "jobnavigator_v2_welcome_seen": "true",
+          "jobnavigator_welcomed": "1"}
     ls.update(extra_ls or {})
     ctx.add_init_script("try{" + "".join(f"localStorage.setItem({json.dumps(k)},{json.dumps(v)});" for k, v in ls.items()) + "}catch(e){}")
     # warm-up: lets App.jsx sync the cookie session so /api hrefs work

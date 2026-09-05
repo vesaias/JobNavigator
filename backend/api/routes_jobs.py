@@ -1,11 +1,12 @@
 """Job listing and management endpoints."""
 import logging
-from typing import Optional
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, text, func
 from backend.models.db import get_db, Job, find_company_by_name
+from backend.api._input import str_field, uuid_filter
 from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.analyzer.salary_extractor import apply_salary_to_job
 from backend.job_monitor import launch_background, JobAlreadyRunningError
@@ -23,8 +24,23 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 @router.post("/linkedin-import")
 async def linkedin_import(request: Request, db: Session = Depends(get_db)):
     """Accept LinkedIn job IDs from the Chrome Extension, scrape via Voyager API in background."""
-    data = await request.json()
-    linkedin_ids = [str(lid).strip() for lid in data.get("linkedin_ids", []) if lid]
+    # The extension can send a truncated or non-JSON body; a bare request.json()
+    # makes that an unhandled JSONDecodeError (R4-T1-13).
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Body must be a JSON object")
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=422, detail="Body must be a JSON object")
+    raw_ids = data.get("linkedin_ids", [])
+    if raw_ids is None:
+        raw_ids = []
+    # A bare string is the dangerous shape: iterating it queues one junk id per
+    # character (R4-T1-14). Anything that is not a list/tuple is a request error.
+    if not isinstance(raw_ids, (list, tuple)):
+        raise HTTPException(status_code=422,
+                            detail="linkedin_ids must be a list of job ids")
+    linkedin_ids = [str(lid).strip() for lid in raw_ids if lid]
 
     if not linkedin_ids:
         return {"accepted": 0, "message": "No IDs provided"}
@@ -81,10 +97,13 @@ def list_jobs(
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     sort_by: Optional[str] = Query("date", pattern="^(date|score|salary|company)$"),
-    limit: int = Query(50, le=200),
-    offset: int = Query(0, ge=0),
+    # ge=0: without a lower bound a negative limit reaches Postgres as LIMIT -5,
+    # which is a DataError the id handler then reports as a 500 (R4-T1-07).
+    limit: Annotated[int, Query(ge=0, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
     db: Session = Depends(get_db),
 ):
+    search_id = uuid_filter(search_id, "search_id")
     q = db.query(Job)
 
     if status:
@@ -210,7 +229,7 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
     if max_salary is not None:
         q = q.filter(Job.salary_min <= max_salary)
     if search_id:
-        q = q.filter(Job.search_id == search_id)
+        q = q.filter(Job.search_id == uuid_filter(search_id, "search_id"))
     return q
 
 
@@ -229,7 +248,7 @@ def feed_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/unscored-ids")
-def unscored_ids(limit: int = 500, db: Session = Depends(get_db)):
+def unscored_ids(limit: Annotated[int, Query(ge=0, le=10000)] = 500, db: Session = Depends(get_db)):
     """IDs of not-yet-scored new/saved jobs; the header's "Score N unscored" action scores exactly these, since they sort to the bottom by score and won't be on the feed page."""
     from sqlalchemy import text
     rows = db.execute(text(
@@ -351,10 +370,12 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     import uuid as _uuid
     import re as _re
 
-    title = (body.get("title") or "").strip()
-    company = (body.get("company") or "").strip()
-    url = (body.get("url") or "").strip()
-    description = (body.get("description") or "").strip() or None
+    # str_field answers 400 for a wrongly typed value the same way the blank
+    # checks below answer 400 for an empty one (R4-T1-20).
+    title = str_field(body, "title")
+    company = str_field(body, "company")
+    url = str_field(body, "url")
+    description = str_field(body, "description") or None
     if not title or not company or not url:
         raise HTTPException(status_code=400, detail="title, company, and url are required")
 
@@ -491,16 +512,54 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     return out
 
 
+# Column types for the three fields both job writers accept. Without this a
+# `{"saved": "banana"}` reaches the driver and 500s (R4-T1-11); `status` stays a
+# free string on purpose (the feed invents statuses like "ignored").
+_JOB_UPDATE_TYPES = {"seen": bool, "saved": bool, "status": str}
+
+
+def _validate_job_updates(updates: dict, allowed: set) -> None:
+    """400 on a value whose type the column cannot hold. Keys outside the
+    allow-list are ignored here — they are dropped silently downstream."""
+    for key, value in updates.items():
+        if key not in allowed:
+            continue
+        expected = _JOB_UPDATE_TYPES.get(key)
+        if expected is None or value is None:
+            continue
+        if expected is bool:
+            if not isinstance(value, bool):
+                raise HTTPException(status_code=400,
+                                    detail=f"{key} must be true or false")
+        elif not isinstance(value, expected):
+            raise HTTPException(status_code=400,
+                                detail=f"{key} must be a string")
+
+
 @router.post("/bulk-update")
 def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
     """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>]} so the frontend can reconcile stale client-side selections."""
-    job_ids = body.get("job_ids", [])
-    updates = body.get("updates", {})
+    import uuid as _uuid
+    job_ids = body.get("job_ids") or []
+    updates = body.get("updates") or {}
+    if not isinstance(job_ids, (list, tuple)):
+        raise HTTPException(status_code=422, detail="job_ids must be a list")
+    if not isinstance(updates, dict):
+        raise HTTPException(status_code=422, detail="updates must be an object")
     allowed = {"status", "seen", "saved"}
+    _validate_job_updates(updates, allowed)
     count = 0
     not_found: list[str] = []
     for job_id in job_ids:
-        job = db.query(Job).filter(Job.id == job_id).first()
+        # A non-uuid used to raise DataError mid-loop, so the whole batch aborted
+        # with a bare 404 and every valid id in it was silently dropped
+        # (R4-T1-12). Report it alongside the ids that simply do not exist.
+        try:
+            parsed = _uuid.UUID(str(job_id))
+        except (ValueError, AttributeError, TypeError):
+            not_found.append(str(job_id))
+            continue
+        job = db.query(Job).filter(Job.id == parsed).first()
         if job:
             for k, v in updates.items():
                 if k in allowed:
@@ -535,6 +594,7 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
         raise HTTPException(status_code=404, detail="Job not found")
 
     allowed = {"seen", "saved", "status"}
+    _validate_job_updates(updates, allowed)
     for key, value in updates.items():
         if key in allowed:
             setattr(job, key, value)
