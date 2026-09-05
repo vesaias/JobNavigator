@@ -27,6 +27,12 @@ from backend.api.routes_llm import router as llm_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("jobnavigator")
 
+# httpx logs every request URL at INFO, and the Telegram API carries the bot token in
+# the path — so each alert wrote the token into the container log in cleartext
+# (R4-T5-03). The app logs its own outcomes for every outbound call it cares about.
+for _noisy in ("httpx", "httpcore"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -164,11 +170,66 @@ async def api_key_auth(request: Request, call_next):
 
 # ── Auth endpoints (cookie session) ──────────────────────────────────────────
 import hmac as _hmac
+import time as _time
 from fastapi import Response as _Response
 
+# ── Brute-force throttle for the two unauthenticated auth endpoints ──────────
+# They answered 401 at ~276 req/s with no delay and no lockout (R4-T5-06). In-memory
+# per-IP failure counter: N failures inside the window → 429 + Retry-After; a
+# successful verify clears the bucket. Process-local by design (single-user app,
+# one backend process) — a restart forgives everything, which is fine.
+_AUTH_FAIL_LIMIT = 10
+_AUTH_FAIL_WINDOW = 60.0
+_auth_failures: dict[str, list[float]] = {}
+
+
+def _auth_client_ip(request: Request) -> str:
+    """Caller IP. Through Caddy every browser request has the proxy's IP as the peer,
+    so prefer the forwarded client address — otherwise one LAN attacker would lock
+    out the dashboard itself."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        first = fwd.split(",")[0].strip()
+        if first:
+            return first
+    return request.client.host if request.client else "unknown"
+
+
+def _auth_throttle(request: Request) -> None:
+    """Raise 429 with Retry-After while this IP is over the failure budget."""
+    ip = _auth_client_ip(request)
+    now = _time.monotonic()
+    hits = [t for t in _auth_failures.get(ip, []) if now - t < _AUTH_FAIL_WINDOW]
+    if hits:
+        _auth_failures[ip] = hits
+    else:
+        _auth_failures.pop(ip, None)
+    if len(hits) >= _AUTH_FAIL_LIMIT:
+        retry_after = max(1, int(_AUTH_FAIL_WINDOW - (now - hits[0])) + 1)
+        logger.warning("auth throttle: %s locked out for %ss", ip, retry_after)
+        raise HTTPException(
+            status_code=429, detail="Too many failed attempts",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+def _auth_record_failure(request: Request) -> None:
+    _auth_failures.setdefault(_auth_client_ip(request), []).append(_time.monotonic())
+
+
+def _auth_clear_failures(request: Request) -> None:
+    _auth_failures.pop(_auth_client_ip(request), None)
+
+
+def _reset_auth_throttle() -> None:
+    """Drop every bucket (tests, and a manual unlock)."""
+    _auth_failures.clear()
+
+
 @app.post("/api/auth/verify", tags=["auth"], summary="Verify an API key without setting a session")
-async def verify_api_key(body: dict):
-    """Validate API key. Returns 200 {ok: true} on match, 401 otherwise."""
+async def verify_api_key(body: dict, request: Request):
+    """Validate API key. Returns 200 {ok: true} on match, 401 otherwise, 429 after too many failures from one IP."""
+    _auth_throttle(request)
     # hmac.compare_digest() raises TypeError on a non-string, and this endpoint is
     # unauthenticated — anything that is not a string is simply not the key
     # (R4-T1-24).
@@ -182,15 +243,18 @@ async def verify_api_key(body: dict):
         if not expected:
             return {"ok": True, "first_run": True}
         if not api_key or not _hmac.compare_digest(api_key, expected):
+            _auth_record_failure(request)
             raise HTTPException(status_code=401, detail="Invalid API key")
+        _auth_clear_failures(request)
         return {"ok": True, "first_run": False}
     finally:
         db.close()
 
 
 @app.post("/api/auth/set-session", tags=["auth"], summary="Set session cookie from API key")
-async def set_session(body: dict, response: _Response):
-    """Verify API key and set httpOnly jn_session cookie (also sent on iframe/download requests)."""
+async def set_session(body: dict, response: _Response, request: Request):
+    """Verify API key and set httpOnly jn_session cookie (also sent on iframe/download requests); 429 after too many failures from one IP."""
+    _auth_throttle(request)
     # hmac.compare_digest() raises TypeError on a non-string, and this endpoint is
     # unauthenticated — anything that is not a string is simply not the key
     # (R4-T1-24).
@@ -202,7 +266,9 @@ async def set_session(body: dict, response: _Response):
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
         expected = setting.value if setting else INITIAL_API_KEY
         if expected and (not api_key or not _hmac.compare_digest(api_key, expected)):
+            _auth_record_failure(request)
             raise HTTPException(status_code=401, detail="Invalid API key")
+        _auth_clear_failures(request)
         # First-run (no key configured) is OK - set cookie to empty, middleware will allow
         cookie_value = api_key or ""
         response.set_cookie(
@@ -450,6 +516,19 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
         target_job_uuid = _uuid.UUID(job_id)
     except (ValueError, AttributeError, TypeError):
         raise HTTPException(status_code=404, detail="Not found")
+
+    # JobRun.target_job_id is a FK to jobs.id, so a well-formed id for a job that does
+    # not exist raised ForeignKeyViolation inside launch_background — a bare 500 plus a
+    # full INSERT traceback in the log (R4-T5-09). Look it up first, like
+    # /api/scrape/company/{id} does.
+    from backend.models.db import Job as _Job
+    db = SessionLocal()
+    try:
+        if not db.query(_Job.id).filter(_Job.id == target_job_uuid).first():
+            raise HTTPException(status_code=404, detail="Job not found")
+    finally:
+        db.close()
+
     cv_ids = (body or {}).get("cv_ids")
 
     async def _do():

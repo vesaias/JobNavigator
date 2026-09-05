@@ -616,9 +616,13 @@ export default function V2JobFeed() {
   }
   const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
 
-  // Gated on `!confirm` so a dialog's own useEscape owns the key while one is open.
+  // Gated on `!confirm` so a dialog's own useEscape owns the key while one is open,
+  // and on there actually being something to close: an always-on listener claims the
+  // key with preventDefault() even when it closes nothing, and the global Welcome /
+  // sign-in overlays above the shell then never see it (R4-E2E-01).
   // No INPUT guard here, so Escape still works from inside a filter menu's search box.
-  useEscape(() => { setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null) }, !confirm)
+  const escOpen = menu != null || rowMenu != null || headMenu || shortcutsOpen || picker != null || rescoreJob != null
+  useEscape(() => { setMenu(null); setRowMenu(null); setHeadMenu(false); setShortcutsOpen(false); setPicker(null); setRescoreJob(null) }, !confirm && escOpen)
 
   // keyboard
   useEffect(() => {
@@ -1129,10 +1133,17 @@ export default function V2JobFeed() {
 
               {/* header */}
               <HeaderRow align="stretch" pad={headOpen ? '20px 30px 15px' : '11px 30px 12px'} style={{ flexDirection: 'column', gap: headOpen ? 14 : 10 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
+                {/* `flexWrap` + the title column's 190px floor: the action block is
+                    fixed-width (~248px), so in a 420px pane it left the title column
+                    ~117px and the meta line ellipsised down to one letter. Wrapping
+                    the actions onto their own line keeps the title readable there and
+                    is inert wherever the row still fits — 1440 is pixel-identical
+                    (R4-E2E-02). `marginLeft:auto` is likewise a no-op unwrapped: the
+                    flex:1 column already pushes the actions right. */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 3, marginLeft: -26 }}>
                   {/* ui: keep — bare 19x26 caret cell in the header gutter, no label, so no head row for SectionHead to draw */}
                   <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
-                  <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
+                  <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 190, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <Label style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
                     </Label>}
@@ -1148,7 +1159,7 @@ export default function V2JobFeed() {
                     ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
                   {/* actions */}
-                  <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: '0 0 auto', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {/* ui: keep — a real <a href target=_blank>, and its height tracks the collapsing detail header (36/30) */}
                     {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
                     {/* Routed through Button (not hand-drawn) so it reads --btn-shadow/--btn-weight/--btn-primary-bg/-ink
@@ -1372,14 +1383,22 @@ export default function V2JobFeed() {
                       </div>
                     )}
                     {viewCached && dCached ? (
-                      <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
+                      /* stored third-party HTML: no allow-same-origin (a script in here must never
+                         reach this origin's storage or API) and no allow-scripts — a cleaned
+                         snapshot needs neither. srcdoc carries no response CSP, so the sandbox
+                         attribute is the whole control (R4-T5-02). */
+                      <iframe title="cached" srcDoc={cachedHtml || '<p style="padding:16px;font-family:sans-serif">Loading cached snapshot…</p>'} sandbox="allow-popups allow-forms" referrerPolicy="no-referrer" style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                     ) : frameSrc ? (
                       /* optimistic: always try the live frame; only a confirmed block swaps it out. `key` remounts
                          per job/src so the previous posting is gone at once; the cover fills the gap until onLoad fires. */
                       <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
+                        {/* live posting: no allow-same-origin. Measured on 10 real postings —
+                            every one that embeds at all (both Greenhouse hosts, github.careers,
+                            careers.docusign) renders byte-identically without it; the rest are
+                            blocked by their own framing headers either way (R4-T5-02). */}
                         <iframe key={`${frameJobId}|${frameSrc}`} title="posting" src={frameSrc}
                           onLoad={() => settleFrame(frameJobId)} onError={() => settleFrame(frameJobId)}
-                          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                          sandbox="allow-scripts allow-popups allow-forms"
                           style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                         {frameLoadId === frameJobId && (
                           <div style={{ position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>

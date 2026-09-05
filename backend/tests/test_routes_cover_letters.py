@@ -239,7 +239,8 @@ def test_base_resume_stub_uses_zero_prefix(test_db):
 
 
 def test_base_resume_without_stub_stays_random(test_db):
-    """No stub and no job short_id → fall back to a random 6-char token (not '0…')."""
+    """No stub and no job short_id → fall back to a random token (not '0…'); it comes from
+    `secrets.token_urlsafe(8)` since R4-T5-07, so ≥ 8 chars rather than the old 6."""
     import uuid
     from backend.models.db import Setting, Resume, TracerLink
     from backend.api.routes_resumes import _rewrite_urls_with_tracers
@@ -257,4 +258,5 @@ def test_base_resume_without_stub_stays_random(test_db):
 
     link = test_db.query(TracerLink).filter(TracerLink.resume_id == resume.id).first()
     assert link is not None
-    assert len(link.token) == 6
+    assert len(link.token) >= 8
+    assert link.token != "0li"        # not the deterministic 0{stub} shape

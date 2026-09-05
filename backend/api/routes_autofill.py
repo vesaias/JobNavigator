@@ -255,16 +255,29 @@ def _build_autofill_prompt(body: dict, *, want_provider: bool = False) -> dict:
     else:
         before, suffix_template = "", template
 
-    cached_prefix = (before
-                     .replace("{persona}", persona_txt)
-                     .replace("{qa_bank}", qa_txt)
-                     .replace("{max_chars}", str(max_chars))) or None
+    # Every placeholder is substituted in BOTH halves, independently of where the
+    # split fell. Filling only some of them per half meant a template written
+    # without {company} put the whole thing in the suffix and never expanded
+    # {persona} / {qa_bank} — the model was handed the literal braces and answered
+    # with no profile at all (R4-E2E-04). Sequential .replace, not str.format_map:
+    # the shipped template contains a literal JSON envelope ({"answer": …}) that
+    # any format() call would choke on.
+    values = {
+        "{persona}": persona_txt,
+        "{qa_bank}": qa_txt,
+        "{max_chars}": str(max_chars),
+        "{company}": company,
+        "{position}": position,
+        "{question}": question,
+    }
 
-    suffix = (suffix_template
-              .replace("{company}", company)
-              .replace("{position}", position)
-              .replace("{question}", question)
-              .replace("{max_chars}", str(max_chars)))
+    def _fill(chunk: str) -> str:
+        for token, value in values.items():
+            chunk = chunk.replace(token, value)
+        return chunk
+
+    cached_prefix = _fill(before) or None
+    suffix = _fill(suffix_template)
     return {"cached_prefix": cached_prefix, "suffix": suffix,
             "max_chars": max_chars, "provider": provider, "model": model}
 

@@ -26,7 +26,10 @@ export default function WelcomeModal({ onClose }) {
   return (
     // Scrim carries the theme root and its own z-index (below sign-in, above
     // every in-shell modal). Scrim click and Escape both close (ModalPanel contract).
-    <ModalPanel width={420} onClose={onClose} zIndex={9998}
+    // `escapeCapture`: this overlay mounts outside the shell, so the screen behind
+    // it registers its Escape listener first — capture phase is how the topmost
+    // overlay keeps the key (R4-E2E-01).
+    <ModalPanel width={420} onClose={onClose} escapeCapture zIndex={9998}
       scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       scrimStyle={{ padding: 16 }}
       style={{ maxWidth: '100%', overflow: 'hidden' }}>
