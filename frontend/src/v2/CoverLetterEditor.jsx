@@ -349,8 +349,11 @@ export default function CoverLetterEditor() {
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
+        {/* S5: the Draft/stage badge is ResumeEditor's Base/Tailored twin — same Tag
+            role, same token read. --label-case is `uppercase` and
+            --label-tracking-scale 1 in the base blocks, so the paint is unchanged. */}
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
-          style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)' }}>{badge}</span>
+          style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)' }}>{badge}</span>
         {/* R2-S-06: every other v2 screen names itself with an h1; visually this
             is the same span it always was (margin and font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>

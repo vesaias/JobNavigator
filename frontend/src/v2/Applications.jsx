@@ -438,14 +438,20 @@ export default function Applications() {
                           Tailwind's preflight sets 1.5 on <html>, which would inflate the block */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 'normal' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
-                          <span title={a.title || 'Unknown Role'} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
+                          {/* S5 / P1: `v2-rowink` lets a SELECTED row's --row-selected-ink
+                              reach its text (theme.css, the opaque-selection gate — it
+                              matches nothing in the default theme). The ✉ opts in only
+                              when it is actually showing: it HIDES itself with
+                              `color:transparent`, so forcing the selection ink onto it
+                              unconditionally would reveal a glyph that means "no reply". */}
+                          <span title={a.title || 'Unknown Role'} className="v2-rowink" style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: unknownTitle || a.status === 'rejected' ? 'var(--muted)' : 'var(--text)' }}>{a.title || 'Unknown Role'}</span>
                           {/* lineHeight 1: with the row's inherited `normal` this 10px
                               glyph box was 12px under Public Sans and 11px under Inter */}
-                          <span title="Reply detected in Gmail" style={{ flex: '0 0 auto', fontSize: 10, lineHeight: 1, color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent' }}>✉</span>
+                          <span title="Reply detected in Gmail" className={(a.last_email_received || a.last_email_snippet) ? 'v2-rowink' : undefined} style={{ flex: '0 0 auto', fontSize: 10, lineHeight: 1, color: (a.last_email_received || a.last_email_snippet) ? 'var(--accent)' : 'transparent' }}>✉</span>
                         </div>
-                        <Helper title={companyOf(a)} style={{ color: companyOf(a) === 'Unknown Company' ? 'var(--edge)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyOf(a)}</Helper>
+                        <Helper title={companyOf(a)} className="v2-rowink" style={{ color: companyOf(a) === 'Unknown Company' ? 'var(--edge)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyOf(a)}</Helper>
                       </div>
-                      <Helper size="xs" mono title={stale ? `No movement for ${daysSince(a.updated_at)} days` : `Last activity ${daysSince(a.updated_at)}d ago`}
+                      <Helper size="xs" mono className="v2-rowink" title={stale ? `No movement for ${daysSince(a.updated_at)} days` : `Last activity ${daysSince(a.updated_at)}d ago`}
                         style={{ flex: '0 0 30px', textAlign: 'right', color: stale ? 'var(--warn)' : 'var(--muted)' }}>{daysSince(a.updated_at)}d</Helper>
                     </Row>
                   )

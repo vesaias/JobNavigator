@@ -183,7 +183,13 @@ export default function V2App() {
           {GROUPS.map((g) => (
             <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
-                <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{g.label}</span>
+                {/* S5: the rail's group headers are a caps label, so the case and the
+                    tracking are the theme's to switch (win98 is sentence case with no
+                    tracking). --label-case is `uppercase` in the base blocks and
+                    --label-tracking-scale is 1, so `calc(.16em * 1)` is the .16em this
+                    line always drew — the rail keeps its own wider stop rather than
+                    being folded into --label-tracking's .13em. */}
+                <span style={{ fontSize: 10, lineHeight: '18px', letterSpacing: 'calc(.16em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{g.label}</span>
                 {/* ui: keep — a rail hairline on --rail-line; Rule reads the --head-line
                     pair, which is the light-surface rule, not the dark rail's */}
                 <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 16, height: 1, background: 'var(--rail-line)', opacity: open ? 0 : 1, transition: 'opacity .2s', pointerEvents: 'none' }} />

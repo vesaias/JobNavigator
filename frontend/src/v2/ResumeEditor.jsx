@@ -529,8 +529,11 @@ export default function ResumeEditor() {
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
-        {/* ui: keep — Tag role (D4d): an uppercase badge with a background and r99, not a Label */}
-        <span style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
+        {/* ui: keep — Tag role (D4d): an uppercase badge with a background and r99, not a Label.
+            S5: the case and the tracking read the theme (--label-case is `uppercase`
+            and --label-tracking-scale 1 in the base blocks, so this is the .08em it
+            always drew); win98 turns both off and the badge reads "Base"/"Tailored". */}
+        <span style={{ fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
         {/* R2-S-06: every other v2 screen names itself with an h1; visually this
             is the same span it always was (margin and font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>

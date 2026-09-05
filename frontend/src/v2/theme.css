@@ -233,6 +233,15 @@
   --btn-weight:500; --title-weight:400; --label-weight:400;
   --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
   --label-case:uppercase; --display-tracking:-.02em;
+  /* S5 — the MULTIPLIER for the caps labels a primitive does not draw: the rail's
+     group headers (.16em), the résumé/cover-letter status badge (.08em) and the
+     toast-lab kind label. Those three sit off the --label-tracking / --tag-tracking
+     stops and keeping their own em value is the point (they were tuned at the
+     site), so the token they read is a FACTOR, not a length: `calc(.16em *
+     var(--label-tracking-scale))`. 1 here reproduces the literal exactly, and a
+     theme that wants no caps tracking at all (win98) sets 0 once and every one of
+     them collapses — the same switch --label-case is for the case. */
+  --label-tracking-scale:1;
   /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
      pressed cell "P"), so in the base blocks each name resolves to the paint the
      default theme already has: a primary button does not darken on hover, and
@@ -471,6 +480,15 @@
   --btn-weight:500; --title-weight:400; --label-weight:400;
   --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
   --label-case:uppercase; --display-tracking:-.02em;
+  /* S5 — the MULTIPLIER for the caps labels a primitive does not draw: the rail's
+     group headers (.16em), the résumé/cover-letter status badge (.08em) and the
+     toast-lab kind label. Those three sit off the --label-tracking / --tag-tracking
+     stops and keeping their own em value is the point (they were tuned at the
+     site), so the token they read is a FACTOR, not a length: `calc(.16em *
+     var(--label-tracking-scale))`. 1 here reproduces the literal exactly, and a
+     theme that wants no caps tracking at all (win98) sets 0 once and every one of
+     them collapses — the same switch --label-case is for the case. */
+  --label-tracking-scale:1;
   /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
      pressed cell "P"), so in the base blocks each name resolves to the paint the
      default theme already has: a primary button does not darken on hover, and
@@ -1061,7 +1079,7 @@
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
@@ -1073,7 +1091,11 @@
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  /* S5: `none` is not a border-colour, so the field-hover rule below was invalid at
+     computed-value time and fell back to `currentColor` — a hovered field lost its
+     bevel to a flat black box. The bevel IS this theme's field paint, so the hover
+     token is the inset bevel's own four-sided colour: hovering changes nothing. */
+  --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
 }
@@ -1105,7 +1127,7 @@
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0;
+  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
@@ -1117,7 +1139,11 @@
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  --input-border-hover:none; --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  /* S5: `none` is not a border-colour, so the field-hover rule below was invalid at
+     computed-value time and fell back to `currentColor` — a hovered field lost its
+     bevel to a flat black box. The bevel IS this theme's field paint, so the hover
+     token is the inset bevel's own four-sided colour: hovering changes nothing. */
+  --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
 }
@@ -1352,11 +1378,47 @@
    --row-selected-edge `none` in every theme but cobalt (a 3px inset accent bar)
    and win98 (a navy fill with white ink). */
 .jn-v2 .v2-row[aria-current="true"] { background:var(--row-selected) !important; color:var(--row-selected-ink); box-shadow:var(--row-selected-edge); }
-/* win98 bevels: raised on controls, inset on fields/lists/pressed. Both sides
-   are `none`/`transparent` in every other theme, so the two rules paint nothing
-   until a primitive asks for the class. */
-.jn-v2 .v2-raised { border:var(--bevel-raised-border); border-color:var(--bevel-raised-color); box-shadow:var(--bevel-raised-shadow); }
-.jn-v2 .v2-inset, .jn-v2 .v2-raised:active { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
+
+/* — Themes layer, OPAQUE-SELECTION and BEVEL gates -----------------------------
+   The three rules below are the only ones in this file that name a theme, and
+   they have to: each of them must beat an INLINE declaration, which takes
+   `!important`, and an `!important` rule cannot be made inert by a token whose
+   value is `none`/`inherit` — an invalid or empty substitution computes to
+   `unset`, which would ERASE the default theme's own inline paint rather than
+   leave it alone. So the gate is the selector, not the value.
+   A NEW SKIN OPTS IN BY ADDING ITS NAME to the selector lists here: a skin whose
+   --row-selected is an opaque fill with a --row-selected-ink joins the first
+   rule; a skin whose --bevel-*-border is not `none` joins the other two. Nothing
+   else about adding a skin changes (two palette blocks + a line in theme.js). */
+
+/* S5 / P1 — the picked row's INK reaches its text. Row and the Feed row write
+   `color:var(--row-selected-ink)` on the row box, but every line of text inside
+   sets its own colour inline (--ink-2 for the company, --text-2 / --muted for the
+   meta run, --heading-ink through Heading for the title), so white never cascaded
+   down and win98 drew near-black on its navy fill (~1.4:1).
+   The hook is a CLASS on the reading content, not a blanket `*`: a selected row
+   also carries a status badge on its own light ground, a ScoreRing chip and (in
+   Applications) a ✉ hidden behind `color:transparent`, and every one of those
+   would be destroyed by flattening the whole subtree to one ink. `.v2-rowink`
+   marks the text that must follow the selection; anything with a ground of its
+   own is deliberately left out. */
+.jn-v2[data-theme="win98"] .v2-row[aria-current="true"] .v2-rowink,
+.jn-v2[data-theme="win98"] .v2-row[aria-current="true"] .v2-rowink * { color:var(--row-selected-ink) !important; }
+
+/* S5 / P2 — win98 bevels: raised on controls, inset on fields/lists/pressed.
+   These shipped unscoped and WITHOUT `!important`, which made them dead letters:
+   every carrier (Pill, Chip, the bordered IconButton, Menu, ModalPanel,
+   ToastCard, the bordered Segmented cell, FIELD and the Select trigger) writes
+   `border` and `boxShadow` inline, and an inline declaration beats a plain class
+   rule — so no field was ever sunk and no button ever raised. `!important` is the
+   same convention every hover rule above uses, for the same reason.
+   Two carve-outs on the inset side, both mirroring the field-hover rule below:
+     .v2-underline          SearchInput's underline variant has no box to sink.
+     [aria-invalid="true"]  an error border must survive; the invalid rule above
+                            is (0,2,0) and would otherwise lose to this one. */
+.jn-v2[data-theme="win98"] .v2-raised { border:var(--bevel-raised-border) !important; border-color:var(--bevel-raised-color) !important; box-shadow:var(--bevel-raised-shadow) !important; }
+.jn-v2[data-theme="win98"] .v2-inset:not(.v2-underline):not([aria-invalid="true"]),
+.jn-v2[data-theme="win98"] .v2-raised:active { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
 
 /* U-01 / D-07 — pressed. Inert in the default theme: --pressed-shift is `none`
    and --pressed-wash `transparent` there. The wash is a background-image overlay

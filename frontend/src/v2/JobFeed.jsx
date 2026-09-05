@@ -1109,17 +1109,22 @@ export default function V2JobFeed() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, minHeight: 20 }}>
                           {/* the 1.15 ratio is the row's: it keeps the two-line title block at
                               the list row's own rhythm, so it stays with the call site */}
-                          <Heading strong size={16} title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
-                          {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--accent)' }}>✦</a>}
+                          {/* S5 / P1: `v2-rowink` is the hook that lets a SELECTED row's
+                              --row-selected-ink reach the text (theme.css, the
+                              opaque-selection gate). It marks the reading content only —
+                              the status badge beside it keeps its own ground and ink, and
+                              the rule does not match at all in the default theme. */}
+                          <Heading strong size={16} className="v2-rowink" title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
+                          {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--accent)' }}>✦</a>}
                           {/* ui: keep — status badge with background + border + r99: Tag role (D4d), not a Label */}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 'var(--radius-control)', border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, fontWeight: 450, color: 'var(--text-2)', minWidth: 0, marginTop: -2 }}>
+                        <div className="v2-rowink" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: 1.2, fontWeight: 450, color: 'var(--text-2)', minWidth: 0, marginTop: -2 }}>
                           <span title={j.company} style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230, fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company}</span>
                           {j.location && <span style={{ flex: '0 0 auto', color: 'var(--line)' }}>|</span>}
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: '13px', fontWeight: 450, minWidth: 0, marginTop: 2 }}>
+                        <div className="v2-rowink" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: '13px', fontWeight: 450, minWidth: 0, marginTop: 2 }}>
                           <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
@@ -1213,8 +1218,19 @@ export default function V2JobFeed() {
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {/* ui: keep — a real <a href target=_blank>, and its height tracks the collapsing detail header (36/30) */}
                     {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
-                    {/* ui: keep — height tracks the collapsing detail header (36/30); Button's sizes are fixed, and its Open ↗ / ⋯ siblings follow the same pair */}
-                    <div onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })} style={{ height: headOpen ? 36 : 30, padding: '0 19px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</div>
+                    {/* S5: this is the detail pane's primary CTA and it was hand-drawn —
+                        the note that stood here said Button's sizes are fixed while this
+                        one has to track the collapsing header (36/30). That is a `style`
+                        override, not a reason to redraw the role: routed through Button
+                        it now reads --btn-shadow (the missing cobalt-tinted drop that
+                        made it the only primary CTA in the app without one), --btn-weight,
+                        --btn-primary-bg/-ink and the v2-btn-primary hover/pressed rules.
+                        The override restores the three numbers that differ from `sm`
+                        (height, padding, and the inherited line box `v2-ctl` would
+                        otherwise pin to 1) — every one of them `none`/identical in the
+                        default theme, where --btn-shadow is `none`. */}
+                    <Button size="sm" onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
+                      style={{ height: headOpen ? 36 : 30, padding: '0 19px', lineHeight: 'inherit' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</Button>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
                       {/* ui: keep — 36/30 with the collapsing detail header; IconButton's bordered size is a fixed 36 */}
                       <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
