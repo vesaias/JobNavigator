@@ -12,23 +12,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..600&family=Public+Sans:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <title>JobNavigator Dashboard</title>
-    <!-- No-flash boot. Runs before the bundle, so the first painted frame is
-         already the right ground colour instead of white-then-dark.
-         <html> is the boot host for the two look attributes — data-appearance
-         (light|dark) and data-theme (the palette) — and for the classic
-         shell's `.dark` class; frontend/src/v2/theme.js re-stamps the
-         same three the moment React mounts and on every change after that, and
-         each .jn-v2 root mirrors them so theme.css keeps selecting on the root
-         itself. Keep the logic here in step with migrateKeys()/readMode()/
-         readTheme() there — same steps, same order, or the ground flashes. -->
+    <!-- No-flash boot: sets data-appearance/data-theme/.dark before the bundle paints.
+         Keep in step with theme.js's migrateKeys()/readMode()/readTheme() — same steps, same order, or the ground flashes. -->
     <script>
       (function () {
         try {
           var d = document.documentElement, s = window.localStorage;
-          /* one-time migration of the Appearance/Theme rename: the old
-             `jobnavigator_theme` held light|dark|system and now holds the
-             palette, which is what `jobnavigator_skin` held. Read the old mode
-             out first, then let the old skin overwrite the key. */
+          /* jobnavigator_appearance holds light|dark|system; jobnavigator_theme
+             holds the palette (migrated from jobnavigator_skin). */
           var m = s.getItem('jobnavigator_appearance');
           var oldMode = s.getItem('jobnavigator_theme');
           if (m !== 'light' && m !== 'dark' && m !== 'system'
@@ -38,7 +29,7 @@
           var oldTheme = s.getItem('jobnavigator_skin');
           if (oldTheme !== null) { s.setItem('jobnavigator_theme', oldTheme); s.removeItem('jobnavigator_skin'); }
           if (m !== 'light' && m !== 'dark' && m !== 'system') {
-            /* one-time migration off the pre-D6 boolean */
+            /* migrates the legacy dark_mode boolean */
             m = s.getItem('jobnavigator_dark_mode') === 'true' ? 'dark' : 'light';
             s.setItem('jobnavigator_appearance', m);
           }

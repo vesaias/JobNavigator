@@ -1,59 +1,27 @@
-// The one place the app decides what it looks like.
+// The one place the app decides what it looks like. Two independent axes, stored
+// per browser (never the DB): appearance (light|dark|system, `jobnavigator_appearance`) and theme (the palette, `jobnavigator_theme`).
 //
-// Two independent axes, both stored per browser (never in the DB — a theme is a
-// preference, not a setting the backend acts on):
-//   appearance  light | dark | system   → localStorage `jobnavigator_appearance`
-//               (the store field is still called `mode`, and `resolved` is the
-//               light|dark it lands on)
-//   theme       default | tone1 | tone2 | tone3 | editorial | alt
-//               | cobalt | saas | win98 → localStorage `jobnavigator_theme`
+// default/alt are the two designed themes; tone1-3 ramp toward editorial in OKLab.
+// Adding a theme is two palette blocks in theme.css plus one line here — nothing else.
 //
-// `default` and `alt` are the two designed themes. `editorial` is the palette of
-// the DirectionC-Editorial direction board — the one the shipped default
-// descends from, before it was lightened — and tone1/tone2/tone3 are the ramp
-// between the two: every palette token interpolated in OKLab from default to
-// editorial at ¼, ½ and ¾, light and dark separately, on the default's fonts —
-// so the six can be looked at side by side on the monitor and the middle of the
-// ramp picked by eye. `cobalt`, `saas` and `win98` come from the three deep-retheme
-// Feed boards; each carries the board's own light AND dark palette plus its font
-// stacks, and nothing else — the boards' geometry (radii, bevels, shadows, type
-// scale) is out of a theme's reach, see v2-testing/round-design/skins-boards.md.
-// Adding one is still two palette blocks in theme.css plus a line here — nothing
-// else.
+// `resolved` is the light|dark actually painted (system follows prefers-color-scheme
+// live); `mode` is what the user picked. Every consumer subscribes here so one click moves both shells with no reload.
 //
-// `system` follows `prefers-color-scheme` live, so a mode is not the same thing
-// as the colour that ends up on screen. `resolved` is that colour (light|dark);
-// `mode` is what the user picked. Everything that used to read the old boolean
-// `jobnavigator_dark_mode` on its own — V2App, ToastLab, UiGallery, LoginModal,
-// WelcomeModal and the classic shell in App.jsx — subscribes here instead, so
-// one click moves both shells with no reload (SHELL-02, SHELL-06).
-//
-// ATTRIBUTE HOSTS
-//   <html>          data-appearance, data-theme, and the classic shell's `.dark` class.
-//                   Stamped by the inline boot script in index.html *before*
-//                   React mounts, so the page ground is already the right colour
-//                   on the first frame (index.html carries the matching
-//                   `:root[data-appearance]` ground rules), and re-stamped by apply()
-//                   on every change.
-//   every .jn-v2    the same two attributes, mirrored through React props.
-//                   theme.css keeps selecting on the root itself
-//                   (`.jn-v2[data-appearance="dark"]`, `.jn-v2[data-theme="alt"]`), so
-//                   the palette cascade is exactly what it was before this file
-//                   existed; <html> is the boot copy, not a second source.
-// Use `themeAttrs()` for the props — never read localStorage in a component.
+// ATTRIBUTE HOSTS: <html> gets data-appearance/data-theme + .dark from index.html's
+// boot script before React mounts, then apply() re-stamps them on every change.
+// Each .jn-v2 root mirrors the same two attributes via themeAttrs() — never read localStorage directly in a component.
 
 import { useSyncExternalStore } from 'react'
 
 const APPEARANCE_KEY = 'jobnavigator_appearance'
 const THEME_KEY = 'jobnavigator_theme'
-const LEGACY_KEY = 'jobnavigator_dark_mode'   // the pre-D6 boolean, migrated once
-const LEGACY_THEME_KEY = 'jobnavigator_skin'  // what THEME_KEY was called before the rename
+const LEGACY_KEY = 'jobnavigator_dark_mode'   // legacy boolean, migrated once
+const LEGACY_THEME_KEY = 'jobnavigator_skin'  // old name for THEME_KEY
 
 export const MODES = ['light', 'dark', 'system']
 export const THEMES = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98']
 
-// The rail's ◐ is a three-state control, so it needs three glyphs (Nav Rail spec:
-// "cycles Light → Dark → System, tooltip names the current mode").
+// Three-state control (Light → Dark → System), so it needs three glyphs.
 export const MODE_ICON = { light: '◐', dark: '◑', system: '◒' }
 export const MODE_LABEL = { light: 'Light', dark: 'Dark', system: 'System' }
 export const MODE_OPTIONS = MODES.map((m) => [m, MODE_LABEL[m]])
@@ -73,12 +41,8 @@ export const THEME_OPTIONS = THEMES.map((s) => [s, THEME_LABEL[s]])
 const ls = (fn, fallback) => { try { return fn(window.localStorage) } catch { return fallback } }
 
 // ── storage migration ───────────────────────────────────────────────────────
-// The two keys swapped meaning in the Appearance/Theme rename: `jobnavigator_theme`
-// used to hold light|dark|system and now holds the palette, which is what
-// `jobnavigator_skin` held. Order matters — read the old light|dark value out of
-// THEME_KEY *before* the skin value overwrites it. Runs once, then both branches
-// are inert. The inline boot script in index.html does exactly the same thing, in
-// the same order, so the pre-mount ground never disagrees with the store.
+// jobnavigator_theme now holds the palette (previously jobnavigator_skin); order
+// matters — read the old light|dark value out of THEME_KEY before the skin value overwrites it. Must match index.html's boot script step for step.
 function migrateKeys(s) {
   const appearance = s.getItem(APPEARANCE_KEY)
   const oldMode = s.getItem(THEME_KEY)
@@ -89,9 +53,8 @@ function migrateKeys(s) {
 ls((s) => migrateKeys(s), null)
 
 // ── read ────────────────────────────────────────────────────────────────────
-// The legacy boolean is folded in on the first read and never consulted again;
-// the write below keeps mirroring it so a stale bundle (or a browser tab still
-// running the old code) doesn't flip back.
+// Legacy boolean is folded in on first read; setMode() below keeps mirroring it
+// so a stale bundle or browser tab still running the old code doesn't flip it back.
 function readMode() {
   const raw = ls((s) => s.getItem(APPEARANCE_KEY), null)
   if (MODES.includes(raw)) return raw
@@ -121,7 +84,7 @@ const listeners = new Set()
 const emit = () => { listeners.forEach((l) => l()) }
 
 // <html> is the boot copy of the two attributes plus the classic shell's `.dark`
-// class, so v1 agrees with v2 the moment either one changes (SHELL-06).
+// class, so v1 agrees with v2 the moment either one changes.
 function apply() {
   const d = typeof document !== 'undefined' && document.documentElement
   if (!d) return

@@ -7,7 +7,7 @@ Order is fixed; each item builds and gates before the next starts.
 3. [x] **Skins step 2** — ui.jsx changes 1–9 from `design-in/Skins handoff.md` §4 + the deferred state rules (pressed, field hover, `aria-disabled`, transitions, reduced-motion with spinner carve-out). Gate: default skin identical except the accepted proposals (P cells).
 4. [x] **Skins step 3** — new primitives (PillXs, ToolbarTrigger, TableRow, FooterRow, Mono, GlyphBadge, Notice, `HeaderRow variant="titlebar"`), migrate their hand-drawn sites, seven palette leaks, gallery rows.
 5. [x] **Skins proof** — shots + crawl per skin × light/dark, contrast table, smoke.
-6. [ ] **Cron helper** (Opus) — `describeCron()` + next-run readout in the cron fields' helper line (user timezone, UTC note), preset ▾ menu (Hourly · Every 6 h · Daily 03:00 · Weekdays 09:00 · Weekly Mon · Monthly 1st). Settings + ui.jsx/time.js.
+6. [x] **Cron helper** (Opus) — `describeCron()` + next-run readout in the cron fields' helper line (user timezone, UTC note), preset ▾ menu (Hourly · Every 6 h · Daily 03:00 · Weekdays 09:00 · Weekly Mon · Monthly 1st). Settings + ui.jsx/time.js.
 
 6b. [ ] **Comment cleanup** (Sonnet) — strip narrative prose from comments in `frontend/src/v2/*`, `theme.css/js`, `v2-testing/tools/*.py`: keep one-line why-comments, the `// ui: keep — …` / `// lint: allow` annotations (one line) and load-bearing notes; drop finding ids, history, restated code, multi-line essays. Gate: comment-stripped source identical before/after, lint 0, build ok. Backend Python (`backend/**/*.py`, tests included) in the same pass, same rules.
 

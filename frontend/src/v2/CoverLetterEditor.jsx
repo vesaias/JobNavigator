@@ -69,13 +69,9 @@ export default function CoverLetterEditor() {
   const [fmtOpen, setFmtOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [regenOpen, setRegenOpen] = useState(false)
-  const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
-  // CL-28: one `err` slot used to hold every failure on the screen, so a PDF
-  // download error sat in the top bar indefinitely (only a successful save
-  // cleared it) next to a letter name it had pushed out. The bar now holds save
-  // failures only — they are the one error the autosave header is about — and
-  // everything else goes to the toast host. `err` keeps the load and regenerate
-  // failures, which have their own slots (the empty state and the regen footer).
+  const [confirm, setConfirm] = useState(null)   // v2 dialog, not window.confirm
+  // The top bar shows save failures only; everything else goes to the toast host.
+  // `err` covers load/regenerate failures, which have their own slots (empty state, regen footer).
   const [saveErr, setSaveErr] = useState('')
   const [regening, setRegening] = useState(false)
   const [presets, setPresets] = useState([])
@@ -85,8 +81,8 @@ export default function CoverLetterEditor() {
   const [rVoice, setRVoice] = useState('')
   const [rLength, setRLength] = useState('standard')
   const [err, setErr] = useState('')
-  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
-  const [pdfErr, setPdfErr] = useState(false); const [pdfNonce, setPdfNonce] = useState(0)   // CL-19
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
+  const [pdfErr, setPdfErr] = useState(false); const [pdfNonce, setPdfNonce] = useState(0)
   const [headOpen, setHeadOpen] = useState(() => loadUI().headOpen ?? false)
   const [recipOpen, setRecipOpen] = useState(() => loadUI().recipOpen ?? false)
   const [letterOpen, setLetterOpen] = useState(() => loadUI().letterOpen ?? true)
@@ -108,17 +104,12 @@ export default function CoverLetterEditor() {
       setRSource(d.from_persona ? 'persona' : (d.resume_id || ''))
       setRVoice(d.voice || ''); setRLength(d.length || 'standard')
       loaded.current = true
-    }).catch((e) => { if (!dead) setErr(e?.response?.status === 404 ? 'This letter no longer exists.' : 'Couldn’t load this letter — try again.') })   // CL-15
+    }).catch((e) => { if (!dead) setErr(e?.response?.status === 404 ? 'This letter no longer exists.' : 'Couldn’t load this letter — try again.') })
     return () => { dead = true }
   }, [id])
 
-  // DESIGN-LOAD: these four are the editor's chrome — the layout and paper
-  // pickers, the Regenerate source list and the voice list. They settle as one,
-  // and `metaReady` (with the document, which already gates the whole screen)
-  // is what lets the preview toolbar draw: otherwise the Template trigger paints
-  // the raw template *id* and swaps to its name a moment later.
-  // OPEN-05: converted — failing silently left those pickers empty with nothing
-  // to say why, on a screen the user just opened. Each keeps its own catch.
+  // Template/paper pickers, Regenerate source list and voice list settle as one; `metaReady`
+  // (with doc) gates the preview toolbar so the Template trigger never flashes a raw id. Each keeps its own catch so a failure explains itself instead of leaving a silent empty picker.
   const { ready: metaReady } = useSettled([
     () => api.get('/cover-letters/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) }),
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — Regenerate has no source to pick.' }) }),
@@ -134,10 +125,8 @@ export default function CoverLetterEditor() {
   useEffect(() => () => { clearTimeout(saveTimer.current); clearTimeout(pdfTimer.current) }, [])
   useEffect(() => () => { if (prevBlob.current) URL.revokeObjectURL(prevBlob.current) }, [])
 
-  // autosave (debounced) — the header says "autosaves", so no save button.
-  // One timer serves every patch kind, so the pending patches must MERGE:
-  // replacing them wholesale silently dropped a {template} pick made within
-  // 500 ms of a keystroke (and vice versa) while the header still said "saved".
+  // autosave (debounced) — header says "autosaves", so no save button.
+  // One timer serves every patch kind; pending patches MERGE so a {template} pick within 500ms of a keystroke isn't dropped.
   const persist = useCallback((patch) => {
     if (!loaded.current) return
     pendingPatch.current = { ...pendingPatch.current, ...patch }
@@ -159,8 +148,7 @@ export default function CoverLetterEditor() {
     })
   }
 
-  // RES-16: every other destructive edit in the three builders is undoable; the
-  // body paragraph was the one that just vanished.
+  // Undoable, like every other destructive edit in the three builders.
   const undoRemove = useUndoRemove(update, (msg, undo) => pushToast({ kind: 'undo', msg, action: 'Undo', onAction: undo }))
 
   // live PDF, debounced behind the save so we never render a stale draft
@@ -177,7 +165,7 @@ export default function CoverLetterEditor() {
         prevBlob.current = url
         setPdfUrl(url)
         setPdfErr(false)
-      } catch (e) { if (e.name !== 'CanceledError') { console.error(e); setPdfErr(true) } }   // CL-19
+      } catch (e) { if (e.name !== 'CanceledError') { console.error(e); setPdfErr(true) } }
       setPdfBusy(false)
     }, 900)
     return () => { clearTimeout(pdfTimer.current); ac.abort() }
@@ -199,7 +187,7 @@ export default function CoverLetterEditor() {
       a.href = url; a.download = m ? m[1] : 'CoverLetter.pdf'
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }   // CL-28: a download failure is not a save failure
+    } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not download the PDF.' }) }   // a download failure is not a save failure
   }
 
   const remove = () => {
@@ -208,13 +196,13 @@ export default function CoverLetterEditor() {
       title: `Delete "${doc?.name}"?`, body: 'This cannot be undone.', label: 'Delete', danger: true,
       onConfirm: async () => {
         setConfirm(null)
-        try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }   // CL-17
-        catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }   // CL-28
+        try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }
+        catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
       },
     })
   }
 
-  const regenRun = useRef(null)   // DS-B-02: run_id of the regenerate in flight
+  const regenRun = useRef(null)   // run_id of the regenerate in flight
   const regenerate = async () => {
     if (regening || !rSource) return
     setRegening(true); setErr('')
@@ -223,11 +211,11 @@ export default function CoverLetterEditor() {
         resume_id: rSource, job_id: doc.job_id, voice: rVoice, length: rLength,
         cover_letter_id: id,       // rewrite this draft in place
       })
-      regenRun.current = started?.run_id || null   // DS-B-02: read its status below
+      regenRun.current = started?.run_id || null   // read its status below
     } catch (e) {
       setRegening(false)
       setErr(e?.response?.data?.detail || 'Regeneration failed')
-      pushToast({ kind: 'error', msg: e?.response?.data?.detail || 'Regeneration failed' })   // CL-14/18: visible above the modal scrim
+      pushToast({ kind: 'error', msg: e?.response?.data?.detail || 'Regeneration failed' })   // visible above the modal scrim
     }
   }
 
@@ -238,15 +226,12 @@ export default function CoverLetterEditor() {
     const iv = setInterval(async () => {
       try {
         const { data: runs } = await api.get('/monitor/active')
-        // scope to THIS letter — the backend keys a regenerate as cl:{letter id}
-        // (routes_cover_letters.py:341). Matching any generate_cover_letter run
-        // kept this modal spinning until every unrelated generation finished.
+        // scope to THIS letter (backend keys a regenerate as cl:{letter id}) — matching
+        // any generate_cover_letter run kept this modal spinning on unrelated generations.
         const live = (runs || []).some((r) => r.job_type === 'generate_cover_letter' && r.scope_key === `cl:${id}`)
         if (!live && !dead) {
-          // DS-B-02: the run leaving /monitor/active only means it ended. A failed
-          // regenerate used to close this modal on an unchanged draft, silently
-          // indistinguishable from a rewrite. Ask the run what happened; on a
-          // failure keep the modal open with the reason so it can be retried.
+          // A run leaving /monitor/active only means it ended, not that it succeeded.
+          // Check its outcome; on failure keep the modal open with the reason so it can be retried.
           const run = await fetchRunOutcome(regenRun.current, 'generate_cover_letter')
           if (dead) return
           if (runFailed(run)) {
@@ -271,9 +256,8 @@ export default function CoverLetterEditor() {
     return () => { dead = true; clearInterval(iv) }
   }, [regening, id, pushToast])
 
-  // RES-15: Escape closes the modal through the shared hook. This handler keeps the
-  // menu/dropdown half (CL-25) and marks the event handled when one was actually
-  // open, so the same press can't close a dropdown and the modal behind it.
+  // Escape closes the modal via the shared hook; this handler additionally closes
+  // an open menu/dropdown first and marks the event handled, so one press doesn't close both.
   const openUi = useRef({ menuOpen: false, tplOpen: false, fmtOpen: false })
   openUi.current = { menuOpen, tplOpen, fmtOpen }
   useEffect(() => {
@@ -292,10 +276,8 @@ export default function CoverLetterEditor() {
       ...(personaAvailable ? [{ id: 'persona', label: 'Persona (full profile)' }] : []),
       ...resumes.map((r) => ({ id: r.id, label: r.name })),
     ]
-    // R2-H-14: the list is bases + Persona, but a letter generated from the
-    // Résumé editor is paired with a *tailored* copy. Its id matched no option, so
-    // the picker showed "Select a source…" while Regenerate ran against that very
-    // copy. Prepend the letter's own source when it isn't already there.
+    // A letter generated from the Résumé editor may be paired with a tailored copy
+    // not in this list (showed "Select a source…" while Regenerate used it) — prepend it if missing.
     const own = doc?.resume_id
     if (own && !doc.from_persona && !opts.some((o) => String(o.id) === String(own))) {
       opts.unshift({ id: own, label: doc.source_name ? `${doc.source_name} · tailored copy` : 'This letter’s tailored copy' })
@@ -304,7 +286,6 @@ export default function CoverLetterEditor() {
   }, [resumes, personaAvailable, doc])
 
   if (!doc) {
-    // the 404 / load-failure page stays exactly as it was
     if (err) {
       return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
@@ -316,11 +297,8 @@ export default function CoverLetterEditor() {
         </div>
       )
     }
-    // DESIGN-LOAD: reserve the chrome's own shape while the document fetch is in
-    // flight, instead of a bare "Loading…" that collapses the whole screen to one
-    // centred line and then jumps to the real top-bar + two-pane layout once the
-    // doc lands. NBSP holds the top bar's line height; the panes need no content
-    // to reserve theirs — they already flex to fill what's left.
+    // Reserves the chrome's own shape while the doc fetches, instead of a bare
+    // "Loading…" that collapses to one line then jumps to the real layout; NBSP holds the top bar's height.
     return (
       <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <HeaderRow pad="10px 24px" bg="surface" soft align="center">
@@ -349,13 +327,10 @@ export default function CoverLetterEditor() {
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
-        {/* S5: the Draft/stage badge is ResumeEditor's Base/Tailored twin — same Tag
-            role, same token read. --label-case is `uppercase` and
-            --label-tracking-scale 1 in the base blocks, so the paint is unchanged. */}
+        {/* Draft/stage badge is ResumeEditor's Base/Tailored twin — same Tag role, same token read. */}
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
           style={{ flex: '0 0 auto', fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)' }}>{badge}</span>
-        {/* R2-S-06: every other v2 screen names itself with an h1; visually this
-            is the same span it always was (margin and font reset inline). */}
+        {/* every v2 screen names itself with an h1 (margin/font reset inline). */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{doc.name}</h1>
         <Helper title={saveErr || undefined} style={{ marginLeft: 'auto', flex: '0 1 auto', minWidth: 0, maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(saveErr ? { color: 'var(--bad)' } : null) }}>
           {saveErr || (savedAt ? `saved ${ago(savedAt)} · autosaves` : 'autosaves')}
@@ -488,8 +463,7 @@ export default function CoverLetterEditor() {
                     (d) => { d.body_paragraphs = d.body_paragraphs || []; d.body_paragraphs.splice(i, 0, text) })} title="Delete paragraph" className="v2-parabtn-bad"
                     style={{ width: 20, height: 20, borderRadius: 'var(--radius-mini)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--edge)', cursor: 'pointer' }}>✕</span>
                 </div>
-                {/* ui: keep — a paragraph is flowing text inside the ¶ card's own box: no
-                    border, no background, margin instead of padding, resize:none */}
+                {/* ui: keep — flowing text in the ¶ card's own box: no border/background, resize:none */}
                 <textarea value={text} rows={4} onChange={(e) => update((d) => { d.body_paragraphs[i] = e.target.value })}
                   style={{ margin: '4px 10px 9px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: '19px', color: 'var(--text)', outline: 'none', resize: 'none' }} />
               </UiCard>
@@ -514,9 +488,8 @@ export default function CoverLetterEditor() {
             <Label>PDF preview</Label>
             {pdfBusy && <Spinner size={10} color="var(--edge)" />}
 
-            {/* DESIGN-LOAD: the two triggers wait for the template list. The row's
-                height is the Download button's, so nothing moves when they land —
-                and the Template trigger never shows a raw id first. */}
+            {/* Triggers wait for the template list; row height is the Download button's, so
+                nothing moves when they land, and Template never shows a raw id first. */}
             {metaReady && <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
               <ToolbarTrigger label="Template" value={tplLabel} onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }}
                 title="Cover letter template" />
@@ -555,9 +528,8 @@ export default function CoverLetterEditor() {
       </div>
 
       {regenOpen && (
-        // CL: a run in flight is not cancellable, so while `regening` the panel
-        // takes no `onClose` at all — no scrim click, no Escape listener, exactly
-        // the `regenOpen && !regening` guard it had.
+        // A run in flight isn't cancellable, so while `regening` the panel takes
+        // no `onClose` at all — no scrim click, no Escape.
         <ModalPanel width={460} zIndex={60} onClose={regening ? undefined : () => setRegenOpen(false)} style={{ overflow: 'hidden' }}>
             <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
               <Heading>Regenerate letter</Heading>
@@ -573,8 +545,7 @@ export default function CoverLetterEditor() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Voice</Label>
-                {/* DESIGN-LOAD: "No voice presets…" is a verdict, not a loading
-                    state — the row holds a pill's height until the settle. */}
+                {/* "No voice presets…" is a verdict, not a loading state — the row holds a pill's height until the settle. */}
                 <div style={{ minHeight: 26 }}>{metaReady && <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -583,10 +554,9 @@ export default function CoverLetterEditor() {
               </div>
             </div>
             <FooterRow bg="page" style={{ flex: '0 0 auto' }}>
-              {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}   {/* CL-14 */}
+              {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}
               <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
-              {/* RES-17: a disabled primary pill is --line on --muted across the three
-                  builders — a dimmed accent still reads as the live button. */}
+              {/* Disabled primary pill is --line on --muted across the three builders — a dimmed accent still reads as live. */}
               <Button size="sm" onClick={regenerate} disabled={regening || !rSource}>
                 {regening && <Spinner color="currentColor" />}
                 {regening ? 'Regenerating…' : 'Regenerate'}

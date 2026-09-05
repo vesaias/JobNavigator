@@ -58,18 +58,15 @@ const MODE_OPTIONS = [
   ['jobright', 'Jobright.ai'],
   ['freehire', 'freehire.me'],
 ]
-// /monitor/active carries every background job. Only POST /searches/{id}/run
-// tags its run with job_type 'search_run' (routes_searches.py) - company scrapes
-// and resume jobs also carry a scope_key, and used to keep this screen polling.
+// /monitor/active carries every background job; only POST /searches/{id}/run
+// tags its run with job_type 'search_run' (routes_searches.py) — filter on that.
 const isSearchRun = (r) => r?.job_type === 'search_run'
 const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
 const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
 
-// `dots` is a COUNT, not a glyph string: Segmented draws that many accent Dots
-// before the label, and the row badge below draws the same discs. 0 draws
-// nothing at all — the old '' string still rendered an empty span, and the gap
-// it reserved pushed the "Off" label off the cell's centre.
+// `dots` is a COUNT, not a glyph string — Segmented draws that many accent Dots
+// before the label; 0 must draw nothing, not an empty span (that shifts centering).
 const DEPTHS = [
   { id: 'off', label: 'Off', dots: 0, hint: 'New results arrive unscored — score them by hand from the feed' },
   { id: 'light', label: 'Light', dots: 1, hint: 'Score only. Low cost.' },
@@ -87,7 +84,7 @@ const noteFor = (mode) => {
   return null
 }
 
-// one-line "what this search does", mirroring the design's summary strings
+// one-line summary of what this search does
 const summaryOf = (s) => {
   const last = s.last_run_at ? ` · last run ${ago(s.last_run_at)}` : ''
   const m = s.search_mode
@@ -131,13 +128,12 @@ const draftOf = (s) => ({
   auto_scoring_depth: s.auto_scoring_depth || 'off',
   run_interval_minutes: s.run_interval_minutes ?? 0,
 })
-// R2-H-03: a new search opens on Light, the same as the Add-company modal — the
-// two creation flows used to disagree (off vs light) on the one control that
-// spends money per scraped job.
+// New search opens on Light, matching the Add-company modal — keeps the one
+// control that spends money per scraped job consistent across creation flows.
 const NEW_DRAFT = draftOf({ sources: ['linkedin', 'indeed', 'zip_recruiter', 'google'], title_exclude_keywords: ['intern', 'junior', 'associate'], auto_scoring_depth: 'light' })
 
-// R2-A-02: the numeric bounds live in one place so an input's min/max and the
-// payload clamp can't drift apart (COMP-12 did the same for Companies).
+// Numeric bounds live in one place so an input's min/max and the payload clamp
+// can't drift apart.
 const BOUNDS = {
   hours_old: [0, 720],
   results_wanted: [1, 500],
@@ -149,14 +145,11 @@ const BOUNDS = {
 
 const toPayload = (d) => {
   const list = (v) => (v || '').split(',').map((x) => x.trim()).filter(Boolean)
-  // SRCH-12: `parseInt(x) || fallback` turned an explicit 0 into 24 / 50. A
-  // cleared field now goes out as null — the backend falls back to the column
-  // default on create and stores NULL on update, which reads back as the default.
+  // `parseInt(x) || fallback` turned an explicit 0 into 24 / 50 — a cleared field
+  // goes out as null instead; the backend falls back to the column default.
   const num = (v) => { const n = parseInt(v, 10); return Number.isNaN(n) ? null : n }
-  // R2-A-02: `parseInt(x) || fallback` swallowed a legal 0 (max_pages 0 became 50)
-  // and let a negative page count or a 999-page run reach the wire, while the
-  // "20–500" label enforced nothing. Clamp to the bounds the inputs declare; a
-  // cleared field still goes out as null so the column default applies.
+  // Clamp to the bounds the inputs declare — a label like "20–500" enforces
+  // nothing on its own; a cleared field still goes out as null.
   const clamp = (v, key) => { const n = num(v); if (n == null) return null; const [lo, hi] = BOUNDS[key]; return Math.min(hi, Math.max(lo, n)) }
   const rwKey = d.search_mode === 'jobright' ? 'results_wanted_jobright' : 'results_wanted'
   const p = {
@@ -174,14 +167,14 @@ const toPayload = (d) => {
     auto_scoring_depth: d.auto_scoring_depth,
     run_interval_minutes: clamp(d.run_interval_minutes, 'run_interval_minutes') ?? 0,
   }
-  // SRCH-12: location is a keyword-search field only — sending it for
+  // location is a keyword-search field only — sending it for
   // levels_fyi / jobright / freehire / extension searches means nothing.
   if (d.search_mode === 'keyword') p.location = d.location || 'United States'
   return p
 }
 
 // ── small pieces ─────────────────────────────────────────────────────────────
-function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type, min, max }) {   // R2-A-02: min/max
+function Cell({ label, value, onChange, mono, placeholder, span, sub, disabled, options, type, min, max }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: span ? `span ${span}` : undefined, minWidth: 0 }}>
       <Label>{label}</Label>
@@ -333,8 +326,8 @@ export default function Searches() {
   const [nextRun, setNextRun] = useState(null)
   const [test, setTest] = useState(null)       // {name, data} | {name, error}
   const [testingId, setTestingId] = useState(null)
-  const [confirm, setConfirm] = useState(null)   // R2-A-01: the shared destructive-confirm dialog
-  const [busy, setBusy] = useState(null)      // SRCH-29: 'new' | search id while a POST/PATCH is in flight
+  const [confirm, setConfirm] = useState(null)   // the shared destructive-confirm dialog
+  const [busy, setBusy] = useState(null)      // 'new' | search id while a POST/PATCH is in flight
   const [testTab, setTestTab] = useState('all')
   const [reload, setReload] = useState(0)   // "Try again" re-arms the settle below
   const [loadErr, setLoadErr] = useState(null)
@@ -351,28 +344,25 @@ export default function Searches() {
       pushToast({ kind: 'error', msg: errText(e, 'Could not load your searches') })
     }
   }, [pushToast])
-  // SRCH-24: health + the schedule are re-read after every mutation and whenever
-  // a run finishes, not only on mount. Failures stay silent and leave whatever
-  // was loaded before in place.
+  // Health + the schedule are re-read after every mutation and whenever a run
+  // finishes, not only on mount; failures stay silent and keep the last value.
   const loadAux = useCallback(() => Promise.all([
-    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => { /* silent: SRCH-24 — re-read after every mutation; a failure leaves the last verdict in place */ }),
+    api.get('/health/entities').then(({ data }) => { const m = {}; (data.searches || []).forEach((s) => { m[s.id] = s.reason }); setDownMap(m) }).catch(() => { /* silent — a failure leaves the last verdict in place */ }),
     api.get('/scheduler/jobs').then(({ data }) => {
       const j = (data || []).find((x) => x.id === 'scrape_all')
       if (j?.next_run) setNextRun(j.next_run)
-    }).catch(() => { /* silent: SRCH-24 — the “next run” hint keeps its last value */ }),
+    }).catch(() => { /* silent — the “next run” hint keeps its last value */ }),
   ]), [])
-  // DESIGN-LOAD: cards, health verdicts, the next-sweep time and the running set
-  // settle together. Drawn as they landed, the cards appeared under a "0 configs"
-  // subtitle and then grew their amber warning edges a beat later.
+  // Cards, health verdicts, next-sweep time and the running set settle together —
+  // otherwise cards render before verdicts, growing amber edges a beat later.
   const { ready } = useSettled([
     () => load(),
     () => loadAux(),
     () => api.get('/monitor/active').then(({ data }) => { const m = {}; (data || []).filter(isSearchRun).forEach((r) => { if (r.scope_key) m[r.scope_key] = true }); setRunning(m) }).catch(() => { /* silent: poller — the interval below retries */ }),
   ], reload)
 
-  // SRCH-28: one interval for the life of the screen. It used to list `running`
-  // and `load` as deps, so every tick (which always wrote a fresh object) tore
-  // the timer down and rebuilt it; state and callbacks are read through refs now.
+  // One interval for the life of the screen — state and callbacks are read via
+  // refs so a fresh `running`/`load` value each tick doesn't tear it down.
   const runningRef = useRef(running)
   const cbRef = useRef({ load, loadAux })
   useEffect(() => { runningRef.current = running }, [running])
@@ -396,8 +386,8 @@ export default function Searches() {
     return () => clearInterval(h)
   }, [])
 
-  // SRCH-20: relative times ("last run 3d ago", the countdown) are computed at
-  // render, so without this they froze until some other state changed.
+  // Relative times ("last run 3d ago", the countdown) are computed at render, so
+  // without this tick they'd freeze until some other state changed.
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const h = setInterval(() => setTick((t) => t + 1), 60000)
@@ -406,9 +396,8 @@ export default function Searches() {
 
   useEffect(() => {
     const onDoc = () => setMenuFor(null)
-    // SRCH-21: the test modal is the top layer - Escape closes it alone;
-    // otherwise Escape closes whichever editor is open (drawer / New search),
-    // and the New-search draft is reset exactly as its Cancel button does.
+    // Test modal is the top layer — Escape closes it alone; otherwise Escape closes
+    // whichever editor is open, resetting the New-search draft like Cancel does.
     const onKey = (e) => {
       if (e.key !== 'Escape') return
       setMenuFor(null)
@@ -421,9 +410,8 @@ export default function Searches() {
   }, [test, editing, newOpen])
 
   const nActive = searches.filter((s) => s.active).length
-  // R3-A-03: a board that hard-failed on the last run is the most specific thing
-  // we can say, so it outranks the generic verdicts below — "9 seen, +0 new"
-  // otherwise reads like a quiet day on every configured source.
+  // A hard-failed source is the most specific verdict, so it outranks the generic
+  // ones below — otherwise "9 seen, +0 new" reads like a quiet day.
   const sourceWarnOf = (s) => {
     const errs = s.last_source_errors || []
     if (!errs.length) return null
@@ -433,11 +421,8 @@ export default function Searches() {
   // single clean-but-empty run
   const warnTextOf = (s) => sourceWarnOf(s) || s.last_error || downMap[s.id]
     || (s.last_run_warning ? 'Last run finished cleanly but returned no jobs' : null)
-  // A paused search is not an open problem: it was switched off deliberately, so
-  // its last-run state stays on the card as history — muted, labelled “paused” —
-  // rather than driving the ▲, the amber edge, the header count and the rail dot.
-  // Same for a warning the operator acknowledged, until a newer run fails
-  // (the backend re-raises it by itself; `warning_acknowledged` says which).
+  // A paused search or an acknowledged warning is muted on the card ("paused"),
+  // not driving the ▲/amber/header/rail — the backend re-raises it once a newer run fails.
   const warnMuted = (s) => !s.active || !!s.warning_acknowledged
   const warnOf = (s) => { const t = warnTextOf(s); return t && !warnMuted(s) ? t : null }
   const mutedWarnOf = (s) => {
@@ -445,13 +430,11 @@ export default function Searches() {
     if (!t || !warnMuted(s)) return null
     return `${t} · ${s.active ? `acknowledged ${ago(s.warning_acknowledged_at)}` : 'paused'}`
   }
-  // SRCH-09: the header count uses health's verdict alone — the same source as
-  // the rail's “N sources need attention”. The row ▲ and the drawer banner keep
-  // the broader warnOf() predicate.
+  // Header count uses health's verdict alone — same source as the rail's “N need
+  // attention”; the row ▲ and drawer banner keep the broader warnOf() predicate.
   const nWarn = searches.filter((s) => s.active && downMap[s.id]).length
-  // Warm start: the counts and the next-sweep time are the same on the frame after
-  // a refresh as they were before it (the countdown is recomputed from the cached
-  // timestamp at render, so it stays honest), and reconcile on settle.
+  // Warm start: counts and next-sweep time match the pre-refresh frame (the
+  // countdown recomputes from the cached timestamp), then reconcile on settle.
   const { warm: sub, style: subStyle } = useWarm('searches', ready
     ? { n: searches.length, active: nActive, warn: nWarn, next: nextRun }
     : null, ready)
@@ -469,8 +452,8 @@ export default function Searches() {
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
   const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
-  // SRCH-10: the shell re-reads its rail badges on this event, so every mutation
-  // that changes how many searches exist fires it.
+  // The shell re-reads its rail badges on this event — every mutation that
+  // changes how many searches exist fires it.
   const bumpCounts = () => window.dispatchEvent(new CustomEvent('jn:counts-changed'))
   const save = async (s) => {
     if (busy) return
@@ -513,7 +496,7 @@ export default function Searches() {
       setRunning((m) => { const n = { ...m }; delete n[s.id]; return n })
     }
   }
-  // R2-A-01: the styled dialog every other v2 destructive action uses.
+  // The styled dialog every other v2 destructive action uses.
   const remove = (s) => {
     setMenuFor(null)
     setConfirm({
@@ -530,12 +513,10 @@ export default function Searches() {
   }
 
   const runTest = async (s) => {
-    if (testingId) return                       // SRCH-23: one Test at a time
+    if (testingId) return                       // one Test at a time
     setMenuFor(null); setTestingId(s.id); setTestTab('all')
-    // Every preview path (jobright/freehire/linkedin_personal, and the keyword
-    // scrape-failed branch) reports failure as {"error": …} with HTTP 200.
-    // Without this the modal would render the data branch and claim
-    // "No results returned." over a real error.
+    // Every preview path reports failure as {"error": …} with HTTP 200 — without this
+    // the modal renders the data branch and claims "No results returned." on a real error.
     const settle = (data) => setTest(data?.error ? { name: s.name, error: data.error } : { name: s.name, data })
     try {
       const res = await api.post(`/searches/${s.id}/test`, null, { timeout: 30000 })
@@ -602,15 +583,13 @@ export default function Searches() {
           const depth = s.auto_scoring_depth || 'off'
           const dep = DEPTHS.find((x) => x.id === depth)
           const isOpen = editing === s.id
-          const testBlocked = !!testingId && testingId !== s.id   // SRCH-23
+          const testBlocked = !!testingId && testingId !== s.id
           const mutedWarn = mutedWarnOf(s)
           const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (warn || mutedWarn || summaryOf(s))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
-            /* same card hover as Résumés and Cover Letters. Not while open — the
-               expanded editor shouldn't wash under the cursor — and a warned card
-               keeps its amber edge (.v2-bd-warn comes later in theme.css, so its
-               border-color wins over .v2-card's accent). */
+            /* Same card hover as Résumés/Cover Letters, suppressed while open; a warned
+               card keeps its amber edge — .v2-bd-warn comes later in theme.css so it wins over .v2-card. */
             <Card key={s.id} className={isOpen ? undefined : warn ? 'v2-card v2-bd-warn' : 'v2-card'}
               style={{ padding: 0, ...(warn ? { borderColor: 'var(--warn-line)' } : isOpen ? { borderColor: 'var(--accent)' } : null), display: 'flex', flexDirection: 'column' }}>
               {/* summary row */}
@@ -618,16 +597,14 @@ export default function Searches() {
                 {warn && <span title={`Needs attention — ${warn}`} style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)' }}>▲</span>}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {/* the 23px that held this card on an integer height is now
-                        `Heading strong`'s own pinned line-height (D5). */}
+                    {/* Card's integer height comes from `Heading strong`'s own pinned line-height. */}
                     <Heading strong size={15.5} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                     <span title={summary} style={{ flex: '0 1 auto', minWidth: 0, fontSize: 11.5, lineHeight: '17px', color: summaryFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</span>
                     {warn && !ext && (
-                      /* ui: keep — muted 11 inline action, not the Link signature (accent 11.5/500); its 17px
-                         line-height is the card's row rhythm, matching the summary line beside it */
+                      /* ui: keep — muted 11 inline action, not the Link signature (accent 11.5/500); matches the summary line's 17px row rhythm. */
                       <span onClick={(e) => { e.stopPropagation(); acknowledge(s) }} className="v2-hover-accent-text"
                         title="Stop counting this search as needing attention. The warning stays here; a run that fails after this raises it again."
                         style={{ flex: '0 0 auto', fontSize: 11, lineHeight: '17px', color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
@@ -639,7 +616,7 @@ export default function Searches() {
                     ? 'Full — every new result gets a score plus the full report with keywords and requirements'
                     : 'Light: each new job gets a score. Open the job to generate a full report.'}
                     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, cursor: 'help' }}>
-                    {/* the same discs the Segmented cells draw — DEPTHS.dots is a count now */}
+                    {/* the same discs the Segmented cells draw — DEPTHS.dots is a count */}
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                       {Array.from({ length: dep?.dots || 0 }, (_, k) => <Dot key={k} tone="accent" size={6} />)}
                     </span>{dep?.label}
@@ -656,9 +633,7 @@ export default function Searches() {
                     style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension • passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                    {/* ui: keep — the row's 25px pills are padded 0 9, one pixel tighter each
-                        side than Pill xs's canonical 0 10 (Companies draws 0 10, Stats 0 11);
-                        pinned here rather than drifted, and D-13 picks the one padding. */}
+                    {/* ui: keep — row's 25px pills padded 0 9, one px tighter than Pill xs's canonical 0 10 (Companies 0 10, Stats 0 11). */}
                     <Pill size="xs" hover="v2-bdc" line="inherit" onClick={() => runNow(s)}
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-on-ink)' } : null) }}>
@@ -672,8 +647,7 @@ export default function Searches() {
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </Pill>
                     )}
-                    {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its ink
-                        (the glyph stays --text-2 here, as on Companies); see D-15. */}
+                    {/* ui: keep — open ⋯ takes the on-trio's fill/border but not its ink (glyph stays --text-2, as on Companies). */}
                     <IconButton size={25} hover="v2-bd" line="inherit" on={menuFor === s.id} style={{ color: 'var(--pill-ink)' }}
                       onClick={() => setMenuFor(menuFor === s.id ? null : s.id)}
                       title="More actions" ariaExpanded={menuFor === s.id} ariaHaspopup="menu">⋯</IconButton>
@@ -706,11 +680,10 @@ export default function Searches() {
           )
         })}
 
-        {/* a failed GET used to fall through to "No searches yet", which reads
-            as an empty database; and the empty state flashed on every mount
-            before the first response landed. */}
-        {/* DESIGN-LOAD: no "Loading searches…" row — the scroller keeps its box and
-            the cards draw once, with their warning edges already on. */}
+        {/* Error state is shown separately, or a failed GET reads as an empty
+            database and the empty state flashes before the first response lands. */}
+        {/* No "Loading searches…" row — the scroller keeps its box and cards draw
+            once with warning edges already on. */}
         {ready && loadErr && searches.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 30px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your searches</span>
@@ -742,15 +715,14 @@ function TestModal({ test, tab, setTab, onClose }) {
   const filtered = jobs.filter((j) => !j.kept)
   const rows = tab === 'kept' ? kept : tab === 'filtered' ? filtered : jobs
   const cfg = d.config || {}
-  // R3-A-01 footer arithmetic. `body_excluded_count` is the number the run would
-  // store as `ignored`; the rest of the drops are the two title/company layers.
+  // Footer arithmetic: `body_excluded_count` is the number the run would store as
+  // `ignored`; the rest of the drops are the two title/company layers.
   const nRaw = d.raw_count ?? jobs.length
   const nKept = d.after_filter ?? kept.length
   const nBodyExcluded = d.body_excluded_count ?? 0
   const nBodyUnchecked = d.body_unchecked_count ?? 0
-  // DS-A-02: the global title-exclude list is a third layer the run applies and
-  // this preview used to skip, so "5 kept · 0 title-filtered" turned into a run
-  // that filed 2 of them as `ignored`. Broken out the way Companies does it.
+  // Global title-exclude list is a third filtering layer the run applies —
+  // broken out here the same way Companies does it.
   const nGlobalExcluded = d.global_excluded_count ?? 0
   const nPassSearch = typeof d.after_search_filter === 'number' ? d.after_search_filter : null
   const nTitleFiltered = Math.max(0, nRaw - nKept - nBodyExcluded - nGlobalExcluded)
@@ -791,8 +763,7 @@ function TestModal({ test, tab, setTab, onClose }) {
   }
 
   return (
-    // was a hand-written panel with neither Escape nor the pixel snap; ModalPanel
-    // brings both (RES-15 / RES-32) — the scrim click already closed it.
+    // ModalPanel brings Escape handling and pixel-snap; the scrim click already closes it.
     <ModalPanel width={980} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading size={18} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
@@ -812,9 +783,7 @@ function TestModal({ test, tab, setTab, onClose }) {
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {Object.entries(bySource).map(([k, v]) => {
                   const c = srcChip(k)
-                  /* ui: keep — mono source badge on the cc- / sm- hue taxonomy (its colour
-                     comes from `c.className`/`c.style`, which an inline Tag tone would beat);
-                     Tag is the uppercase .06em sans form at pad 2 8 */
+                  /* ui: keep — mono source badge on the cc- / sm- hue taxonomy (colour from `c.className`/`c.style`, which an inline Tag tone would beat). */
                   return <span key={k} className={c.className} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 7px', borderRadius: 'var(--radius-control)', ...(c.style || {}) }}>{k} {v}</span>
                 })}
               </span>
@@ -846,30 +815,25 @@ function TestModal({ test, tab, setTab, onClose }) {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '2px 22px', borderBottom: '1px solid var(--line-soft)', background: ok ? 'transparent' : 'var(--bad-faint)' }}>
                     <Helper size="xs" mono style={{ flex: '0 0 80px' }}>{j.source}</Helper>
                     <span title={j.company} style={{ flex: 1.3, minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.company}</span>
-                    {/* SRCH-27: a preview row can arrive with url: null - render
-                        the title as text then, not as a link that goes nowhere */}
-                    {/* R2-H-01: the reason a row was filtered is the whole point of
-                        the Filtered tab, and it only existed on the OUT chip's
-                        title= — one hover per row. Render it under the title. */}
+                    {/* A preview row can arrive with url: null — render the title as text, not a dead link. */}
+                    {/* Filter reason is the point of the Filtered tab; render it under the title
+                        instead of only in the OUT chip's hover tooltip. */}
                     <span style={{ flex: 2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, paddingRight: 8 }}>
                       {j.url
                         ? <a href={j.url} target="_blank" rel="noopener noreferrer" title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.title}</a>
                         : <span title={j.title} style={{ minWidth: 0, fontSize: 12, lineHeight: '17px', color: ok ? 'var(--text-2)' : 'var(--muted)', textDecoration: ok ? 'none' : 'line-through', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'default' }}>{j.title}</span>}
                       {j.reason && <Helper title={j.reason} style={{ minWidth: 0, color: ok ? 'var(--muted)' : 'var(--bad)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.reason}</Helper>}
-                      {/* R3-A-01: a kept row the body scan could not run on is not
-                          a promise — say which check is missing rather than let
-                          the run turn it into an `ignored` row unexplained. */}
+                      {/* A kept row the body scan couldn't run on isn't a promise — say which
+                          check is missing rather than let the run silently mark it `ignored`. */}
                       {ok && needsDesc(j) && <Helper title="The run scans the description for body_exclusion_phrases; this preview didn’t have one" style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>body check needs the description</Helper>}
                     </span>
                     <Helper title={j.location} style={{ flex: '0 0 116px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</Helper>
                     <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
-                      {/* R3-A-01: a body-phrase drop is stored as `ignored`, not
-                          filtered out of the feed — label it as what it becomes. */}
+                      {/* A body-phrase drop is stored as `ignored`, not filtered out — label it as what it becomes. */}
                       {/* ui: keep — per-row verdict badge (Tag role), not a control */}
-                      {/* DS-A-02: a global-list drop reads GLOBAL, not a bare OUT —
-                          the row passed this search's own filters. */}
+                      {/* A global-list drop reads GLOBAL, not a bare OUT — the row passed this search's own filters. */}
                       <span title={j.reason || 'Passed all filters'} style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: ok ? 'var(--accent-soft)' : j.body_excluded_by ? 'var(--warn-soft)' : 'var(--bad-soft)', color: ok ? 'var(--good)' : j.body_excluded_by ? 'var(--warn)' : 'var(--bad)', cursor: j.reason ? 'help' : 'default' }}>{ok ? 'Kept' : j.body_excluded_by ? 'Ignored' : globalOut(j) ? 'Global' : 'Out'}</span>
                     </span>
                   </div>
@@ -883,11 +847,11 @@ function TestModal({ test, tab, setTab, onClose }) {
             </div>
 
             <FooterRow variant="compact" bg="page" style={{ flex: '0 0 auto', fontSize: 11.5, color: 'var(--text-2)' }}>
-              {/* R3-A-01: three buckets, not two — a body-phrase drop is stored
-                  as `ignored` by the run and used to hide inside "filtered". */}
+              {/* Three buckets, not two — a body-phrase drop is stored as `ignored` by
+                  the run, distinct from "filtered". */}
               <span>
                 <b style={{ color: 'var(--good)' }}>{nKept} kept</b> · <b style={{ color: 'var(--bad)' }}>{nTitleFiltered} title-filtered</b>
-                {/* DS-A-02: the global list gets its own term, like the Companies footer */}
+                {/* The global list gets its own term, like the Companies footer */}
                 {nGlobalExcluded > 0 && (
                   <> · <b style={{ color: 'var(--bad)' }}>{nGlobalExcluded} removed by the global list</b>
                     {nPassSearch != null && <span style={{ color: 'var(--muted)' }}> ({nPassSearch} pass this search’s filters)</span>}

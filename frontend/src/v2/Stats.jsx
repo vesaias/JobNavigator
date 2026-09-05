@@ -7,19 +7,15 @@ import { useEscape, useSettled, useWarm, NBSP } from './hooks'
 import { Card, GlyphBadge, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, Mono, PageTitle, Pill as UiPill, Spinner, TableHead, TableRow } from './ui'
 import './theme.css'
 
-// Stats reads the pipeline back to you: what's in the funnel, how the scorer is
-// doing, what the LLM costs, and what the scheduler has actually been up to.
-// Everything here is derived from endpoints that already existed, except the
-// score averages (score-distribution?detail=true) and run result summaries
-// (JobRun.result_summary, which used to be written as None on every run).
+// Stats reads the pipeline back: funnel, scorer, LLM costs, scheduler activity.
+// Score averages and run result summaries come from the newer endpoint fields.
 
 const PERIODS = [[1, '1d'], [7, '7d'], [30, '30d'], [0, 'all']]
-// STAT-18: both logs used to stop at one silent page. They now page with
-// limit+offset, and the control hides itself when a page comes back short.
+// Both logs page via limit+offset; the control hides itself when a page comes back short.
 const RUN_PAGE = 30
 const ACT_PAGE = 50
 const BUCKET_COLOR = {
-  // STAT-21: --line is a border token; as a fill it vanished into the card in dark
+  // --line is a border token; as a fill it vanished into the card in dark mode.
   '0-20': 'var(--line-strong)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
   '61-80': 'var(--funnel-mid)', '81-100': 'var(--accent)',
 }
@@ -29,9 +25,8 @@ const TYPE_CLASS = {
 }
 const TYPE_OPTS = [['', 'All types'], ['scrape', 'Scrape'], ['h1b', 'H-1B'], ['cv_score', 'Résumé score'], ['email', 'Email'], ['telegram', 'Telegram']]
 
-// STAT-22: v2 draws its controls as span/div, so they were neither focusable nor
-// operable from the keyboard. Spread kb(fn) on such an element; the focus ring is
-// theme.css's `[tabindex="0"]:focus-visible`. (Same helper as ResumeSections.jsx.)
+// v2 draws controls as span/div, so spread kb(fn) on one to make it focusable and
+// keyboard-operable; the focus ring is theme.css's `[tabindex="0"]:focus-visible`.
 const kb = (fn, role = 'button') => ({
   tabIndex: 0,
   role,
@@ -40,10 +35,8 @@ const kb = (fn, role = 'button') => ({
 
 const money = (n) => (n == null ? '—' : n === 0 || n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(n < 0.01 ? 4 : 3)}`)
 const int = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'))
-// STAT-15: the timeline keys are calendar dates in the viewer's own zone (the
-// backend groups on the DB's local date). `new Date('2026-09-02')` parses as UTC
-// midnight, which renders as the previous day west of UTC — build the Date from
-// the parts instead so the label matches the bucket it names.
+// Timeline keys are calendar dates in the viewer's zone; `new Date('2026-09-02')` parses
+// as UTC midnight and renders a day early west of UTC — build the Date from parts instead.
 const localKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const dayLabel = (key) => {
   const p = String(key).split('-').map(Number)
@@ -91,26 +84,18 @@ const decodeCron = (expr) => {
   return `Daily ${t}`
 }
 
-// ui: keep — the five plain card titles now render through `Heading strong
-// size={17}`; this const survives for the one site Heading cannot serve: the
-// run-history / activity-log **tabs**, which spread it as the base of a
-// keyboard-operable control (kb(), a --accent underline, a swapped ink).
+// ui: keep — H serves only the run-history/activity-log tabs (kb() control + accent underline); Heading covers everything else.
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
-// ui: keep — COL now has one site left: the LLM-cost card's 9px column strip,
-// which is a TableHead at a smaller step (h22 / 9px) than the role's 9.5, inside
-// a scroll-gutter head. The two 26px strips migrated to <TableHead>.
+// ui: keep — COL serves only the LLM-cost card's 9px column strip (h22/9px, smaller than TableHead's 9.5 step) inside a scroll-gutter head.
 const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
-// ui: keep — three sites left: the funnel count, the LLM model cell and the peak
-// caption all set their OWN font size over the role's 10.5 (11.5 / 10 / 10), which
-// is the one thing <Mono size=…> spells as a step rather than a number. Everything
-// else on this screen is a <Mono> now.
+// ui: keep — MONO covers the funnel count, LLM model cell and peak caption, each overriding font-size (11.5/10/10) vs Mono's 10.5 step; everything else uses <Mono>.
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
 const BADGE = { fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', lineHeight: '14px', whiteSpace: 'nowrap' }
 const Pill = ({ children, bg, fg }) => (
   <span style={{ ...BADGE, background: bg, color: fg }}>{children}</span>
 )
-// STAT-18: the pager both logs share.
+// The pager both logs share.
 const LoadMore = ({ onClick, busy }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 20px 12px' }}>
     <UiPill size="sm" disabled={!!busy} ariaBusy={!!busy} onClick={onClick}>
@@ -144,32 +129,28 @@ export default function Stats() {
   const [actQuery, setActQuery] = useState('')
   const [typeOpen, setTypeOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [coreErr, setCoreErr] = useState(false)   // STAT-03: any core stats request failed
-  const [schedErr, setSchedErr] = useState(false) // OPEN-06: /scheduler/jobs failed
+  const [coreErr, setCoreErr] = useState(false)   // any core stats request failed
+  const [schedErr, setSchedErr] = useState(false) // /scheduler/jobs failed
   const [triggering, setTriggering] = useState(new Set())
   const pollRef = useRef(null)
   const runningRef = useRef(false)
   const qRef = useRef(null)
-  const runsPaged = useRef(false)   // STAT-18: Load more was used, so the poll must not shrink the list back
-  const runsCardRef = useRef(null)  // STAT-16: the rail links here as /v2/stats#runs
+  const runsPaged = useRef(false)   // Load more was used, so the poll must not shrink the list back
+  const runsCardRef = useRef(null)  // the rail links here as /v2/stats#runs
   const { hash } = useLocation()
-  // STAT-04: the schedules columns are fixed-width and the card has no scroller,
-  // so below ~1100px the Run now buttons spilled past its right border. Measure
-  // the card and drop columns right-to-left as it narrows; the job name (which
-  // shrinks to an ellipsis) and the run control are the two that always survive.
+  // Schedules columns are fixed-width with no scroller, so below ~1100px Run now spilled
+  // past the border. Measure the card and drop columns right-to-left as it narrows.
   const schedRef = useRef(null)
   const [schedW, setSchedW] = useState(1200)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
-  // DS-S-22: the Type ▾ menu only had a click-catching backdrop, so it was the
-  // one dropdown in v2 that survived Escape. Same shared hook every other
-  // overlay uses; the second argument gates the listener on the menu being open.
+  // Same shared Escape hook every overlay uses; the second argument gates the
+  // listener on the menu being open.
   useEscape(() => setTypeOpen(false), typeOpen)
 
   const loadCore = useCallback(async () => {
     let anyFailed = false
     const get = (u, params) => api.get(u, { params }).then(({ data }) => data).catch((e) => { console.error(u, e); anyFailed = true; return null })
-    // one round, not two: the sweep and health calls used to wait on the first
-    // batch for no reason
+    // one Promise.all round — sweep and health calls run alongside the rest.
     const [s, tl, sd, bj, fl, sw, he] = await Promise.all([
       get('/stats'),
       get('/stats/timeline', { days: 30 }),
@@ -181,8 +162,8 @@ export default function Stats() {
     ])
     setSweep((sw || [])[0] || null)
     setFailing(((he?.companies || []).length) + ((he?.searches || []).length))
-    // STAT-03: keeping the previous value on failure rendered a dead backend as a
-    // plausible dashboard. Clear the node instead — int(null) renders “—”.
+    // Clear the node on failure instead of keeping the previous value — int(null)
+    // renders "—", so a dead backend doesn't look like a plausible dashboard.
     setStats(s)
     setTimeline(tl)
     setScores(sd)
@@ -198,10 +179,8 @@ export default function Stats() {
       api.get('/scheduler/jobs').then(({ data }) => data).catch(() => null),
       api.get('/monitor/history', { params: { limit: RUN_PAGE } }).then(({ data }) => data).catch(() => null),
     ])
-    // OPEN-06: STAT-03 gave the funnel and the 30-day card an explicit failure
-    // state but left this one drawing an empty-but-plausible table — "0 jobs" and
-    // no rows reads exactly like a correctly configured, idle scheduler. Same
-    // treatment: drop the stale rows and say the request failed.
+    // Drop stale rows and flag the failure explicitly — an empty table here reads
+    // exactly like a correctly configured, idle scheduler.
     if (j) { setJobs(j); setSchedErr(false); runningRef.current = j.some((x) => x.running) }
     else { setJobs([]); setSchedErr(true); runningRef.current = false }
     // the poll only ever re-reads the first page, so rows fetched by Load more sit
@@ -215,14 +194,12 @@ export default function Stats() {
   const loadActivity = useCallback(() => {
     api.get('/activity-log', { params: { limit: ACT_PAGE, ...(actType && { type: actType }), ...(actQuery.trim() && { company: actQuery.trim() }) } })
       .then(({ data }) => { const rows = data || []; setActivity(rows); setActMore(rows.length >= ACT_PAGE) })
-      // R2-A-03: converted — the activity log is a list the user filters; a failed
-      // reload used to leave the old rows (or none) with nothing to explain them
+      // A failed reload needs its own toast — otherwise old/empty rows have nothing to explain them.
       .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the activity log' }) })
   }, [actType, actQuery])
 
-  // DESIGN-LOAD: core figures, the live half AND the LLM spend settle as one. The
-  // spend used to arrive on its own and grow a " · $x on LLM calls" tail onto the
-  // header line that was already there, and the health clause behind it.
+  // Core figures, the live half and LLM spend settle together as one `ready` flag
+  // so the header line doesn't grow a late " · $x on LLM calls" tail after paint.
   const { ready } = useSettled([
     () => loadCore(),
     () => loadLive(),
@@ -257,15 +234,13 @@ export default function Stats() {
     setRefreshing(true)
     await Promise.all([loadCore(), loadLive()])
     loadActivity()
-    // R2-A-03: converted — this one is behind the Refresh button, so a failure
-    // that leaves the old figures on screen has to say so
+    // Behind the Refresh button — a failure that leaves old figures on screen has to say so.
     api.get('/stats/llm-costs', { params: { days: period } }).then(({ data }) => setCosts(data)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not refresh the LLM costs' }) })
     setRefreshing(false)
   }
 
-  // STAT-01: 202, 409 and 500 used to give byte-identical UI for a fixed 4s, so a
-  // refused or failed trigger read as a started one. Toast the outcome, and drop
-  // the optimistic "Running" immediately when nothing was actually started.
+  // Toast the real outcome (202/409/500 differ) and drop the optimistic "Running"
+  // state immediately when nothing was actually started.
   const trigger = async (job) => {
     if (!job.trigger_url) return
     const clear = () => setTriggering((p) => { const n = new Set(p); n.delete(job.id); return n })
@@ -282,7 +257,7 @@ export default function Stats() {
     }
   }
 
-  // STAT-18: one more page of whichever log you're looking at, appended.
+  // One more page of whichever log you're looking at, appended.
   const moreRuns = async () => {
     if (moreBusy) return
     setMoreBusy(true)
@@ -311,9 +286,8 @@ export default function Stats() {
     } finally { setMoreBusy(false) }
   }
 
-  // STAT-16: the rail's health line promises "Stats · Run history", which is the
-  // last card on a ~2400px page. It now navigates to /v2/stats#runs; scroll there
-  // once the cards exist (before that the ref is null and the page is one screen).
+  // The rail's health line links to /v2/stats#runs, the last card on a ~2400px page;
+  // scroll there once the cards exist (the ref is null before that).
   useEffect(() => {
     if (!ready || hash !== '#runs') return
     runsCardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
@@ -322,8 +296,8 @@ export default function Stats() {
   // ── derived ───────────────────────────────────────────────────────────────
   const st = stats?.application_statuses || {}
   const inPlay = Math.max(0, (stats?.total_applications || 0) - ((st.rejected || 0) + (st.ghosted || 0) + (st.withdrawn || 0)))
-  // STAT-02: cv_scores can be {} (routes_jobs.py treats that as unscored) and
-  // Math.max() of an empty list is -Infinity — the tile rendered "-Infinity".
+  // cv_scores can be {} (unscored); Math.max() of an empty list is -Infinity,
+  // which rendered as the literal string "-Infinity" in the tile.
   const bestScore = useMemo(() => {
     const nums = Object.values(best?.cv_scores || {}).filter((v) => typeof v === 'number')
     return nums.length ? String(Math.round(Math.max(...nums))) : '—'
@@ -335,8 +309,8 @@ export default function Stats() {
     const out = []
     for (let i = 29; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      // STAT-15: local calendar date, not the UTC one — toISOString() shifted all
-      // 30 buckets by a day west of UTC, and with them "New this week" and peak
+      // Local calendar date, not UTC — toISOString() shifted all 30 buckets a day
+      // west of UTC, skewing "New this week" and the peak label with them.
       const key = localKey(d)
       const r = byDate[key]
       out.push({ date: key, total: r?.total || 0, applied: r?.applied || 0 })
@@ -349,13 +323,8 @@ export default function Stats() {
   }, [series])
   const peak = useMemo(() => series.reduce((m, r) => (r.total > (m?.total ?? -1) ? r : m), null), [series])
 
-  // A funnel needs "ever reached", not "currently in". application_statuses is a
-  // snapshot — an application that interviewed and was then rejected counts as
-  // rejected there, so reading Interview off it undercounts badly. The status
-  // transition graph records every hop, so downstream stages come from that.
-  // STAT-06: every row now counts applications (Saved was the live job shortlist,
-  // a different population, which made the widest-row normalisation read upside
-  // down). Widths are relative to Applied, the top of the funnel.
+  // A funnel needs "ever reached", not "currently in": application_statuses is a snapshot
+  // that undercounts stages, so downstream stages use the transition graph; bar widths are relative to Applied.
   const reached = useMemo(() => {
     const to = {}
     for (const f of flows) to[f.target] = (to[f.target] || 0) + (f.value || 0)
@@ -363,17 +332,12 @@ export default function Stats() {
   }, [flows])
   const funnel = useMemo(() => {
     const applied = stats?.total_applications || 0
-    // STAT-05: the design's one neutral → accent ramp, ending on the neutral
-    // --line-strong for the terminal Rejected row.
-    // STAT-09: with no transition history the row falls back to the status
-    // snapshot, which is a different question ("currently in" vs "ever reached")
-    // — flag those rows so the footnote isn't claiming something it can't know.
+    // With no transition history a row falls back to the status snapshot (a
+    // different question: "currently in" vs "ever reached") — flag those rows.
     const pick = (k) => (reached[k] ? { count: reached[k], snapshot: false } : { count: st[k] || 0, snapshot: !!st[k] })
     const rows = [
-      // R3-U-01: one stage, one colour. These used to run on the neutral chart
-      // ramp (--funnel-low/-mid/--accent/--line-strong), so Applied was green
-      // here, blue on the Flow view's Sankey nodes and blue again on the
-      // Applications stage dots. All three now read the same --stage-* tokens.
+      // One stage, one colour: funnel rows, Sankey nodes and Applications stage
+      // dots all read the same --stage-* tokens (kept in sync across files).
       { label: 'Applied', count: applied, snapshot: false, color: 'var(--stage-applied)' },
       { label: 'Interview', ...pick('interview'), color: 'var(--stage-interview)' },
       { label: 'Offer', ...pick('offer'), color: 'var(--stage-offer)' },
@@ -409,9 +373,8 @@ export default function Stats() {
   // widths each column needs, measured against the 250/132/140/132/110 grid + 40px padding
   const showId = schedW >= 830, showSched = schedW >= 700, showNext = schedW >= 560, showStatus = schedW >= 430
 
-  // Warm start: the header line — last sweep, sources needing attention, spend —
-  // is the same on the frame after a refresh as it was before it. The timestamp is
-  // cached, not the phrase, so "3h ago" is recomputed at render.
+  // Warm start: the header line (last sweep, sources needing attention, spend) matches
+  // the pre-refresh frame. Only the timestamp is cached — "3h ago" recomputes at render.
   const { warm: sub, style: subStyle } = useWarm('stats', ready ? {
     has: !!sweep, status: sweep?.status || null, at: sweep ? (sweep.finished_at || sweep.started_at) : null,
     failing, spend: spend == null ? null : spend, period,
@@ -423,18 +386,15 @@ export default function Stats() {
       {sub.spend != null && <> · {money(sub.spend)} on LLM calls {sub.period ? `in ${sub.period}d` : 'all time'}</>}
     </>
   )
-  // Volume, outcomes, scoring and spend each already have a card below, so the
-  // header carries the one thing none of them shows: whether the pipeline ran and
-  // whether anything is broken.
-  // ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the whole
-  // header column is pinned to integer line-heights
+  // Volume, outcomes, scoring and spend already have cards below; the header carries
+  // the one thing none of them shows — whether the pipeline ran and whether anything's broken.
+  // ui: keep — 13/20px is outside Helper's 11.5/16 tolerance; the header column is pinned to integer line-heights.
   const subSpan = (
     <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...subStyle }}>{subLine}</span>
   )
 
-  // DESIGN-LOAD: the page used to be replaced wholesale by a centred "Loading…".
-  // The header is real chrome and can be drawn at once — with its line warm-started
-  // where there is a cache — while the cards wait for the one settle below.
+  // The header is real chrome and draws immediately (warm-started where cached)
+  // while the cards below wait on the single `ready` settle.
   if (!ready) return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
@@ -453,10 +413,8 @@ export default function Stats() {
           <PageTitle>Stats</PageTitle>
           {subSpan}
         </div>
-        {/* D4f consistency decision: the retry/refresh affordance is a Link on
-            Companies, Searches and Settings, so it is one here too — accent
-            11.5/500 at the canonical 17px line-height, keeping only the icon row
-            layout in `style`. */}
+        {/* Consistency: retry/refresh is a Link here too, matching Companies/Searches/Settings —
+            accent 11.5/500 at the canonical 17px line-height. */}
         <Link onClick={refresh} title="Reload every figure on this page"
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7 }}>
           {refreshing
@@ -469,9 +427,8 @@ export default function Stats() {
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 30px', background: 'var(--bad-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, lineHeight: '18px', color: 'var(--bad)' }}>
           <GlyphBadge tone="bad" style={{ flex: '0 0 auto' }}>!</GlyphBadge>
           <span style={{ flex: 1 }}>Some numbers could not be loaded. They show “—” until the backend responds.</span>
-          {/* D4f consistency decision: the retry link is a Link everywhere else, so
-              it is one here — it leaves the band's --bad run and reads as the
-              accent action it is. The dotted underline stays as its affordance. */}
+          {/* Consistency: retry is a Link everywhere else, so it is one here too,
+              with the dotted underline as its affordance. */}
           <Link onClick={refresh} style={{ flex: '0 0 auto', borderBottom: '1px dotted currentColor' }}>Try again</Link>
         </div>
       )}
@@ -489,12 +446,10 @@ export default function Stats() {
           ].map(([label, value, sub, hint], i, arr) => (
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <Label style={{ whiteSpace: 'nowrap' }}>{label}</Label>
-              {/* ui: keep — the KPI numeral at serif 27/30px: 3px off PageTitle's 30
-                  and above Heading's 22, so it is its own step */}
+              {/* ui: keep — KPI numeral is serif 27/30px, its own step (3px off PageTitle's 30, above Heading's 22). */}
               <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {/* lineHeight 1 on the sub-unit: left on the numeral's 30px it baselines at
-                    a font-dependent offset inside that box, which made the numeral 33px
-                    (35px under alt) and pushed the whole KPI strip with it */}
+                {/* lineHeight 1 on the sub-unit: at the numeral's 30px it baselines at a font-dependent
+                    offset, growing the numeral to 33px (35px alt) and the whole strip with it. */}
                 {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, lineHeight: 1, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
               </span>
             </div>
@@ -503,9 +458,8 @@ export default function Stats() {
 
         {/* funnel + score distribution */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {/* Fixed height: the funnel and the Sankey are different shapes, so
-              letting either size the card made the row jump on toggle. Both
-              views get the same 162px of content area inside 230. */}
+          {/* Fixed height: funnel and Sankey are different shapes; letting either size the
+              card made the row jump on toggle. Both get the same 162px inside 230. */}
           <Card style={{ height: 230, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <Heading strong size={17}>Application funnel</Heading>
@@ -537,15 +491,13 @@ export default function Stats() {
                   <Meter value={f.frac} height={22} tone={f.color} track="var(--surface-2)" radius="var(--radius-mini)"
                     style={{ flex: 1 }} ariaLabel={`${f.label}: ${f.count}`} />
                   <span style={{ flex: '0 0 40px', ...MONO, fontSize: 11.5, lineHeight: '18px', color: 'var(--text)', textAlign: 'right' }}>{f.count}</span>
-                  {/* ui: keep — 9.5 is below Helper's 10.5 xs step, and the 18px
-                      line-height baselines it against the 22px funnel bar beside it */}
+                  {/* ui: keep — 9.5 is below Helper's 10.5 xs step; 18px line-height baselines it against the 22px funnel bar beside it. */}
                   {f.snapshot && <span title="No stage history for these applications. They are counted by current status only."
                     style={{ flex: '0 0 auto', fontSize: 9.5, lineHeight: '18px', color: 'var(--muted)', cursor: 'help' }}>snapshot</span>}
                 </div>
               ))}
             </div>
-            {/* ui: keep — the 15px line-height is what fits two caveat lines inside
-                the card's fixed 230px height; Helper's 16px would overflow it */}
+            {/* ui: keep — 15px line-height fits two caveat lines inside the card's fixed 230px height; Helper's 16px would overflow it. */}
             <span style={{ fontSize: 11, lineHeight: '15px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* the card's height is fixed, so the caveat replaces the "bars are
                   relative to Applied" clause rather than adding a third line */}
@@ -563,9 +515,8 @@ export default function Stats() {
               <Heading strong size={17}>Score distribution</Heading>
               <Helper style={{ flex: 1 }}>{int(scores?.scored_count)} scored jobs · best résumé per job</Helper>
               {scores?.avg != null && (
-                // lineHeight 1: this head is baseline-aligned, so an 11px span left on the
-                // row's 24px line-height rides a font-dependent offset from the shared
-                // baseline and grew the head 25→27px under the alt theme
+                // lineHeight 1: baseline-aligned head — an 11px span on the row's 24px
+                // line-height rides a font-dependent offset, growing the head 25→27px under alt.
                 <span style={{ fontSize: 11, lineHeight: 1, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
                   avg {scores.avg}
                   {scores.tailored_avg != null && <> · <span title={`Average score after tailoring, across the ${scores.tailored_count} jobs with a tailored copy`} style={{ color: 'var(--accent)', cursor: 'help' }}>tailored {scores.tailored_avg}</span></>}
@@ -591,9 +542,8 @@ export default function Stats() {
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <Heading strong size={17}>New jobs · last 30 days</Heading>
               <Helper style={{ flex: 1 }}>daily arrivals across all sources</Helper>
-              {/* STAT-07: --stage-applied is the applied series everywhere else in
-                  v2; the swatch is solid, as designed. R3-U-02: the legend swatches
-                  follow the strokes below, so "new" is --series-new here too. */}
+              {/* --stage-applied is the applied series everywhere else in v2 (swatch solid,
+                  as designed); legend swatches follow the strokes below, so "new" is --series-new too. */}
               {[['new', 'var(--series-new)'], ['applied', 'var(--stage-applied)']].map(([l, c]) => (
                 // lineHeight 1: same baseline-alignment leak as the score head above —
                 // these 11px legends on the row's 24px line-height grew it 27→29px alt
@@ -687,10 +637,7 @@ export default function Stats() {
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    // ui: keep — Pill xs is the role, but this one's paint is a FOURTH signature:
-                    // no ground (Searches/Companies sit on --pill-bg), pad 0 11 vs their 0 9 / 0 10,
-                    // gap 6 vs 5, and a running state that quiets the BORDER and the INK
-                    // (--line / --edge) where a Pill dims with opacity. See D-13.
+                    // ui: keep — Pill xs is the role, but this control's paint differs: no ground, pad 0 11 vs 0 9/0 10, gap 6 vs 5, and a running state that quiets border+ink instead of dimming via opacity.
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
                         className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>
@@ -731,9 +678,7 @@ export default function Stats() {
                     </>
                   )}
                 </span>
-                {/* ui: keep — a 26px transparent v2-fieldwrap pill that carries the ⌕ and
-                    the focus signal around a bare input; SearchInput's boxed variant is h32
-                    on --search-bg, which would not sit on this log header row */}
+                {/* ui: keep — 26px transparent v2-fieldwrap pill carrying ⌕ + focus signal around a bare input; SearchInput's boxed h32 variant wouldn't sit on this log header row. */}
                 <span className="v2-fieldwrap" style={{ height: 26, width: 140, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {/* ui: keep — a 10px icon glyph inside the field wrap, not helper text */}
                   <span style={{ fontSize: 10, color: 'var(--muted)' }}>⌕</span>
@@ -784,7 +729,7 @@ export default function Stats() {
                   <Helper style={{ flex: '0 0 130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.company || '—'}</Helper>
                 </TableRow>
               ))}
-              {/* STAT-18: an empty log and an over-tight filter are different problems */}
+              {/* An empty log and an over-tight filter are different problems */}
               {!activity.length && <Helper style={{ padding: '16px 20px' }}>{actType || actQuery.trim() ? 'No activity matches these filters.' : 'No activity recorded yet.'}</Helper>}
               {actMore && <LoadMore onClick={moreActivity} busy={moreBusy} />}
             </div>
@@ -796,11 +741,8 @@ export default function Stats() {
   )
 }
 
-// 30-day arrivals, on Recharts like v1 — a real dated X axis and one Y axis per
-// series, because applied is an order of magnitude smaller than new and a shared
-// scale flattens it onto the baseline. The chart flexes to fill the card, which
-// is sized by the taller LLM card beside it; a fixed height left a third of the
-// card empty.
+// Dual Y-axis: applied is an order of magnitude smaller than new, and a shared scale
+// flattens it to the baseline. The chart flexes to fill the card (sized by the LLM card beside it).
 function Spark({ series, peak }) {
   const data = series.map((r) => ({ ...r, label: dayLabel(r.date) }))
   const axis = { tick: { fontSize: 9.5, fill: 'var(--muted)', fontFamily: 'var(--mono)' }, axisLine: false, tickLine: false }
@@ -815,10 +757,8 @@ function Spark({ series, peak }) {
           <Tooltip
             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-cell)', fontSize: 12, padding: '6px 10px' }}
             labelStyle={{ color: 'var(--text)', fontSize: 11, marginBottom: 2 }} itemStyle={{ padding: 0 }} />
-          {/* R3-U-02: "new" was --accent, a dark green that sits within 1.2:1 of
-              --stage-applied's dark blue in light mode — the two lines read as one.
-              --series-new is a warm ochre tuned per theme to keep a >=2:1 luminance
-              gap from the applied line (and the dash pattern still separates them). */}
+          {/* --series-new is a warm ochre tuned per theme for >=2:1 luminance contrast
+              against --stage-applied's blue (dash pattern also separates the lines). */}
           <Line yAxisId="l" type="monotone" dataKey="total" name="new" stroke="var(--series-new)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
           <Line yAxisId="r" type="monotone" dataKey="applied" name="applied" stroke="var(--stage-applied)" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 3 }} />
         </LineChart>
@@ -828,13 +768,12 @@ function Spark({ series, peak }) {
   )
 }
 
-// Recharts renders Sankey nodes itself; this draws them on the Applications
-// stage palette so a stage looks the same on both screens, with the
-// "name (value)" label v1 used.
+// Custom Sankey node rendering, painted with the Applications stage palette so a
+// stage looks the same on both screens; label format ("name (value)") matches v1.
 const STAGE_FILL = {
   new: 'var(--stage-new)', saved: 'var(--stage-new)', applied: 'var(--stage-applied)',
   interview: 'var(--stage-interview)', offer: 'var(--stage-offer)', rejected: 'var(--stage-rejected)',
-  // APPS-22: ghosted/withdrawn have no stage of their own — they group under Rejected
+  // ghosted/withdrawn have no stage of their own — they group under Rejected
   ghosted: 'var(--stage-rejected)', withdrawn: 'var(--stage-rejected)',
 }
 function SankeyNode({ x, y, width, height, payload }) {

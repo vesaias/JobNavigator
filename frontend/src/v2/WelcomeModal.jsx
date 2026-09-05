@@ -5,9 +5,8 @@ import { Button, FooterRow, GlyphBadge, Helper, ModalPanel } from './ui'
 import { useTheme, themeAttrs } from './theme'
 import './theme.css'
 
-// First-run overlay (System Overlays.dc.html · 2). The design draws the steps as
-// static rows; v1 made each one a link to the screen it names, which is the
-// whole point of the list, so they stay clickable and hover.
+// First-run overlay. Each step is a link to the screen it names, so they
+// stay clickable and hover.
 const STEPS = [
   [SettingsIcon, 'Set up AI scoring', 'Pick your LLM provider and add its key — Anthropic, OpenAI, Ollama or OpenRouter.', 'settings'],
   [FileUser, 'Build your résumé + Persona', 'Edit a base résumé and fill Persona (contact, work auth) so jobs score against your profile.', 'resumes'],
@@ -19,16 +18,14 @@ export default function WelcomeModal({ onClose }) {
   const navigate = useNavigate()
   // land in whichever shell you're already in — this overlay is global
   const base = useLocation().pathname.startsWith('/v2') ? '/v2/' : '/'
-  // mounts outside the v2 shell like the sign-in overlay, so it brings the theme
-  // with it — from the shared store (SHELL-02)
+  // mounts outside the v2 shell like the sign-in overlay, so it brings the
+  // theme with it from the shared store
   const look = useTheme()
   const go = (slug) => { onClose?.(); navigate(base + slug) }
 
   return (
-    // Like the sign-in overlay this mounts outside the v2 shell, so the scrim
-    // carries the theme root and its own z-index (below sign-in, above every
-    // in-shell modal). The scrim click still closes; Escape now closes too,
-    // which it did not before — ModalPanel's RES-15 contract.
+    // Scrim carries the theme root and its own z-index (below sign-in, above
+    // every in-shell modal). Scrim click and Escape both close (ModalPanel contract).
     <ModalPanel width={420} onClose={onClose} zIndex={9998}
       scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       scrimStyle={{ padding: 16 }}

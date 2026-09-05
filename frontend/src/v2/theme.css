@@ -1,13 +1,5 @@
-/* v2 redesign theme — canonical tokens from "JobNavigator Redesign" (the master).
-   Scoped to .jn-v2 so it never touches the classic UI. Light + dark + an `alt`
-   theme (D6) + the default→editorial tone ramp at the bottom of the palette
-   section (tone1, tone2, tone3, editorial). Every .jn-v2 root carries
-   `data-appearance` (light|dark, the *resolved* mode — `system` follows
-   prefers-color-scheme) and `data-theme` (default|tone1|tone2|tone3|editorial|alt),
-   both from the single store in theme.js; <html> carries a boot copy of the same
-   two attributes, stamped by the inline script in index.html before React mounts
-   so the page ground never flashes. The palette selectors below stay on the
-   .jn-v2 root itself — <html> is the boot copy, not a second source of truth. */
+/* v2 redesign theme tokens, scoped to .jn-v2. Every root carries `data-appearance`
+   (light|dark) and `data-theme` (default|tone1|tone2|tone3|editorial|alt) from theme.js; <html> holds only a boot copy so the page ground never flashes. */
 .jn-v2 {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;  /* ScoreRing optical centring for the default fonts */
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
@@ -15,18 +7,12 @@
   --good:#3f6b52; --warn:#9a5b28; --warn-soft:#f6eee4; --bad:#9c3b30; --bad-soft:#f7ecea;
   --change-soft:#d6e8dc; --change-bg:#fdfcf9; --hover-soft:#f4f8f5; --ring-accent:rgba(63,107,82,.22); --scrim:rgba(20,19,15,.42);
   --warn-line:#d4a06a; --line-strong:#c9c3b4; --bad-faint:#fdf6f4;
-  /* One stage, one colour, everywhere it is drawn: the Applications stage
-     dots and stepper, the Stats funnel bars, and the Sankey nodes on the
-     Flow view (R3-U-01). Before these existed the funnel ran on the neutral
-     neutral funnel/accent chart ramp, so the same stage was green in one card
-     and blue in the next. --stage-new covers the pre-application Sankey
-     nodes (new/saved), which are not stages a user moves an application to. */
+  /* One stage, one colour everywhere: Applications dots/stepper, Stats funnel
+     bars, Sankey nodes. --stage-new covers pre-application nodes, not a real status. */
   --stage-applied:#3a5a86; --stage-interview:#9a5b28; --stage-offer:#3f6b52;
   --stage-rejected:#9c3b30; --stage-new:#c9c3b4;
-  /* The 30-day timeline draws two series at once. --accent (dark green) sat
-     within 1.2:1 of --stage-applied in light mode, so "new" and "applied"
-     read as one dark line (R3-U-02). --series-new is tuned per theme to keep
-     a >=2:1 luminance gap from --stage-applied while staying >=3:1 on --bg. */
+  /* tuned per theme to keep >=2:1 luminance gap from --stage-applied (else the
+     30-day timeline's two series read as one line) and >=3:1 on --bg. */
   --series-new:#b8822b;
   /* a surface that reads as set-back from --surface (archived rows, pending rows).
      Not --change-bg: that one is the diff tint and is green in dark. */
@@ -34,15 +20,12 @@
   /* Persona's Q&A bank is the one amber-tinted card in v2 — its answers reach the
      LLM verbatim, so the design sets it apart from the neutral autofill groups. */
   --amber-bg:#fffdf6; --amber-line:#d4c9a8; --amber-line-soft:#eee5cc; --amber-hover:#faf6e9;
-  /* Stats chart ramp for the score buckets: neutral -> accent. The funnel used
-     to share it and now runs on --stage-* instead (R3-U-01). */
+  /* Stats chart ramp for the score buckets: neutral -> accent. */
   --sand:#d4cbb2; --gold:#c9a35a; --funnel-low:#8fae9b; --funnel-mid:#5f8a70;
   /* Toast tints: softer than --accent-soft/--bad-soft, which are already spoken
      for by chips and inline diffs. */
   --toast-ok-bg:#eef5ef; --toast-ok-line:#8fae9b; --toast-ok-ink:#2f6b4a;
   --toast-bad-bg:#faedeb; --toast-bad-line:#d09a90; --toast-bad-ink:#8c352b;
-  /* Toast tints: softer than --accent-soft/--bad-soft, which are already spoken
-     for by chips and inline diffs. */
   /* Every colour the app can render lives in these two blocks and nowhere
      else — a theme is a wholesale replacement of this list. */
   --shadow-modal:0 18px 50px rgba(0,0,0,.28); --shadow-menu:0 12px 32px rgba(0,0,0,.16);
@@ -80,25 +63,16 @@
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
 
 
-  /* — Semantic layer (design pass D2) ---------------------------------------
-     Every primitive in ui.jsx reads ONLY these names; none of them holds a
-     literal. Each points at a palette token above, so a new theme stays a
-     wholesale replacement of the palette block and nothing else. The block is
-     repeated verbatim in the dark selector below: identical by construction
-     today, but the duplication is what lets a future theme re-point a semantic
-     token at a *different* palette token per theme. Change one, change both. */
+  /* Semantic layer: every primitive in ui.jsx reads ONLY these names, never a
+     literal. Repeated verbatim below so a theme can re-point one per mode. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  /* radii — the whole scale, smallest first. --radius-mark is the inline diff
-     highlight drawn behind running text; --radius-inline the inline mono chip and
-     the 14-16px tick box; --radius-mini the 17-22px square control (checkbox,
-     paragraph button, funnel bar); --radius-cell the pick cell / small panel that
-     sits one step between the row and the card (segmented cells, the chart
-     tooltip, a note block). */
+  /* radii, smallest first: -mark inline diff highlight, -inline mono chip/tick
+     box, -mini checkbox/funnel-bar square, -cell pick cell/small panel. */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
   --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
   --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
@@ -120,11 +94,11 @@
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
   --row-hover:var(--surface-2); --row-selected:var(--surface-2);
-  /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
+  /* Check / Radio — the tick box and the radio disc */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
-  /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
-     track so it reads in light and dark; OFF keeps --knob on a neutral track. */
+  /* Switch — track + knob. ON knob is a surface disc on the accent track so it
+     reads in light and dark; OFF keeps --knob on a neutral track. */
   --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
   --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
   /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
@@ -133,10 +107,8 @@
   --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
   --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
   --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
-  /* ChoiceCard / ChoiceRow — the "pick one" cells the Tailor, Re-tailor and
-     Persona Import modals draw. Same on-trio as Pill and Segmented; the rest
-     state is a bare --edge outline on whatever ground the modal already paints,
-     which is why --choice-bg is transparent rather than a surface. */
+  /* ChoiceCard / ChoiceRow — "pick one" cells in the Tailor/Persona modals. Rest
+     state is a bare --edge outline on the modal's own ground, hence transparent. */
   --choice-bg:transparent; --choice-ink:var(--text); --choice-border:var(--edge);
   --choice-on-bg:var(--accent-soft); --choice-on-ink:var(--accent); --choice-on-border:var(--accent);
   /* Meter — track + fill, one name per band */
@@ -190,12 +162,8 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
-  /* — S4 roles: Mono · GlyphBadge · Notice · the toast marks -----------------
-     Semantic names for the four roles the primitive layer had no tokens for.
-     Every value is the palette token the hand-drawn site already wrote, so the
-     default theme does not move; a theme re-points the palette and these follow.
-     The toast marks close the last of the U-16 palette leaks the handoff names
-     (§4 item 11): Toast.jsx read --accent / --bad directly. */
+  /* Mono · GlyphBadge · Notice · toast marks: semantic names for roles the
+     primitive layer had no tokens for. */
   --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
   --mono-ink-strong:var(--text); --mono-ink-accent:var(--accent);
   --glyph-bg:var(--surface); --glyph-ink:var(--muted); --glyph-border:var(--edge);
@@ -208,63 +176,33 @@
   --notice-quiet-bg:var(--recessed); --notice-quiet-border:var(--line); --notice-quiet-mark:var(--muted);
   --toast-mark-ok:var(--accent); --toast-mark-bad:var(--bad);
 
-  /* — Themes layer (round-design "Skins handoff" §1) --------------------------
-     The geometry and state names a per-theme block may now carry on top of the
-     60 palette names, so cobalt/saas/win98 can express radii, bevels, control
-     shadows, a type scale and a selection model instead of colour alone.
-     EVERY VALUE HERE IS TODAY'S PAINT: the border widths are the 1px the
-     primitives hard-code, the five control shadows are `none`, the weights and
-     the tracking are what ui.jsx already writes inline, and the pressed, hover,
-     disabled and error names are the handoff's proposed recipe for states that
-     do not exist yet. Nothing moves until a primitive starts reading a name or
-     a theme block overrides one — the theme-skins.css rules that would repaint
-     the default theme (pressed wash, aria-disabled, field hover, the global
-     transition and the reduced-motion sweep) are held back for the ui.jsx pass.
-     Names that already existed above keep their values and are not restated:
-     the radii, the type stops, the five panel shadows, --row-selected and the
-     pill on-trio.
-     One deviation from theme-skins.css: it redefines --focus-ring as a
-     box-shadow VALUE (and self-referentially at that), but that name is the
-     ring COLOUR here and the [tabindex="0"] focus rule reads it as one. The
-     shadow-valued token is --focus-shadow instead; --focus-ring is unchanged. */
+  /* Themes layer: geometry/state tokens for per-theme skins beyond colour.
+     --focus-ring stays a COLOUR; --focus-shadow holds the box-shadow value. */
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --radius-rail-item:0;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --btn-weight:500; --title-weight:400; --label-weight:400;
   --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
   --label-case:uppercase; --display-tracking:-.02em;
-  /* S5 — the MULTIPLIER for the caps labels a primitive does not draw: the rail's
-     group headers (.16em), the résumé/cover-letter status badge (.08em) and the
-     toast-lab kind label. Those three sit off the --label-tracking / --tag-tracking
-     stops and keeping their own em value is the point (they were tuned at the
-     site), so the token they read is a FACTOR, not a length: `calc(.16em *
-     var(--label-tracking-scale))`. 1 here reproduces the literal exactly, and a
-     theme that wants no caps tracking at all (win98) sets 0 once and every one of
-     them collapses — the same switch --label-case is for the case. */
+  /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
+     var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
   --label-tracking-scale:1;
-  /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
-     pressed cell "P"), so in the base blocks each name resolves to the paint the
-     default theme already has: a primary button does not darken on hover, and
-     nothing shifts or washes on :active. The rules that read them are therefore
-     no-ops here and live only in cobalt/saas/win98, which carry the handoff
-     values. Accepting the proposal is four values, not a code change:
-       hover  color-mix(in oklab, var(--btn-primary-bg) 90%, black)
-       press  color-mix(in oklab, var(--btn-primary-bg) 82%, black)
-       shift  translateY(1px)      wash  var(--surface-2)  */
+  /* No-ops in the default theme (button doesn't darken on hover, nothing shifts
+     on :active); a skin overrides these four with its own hover/press mix. */
   --btn-primary-hover-bg:var(--btn-primary-bg);
   --btn-primary-pressed-bg:var(--btn-primary-bg);
   --btn-danger-hover-bg:var(--btn-danger-bg);
   --pressed-shift:none; --pressed-wash:transparent;
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
-  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* D-08 open: .5 IS the inline dim every primitive writes today, so the token can be read inline; the ink stays inherited so the class rule cannot repaint a control that sets no colour of its own */
-  --input-border-hover:var(--input-border);   /* D-06 open: = the rest border, so field hover is a no-op in the default theme (handoff proposes var(--line-strong)) */
+  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* ink stays inherited so the class rule can't repaint a control that sets no colour of its own */
+  --input-border-hover:var(--input-border);   /* no-op in default theme; a skin can set this to a stronger border */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* 3px, not the handoff 2px: V2App widened the accent and compensates in the padding */
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* V2App widened the accent mark and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -293,8 +231,8 @@
   --warn-line:#6b5638; --line-strong:#4a4638; --bad-faint:#241a18;
   --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f;
   --stage-rejected:#d98a7e; --stage-new:#4a4638;
-  /* deliberately darker than --stage-applied here: in dark the applied blue is
-     a pale tint, so the gap has to come from below it, not above. */
+  /* darker than --stage-applied here: in dark the applied blue is a pale tint,
+     so the luminance gap has to come from below it, not above. */
   --series-new:#a1731f;
   --recessed:#221f19;
   /* tuned the way --warn-soft/--warn-line were: a warm tint of --surface, not a
@@ -305,10 +243,8 @@
   --sand:#6f6647; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
   --toast-ok-bg:#22302a; --toast-ok-line:#3f6b52; --toast-ok-ink:#8dbb9f;
   --toast-bad-bg:#2f1e1b; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
-  /* --hover-soft is a faint accent wash on white in light (#f4f8f5). Its dark
-     value was never retuned and read as a green-grey against this warm palette,
-     so Companies rows and Résumé cards hovered green while everything else
-     warmed. It is now a warm lift from --surface, matching the rest. */
+  /* a warm lift from --surface, not a green-grey wash, so hovered rows match
+     the rest of the warm dark palette. */
   --cc-greenhouse-bg:#22352a; --cc-greenhouse-fg:#a4cdb2;
   --cc-workday-bg:#3a3021; --cc-workday-fg:#d3b083;
   --cc-lever-bg:#1f3432; --cc-lever-fg:#96c8c0;
@@ -333,33 +269,24 @@
   --sm-freehire-bg:#3a3021; --sm-freehire-fg:#d3b083;
   --sm-extension-bg:#34322c; --sm-extension-fg:#b5b0a3;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f;
-  /* F-004: the light alphas vanish against #1e1c17 — dark surfaces need a higher
-     alpha (and the menu a hairline) to read as lifted off the page at all. */
+  /* light alphas vanish against #1e1c17 — dark surfaces need a higher alpha
+     (and the menu a hairline) to read as lifted off the page at all. */
   --shadow-modal:0 18px 50px rgba(0,0,0,.6);
   --shadow-menu:0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
   --shadow-pop:0 10px 30px rgba(0,0,0,.6);
   --shadow-toast:0 8px 24px rgba(0,0,0,.5);
   --shadow-drawer:-14px 0 40px rgba(0,0,0,.45);
 
-  /* — Semantic layer (design pass D2) ---------------------------------------
-     Every primitive in ui.jsx reads ONLY these names; none of them holds a
-     literal. Each points at a palette token above, so a new theme stays a
-     wholesale replacement of the palette block and nothing else. The block is
-     repeated verbatim in the dark selector below: identical by construction
-     today, but the duplication is what lets a future theme re-point a semantic
-     token at a *different* palette token per theme. Change one, change both. */
+  /* Semantic layer: every primitive in ui.jsx reads ONLY these names, never a
+     literal. Repeated verbatim below so a theme can re-point one per mode. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
   --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  /* radii — the whole scale, smallest first. --radius-mark is the inline diff
-     highlight drawn behind running text; --radius-inline the inline mono chip and
-     the 14-16px tick box; --radius-mini the 17-22px square control (checkbox,
-     paragraph button, funnel bar); --radius-cell the pick cell / small panel that
-     sits one step between the row and the card (segmented cells, the chart
-     tooltip, a note block). */
+  /* radii, smallest first: -mark inline diff highlight, -inline mono chip/tick
+     box, -mini checkbox/funnel-bar square, -cell pick cell/small panel. */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
   --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
   --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
@@ -381,11 +308,11 @@
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
   --row-hover:var(--surface-2); --row-selected:var(--surface-2);
-  /* Check / Radio — the tick box and the radio disc (post-pass D-POST-12) */
+  /* Check / Radio — the tick box and the radio disc */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
-  /* Switch — track + knob. SET-14: the ON knob is a surface disc on the accent
-     track so it reads in light and dark; OFF keeps --knob on a neutral track. */
+  /* Switch — track + knob. ON knob is a surface disc on the accent track so it
+     reads in light and dark; OFF keeps --knob on a neutral track. */
   --switch-track-on:var(--accent); --switch-track-off:var(--line-strong);
   --switch-knob-on:var(--surface-2); --switch-knob-off:var(--knob);
   /* Segmented — the picked cell carries the pill's on-trio; `bad` closes the
@@ -394,10 +321,8 @@
   --seg-on-bg:var(--accent-soft); --seg-on-ink:var(--accent); --seg-on-border:var(--accent);
   --seg-on-bad-bg:var(--bad-soft); --seg-on-bad-ink:var(--bad); --seg-on-bad-border:var(--bad);
   --seg-inset-bg:var(--surface); --seg-inset-ink:var(--muted);
-  /* ChoiceCard / ChoiceRow — the "pick one" cells the Tailor, Re-tailor and
-     Persona Import modals draw. Same on-trio as Pill and Segmented; the rest
-     state is a bare --edge outline on whatever ground the modal already paints,
-     which is why --choice-bg is transparent rather than a surface. */
+  /* ChoiceCard / ChoiceRow — "pick one" cells in the Tailor/Persona modals. Rest
+     state is a bare --edge outline on the modal's own ground, hence transparent. */
   --choice-bg:transparent; --choice-ink:var(--text); --choice-border:var(--edge);
   --choice-on-bg:var(--accent-soft); --choice-on-ink:var(--accent); --choice-on-border:var(--accent);
   /* Meter — track + fill, one name per band */
@@ -451,10 +376,8 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
-  /* — S4 roles: Mono · GlyphBadge · Notice · the toast marks — the light block's
-     twin. Every value is a var(), so the two blocks are identical by design; the
-     duplication is what stops a light value leaking into dark (both selectors
-     weigh (0,2,0)). */
+  /* Mono · GlyphBadge · Notice · toast marks — light block's twin, kept
+     identical so no light value leaks into dark. */
   --mono-ink:var(--text-2); --mono-ink-muted:var(--muted); --mono-ink-faint:var(--edge);
   --mono-ink-strong:var(--text); --mono-ink-accent:var(--accent);
   --glyph-bg:var(--surface); --glyph-ink:var(--muted); --glyph-border:var(--edge);
@@ -467,51 +390,33 @@
   --notice-quiet-bg:var(--recessed); --notice-quiet-border:var(--line); --notice-quiet-mark:var(--muted);
   --toast-mark-ok:var(--accent); --toast-mark-bad:var(--bad);
 
-  /* — Themes layer (round-design "Skins handoff" §1) — the light block's twin.
-     Same names, same values (every one of them is a var() or a mode-neutral
-     number, so the two blocks are identical by construction); the rationale is
-     written out once, above. The duplication is not redundant: this block and
-     `[data-theme="x"]` both weigh (0,2,0), so a name the light block sets and
-     this one forgets would leak a light value into dark. Change one, change
-     both. */
+  /* Themes layer — light block's twin, kept identical (var()s and mode-neutral
+     numbers only) so no name the light block sets leaks into dark by omission. */
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --radius-rail-item:0;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --btn-weight:500; --title-weight:400; --label-weight:400;
   --label-tracking:.13em; --label-tracking-strip:.11em; --tag-tracking:.06em;
   --label-case:uppercase; --display-tracking:-.02em;
-  /* S5 — the MULTIPLIER for the caps labels a primitive does not draw: the rail's
-     group headers (.16em), the résumé/cover-letter status badge (.08em) and the
-     toast-lab kind label. Those three sit off the --label-tracking / --tag-tracking
-     stops and keeping their own em value is the point (they were tuned at the
-     site), so the token they read is a FACTOR, not a length: `calc(.16em *
-     var(--label-tracking-scale))`. 1 here reproduces the literal exactly, and a
-     theme that wants no caps tracking at all (win98) sets 0 once and every one of
-     them collapses — the same switch --label-case is for the case. */
+  /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
+     var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
   --label-tracking-scale:1;
-  /* U-02 and D-07 are PROPOSALS (the board tags primary/danger hover and every
-     pressed cell "P"), so in the base blocks each name resolves to the paint the
-     default theme already has: a primary button does not darken on hover, and
-     nothing shifts or washes on :active. The rules that read them are therefore
-     no-ops here and live only in cobalt/saas/win98, which carry the handoff
-     values. Accepting the proposal is four values, not a code change:
-       hover  color-mix(in oklab, var(--btn-primary-bg) 90%, black)
-       press  color-mix(in oklab, var(--btn-primary-bg) 82%, black)
-       shift  translateY(1px)      wash  var(--surface-2)  */
+  /* No-ops in the default theme (button doesn't darken on hover, nothing shifts
+     on :active); a skin overrides these four with its own hover/press mix. */
   --btn-primary-hover-bg:var(--btn-primary-bg);
   --btn-primary-pressed-bg:var(--btn-primary-bg);
   --btn-danger-hover-bg:var(--btn-danger-bg);
   --pressed-shift:none; --pressed-wash:transparent;
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
-  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* D-08 open: .5 IS the inline dim every primitive writes today, so the token can be read inline; the ink stays inherited so the class rule cannot repaint a control that sets no colour of its own */
-  --input-border-hover:var(--input-border);   /* D-06 open: = the rest border, so field hover is a no-op in the default theme (handoff proposes var(--line-strong)) */
+  --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* ink stays inherited so the class rule can't repaint a control that sets no colour of its own */
+  --input-border-hover:var(--input-border);   /* no-op in default theme; a skin can set this to a stronger border */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* 3px, not the handoff 2px: V2App widened the accent and compensates in the padding */
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* V2App widened the accent mark and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -521,40 +426,14 @@
   --ring-variant:ring;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
-/* — Theme: alt (design pass D6) ---------------------------------------------
-   The proof that the semantic layer is a layer. Two blocks, one per theme,
-   holding ONLY palette tokens and the three font stacks — no semantic token, no
-   --radius-*, no --t-*. Every primitive keeps reading the same semantic names,
-   so switching data-theme may change colour and font family and nothing else:
-   sizes, padding, radii, line-heights, border widths and shadow offsets are
-   untouched by construction (the gate is v2-testing/round-design/expected-D6.md).
-
-   Palette: cool slate ground, indigo accent, Georgia/Inter stacks (system
-   fallbacks only — no webfont is loaded, so a theme switch costs no request).
-   Contrast was matched to the default, not merely to AA. On --surface:
-   light --text 17.4 (default 17.4), --text-2 7.6 (7.7), --muted 5.6 (5.5),
-   --accent 7.0 (6.1); dark 11.4 (10.6) / 9.8 (9.1) / 6.2 (6.2) / 7.2 (7.1).
-   The two chart constraints hold too: --series-new keeps >=2:1 on
-   --stage-applied (2.16 light / 2.05 dark) and >=3:1 on --bg (3.10 / 4.45).
-
-   Deliberately NOT re-themed: the --cc- and --sm- families (the ATS and
-   search-mode badge hues are an identity taxonomy, not theme colour), --shadow-*
-   (black alphas, already theme-neutral — and their offsets are part of the
-   geometry the gate pins), and the on-rail overlays --rail-active,
-   --rail-hover, --on-rail-* (white alphas that work on any dark rail).
-
-   DS-S-31: never glob two token families as `--cc-*` immediately followed by a
-   slash and `--sm-*` here. The star and the slash together end this comment
-   fifteen lines early; the remaining prose then reads as a selector prelude
-   that swallows the whole
-   .jn-v2[data-theme="alt"] rule below, and the browser drops it as invalid —
-   silently, because the correct bytes still ship in the built CSS. Write the
-   family names out, or separate the glob from the next `/` with a space.
-
-   The two blocks MUST declare the identical set of names. `[data-theme="alt"]`
-   and `.jn-v2[data-appearance="dark"]` weigh the same (0,2,0), so a token that the
-   light theme block sets and the dark one forgets would beat the default dark
-   value and leak a light colour into the dark theme. */
+/* Theme: alt — proof the semantic layer is real: holds ONLY palette tokens and
+   the font stacks, so switching data-theme changes colour and font only. */
+/* Deliberately NOT re-themed: --cc-/--sm- (badge identity colours, not theme
+   colour), --shadow-* and the on-rail overlays (already theme-neutral). */
+/* CSS gotcha: never write a glob like --cc-* immediately followed by a slash in
+   a nearby comment — star-slash together closes the comment early and the rest silently drops. */
+/* Must declare the identical set of names as [data-appearance="dark"] (same
+   specificity) or a name this block skips lets dark's value leak in. */
 .jn-v2[data-theme="alt"] {
   --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default theme, see v2-testing/round-design/ring-sizes.md */
   --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
@@ -604,52 +483,12 @@
   --mono:'Cascadia Mono',Consolas,'SF Mono',ui-monospace,monospace;
 }
 
-/* — Tone ramp: default → editorial (tone1 · tone2 · tone3 · editorial) ------
-   `editorial` is the palette of the DirectionC-Editorial direction board — the
-   board the shipped v2 palette descends from, before it was lightened. The three
-   `tone` themes are the straight line from today's default to it, sampled at ¼,
-   ½ and ¾. Every palette token — grounds, surfaces, lines, edges, ink steps, the
-   accent family, the states, the stage colours, the rail and the chart series —
-   is the default value and the editorial value interpolated in OKLab, separately
-   for light and dark (sRGB → linear → OKLab, lerp, back, round to hex; alpha
-   lerps linearly for the two rgba tokens). A token that is identical in default
-   and editorial is byte-identical here too, so the ramp moves only what actually
-   differs.
-
-   In light that is four tokens — --bg, --surface-2, --muted and --rail-dim. The
-   rest of the shipped light palette already IS the board's: same #e2ddd0 line
-   ladder, same #1b1a16 / #57534a ink, same #3f6b52 green, same #22211c rail. The
-   board's darker tones live almost entirely in its dark block, where the whole
-   ladder drops (#1e1c17 → #15140f ground) and the ink steps spread apart
-   (#d9d7d0 → #efeade primary, #a8a49d → #807b6e muted). So the ramp reads as a
-   dark-mode ramp with a faint warming of the light ground.
-
-   Tokens the board does not name keep the default's value. One exception, and it
-   is derived, not copied: dark --recessed. Its documented job is to read as set
-   BACK from --surface, and the default's #221f19 is lighter than the editorial
-   dark surface #1c1b16, which would invert it — so it is re-seated between the
-   editorial --bg and --surface at the same OKLab-L fraction (.363) it occupies in
-   the default. Two board literals were deliberately not taken: the board's rail
-   markup hardcodes #f6f3ea / #66604f / #8dbb9f, which the rail wants in both
-   themes and which we do take, but its primary button also hardcodes #fff as ink
-   on --accent, and #fff on the pale dark accent is 1.9:1 — dark keeps the
-   default's --accent-ink.
-
-   The fonts stay the default's Newsreader / Public Sans / JetBrains Mono, and
-   with them the default's --ring-shift-sm, --ring-shift-md and
-   --ring-label-shift: the numerals sit where they always did. `default` and `alt`
-   are untouched.
-
-   The dark endpoint is the *effective* default dark palette — the light block
-   overridden by `.jn-v2[data-appearance="dark"]`. That block does not restate
-   --rail-line or --rail-ink, so those two ramp from the light block's values.
-
-   Same rules as the alt theme above: palette tokens and the three font stacks
-   only, and the light block and the dark block declare the IDENTICAL set of
-   names — `[data-theme="x"]` and `.jn-v2[data-appearance="dark"]` both weigh (0,2,0),
-   so a name set in one and forgotten in the other leaks a light value into dark.
-   Not re-themed here either: the --cc- and --sm- badge families, the --shadow-
-   family and the on-rail white overlays. */
+/* Tone ramp: default -> editorial (tone1 · tone2 · tone3 · editorial), sampled at
+   1/4, 1/2, 3/4, each palette token interpolated in OKLab per light/dark. Fonts and ring-shift tokens stay the default's — only colour moves. */
+/* dark --recessed is re-seated between editorial --bg/--surface at the default's
+   OKLab-L fraction, so it stays set-back from --surface instead of inverting. */
+/* Same rules as alt above: palette tokens and font stacks only, identical name
+   sets between light/dark, --cc-/--sm-/--shadow-/rail overlays not re-themed. */
 
 .jn-v2[data-theme="tone1"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -766,16 +605,8 @@
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 
-/* editorial — the far end of the ramp: the direction board's own tones.
-   Light is DirectionC-Editorial's :root as drawn — #faf8f3 paper, #f3f0e8
-   surface-2, #8f8a7d muted — with everything else already matching what
-   shipped. Dark is the board's own [data-appearance="dark"] block: the #15140f /
-   #1c1b16 / #232219 ladder, the #323026 / #26251d lines, #efeade ink over
-   #b8b2a3 over #807b6e, the #1f2a23 accent wash, and the #100f0b rail. Note
-   what this costs at the endpoint: --muted is 3.44:1 on --surface in light and
-   4.09:1 in dark (the default is 5.52 / 6.17), and --rail-dim is 2.57:1 on the
-   rail. Those are the board's own numbers — it used --muted for 11-13px
-   secondary lines only. */
+/* editorial — the far end of the tone ramp. --muted contrast is lower than the
+   default (used here for 11-13px secondary lines only) — don't reuse for primary text. */
 .jn-v2[data-theme="editorial"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#faf8f3; --surface:#ffffff; --surface-2:#f3f0e8; --line:#e2ddd0; --line-soft:#eeeae0;
@@ -815,48 +646,16 @@
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 
-/* — Board themes: cobalt · saas · win98 -------------------------------------
-   Three deep-retheme boards from the Claude Design project. Sources:
-   "Feed - Cobalt.dc.html", "Feed - SaaS.dc.html", "Feed - Win98.dc.html"
-   (each board's own `:root` / `[data-appearance="dark"]` block in its helmet), plus
-   "Cobalt Elements.dc.html" for the Cobalt primitive-by-primitive swap. Every
-   board ships BOTH modes, so no mode is derived here.
-
-   These three carry more than a palette. The recorded decision behind the
-   "Skins handoff" widened the contract (U-21): a theme block may also set the
-   geometry and state names the base blocks now declare — radii, the three
-   border widths, the panel and control shadows, the type scale, the control
-   weights and tracking, the selection and rail models, the bevels and the
-   ScoreRing variant. The palette lines below are byte-identical to what they
-   were when a theme was palette-only; everything under the fonts is the new
-   layer, transcribed from v2-testing/round-design/design-in/theme-skins.css
-   (generated from skins.js, so the two stay in step). Nothing reads the new
-   names yet outside the state rules at the foot of this file — the primitives
-   pick them up in the ui.jsx pass, and until then these themes move only the
-   names ui.jsx already reads (the radii, the type stops, the shadows,
-   --row-selected and the pill on-trio).
-
-   Two deviations from the generated file: --focus-ring is the ring COLOUR here
-   (the [tabindex="0"] rule reads it as one), so the shadow-valued token is
-   --focus-shadow; and win98 takes the handoff §5 re-point of --head-bg-page and
-   --chip-bg onto --surface, because its --bg is a desktop colour, not a text
-   ground.
-
-   Same rule as the alt theme above: the light block and the dark block declare
-   the IDENTICAL set of names — `[data-theme="x"]` and `.jn-v2[data-appearance="dark"]`
-   both weigh (0,2,0), so a name set in one and forgotten in the other leaks a
-   light value into dark. Not re-themed here either: the --cc- and --sm- badge
-   families and the on-rail white overlays.
-
-   Ring offsets: all three boards put a SANS with lining figures in the display
-   slot (IBM Plex Sans / system-ui / Tahoma), where the default has Newsreader
-   and alt has Georgia — both serifs. The one calibrated cross-face measurement
-   we have (ring-sizes.md) shows the whole default→alt move, 2px→1.25px at sm,
-   is explained by Georgia's OLD-STYLE figures riding ~0.05em lower; cap-height
-   and ascent/descent differences between the sans faces here and Public Sans
-   are under 0.03em, i.e. under 0.25px at the 14/19px numeral sizes — inside the
-   +-0.25px tolerance that pass used. So all three seed at the DEFAULT offsets
-   and the ink measurement re-run after the build sets the final values. */
+/* — Board themes: cobalt · saas · win98 — three deep-retheme boards from the
+   design project; each ships both light and dark, so no mode is derived here. */
+/* These carry more than a palette: a theme block may also set geometry/state
+   (radii, borders, shadows, type scale, weights, bevels, ScoreRing variant), transcribed from theme-skins.css but not yet read outside the state rules below. */
+/* Deviations: --focus-ring stays the ring COLOUR (read as one by [tabindex="0"])
+   with --focus-shadow holding the shadow value; win98 re-points --head-bg-page/--chip-bg onto --surface since its --bg is a desktop colour. */
+/* Same rule as alt: light/dark blocks need identical name sets; --cc-/--sm-
+   badge families and on-rail white overlays are not re-themed here either. */
+/* Ring offsets: these boards put a sans with lining figures in the display slot
+   (serif elsewhere), so all three seed at default offsets pending an ink-measurement pass. */
 
 .jn-v2[data-theme="cobalt"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -882,7 +681,7 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
@@ -925,7 +724,7 @@
   --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
@@ -971,7 +770,7 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
@@ -1014,7 +813,7 @@
   --serif:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px; --radius-field:8px; --radius-row:8px; --radius-cell:8px; --radius-card:10px; --radius-menu:10px; --radius-modal:12px; --radius-control:8px; --radius-rail-item:8px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:0 20px 48px rgba(16,24,40,.18), 0 0 0 1px var(--line); --shadow-menu:0 4px 16px rgba(16,24,40,.08), 0 0 0 1px var(--line); --shadow-pop:0 8px 24px rgba(16,24,40,.12); --shadow-toast:0 8px 24px rgba(16,24,40,.14), 0 0 0 1px var(--line); --shadow-drawer:-12px 0 32px rgba(16,24,40,.12);
@@ -1036,21 +835,10 @@
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 
-/* win98 — the "Feed - Win98" board. The one theme whose surface is DARKER than
-   its second surface: the window chrome is #c0c0c0 and the client area is
-   white, which is exactly how the era worked, and it happens to map cleanly
-   onto --surface / --surface-2. Two things this palette cannot fix, both
-   recorded in skins-boards.md: (1) --bg is a DESKTOP colour (teal in light,
-   navy in dark), not a text ground, so the black ink the rest of the theme uses
-   reads 4.40:1 on the light desktop and 1.46:1 on the dark one — the two places
-   v2 paints --bg under --text (--head-bg-page and --chip-bg) now re-point to
-   --surface inside this block, which is exactly the per-theme semantic re-point
-   the widened contract allows (handoff §5); (2) the rail is LIGHT here, so
-   --rail-active / --rail-hover /
-   --on-rail-* (white alphas, deliberately not re-themed) all but vanish.
-   Two board values were moved, both below 3:1 as ink on --surface: --good
-   #008000 -> #006000 (2.82 -> 4.32) and --warn #808000 -> #575700 (2.31 ->
-   4.17) in light. Everything else is the board's own VGA palette. */
+/* win98 — surface is DARKER than surface-2 (window chrome #c0c0c0, client area
+   white). --bg is a DESKTOP colour, so --head-bg-page/--chip-bg re-point to --surface; the rail is LIGHT, so the white-alpha rail overlays all but vanish. */
+/* --good and --warn are nudged darker from the board's VGA values to clear 3:1
+   as ink on --surface. */
 .jn-v2[data-theme="win98"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
   --bg:#008080; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
@@ -1073,7 +861,7 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
   --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
@@ -1091,13 +879,11 @@
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  /* S5: `none` is not a border-colour, so the field-hover rule below was invalid at
-     computed-value time and fell back to `currentColor` — a hovered field lost its
-     bevel to a flat black box. The bevel IS this theme's field paint, so the hover
-     token is the inset bevel's own four-sided colour: hovering changes nothing. */
+  /* `none` is not a valid border-colour, so field-hover would fall back to
+     currentColor (a flat black box) — use the inset bevel's own colour instead. */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
-  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
 }
 .jn-v2[data-theme="win98"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -1121,7 +907,7 @@
   --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
   --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state (Skins handoff 1) — everything a theme may now carry beyond the palette */
+  /* geometry + state — everything a theme may now carry beyond the palette */
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
   --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
   --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
@@ -1139,13 +925,11 @@
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  /* S5: `none` is not a border-colour, so the field-hover rule below was invalid at
-     computed-value time and fell back to `currentColor` — a hovered field lost its
-     bevel to a flat black box. The bevel IS this theme's field paint, so the hover
-     token is the inset bevel's own four-sided colour: hovering changes nothing. */
+  /* `none` is not a valid border-colour, so field-hover would fall back to
+     currentColor (a flat black box) — use the inset bevel's own colour instead. */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
-  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* handoff §5: --bg is the DESKTOP colour here, so the page head and the chip ground re-point to the window grey */
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
 }
 
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
@@ -1154,35 +938,23 @@
 
 /* interactive (inline styles can't do :hover) */
 .v2-row:hover { background:var(--row-hover) !important; }
-/* D-POST-17: the picked row is an --accent-soft wash now, not the same grey as
-   the hover, so the hover rule above must not wipe it out when the pointer
-   crosses the selected row. `aria-current` is what Row (and the Feed row,
-   which paints its own background) marks the picked row with. */
+/* The picked row is an --accent-soft wash, not the hover grey, so the hover
+   rule above must not wipe it out when the pointer crosses the selected row. */
 .v2-row[aria-current="true"]:hover { background:var(--row-selected) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.v2-rail-copy:hover { background:var(--line-soft) !important; color:var(--text) !important; }   /* the cells set inline colour (FEED-12) */
+.v2-rail-copy:hover { background:var(--line-soft) !important; color:var(--text) !important; }   /* the cells set inline colour */
 .v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
-.v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour (APPS-10) */
-/* The Feed detail's grab-line (board l.252-254). The strip itself is invisible —
-   12px of hit area floating over the top of the pane — and everything that shows
-   is the 52x4 handle: --edge, ringed 3px in --surface so it reads as lying on
-   the header, growing to 64px and --accent on hover. The board hangs the hover on
-   the handle; here the whole strip is the target, because a 4px band is not one.
-   !important: the handle sets width and background inline. .12s is the board's
-   own timing (`transition:background .12s,width .12s` on the handle). */
+.v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour */
+/* Feed detail's grab-line: an invisible 12px hit area over the pane top; the
+   52x4 handle grows to 64px/--accent on hover. !important: handle sets width/background inline. */
 .v2-grab > span { box-shadow:0 0 0 3px var(--surface); transition:background .12s,width .12s; }
 .v2-grab:hover > span { background:var(--accent) !important; width:64px !important; }
-/* The collapse the grab-line drives. The board flips display none/flex
-   (l.1734-1735), which cannot animate, so the header and the score band ride one
-   grid row instead: 1fr → 0fr travels the real content height, which max-height
-   could not do — the band is flex:1 while the report is open and auto otherwise.
-   Same .12s ease as the handle. The body's overflow is inline: it must stay
-   visible when the fold is open and idle, or the header's ⋯ menu is clipped. */
+/* The collapse the grab-line drives: display none/flex can't animate, so the
+   header/score band ride one grid row — 1fr -> 0fr travels the real content height. */
 .v2-fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .12s ease,opacity .12s ease; }
-/* visibility flips only once the row has finished travelling, so the folded
-   header keeps its buttons out of the tab order the way display:none did, and
-   the fade still plays. Expanding uses the base rule, with no delay. */
+/* visibility flips only after the row finishes travelling, so the folded header
+   stays out of the tab order (like display:none) but the fade still plays. */
 .v2-fold[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .12s ease,opacity .12s ease,visibility 0s linear .12s; }
 .v2-foldbody { min-height:0; display:flex; flex-direction:column; }
 @media (prefers-reduced-motion: reduce) {
@@ -1199,19 +971,17 @@
 .v2-appearancebtn:hover { background:var(--rail-hover) !important; }
 /* inline styles set border/background on these, so :hover must use !important to win */
 .v2-card { transition:border-color .12s,background .12s; }
-/* Résumés' design hovers its cards to a soft beige (#d4cec0) while every other
-   clickable card/row in v2 goes to the accent — and --edge was stronger than
-   that beige anyway. Unified on the accent; the background lift is unchanged. */
+/* Unified on the accent hover (every other clickable card/row in v2 uses it);
+   the background lift is unchanged. */
 .v2-card:hover { border-color:var(--card-border-hover) !important; background:var(--card-bg-hover) !important; }
 .v2-chip { transition:border-color .12s,background .12s,box-shadow .12s,color .12s; }
 .v2-chip:hover { border-color:var(--chip-border-hover) !important; background:var(--chip-bg-hover) !important; color:var(--chip-ink-hover) !important; box-shadow:0 0 0 2px var(--chip-ring-hover) !important; }
 .v2-dashadd { transition:border-color .12s,background .12s; }
 .v2-dashadd:hover { border-color:var(--dashadd-border-hover) !important; background:var(--dashadd-bg-hover) !important; color:var(--dashadd-ink-hover) !important; }
 .v2-act:hover { border-color:var(--card-border-hover) !important; background:var(--card-bg-hover) !important; }
-.v2-menuitem:hover { background:var(--menu-item-hover) !important; }   /* menu items carry inline backgrounds (FEED-04, COMP) */
-/* Flat list rows all hover to --surface-2: the Feed (.v2-row) and Applications
-   (.v2-arow) already did, Companies used the accent wash. Bordered cards/pills
-   (.v2-card, .v2-act, .v2-dashadd) keep --hover-soft deliberately. */
+.v2-menuitem:hover { background:var(--menu-item-hover) !important; }   /* menu items carry inline backgrounds */
+/* Flat list rows all hover to --surface-2. Bordered cards/pills (.v2-card,
+   .v2-act, .v2-dashadd) keep --hover-soft deliberately. */
 .v2-crow:hover { background:var(--row-hover) !important; }
 .v2-arow:hover { background:var(--row-hover) !important; }
 /* border-only hovers for pills that already carry their own fill */
@@ -1220,15 +990,13 @@
 /* border + text turn accent, no background wash (the design's pill hover) */
 .v2-bdc:hover { border-color:var(--pill-border-hover) !important; color:var(--pill-ink-hover) !important; }
 
-/* Controls only: at the inherited 1.5 a fixed-height control's label rides
-   high, and a fallback-font glyph in the label (↗ ▾ ›) drags it further.
+/* Controls only: at the inherited 1.5 a fixed-height control's label rides high.
    Never put this on the root — content-driven card heights depend on 1.5. */
 .v2-ctl { line-height:1; }
 
 /* Cover letters + Persona: card headers wash on hover, paragraph/contact buttons tint */
-/* PERS-10: every collapsible header in v2 washes to --surface-2 — the section and
-   role headers already do via .v2-hover-accent, so these must match rather than
-   read as a second affordance */
+/* every collapsible header in v2 washes to --surface-2, matching the section
+   and role headers via .v2-hover-accent, rather than a second affordance */
 .v2-clhead:hover { background:var(--hover-wash-bg); }
 /* the Q&A bank card sits on --amber-bg, so it washes to its own amber hover */
 .v2-qahead:hover { background:var(--amber-hover); }
@@ -1239,17 +1007,15 @@
    sibling --bad rule already knew this */
 .v2-hover-accent-text:hover { color:var(--link-ink-hover) !important; }
 .v2-hover-bad-text:hover { color:var(--hover-bad-ink) !important; }
-/* SET-15: the model-catalog × turns border AND glyph --bad, per the design's
-   `border-color:#9c3b30;color:#9c3b30`. Kept separate from -bad-text so the ×
-   on the other screens keeps its colour-only hover. */
+/* the model-catalog × turns border AND glyph --bad; kept separate from
+   -bad-text so the × on other screens keeps its colour-only hover. */
 .v2-hover-bad-bdc:hover { border-color:var(--hover-bad-ink) !important; color:var(--hover-bad-ink) !important; }
 /* welcome steps are links in v1 and stay links here, so they need an affordance */
 .v2-welcomestep { transition:background .12s; }
 .v2-welcomestep:hover { background:var(--hover-wash-bg); }
 
-/* Badge palette (Badge Palette.dc.html): 8 hues, one oklch recipe per mode.
-   light bg L.94/C.03 + ink L.45/C.09 · dark bg L.32/C.05 + ink L.84/C.07 — all pass AA.
-   Tier chips are a separate taxonomy and are not part of that badge set. */
+/* Badge palette: 8 hues, one oklch recipe per mode (light bg L.94/C.03 + ink
+   L.45/C.09, dark bg L.32/C.05 + ink L.84/C.07, all pass AA). Tier chips are a separate taxonomy. */
 .jn-v2 .cc-greenhouse{background:var(--cc-greenhouse-bg);color:var(--cc-greenhouse-fg)}
 .jn-v2 .cc-workday{background:var(--cc-workday-bg);color:var(--cc-workday-fg)}
 .jn-v2 .cc-lever{background:var(--cc-lever-bg);color:var(--cc-lever-fg)}
@@ -1277,11 +1043,8 @@
 
 .v2-tab { transition:color .12s; }
 
-/* Reserve the scrollbar's space even when it isn't showing, so a list that
-   grows past its box (expanding the archived band) doesn't narrow its rows and
-   shift them out from under the header above. Pairing it with overflow:hidden
-   on that non-scrolling header reserves the identical gutter there, so the two
-   stay aligned whatever width the platform gives the scrollbar. */
+/* Reserve the scrollbar's space even when hidden, so a growing list doesn't
+   narrow its rows out from under the header above. */
 .v2-gutter { scrollbar-gutter:stable; }
 .v2-gutter-head { overflow:hidden; scrollbar-gutter:stable; }
 /* The rail is 50px collapsed — a 9px scrollbar there would push every icon off
@@ -1295,161 +1058,63 @@
 @keyframes v2-spin { to { transform:rotate(360deg); } }
 .v2-spin { animation:v2-spin .9s linear infinite; }
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
-/* D-POST-01: a Menu is a *column* flex box, so a child's height is only a
-   flex-basis. Once the list is taller than the menu's maxHeight the browser
-   shrinks every shrinkable child to fit, and the in-menu search field on the
-   Feed's Company filter collapsed from 32px to 17. Menu rows are fixed-height by
-   definition: a scrolling menu scrolls, it never squashes. */
+/* A Menu is a column flex box, so a child's height is only a flex-basis: once
+   the list exceeds maxHeight the browser shrinks children instead of scrolling. */
 .jn-v2 .v2-menu > * { flex-shrink:0; }
 
 .jn-v2 input::placeholder, .jn-v2 textarea::placeholder { color:var(--input-placeholder) !important; opacity:1; }
 .jn-v2 input, .jn-v2 select { color:var(--text); background:transparent; }
-/* CL-21: keyboard focus is visible on every field; inline borders need !important.
-   The 2px ring is gone: browsers apply :focus-visible to text inputs on *mouse*
-   focus too, so every click drew a rectangle — and on the borderless inputs
-   (Applications, Settings, Resumes, Cover Letters) it floated around nothing.
-   A field now signals focus the way it draws itself at rest: a bordered box turns
-   its border accent, an underline input turns its underline accent. */
+/* Browsers apply :focus-visible to text inputs on mouse focus too, so a 2px
+   ring drew on every click; a field signals focus via its own border/underline instead. */
 .jn-v2 input:focus-visible, .jn-v2 textarea:focus-visible, .jn-v2 select:focus-visible { border-color:var(--input-border-focus) !important; outline:none; }
 /* A bare input inside a bordered wrapper has no border of its own, so the wrapper
    carries the signal instead. */
 .jn-v2 .v2-fieldwrap:focus-within { border-color:var(--input-border-focus) !important; }
-/* Keyboard-only ring on non-input controls — :focus-visible never fires on these
-   from a mouse click, so the rule itself is unchanged; only its two values are
-   tokens now (theme-skins.css line 198). In every theme that ships today
-   --focus-outline is `none` and --focus-shadow is the 2px --focus-ring this rule
-   drew literally, so the paint is identical; win98 swaps them for its 1px dotted
-   outline and saas/cobalt for a 3px halo. outline-offset only bites once an
-   outline exists. */
+/* Keyboard-only ring on non-input controls. win98 swaps --focus-outline/-shadow
+   for a 1px dotted outline; saas/cobalt for a 3px halo. */
 .jn-v2 [tabindex="0"]:focus-visible { outline:var(--focus-outline); outline-offset:-4px; box-shadow:var(--focus-shadow) !important; }
 
-/* R2-S-01: at ≤1024px the Companies row is wider than its pane, so the ⋯ and the
-   Run/Test pills scrolled off the viewport. Pin the actions column to the right
-   edge of the scroller; the two backgrounds mirror .v2-crow's rest/hover so the
-   pinned cell never reads as a separate strip — including the --surface-2 the
-   row now hovers to. */
+/* At <=1024px the Companies row is wider than its pane, so pin the actions
+   column to the scroller's right edge; backgrounds mirror .v2-crow's rest/hover. */
 .v2-cactions { background:var(--bg); }
 .v2-crow:hover .v2-cactions { background:var(--row-hover); }
 
-/* — Themes layer, state rules (theme-skins.css lines 190-205) -----------------
-   Only the rules that are INERT for the default theme today: three hang on
-   classes ui.jsx does not write yet (v2-btn-primary, v2-btn-danger, v2-raised /
-   v2-inset), one on an attribute nothing sets yet (aria-invalid, and the
-   matching data-invalid on a field wrapper), and the selected-row rule resolves
-   to the paint Row and the Feed row already write inline. They land now so the
-   ui.jsx pass is a change of markup, not of markup AND cascade.
-   `!important` for the same reason every hover rule above needs it: the
-   primitives set the property inline.
-
-   HELD BACK for that pass, because each one repaints the default theme the
-   moment it lands (they are listed here so the next agent does not have to
-   re-derive the set):
-     · .v2-bd/.v2-bdc/.v2-act :active — landed below, but INERT: --pressed-wash is
-       `transparent` and --pressed-shift `none` in the base blocks (D-07 is open),
-       so only cobalt/saas/win98 draw a pressed state. The wash is painted as a
-       background-IMAGE overlay rather than `background:`, so a transparent wash
-       leaves the control's own ground alone instead of erasing it.
-     · [aria-disabled="true"] — landed below. Every disabled primitive writes
-       `opacity:var(--disabled-opacity)` inline (= .5, today's number), so the
-       rule only reaches the handful of hand-rolled disabled spans in the screens;
-       --disabled-ink is `inherit` here so it cannot repaint one of them.
-     · the field hover rule (--input-border-hover) — landed below, pointed at the
-       field's own rest border (D-06 open). The SearchInput underline variant is
-       carved out (.v2-underline): its rest border is --input-underline, not
-       --input-border, so the shared token would repaint it.
-     · the prefers-reduced-motion sweep — landed below as TRANSITIONS ONLY
-       (D-05): `animation-duration:0s` on `.jn-v2 *` would also stop .v2-spin and
-       the ScoreRing busy arc, and a spinner is a progress indicator.
-
-   STILL held back:
-     · the blanket transition rule — it would give .v2-row, .v2-menuitem, .v2-bd,
-       .v2-bdc and .v2-act hover fades they do not have.
-     · .v2-pill[aria-pressed="true"]:hover — marked P, and Pill carries
-       aria-pressed, so it would repaint an ON pill on contact. Pill deliberately
-       does NOT carry the `v2-pill` class, which is what keeps it inert.
-     · .v2-chip[aria-pressed="true"] — Chip reads --chip-on-* inline instead
-       (same tokens, no cascade surprise). */
+/* Themes layer, state rules: only rules INERT on the default theme today.
+   !important because primitives set these properties inline. */
 .jn-v2 .v2-btn-primary:hover { background:var(--btn-primary-hover-bg) !important; }
 .jn-v2 .v2-btn-primary:active { background:var(--btn-primary-pressed-bg) !important; transform:var(--pressed-shift); }
 .jn-v2 .v2-btn-danger:hover { background:var(--btn-danger-hover-bg) !important; }
 .jn-v2 [aria-invalid="true"], .jn-v2 .v2-fieldwrap[data-invalid="true"] { border-color:var(--input-border-error) !important; box-shadow:var(--input-ring-error) !important; }
-/* the picked row's paint as a token trio: --row-selected is what Row and the
-   Feed row already set inline, --row-selected-ink is `inherit` and
-   --row-selected-edge `none` in every theme but cobalt (a 3px inset accent bar)
-   and win98 (a navy fill with white ink). */
+/* --row-selected is what Row and the Feed row already set inline; -ink and
+   -edge are inert (inherit/none) except cobalt and win98. */
 .jn-v2 .v2-row[aria-current="true"] { background:var(--row-selected) !important; color:var(--row-selected-ink); box-shadow:var(--row-selected-edge); }
 
-/* — Themes layer, OPAQUE-SELECTION and BEVEL gates -----------------------------
-   The three rules below are the only ones in this file that name a theme, and
-   they have to: each of them must beat an INLINE declaration, which takes
-   `!important`, and an `!important` rule cannot be made inert by a token whose
-   value is `none`/`inherit` — an invalid or empty substitution computes to
-   `unset`, which would ERASE the default theme's own inline paint rather than
-   leave it alone. So the gate is the selector, not the value.
-   A NEW SKIN OPTS IN BY ADDING ITS NAME to the selector lists here: a skin whose
-   --row-selected is an opaque fill with a --row-selected-ink joins the first
-   rule; a skin whose --bevel-*-border is not `none` joins the other two. Nothing
-   else about adding a skin changes (two palette blocks + a line in theme.js). */
+/* The three rules below name a theme because none/inherit can't gate an
+   !important override (would compute to unset and erase inline paint) — a new skin opts in by adding its name to these selectors. */
 
-/* S5 / P1 — the picked row's INK reaches its text. Row and the Feed row write
-   `color:var(--row-selected-ink)` on the row box, but every line of text inside
-   sets its own colour inline (--ink-2 for the company, --text-2 / --muted for the
-   meta run, --heading-ink through Heading for the title), so white never cascaded
-   down and win98 drew near-black on its navy fill (~1.4:1).
-   The hook is a CLASS on the reading content, not a blanket `*`: a selected row
-   also carries a status badge on its own light ground, a ScoreRing chip and (in
-   Applications) a ✉ hidden behind `color:transparent`, and every one of those
-   would be destroyed by flattening the whole subtree to one ink. `.v2-rowink`
-   marks the text that must follow the selection; anything with a ground of its
-   own is deliberately left out. */
+/* Row text sets its own colour inline, so --row-selected-ink never cascaded down
+   (win98 drew near-black on navy). `.v2-rowink` marks text that should follow selection. */
 .jn-v2[data-theme="win98"] .v2-row[aria-current="true"] .v2-rowink,
 .jn-v2[data-theme="win98"] .v2-row[aria-current="true"] .v2-rowink * { color:var(--row-selected-ink) !important; }
 
-/* S5 / P2 — win98 bevels: raised on controls, inset on fields/lists/pressed.
-   These shipped unscoped and WITHOUT `!important`, which made them dead letters:
-   every carrier (Pill, Chip, the bordered IconButton, Menu, ModalPanel,
-   ToastCard, the bordered Segmented cell, FIELD and the Select trigger) writes
-   `border` and `boxShadow` inline, and an inline declaration beats a plain class
-   rule — so no field was ever sunk and no button ever raised. `!important` is the
-   same convention every hover rule above uses, for the same reason.
-   Two carve-outs on the inset side, both mirroring the field-hover rule below:
-     .v2-underline          SearchInput's underline variant has no box to sink.
-     [aria-invalid="true"]  an error border must survive; the invalid rule above
-                            is (0,2,0) and would otherwise lose to this one. */
+/* win98 bevels: raised on controls, inset on fields/lists/pressed. !important
+   because every carrier writes border/boxShadow inline; carve-outs .v2-underline and [aria-invalid] keep their own border. */
 .jn-v2[data-theme="win98"] .v2-raised { border:var(--bevel-raised-border) !important; border-color:var(--bevel-raised-color) !important; box-shadow:var(--bevel-raised-shadow) !important; }
 .jn-v2[data-theme="win98"] .v2-inset:not(.v2-underline):not([aria-invalid="true"]),
 .jn-v2[data-theme="win98"] .v2-raised:active { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
 
-/* U-01 / D-07 — pressed. Inert in the default theme: --pressed-shift is `none`
-   and --pressed-wash `transparent` there. The wash is a background-image overlay
-   (a flat two-stop gradient) rather than `background:`, so `transparent` leaves
-   the control's own ground visible; `background: transparent !important` would
-   erase a Card's surface for as long as the mouse is down. Opaque skin washes
-   paint identically either way. */
+/* Inert in the default theme (--pressed-shift none, --pressed-wash transparent).
+   The wash is a background-image overlay, not `background:`, so it leaves the control's own ground visible instead of erasing it. */
 .jn-v2 .v2-bd:active, .jn-v2 .v2-bdc:active, .jn-v2 .v2-act:active {
   background-image:linear-gradient(var(--pressed-wash), var(--pressed-wash)) !important;
   transform:var(--pressed-shift);
 }
-/* U-05 / D-08 — disabled. Every primitive writes `opacity:var(--disabled-opacity)`
-   inline (.5 = today), so this rule is the fallback for hand-rolled disabled spans
-   in the screens; --disabled-ink is `inherit` and --disabled-engrave `none` in the
-   base blocks, and win98 swaps both for its engraved grey. */
+/* Every primitive writes opacity inline, so this rule is the fallback for
+   hand-rolled disabled spans; win98 swaps --disabled-ink/-engrave for its grey. */
 .jn-v2 [aria-disabled="true"] { opacity:var(--disabled-opacity); color:var(--disabled-ink); text-shadow:var(--disabled-engrave); }
-/* U-06 field hover (D-06 open). --input-border-hover is the field's own rest
-   border in the base blocks, so this repaints nothing in the default theme.
-   It hangs on `.v2-inset` — the fields ui.jsx draws (Input, Textarea, the boxed
-   SearchInput, the Select trigger) — rather than on `input`, so the borderless
-   raw inputs the screens put inside a v2-fieldwrap keep their (invisible) border
-   colour and the crawl has nothing to report. Three carve-outs:
-     .v2-underline          SearchInput's underline variant rests on
-                            --input-underline, not --input-border.
-     [aria-expanded="true"] an OPEN Select trigger already wears the accent
-                            (--input-border-focus); hover must not take it back.
-     :focus                 same reason for a focused field.
-   Field WRAPPERS are out too: LoginModal paints its wrapper --bad while an error
-   stands, and a shared hover token would wipe it. */
+/* Hangs on `.v2-inset`, not `input`, so borderless raw inputs are untouched.
+   Carve-outs: .v2-underline, and [aria-expanded]/:focus (already wear the accent). */
 .jn-v2 .v2-inset:not(.v2-underline):not([aria-expanded="true"]):hover:not(:focus) { border-color:var(--input-border-hover) !important; }
-/* U-03 / D-05 — reduced motion, TRANSITIONS ONLY. The handoff also zeroes
-   animation-duration on `.jn-v2 *`; that would stop .v2-spin and the ScoreRing's
-   busy arc, which are progress indicators rather than decoration. */
+/* Transitions only — zeroing animation-duration too would stop .v2-spin and the
+   ScoreRing's busy arc, which are progress indicators, not decoration. */
 @media (prefers-reduced-motion: reduce) { .jn-v2 * { transition-duration:0s !important; } }

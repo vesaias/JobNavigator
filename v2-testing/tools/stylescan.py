@@ -8,10 +8,8 @@ style keys that matter for design consistency, and groups sites by role and sign
 """
 import re, os, sys, json, collections, io
 
-# Only the shipped v2 screens. The design workbench (the /v2/ui gallery and the
-# /v2/toasts lab) lives one folder over in frontend/src/design-base/ — git-ignored,
-# loaded by App.jsx through import.meta.glob — and is deliberately not scanned:
-# it renders the primitives on purpose, so its signatures are not screen drift.
+# design-base/ (git-ignored /v2/ui gallery + /v2/toasts lab) is deliberately not
+# scanned — it renders primitives on purpose, so its signatures are not screen drift.
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "v2")
 KEEP = ["background", "backgroundColor", "color", "border", "borderColor", "borderBottom", "borderTop", "borderLeft",
         "borderRadius", "boxShadow", "fontFamily", "fontSize", "fontWeight", "lineHeight", "height", "padding",

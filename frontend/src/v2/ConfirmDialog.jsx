@@ -2,20 +2,13 @@ import React, { useState } from 'react'
 import './theme.css'
 import { Button, Heading, Input, ModalPanel } from './ui'
 
-// RES-16: the one destructive-confirm dialog for v2. Lifted out of Companies.jsx
-// (COMP-28) so the résumé and cover-letter deletes stop falling back to
-// window.confirm — a native dialog on a screen that owns a modal system.
-// Escape and the scrim both cancel; the confirm side never auto-focuses, so
-// Enter can't destroy anything by reflex.
-// U-16 / handoff §4.11: both dialogs' body lines read the PALETTE name --muted;
-// they are helper prose, so they read --helper-ink, which points at --muted.
-// Same value, no repaint — the raw 12.5px step stays (U-16's other half).
+// The one destructive-confirm dialog for v2, so deletes stop falling back to
+// window.confirm. Escape and the scrim both cancel; the confirm side never
+// auto-focuses, so Enter can't destroy anything by reflex.
 export default function ConfirmDialog({ title, body, label, danger, onConfirm, onCancel }) {
   return (
-    // ModalPanel carries the scrim, Escape (RES-15) and the pixel snap (RES-32).
-    // It also sits at z-index 70, the same layer the hand-written panel used, so a
-    // confirm raised from inside a drawer (z 30) or another modal still lands on
-    // top — it mounts last in the tree, and equal z-index resolves in DOM order.
+    // ModalPanel carries the scrim, Escape and the pixel snap; it sits at
+    // z-index 70, so a confirm raised from a drawer (z 30) or modal still lands on top.
     <ModalPanel width={400} onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}>
       <Heading size={19}>{title}</Heading>
       {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
@@ -27,10 +20,9 @@ export default function ConfirmDialog({ title, body, label, danger, onConfirm, o
   )
 }
 
-// R2-A-01's sibling: the two `window.prompt` calls left in Settings (reveal the
-// rotated webhook secret, ask for the public base URL) are the same interaction
-// rendered by the browser. Same card, same Escape/scrim rules; `readOnly` turns
-// it into a reveal-and-copy panel with a single Done button.
+// Replaces the `window.prompt` calls left in Settings (reveal the rotated
+// webhook secret, ask for the public base URL). `readOnly` turns it into a
+// reveal-and-copy panel with a single Done button.
 export function PromptDialog({ title, body, label, value, placeholder, readOnly, mono, onSubmit, onCancel }) {
   const [v, setV] = useState(value || '')
   const [copied, setCopied] = useState(false)

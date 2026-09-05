@@ -1,23 +1,15 @@
 """D5 lint: fail on styling that bypasses the primitive layer.
 
 Usage: py v2-testing/tools/stylelint.py [--strict]
-Checks frontend/src/v2/*.jsx (except ui.jsx) and theme.css. The lab pages live in
-frontend/src/design-base/ (git-ignored) and are outside the scanned folder:
-  1. raw colours (#hex, rgb(/rgba(/hsl() in JSX  → only theme.css may hold them
-  2. fontFamily / fontSize literals in JSX style objects (numbers or px strings) outside ui.jsx
-  3. borderRadius / boxShadow literals in JSX outside ui.jsx (var(--radius-*) / var(--*-shadow) are fine)
-  4. hover classes (v2-bd, v2-bdc, v2-act, v2-row, v2-card, v2-menuitem, v2-hover-*, v2-dashadd, v2-navlink) on elements that are not ui.jsx primitives
-  5. style objects matching a primitive role signature (radius 99 + border/background; 1px border + radius 6-12 + surface bg) outside ui.jsx
-  6. theme.css: the semantic token block must be identical in the light and dark sections (same names)
+Checks frontend/src/v2/*.jsx (except ui.jsx) and theme.css for raw colours, font/radius/shadow
+literals outside ui.jsx, hover classes on non-primitives, and light/dark token parity.
 Lines carrying `// ui: keep` or `// lint: allow` are exempt (reported separately as allowed).
 Exit 1 on any finding unless every finding is allowed.
 """
 import re, os, sys, io, collections
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "v2")
-# The lab pages moved out of the scanned folder entirely (frontend/src/design-base/,
-# git-ignored, wired up through import.meta.glob in App.jsx), so the folder itself
-# is the skip now and only the primitive layer needs naming.
+# design-base/ (git-ignored lab pages) is outside ROOT already; only ui.jsx needs skipping.
 SKIP = {"ui.jsx"}
 HOVER = re.compile(r"\bv2-(bdc?|act|row|crow|arow|card|chip|menuitem|hover-[a-z-]+|dashadd|navlink|clhead)\b")
 PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "Input", "Textarea", "SearchInput", "Select", "Menu", "MenuItem", "SectionHead", "Chip", "Tag", "Dot", "Link", "NavLink", "ModalPanel", "Drawer", "HeaderRow", "TableHead", "Label", "Helper", "Heading", "PageTitle", "Spinner", "ShowMore", "Rule", "Surface", "Check", "Radio", "Switch", "Segmented", "Meter", "ScoreRing", "ToastCard",
@@ -28,11 +20,7 @@ PRIMS = {"Button", "Pill", "IconButton", "Row", "Card", "Band", "DashedAdd", "In
 
 def strip_block_comments(lines):
     """Blank out every `/* … */` span (the `{/* … */}` JSX form included) while
-    keeping the line numbering. A block comment that runs over several lines used
-    to leave its continuation lines looking like code — `(theme.css .v2-hover-accent)
-    — the stage bands were the last` read as a hover class on a non-primitive —
-    because each line was tested on its own. The open/closed state has to be
-    carried across lines instead."""
+    keeping line numbering; open/closed state carries across lines so a multi-line comment isn't tested one line at a time."""
     out, open_ = [], False
     for line in lines:
         buf, i = [], 0
@@ -53,11 +41,8 @@ def lint_jsx(fn, text):
     lines = text.splitlines()
     nocomment = strip_block_comments(lines)
     def is_allowed(i):
-        # The keep note is written *above* the element it annotates, so the walk
-        # back may cross that element's own opening tag — but only that one: a
-        # second `^<Tag` means we have stepped into the previous sibling and the
-        # note is not ours. When the flagged line carries its own `<Tag`, the
-        # element starts on this line and no crossing is allowed at all.
+        # A keep note sits above its element, so the walk back may cross that one
+        # opening tag; a second `^<Tag` means we've stepped into the previous sibling.
         crossed = bool(re.search(r"<[A-Za-z]", lines[i - 1]))
         for j in range(i - 1, max(-1, i - 8), -1):
             if "ui: keep" in lines[j] or "lint: allow" in lines[j]: return True

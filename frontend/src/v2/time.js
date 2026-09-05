@@ -1,5 +1,4 @@
-// One clock for every v2 screen: the list and the editor used to disagree
-// ("1m" vs "just now") about the same timestamp (CL-26).
+// One clock for every v2 screen, so the list and the editor never disagree about the same timestamp.
 const mins = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 60000) : null)
 export const ago = (iso) => {
   const m = mins(iso); if (m == null) return ''
@@ -16,45 +15,19 @@ export const agoShort = (iso) => {
   return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`
 }
 
-// A fixed instant, in the reader's own zone: "Sat 06 Sep 05:00". The Schedules
-// table on Stats writes the same shape from `toLocaleString('en-GB')`; this one
-// is assembled by hand from the same day/month tables the cron sentence uses,
-// because `toLocaleString` renders that month as "Sept" on current ICU (and the
-// separators move with the locale data), and the two halves of the helper line —
-// "every Monday" and "next Mon 07 Sep" — have to name a day the same way.
+// whenShort's "Sat 06 Sep 05:00" shape matches Stats' toLocaleString('en-GB')
+// output by hand, since ICU's own formatting (e.g. "Sept") would make the two halves of a schedule line disagree on how a day is named.
 
 // ── cron ────────────────────────────────────────────────────────────────────
-// `describeCron(expr)` turns one of the five Scheduler cron fields into a plain
-// sentence plus the next instant it fires, so the Settings row can say what the
-// expression MEANS while it is being typed. Pure, no dependency: the five-field
-// grammar is small and a library would be the only runtime dep in v2.
-//
-// Two things it deliberately does NOT do the way "cron" usually does, because
-// the backend does not either — the helper describes what will actually run:
-//
-//   1. WEEKDAY NUMBERING IS APSCHEDULER'S, NOT VIXIE CRON'S. backend/scheduler.py
-//      hands the fifth field to APScheduler 3.10 (`CronTrigger(day_of_week=…)`,
-//      and `CronTrigger.from_crontab` in routes_settings' validator), and
-//      APScheduler numbers weekdays **0 = Monday … 6 = Sunday**. Verified against
-//      the container, not assumed: `0 8 * * 1` fires on a Tuesday there, and the
-//      seeded `h1b_cron` "0 2 * * 0" fires on a Monday. Standard cron would say
-//      Sunday and Sunday. Names (mon…sun) mean the same thing in both dialects,
-//      which is why the preset menu writes `mon-fri` rather than `1-5`
-//      (DECISIONS D-20).
-//   2. DAY-OF-MONTH AND DAY-OF-WEEK ARE **AND**ed. Vixie cron ORs them when both
-//      are restricted; APScheduler ANDs every field. `next` follows APScheduler.
-//
-// `next` is computed in UTC — the scheduler has no timezone configured, so its
-// crons run in the container's UTC clock (the Stats page already says "schedule
-// set in UTC"). The returned value is a plain Date, i.e. a real instant, so the
-// caller renders it in the reader's own zone with `whenShort`.
-//
-// Returns `{ text, next }`, or `null` when the expression cannot be read at all.
-// `next` is null in two unrelated cases, which `unparsed` tells apart: the
-// expression can never fire (31 February), or it uses an APScheduler extension
-// this parser does not evaluate (`last`, `fri#3`) — those are legal on the
-// backend, so they are echoed as `{ text: <the raw line>, unparsed: true }`
-// rather than called invalid.
+// describeCron(expr): plain-English sentence + next fire time for one Scheduler
+// cron field. Pure, no dependency. Two backend-verified departures from standard
+// cron: weekday numbers are APScheduler's, not vixie cron's (0=Monday — `0 8 * * 1`
+// fires Tuesday in the container), and day-of-month/day-of-week are ANDed, not
+// ORed (`next` follows APScheduler). `next` is computed in UTC (the scheduler has
+// no timezone) and returned as a Date; callers render it in the reader's own
+// zone via `whenShort`. Returns `{ text, next }`, or null if unreadable;
+// an APScheduler-only extension (`last`, `fri#3`) this parser doesn't evaluate
+// is echoed as `{ text: <raw line>, unparsed: true }` rather than called invalid.
 const DOW_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']   // APScheduler order: index 0 = Monday
 const DOW_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DOW_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -193,9 +166,8 @@ function cronNext(M, H, D, MO, W, from) {
   return null
 }
 
-// APScheduler's own extras (`last`, `last sun`, `3rd fri` as `fri#3`, `?`). They
-// are legal on the backend, so they must not be called invalid — but this parser
-// does not evaluate them, so the line falls back to echoing the expression.
+// APScheduler's own extras (`last`, `last sun`, `fri#3`, `?`) are legal on the
+// backend but not evaluated here, so the line falls back to echoing the expression.
 const CRON_EXTRAS = /[#?]|(^|[^a-z])(last|w)([^a-z]|$)/i
 
 export function describeCron(expr, opts = {}) {
@@ -215,10 +187,8 @@ export function describeCron(expr, opts = {}) {
   return { text: cronText(M, H, D, MO, W), next: cronNext(M, H, D, MO, W, opts.from) }
 }
 
-// The presets the Settings cron rows offer. `mon-fri` / `mon`, not `1-5` / `1`:
-// under APScheduler's numbering those digits are Tue–Sat and Tuesday, so the
-// numeric form would have written a schedule that does not match its own label
-// (DECISIONS D-20). Names read the same in either dialect.
+// Presets use names (mon-fri, mon) not digits: under APScheduler's numbering
+// 1-5/1 mean Tue-Sat/Tuesday, so digits would mislabel the schedule (DECISIONS D-20).
 export const CRON_PRESETS = [
   ['Hourly', '0 * * * *'],
   ['Every 6 hours', '0 */6 * * *'],
