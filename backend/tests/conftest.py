@@ -8,6 +8,15 @@ from unittest.mock import AsyncMock, MagicMock
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 
+def pytest_configure(config):
+    """Register markers here too — the container runs pytest from /app, where the
+    repo's pytest.ini is not mounted."""
+    config.addinivalue_line(
+        "markers",
+        "live: hits the running stack over HTTP (read-only); auto-skips when unreachable",
+    )
+
+
 # ── Anthropic mock fixtures ───────────────────────────────────────────────
 
 @pytest.fixture
