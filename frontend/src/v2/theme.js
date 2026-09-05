@@ -39,7 +39,7 @@ export const THEME_LABEL = {
   tone3: 'Tone 3 — ¾ toward Editorial',
   editorial: 'Editorial — original board tones',
   alt: 'Alt — cool slate',
-  cobalt: 'Cobalt — IBM Plex blue',
+  cobalt: 'Cobalt — stone, mono captions',
   saas: 'SaaS — system neutral',
   win98: 'Win98 — desktop grey',
 }

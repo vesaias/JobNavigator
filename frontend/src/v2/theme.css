@@ -309,6 +309,16 @@
 
   font-family:var(--sans); color:var(--text); background:var(--bg);
   -webkit-font-smoothing:antialiased; font-size:14px;
+
+  /* cobalt r5 */
+  /* The CAPTION face — Label · MenuHead · TableHead · Tag · SectionHead. Separate
+     from --font-body because a theme may set its captions in the mono while prose
+     stays sans (cobalt does); the default is the body sans, so no other theme moves. */
+  --label-face:var(--sans);
+  /* Link/NavLink text-decoration. `none` is what `.jn-v2 a` and `.v2-navlink`
+     already compute, so the default is unchanged; cobalt underlines because its
+     links are text-coloured rather than accent-coloured and need the second cue. */
+  --link-decoration:none;
 }
 .jn-v2[data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
@@ -596,6 +606,12 @@
      bar wants a bigger figure raises it (saas: 1.3 sm / 1.5 md). */
   --ring-numeral-scale-sm:1; --ring-numeral-scale-md:1;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
+
+  /* cobalt r5 — same two names as the light block (see there for the reasoning);
+     both are mode-invariant in every theme, but the pair has to be declared in
+     BOTH base blocks or dark would fall through to the light block's value. */
+  --label-face:var(--sans);
+  --link-decoration:none;
 }
 /* Theme: alt — proof the semantic layer is real: holds ONLY palette tokens and
    the font stacks, so switching data-theme changes colour and font only. */
@@ -874,102 +890,127 @@
 /* Ring offsets: these boards put a sans with lining figures in the display slot
    (serif elsewhere), so all three seed at default offsets pending an ink-measurement pass. */
 
+/* cobalt — round 5, the "Cobalt Directions" 5a/5b boards: stone, mono-forward,
+   ACHROMATIC. The id keeps the name; the blue is gone by design (SaaS took the
+   Plex face and a blue accent, so the two themes had become one). Colour now
+   means status only: score pill, health dot, stage. Faces are Geist / Geist Mono
+   (Vercel's pair, OFL, loaded from Google Fonts in index.html). */
 .jn-v2[data-theme="cobalt"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f7f8fa; --line:#e3e5ea; --line-soft:#eef0f3;
-  --line-strong:#c8ccd6; --edge:#d7dae1; --track:#eef0f3;
-  --text:#16181d; --text-2:#5b6270; --muted:#707887; --ink-2:#2f353f;
-  --accent:#2d5be3; --accent-ink:#ffffff; --accent-soft:#e7edfd;
-  --good:#157a43; --warn:#946c07; --warn-soft:#fbf2d7; --warn-line:#ecd9a0;
-  --bad:#c23b32; --bad-soft:#fdeaea; --bad-faint:#fef6f6;
-  --change-soft:#c9e7d6; --change-bg:#f5fbf7; --hover-soft:#f2f6fe;
-  --ring-accent:rgba(45,91,227,.22); --scrim:rgba(15,17,21,.46); --recessed:#fafbfc;
-  /* the board's accent IS the blue the default gives to `applied`, so applied
-     moves to a deep teal (the alt theme does the same for its indigo) */
-  --stage-applied:#0b5570; --stage-interview:#946c07; --stage-offer:#157a43;
-  --stage-rejected:#c23b32; --stage-new:#c8ccd6;
-  --series-new:#b8822b;
-  --amber-bg:#fffdf4; --amber-line:#ecd9a0; --amber-line-soft:#f5ead0; --amber-hover:#fbf5e2;
-  --sand:#ccd2de; --gold:#c08a2e; --funnel-low:#8fa5e2; --funnel-mid:#4a6fd0;
-  --toast-ok-bg:#e2f5e9; --toast-ok-line:#bfe3cc; --toast-ok-ink:#157a43;
-  --toast-bad-bg:#fdeaea; --toast-bad-line:#efb3b0; --toast-bad-ink:#a8322a;
-  --rail:#16181d; --rail-text:#8d95a6; --rail-dim:#6b7280; --rail-accent:#7f9cf5;
-  --rail-line:#232a38; --rail-ink:#ffffff;
-  --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
-  --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
-  --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  --bg:#f7f6f3; --surface:#ffffff; --surface-2:#f0efec; --line:#e7e5e4; --line-soft:#f0efec;
+  --line-strong:#a8a29e; --edge:#d6d3d1; --track:#e7e5e4;
+  --text:#1c1917; --text-2:#44403c; --muted:#78716c; --ink-2:#292524;
+  /* achromatic primary: near-black on the light ground, off-white in dark. The
+     one token that inverts per mode, which is why hover/pressed mix toward --bg. */
+  --accent:#1c1917; --accent-ink:#fafaf9; --accent-soft:#f0efec;
+  --good:#166534; --warn:#a16207; --warn-soft:#fef3c7; --warn-line:#d6b24a;
+  --bad:#b91c1c; --bad-soft:#fee2e2; --bad-faint:#fef2f2;
+  --change-soft:#bbf7d0; --change-bg:#f4fbf6; --hover-soft:#f0efec;
+  --ring-accent:rgba(28,25,23,.18); --scrim:rgba(28,25,23,.45); --recessed:#faf9f7;
+  /* applied is neutral ink here, not a blue: the theme has no blue to spend */
+  --stage-applied:#44403c; --stage-interview:#a16207; --stage-offer:#166534;
+  --stage-rejected:#b91c1c; --stage-new:#a8a29e;
+  --series-new:#b8863a;
+  --amber-bg:#fffbeb; --amber-line:#d6b24a; --amber-line-soft:#efe0a8; --amber-hover:#fdf6dc;
+  --sand:#d6d3d1; --gold:#a16207; --funnel-low:#a8a29e; --funnel-mid:#57534e;
+  --toast-ok-bg:#f0fdf4; --toast-ok-line:#86efac; --toast-ok-ink:#166534;
+  --toast-bad-bg:#fef2f2; --toast-bad-line:#fca5a5; --toast-bad-ink:#b91c1c;
+  /* the rail is dark stone in BOTH appearances; --rail-accent is the 3px bar */
+  --rail:#1c1917; --rail-text:#a8a29e; --rail-dim:#78716c; --rail-accent:#fafaf9;
+  --rail-line:#292524; --rail-ink:#fafaf9;
+  --serif:'Geist','Segoe UI',ui-sans-serif,system-ui,sans-serif;
+  --sans:'Geist','Segoe UI',ui-sans-serif,system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   /* geometry + state — everything a theme may now carry beyond the palette */
-  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --radius-mark:2px; --radius-inline:3px; --radius-mini:3px; --radius-field:4px; --radius-row:0; --radius-cell:4px; --radius-card:6px; --radius-menu:6px; --radius-modal:8px; --radius-control:4px; --radius-rail-item:2px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
-  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
-  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --shadow-modal:0 16px 40px rgba(28,25,23,.18), 0 0 0 1px rgba(28,25,23,.06); --shadow-menu:0 8px 24px rgba(28,25,23,.12), 0 0 0 1px rgba(28,25,23,.06); --shadow-pop:0 8px 24px rgba(28,25,23,.14); --shadow-toast:0 8px 24px rgba(28,25,23,.14), 0 0 0 1px rgba(28,25,23,.06); --shadow-drawer:-12px 0 32px rgba(28,25,23,.14);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-weight:500; --title-weight:600; --label-weight:500; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.01em; --label-tracking-scale:1;
+  /* the signature: captions and numerals in Geist Mono, caps and .06em kept */
+  --label-face:var(--mono); --numeral-face:var(--mono);
+  /* --btn-danger-ink is spelled out rather than left on --accent-ink: in dark the
+     accent ink is near-black, which would put dark text on the red button. */
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-danger-bg:var(--bad); --btn-danger-ink:#ffffff;
+  /* the inverting primary mixes toward the CANVAS, so black lightens in light and
+     off-white darkens in dark — one rule for both modes. Danger still mixes to black. */
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, var(--bg)); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, var(--bg)); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
-  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
-  --row-selected:#eef3fe; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
-  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:3px solid transparent; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 10px;
+  --input-border-hover:var(--text-2); --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  /* selection = surface-2 wash + a 3px edge in the primary ink */
+  --row-selected:var(--surface-2); --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
+  /* the rail's own version of the row edge: an inset tile PLUS a 3px left bar */
+  --rail-active-bg:#292524; --rail-active-ink:var(--rail-ink); --rail-active-mark:3px solid #fafaf9; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 8px;
   --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
-  /* The violet the SaaS handover gave cobalt was dropped by the user: the AI
-     accent is SaaS's alone, so here the whole --ai family IS the accent family
-     and an `ai` button paints exactly what a `primary` one does. */
-  --ai:var(--accent); --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
+  /* AI = the primary, no violet; the ✦ glyph its callers write is the marker.
+     The whole --ai family IS the accent family, so an `ai` button paints exactly
+     what a `primary` one does, hover and pressed included. */
+  --ai:#1c1917; --ai-ink:#fafaf9; --ai-soft:var(--accent-soft);
   --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:var(--btn-primary-hover-bg); --btn-ai-pressed-bg:var(--btn-primary-pressed-bg);
-  --sc-hi-bg:#e2f5e9; --sc-hi:#157a43; --sc-mid-bg:#fbf2d7; --sc-mid:#946c07; --sc-lo-bg:#fdeaea; --sc-lo:#c23b32; --sc-none-bg:#eef0f3; --sc-none:#707887;
-  --ring-variant:pill; --ctl-line:1.4;   /* Plex's 1.30em ink box needs more than `line-height: 1` where a run is clipped */
+  --sc-hi-bg:#dcfce7; --sc-hi:#166534; --sc-mid-bg:#fef3c7; --sc-mid:#a16207; --sc-lo-bg:#fee2e2; --sc-lo:#b91c1c; --sc-none-bg:#f0efec; --sc-none:#78716c;
+  --ring-variant:pill; --ctl-line:1.4;   /* a webfont ink box taller than 1em needs more than `line-height: 1` where a run is clipped */
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* same split as saas: --muted is too dark to read as "off" here */
-  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  /* on-state is a FILLED primary now, not an accent-soft wash */
+  --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent) 88%, var(--bg)); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  /* links are underlined text, not a hue */
+  --link-ink:var(--text); --link-ink-hover:var(--muted); --link-decoration:underline;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 .jn-v2[data-theme="cobalt"][data-appearance="dark"] {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#0f1115; --surface:#16181d; --surface-2:#1c1f26; --line:#2a2f3a; --line-soft:#22262f;
-  --line-strong:#3f4653; --edge:#3a4050; --track:#2a2f3a;
-  --text:#e8eaf0; --text-2:#b3bac7; --muted:#8d95a6; --ink-2:#d5dae3;
-  --accent:#4d79f6; --accent-ink:#ffffff; --accent-soft:#1c2b4d;
-  --good:#5fd394; --warn:#e8c46a; --warn-soft:#2b2410; --warn-line:#6a5a2e;
-  --bad:#f28b82; --bad-soft:#3c1a1a; --bad-faint:#2a1614;
-  --change-soft:#28503b; --change-bg:#14211a; --hover-soft:#1a1f29;
-  --ring-accent:rgba(77,121,246,.24); --scrim:rgba(0,0,0,.58); --recessed:#121419;
-  --stage-applied:#6fc3dd; --stage-interview:#e8c46a; --stage-offer:#5fd394;
-  --stage-rejected:#f28b82; --stage-new:#3f4653;
-  --series-new:#9c6f22;
-  --amber-bg:#231e12; --amber-line:#453c25; --amber-line-soft:#332c1c; --amber-hover:#2b2517;
-  --sand:#5a6070; --gold:#c9a35a; --funnel-low:#4a6fd0; --funnel-mid:#8fa5e2;
-  --toast-ok-bg:#123723; --toast-ok-line:#2a7d4d; --toast-ok-ink:#5fd394;
-  --toast-bad-bg:#3c1a1a; --toast-bad-line:#8a3d38; --toast-bad-ink:#f28b82;
-  --rail:#090c12; --rail-text:#8d95a6; --rail-dim:#5b6270; --rail-accent:#7f9cf5;
-  --rail-line:#1a1f2b; --rail-ink:#ffffff;
-  --serif:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
-  --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
-  --mono:'IBM Plex Mono',Consolas,'SF Mono',ui-monospace,monospace;
+  /* the canvas sits between stone-900 and -800 — deliberately not near-black */
+  --bg:#231f1c; --surface:#2e2926; --surface-2:#38322e; --line:#4a443f; --line-soft:#3a342f;
+  --line-strong:#8a837c; --edge:#5c554f; --track:#4a443f;
+  --text:#f5f5f4; --text-2:#d6d3d1; --muted:#b8b1aa; --ink-2:#e7e5e4;
+  --accent:#f5f5f4; --accent-ink:#1c1917; --accent-soft:#3a342f;
+  --good:#6fdc8c; --warn:#f2c94c; --warn-soft:#3a2f10; --warn-line:#8a6d1a;
+  --bad:#f87171; --bad-soft:#4a1f1c; --bad-faint:#3a1a18;
+  --change-soft:#2f6b45; --change-bg:#1f2e24; --hover-soft:#3a342f;
+  --ring-accent:rgba(245,245,244,.22); --scrim:rgba(0,0,0,.55); --recessed:#292420;
+  --stage-applied:#d6d3d1; --stage-interview:#f2c94c; --stage-offer:#6fdc8c;
+  --stage-rejected:#f87171; --stage-new:#8a837c;
+  --series-new:#e0a95a;
+  --amber-bg:#3a2f10; --amber-line:#8a6d1a; --amber-line-soft:#5c4a14; --amber-hover:#443614;
+  --sand:#5c554f; --gold:#f2c94c; --funnel-low:#8a837c; --funnel-mid:#d6d3d1;
+  --toast-ok-bg:#1f2e24; --toast-ok-line:#2f6b45; --toast-ok-ink:#6fdc8c;
+  --toast-bad-bg:#4a1f1c; --toast-bad-line:#8a3a36; --toast-bad-ink:#f87171;
+  /* same rail ground as light; in dark it sits one step BELOW the canvas */
+  --rail:#1c1917; --rail-text:#b8b1aa; --rail-dim:#8a837c; --rail-accent:#f5f5f4;
+  --rail-line:#2e2926; --rail-ink:#f5f5f4;
+  --serif:'Geist','Segoe UI',ui-sans-serif,system-ui,sans-serif;
+  --sans:'Geist','Segoe UI',ui-sans-serif,system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   /* geometry + state — everything a theme may now carry beyond the palette */
-  --radius-mark:3px; --radius-inline:5px; --radius-mini:5px; --radius-field:8px; --radius-row:0; --radius-cell:5px; --radius-card:9px; --radius-menu:9px; --radius-modal:9px; --radius-control:8px; --radius-rail-item:5px;
+  --radius-mark:2px; --radius-inline:3px; --radius-mini:3px; --radius-field:4px; --radius-row:0; --radius-cell:4px; --radius-card:6px; --radius-menu:6px; --radius-modal:8px; --radius-control:4px; --radius-rail-item:2px;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
-  --shadow-modal:0 16px 40px rgba(22,24,29,.18), 0 0 0 1px rgba(0,0,0,.06); --shadow-menu:0 8px 24px rgba(22,24,29,.12), 0 0 0 1px rgba(0,0,0,.06); --shadow-pop:0 8px 24px rgba(22,24,29,.14); --shadow-toast:0 8px 24px rgba(22,24,29,.14), 0 0 0 1px rgba(0,0,0,.06); --shadow-drawer:-12px 0 32px rgba(22,24,29,.14);
-  --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
+  --shadow-modal:0 16px 40px rgba(28,25,23,.18), 0 0 0 1px rgba(28,25,23,.06); --shadow-menu:0 8px 24px rgba(28,25,23,.12), 0 0 0 1px rgba(28,25,23,.06); --shadow-pop:0 8px 24px rgba(28,25,23,.14); --shadow-toast:0 8px 24px rgba(28,25,23,.14), 0 0 0 1px rgba(28,25,23,.06); --shadow-drawer:-12px 0 32px rgba(28,25,23,.14);
+  --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-weight:500; --title-weight:600; --label-weight:500; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.01em; --label-tracking-scale:1;
+  --label-face:var(--mono); --numeral-face:var(--mono);
+  --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink); --btn-danger-bg:var(--bad); --btn-danger-ink:#ffffff;
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, var(--bg)); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, var(--bg)); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
-  --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
-  --row-selected:#1a2334; --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--accent); --row-line-style:solid; --divider:1px solid var(--line);
-  --rail-active-bg:#2c3442; --rail-active-ink:#ffffff; --rail-active-mark:3px solid transparent; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 10px;
+  --input-border-hover:var(--text-2); --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
+  /* the dark selection edge is --text-2, not pure white, so it reads as structure */
+  --row-selected:var(--surface-2); --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--text-2); --row-line-style:solid; --divider:1px solid var(--line);
+  --rail-active-bg:#2e2926; --rail-active-ink:var(--rail-ink); --rail-active-mark:3px solid #d6d3d1; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 8px;
   --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
-  /* cobalt's violet dropped — see the light block */
-  --ai:var(--accent); --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
+  /* AI = the primary, no violet — see the light block */
+  --ai:#f5f5f4; --ai-ink:#1c1917; --ai-soft:var(--accent-soft);
   --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:var(--btn-primary-hover-bg); --btn-ai-pressed-bg:var(--btn-primary-pressed-bg);
-  --sc-hi-bg:#173226; --sc-hi:#5fd394; --sc-mid-bg:#2b2410; --sc-mid:#e8c46a; --sc-lo-bg:#3c1a1a; --sc-lo:#f28b82; --sc-none-bg:#1c1f26; --sc-none:#8d95a6;
-  --ring-variant:pill; --ctl-line:1.4;   /* Plex's 1.30em ink box needs more than `line-height: 1` where a run is clipped */
-  --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* same split as saas: --muted is too dark to read as "off" here */
-  --input-border-hover:var(--text-2); --pill-on-bg:var(--accent-soft); --pill-on-ink:var(--accent); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black); --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
+  --sc-hi-bg:#14361f; --sc-hi:#6fdc8c; --sc-mid-bg:#3a2f10; --sc-mid:#f2c94c; --sc-lo-bg:#4a1f1c; --sc-lo:#f87171; --sc-none-bg:#38322e; --sc-none:#b8b1aa;
+  --ring-variant:pill; --ctl-line:1.4;
+  --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);
+  --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent) 88%, var(--bg)); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
+  --link-ink:var(--text); --link-ink-hover:var(--muted); --link-decoration:underline;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 

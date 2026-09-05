@@ -697,6 +697,9 @@ export function MenuHead({ children, style }) {
   return (
     <div style={{
       padding: '4px 11px 3px', fontSize: 'var(--t-9-5)', lineHeight: '14px',
+      // --label-face is the CAPTION face, shared with Label/TableHead/Tag/SectionHead:
+      // var(--sans) everywhere but cobalt, which sets its captions in the mono.
+      fontFamily: 'var(--label-face)',
       letterSpacing: 'var(--label-tracking)', textTransform: 'var(--label-case)',
       fontWeight: 'var(--label-weight)', color: 'var(--label-ink)', ...style,
     }}>{children}</div>
@@ -818,6 +821,7 @@ export function SectionHead({
       className={cx(onToggle && hover, className)}
       style={{
         display: 'flex', alignItems: 'center', gap: card ? 9 : 6,
+        fontFamily: 'var(--label-face)',   // caption face, see MenuHead
         fontSize: 'var(--t-12-5)', lineHeight: '18px',
         ...(card ? null : { color: 'var(--section-head-ink)' }),
         ...(card ? { borderRadius: 'var(--radius-card)' } : null),
@@ -878,6 +882,7 @@ export function Tag({ tone = 'neutral', title, children, style, className }) {
     <span title={title} className={className} style={{
       flex: '0 0 auto', display: 'inline-flex', alignItems: 'center',
       borderRadius: 'var(--radius-control)', fontSize: 'var(--t-10)', lineHeight: '15px',
+      fontFamily: 'var(--label-face)',   // caption face, see MenuHead
       // Tag is tracked tighter than Label (.06em vs .13em); not one caps scale,
       // so it keeps its own token rather than folding into --label-tracking.
       padding: '2px 8px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)',
@@ -1447,6 +1452,10 @@ export function ToastCard({ kind = 'progress', children, style, className }) {
 export function Link({ href, target, rel, onClick, title, ariaLabel, children, style, className }) {
   const st = {
     color: 'var(--link-ink)', fontSize: 'var(--t-11-5)', lineHeight: '17px', fontWeight: 'var(--weight-medium)',
+    // --link-decoration is `none` by default — the same value `.jn-v2 a` already
+    // computes — and `underline` in a theme whose links carry no hue of their own
+    // (cobalt paints them --text/--muted, so the rule is the only cue left).
+    textDecoration: 'var(--link-decoration)',
     cursor: 'pointer', ...style,
   }
   const cls = cx('v2-hover-accent-text', className)
@@ -1459,7 +1468,7 @@ export function NavLink({ pad, onClick, title, ariaLabel, children, style, class
   return (
     <span {...act(onClick, false, 'link')} title={title} aria-label={ariaLabel}
       className={cx('v2-navlink', className)}
-      style={{ color: 'var(--navlink-ink)', fontSize: 'var(--t-12)', lineHeight: '18px', padding: pad, cursor: 'pointer', ...style }}>
+      style={{ color: 'var(--navlink-ink)', fontSize: 'var(--t-12)', lineHeight: '18px', textDecoration: 'var(--link-decoration)', padding: pad, cursor: 'pointer', ...style }}>
       {children}
     </span>
   )
@@ -1664,6 +1673,7 @@ export function TableHead({ height = 28, pad = '0 22px', soft, top, children, st
     <div className={className} style={{
       flex: '0 0 auto', display: 'flex', alignItems: 'center', height, padding: pad,
       background: 'var(--head-bg-page)', color: 'var(--label-ink)',
+      fontFamily: 'var(--label-face)',   // caption face, see MenuHead
       // .11em, between Label's .13 and Tag's .06 — a third value, kept as a third
       // name (--label-tracking-strip) instead of being rounded into --label-tracking
       fontSize: 'var(--t-9-5)', lineHeight: '14px',
@@ -1747,6 +1757,7 @@ const LABEL_SIZE = {
 }
 export function Label({ size = 'md', htmlFor, title, children, style, className }) {
   const st = {
+    fontFamily: 'var(--label-face)',   // caption face, see MenuHead
     letterSpacing: 'var(--label-tracking)', textTransform: 'var(--label-case)',
     fontWeight: 'var(--label-weight)', color: 'var(--label-ink)',
     ...(LABEL_SIZE[size] || LABEL_SIZE.md), ...style,
