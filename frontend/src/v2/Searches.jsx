@@ -685,7 +685,7 @@ export default function Searches() {
                     {/* ui: keep — running-state box: these 25px pills are padded 0 9, and the running "Running" pill was measured at that width; canonical 0 10 would widen it 2px. */}
                     <Pill size="xs" line="inherit" onClick={() => runNow(s)}
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
-                      style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-on-ink)' } : null) }}>
+                      style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-busy-ink)' } : null) }}>
                       {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </Pill>

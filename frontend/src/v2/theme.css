@@ -201,6 +201,25 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* A spinner sitting ON a filled control cannot be --spinner-ink: in a theme
+     whose accent IS the ink, accent-on-accent is invisible. --spinner-on-ink is
+     the colour for that case, and --pill-busy-ink the ink a RUNNING pill takes
+     while it stays on the normal ground. Both default to what those two sites
+     already computed, so only a theme that inverts its accent re-points them. */
+  --spinner-on-ink:var(--spinner-ink); --pill-busy-ink:var(--pill-on-ink);
+  /* The job row's rail cells (♥ save · ⋯ more) hover through these. They were
+     literals in the rules below; as tokens a theme whose accent-soft IS its
+     surface-2 (cobalt: both #f0efec) can give the hover a step you can see.
+     The skip cell keeps --warn-soft/--warn: amber reads in every theme. */
+  --cell-save-hover-bg:var(--accent-soft); --cell-save-hover-ink:var(--accent);
+  --cell-more-hover-bg:var(--line-soft); --cell-more-hover-ink:var(--text);
+  /* The Feed's bulk bar sits on --rail and its Skip/Score/Tailor controls carry a
+     1px --on-rail-line border. The Save button is a primary Button and has no
+     border at all, which is fine while --accent differs from --rail — and is
+     invisible in a theme where they are the SAME near-black. This is that
+     button's shadow: --btn-shadow here, so nothing changes, and a theme that
+     needs it prepends an inset ring (no layout cost, unlike a border). */
+  --btn-on-rail-shadow:var(--btn-shadow);
   /* The rail is dark in every appearance, so the content ring (--focus-ring on
      a light ground) is invisible there; the rail's own accent is the ring. */
   --rail-focus:var(--rail-accent);
@@ -519,6 +538,25 @@
   --hover-wash-bg:var(--surface-2); --hover-wash-ink:var(--text);
   --hover-bad-bg:var(--bad-soft); --hover-bad-ink:var(--bad);
   --spinner-ink:var(--accent); --focus-ring:var(--ring-accent);
+  /* A spinner sitting ON a filled control cannot be --spinner-ink: in a theme
+     whose accent IS the ink, accent-on-accent is invisible. --spinner-on-ink is
+     the colour for that case, and --pill-busy-ink the ink a RUNNING pill takes
+     while it stays on the normal ground. Both default to what those two sites
+     already computed, so only a theme that inverts its accent re-points them. */
+  --spinner-on-ink:var(--spinner-ink); --pill-busy-ink:var(--pill-on-ink);
+  /* The job row's rail cells (♥ save · ⋯ more) hover through these. They were
+     literals in the rules below; as tokens a theme whose accent-soft IS its
+     surface-2 (cobalt: both #f0efec) can give the hover a step you can see.
+     The skip cell keeps --warn-soft/--warn: amber reads in every theme. */
+  --cell-save-hover-bg:var(--accent-soft); --cell-save-hover-ink:var(--accent);
+  --cell-more-hover-bg:var(--line-soft); --cell-more-hover-ink:var(--text);
+  /* The Feed's bulk bar sits on --rail and its Skip/Score/Tailor controls carry a
+     1px --on-rail-line border. The Save button is a primary Button and has no
+     border at all, which is fine while --accent differs from --rail — and is
+     invisible in a theme where they are the SAME near-black. This is that
+     button's shadow: --btn-shadow here, so nothing changes, and a theme that
+     needs it prepends an inset ring (no layout cost, unlike a border). */
+  --btn-on-rail-shadow:var(--btn-shadow);
   /* The rail is dark in every appearance, so the content ring (--focus-ring on
      a light ground) is invisible there; the rail's own accent is the ring. */
   --rail-focus:var(--rail-accent);
@@ -993,6 +1031,19 @@
      --seg-dot-on is written as var(--text) to say what it means: this theme's
      accent IS the ink. Both dot values already resolved to exactly this. */
   --chip-ink-hover:var(--accent); --card-border-hover:var(--line-strong);
+  /* the accent IS the ink here, so a busy control has to invert: the spinner on
+     a filled on-pill takes the pill's own ink, and a running pill that keeps the
+     normal ground takes the accent rather than the (inverted) on-ink. */
+  --spinner-on-ink:var(--accent-ink); --pill-busy-ink:var(--accent);
+  /* --accent-soft and --line-soft are both #f0efec here, one step off --surface,
+     so the rail cells' hover was a step you could measure and not see. Two steps
+     instead: --line is the plate, --text the ink. */
+  --cell-save-hover-bg:var(--line); --cell-save-hover-ink:var(--text);
+  /* --rail and --accent are the same near-black here, so the bulk bar's Save
+     button had a 1.0:1 fill against the bar it sits on. The same white overlay
+     its siblings use as a border, as an inset ring: 4.08:1 on the bar. */
+  --btn-on-rail-shadow:inset 0 0 0 1px var(--on-rail-line), var(--btn-shadow);
+  --cell-more-hover-bg:var(--line); --cell-more-hover-ink:var(--text);
   --seg-dot-on:var(--text); --seg-dot-off:var(--line-strong);
   /* Geist's ink box is 1.30em against Newsreader's 1.0em in the same pinned 30px
      line box, which puts the KPI baseline ~2.3px lower; whole pixels. */
@@ -1075,6 +1126,19 @@
      --seg-dot-on is written as var(--text) to say what it means: this theme's
      accent IS the ink. Both dot values already resolved to exactly this. */
   --chip-ink-hover:var(--accent); --card-border-hover:var(--line-strong);
+  /* the accent IS the ink here, so a busy control has to invert: the spinner on
+     a filled on-pill takes the pill's own ink, and a running pill that keeps the
+     normal ground takes the accent rather than the (inverted) on-ink. */
+  --spinner-on-ink:var(--accent-ink); --pill-busy-ink:var(--accent);
+  /* --accent-soft and --line-soft are both #f0efec here, one step off --surface,
+     so the rail cells' hover was a step you could measure and not see. Two steps
+     instead: --line is the plate, --text the ink. */
+  --cell-save-hover-bg:var(--line); --cell-save-hover-ink:var(--text);
+  /* --rail and --accent are the same near-black here, so the bulk bar's Save
+     button had a 1.0:1 fill against the bar it sits on. The same white overlay
+     its siblings use as a border, as an inset ring: 4.08:1 on the bar. */
+  --btn-on-rail-shadow:inset 0 0 0 1px var(--on-rail-line), var(--btn-shadow);
+  --cell-more-hover-bg:var(--line); --cell-more-hover-ink:var(--text);
   --seg-dot-on:var(--text); --seg-dot-off:var(--line-strong);
   /* Geist's ink box is 1.30em against Newsreader's 1.0em in the same pinned 30px
      line box, which puts the KPI baseline ~2.3px lower; whole pixels. */
@@ -1396,8 +1460,8 @@
    rule above must not wipe it out when the pointer crosses the selected row. */
 .v2-row[aria-current="true"]:hover { background:var(--row-selected) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.v2-rail-copy:hover { background:var(--line-soft) !important; color:var(--text) !important; }   /* the cells set inline colour */
-.v2-rail-save:hover { background:var(--accent-soft) !important; color:var(--accent) !important; }
+.v2-rail-copy:hover { background:var(--cell-more-hover-bg) !important; color:var(--cell-more-hover-ink) !important; }   /* the cells set inline colour */
+.v2-rail-save:hover { background:var(--cell-save-hover-bg) !important; color:var(--cell-save-hover-ink) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
 .v2-hover-accent:hover { background:var(--hover-wash-bg) !important; color:var(--hover-wash-ink) !important; }   /* callers set inline colour */
 /* Feed detail's grab-line: an invisible 12px hit area over the pane top; the

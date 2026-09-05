@@ -998,7 +998,10 @@ export default function V2JobFeed() {
             <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', zIndex: 25, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px 7px 14px', background: 'var(--rail)', borderRadius: 'var(--radius-control)', boxShadow: 'var(--shadow-pop)' }}>
               <span style={{ fontSize: 12, color: 'var(--rail-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{checked.size} selected</span>
               <div style={{ width: 1, height: 16, background: 'var(--on-rail-sep)', margin: '0 3px' }} />
-              <Button size="xs" onClick={() => bulkStatus('saved')}>Save</Button>
+              {/* the one filled control on the bulk bar: --btn-on-rail-shadow is
+                  --btn-shadow everywhere but a theme whose accent IS its rail colour,
+                  which prepends an --on-rail-line ring so the button has an edge. */}
+              <Button size="xs" onClick={() => bulkStatus('saved')} style={{ boxShadow: 'var(--btn-on-rail-shadow)' }}>Save</Button>
               {/* ui: keep — RAIL_BTN controls (--rail-ink on --on-rail-line); the Pill tokens are for light surfaces */}
               <div onClick={() => bulkStatus('skip')} className="v2-bdc v2-ctl" style={RAIL_BTN}>Skip</div>
               {/* ui: keep — RAIL_BTN, as above */}

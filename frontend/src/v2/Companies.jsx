@@ -524,7 +524,7 @@ export default function Companies() {
                 <Pill size="xs" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
                   style={testingId === c.id ? { opacity: 1 } : undefined}
                   title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'}>
-                  {testingId === c.id ? <Spinner /> : <FlaskGlyph size={11} />}{testingId === c.id ? 'Testing…' : 'Test'}
+                  {testingId === c.id ? <Spinner color="var(--spinner-on-ink)" /> : <FlaskGlyph size={11} />}{testingId === c.id ? 'Testing…' : 'Test'}
                 </Pill>
                 <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
                   title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>
