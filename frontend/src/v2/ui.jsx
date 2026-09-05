@@ -83,6 +83,19 @@ function useThemeVar(name, fallback) {
   return val || fallback
 }
 
+// ── the bevel's padding compensation ────────────────────────────────────────
+// A bevelled theme (win98) paints all four of its tones inside the box as one
+// inset box-shadow stack with `border: 0`, so the two mixed corner pixels land
+// in a single tone instead of being mitred between two border sides. That costs
+// the 1px border every carrier used to reserve, so each carrier hands the two
+// pixels back as padding: `--bevel-pad` is `1px` there and `0px` in every other
+// theme, where `calc(18px + 0px)` computes to exactly `18px` — no pixel moves.
+// Only the `v2-raised` / `v2-inset` carriers use these; fixed-size boxes
+// (IconButton, the titlebar glyphs) need no compensation at all, since with
+// border-box a removed border never changes an explicit width or height.
+const BPAD = 'var(--bevel-pad)'
+const bpad = (v) => `calc(${v} + var(--bevel-pad))`
+
 // ── Spinner ─────────────────────────────────────────────────────────────────
 // `color` lets a button spin in its own ink (currentColor) without a second
 // token. `weight="bold"` is the 2px band used at larger diameters (e.g. the
@@ -101,9 +114,9 @@ export function Spinner({ size = 9, weight, color, style }) {
 
 // ── Button ──────────────────────────────────────────────────────────────────
 const BTN_SIZE = {
-  md: { height: 36, fontSize: 'var(--t-13-5)', padding: '0 18px' },
-  sm: { height: 33, fontSize: 'var(--t-13)', padding: '0 15px' },
-  xs: { height: 28, fontSize: 'var(--t-12-5)', padding: '0 14px' },
+  md: { height: 36, fontSize: 'var(--t-13-5)', padding: `${BPAD} ${bpad('18px')}` },
+  sm: { height: 33, fontSize: 'var(--t-13)', padding: `${BPAD} ${bpad('15px')}` },
+  xs: { height: 28, fontSize: 'var(--t-12-5)', padding: `${BPAD} ${bpad('14px')}` },
 }
 // `state` is the class the theme's own hover/pressed rules hang on
 // (theme.css: `.v2-btn-primary:hover` → --btn-primary-hover-bg, `:active` →
@@ -208,9 +221,9 @@ export function Button({
 // same tokens — a variant rather than a separate component, since every site
 // already needs `on` or `disabled`.
 const PILL_SIZE = {
-  md: { height: 31, fontSize: 'var(--t-12-5)', padding: '0 15px' },
-  sm: { height: 26, fontSize: 'var(--t-11-5)', padding: '0 13px' },
-  xs: { height: 25, fontSize: 'var(--t-11-5)', padding: '0 10px', gap: 5 },
+  md: { height: 31, fontSize: 'var(--t-12-5)', padding: `${BPAD} ${bpad('15px')}` },
+  sm: { height: 26, fontSize: 'var(--t-11-5)', padding: `${BPAD} ${bpad('13px')}` },
+  xs: { height: 25, fontSize: 'var(--t-11-5)', padding: `${BPAD} ${bpad('10px')}`, gap: 5 },
 }
 // `hover` names the class the theme's rule hangs on. md/sm use the role's own
 // `v2-bd` (accent border); `xs` uses `v2-bdc` (border + ink) — D-13 made that the
@@ -318,7 +331,7 @@ export function Input({ value, defaultValue, onChange, placeholder, type = 'text
       aria-invalid={invalid ? 'true' : undefined}
       aria-label={ariaLabel} title={title} className={cx('v2-inset', className)}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
-      style={{ ...FIELD, height: 32, padding: '0 9px', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
+      style={{ ...FIELD, height: 32, padding: `${BPAD} ${bpad('9px')}`, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
       {...rest} />
   )
 }
@@ -331,7 +344,7 @@ export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3,
       aria-label={ariaLabel} title={title} className={cx('v2-inset', className)}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
       style={{
-        ...FIELD, padding: '5.5px 9px', minHeight: rows * 19 + 13, lineHeight: '19px', resize: 'vertical',
+        ...FIELD, padding: `${bpad('5.5px')} ${bpad('9px')}`, minHeight: rows * 19 + 13, lineHeight: '19px', resize: 'vertical',
         fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style,
       }}
       {...rest} />
@@ -353,7 +366,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-13)', outline: 'none',
     }
     : {
-      width: '100%', height: 32, padding: '0 12px 0 29px', border: 'var(--bw-control) solid var(--input-border)',
+      width: '100%', height: 32, padding: `${BPAD} ${bpad('12px')} ${BPAD} ${bpad('29px')}`, border: 'var(--bw-control) solid var(--input-border)',
       borderRadius: 'var(--radius-control)', background: 'var(--search-bg)', boxShadow: 'var(--field-shadow)',
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', outline: 'none',
     }
@@ -414,7 +427,7 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
       <div {...act(toggle, disabled)} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-disabled={disabled || undefined}
         aria-invalid={invalid ? 'true' : undefined} className="v2-inset v2-select-trigger"
         style={{
-          flex: 1, minWidth: 0, height: 32, padding: '0 10px',
+          flex: 1, minWidth: 0, height: 32, padding: `${BPAD} ${bpad('10px')}`,
           border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
           boxShadow: 'var(--field-shadow)',
           // trigger is a field, so it takes --input-bg like Input/Textarea —
@@ -580,7 +593,10 @@ export function FooterRow({
 }) {
   const El = as === 'footer' ? 'footer' : 'div'
   return (
-    <El id={id} className={className} {...rest} style={{
+    // `v2-footerrow` is the etch hook: 98 draws a highlight line hard under the
+    // shadow line of a divider, which no single border can spell. theme.css adds
+    // it as an inset box-shadow in win98 only; inert everywhere else.
+    <El id={id} className={cx('v2-footerrow', className)} {...rest} style={{
       padding: pad || FOOT_PAD[variant] || FOOT_PAD.modal,
       borderTop: soft ? 'var(--bw-hair) solid var(--head-line-soft)' : 'var(--divider)',
       display: 'flex', alignItems: align, gap,
@@ -634,7 +650,7 @@ export function DashedAdd({ big, disabled, onClick, title, ariaLabel, children, 
       style={{
         height: big ? 32 : 28, border: '1px dashed var(--dashadd-border)',
         borderRadius: 'var(--radius-field)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        fontFamily: 'var(--font-body)', fontSize: big ? 'var(--t-12)' : 'var(--t-11-5)', fontWeight: big ? 500 : 400,
+        fontFamily: 'var(--font-body)', fontSize: big ? 'var(--t-12)' : 'var(--t-11-5)', fontWeight: big ? 'var(--weight-medium)' : 400,
         color: 'var(--dashadd-ink)', opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer', ...style,
       }}>{children}</div>
   )
@@ -667,7 +683,7 @@ export function Menu({ role = 'menu', onDismiss, backdropZ, children, ariaLabel,
   const panel = (
     <div role={role} aria-label={ariaLabel} className={cx('v2-menu', 'v2-raised', className)} style={{
       background: 'var(--menu-bg)', border: 'var(--bw-panel) solid var(--menu-border)',
-      borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: 5,
+      borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: bpad('5px'),
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
     }}>{children}</div>
   )
@@ -704,7 +720,7 @@ export function MenuItem({
       display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px',
       borderRadius: 'var(--radius-field)', fontSize: 'var(--t-12-5)',
       color: danger ? 'var(--menu-item-danger-ink)' : selected ? 'var(--menu-item-on-ink)' : 'var(--menu-item-ink)',
-      ...(selected ? { background: 'var(--menu-item-on-bg)', fontWeight: 500 } : null),
+      ...(selected ? { background: 'var(--menu-item-on-bg)', fontWeight: 'var(--weight-medium)' } : null),
       ...(sep ? { borderTop: '1px solid var(--menu-item-sep)' } : null),
       opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer', ...style,
     },
@@ -796,7 +812,7 @@ export function Chip({ on, disabled, onClick, title, ariaLabel, children, style,
       className={cx('v2-ctl', 'v2-raised', !disabled && onClick && 'v2-chip', className)}
       style={{
         flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', gap: 6,
-        height: 26, padding: '0 10px', borderRadius: 'var(--radius-control)',
+        height: 26, padding: `${BPAD} ${bpad('10px')}`, borderRadius: 'var(--radius-control)',
         background: on ? 'var(--chip-on-bg)' : 'var(--chip-bg)',
         color: on ? 'var(--chip-on-ink)' : 'var(--chip-ink)',
         border: `var(--bw-control) solid ${on ? 'var(--chip-on-border)' : 'var(--chip-border)'}`,
@@ -941,8 +957,46 @@ function Indicator({ round, checked, indeterminate, size }) {
     }}>{indeterminate ? '\u2013' : checked ? (round ? '\u25cf' : '\u2713') : ''}</span>
   )
 }
+// \u2500\u2500 the bevelled indicator (--check-style: win98) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// A theme may replace this DRAWING the way --ring-variant replaces the score
+// mark: 98 has no filled accent square. The box is a sunken client-white well
+// on the shared inset bevel (`v2-inset`), and the mark is a 7x7 bitmap tick
+// drawn as 1x1 rects at crispEdges so it stays a pixel figure at any zoom.
+// Sizes are 98's own: 13px for the tick box, 12px for the radio (round, on the
+// same inset recipe \u2014 the four-quadrant arcs are what 98 drew). Disabled fills
+// the well with the button face and greys the mark, exactly as 98 did.
+// `--bevel-pad` is on the box for the same reason every other carrier has it:
+// the bevel's `border: 0` costs a pixel of inner room.
+// [x, y, width] runs of the 7x7 tick, transcribed from the bevel mock's path:
+//   ......X / .....XX / ....XX. / XX.XX.. / .XXX... / ..X.... / .......
+const TICK_RUNS = [[6, 0, 1], [5, 1, 2], [4, 2, 2], [0, 3, 2], [3, 3, 2], [1, 4, 3], [2, 5, 1]]
+function Indicator98({ round, checked, indeterminate, disabled }) {
+  const px = round ? 12 : 13
+  const on = checked || indeterminate
+  const ink = disabled ? 'var(--disabled-ink)' : 'var(--text)'
+  return (
+    <span aria-hidden="true" className="v2-inset" style={{
+      flex: `0 0 ${px}px`, width: px, height: px, padding: BPAD,
+      borderRadius: round ? '50%' : 'var(--radius-mark)',
+      background: disabled ? 'var(--surface)' : 'var(--surface-2)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {!on ? null : round ? (
+        <span style={{ width: 4, height: 4, background: ink }} />
+      ) : (
+        <svg width="7" height="7" viewBox="0 0 7 7" shapeRendering="crispEdges"
+          aria-hidden="true" style={{ display: 'block' }}>
+          {indeterminate
+            ? <rect x="0" y="3" width="7" height="1" fill={ink} />
+            : TICK_RUNS.map(([x, y, w]) => <rect key={`${x}-${y}`} x={x} y={y} width={w} height="1" fill={ink} />)}
+        </svg>
+      )}
+    </span>
+  )
+}
 function Ticker({ round, checked, indeterminate, onChange, label, title, ariaLabel, size = 'sm', disabled, style, className }) {
   const fire = onChange ? () => onChange(!checked) : undefined
+  const style98 = useThemeVar('--check-style', 'default') === 'win98'
   return (
     // A non-interactive indicator (a tick riding in a MenuItem's icon gutter,
     // where the row owns the click) still needs its role — act() hands back an
@@ -956,7 +1010,9 @@ function Ticker({ round, checked, indeterminate, onChange, label, title, ariaLab
         fontSize: 'var(--t-12)', color: 'var(--check-label-ink)',
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
       }}>
-      <Indicator round={round} checked={checked} indeterminate={indeterminate} size={size} />
+      {style98
+        ? <Indicator98 round={round} checked={checked} indeterminate={indeterminate} disabled={disabled} />
+        : <Indicator round={round} checked={checked} indeterminate={indeterminate} size={size} />}
       {label ? <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span> : null}
     </span>
   )
@@ -1066,7 +1122,9 @@ export function Segmented({
             style={{
               flex: grow && !inset ? 1 : '0 0 auto', minWidth: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              height: z.height, padding: inset ? '0 10px' : undefined,
+              // a non-inset cell carries the bevel, so it pays the bevel's
+              // padding; an `inset` cell is borderless inside one shared frame
+              height: z.height, padding: inset ? '0 10px' : BPAD,
               borderRadius: inset ? 'var(--radius-control)' : 'var(--radius-cell)',
               border: inset ? undefined : `var(--bw-control) solid ${on ? t.border : 'var(--seg-border)'}`,
               background: on ? t.bg : (inset ? 'transparent' : 'var(--seg-bg)'),
@@ -1074,7 +1132,7 @@ export function Segmented({
               // the picked cell is the only one a theme may lift (`none` here)
               ...(on && !inset ? { boxShadow: 'var(--seg-on-shadow)' } : null),
               fontFamily: 'var(--font-body)', fontSize: z.fontSize, lineHeight: 1,
-              fontWeight: on && !inset ? 600 : 400, whiteSpace: 'nowrap',
+              fontWeight: on && !inset ? 'var(--weight-semibold)' : 400, whiteSpace: 'nowrap',
               opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
             }}>
             {o.dotColor ? <Dot style={{ background: o.dotColor }} /> : null}
@@ -1166,14 +1224,14 @@ function ScorePill({ value, busy }) {   // the tile paints from --sc-*, not the 
       flex: '0 0 40px', width: 40, height: 44, borderRadius: 'var(--radius-field)',
       background: `var(--sc-${busy ? 'none' : k}-bg)`, color: `var(--sc-${k})`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 'var(--t-14)',
+      fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--t-14)',
       lineHeight: 1, letterSpacing: '-.01em',
     }}>
       {busy ? <Spinner size={12} /> : (
         <>
           {value == null ? '—' : value}
           <span style={{
-            fontFamily: 'var(--font-body)', fontSize: 'var(--t-9)', fontWeight: 600,
+            fontFamily: 'var(--font-body)', fontSize: 'var(--t-9)', fontWeight: 'var(--weight-semibold)',
             letterSpacing: '.08em', textTransform: 'uppercase', opacity: 0.7, marginTop: 2,
           }}>fit</span>
         </>
@@ -1190,7 +1248,7 @@ function ScoreBar({ value, busy, ink }) {
       {busy ? <Spinner size={12} /> : (
         <>
           <span style={{
-            fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 'var(--t-16)',
+            fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--t-16)',
             lineHeight: 1, color: ink, fontVariantNumeric: 'tabular-nums',
           }}>{value == null ? '—' : value}</span>
           <Meter value={(value || 0) / 100} tone={ink} height={3} radius="var(--radius-mark)" style={{ width: 32 }} />
@@ -1204,7 +1262,10 @@ function ScoreAscii({ value, busy, ink }) {
   return (
     <span style={{
       flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 2,
-      fontFamily: 'var(--font-mono)', lineHeight: 1,
+      // --font-ascii, not --font-mono: the block/shade run needs a real fixed
+      // advance, and win98 re-points --mono at its pixel sans so every other
+      // numeral leaves the mono face (round-5 handover §4). Base value is --mono.
+      fontFamily: 'var(--font-ascii)', lineHeight: 1,
       color: busy ? 'var(--ring-neutral-ink)' : ink,
     }}>
       {busy ? <span style={{ fontSize: 'var(--t-9)' }}>[..........]</span> : (
@@ -1293,7 +1354,7 @@ export function ToastCard({ kind = 'progress', children, style, className }) {
   const k = TOAST_KIND[kind] || TOAST_KIND.progress
   return (
     <div className={cx('v2-raised', className)} style={{
-      display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: '10px 13px',
+      display: 'flex', alignItems: 'center', gap: 10, maxWidth: 380, padding: `${bpad('10px')} ${bpad('13px')}`,
       background: k.bg, border: `var(--bw-panel) solid ${k.line}`, borderRadius: 'var(--radius-card)', color: k.ink,
       boxShadow: 'var(--shadow-toast)', ...style,
     }}>{children}</div>
@@ -1308,7 +1369,7 @@ export function ToastCard({ kind = 'progress', children, style, className }) {
 // (Settings' colophon, the Companies test-row ↗) without leaving the primitive.
 export function Link({ href, target, rel, onClick, title, ariaLabel, children, style, className }) {
   const st = {
-    color: 'var(--link-ink)', fontSize: 'var(--t-11-5)', lineHeight: '17px', fontWeight: 500,
+    color: 'var(--link-ink)', fontSize: 'var(--t-11-5)', lineHeight: '17px', fontWeight: 'var(--weight-medium)',
     cursor: 'pointer', ...style,
   }
   const cls = cx('v2-hover-accent-text', className)
@@ -1398,8 +1459,10 @@ export function ModalPanel({
       <Panel ref={panel} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
         onSubmit={onSubmit} onClick={(e) => e.stopPropagation()} className={cx('v2-raised', className)}
         style={{
+          // `padding` is 0 in every theme but the bevelled one, where it is the
+          // 1px the bevel's `border: 0` gave up (--bevel-pad)
           width, background: 'var(--modal-bg)', border: 'var(--bw-panel) solid var(--modal-border)',
-          borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)',
+          borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)', padding: BPAD,
           display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
         }}>
         {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar}</HeaderRow>}
@@ -1498,7 +1561,10 @@ export function HeaderRow({
     )
   }
   return (
-    <El id={id} className={className} {...rest} style={{
+    // `v2-footerrow`'s twin, the other way up: the etch's highlight line goes
+    // BELOW this row's rule, so theme.css hangs an outer shadow on it in win98.
+    // A head with `line="none"` has no rule to etch, so it does not take the hook.
+    <El id={id} className={cx(tone !== 'none' && 'v2-headerrow', className)} {...rest} style={{
       flex: '0 0 auto', padding: pad || HEAD_PAD[variant] || HEAD_PAD.modal,
       ...(tone === 'none' ? null : { borderBottom: `1px solid ${HEAD_LINE[tone] || HEAD_LINE.line}` }),
       display: 'flex', alignItems: align, gap: 12,
@@ -1683,7 +1749,7 @@ export function Heading({ size, strong, id, title, children, style, className })
   // `strong` keeps its OWN weight/tracking (500/600 at -.01/-.015em, per size);
   // --title-weight/--display-tracking belong to the 400-weight plain scale only.
   const look = strong
-    ? { fontWeight: strong === 600 ? 600 : 500, ...(HEADING_STRONG[size ?? 15.5] || HEADING_STRONG[15.5]) }
+    ? { fontWeight: strong === 600 ? 'var(--weight-semibold)' : 'var(--weight-medium)', ...(HEADING_STRONG[size ?? 15.5] || HEADING_STRONG[15.5]) }
     : { fontWeight: 'var(--title-weight)', letterSpacing: 'var(--display-tracking)', ...(HEADING_SIZE[size ?? 18] || HEADING_SIZE[18]) }
   return (
     <span id={id} title={title} className={className} style={{
@@ -1747,7 +1813,7 @@ export function ChoiceCard({ on, disabled, label, hint, onClick, title, ariaLabe
         opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer', ...style,
       }}>
       <span style={{
-        fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 500,
+        fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 'var(--weight-medium)',
         color: on ? 'var(--choice-on-ink)' : 'var(--choice-ink)',
       }}>{label}</span>
       {hint != null && hint !== false && hint !== '' && (
@@ -1786,7 +1852,7 @@ export function ChoiceRow({
         {children === undefined ? (
           <>
             <span style={{
-              fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 500,
+              fontSize: 'var(--t-12-5)', lineHeight: '18px', fontWeight: 'var(--weight-medium)',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>{label}</span>
             {sub != null && sub !== false && sub !== '' && (

@@ -1,6 +1,7 @@
 /* v2 redesign theme tokens, scoped to .jn-v2. Every root carries `data-appearance`
    (light|dark) and `data-theme` (default|board|cobalt|saas|win98 in the picker;
    tone1-3|editorial|alt still valid, hidden) from theme.js; <html> holds only a boot copy so the page ground never flashes. */
+
 .jn-v2 {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;  /* ScoreRing optical centring for the default fonts */
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
@@ -68,6 +69,14 @@
      literal. Repeated verbatim below so a theme can re-point one per mode. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
+  /* The ScoreRing's `ascii` mark needs a fixed-advance face even where --mono is
+     NOT one: win98 re-points --mono at its pixel sans (numerals off mono) and
+     keeps a Lucida Console stack here for the bar drawing alone. */
+  --font-ascii:var(--mono);
+  /* The two weights primitives used to write as bare 500/600 literals. A pixel
+     face carries 400 and 700 only, so win98 maps them down/up; every other theme
+     keeps the literals, so nothing about the computed weight moves. */
+  --weight-medium:500; --weight-semibold:600;
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
@@ -215,6 +224,12 @@
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  /* A bevelled theme paints all four tones inside the box (box-shadow, border:0)
+     so the two mixed corner pixels land in one tone instead of a mitre. The two
+     border pixels it gives up come back as padding: every bevel carrier writes
+     `calc(<its own padding> + var(--bevel-pad))`, which is an exact no-op at 0px. */
+  --bevel-pad:0px;
+  --check-style:default;   /* which Indicator drawing Check/Radio render (see --ring-variant) */
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
   --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
@@ -290,6 +305,14 @@
      literal. Repeated verbatim below so a theme can re-point one per mode. */
   /* type */
   --font-body:var(--sans); --font-display:var(--serif); --font-mono:var(--mono);
+  /* The ScoreRing's `ascii` mark needs a fixed-advance face even where --mono is
+     NOT one: win98 re-points --mono at its pixel sans (numerals off mono) and
+     keeps a Lucida Console stack here for the bar drawing alone. */
+  --font-ascii:var(--mono);
+  /* The two weights primitives used to write as bare 500/600 literals. A pixel
+     face carries 400 and 700 only, so win98 maps them down/up; every other theme
+     keeps the literals, so nothing about the computed weight moves. */
+  --weight-medium:500; --weight-semibold:600;
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px;
   --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px;
   --t-16:16px; --t-17:17px;
@@ -437,6 +460,12 @@
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  /* A bevelled theme paints all four tones inside the box (box-shadow, border:0)
+     so the two mixed corner pixels land in one tone instead of a mitre. The two
+     border pixels it gives up come back as padding: every bevel carrier writes
+     `calc(<its own padding> + var(--bevel-pad))`, which is an exact no-op at 0px. */
+  --bevel-pad:0px;
+  --check-style:default;   /* which Indicator drawing Check/Radio render (see --ring-variant) */
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
   --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
@@ -898,111 +927,105 @@
   --title-bar:none; --title-bar-ink:var(--heading-ink);
 }
 
-/* win98 — surface is DARKER than surface-2 (window chrome #c0c0c0, client area
-   white). --bg is a DESKTOP colour, so --head-bg-page/--chip-bg re-point to --surface; the rail is LIGHT, so the white-alpha rail overlays all but vanish. */
-/* --good and --warn are nudged darker from the board's VGA values to clear 3:1
-   as ink on --surface. */
+/* win98 — round-5 rework (Design "Win98 review/REWORK.md", 2026-09-05).
+   --bg is now the WINDOW CHROME grey, not the desktop teal: content used to sit
+   straight on the desktop, which was the single biggest colour fault. The
+   desktop gutter (REWORK W-A) was skipped, so win98 reads as one maximised
+   window. --head-bg-page/--chip-bg still re-point to --surface (they did so
+   because --bg was a desktop colour; now they simply agree with it).
+   Dark = teal-tinted chrome on #3e4c4c with VGA teal in the Hilight/accent
+   roles — decision (A) of the handover, not the old navy desktop.
+   Bevels: the four 98.css tones now live in ONE box-shadow stack with border:0,
+   so the two mixed corner pixels land in a single tone instead of a mitre; the
+   two border pixels that buys back are returned as --bevel-pad (see the base
+   block and every `calc(… + var(--bevel-pad))` in ui.jsx). */
 .jn-v2[data-theme="win98"] {
-  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#008080; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
-  --line-strong:#404040; --edge:#404040; --track:#808080;
-  --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000;
-  --accent:#000080; --accent-ink:#ffffff; --accent-soft:#c0c0c0;
-  --good:#006000; --warn:#575700; --warn-soft:#ffffcc; --warn-line:#808000;
-  --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0;
-  --change-soft:#008000; --change-bg:#e4ffe4; --hover-soft:#d4d4d4;
-  --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#b4b4b4;
-  --stage-applied:#000080; --stage-interview:#575700; --stage-offer:#006000;
-  --stage-rejected:#800000; --stage-new:#808080;
-  --series-new:#8f4a00;
-  --amber-bg:#ffffe4; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc;
-  --sand:#a0a0a0; --gold:#808000; --funnel-low:#8080c0; --funnel-mid:#000080;
-  --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#006000;
-  --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000;
-  --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080;
-  --rail-line:#808080; --rail-ink:#000000;
-  --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
-  --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
-  --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state — everything a theme may now carry beyond the palette */
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#c0c0c0; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#dfdfdf; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#808080; --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000; --accent:#000080; --accent-ink:#ffffff; --accent-soft:#dfdfdf; --good:#005a00; --warn:#555500; --warn-soft:#ffffe1; --warn-line:#808000; --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0; --change-soft:#008000; --change-bg:#e4ffe4; --hover-soft:#dfdfdf; --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#b5b5b5; --stage-applied:#000080; --stage-interview:#555500; --stage-offer:#005a00; --stage-rejected:#800000; --stage-new:#808080; --series-new:#8f4a00; --amber-bg:#ffffe1; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc; --sand:#b5b5b5; --gold:#808000; --funnel-low:#1084d0; --funnel-mid:#000080; --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#005a00; --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000; --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080; --rail-line:#808080; --rail-ink:#000000;
+  /* 98.css's own bitmap face, shipped under /fonts/98 (see the @font-face pair
+     at the foot of this file). Tahoma is the fallback if it fails to load.
+     --mono is the SANS stack on purpose: §4 of the handover takes every numeral
+     (salary, counts, dates, ages) off the mono face, and Mono/--font-mono is the
+     one name those runs read. The ScoreRing's ascii bar keeps a real fixed
+     advance through --font-ascii. */
+  --serif:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --sans:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
+  --font-ascii:'Lucida Console','Courier New',Consolas,monospace;
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
-  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
-  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;   /* 98 had no drop shadows at all */
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
-  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  /* whole pixels, not the old half-px steps: a bitmap face has no fractional stem */
+  --t-7-5:7px; --t-9:8px; --t-9-5:9px; --t-10:9px; --t-10-5:10px; --t-11:10px; --t-11-5:11px; --t-12:11px; --t-12-5:12px; --t-13:12px; --t-13-5:12px; --t-14:13px; --t-15:14px; --t-15-5:14px; --t-16:15px; --t-17:16px; --t-18:17px; --t-19:17px; --t-22:20px; --t-30:28px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  --weight-medium:400; --weight-semibold:700;   /* the pixel face has 400 and 700 only */
+  /* the DEFAULT PUSH BUTTON: grey face, bold label, and the 1px window-frame
+     ring the theme-named rule at the foot of this file appends to the bevel.
+     Danger is the same face with maroon ink. */
+  --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
   --input-border-error:var(--bad); --input-ring-error:none;
-  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
   --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
-  --focus-shadow:none; --focus-outline:1px dotted #000000;   /* the generated file says `transparent`, which is not a valid box-shadow on its own; `none` is the same intent, valid */
-  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --focus-shadow:none; --focus-ring:none; --focus-outline:1px dotted #000000;
+  /* Corner-pixel bevel: all four 98.css tones in one inset stack, border 0.
+     Outer ring = highlight / window-frame, inner ring = button-face /
+     button-shadow; the first layer paints on top, so the dark tone owns both
+     mixed corners exactly as 98.css draws them. --bevel-*-border/-color stay in
+     the contract (the rule writes all three) but now only zero the border. */
+  --bevel-raised-border:0; --bevel-raised-color:transparent;
+  --bevel-raised-shadow:inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #ffffff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+  --bevel-inset-border:0; --bevel-inset-color:transparent;
+  --bevel-inset-shadow:inset -1px -1px 0 #ffffff, inset 1px 1px 0 #808080, inset -2px -2px 0 #dfdfdf, inset 2px 2px 0 #0a0a0a;
+  --bevel-pad:1px;   /* the two border pixels the stack gives up, handed back as padding */
+  --check-style:win98;   /* 13px sunken tick box / 12px round radio, drawn in ui.jsx */
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  /* `none` is not a valid border-colour, so field-hover would fall back to
-     currentColor (a flat black box) — use the inset bevel's own colour instead. */
+  /* the bevel IS the rest border here, so field-hover is a genuine no-op (D-06) */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
-  /* 98.css's --link-blue. Falling through to --accent drew links in the same
-     navy as the title bar and the selection fill, so a link read as chrome. */
-  --link-ink:#0000ff; --link-ink-hover:#000080;
-  /* No bevel is expressible through scrollbar-color, so the bar keeps the
-     chrome's two greys (button-shadow thumb on button-face trough) and stays slim. */
-  --scroll-thumb:#808080; --scroll-track:#c0c0c0;
+  --link-ink:#0000ff; --link-ink-hover:#800080;   /* 98's link-blue and its visited purple */
+  /* Still slim: no bevel is expressible through scrollbar-color. The webkit path
+     gets the dithered trough + bevelled thumb in the rules at the foot of this file. */
+  --scroll-thumb:#808080; --scroll-track:#dfdfdf;
   --title-bar:linear-gradient(90deg,#000080,#1084d0); --title-bar-ink:#ffffff;
-  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);
 }
 .jn-v2[data-theme="win98"][data-appearance="dark"] {
-  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
-  --bg:#1f2b3a; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#a0a0a0;
-  --line-strong:#404040; --edge:#404040; --track:#808080;
-  --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000;
-  --accent:#2b3a5c; --accent-ink:#ffffff; --accent-soft:#c0c0c0;
-  --good:#006400; --warn:#7a5a00; --warn-soft:#ffffcc; --warn-line:#7a5a00;
-  --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0;
-  --change-soft:#006400; --change-bg:#e4ffe4; --hover-soft:#d4d4d4;
-  --ring-accent:rgba(43,58,92,.22); --scrim:rgba(0,0,0,.58); --recessed:#b4b4b4;
-  --stage-applied:#2b3a5c; --stage-interview:#7a5a00; --stage-offer:#006400;
-  --stage-rejected:#800000; --stage-new:#808080;
-  --series-new:#a15300;
-  --amber-bg:#ffffe4; --amber-line:#7a5a00; --amber-line-soft:#c0c080; --amber-hover:#ffffcc;
-  --sand:#a0a0a0; --gold:#7a5a00; --funnel-low:#8090b8; --funnel-mid:#2b3a5c;
-  --toast-ok-bg:#e4ffe4; --toast-ok-line:#006400; --toast-ok-ink:#006400;
-  --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000;
-  --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#2b3a5c;
-  --rail-line:#808080; --rail-ink:#000000;
-  --serif:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
-  --sans:Tahoma,'MS Sans Serif',Verdana,system-ui,sans-serif;
-  --mono:'Lucida Console','Courier New',Consolas,monospace;
-  /* geometry + state — everything a theme may now carry beyond the palette */
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#3e4c4c; --surface:#3e4c4c; --surface-2:#1e2828; --line:#6f8484; --line-soft:#4a5a5a; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#6f8484; --text:#ffffff; --text-2:#e4ecec; --muted:#b4c5c5; --ink-2:#ffffff; --accent:#008080; --accent-ink:#ffffff; --accent-soft:#0c3d3d; --good:#6fdc8c; --warn:#ffd166; --warn-soft:#4a3d12; --warn-line:#b59a3a; --bad:#ff7b72; --bad-soft:#4a1f1c; --bad-faint:#33191a; --change-soft:#3fa66b; --change-bg:#163322; --hover-soft:#4a5a5a; --ring-accent:rgba(0,128,128,.4); --scrim:rgba(0,0,0,.6); --recessed:#33403f; --stage-applied:#008080; --stage-interview:#ffd166; --stage-offer:#6fdc8c; --stage-rejected:#ff7b72; --stage-new:#6f8484; --series-new:#ffa657; --amber-bg:#3a3212; --amber-line:#b59a3a; --amber-line-soft:#6e5f2a; --amber-hover:#4a4018; --sand:#6f8484; --gold:#ffd166; --funnel-low:#4fd1c5; --funnel-mid:#008080; --toast-ok-bg:#163322; --toast-ok-line:#3fa66b; --toast-ok-ink:#6fdc8c; --toast-bad-bg:#4a1f1c; --toast-bad-line:#ff7b72; --toast-bad-ink:#ff7b72; --rail:#3e4c4c; --rail-text:#ffffff; --rail-dim:#b4c5c5; --rail-accent:#4fd1c5; --rail-line:#6f8484; --rail-ink:#ffffff;
+  --serif:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --sans:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
+  --font-ascii:'Lucida Console','Courier New',Consolas,monospace;
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
-  --bw-hair:1px; --bw-control:2px; --bw-panel:2px;
-  --shadow-modal:4px 4px 0 rgba(0,0,0,.6); --shadow-menu:3px 3px 0 rgba(0,0,0,.5); --shadow-pop:3px 3px 0 rgba(0,0,0,.5); --shadow-toast:3px 3px 0 rgba(0,0,0,.5); --shadow-drawer:-3px 0 0 rgba(0,0,0,.5);
+  --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
+  --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
-  --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
+  --t-7-5:7px; --t-9:8px; --t-9-5:9px; --t-10:9px; --t-10-5:10px; --t-11:10px; --t-11-5:11px; --t-12:11px; --t-12-5:12px; --t-13:12px; --t-13-5:12px; --t-14:13px; --t-15:14px; --t-15-5:14px; --t-16:15px; --t-17:16px; --t-18:17px; --t-19:17px; --t-22:20px; --t-30:28px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  --weight-medium:400; --weight-semibold:700;
+  --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
-  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
+  --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #58696a;
   --input-border-error:var(--bad); --input-ring-error:none;
-  /* the dark desktop (#1f2b3a) and --accent (#2b3a5c) sit ~1.3:1 apart, so a
-     picked row was hard to spot; the title bar's own light stop separates them. */
-  --row-selected:#4a6a99; --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:dotted; --divider:2px groove #dfdfdf;
+  /* the light block's #4a6a99 special case is gone: teal Hilight separates a
+     picked row from the chrome on its own */
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
   --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:none; --rail-item-inset:0;
-  --focus-shadow:none; --focus-outline:1px dotted #000000;   /* the generated file says `transparent`, which is not a valid box-shadow on its own; `none` is the same intent, valid */
-  --bevel-raised-border:2px solid; --bevel-raised-color:#ffffff #404040 #404040 #ffffff; --bevel-raised-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; --bevel-inset-border:2px solid; --bevel-inset-color:#808080 #ffffff #ffffff #808080; --bevel-inset-shadow:inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  --focus-shadow:none; --focus-ring:none; --focus-outline:1px dotted #ffffff;
+  --bevel-raised-border:0; --bevel-raised-color:transparent;
+  --bevel-raised-shadow:inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #8fa3a3, inset -2px -2px 0 #26302f, inset 2px 2px 0 #58696a;
+  --bevel-inset-border:0; --bevel-inset-color:transparent;
+  --bevel-inset-shadow:inset -1px -1px 0 #8fa3a3, inset 1px 1px 0 #26302f, inset -2px -2px 0 #58696a, inset 2px 2px 0 #0a0a0a;
+  --bevel-pad:1px;
+  --check-style:win98;
   --ai:var(--accent); --ai-ink:var(--accent-ink);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ascii;
-  /* `none` is not a valid border-colour, so field-hover would fall back to
-     currentColor (a flat black box) — use the inset bevel's own colour instead. */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
-  --link-ink:#0000ff; --link-ink-hover:#000080;
-  --scroll-thumb:#808080; --scroll-track:#c0c0c0;
-  --title-bar:linear-gradient(90deg,#2b3a5c,#4a6a99); --title-bar-ink:#ffffff;
-  --head-bg-page:var(--surface); --chip-bg:var(--surface);   /* --bg is the DESKTOP colour here, so these re-point to the window grey */
+  --link-ink:#8ab4ff; --link-ink-hover:#ffffff;
+  --scroll-thumb:#5a8f8f; --scroll-track:#33403f;
+  --title-bar:linear-gradient(90deg,#008080,#20a0a0); --title-bar-ink:#ffffff;
+  --head-bg-page:var(--surface); --chip-bg:var(--surface);
 }
 
 .jn-v2 *, .jn-v2 *::before, .jn-v2 *::after { box-sizing:border-box; }
@@ -1176,8 +1199,8 @@
    -edge are inert (inherit/none) except cobalt and win98. */
 .jn-v2 .v2-row[aria-current="true"] { background:var(--row-selected) !important; color:var(--row-selected-ink); box-shadow:var(--row-selected-edge); }
 
-/* The three rules below name a theme because none/inherit can't gate an
-   !important override (would compute to unset and erase inline paint) — a new skin opts in by adding its name to these selectors. */
+/* The rules below name a theme because none/inherit can't gate an
+   !important override (would compute to unset and erase inline paint) — a new skin opts in by adding its name to these selectors (D-17). */
 
 /* Row text sets its own colour inline, so --row-selected-ink never cascaded down
    (win98 drew near-black on navy). `.v2-rowink` marks text that should follow selection. */
@@ -1185,10 +1208,38 @@
 .jn-v2[data-theme="win98"] .v2-row[aria-current="true"] .v2-rowink * { color:var(--row-selected-ink) !important; }
 
 /* win98 bevels: raised on controls, inset on fields/lists/pressed. !important
-   because every carrier writes border/boxShadow inline; carve-outs .v2-underline and [aria-invalid] keep their own border. */
+   because every carrier writes border/boxShadow inline; carve-outs .v2-underline and [aria-invalid] keep their own border.
+   Unchanged shape, new token values: --bevel-*-border is now `0` and the four
+   98.css tones ride one inset box-shadow stack, so the TR/BL corner pixels are
+   painted in a single tone instead of mitred between two border sides. The box
+   is kept identical by --bevel-pad, which every carrier adds to its own padding. */
 .jn-v2[data-theme="win98"] .v2-raised { border:var(--bevel-raised-border) !important; border-color:var(--bevel-raised-color) !important; box-shadow:var(--bevel-raised-shadow) !important; }
 .jn-v2[data-theme="win98"] .v2-inset:not(.v2-underline):not([aria-invalid="true"]),
 .jn-v2[data-theme="win98"] .v2-raised:active { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
+
+/* The DEFAULT PUSH BUTTON. `primary` and `danger` are both grey-faced in win98
+   (--btn-*-bg / -ink do that, and --btn-weight already bolds the label); what no
+   token can add is the 1px window-frame ring 98 draws around the DEFAULT button,
+   so it is appended to the bevel stack here — on `primary` only, as the bevel
+   mock and the board's win98 column draw it (danger is a grey bevel with maroon
+   ink and no ring). `:active` swaps to the sunken stack and keeps the ring; the
+   1px nudge is --pressed-shift on the existing `.v2-btn-primary:active` rule. */
+.jn-v2[data-theme="win98"] .v2-btn-primary.v2-raised { box-shadow:var(--bevel-raised-shadow), 0 0 0 1px var(--edge) !important; }
+.jn-v2[data-theme="win98"] .v2-btn-primary.v2-raised:active { box-shadow:var(--bevel-inset-shadow), 0 0 0 1px var(--edge) !important; }
+
+/* Etched divider. The token gives the shadow line (--divider / --head-line);
+   98 draws a highlight line hard against it, which no single border can express.
+   HeaderRow's rule is BELOW its box, FooterRow's ABOVE, so the highlight is an
+   outer shadow on one and an inset on the other. No !important: neither
+   primitive writes box-shadow inline. */
+.jn-v2[data-theme="win98"] .v2-headerrow { box-shadow:0 1px 0 var(--line-soft); }
+.jn-v2[data-theme="win98"] .v2-footerrow { box-shadow:inset 0 1px 0 var(--line-soft); }
+
+/* Slim scrollbar, webkit path only: dithered trough + bevelled thumb. Engines on
+   the standard `scrollbar-color` keep the flat two-grey bar from the tokens. */
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-track { background:repeating-conic-gradient(var(--surface) 0 25%, #ffffff 0 50%) 0 0 / 2px 2px; }
+.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-track { background:repeating-conic-gradient(var(--surface) 0 25%, #58696a 0 50%) 0 0 / 2px 2px; }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-thumb { background:var(--surface); border:0; box-shadow:var(--bevel-raised-shadow); }
 
 /* Live in every theme since D-07 (1px shift + a --surface-2 wash). The wash is a
    background-image overlay, not `background:`, so it leaves the control's own ground visible instead of erasing it. */
