@@ -29,21 +29,16 @@ _DEFAULT_TRACKING_PARAMS = {
     "__jvsd", "__jvst", "jobpipeline", "cmpid", "codes", "feedid",
     "partnerid", "siteid", "bid", "customredirect",
     "chnlid", "v", "ccd", "frd", "r", "a",
-    # R3-A-02: "jk" is gone from this list — it is Indeed's entire job identity,
-    # not tracking. _IDENTITY_PARAMS below is the real guard: it also protects an
-    # operator whose editable `dedup_tracking_params` setting still contains it.
+    # "jk" is gone from this list — it is Indeed's entire job identity, not
+    # tracking. _IDENTITY_PARAMS below is the real guard, protecting it even if
+    # an operator's editable `dedup_tracking_params` setting still contains it.
     # Search-context noise (career page filters that leak into job hrefs):
     "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
 }
 
-# R3-A-02: a query param can be pure tracking on one board and the posting's whole
-# identity on another. Indeed's job URLs are `/viewjob?jk=<key>` — the path carries
-# nothing — so stripping `jk` collapsed every Indeed posting ever scraped onto a
-# single external_id and the pipeline silently discarded all of them (measured: 0
-# rows with source LIKE 'jobspy_%' out of 18 933). The tracking list is
-# user-editable, so removing `jk` from the seed is not enough on its own: these
-# params are kept for their host whatever that list says.
-#
+# A query param can be pure tracking on one board and the posting's whole identity
+# on another (Indeed's `/viewjob?jk=<key>` carries nothing in the path) — these
+# params are kept for their host regardless of the user-editable tracking list.
 # Keys match the host and any subdomain of it, lowercased.
 _IDENTITY_PARAMS = {
     "indeed.com": {"jk", "vjk"},
@@ -52,10 +47,8 @@ _IDENTITY_PARAMS = {
     "dice.com": {"jobid"},
     "monster.com": {"jobid"},
 }
-# LinkedIn is the exception that proves the rule: on /jobs/view/<id> the identity is
-# already in the path and `currentJobId` is merely the card the user happened to be
-# on — noise, and stripping it is what makes the two URL shapes for one posting
-# converge. It is an identity only on the collection/search shapes.
+# LinkedIn is the exception: on /jobs/view/<id> the identity is already in the
+# path, so `currentJobId` is noise there — it's an identity only on search shapes.
 _LINKEDIN_ID_IN_PATH = re.compile(r"/jobs/view/\d+")
 
 
@@ -105,13 +98,7 @@ def reload_tracking_params():
 
 
 def _normalize_url(url: str) -> str:
-    """Strip tracking/referral query params, apply/thanks suffixes, and fragment.
-
-    Case is PRESERVED — Oracle HCM, Salesforce Workday and others use case-sensitive
-    path segments (`/hcmUI/CandidateExperience/`, `/External_Career_Site/`) whose
-    WAFs return 403 on lowercased paths. Callers that store this value get the
-    original casing; case-insensitive dedup happens in make_external_id below.
-    """
+    """Strip tracking/referral query params, apply/thanks suffixes, and fragment; case is PRESERVED since some ATS WAFs (Oracle HCM, Workday) 403 on lowercased paths."""
     if not url:
         return ""
     try:
@@ -124,9 +111,8 @@ def _normalize_url(url: str) -> str:
             if path.lower().endswith(suffix):
                 path = path[:-len(suffix)]
         qs = parse_qs(parsed.query, keep_blank_values=False)
-        # Remove tracking params (case-insensitive key match) + all utm_* params.
-        # R3-A-02: except the ones that ARE the posting's identity on this host —
-        # stripping those merges unrelated jobs onto one external_id.
+        # Remove tracking params + utm_* except the ones that ARE the posting's
+        # identity on this host — stripping those merges unrelated jobs onto one id.
         keep = _identity_params_for(parsed)
         cleaned = {k: v for k, v in qs.items()
                    if k.lower() in keep
@@ -140,13 +126,7 @@ def _normalize_url(url: str) -> str:
 
 
 def _canonical_for_hash(url: str) -> str:
-    """Hash-only canonical form: stripped URL with host+path lowercased.
-
-    Splitting this from _normalize_url means the stored URL keeps its original case
-    (so click-through still works for Oracle/Workday WAFs) while dedup hashes
-    converge across case-divergent slugs (Distyl/distyl, JR338690/jr338690, etc.).
-    Query values are NOT lowercased — some carry case-sensitive tokens.
-    """
+    """Hash-only canonical form: stripped URL with host+path lowercased (but not query values) so case-divergent slugs converge while the stored URL keeps its original case."""
     if not url:
         return ""
     stripped = _normalize_url(url)
@@ -161,9 +141,7 @@ def _canonical_for_hash(url: str) -> str:
 
 
 def make_external_id(company: str, title: str, url: str) -> str:
-    """Generate SHA256 hash for deduplication. Uses canonical (lowercased) URL —
-    case-divergent slugs on the same posting hash identically.
-    Falls back to company+title if URL is empty."""
+    """Generate a SHA256 dedup hash from the canonical (lowercased) URL, falling back to company+title if URL is empty."""
     canonical = _canonical_for_hash(url)
     if canonical:
         return hashlib.sha256(canonical.encode()).hexdigest()

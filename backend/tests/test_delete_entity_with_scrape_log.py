@@ -1,16 +1,4 @@
-"""R3-A-08: a scraped company / a search that has run must still be deletable.
-
-`ScrapeLog.company_id`, `ScrapeLog.search_id` and `Job.search_id` are plain FKs
-with no ON DELETE in the live schema, so `db.delete(entity)` raised
-ForeignKeyViolation and the endpoint returned a bare 500. Every scheduled scrape
-writes a ScrapeLog row, and since the R2-H-02 fix every manual scrape does too —
-so in practice every real company had become undeletable.
-
-The handlers now orphan the audit rows (and the stored jobs) first. SQLite does
-not enforce foreign keys by default, so these tests assert the *behaviour* the
-handlers must have — the rows are nulled, not deleted, and the entity is gone —
-rather than reproducing the Postgres error.
-"""
+"""A scraped company or a run search must still be deletable: the handlers orphan ScrapeLog/Job rows (nulling the FK) rather than raising on delete."""
 import pytest
 from fastapi import HTTPException
 

@@ -1,10 +1,4 @@
-"""Cover-letter CRUD, PDF export, and background AI generation.
-
-Mirrors routes_resumes.py. Reuses the warm Playwright browser singleton
-(_get_browser) and the font-embedding render pattern. Tracer-link rewriting IS
-applied on export (TracerLink.cover_letter_id), so header contact URLs render as
-tracked redirects when tracer_links_enabled is on.
-"""
+"""Cover-letter CRUD, PDF export, and background AI generation; mirrors routes_resumes.py (shared browser singleton, font-embedding render, tracer-link rewriting on export)."""
 import json
 import logging
 import uuid as _uuid
@@ -86,8 +80,7 @@ def list_templates():
 # ── Serialization ─────────────────────────────────────────────────────────────
 
 def _to_dict(cl: CoverLetter, include_json_data: bool = False, ctx: dict | None = None) -> dict:
-    """ctx carries the batch-loaded job/application/resume context so the list can
-    render a row without an N+1 walk (see list_cover_letters)."""
+    """ctx carries the batch-loaded job/application/resume context so the list can render a row without an N+1 walk (see list_cover_letters)."""
     ctx = ctx or {}
     d = {
         "id": str(cl.id),
@@ -119,8 +112,7 @@ def _to_dict(cl: CoverLetter, include_json_data: bool = False, ctx: dict | None 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
 def _build_ctx(rows: list[CoverLetter], db: Session) -> dict:
-    """Batch-load the job, its application stage and the source resume name for a
-    set of letters — three queries total rather than three per row."""
+    """Batch-load the job, its application stage and the source resume name for a set of letters — three queries total rather than three per row."""
     from backend.models.db import Application, Job, Resume
     job_ids = {cl.job_id for cl in rows if cl.job_id}
     res_ids = {cl.resume_id for cl in rows if cl.resume_id}
@@ -175,7 +167,7 @@ def create_cover_letter(body: dict, db: Session = Depends(get_db)):
     db.add(cl)
     db.commit()
     db.refresh(cl)
-    return _to_dict(cl, include_json_data=True, ctx=_build_ctx([cl], db).get(cl.id))   # CL-27
+    return _to_dict(cl, include_json_data=True, ctx=_build_ctx([cl], db).get(cl.id))
 
 
 @router.get("/{cl_id}")
@@ -234,9 +226,8 @@ def delete_cover_letter(cl_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Cover letter not found")
     # Drop tracer links first (DB has ON DELETE CASCADE, but delete explicitly so
     # the ORM doesn't try to NULL the FK on this nullable column).
-    # R3-B-03: a link shared with the résumé this letter was written from stays —
-    # release only our side of it, so the résumé keeps reporting it and its click
-    # history survives.
+    # A link shared with the résumé this letter was written from stays — release
+    # only our side of it, so the résumé keeps reporting it and its click history survives.
     for link in db.query(TracerLink).filter(
         TracerLink.cover_letter_id == cl.id, TracerLink.resume_id.isnot(None),
     ).all():
@@ -304,12 +295,7 @@ async def export_pdf(cl_id: str, db: Session = Depends(get_db)):
 
 @router.post("/generate", status_code=202)
 async def generate_cover_letter(body: dict, db: Session = Depends(get_db)):
-    """Generate a cover letter for a (resume, job) pair in the background.
-
-    Body: {resume_id, job_id, voice?, length?, template?, page_format?, cover_letter_id?}
-    Returns 202 + run_id. Without cover_letter_id a new row appears when the job
-    finishes; with it, that existing letter is rewritten in place (Regenerate).
-    """
+    """Generate a cover letter for a (resume, job) pair in the background; returns 202 + run_id, and with cover_letter_id rewrites that existing letter in place instead of creating a new one."""
     resume_id = body.get("resume_id")
     job_id = body.get("job_id")
     if not resume_id or not job_id:
@@ -371,11 +357,7 @@ async def generate_cover_letter(body: dict, db: Session = Depends(get_db)):
 async def _generate_impl(resume_id: str, job_id: str, voice: str | None, length: str,
                          template: str | None, page_format: str | None,
                          cover_letter_id: str | None = None):
-    """Background worker: generate the letter and persist a CoverLetter row.
-
-    Semaphore-guarded (shared with tailoring) so concurrent generations across
-    different (resume, job) pairs don't blow the LLM rate limit.
-    """
+    """Background worker: generate the letter and persist a CoverLetter row; semaphore-guarded (shared with tailoring) so concurrent generations don't blow the LLM rate limit."""
     from backend.analyzer.cover_letter_generator import (
         resolve_voice_instruction, generate_cover_letter_body,
     )
@@ -423,8 +405,8 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         voice_id, voice_instruction = resolve_voice_instruction(db, voice)
         preferences = (persona.preferences if persona else {}) or {}
 
-        # Log the pair call_cover_letter_llm will actually dispatch with — the
-        # same resolver, not a second fallback chain (R2-H-15).
+        # Log the pair call_cover_letter_llm will actually dispatch with — the same
+        # resolver, not a second fallback chain.
         from backend.analyzer.llm_client import resolve_llm_config
         _cfg = resolve_llm_config("cover_letter", db=db)
         _provider, _model = _cfg["provider"], _cfg["model"]

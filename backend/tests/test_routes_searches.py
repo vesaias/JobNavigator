@@ -1,10 +1,4 @@
-"""Tests for /api/searches guards on the built-in extension searches.
-
-The two seeded searches ("Extension" / "Extension LI") have no scraper: jobs are
-pushed in by the Chrome extension. The v2 UI hides Run/Test/Delete for them; these
-tests cover the server-side half of that gating (SRCH-26). PATCH stays allowed —
-the editor saves their title/company filters through it.
-"""
+"""Tests for /api/searches guards on the built-in extension searches ("Extension"/"Extension LI" have no scraper; the v2 UI hides Run/Test/Delete for them, and PATCH stays allowed)."""
 import pytest
 
 
@@ -64,12 +58,8 @@ def test_run_still_allowed_on_keyword_search(api_client, test_db, monkeypatch):
     assert resp.status_code == 202, f"Unexpected {resp.status_code}: {resp.text}"
 
 
-# ── DS-A-02: the test preview must apply title_exclude_global ────────────────
-# The run merges the global list into the per-search excludes before it stores
-# anything (scraper/sources/jobspy.py:285). The preview used to skip that layer
-# entirely, so it reported "5 kept · 0 title-filtered" for a run that then filed
-# two of those rows as `ignored`. The Companies preview already surfaces the
-# layer (routes_companies.py:603); these tests pin the Searches one to it.
+# ── the test preview must apply title_exclude_global, same as the run does ──
+# (scraper/sources/jobspy.py:285) and same as the Companies preview (routes_companies.py:603).
 
 def _seed_global_exclude(db, keywords):
     import json
@@ -80,9 +70,8 @@ def _seed_global_exclude(db, keywords):
 
 def _mk_keyword_search(db, **kw):
     from backend.models.db import Search
-    # Search.title_exclude_keywords defaults to ["intern", "junior", "associate"];
-    # blank it unless a test is deliberately exercising the per-search layer, so
-    # what these tests measure is the *global* list and nothing else.
+    # title_exclude_keywords defaults to ["intern", "junior", "associate"]; blank it so these
+    # tests measure only the global list, unless a test deliberately exercises the per-search layer.
     kw.setdefault("title_exclude_keywords", [])
     s = Search(name="Global exclude probe", search_mode="keyword", active=True,
                sources=["indeed"], search_term="program manager", **kw)
@@ -92,11 +81,7 @@ def _mk_keyword_search(db, **kw):
 
 
 def _stub_jobspy(monkeypatch, titles):
-    """Make jobspy.scrape_jobs return one row per title.
-
-    `test_search` does `from jobspy import scrape_jobs` *inside* the handler, so
-    patching the module attribute is enough.
-    """
+    """Make jobspy.scrape_jobs return one row per title (patching the module attribute works since the handler imports it inside the function)."""
     import jobspy
     import pandas as pd
     df = pd.DataFrame([{
@@ -148,8 +133,7 @@ def test_preview_global_exclude_is_word_bounded_and_optional(api_client, test_db
     _seed_first_run(test_db)
     _seed_global_exclude(test_db, ["intern"])
     sid = _mk_keyword_search(test_db)
-    # "Internal Communications Manager" contains "intern" as a substring only —
-    # the run's filter is word-bounded, so the preview's must be too.
+    # "Internal Communications Manager" contains "intern" only as a substring; the filter is word-bounded.
     _stub_jobspy(monkeypatch, ["Internal Communications Manager"])
 
     d = api_client.post(f"/api/searches/{sid}/test").json()

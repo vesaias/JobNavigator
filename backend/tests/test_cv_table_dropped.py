@@ -1,4 +1,4 @@
-"""cvs table is gone (Task 11)."""
+"""cvs table is gone."""
 def test_cv_table_does_not_exist(test_db):
     from sqlalchemy import inspect
     insp = inspect(test_db.get_bind())

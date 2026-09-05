@@ -1,14 +1,4 @@
-"""R3-A-02: a posting's identity param must survive dedup normalization.
-
-`jk` was in the tracking-param list, and Indeed's whole job identity is
-`/viewjob?jk=<key>` — the path carries nothing — so every Indeed posting ever
-scraped canonicalised to `https://www.indeed.com/viewjob` and hashed to one
-`external_id`. Measured in the live DB: 0 rows with `source LIKE 'jobspy_%'` out
-of 18 933; four real runs each reported "N seen, +0 new".
-
-Two guards: `jk` is out of the seeded list, and `_IDENTITY_PARAMS` keeps it (and
-the equivalents on a few other boards) whatever the editable setting says.
-"""
+"""A posting's identity param (e.g. Indeed's `jk`) must survive dedup normalization even if the editable tracking-params setting would strip it."""
 import json
 
 import pytest
@@ -75,12 +65,7 @@ def test_tracking_stripping_on_other_hosts_is_unchanged():
 
 
 def test_jk_is_no_longer_stripped_anywhere():
-    """Deliberate: `jk` left the tracking list entirely, not just for Indeed.
-
-    It is a job key wherever it appears, so treating it as noise is what caused
-    this bug; `_IDENTITY_PARAMS` then guarantees Indeed specifically even if an
-    operator puts it back into the editable setting.
-    """
+    """`jk` left the tracking list entirely, not just for Indeed — it is a job key wherever it appears."""
     a = _normalize_url("https://boards.greenhouse.io/acme/jobs/123?jk=aaa")
     assert "jk=aaa" in a
 

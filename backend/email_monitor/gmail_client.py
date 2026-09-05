@@ -63,7 +63,7 @@ def _load_processed_ids(db) -> set:
 
 def _save_processed_ids(db, processed_ids: set):
     """Save processed Gmail message IDs to settings (keep last 500)."""
-    id_list = list(processed_ids)[-500:]  # Keep only the most recent 500
+    id_list = list(processed_ids)[-500:]
     row = db.query(Setting).filter(Setting.key == "gmail_processed_ids").first()
     if row:
         row.value = json.dumps(id_list)
@@ -77,7 +77,6 @@ def _build_gmail_query(db) -> str:
     """Build Gmail search query from settings — sender patterns + subject keywords + exclusions."""
     import json as _json
 
-    # Sender patterns (domains, prefixes, specific addresses — all in one list)
     senders_row = db.query(Setting).filter(Setting.key == "email_gmail_query_senders").first()
     sender_patterns = []
     if senders_row and senders_row.value:
@@ -92,7 +91,6 @@ def _build_gmail_query(db) -> str:
         else:
             sender_parts.append(f'from:"{s}"')
 
-    # Subject keywords from settings
     subjects_row = db.query(Setting).filter(Setting.key == "email_gmail_query_subjects").first()
     subject_terms = []
     if subjects_row and subjects_row.value:
@@ -102,7 +100,6 @@ def _build_gmail_query(db) -> str:
             pass
     subject_parts = [f'subject:"{s}"' for s in subject_terms]
 
-    # Exclusions from settings
     exclusions_row = db.query(Setting).filter(Setting.key == "email_gmail_query_exclusions").first()
     exclusion_terms = []
     if exclusions_row and exclusions_row.value:
@@ -116,11 +113,8 @@ def _build_gmail_query(db) -> str:
     from_block = " OR ".join(sender_parts)
     subject_block = " OR ".join(subject_parts)
 
-    # `in:anywhere` forces Gmail to search all mail — including Trash and Spam.
-    # The list endpoint's includeSpamTrash flag alone is not enough; Gmail still
-    # filters some Trash hits out of the result set unless the query itself
-    # opts into them. Paired with params.includeSpamTrash=True this guarantees
-    # auto-archived rejection emails still get classified.
+    # `in:anywhere` forces Gmail to search all mail incl. Trash/Spam — the list endpoint's
+    # includeSpamTrash flag alone isn't enough to surface auto-archived rejection emails.
     parts = ["in:anywhere", "newer_than:3d"]
     if from_block and subject_block:
         parts.append(f"(({from_block}) OR ({subject_block}))")
@@ -164,9 +158,7 @@ def _apply_email_to_app(db, matched_app, class_type: str, body: str, subject: st
 
     from backend.models.db import record_transition, utcnow
     if class_type == "positive":
-        # Positive recruiter response on an applied row → interview.
-        # Prior to the 2026-04-23 simplification this transitioned to
-        # screening; the column now collapses into interview.
+        # Positive recruiter response on an applied row -> interview.
         if matched_app.status == "applied":
             record_transition(matched_app, "interview", "email")
     elif class_type == "rejection":
@@ -212,16 +204,12 @@ async def check_emails():
 
     db = SessionLocal()
     try:
-        # Load previously processed message IDs
         processed_ids = _load_processed_ids(db)
-
-        # Build improved Gmail search query from settings
         query = _build_gmail_query(db)
 
         headers = {"Authorization": f"Bearer {access_token}"}
 
         async with httpx.AsyncClient(timeout=30) as client:
-            # List messages matching query
             resp = await client.get(
                 f"{GMAIL_API_BASE}/users/me/messages",
                 params={"q": query, "maxResults": 20, "includeSpamTrash": True},
@@ -239,11 +227,9 @@ async def check_emails():
             for msg_ref in messages:
                 msg_id = msg_ref["id"]
 
-                # Skip already-processed messages
                 if msg_id in processed_ids:
                     continue
 
-                # Get full message
                 msg_resp = await client.get(
                     f"{GMAIL_API_BASE}/users/me/messages/{msg_id}",
                     params={"format": "full"},
@@ -256,7 +242,6 @@ async def check_emails():
                 msg_data = msg_resp.json()
                 headers_list = msg_data.get("payload", {}).get("headers", [])
 
-                # Extract headers
                 from_header = ""
                 subject = ""
                 for h in headers_list:
@@ -265,12 +250,10 @@ async def check_emails():
                     elif h["name"].lower() == "subject":
                         subject = h["value"]
 
-                # Extract body text
                 body = _extract_body(msg_data.get("payload", {}))
 
                 sender_domain = _extract_email_domain(from_header)
 
-                # Classify the email
                 classification = classify_email(subject, body)
                 class_type = classification["classification"]
 
@@ -278,7 +261,6 @@ async def check_emails():
                     processed_ids.add(msg_id)
                     continue
 
-                # High-confidence phrase match — use existing matching logic
                 if classification["confidence"] >= 0.8 and class_type in ("positive", "rejection"):
                     matched_app = _match_email_to_application(db, from_header, subject, body, sender_domain)
                     if matched_app:
@@ -297,12 +279,10 @@ async def check_emails():
                 await asyncio.sleep(2)  # Rate limit between LLM calls
 
                 if llm_result:
-                    # Check confidence threshold
                     threshold_row = db.query(Setting).filter(Setting.key == "email_llm_confidence_threshold").first()
                     threshold = int(threshold_row.value) if threshold_row and threshold_row.value else 70
 
                     if llm_result["confidence"] >= threshold and llm_result["status"] != "no_change":
-                        # Find matched application
                         match_idx = llm_result.get("match_index")
                         matched_app = None
                         matched_company = ""
@@ -311,9 +291,8 @@ async def check_emails():
                             matched_company = app_info.get("company", "")
                             matched_app = db.query(Application).get(app_info["id"])
 
-                        # Sender verification: never apply an email to an application whose
-                        # company the email did not actually come from (guards against the
-                        # LLM force-matching, e.g. an Amazon email onto a Kpler application).
+                        # Guards against the LLM force-matching an email onto the wrong company's
+                        # application (e.g. an Amazon email onto a Kpler application).
                         if matched_app and not _email_matches_company(
                             matched_company, from_header, subject, body, sender_domain
                         ):
@@ -326,9 +305,8 @@ async def check_emails():
                         if matched_app:
                             _apply_llm_result_to_app(db, matched_app, llm_result, body, subject)
 
-                        # Status + confidence only — summaries paraphrase the
-                        # recruiter's email body, which we don't want persisted
-                        # in activity_log.
+                        # Status + confidence only — a summary paraphrasing the recruiter's email
+                        # body is not something we want persisted in activity_log.
                         from backend.activity import log_activity
                         log_activity(
                             "email",
@@ -346,7 +324,6 @@ async def check_emails():
 
                 processed_ids.add(msg_id)
 
-        # Save updated processed IDs
         _save_processed_ids(db, processed_ids)
 
         from backend.activity import log_activity
@@ -422,13 +399,8 @@ def _company_tokens(company: str) -> list:
 
 def _email_matches_company(company: str, from_header: str, subject: str,
                            body: str, sender_domain: str) -> bool:
-    """True iff an email plausibly belongs to `company`.
-
-    The From header, sender domain, and subject are authoritative (that's who actually
-    sent it). The body is only a weak fallback and requires the FULL company name. Job
-    title is deliberately never used — generic titles like "Product Manager" are shared
-    across companies and caused emails to be applied to the wrong application.
-    """
+    """True iff an email plausibly belongs to `company`, matching on From/domain/subject (authoritative)
+    or the full company name in the body (weak fallback); job title is deliberately never used."""
     if not company or not company.strip():
         return False
     sender_text = f"{from_header or ''} {subject or ''}".lower()
@@ -445,12 +417,8 @@ def _email_matches_company(company: str, from_header: str, subject: str,
 
 
 def _match_email_to_application(db, from_header: str, subject: str, body: str, sender_domain: str):
-    """Match an email to an existing active application, anchored on the sender.
-
-    Returns the application whose company the email is actually from, or None. A match
-    where the company only appears in the body is used only as a fallback, after every
-    app has been checked for a stronger sender/subject match.
-    """
+    """Match an email to an active application anchored on the sender; a body-only company
+    match is used only as a fallback after every app is checked for a stronger sender match."""
     active_statuses = ["applied", "interview"]
     apps = db.query(Application).filter(Application.status.in_(active_statuses)).all()
 

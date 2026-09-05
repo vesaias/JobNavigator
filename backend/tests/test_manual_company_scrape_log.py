@@ -1,10 +1,4 @@
-"""R2-H-02: a manual company scrape must write the same ScrapeLog row as the batch.
-
-Only the batch path (scrape_career_pages) used to build the ScrapeLog row, so
-POST /api/scrape/company/{id} left no audit trail — /api/scrape-log, is_warning
-and /health/entities never saw manual runs. Both paths now call
-record_company_scrape_log().
-"""
+"""A manual company scrape must write the same ScrapeLog row as the batch path — both call record_company_scrape_log() so is_warning and /health/entities see manual runs too."""
 import asyncio
 
 import pytest
@@ -76,10 +70,7 @@ def test_record_company_scrape_log_opens_own_session(test_db):
 
 @pytest.mark.asyncio
 async def test_manual_company_trigger_writes_scrape_log(test_db, monkeypatch):
-    """POST /api/scrape/company/{id} background worker writes the audit row.
-
-    Needs the container (imports backend.main → apscheduler).
-    """
+    """POST /api/scrape/company/{id} background worker writes the audit row (needs the container: imports backend.main → apscheduler)."""
     pytest.importorskip("apscheduler")
     import backend.main as main_mod
     import backend.scraper.sources.company_pages as cp

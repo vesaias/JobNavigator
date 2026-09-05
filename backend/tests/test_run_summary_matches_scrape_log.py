@@ -1,18 +1,4 @@
-"""OPEN-03: the run summary must agree with the ScrapeLog row and with the rows
-the run actually stored.
-
-The reported symptom: an Indeed run left **8** rows in `jobs` while the summary
-and the ScrapeLog both read "6 seen, +6 new". The two counters were never in
-disagreement with each other — both are `jobs_found` / `new_jobs` off the same
-result dict — but neither counted the postings the title filters rejected, which
-_run_sync still writes to `jobs` as `ignored` so the next run dedups them. That
-left an unexplained two-row gap.
-
-So: `_run_sync` now counts those (`ignored_jobs`, plus a per-board `filtered`
-entry that rides into `ScrapeLog.source_breakdown`), and the summary is built by
-reading the log row back — the convention `scheduler._scrape_summary` already
-follows — so it cannot drift from the audit trail.
-"""
+"""The run summary must agree with the ScrapeLog row and with the rows the run actually stored: `_run_sync` counts title-filtered postings (still stored as `ignored`) into `ignored_jobs` and a per-board `filtered` entry, and the summary is built by reading the log row back so it cannot drift from the audit trail."""
 import sys
 import types
 
@@ -52,11 +38,7 @@ def _search(db, sources, exclude=None):
 # ── the counters ────────────────────────────────────────────────────────────
 
 def test_every_stored_row_is_accounted_for(test_db):
-    """new_jobs + ignored_jobs == the rows the run actually inserted.
-
-    Two of the five postings are rejected by the title filter and stored
-    `ignored`; before this they were counted nowhere.
-    """
+    """new_jobs + ignored_jobs == the rows the run actually inserted; two of the five postings are rejected by the title filter and stored `ignored`."""
     from backend.scraper.sources.jobspy import _run_sync
 
     _fake_jobspy([
@@ -77,7 +59,7 @@ def test_every_stored_row_is_accounted_for(test_db):
     assert result["jobs_found"] == len(kept) == 3
     assert result["new_jobs"] == 3
     assert result["ignored_jobs"] == len(dropped) == 2
-    # the whole stored set, with nothing left over — the gap the finding saw
+    # the whole stored set, with nothing left over
     assert result["new_jobs"] + result["ignored_jobs"] == len(stored) == 5
 
 
@@ -118,8 +100,7 @@ def test_no_filtered_key_when_nothing_was_rejected(test_db):
 # ── summary vs the log row ──────────────────────────────────────────────────
 
 async def _run_and_summarize(test_db, monkeypatch, search):
-    """Drive the real _run_sync through _run_search_by_id, then build the
-    Run-history line the way the trigger endpoint does."""
+    """Drive the real _run_sync through _run_search_by_id, then build the Run-history line the way the trigger endpoint does."""
     import backend.scraper.orchestrator as orch
     from backend.scraper.sources.jobspy import _run_sync
 
@@ -171,8 +152,7 @@ async def test_summary_says_nothing_about_filtering_when_there_was_none(test_db,
 
 @pytest.mark.asyncio
 async def test_summary_prefers_the_log_row_over_a_stale_result_dict(test_db, monkeypatch):
-    """Pins the mechanism: the numbers come from the ScrapeLog row, so a caller
-    handing over a dict whose counts drifted cannot put a wrong number on screen."""
+    """Pins the mechanism: the numbers come from the ScrapeLog row, so a caller handing over a dict whose counts drifted cannot put a wrong number on screen."""
     import backend.scraper.orchestrator as orch
 
     async def fake_run_search(s, proxy_url=None):

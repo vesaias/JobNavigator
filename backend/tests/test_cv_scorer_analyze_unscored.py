@@ -25,8 +25,7 @@ def scorer_ready_db(test_db, monkeypatch):
         test_db.add(Setting(key=k, value=v))
     test_db.commit()
 
-    # Seed a default Resume (the only scoring source — Task 11 dropped the cvs table).
-    # The flattened text must contain the same identifying phrase the assertions check.
+    # Seed a default Resume (the only scoring source); its flattened text must contain the phrase the assertions check for.
     resume = Resume(
         name="Default",
         is_base=True,
@@ -51,19 +50,15 @@ def scorer_ready_db(test_db, monkeypatch):
     monkeypatch.setattr(scorer, "_get_scoring_semaphore",
                         lambda: asyncio.Semaphore(5))
 
-    # analyze_unscored_jobs builds a query using `text("'{}'::jsonb")` which is
-    # Postgres-specific syntax and fails under SQLite. Rewrite the `text()` call
-    # inside the cv_scorer module's import path so it emits a SQLite-compatible
-    # no-op predicate instead (matches no rows — empty string is never a valid
-    # default for cv_scores).
+    # analyze_unscored_jobs builds a query using text("'{}'::jsonb") — Postgres-only syntax that
+    # fails under SQLite; rewritten below to a no-op predicate that matches no rows.
     from sqlalchemy import text as _sa_text, sql as _sa_sql
     def _safe_text(expr):
         if expr == "'{}'::jsonb":
             # Empty-string literal — matches no real cv_scores rows under SQLite
             return _sa_text("''")
         return _sa_text(expr)
-    # The function does `from sqlalchemy import ... text` inside the function body,
-    # so patch the sqlalchemy module attribute.
+    # The function imports text from sqlalchemy inside its body, so patch the module attribute.
     import sqlalchemy as _sa
     monkeypatch.setattr(_sa, "text", _safe_text)
 
@@ -72,10 +67,7 @@ def scorer_ready_db(test_db, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_analyze_unscored_jobs_only_scores_entities_with_auto_scoring(scorer_ready_db, monkeypatch):
-    """Jobs from companies with auto_scoring_depth='off' should be skipped.
-
-    Jobs from companies with auto_scoring_depth='light' should be scored.
-    """
+    """Jobs from companies with auto_scoring_depth='off' are skipped; 'light' companies get scored."""
     from backend.models.db import Company, Job
 
     db = scorer_ready_db["db"]
@@ -91,8 +83,7 @@ async def test_analyze_unscored_jobs_only_scores_entities_with_auto_scoring(scor
     desc_on = "SCORE_ME_ON: Senior product manager position. " + ("Detail. " * 10)
     desc_off = "SCORE_ME_OFF: Senior product manager position. " + ("Detail. " * 10)
 
-    # cv_scores=sa_null() so the IS NULL branch of the unscored filter matches under SQLite.
-    # (The PG `'{}'::jsonb` branch is patched to a no-op in the fixture.)
+    # cv_scores=sa_null() so the IS NULL branch of the unscored filter matches (the PG jsonb branch is a no-op here).
     job_on = Job(external_id="j1", content_hash="h1", company="ScoreOnCo",
                  title="Senior PM", url="https://x.com/1", status="new",
                  description=desc_on, cv_scores=sa_null())
@@ -134,13 +125,7 @@ async def test_analyze_unscored_jobs_only_scores_entities_with_auto_scoring(scor
 
 @pytest.mark.asyncio
 async def test_analyze_unscored_skips_jobs_with_no_text(scorer_ready_db, monkeypatch):
-    """A job with no description, no cached page, and no URL should be marked _skipped
-    (not sent to the LLM). This is the 'true skip' / sentinel code path.
-
-    Note: SPA-garbage detection happens inside `_fetch_job_description` (live fetch),
-    not inside `analyze_unscored_jobs` — a job whose stored description is JSON garbage
-    would still be scored. This test verifies the real no-text skip path instead.
-    """
+    """A job with no description, no cached page, and no URL is marked _skipped (not sent to the LLM) — the true no-text skip path."""
     from backend.models.db import Company, Job
 
     db = scorer_ready_db["db"]

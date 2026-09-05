@@ -1,11 +1,4 @@
-"""H-1B company LCA data checker + JD body scan.
-
-H-1B metrics live in the VisaCache table (keyed by company name + country), not
-on the Company record — so jobs from any source can show H-1B info even when the
-company isn't in the companies table. `resolve_company_h1b` is the single entry
-point: cache-first, live fetch on a miss (MyVisaJobs primary, h1bdata.info
-fallback), negative-cached.
-"""
+"""H-1B company LCA data checker + JD body scan; H-1B metrics live in the VisaCache table so any job's source company can show H-1B info."""
 import json
 import logging
 import re
@@ -30,12 +23,7 @@ class H1bRateLimited(Exception):
 
 
 class _LiveBudget:
-    """Bounds inline live lookups during a scrape so MyVisaJobs isn't hammered.
-
-    Rolling window: at most MAX_LOOKUPS live fetches, and after MAX_RATE_STRIKES
-    consecutive rate-limit hits inline lookups stop until the window rolls over.
-    The cron bypasses this (respect_budget=False) since it paces itself.
-    """
+    """Bounds inline live lookups during a scrape to MAX_LOOKUPS per rolling WINDOW, and stops after MAX_RATE_STRIKES consecutive rate-limit hits until it rolls over."""
     WINDOW = 900          # seconds
     MAX_LOOKUPS = 10
     MAX_RATE_STRIKES = 3
@@ -69,7 +57,6 @@ _budget = _LiveBudget()
 async def _fetch_myvisajobs(company_name: str, h1b_slug: str = None) -> dict:
     """Scrape myvisajobs.com for company H-1B LCA data. Raises H1bRateLimited on 429/403."""
     try:
-        # Use explicit slug if provided, otherwise auto-generate from name
         if h1b_slug:
             slug = h1b_slug
         else:
@@ -104,8 +91,7 @@ async def _fetch_myvisajobs(company_name: str, h1b_slug: str = None) -> dict:
             if lca_match:
                 lca_count = int(lca_match.group(1).replace(",", ""))
 
-            # Approval rate: compute from certified/total if available
-            # Look for "Certified" count in the most recent year row
+            # Approval rate: compute from the "Certified" count vs lca_count if available.
             certified_match = re.search(r'certified[^>]*>\s*([\d,]+)', text, re.IGNORECASE)
             if certified_match and lca_count > 0:
                 certified = int(certified_match.group(1).replace(",", ""))
@@ -133,13 +119,7 @@ async def _fetch_myvisajobs(company_name: str, h1b_slug: str = None) -> dict:
 
 
 async def _fetch_h1bdata(company_name: str) -> dict:
-    """Fallback: parse h1bdata.info (raw DOL LCA disclosure rows).
-
-    Each row is one LCA filing [Employer, Job Title, Base Salary, Location,
-    Submit Date, Start Date]. lca_count = row count, median_salary = median of
-    the salary column. No approval_rate here (LCA data, not USCIS decisions).
-    Raises H1bRateLimited on 429/403.
-    """
+    """Fallback: parse h1bdata.info's raw DOL LCA disclosure rows into lca_count (row count) and median_salary; no approval_rate (LCA data, not USCIS decisions)."""
     from urllib.parse import quote
     import statistics
     url = f"https://h1bdata.info/index.php?em={quote(company_name)}"
@@ -166,13 +146,7 @@ async def _fetch_h1bdata(company_name: str) -> dict:
 
 
 async def fetch_company_h1b_data(company_name: str, h1b_slug: str = None) -> dict:
-    """Company H-1B LCA data: MyVisaJobs primary, h1bdata.info fallback.
-
-    MyVisaJobs is richer (includes approval_rate) but blocks some egress IPs with
-    403. On a rate-limit or empty MyVisaJobs result we fall back to h1bdata.info,
-    which serves the same underlying DOL data. Raises H1bRateLimited only when
-    BOTH sources are blocked (so the breaker still trips on a total blackout).
-    """
+    """Company H-1B LCA data: MyVisaJobs primary (richer, blocks some IPs), falling back to h1bdata.info; raises H1bRateLimited only when both are blocked."""
     mvj_blocked = False
     try:
         data = await _fetch_myvisajobs(company_name, h1b_slug)
@@ -213,13 +187,7 @@ def _row_to_dict(row):
 
 async def resolve_company_h1b(db, name, slug=None, allow_live=True,
                               respect_budget=True, force=False, ttl_days=_TTL_DAYS):
-    """Return cached H-1B metrics for a company name (dict) or None.
-
-    Cache-first; on a miss/stale entry does a live MyVisaJobs fetch (unless
-    allow_live=False, or the inline budget/rate-limit breaker is tripped and
-    respect_budget=True). Writes the row into the session but does NOT commit —
-    the caller commits (so it participates in the scraper's batch transaction).
-    """
+    """Return cached H-1B metrics for a company name (dict) or None; cache-first, live fetch on a miss unless the budget/breaker blocks it. Writes but does NOT commit — the caller commits."""
     key = _name_key(name)
     if not key:
         return None
@@ -273,8 +241,7 @@ async def resolve_company_h1b(db, name, slug=None, allow_live=True,
 
 
 async def refresh_all_h1b():
-    """Cron: refresh stale VisaCache rows + fetch company names seen on jobs but not
-    yet cached (the overflow deferred by the inline budget). Bypasses the breaker."""
+    """Cron: refresh stale VisaCache rows + fetch job companies not yet cached, bypassing the budget breaker."""
     db = SessionLocal()
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(days=_TTL_DAYS)
@@ -326,13 +293,7 @@ async def fetch_h1b_for_company_id(company_id: str):
 
 
 def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:
-    """Scan job description for H-1B exclusion phrases.
-    Returns dict with jd_flag, jd_snippet, matched_phrase.
-
-    `matched_phrase` is the exact user-configured exclusion phrase that hit,
-    safe to log. `jd_snippet` is ~100 chars of surrounding JD text — intended
-    for the UI tooltip, NOT for log lines (leaks recruiter-confidential text).
-    """
+    """Scan a job description for H-1B exclusion phrases; jd_snippet (~100 chars of context) is for the UI tooltip only, never log lines — it can leak recruiter-confidential text."""
     if not description:
         return {"jd_flag": False, "jd_snippet": None, "matched_phrase": None}
 
@@ -340,7 +301,6 @@ def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:
 
     for phrase in exclusion_phrases:
         if phrase.lower() in desc_lower:
-            # Extract snippet — find the phrase in context
             idx = desc_lower.index(phrase.lower())
             start = max(0, idx - 50)
             end = min(len(description), idx + len(phrase) + 50)
@@ -351,11 +311,7 @@ def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:
 
 
 def determine_h1b_verdict(lca_count: int, jd_flag: bool) -> str:
-    """Determine overall H-1B verdict.
-    likely (>50 LCAs, no JD flag)
-    unlikely (<10 LCAs or JD flag)
-    unknown (no data)
-    """
+    """Determine overall H-1B verdict: likely (>50 LCAs, no JD flag), unlikely (<10 LCAs or JD flag), unknown (no data)."""
     if jd_flag:
         return "unlikely"
     lca_count = lca_count or 0  # untracked companies have no LCA data (None)
@@ -369,10 +325,7 @@ def determine_h1b_verdict(lca_count: int, jd_flag: bool) -> str:
 
 
 def load_exclusion_phrases(db) -> list:
-    """Read + parse the body_exclusion_phrases setting once. Batch callers should
-    call this before their job loop and pass the result into check_job_h1b —
-    re-reading/parsing it per job costs a query + json.loads thousands of times
-    per scrape for an identical 46-phrase list."""
+    """Read + parse the body_exclusion_phrases setting once; batch callers should call this before their job loop and pass the result into check_job_h1b to avoid re-parsing it per job."""
     exclusion_setting = db.query(Setting).filter(Setting.key == "body_exclusion_phrases").first()
     if exclusion_setting:
         try:
@@ -383,16 +336,7 @@ def load_exclusion_phrases(db) -> list:
 
 
 async def check_job_h1b(job: Job, db, company_lookup: dict = None, phrases: list = None) -> None:
-    """Run H-1B checks on a single job and update its fields.
-
-    Company H-1B data is cached on the Company record and reused for 90 days.
-    Live MyVisaJobs lookups only happen during the dedicated h1b_cron refresh.
-    Per-job: only the body exclusion scan runs (no HTTP calls).
-
-    Batch callers: pass `company_lookup` (from build_company_lookup) and
-    `phrases` (from load_exclusion_phrases) to avoid a full Companies scan and
-    a Settings read + JSON parse per job.
-    """
+    """Run H-1B checks on a job and update its fields; batch callers should pass `company_lookup` and `phrases` to avoid a full Companies scan and a Settings read per job."""
     if company_lookup is not None:
         company = company_lookup.get((job.company or "").strip().lower())
     else:
@@ -423,7 +367,6 @@ async def check_job_h1b(job: Job, db, company_lookup: dict = None, phrases: list
     # triggered the exclusion without spilling the JD excerpt into logs.
     job._h1b_matched_phrase = jd_result["matched_phrase"]
 
-    # Overall verdict
     job.h1b_verdict = determine_h1b_verdict(lca_count, jd_result["jd_flag"])
 
 

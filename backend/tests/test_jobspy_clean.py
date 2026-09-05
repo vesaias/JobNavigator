@@ -1,9 +1,4 @@
-"""JobSpy field cleaning: pandas nulls must never be stringified into 'None'/'nan'.
-
-Root cause of the tailoring crash: JobSpy rows come from a DataFrame, so missing
-cells are None/NaN. `str(cell)` turned those into the literal text 'None'/'nan',
-which then masqueraded as real content. `_clean` detects the actual null instead.
-"""
+"""JobSpy field cleaning: pandas nulls must never be stringified into 'None'/'nan' — `_clean` detects the actual null instead of doing `str(cell)` on a None/NaN DataFrame cell."""
 
 
 def test_clean_returns_none_for_nulls():

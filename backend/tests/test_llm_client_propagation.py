@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, patch
 @pytest.mark.asyncio
 async def test_call_llm_returns_dict(monkeypatch, mock_anthropic_client, mock_anthropic_response):
     """call_llm returns {text, usage}."""
-    # Mock the settings reads
     def fake_get_setting(db, key, default=""):
         return {
             "llm_provider": "claude_api",

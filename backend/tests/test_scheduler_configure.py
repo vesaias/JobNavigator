@@ -9,7 +9,6 @@ def test_configure_scheduler_zero_interval_skips_job(test_db, monkeypatch):
     from sqlalchemy.orm import sessionmaker
     TestSession = sessionmaker(bind=test_db.get_bind())
 
-    # Seed with disabled scrape interval
     s = TestSession()
     s.add(Setting(key="scrape_interval_minutes", value="0"))
     s.add(Setting(key="email_check_interval_minutes", value="0"))
@@ -19,7 +18,7 @@ def test_configure_scheduler_zero_interval_skips_job(test_db, monkeypatch):
     import backend.scheduler as sched_mod
     monkeypatch.setattr(sched_mod, "SessionLocal", TestSession)
 
-    # Use a fresh scheduler so tests don't pollute each other
+    # a fresh scheduler so tests don't pollute each other
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     fresh = AsyncIOScheduler()
     monkeypatch.setattr(sched_mod, "scheduler", fresh)
@@ -110,8 +109,7 @@ def test_configure_scheduler_invalid_cron_logs_warning(test_db, monkeypatch, cap
 
     job_ids = {j.id for j in fresh.get_jobs()}
     assert "db_backup" not in job_ids
-    # OPEN-01: a bad stored cron is an error, not a warning — it means a job the
-    # user configured is silently not running.
+    # a bad stored cron warns because it means a job the user configured is silently not running
     complaints = [r for r in caplog.records if r.levelno >= logging.WARNING]
     assert any("cron" in r.message.lower() for r in complaints)
 
@@ -140,10 +138,9 @@ def test_configure_scheduler_calls_remove_all_jobs(test_db, monkeypatch):
     mock_scheduler.remove_all_jobs.assert_called_once()
 
 
-# ── OPEN-01: boot resilience ────────────────────────────────────────────────
-# PATCH /api/settings now rejects these values, but a row written before that
-# guard (or edited straight in the DB) must not take the process down —
-# configure_scheduler() runs inside the app's lifespan.
+# ── boot resilience ──────────────────────────────────────────────────────────
+# A row written before validation existed (or edited straight in the DB) must not take
+# the process down — configure_scheduler() runs inside the app's lifespan.
 
 def _fresh(test_db, monkeypatch, rows):
     from backend.models.db import Setting
@@ -164,8 +161,7 @@ def _fresh(test_db, monkeypatch, rows):
 
 
 def test_garbage_interval_does_not_break_boot(test_db, monkeypatch, caplog):
-    """A non-numeric interval used to raise ValueError out of configure_scheduler,
-    i.e. the backend could not start. Now it logs an error and skips that job."""
+    """A non-numeric interval must not raise ValueError out of configure_scheduler; it logs an error and skips that job."""
     import logging
     sched_mod, fresh = _fresh(test_db, monkeypatch, {
         "scrape_interval_minutes": "abc",

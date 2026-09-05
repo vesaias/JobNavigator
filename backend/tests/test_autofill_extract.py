@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
-r"""DS-B-03: the JSON envelope must never reach the user as the answer.
-
-Measured in the design-final flow run: 1 of 4 identical POST /api/autofill/answer
-calls came back with `answer` starting `{"answer": "At additiv I owned a Tier 1
-bank platform delivery ...` — 460 characters of wrapper that the extension would
-paste verbatim into a real application form. The old salvage needed a closing
-brace (r'\{[\s\S]*\}') and, when that failed, returned the raw text unchanged.
-
-`_extract_answer` is a pure function, so these run without the container or an
-LLM: clean JSON, fenced JSON, a truncated envelope, and plain prose.
-"""
+r"""The JSON envelope must never reach the user as the answer; _extract_answer is pure, so these run without the container or an LLM."""
 from backend.api.routes_autofill import _extract_answer
 
 

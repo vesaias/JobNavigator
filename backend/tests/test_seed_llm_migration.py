@@ -1,4 +1,4 @@
-"""Tests for migrate_llm_settings — 2026-07 model-list refresh + openai_compat removal."""
+"""Tests for migrate_llm_settings — model-list refresh + openai_compat removal."""
 import json
 import pytest
 from sqlalchemy import create_engine
@@ -23,8 +23,7 @@ def _default_list():
 
 
 def test_stale_list_gains_defaults_and_drops_dead_provider(db):
-    """Additive migration: openai_compat is dropped, every current default is present,
-    and pre-existing valid entries are kept."""
+    """Additive migration: openai_compat is dropped, every current default is present, and pre-existing valid entries are kept."""
     stale = [
         {"provider": "claude_api", "model": "claude-sonnet-4-6"},
         {"provider": "claude_api", "model": "claude-opus-4-6"},
@@ -50,8 +49,7 @@ def test_stale_list_gains_defaults_and_drops_dead_provider(db):
 
 
 def test_deleted_default_not_readded_after_seeding(db):
-    """Once defaults are seeded (recorded in llm_seeded_models), deleting one keeps it
-    gone across restarts — the migration no longer force-re-adds it."""
+    """Once defaults are seeded (recorded in llm_seeded_models), deleting one keeps it gone across restarts; the migration does not resurrect it."""
     db.add(Setting(key="llm_models_list", value=json.dumps(_default_list())))
     db.commit()
     migrate_llm_settings(db)  # first run records the seen-set

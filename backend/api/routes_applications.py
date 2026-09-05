@@ -55,7 +55,6 @@ def _extract_clean_content(raw_html: str) -> tuple:
 
     soup = BeautifulSoup(raw_html, "html.parser")
 
-    # Remove non-content elements
     for tag in soup.find_all([
         "script", "style", "nav", "footer", "header", "noscript",
         "iframe", "svg", "img", "video", "audio", "picture", "source",
@@ -64,13 +63,11 @@ def _extract_clean_content(raw_html: str) -> tuple:
     ]):
         tag.decompose()
 
-    # Remove hidden elements
     for tag in soup.find_all(True, attrs={"aria-hidden": "true"}):
         tag.decompose()
     for tag in soup.find_all(True, style=lambda s: s and "display:none" in s.replace(" ", "").lower()):
         tag.decompose()
 
-    # Tags we keep (structural content)
     KEEP_TAGS = {
         "h1", "h2", "h3", "h4", "h5", "h6",
         "p", "ul", "ol", "li", "dl", "dt", "dd",
@@ -83,14 +80,13 @@ def _extract_clean_content(raw_html: str) -> tuple:
     # Strip all attributes except href on <a> tags
     for tag in soup.find_all(True):
         if tag.name not in KEEP_TAGS:
-            tag.unwrap()  # Replace tag with its contents
+            tag.unwrap()
         elif tag.name == "a":
             href = tag.get("href", "")
             tag.attrs = {"href": href, "target": "_blank"} if href else {}
         else:
             tag.attrs = {}
 
-    # Get the body content
     body = soup.body if soup.body else soup
     clean_html = str(body)
 
@@ -110,9 +106,8 @@ async def _fetch_with_playwright(url: str) -> str:
     """Fetch a page using Playwright for SPA/JS-rendered sites. Returns raw HTML."""
     from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
     from backend.scraper._shared.url_safety import assert_public_http_url
-    # Revalidate even though callers already gate on the plain-httpx path —
-    # this function is also reachable directly and a single missed caller is
-    # enough to reopen the SSRF hole.
+    # Revalidate here too — this function is also reachable directly, and a
+    # single missed caller elsewhere would reopen the SSRF hole.
     assert_public_http_url(url)
     pw, browser = await _get_browser()
     try:
@@ -139,9 +134,8 @@ async def _cache_job_page(job_id: str, url: str):
         if not job or not url:
             return
 
-        # SSRF gate — reject before any fetch. User-submitted job URLs from the
-        # Chrome extension land here; without this check an attacker could cache
-        # http://169.254.169.254/ or http://db:5432/ and read it from the UI.
+        # SSRF gate: user-submitted job URLs from the extension land here; without
+        # it an attacker could cache http://169.254.169.254/ and read it via the UI.
         try:
             assert_public_http_url(url)
         except UnsafeURLError as e:
@@ -196,7 +190,7 @@ async def _cache_job_page(job_id: str, url: str):
                 job.cached_page_html = clean_html
                 job.cached_page_text = text
                 job.page_cached_at = datetime.now(timezone.utc)
-                job.cache_error = None  # Clear any previous error on success
+                job.cache_error = None
                 db.commit()
                 logger.info(f"Cached page for job {job_id}: {len(clean_html)} clean HTML, {len(text)} text chars")
             else:
@@ -231,7 +225,6 @@ def create_application(
     from backend.scraper._shared.dedup import make_external_id
     external_id = make_external_id(data.company, data.title, data.url)
 
-    # Find or create job
     job = db.query(Job).filter(Job.external_id == external_id).first()
     if not job:
         job = Job(
@@ -248,7 +241,7 @@ def create_application(
     else:
         job.status = "applied"
 
-    # One application per job — a duplicate log is refused with 409 (APPS-04)
+    # One application per job — a duplicate log is refused with 409.
     from backend.models.db import record_transition
     new_status = data.status if data.status in VALID_STATUSES else "applied"
     applied_at = None
@@ -261,9 +254,8 @@ def create_application(
 
     app = db.query(Application).filter(Application.job_id == job.id).first()
     if app:
-        # APPS-04: a second log for the same posting used to silently overwrite the
-        # notes and reset the stage (interview -> applied, with a bogus funnel edge).
-        # Refuse and point the caller at the existing record instead.
+        # Refuse a second log for the same posting — it would silently overwrite
+        # notes and reset the stage, creating a bogus funnel edge.
         db.rollback()
         raise HTTPException(
             status_code=409,
@@ -274,8 +266,7 @@ def create_application(
         status=new_status,
         cv_version_used=data.cv_version_used,
         notes=data.notes,
-        # seed the funnel edge — extension-created rows used to have an empty
-        # history, so they never showed as an "-> applied" edge in the Sankey
+        # seed the funnel edge so this application shows an initial edge in the Sankey chart
         status_transitions=[{
             "from": None, "to": new_status,
             "at": utcnow().isoformat(), "source": "ui",
@@ -302,11 +293,9 @@ def create_application(
             db.flush()
             db.commit()
             logger.info(f"Auto-created company '{company_name}' from application")
-            # Fire H-1B lookup in background
             from backend.analyzer.h1b_checker import fetch_h1b_for_company_id
             background_tasks.add_task(fetch_h1b_for_company_id, str(new_co.id))
 
-    # Cache job page in background if not already cached
     if data.url and not job.has_cached_page:
         background_tasks.add_task(_cache_job_page, str(job.id), data.url)
 
@@ -364,17 +353,14 @@ def update_application(app_id: str, updates: dict, db: Session = Depends(get_db)
     if "status" in updates and updates["status"] not in VALID_STATUSES:
         raise HTTPException(status_code=400,
                             detail=f"status must be one of {sorted(VALID_STATUSES)}")
-    # Track status transitions
     changed = False
     if "status" in updates:
         if updates["status"] != app.status:
             from backend.models.db import record_transition
             record_transition(app, updates["status"], "ui")
             changed = True
-        # Same status = a click on the already-active stage. record_transition()
-        # already declines to log it, so treat it as a no-op here too: bumping
-        # updated_at would reset the ageing signal ("Nd" cell, "N waiting >7d")
-        # for something the user did not actually change (APPS-07).
+        # Same status = click on the already-active stage; record_transition() already
+        # skips logging it, so skip updated_at too — bumping it would reset the ageing signal.
         del updates["status"]
     for key, value in updates.items():
         if key in allowed:
@@ -403,17 +389,12 @@ def delete_application(app_id: str, db: Session = Depends(get_db)):
     return {"deleted": True}
 
 
-# ── Employer detection for the posting-URL reader (R3-A-05) ──────────────────
-# The reader used to fall back to og:site_name / hostname, which on an ATS-hosted
-# board is the *board's* brand ("Greenhouse", "Lever", "Linkedin"), not the
-# employer. That value lands in the Company field the user is about to save and
-# becomes Job.company plus the Application grouping key, and the modal's
-# "only fill empty fields" rule makes a wrong value sticky. So: derive the
-# employer from the board slug for known ATS hosts, and drop any brand-looking
-# fallback instead of guessing — an empty field the user types into beats a
-# confidently wrong one.
+# ── Employer detection for the posting-URL reader ────────────────────────────
+# og:site_name/hostname on an ATS-hosted board return the board's own brand
+# (e.g. "Greenhouse"), not the employer, so ATS URL slugs are tried first and
+# brand-looking fallbacks are dropped rather than guessed.
 
-# Squashed (lowercase, alphanumeric-only) names of job boards / aggregators that
+# Squashed (lowercase, alphanumeric-only) names of job boards/aggregators that
 # must never be returned as an employer.
 _ATS_BRAND_KEYS = {
     "greenhouse", "lever", "ashby", "ashbyhq", "workday", "myworkdayjobs",
@@ -433,17 +414,14 @@ _SLUG_NOISE = {
 
 
 def _title_slug(slug: str) -> str:
-    """'clear-street' -> 'Clear Street'. Only the first letter of each word is
-    forced, so already-cased slugs ('BoschGroup') survive intact."""
+    """'clear-street' -> 'Clear Street'; only the first letter of each word is forced, so already-cased slugs ('BoschGroup') survive intact."""
     import re
     words = [w for w in re.split(r"[-_+.\s]+", (slug or "").strip()) if w]
     return " ".join(w[0].upper() + w[1:] for w in words)
 
 
 def _is_ats_brand(name) -> bool:
-    """True if a detected 'company' is really the job board's own brand (or pure
-    board chrome like 'Careers'). Used to suppress the og:site_name / hostname
-    fallbacks — see R3-A-05."""
+    """True if a detected 'company' is really the job board's own brand or pure board chrome (e.g. 'Careers'), used to suppress the og:site_name/hostname fallback."""
     import re
     raw = (name or "").strip()
     if not raw:
@@ -456,10 +434,7 @@ def _is_ats_brand(name) -> bool:
 
 
 def _company_from_url(url: str):
-    """Derive the employer from a known ATS board URL (slug in the path, or the
-    tenant subdomain); None for anything unrecognised so the caller can fall
-    back to page metadata. Reuses the scraper's is_* host predicates so the two
-    stay in sync rather than growing a second copy of the ATS matrix (R3-A-05)."""
+    """Derive the employer from a known ATS board URL (path slug or tenant subdomain); returns None for anything unrecognised so the caller falls back to page metadata, reusing the scraper's is_* host predicates to stay in sync with the ATS matrix."""
     from urllib.parse import parse_qs, urlparse
     from backend.scraper.ats.ashby import is_ashby
     from backend.scraper.ats.greenhouse import is_greenhouse
@@ -509,15 +484,7 @@ def _company_from_url(url: str):
 
 
 def _decode_entities(value):
-    """OPEN-04: strip HTML entities out of an extracted field.
-
-    BeautifulSoup decodes entities in text nodes and attributes, but JSON-LD
-    lives inside a `<script>` whose contents are raw text — `json.loads` has no
-    reason to touch `&amp;`. LinkedIn emits its titles there, so the reader
-    handed the Log-application modal
-    "…AI Strategy &amp; Health Plan Tech…". Unescape repeatedly for the
-    double-encoded case ("&amp;amp;"), which some boards also emit.
-    """
+    """Strip HTML entities from an extracted field; JSON-LD lives in raw script text so json.loads never unescapes it (e.g. LinkedIn's "&amp;" titles), and unescaping repeats to also catch double-encoded "&amp;amp;" cases."""
     import html
     if not value:
         return value
@@ -532,9 +499,7 @@ def _decode_entities(value):
 
 @router.post("/extract")
 async def extract_posting(payload: ExtractRequest):
-    """Read title + company off a posting URL for the Log-application modal.
-    JSON-LD JobPosting first, then OpenGraph, then <title>/hostname. Always
-    returns 200 with whatever it found — the form fields stay editable."""
+    """Read title + company off a posting URL for the Log-application modal (JSON-LD JobPosting, then OpenGraph, then <title>/hostname); always returns 200 with whatever it found so form fields stay editable."""
     import json
     import re
     from urllib.parse import urlparse
@@ -577,8 +542,8 @@ async def extract_posting(payload: ExtractRequest):
                 title = og["content"]
         if not company:
             og = soup.find("meta", property="og:site_name")
-            # R3-A-05: ATS boards set og:site_name to their own brand, so a
-            # brand-looking value is dropped and the slug layer below wins.
+            # ATS boards set og:site_name to their own brand, so a brand-looking
+            # value is dropped and the slug layer below wins.
             if og and og.get("content") and not _is_ats_brand(og["content"]):
                 company = og["content"]
         # 3. <title>, minus the trailing " | Company" / " at Company" tail
@@ -589,9 +554,8 @@ async def extract_posting(payload: ExtractRequest):
     except Exception as e:
         logger.info("extract failed for %s: %s", url, e)
 
-    # R3-A-05: known ATS board URLs carry the employer in the path/subdomain —
-    # read it there before falling back to the hostname, which on those hosts is
-    # the ATS brand.
+    # Known ATS board URLs carry the employer in the path/subdomain — read it
+    # there before falling back to the hostname, which on those hosts is the ATS brand.
     if not company:
         company = _company_from_url(url)
 
@@ -648,10 +612,7 @@ def delete_interview(interview_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{app_id}/prep")
 def prep_bundle(app_id: str, db: Session = Depends(get_db)):
-    """Assemble the interview prep handover — four plain sections in the order a
-    model reads best: the role, my résumé, the posting, and what I want back.
-    The closing ask is the editable `prep_ask` setting. No LLM call here — this
-    is the context, not the answer."""
+    """Assemble the interview prep handover (role, résumé, posting, and the editable `prep_ask` closing question) as plain context for an external model; no LLM call happens here."""
     from backend.models.db import Resume
     app = db.query(Application).filter(Application.id == app_id).first()
     if not app:
@@ -742,10 +703,7 @@ def prep_bundle(app_id: str, db: Session = Depends(get_db)):
 
 
 def _app_to_dict(a: Application, lookup=None, tailored=None, has_cover_letter=False) -> dict:
-    """Serialize an Application. Pass lookup={lowercase: Company} (from
-    build_company_lookup) to populate company_canonical for alias-aware
-    grouping in the UI. When omitted, company_canonical falls back to the
-    raw company name."""
+    """Serialize an Application; pass lookup={lowercase: Company} (from build_company_lookup) to populate company_canonical for alias-aware grouping, else it falls back to the raw company name."""
     job = a.job
     raw = job.company if job else None
     canonical_co = (lookup or {}).get((raw or "").lower())

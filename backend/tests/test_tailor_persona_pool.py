@@ -1,11 +1,4 @@
-"""Resume-as-base tailoring uses ONLY the base resume's bullets — Persona is NOT
-merged in (that previously caused tailored output to balloon to 1.5-2x the original
-bullet count). Persona-as-base is the explicit way to tap the richer pool, with
-its own constrained prompt.
-
-The helper functions (_merge_persona_experience, _normalize_company, ...) are kept
-since they're still useful primitives for future features (e.g. similarity-based
-bullet dedup elsewhere)."""
+"""Resume-as-base tailoring uses ONLY the base resume's bullets — Persona is NOT merged in; persona-as-base is the explicit way to tap the richer pool."""
 import uuid
 import pytest
 from backend.models.db import Resume, Persona, Setting, Job
@@ -91,7 +84,7 @@ async def test_tailor_works_when_persona_empty(test_db, monkeypatch):
 
 
 
-# ── Tests for the new persona-merge helpers ─────────────────────────────────
+# ── persona-merge helpers ────────────────────────────────────────────────────
 
 from backend.api.routes_resumes import (
     _normalize_company, _normalize_title_root,
@@ -144,8 +137,7 @@ def test_is_duplicate_bullet_unrelated():
 
 
 def test_merge_normalizes_company_and_title():
-    """'Senior Project Manager @ Additiv' + 'Senior Product Manager @ Additiv' merge
-    into ONE entry — same company, both roots collapse to 'manager'."""
+    """'Senior Project Manager @ Additiv' + 'Senior Product Manager @ Additiv' merge into ONE entry — same company, both roots collapse to 'manager'."""
     base = [{"title": "Senior Project Manager", "company": "Additiv", "dates": "2023-2024",
              "bullets": ["Built X"]}]
     persona = [{"title": "Senior Product Manager", "company": "Additiv", "dates": "2023-2024",

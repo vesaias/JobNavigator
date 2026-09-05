@@ -1,7 +1,4 @@
-"""Regression: _dispatch must concatenate cached_prefix into prompt for non-Anthropic providers.
-
-Before the fix, providers other than claude_api silently dropped cached_prefix —
-scoring broke because the rubric + CVs + schema never reached the model."""
+"""_dispatch must concatenate cached_prefix into the prompt for non-Anthropic providers, since only claude_api supports a separate cache_control block."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 

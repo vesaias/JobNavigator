@@ -1,20 +1,4 @@
-"""A manual run-all must cover every active company that has scrape URLs.
-
-The batch used to select `Company.playwright_enabled == True`, a flag with no UI:
-companies the app creates for you when you mark a job applied are born with
-playwright_enabled=False (routes_applications / routes_jobs), so activating one
-and giving it a career-page URL still left it out of every run-all — while
-POST /api/scrape/company/{id}, which never looked at the flag, scraped it fine.
-Measured on the live DB before the fix: the run-all of 2026-09-04 10:58-11:11
-wrote ScrapeLog rows for 55 of the 61 eligible companies, and the six with
-playwright_enabled=False had to be triggered one by one afterwards.
-
-These tests pin the four rules of the batch:
-  - active + has URLs is the whole gate (playwright_enabled is not consulted),
-  - force=True (a manual run) ignores per-company intervals,
-  - one company's failure does not end the batch, and leaves an error ScrapeLog row,
-  - the returned summary names every company that did not run, with the reason.
-"""
+"""A manual run-all must cover every active company with scrape URLs: active+URLs is the whole gate (playwright_enabled is not consulted), force=True ignores per-company intervals, one company's failure does not end the batch, and the summary names every company that did not run with the reason."""
 from datetime import datetime, timedelta, timezone
 
 import pytest

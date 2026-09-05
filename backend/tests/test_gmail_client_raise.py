@@ -4,12 +4,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_check_emails_propagates_service_error(monkeypatch):
-    """When something inside check_emails raises, it should re-raise (not swallow).
-
-    Previously the top-level ``except Exception`` in ``check_emails`` logged + called
-    ``log_activity`` but never re-raised, so when the scheduler ran it via
-    ``tracked_run`` the JobRun was marked ``completed`` instead of ``failed``.
-    """
+    """When something inside check_emails raises, it should re-raise (not swallow) so tracked_run marks the JobRun failed instead of completed."""
     from backend.email_monitor import gmail_client
 
     entry_fn = getattr(gmail_client, "check_emails", None) or getattr(

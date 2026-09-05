@@ -14,7 +14,6 @@ def test_jobspy_does_not_use_asyncio_run():
 def test_jobspy_has_sync_h1b_helper():
     """Expose a sync-callable helper that's safe inside asyncio.to_thread workers."""
     from backend.scraper.sources import jobspy as jobspy_src
-    # Either _apply_h1b_inline or a module-level sync helper must exist
     assert hasattr(jobspy_src, "_apply_h1b_inline") or hasattr(jobspy_src, "scan_jd_for_h1b_flags_sync")
 
 
@@ -22,7 +21,6 @@ def test_apply_h1b_inline_sets_flag_on_match(monkeypatch):
     """When the async scan flags the JD, the sync helper must preserve that flag on the job."""
     from backend.scraper.sources import jobspy as jobspy_src
 
-    # Stub the async scan to set the flag
     async def fake_async_scan(job, db=None, **kwargs):
         job.h1b_jd_flag = True
         job.h1b_jd_snippet = "no visa sponsorship"
@@ -38,11 +36,9 @@ def test_apply_h1b_inline_sets_flag_on_match(monkeypatch):
         url="https://x.com/1", description="We do NOT sponsor visas.",
     )
 
-    # Call the helper — whatever its name is (grep for it first)
     if hasattr(jobspy_src, "_apply_h1b_inline"):
         jobspy_src._apply_h1b_inline(job)
     else:
-        # fallback name
         jobspy_src.scan_jd_for_h1b_flags_sync(job)
 
     assert getattr(job, "h1b_jd_flag", None) is True
@@ -64,7 +60,6 @@ def test_apply_h1b_inline_tolerates_exception(monkeypatch):
     job = Job(external_id="x", content_hash="c", company="Acme", title="PM",
               url="https://x.com/1", description="...")
 
-    # Should not raise
     if hasattr(jobspy_src, "_apply_h1b_inline"):
         jobspy_src._apply_h1b_inline(job)
     else:

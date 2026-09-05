@@ -98,8 +98,7 @@ def test_search_flagged_and_count(test_db):
 
 
 def test_inactive_search_not_flagged(test_db):
-    """A paused search is not an open problem — it was switched off deliberately,
-    so its failed history must stop driving the rail dot and the header count."""
+    """A paused search was switched off deliberately, so its failed history must not drive the rail dot or header count."""
     s = Search(name="OffSearch", search_mode="keyword", active=False)
     test_db.add(s)
     test_db.commit()
@@ -144,8 +143,7 @@ def test_acknowledged_search_not_flagged(test_db):
 
 
 def test_failed_run_after_acknowledge_flags_again(test_db):
-    """No expiry timer: the warning comes back the moment a run *newer* than the
-    acknowledgement fails."""
+    """No expiry timer: the warning comes back the moment a run *newer* than the acknowledgement fails."""
     c = Company(name="ReAckCo", active=True)
     test_db.add(c)
     test_db.commit()
@@ -165,8 +163,7 @@ def test_failed_run_after_acknowledge_flags_again(test_db):
 
 
 def test_acknowledge_also_covers_a_failed_board_on_the_last_run(test_db):
-    """The R3-A-03 single-board branch honours the acknowledgement too — otherwise
-    "ZipRecruiter failed" would stay amber forever with no way to clear it."""
+    """The single-board branch (e.g. "ZipRecruiter failed") honours the acknowledgement too, so it doesn't stay amber forever."""
     s = Search(name="BoardSearch", search_mode="keyword", active=True)
     test_db.add(s)
     test_db.commit()

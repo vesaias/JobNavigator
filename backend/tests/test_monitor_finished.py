@@ -1,9 +1,4 @@
-"""GET /api/monitor/finished — recently-finished per-job runs, with status.
-
-Lets the dashboard resolve OK/NOK for an op that just left /monitor/in-flight using
-the run's ACTUAL status (completed/failed), which can't be inferred from job fields
-for re-runs.
-"""
+"""GET /api/monitor/finished — recently-finished per-job runs, with status; lets the dashboard resolve OK/NOK using the run's actual status, which can't be inferred from job fields for re-runs."""
 import uuid
 from datetime import datetime, timezone, timedelta
 from backend.models.db import Setting, JobRun

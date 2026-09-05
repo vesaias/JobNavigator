@@ -3,8 +3,7 @@ import pytest
 
 
 def _seed_first_run(test_db):
-    """Seed an empty dashboard_api_key row so the auth middleware allows
-    requests (first-run mode, matches seed.py default)."""
+    """Seed an empty dashboard_api_key row so the auth middleware allows requests (first-run mode)."""
     from backend.models.db import Setting
     test_db.add(Setting(key="dashboard_api_key", value=""))
     test_db.commit()

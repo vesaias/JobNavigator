@@ -12,9 +12,8 @@ from backend.models.db import get_db, Search, Setting, ScrapeLog, Job, is_acknow
 
 logger = logging.getLogger("jobnavigator.routes_searches")
 
-# The two seeded browser-extension searches ("Extension" / "Extension LI") have
-# no scraper and must not be deleted — jobs arrive by push from the extension.
-# PATCH stays open (the editor saves their filters through it).
+# The two seeded browser-extension searches ("Extension"/"Extension LI") have no
+# scraper and must not be deleted — jobs arrive by push; PATCH stays open for the editor.
 EXTENSION_MODES = ("extension", "linkedin_extension")
 
 router = APIRouter(prefix="/searches", tags=["searches"])
@@ -100,17 +99,7 @@ def update_search(search_id: str, updates: dict, db: Session = Depends(get_db)):
 
 @router.post("/{search_id}/acknowledge")
 def acknowledge_search_warning(search_id: str, db: Session = Depends(get_db)):
-    """Mark this search's current scrape warning as seen.
-
-    /api/health/entities stops counting the search (rail dot, header "N need
-    attention") while its newest ScrapeLog row is no newer than this stamp. The
-    row keeps showing the warning, muted, so the history stays visible; a run
-    that fails *after* the acknowledgement is newer, so it raises it again.
-
-    The two seeded extension searches never scrape, so they can never raise one
-    of these warnings — acknowledging is meaningless there and returns 409, the
-    same guard /run and DELETE use.
-    """
+    """Mark this search's current scrape warning as seen so /api/health/entities stops counting it until a newer ScrapeLog row appears (muted, not hidden); the two seeded extension searches never scrape, so acknowledging one returns 409, the same guard /run and DELETE use."""
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
@@ -138,12 +127,8 @@ def delete_search(search_id: str, db: Session = Depends(get_db)):
             detail="Built-in extension searches cannot be deleted — "
                    "pause it instead to stop importing captured jobs",
         )
-    # R3-A-08: same trap as delete_company — ScrapeLog.search_id (every run this
-    # search ever did) and Job.search_id (every job it stored) are plain FKs with
-    # no ON DELETE in the live schema, so a search that had ever run could not be
-    # deleted and the endpoint returned a bare 500. Orphan both: the jobs are kept
-    # on purpose (they carry their own company/title), and the audit rows stay
-    # readable in the run history.
+    # ScrapeLog.search_id and Job.search_id are plain FKs with no ON DELETE in the
+    # live schema, so orphan both instead of deleting them — jobs keep their own company/title, and run history stays readable.
     db.query(ScrapeLog).filter(ScrapeLog.search_id == search.id).update(
         {"search_id": None}, synchronize_session=False)
     db.query(Job).filter(Job.search_id == search.id).update(
@@ -163,9 +148,7 @@ def delete_search(search_id: str, db: Session = Depends(get_db)):
 
 @router.post("/{search_id}/run", status_code=202)
 async def trigger_search(search_id: str, auto_score: bool = None, db: Session = Depends(get_db)):
-    """Trigger a single search. Returns immediately with a run_id — the run continues
-    in the background and is pollable via /api/monitor/active (scope_key = search id).
-    auto_score: True/False override, null=use the search's auto_scoring_depth."""
+    """Trigger a single search in the background; returns immediately with a run_id pollable via /api/monitor/active (scope_key = search id); auto_score overrides the search's auto_scoring_depth when set."""
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
@@ -184,11 +167,8 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
         # the real text is already persisted on the ScrapeLog row and logged here.
         if isinstance(result, dict) and result.get("error"):
             logger.warning("Search %s finished with scrape error: %s", search_id, result.get("error"))
-        # Returned string becomes JobRun.result_summary (Stats -> Run history).
-        # OPEN-03: built from the ScrapeLog row the run just wrote, so the line
-        # and the audit row can never carry different numbers — and the postings
-        # the title filters rejected (still stored as `ignored`, which is why a
-        # run could leave more rows than "N seen") are named.
+        # Returned string becomes JobRun.result_summary (Stats -> Run history), built
+        # from the ScrapeLog row the run just wrote so the line and audit row always agree.
         from backend.scraper.orchestrator import summarize_search_run
         return summarize_search_run(search_name, result)
 
@@ -204,16 +184,11 @@ async def trigger_search(search_id: str, auto_score: bool = None, db: Session = 
 
 @router.post("/{search_id}/test")
 async def test_search(search_id: str, db: Session = Depends(get_db)):
-    """Launch a search test in the background. Returns run_id to poll for results.
-
-    For fast modes (keyword), runs synchronously and returns results directly.
-    For slow modes (levels_fyi, linkedin_personal), launches async and returns 202.
-    """
+    """Run a search test: keyword mode runs synchronously and returns results directly, while slow modes (levels_fyi, linkedin_personal, jobright, freehire) launch in the background and return a run_id to poll."""
     search = db.query(Search).filter(Search.id == search_id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Search not found")
 
-    # Slow modes: launch in background, return run_id for polling
     if search.search_mode in ("levels_fyi", "linkedin_personal", "jobright", "freehire"):
         run_id = str(uuid.uuid4())[:8]
         _test_results[run_id] = {"status": "running", "result": None}
@@ -336,7 +311,6 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
 
     raw_count = len(jobs_df)
 
-    # Apply title filters
     include_kw = search.title_include_keywords or []
     exclude_kw = search.title_exclude_keywords or []
 
@@ -348,13 +322,11 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         pattern = "|".join(r'\b' + re.escape(kw) + r'\b' for kw in exclude_kw)
         mask &= ~jobs_df["title"].str.contains(pattern, case=False, na=False, regex=True)
 
-    # Company filter (exact match, case-insensitive)
     company_filter = search.company_filter or []
     if company_filter:
         cf_set = {cf.lower() for cf in company_filter}
         mask &= jobs_df["company"].str.lower().isin(cf_set)
 
-    # Company exclude (global + per-search + active companies if flag on)
     import json
     from backend.scraper._shared.filters import build_search_exclude_sets
     global_exclude_set, search_exclude_set = build_search_exclude_sets(db, search)
@@ -368,13 +340,8 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         excl_mask = jobs_df["company"].apply(_kw_excl)
         mask &= ~excl_mask
 
-    # Global title exclude (DS-A-02). The run merges `title_exclude_global` into
-    # the per-search exclude list before it stores anything
-    # (scraper/sources/jobspy.py:285), so a preview that skips this layer promises
-    # rows the run then files as `ignored` — "5 kept · 0 title-filtered" became
-    # "3 new, 2 filtered out". Applied *after* the per-search title and company
-    # layers and recorded separately, exactly the way the Companies preview does
-    # it (routes_companies.py:603), so each row can say which list dropped it.
+    # The run merges title_exclude_global into the exclude list before storing (see
+    # scraper/sources/jobspy.py:285); applied after the per-search layers here too, mirroring routes_companies.py.
     from backend.models.db import get_global_title_exclude
     global_exclude_kw = [kw for kw in (get_global_title_exclude(db) or []) if str(kw).strip()]
     after_search_filter = int(mask.sum())   # passes the per-search layers only
@@ -392,7 +359,6 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                 global_hits[idx] = matched_global
                 mask[idx] = False
 
-    # Body exclusion description check (H-1B + language phrases)
     body_row = db.query(Setting).filter(Setting.key == "body_exclusion_phrases").first()
     body_phrases = []
     if body_row and body_row.value:
@@ -400,10 +366,7 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             body_phrases = json.loads(body_row.value)
         except json.JSONDecodeError:
             pass
-    # R3-A-01: the preview used to fold a body-exclusion drop into the same
-    # anonymous "filtered" bucket as a title miss, so a job the run would store
-    # as `ignored` looked kept. Record which phrase hit (and which rows could
-    # not be checked at all) so each row can say so inline.
+    # Record which phrase hit (and which rows couldn't be checked at all) so each row can report it inline.
     body_hits = {}          # df index -> the exclusion phrase that matched
     body_unchecked = set()  # df index -> passed the title layers, but had no description
     if body_phrases:
@@ -419,17 +382,14 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                 else:
                     body_unchecked.add(idx)
 
-    # Source breakdown
     source_breakdown = {}
     if "site" in jobs_df.columns:
         source_breakdown = jobs_df["site"].value_counts().to_dict()
 
-    # Company breakdown (top 20)
     company_breakdown = {}
     if "company" in jobs_df.columns:
         company_breakdown = jobs_df["company"].value_counts().head(20).to_dict()
 
-    # Build per-job results
     results = []
     for idx, row in jobs_df.iterrows():
         kept = bool(mask[idx])
@@ -442,7 +402,6 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         min_sal = row.get("min_amount")
         max_sal = row.get("max_amount")
 
-        # Figure out rejection reason
         reason = None
         if not kept:
             title_lower = title.lower()
@@ -462,8 +421,8 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
                     reason = f"Company excluded (global): {company_lower}"
                 elif company_lower in search_exclude_set:
                     reason = f"Company excluded: {company_lower}"
-            # DS-A-02: the global list is its own layer, named as such — a row
-            # dropped by it is not "excluded by this search's filters"
+            # The global list is its own layer, named as such — a row dropped by it
+            # is not "excluded by this search's filters".
             if not reason and idx in global_hits:
                 reason = f"[Global] Excluded by: {', '.join(global_hits[idx])}"
             if not reason and idx in body_hits:
@@ -493,12 +452,10 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
             "desc_length": len(desc) if has_desc else 0,
             "kept": kept,
             "reason": reason,
-            # DS-A-02: the global title-exclude keywords that matched, or [].
+            # The global title-exclude keywords that matched, or [].
             "global_excluded_by": global_hits.get(idx, []),
-            # R3-A-01: the phrase that would make the run store this row as
-            # `ignored`, or null. `body_checked` is false when there was no
-            # description to scan, so the preview says "needs the description"
-            # rather than quietly implying the row passed.
+            # The phrase that would make the run store this row as `ignored`, or
+            # null; body_checked is false when there was no description to scan.
             "body_excluded_by": body_hits.get(idx),
             "body_checked": bool(body_phrases) and idx not in body_unchecked,
         })
@@ -512,12 +469,12 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         "duration": duration,
         "raw_count": raw_count,
         "after_filter": after_filter,
-        # DS-A-02 footer arithmetic: how many survived this search's own filters,
-        # and how many of those the global list then removed.
+        # Footer arithmetic: how many survived this search's own filters, and how
+        # many of those the global list then removed.
         "after_search_filter": after_search_filter,
         "global_excluded_count": len(global_hits),
         "global_exclude_keyword_count": len(global_exclude_kw),
-        # R3-A-01 footer arithmetic: kept · title/company-filtered · would-be-ignored
+        # Footer arithmetic: kept · title/company-filtered · would-be-ignored
         "body_excluded_count": body_excluded_count,
         "body_unchecked_count": body_unchecked_count,
         "body_phrase_count": len(body_phrases),
@@ -622,7 +579,6 @@ async def _test_levelsfyi_search(search, db):
     exclude_kw = search.title_exclude_keywords or []
     company_filter = search.company_filter or []
 
-    # Company exclude (global + per-search + active companies if flag on)
     from backend.models.db import Setting
     import json
     from backend.scraper._shared.filters import build_search_exclude_sets
@@ -630,7 +586,6 @@ async def _test_levelsfyi_search(search, db):
     search_exclude = list(search_exclude_set)
     all_exclude = list(global_exclude_set | search_exclude_set)
 
-    # Body exclusion phrases for desc check (H-1B + language)
     body_row = db.query(Setting).filter(Setting.key == "body_exclusion_phrases").first()
     body_phrases = []
     if body_row and body_row.value:
@@ -639,7 +594,6 @@ async def _test_levelsfyi_search(search, db):
         except json.JSONDecodeError:
             pass
 
-    # Build per-company filter lookup
     company_filters = {}  # company_name_lower -> Company object
     company_names = {j.get("company", "") for j in raw_jobs if j.get("company")}
     for cn in company_names:
@@ -648,7 +602,6 @@ async def _test_levelsfyi_search(search, db):
         if co and (co.title_exclude_keywords or (co.title_include_expr and co.title_include_expr.strip())):
             company_filters[cn.lower()] = co
 
-    # Company breakdown
     from collections import Counter
     company_counts = Counter(j["company"] for j in raw_jobs if j.get("company"))
     company_breakdown = dict(company_counts.most_common(20))
@@ -660,7 +613,6 @@ async def _test_levelsfyi_search(search, db):
         kept = True
         reason = None
 
-        # Search-level title filters
         if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
             kept = False
             reason = f"No match for: {', '.join(include_kw)}"
@@ -675,7 +627,6 @@ async def _test_levelsfyi_search(search, db):
                 kept = False
                 reason = f"Company filter: {', '.join(company_filter)}"
 
-        # Company exclude (global=full match, per-search=full match)
         if kept and (global_exclude_set or search_exclude):
             company_lower = (j.get("company") or "").lower()
             if company_lower in global_exclude_set:
@@ -685,7 +636,6 @@ async def _test_levelsfyi_search(search, db):
                 kept = False
                 reason = f"Company excluded: {company_lower}"
 
-        # Body exclusion description check (H-1B + language)
         if kept and body_phrases:
             desc = j.get("description") or ""
             if desc:
@@ -695,7 +645,6 @@ async def _test_levelsfyi_search(search, db):
                     kept = False
                     reason = f"Body exclusion: {body_result['jd_snippet'][:80] if body_result['jd_snippet'] else 'matched'}"
 
-        # Per-company title filters
         if kept:
             co_name = (j.get("company") or "").lower()
             co_obj = company_filters.get(co_name)
@@ -703,7 +652,6 @@ async def _test_levelsfyi_search(search, db):
                 co_kept, co_rej = _apply_company_filters([j], co_obj)
                 if not co_kept:
                     kept = False
-                    # Build descriptive reason
                     if co_obj.title_exclude_keywords:
                         matched_kw = [kw for kw in co_obj.title_exclude_keywords if re.search(r'\b' + re.escape(kw.lower()) + r'\b', title_lower)]
                         if matched_kw:
@@ -719,7 +667,6 @@ async def _test_levelsfyi_search(search, db):
             if j.get("salary_max"):
                 salary += f" – ${j['salary_max']:,}"
 
-        # Show application_url if available, fallback to levels.fyi URL
         display_url = j.get("application_url") or j.get("url", "")
         desc = j.get("description") or ""
         has_desc = bool(desc and len(desc) > 50)
@@ -741,7 +688,6 @@ async def _test_levelsfyi_search(search, db):
 
     after_filter = sum(1 for r in results if r["kept"])
 
-    # Stats on enrichment
     with_apply_url = sum(1 for j in raw_jobs if j.get("application_url"))
     with_desc = sum(1 for j in raw_jobs if j.get("description") and len(j["description"]) > 50)
     with_salary = sum(1 for j in raw_jobs if j.get("salary_min"))
@@ -769,7 +715,7 @@ async def _test_levelsfyi_search(search, db):
 
 
 def _last_source_errors(last_log) -> list:
-    """Per-board failures from a search's most recent ScrapeLog row (R3-A-03)."""
+    """Per-board failures from a search's most recent ScrapeLog row."""
     if last_log is None:
         return []
     from backend.scraper.orchestrator import source_errors, source_label
@@ -813,7 +759,7 @@ def _search_to_dict(s: Search, last_log=None) -> dict:
         # most recent ScrapeLog for this search (None until it has run once)
         "last_error": (last_log.error if last_log else None),
         "last_run_warning": (bool(last_log.is_warning) if last_log else False),
-        # R3-A-03: boards that hard-failed on the last run, e.g.
+        # Boards that hard-failed on the last run, e.g.
         # [{"source": "zip_recruiter", "label": "ZipRecruiter", "error": "403"}]
         "last_source_errors": _last_source_errors(last_log),
         "last_jobs_found": (last_log.jobs_found if last_log else None),

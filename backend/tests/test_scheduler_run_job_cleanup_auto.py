@@ -17,6 +17,5 @@ async def test_run_job_cleanup_auto_handles_already_running(monkeypatch):
     # Patch the imported name inside job_monitor (scheduler imports it lazily)
     monkeypatch.setattr("backend.job_monitor.tracked_run", raising_tracked_run, raising=False)
 
-    # Must not raise — JobAlreadyRunningError should be caught internally,
-    # and no NameError from a stray `finally: db.close()` with unbound `db`.
+    # must not raise: caught internally, and no NameError from an unbound `db` in `finally: db.close()`
     await scheduler.run_job_cleanup_auto()

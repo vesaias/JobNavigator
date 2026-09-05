@@ -21,14 +21,9 @@ def get_setting(db, key, default=None):
 
 
 def _int_setting(db, key: str) -> int:
-    """A minutes-interval setting, or 0 (= disabled) if the stored value is junk.
-
-    OPEN-01: PATCH /settings now rejects non-integer intervals, but a row written
-    before that guard existed (or edited straight in the DB) must not take the
-    process down — configure_scheduler() runs inside the app's lifespan, so an
-    int() raising here meant the backend could not start at all. Log it loudly
-    and leave that one job unscheduled instead.
-    """
+    """A minutes-interval setting, or 0 (= disabled) if the stored value is junk; a bad value
+    must not raise, since configure_scheduler() runs inside the app's lifespan and would take
+    the whole backend down with it."""
     raw = get_setting(db, key, "0")
     try:
         value = int(str(raw).strip())
@@ -42,13 +37,9 @@ def _int_setting(db, key: str) -> int:
 
 
 def configure_scheduler():
-    """Read all intervals from settings table and configure scheduler jobs.
-    Called at startup and after any settings update.
-
-    Every value is read defensively: a bad interval or cron skips its own job and
-    logs an error, so one unparseable row can never stop the rest of the schedule
-    (or the app) from coming up.
-    """
+    """Read all intervals/crons from settings and (re)configure scheduler jobs; called at startup
+    and after any settings update. Each value is read defensively so one bad row only skips its
+    own job, never the rest of the schedule."""
     db = SessionLocal()
     try:
         scrape_interval = _int_setting(db, "scrape_interval_minutes")
@@ -79,7 +70,6 @@ def configure_scheduler():
         except Exception as e:
             logger.error(f"Invalid cron for {job_id}: '{cron_expr}': {e} — job disabled until it is fixed")
 
-    # Remove existing jobs before reconfiguring
     scheduler.remove_all_jobs()
 
     # Interval-based jobs (0 = disabled)
@@ -113,9 +103,8 @@ def configure_scheduler():
 
 
 # ── Run summaries ───────────────────────────────────────────────────────────
-# JobRun.result_summary is what Stats > Run history shows next to a run. These
-# read back rows the run itself just wrote rather than threading counts up
-# through every subsystem, so a summary can never disagree with the log.
+# JobRun.result_summary is what Stats > Run history shows next to a run. These read back rows
+# the run itself just wrote, so a summary can never disagree with the log.
 
 
 def _scrape_summary(since) -> str:
@@ -126,11 +115,8 @@ def _scrape_summary(since) -> str:
         rows = db.query(ScrapeLog).filter(ScrapeLog.ran_at >= since).all()
         if not rows:
             return "No sources ran"
-        # A paused search / inactive company is not a problem to report: it was
-        # switched off deliberately, and a manual run against one inside the
-        # window used to leave "1 failed" hanging off an otherwise clean sweep.
-        # Its row still counts toward "N sources ran" — it did run — but not
-        # toward any of the attention counts.
+        # A paused search / inactive company is not a problem to report — it was switched off
+        # deliberately. Its row still counts toward "N sources ran" but not toward attention counts.
         off_searches = {s.id for s in db.query(Search).filter(Search.active == False).all()}
         off_companies = {c.id for c in db.query(Company).filter(Company.active == False).all()}
 
@@ -143,8 +129,8 @@ def _scrape_summary(since) -> str:
         live = [r for r in rows if _live(r)]
         found = sum(r.new_jobs or 0 for r in rows)
         failed = sum(1 for r in live if r.error)
-        # R3-A-03: a run where one configured board refused the request now sets
-        # is_warning, but it is not "empty" — say which it is.
+        # A run where one configured board refused the request sets is_warning, but it is not
+        # "empty" — say which it is.
         bad_source = {r.id for r in live if not r.error and source_errors(r.source_breakdown)}
         warned = sum(1 for r in live if r.is_warning and not r.error and r.id not in bad_source)
         parts = [f"{len(rows)} source{'' if len(rows) == 1 else 's'}", f"+{found} new"]
@@ -160,12 +146,8 @@ def _scrape_summary(since) -> str:
 
 
 def _activity_summary(since, log_type: str, noun: str, plural: str = None) -> str:
-    """Count the activity-log rows a run produced, e.g. "1 reply" / "3 replies".
-
-    R3-A-07: the "+s" rule alone made the email summary read "1 repl" / "2 repls",
-    because the only way to get "replies" out of it was to pass the stem. Pass an
-    explicit `plural` whenever the plural is not just the noun plus an s.
-    """
+    """Count the activity-log rows a run produced, e.g. "1 reply" / "3 replies"; pass an explicit
+    `plural` whenever it isn't just the noun plus an s."""
     from backend.models.db import ActivityLog
     db = SessionLocal()
     try:
@@ -179,7 +161,7 @@ def _activity_summary(since, log_type: str, noun: str, plural: str = None) -> st
         db.close()
 
 
-# ── Job stubs (implementations added in later phases) ────────────────────────
+# ── Scheduled jobs ──────────────────────────────────────────────────────────
 async def run_all_scrapes():
     from backend.job_monitor import tracked_run, JobAlreadyRunningError
     try:
@@ -192,7 +174,6 @@ async def run_all_scrapes():
             # Also score any saved-but-unscored jobs (from manual saves)
             from backend.analyzer.cv_scorer import analyze_unscored_jobs
             await analyze_unscored_jobs(status="saved")
-            # Check for repeated scrape failures
             await check_scrape_health()
             run.summary = _scrape_summary(started)
     except JobAlreadyRunningError as e:
@@ -354,7 +335,6 @@ async def run_db_backup():
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_file = f"{backup_dir}/jobnavigator_{timestamp}.sql"
 
-            # Parse DATABASE_URL for pg_dump
             parsed = urlparse(DATABASE_URL)
 
             env = os.environ.copy()
@@ -373,7 +353,6 @@ async def run_db_backup():
 
             logger.info(f"Database backup created: {backup_file}")
 
-            # Keep only last 5 backups
             backups = sorted(glob.glob(f"{backup_dir}/jobnavigator_*.sql"))
             pruned = 0
             while len(backups) > 5:

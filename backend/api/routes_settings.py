@@ -27,7 +27,6 @@ def get_settings(db: Session = Depends(get_db)):
         if row.key in _REDACT_KEYS or any(row.key.endswith(s) for s in _REDACT_SUFFIXES):
             result[row.key] = "" if not row.value else "\u2022" * 6
             continue
-        # Try to parse JSON values
         try:
             result[row.key] = json.loads(row.value)
         except (json.JSONDecodeError, TypeError):
@@ -37,19 +36,7 @@ def get_settings(db: Session = Depends(get_db)):
 
 @router.patch("")
 def update_settings(updates: dict, db: Session = Depends(get_db)):
-    """Update one or more settings.
-
-    Only keys the app actually reads are writable: the seeded defaults plus the
-    handful written at runtime (seed.RUNTIME_SETTING_KEYS). A typo used to create
-    a brand-new Setting row nothing ever reads (SET-28), so unknown keys are now
-    rejected as a group with 400.
-
-    Values are checked too (OPEN-01): integer keys must be whole and non-negative,
-    `*_cron` keys must be empty or a 5-field expression APScheduler can parse, and
-    enum keys must name a value their reader understands. A bad interval used to
-    be written happily and then raise inside configure_scheduler() — after which
-    the backend could not start.
-    """
+    """Update one or more settings; only keys the app reads are writable (unknown -> 400 as a group), and values are validated (integers non-negative, `*_cron` a parseable 5-field expression, enums known) since a bad one could crash configure_scheduler() and prevent the backend from starting."""
     from backend.seed import invalid_setting_values, unknown_setting_keys
 
     unknown = unknown_setting_keys(updates.keys())
@@ -72,7 +59,6 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     warnings: list[str] = []
     updated = []
     for key, value in updates.items():
-        # Skip redacted placeholder values (don't overwrite real secrets with bullets)
         if isinstance(value, str) and value == "\u2022" * 6:
             continue
         setting = db.query(Setting).filter(Setting.key == key).first()
@@ -80,12 +66,10 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             setting.value = json.dumps(value) if isinstance(value, (list, dict, bool)) else str(value)
             updated.append(key)
         else:
-            # Create new setting if it doesn't exist
             db.add(Setting(key=key, value=json.dumps(value) if isinstance(value, (list, dict, bool)) else str(value)))
             updated.append(key)
     db.commit()
 
-    # Reconfigure scheduler if timing settings changed
     timing_keys = {
         "scrape_interval_minutes", "email_check_interval_minutes",
         "backup_cron", "digest_cron", "h1b_cron", "cleanup_cron", "reject_cron",
@@ -97,7 +81,6 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             warnings.append(f"configure_scheduler failed: {_e}")
             logger.exception("configure_scheduler failed after settings update")
 
-    # Reset scoring semaphore if concurrency limit changed
     if "scoring_max_concurrent" in updated:
         try:
             reset_scoring_semaphore()
@@ -105,7 +88,6 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             warnings.append(f"reset_scoring_semaphore failed: {_e}")
             logger.exception("reset_scoring_semaphore failed after settings update")
 
-    # Reset tailoring semaphore if its limit changed
     if "tailoring_max_concurrent" in updated:
         try:
             from backend.api.routes_resumes import reset_tailoring_semaphore
@@ -114,7 +96,6 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             warnings.append(f"reset_tailoring_semaphore failed: {_e}")
             logger.exception("reset_tailoring_semaphore failed after settings update")
 
-    # Reload dedup params cache if changed
     if "dedup_tracking_params" in updated:
         try:
             reload_tracking_params()
@@ -127,7 +108,6 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
 
 @router.get("/defaults")
 def get_defaults():
-    """Seeded defaults, so an editor can offer "Reset to default" without
-    hardcoding a second copy of every prompt in the frontend."""
+    """Seeded defaults, so an editor can offer "Reset to default" without hardcoding a second copy of every prompt in the frontend."""
     from backend.seed import DEFAULT_SETTINGS
     return {k: v[0] for k, v in DEFAULT_SETTINGS.items()}

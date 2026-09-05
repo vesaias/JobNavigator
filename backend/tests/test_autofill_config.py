@@ -20,9 +20,7 @@ def test_config_returns_projected_answers_and_dicts(api_client, test_db):
     resp = api_client.get("/api/autofill/config")
     assert resp.status_code == 200
     data = resp.json()
-    # enabled/trigger moved to the extension popup; config now carries the answers,
-    # dictionaries, schema, and the decline flag — which comes from the Persona's
-    # own decline_demographics checkbox, not a separate setting.
+    # decline_self_id comes from the Persona's own decline_demographics checkbox, not a separate setting.
     assert data["answers"]["gender"] == "male"
     assert data["answers"]["authorized_us"] is True
     assert data["decline_self_id"] is True

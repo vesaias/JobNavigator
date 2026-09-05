@@ -1,11 +1,5 @@
 """Oracle HCM ATS handler — REST API at {host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions.
-
-Detection matches direct `oraclecloud.com/hcmUI/CandidateExperience` URLs and
-known custom career subdomains (e.g. careers.oracle.com) that front an Oracle
-HCM backend.
-
-Public interface: is_oracle_hcm(url), scrape(url, debug=False).
-"""
+Detection matches direct oraclecloud.com/hcmUI/CandidateExperience URLs and known custom career subdomains (e.g. careers.oracle.com)."""
 import json
 import logging
 from urllib.parse import parse_qs, unquote, urlparse
@@ -24,12 +18,7 @@ _ORACLE_HCM_HOSTS = {
 
 
 def is_oracle_hcm(url: str) -> bool:
-    """Check if URL is an Oracle HCM CandidateExperience job board.
-
-    Preserves exact semantics of the pre-refactor one-liner:
-      direct oraclecloud.com/hcmUI/CandidateExperience URL,
-      OR (/sites/ path + /jobs path + host maps via _oracle_hcm_host)
-    """
+    """Check if URL is an Oracle HCM CandidateExperience job board (direct URL, or a /sites/.../jobs path whose host maps to an Oracle HCM backend)."""
     return (
         "oraclecloud.com/hcmUI/CandidateExperience" in url
         or ("/sites/" in url and "/jobs" in url and _oracle_hcm_host(url) is not None)
@@ -67,7 +56,6 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     if "hcmUI/CandidateExperience" in parsed.path:
         job_path_prefix = "/hcmUI/CandidateExperience"
 
-    # Build facets list
     facets = []
     categories = params.get("selectedCategoriesFacet", [""])[0].replace("%3B", ";")
     location_id = params.get("locationId", [""])[0]

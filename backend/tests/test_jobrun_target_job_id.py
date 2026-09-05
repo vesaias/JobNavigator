@@ -1,4 +1,4 @@
-"""JobRun.target_job_id column + filter behavior (Task 1 of 12)."""
+"""JobRun.target_job_id column + filter behavior."""
 import uuid
 import asyncio
 import pytest
@@ -9,12 +9,7 @@ from backend.models.db import JobRun
 
 @pytest.fixture(autouse=True)
 def _utc_tz_on_jobrun_load():
-    """Re-attach UTC tz on loaded JobRun datetimes (SQLite strips tz).
-
-    Mirrors the fixture in test_job_monitor.py — without it, tracked_run()'s
-    _finish_job_run fails with 'can't subtract offset-naive and offset-aware
-    datetimes' because SQLite DateTime(timezone=True) columns come back naive.
-    """
+    """Re-attach UTC tz on loaded JobRun datetimes — SQLite strips tz, which would otherwise make tracked_run() fail subtracting offset-naive from offset-aware datetimes."""
     def _on_load(instance, context):
         for field in ("started_at", "finished_at"):
             v = getattr(instance, field, None)

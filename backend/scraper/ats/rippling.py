@@ -1,12 +1,5 @@
 """Rippling ATS handler — GET api.rippling.com/platform/api/ats/v1/board/{slug}/jobs.
-
-Detection: hostname-based match on ats.rippling.com, or rippling.com + /careers path.
-Public interface: is_rippling(url), scrape(url, debug=False).
-
-API returns a flat JSON array of all jobs. Server-side filter params are unreliable,
-so department/workLocation filtering is done client-side. Multi-location jobs repeat
-with same UUID but different workLocation; deduped by UUID preferring US locations.
-"""
+Server-side filter params are unreliable, so filtering happens client-side; multi-location jobs repeat under the same UUID and are deduped preferring US locations."""
 import json
 import logging
 import re
@@ -28,22 +21,15 @@ def is_rippling(url: str) -> bool:
 
 
 def _parse_rippling_url(url: str) -> tuple[str, dict]:
-    """Parse Rippling URL into (board_slug, query_filters).
-
-    Supported URL formats:
-      - https://ats.rippling.com/{slug}/jobs?department=Product&workLocation=...
-      - https://www.rippling.com/careers/open-roles  (defaults to board slug 'rippling')
-    """
+    """Parse a Rippling URL into (board_slug, query_filters); defaults to slug 'rippling' when there's no ats.rippling.com path segment."""
     parsed = urlparse(url)
     qs = parse_qs(parsed.query)
     filters = {}
 
-    # Extract board slug from ats.rippling.com/{slug}/...
     if host_matches(url, "ats.rippling.com"):
         parts = [p for p in parsed.path.strip("/").split("/") if p]
         slug = parts[0] if parts else "rippling"
     else:
-        # rippling.com/careers/... → default board
         slug = "rippling"
 
     if "department" in qs:
@@ -57,13 +43,7 @@ def _parse_rippling_url(url: str) -> tuple[str, dict]:
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
-    """Fetch jobs from Rippling's public ATS API.
-
-    API returns a flat JSON array of all jobs. The server-side filter params
-    are unreliable, so department/workLocation filtering is done client-side.
-    Multi-location jobs appear multiple times (same UUID, different workLocation);
-    we deduplicate by UUID, preferring locations that match the filter.
-    """
+    """Fetch jobs from Rippling's public ATS API, filtering and deduping client-side (see module docstring)."""
     slug, filters = _parse_rippling_url(url)
     api_url = f"https://api.rippling.com/platform/api/ats/v1/board/{slug}/jobs"
     filter_dept = filters.get("department", "").lower()
@@ -86,8 +66,7 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
         postings = json.loads(resp.text)
         logger.info(f"Rippling API: {len(postings)} entries for {slug}")
 
-        # Deduplicate by UUID — multi-location jobs repeat with different workLocation.
-        # Keep the entry whose location best matches the filter.
+        # Multi-location jobs repeat under the same UUID; keep the entry that best matches the filter.
         seen_uuids: dict[str, list] = {}
         for posting in postings:
             uuid = posting.get("uuid", "")
@@ -115,15 +94,12 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
             loc = best.get("workLocation", {})
             loc_label = loc.get("label", "") if isinstance(loc, dict) else str(loc)
 
-            # Department filter (case-insensitive match)
             if filter_dept and filter_dept != dept_label.lower():
                 if debug:
                     rejected.append({"title": title, "url": job_url, "selector": "rippling_api",
                                      "reason": f"Department '{dept_label}' != '{filters.get('department', '')}'"})
                 continue
 
-            # Location filter — check if ANY of the job's locations match.
-            # "United States" also matches "City, ST" patterns (2-letter US state codes).
             if filter_loc:
                 def _loc_matches(loc_str: str) -> bool:
                     lower = loc_str.lower()

@@ -1,15 +1,4 @@
-"""Tests for gmail_client._apply_llm_result_to_app — forward-only transitions + rejection bypass.
-
-The function signature is:
-    _apply_llm_result_to_app(db, matched_app, llm_result: dict, body: str, subject: str)
-
-Forward-only rule uses a rank dict where rejected=99, so rejection bypasses the rule
-implicitly (99 > any other rank). "no_change" / unknown statuses return -1, so they
-never exceed current_rank — effectively a no-op.
-
-`record_transition` is imported inside the function from `backend.models.db`, so we
-patch it at the source module (not at gmail_client).
-"""
+"""Tests gmail_client._apply_llm_result_to_app: forward-only transitions via a rank dict (rejected=99, so rejection always bypasses the rule); record_transition is patched at backend.models.db since it's imported locally."""
 from unittest.mock import MagicMock
 
 

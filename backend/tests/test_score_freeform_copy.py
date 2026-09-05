@@ -1,9 +1,4 @@
-"""RES-20: a copy tailored from a pasted job description is still scoreable.
-
-Such a copy has no Job row, so the JD it was written against is kept on the copy
-itself (json_data["_tailor_context"]) and the score lands on the copy
-(json_data["_score"]) instead of on a job's cv_scores.
-"""
+"""A copy tailored from a pasted job description is still scoreable: the JD lives on the copy itself (json_data["_tailor_context"]) and the score lands on the copy (json_data["_score"]) instead of on a job's cv_scores."""
 import pytest
 
 from backend.models.db import Resume, Job, Setting

@@ -1,8 +1,4 @@
-"""Tailoring JD resolution order: description → live fetch (persisted) → cached page → none.
-
-Preference is quality-first: a clean stored description, then a fresh ATS-parsed fetch
-(persisted back), and only then the noisy raw cached page text as a last resort.
-"""
+"""Tailoring JD resolution order, quality-first: description → live fetch (persisted) → cached page → none."""
 import asyncio
 from unittest.mock import MagicMock
 

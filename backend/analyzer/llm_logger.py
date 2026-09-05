@@ -21,10 +21,7 @@ def log_llm_call(
     success: bool = True,
     error: Optional[str] = None,
 ) -> None:
-    """Insert a row into llm_call_log. Swallows DB errors — logging must never break scoring.
-
-    usage: {input_tokens, output_tokens, cache_read_tokens, cache_write_tokens}
-    """
+    """Insert a row into llm_call_log; swallows DB errors so logging never breaks scoring. usage: {input_tokens, output_tokens, cache_read_tokens, cache_write_tokens}."""
     try:
         cost = calc_cost(
             provider,
@@ -60,22 +57,7 @@ def log_llm_call(
 
 @asynccontextmanager
 async def track_llm_call(purpose: str, provider: str, model: str, job_id=None):
-    """Async context manager that logs an LLM call to llm_call_log.
-
-    Usage:
-        async with track_llm_call("email", provider, model) as tracker:
-            resp = await call_email_llm(...)
-            tracker.record(resp)          # usage + the pair that actually ran
-            raw = resp["text"]
-
-    Automatically captures duration, success/failure, and error text.
-    Caller must set tracker.usage (or call tracker.record) from the LLM response.
-
-    provider/model are the resolved pair the caller is about to dispatch with —
-    always from llm_client.resolve_llm_config(), never a second fallback chain
-    (R2-H-15). tracker.record() then overwrites them with whatever the response
-    reports, so a fallback dispatch is logged as the model that answered.
-    """
+    """Async context manager that times an LLM call and logs it to llm_call_log; the caller must set tracker.usage (or call tracker.record(resp)) so a fallback dispatch is logged as the model that actually answered."""
     started = time.monotonic()
 
     class _Tracker:

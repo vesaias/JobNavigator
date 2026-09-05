@@ -1,10 +1,5 @@
-"""LinkedIn session (Voyager cookie) status and refresh.
-
-The Chrome-extension import reuses a logged-in cookie jar written by
-refresh_linkedin_session. That login is gated behind LinkedIn's email-PIN
-checkpoint, so a refresh cannot complete unattended: the flow starts, parks in
-`awaiting_pin`, and finishes once the code is posted back here.
-"""
+"""LinkedIn session (Voyager cookie) status and refresh; the login is gated behind
+LinkedIn's email-PIN checkpoint, so a refresh parks in `awaiting_pin` until the code is posted back here."""
 import logging
 import os
 import time

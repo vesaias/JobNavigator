@@ -3,8 +3,7 @@ import pytest
 
 
 def _seed_first_run(test_db):
-    """Seed an empty dashboard_api_key row so the auth middleware allows
-    requests (first-run mode, matches seed.py default)."""
+    """Seed an empty dashboard_api_key row so the auth middleware allows requests (first-run mode)."""
     from backend.models.db import Setting
     test_db.add(Setting(key="dashboard_api_key", value=""))
     test_db.commit()
@@ -13,8 +12,7 @@ def _seed_first_run(test_db):
 @pytest.fixture(autouse=True)
 def _stub_background_tasks(monkeypatch):
     """Stub slow / network-hitting background work so tests are fast + isolated."""
-    # _cache_job_page — this is what the route actually schedules in background.
-    # Make the coroutine a no-op so it doesn't fetch URLs or touch Playwright.
+    # _cache_job_page is what the route schedules in background; no-op it so tests don't hit the network.
     async def _noop_cache(*a, **kw):
         return None
     monkeypatch.setattr(
@@ -133,7 +131,7 @@ def test_list_applications_filters_by_status(api_client, test_db):
 
 
 def test_create_application_twice_returns_409(api_client, test_db):
-    """A second POST for the same posting must not overwrite the first (APPS-04)."""
+    """A second POST for the same posting must not overwrite the first."""
     _seed_first_run(test_db)
     body = {"company": "Acme", "title": "PM", "url": "https://acme.example/jobs/1", "notes": "first"}
     first = api_client.post("/api/applications", json=body)

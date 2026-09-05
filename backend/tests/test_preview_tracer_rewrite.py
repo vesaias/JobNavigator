@@ -1,14 +1,4 @@
-"""OPEN-13: /resumes/{id}/preview and /resumes/{id}/pdf must agree.
-
-`preview_resume` handed back the document with its raw destination URLs while
-`export_pdf` rewrote the same contact items into tracked short links. No live
-defect — the editor renders the PDF — but the two endpoints described different
-documents, and anyone reading the preview saw links the recruiter will never get.
-
-The rewrite helper is shared and reuses a link per (owner, destination), so the
-fix must not mint a second TracerLink for a document that is previewed and then
-exported.
-"""
+"""/resumes/{id}/preview and /resumes/{id}/pdf must serve the same tracer-rewritten URLs, reusing one TracerLink per (owner, destination)."""
 import pytest
 
 from backend.api.routes_resumes import _rewrite_urls_with_tracers, preview_resume

@@ -1,10 +1,4 @@
-"""R3-B-04: `max_chars` is enforced server-side, not just suggested to the model.
-
-Measured before the fix: a 120-char ask came back at 137, a 600-char ask at 714.
-The extension only capped answers for fields that declare a `maxLength`, which the
-usual Greenhouse/Lever/Ashby textarea does not — so the picked length was ignored
-on exactly the fields it was picked for.
-"""
+"""`max_chars` is enforced server-side, not just suggested to the model — the extension only caps fields that declare a `maxLength`."""
 import pytest
 
 from backend.api.routes_autofill import _trim_to_chars

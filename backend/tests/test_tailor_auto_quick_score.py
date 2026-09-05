@@ -1,4 +1,4 @@
-"""Tailor → auto quick-score chain (Task 5 of 12)."""
+"""Tailor → auto quick-score chain."""
 import asyncio
 import uuid
 import pytest
@@ -78,7 +78,7 @@ async def test_auto_score_skipped_when_setting_is_false(test_db, monkeypatch):
     assert "analyze_job" not in launched, f"Expected no analyze_job launch, got {launched}"
 
 
-# ── R2-H-09: the tailor response announces the chained score ────────────────
+# ── the tailor response announces the chained score ─────────────────────────
 
 @pytest.mark.parametrize("value,expected", [
     ("off", None), ("false", None), ("0", None),

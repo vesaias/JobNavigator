@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 
-# ── Anthropic mock fixtures (existing — kept as-is) ──────────────────────────
+# ── Anthropic mock fixtures ───────────────────────────────────────────────
 
 @pytest.fixture
 def mock_anthropic_response():
@@ -44,29 +44,11 @@ def mock_anthropic_client(mock_anthropic_response, monkeypatch):
     return client
 
 
-# ── NEW: DB + TestClient fixtures ────────────────────────────────────────────
+# ── DB + TestClient fixtures ─────────────────────────────────────────────
 
 @pytest.fixture
 def test_db():
-    """In-memory SQLite DB with all models' tables created.
-
-    Yields a Session. Tests can add/query rows directly. Each test gets a fresh DB.
-
-    Critical: this rebinds the *shared* `backend.models.db.SessionLocal` to the
-    test engine. Modules that did `from backend.models.db import SessionLocal` at
-    import time hold a reference to the same sessionmaker object, so reconfiguring
-    it in place makes every caller (scheduler.py, activity.py, route modules...)
-    see the test DB without needing per-module monkeypatch.
-
-    Notes on SQLite compatibility:
-    - PostgreSQL UUID columns are automatically mapped to CHAR(32) by SQLAlchemy under SQLite.
-    - Job.short_id uses server_default=text("nextval('jobs_short_id_seq')") which SQLite
-      cannot parse; we strip server_defaults for CREATE TABLE via a DDL event listener.
-    - SQLAlchemy's Uuid.bind_processor (character-based path used under SQLite) calls
-      `value.hex` on bind params, which fails for plain strings. Production routes bind
-      path params as strings (e.g. PATCH /api/applications/{uuid_str}), so we patch the
-      bind processor once to accept either a UUID or a string.
-    """
+    """In-memory SQLite DB with all tables; rebinds the shared SessionLocal so already-imported modules hit the test DB."""
     from sqlalchemy import create_engine
     from sqlalchemy.pool import StaticPool
     import backend.models.db as db_mod
@@ -95,8 +77,7 @@ def test_db():
         _SAUuid.bind_processor = _lenient_bind
         _SAUuid._jn_test_patched = True
 
-    # StaticPool keeps a single shared connection so all sessions see the same
-    # in-memory SQLite database.
+    # StaticPool keeps a single shared connection so all sessions see the same DB.
     test_engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -116,8 +97,7 @@ def test_db():
         for col, sd in stashed:
             col.server_default = sd
 
-    # Rebind the shared SessionLocal (and engine reference) so module-level
-    # `from backend.models.db import SessionLocal` importers hit the test DB.
+    # Rebind the shared SessionLocal (and engine ref) so top-level importers hit the test DB.
     original_engine = db_mod.engine
     original_bind = db_mod.SessionLocal.kw.get("bind")
     db_mod.engine = test_engine
@@ -135,17 +115,10 @@ def test_db():
 
 @pytest.fixture
 def api_client(test_db, monkeypatch):
-    """FastAPI TestClient for endpoint tests.
-
-    `test_db` has already rebound the shared SessionLocal to the test SQLite
-    engine, so every module that imported SessionLocal at top-level now hits
-    the test DB. We only need to stub out the lifespan dependencies and the
-    scheduler here.
-    """
+    """FastAPI TestClient for endpoint tests; test_db already rebound SessionLocal, so this only stubs lifespan deps and the scheduler."""
     from fastapi.testclient import TestClient
 
-    # Pre-import backend.main + heavy modules so any lazy imports have captured
-    # bindings before monkeypatches take effect.
+    # Pre-import backend.main + heavy modules so lazy imports capture bindings before monkeypatches.
     import backend.main  # noqa: F401
     import backend.scraper.sources.linkedin_extension  # noqa: F401
 
@@ -183,15 +156,11 @@ def api_client(test_db, monkeypatch):
         app.dependency_overrides.pop(get_db, None)
 
 
-# ── NEW: httpx + Telegram mock fixtures ──────────────────────────────────────
+# ── httpx + Telegram mock fixtures ───────────────────────────────────────
 
 @pytest.fixture
 def mock_httpx(monkeypatch):
-    """Replace httpx.AsyncClient with a MagicMock that returns a canned response.
-
-    Returns a dict: {"client": <mock>, "response": <mock>} so tests can inspect or
-    reconfigure behavior.
-    """
+    """Replace httpx.AsyncClient with a MagicMock returning a canned response; returns {"client", "response"} for inspection."""
     resp = MagicMock()
     resp.status_code = 200
     resp.json = MagicMock(return_value={})
@@ -211,10 +180,7 @@ def mock_httpx(monkeypatch):
 
 @pytest.fixture
 def mock_telegram(monkeypatch):
-    """Replace the Telegram notifier's httpx call with a recorder.
-
-    Returns a list of {"url", "json"} dicts captured during the test.
-    """
+    """Replace the Telegram notifier's httpx call with a recorder; returns a list of {"url", "json"} dicts."""
     sent = []
 
     async def fake_post(url, json=None, **kwargs):

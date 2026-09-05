@@ -1,10 +1,4 @@
-"""R2-H-15: llm_call_log must record the provider/model that actually dispatched.
-
-Cover-letter generation logged a hardcoded claude_api / claude-sonnet-4-6 while
-call_cover_letter_llm dispatched on the primary pair, so the cost report priced
-letters against a model that was never called. Every feature now resolves the
-pair once, through llm_client.resolve_llm_config().
-"""
+"""llm_call_log must record the provider/model that actually dispatched — every feature resolves the pair once through llm_client.resolve_llm_config() so the cost report never prices against the wrong model."""
 import pytest
 
 from backend.models.db import Setting, LlmCallLog
@@ -54,8 +48,7 @@ def test_resolve_prefers_feature_override(test_db):
     ("autofill", "autofill", "call_autofill_llm"),
 ])
 async def test_logged_pair_equals_dispatched_pair(test_db, monkeypatch, feature, purpose, fn_name):
-    """With per-feature settings empty and the primary set, the row logged by
-    track_llm_call names exactly the pair _dispatch was called with."""
+    """With per-feature settings empty and the primary set, the row logged by track_llm_call names exactly the pair _dispatch was called with."""
     import backend.analyzer.llm_client as L
     from backend.analyzer.llm_logger import track_llm_call
 
@@ -114,8 +107,7 @@ async def _no_sleep(*_a, **_kw):
 
 @pytest.mark.asyncio
 async def test_cover_letter_body_reports_dispatched_pair(test_db, monkeypatch):
-    """generate_cover_letter_body hands the caller the pair that ran, which is
-    what routes_cover_letters._generate_inner logs."""
+    """generate_cover_letter_body hands the caller the pair that ran, which routes_cover_letters._generate_inner logs."""
     import backend.analyzer.llm_client as L
     import backend.analyzer.cover_letter_generator as G
 

@@ -1,4 +1,4 @@
-"""GET /api/jobs returns in_flight array per row (Task 7 of 12)."""
+"""GET /api/jobs returns in_flight array per row."""
 import uuid
 from datetime import datetime, timezone
 

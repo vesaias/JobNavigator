@@ -1,9 +1,4 @@
-"""Jobright.ai source — personalized recommendations + search via REST API.
-
-Public entry points:
-- `run(search)` — full scrape entry point for the scheduler / dispatch.
-- `preview(search, db)` — UI dry-run endpoint that returns filtering diagnostics.
-"""
+"""Jobright.ai source — personalized recommendations + search via REST API."""
 import asyncio
 import json
 import logging
@@ -62,7 +57,6 @@ async def _login(email: str, password: str) -> str:
         if not data.get("success"):
             raise RuntimeError(f"Jobright login failed: {data}")
 
-        # Extract SESSION_ID from set-cookie header
         session_id = None
         for cookie in resp.cookies.jar:
             if cookie.name == "SESSION_ID":
@@ -84,19 +78,13 @@ async def _login(email: str, password: str) -> str:
 
 
 async def _ensure_session(force_relogin: bool = False) -> str:
-    """Get a valid session ID, logging in if needed.
-
-    Args:
-        force_relogin: Skip validation and always re-login (used when
-                       API returns 200+empty despite session looking valid).
-    """
+    """Get a valid session ID, logging in if needed; force_relogin skips validation and re-logs in when the API returns 200+empty despite a seemingly valid session."""
     db = SessionLocal()
     try:
         session_id = _get_setting(db, "jobright_session_id")
 
-        # Validate existing session — just check auth, not job content.
-        # Empty jobList with success=true is normal (cache depleted); the
-        # scraper handles this by passing refresh=true on the first fetch.
+        # Validate existing session (auth only). Empty jobList with success=true is
+        # normal (cache depleted) — refresh=true on the first fetch handles it.
         if session_id and not force_relogin:
             try:
                 async with httpx.AsyncClient(timeout=15) as client:
@@ -116,7 +104,6 @@ async def _ensure_session(force_relogin: bool = False) -> str:
         elif force_relogin:
             logger.info("Jobright: forced re-login requested")
 
-        # Need to login
         email = _get_setting(db, "jobright_email")
         password = _get_setting(db, "jobright_password")
         if not email or not password:
@@ -124,9 +111,8 @@ async def _ensure_session(force_relogin: bool = False) -> str:
 
         session_id = await _login(email, password)
 
-        # Persist session for reuse across restarts. OPEN-16: stamp when it was
-        # obtained too — the cookie is redacted on GET /settings, so its age is
-        # the only thing the Accounts tab can honestly show.
+        # Persist session for reuse across restarts, stamping when it was obtained —
+        # the cookie is redacted on GET /settings, so age is the only signal left.
         from datetime import datetime as _dt, timezone as _tz
         _save_setting(db, "jobright_session_id", session_id)
         _save_setting(db, "jobright_session_obtained_at", _dt.now(_tz.utc).isoformat())
@@ -136,18 +122,7 @@ async def _ensure_session(force_relogin: bool = False) -> str:
 
 
 async def _fetch_recommendations(session_id: str, position: int, count: int = 20, refresh: bool = False) -> list[dict] | None:
-    """Fetch a page of personalized job recommendations.
-
-    Args:
-        refresh: Pass True on the first request to force Jobright to regenerate
-                 its recommendation pool. Without this, the cache can be empty
-                 after prior scrapes exhaust it. Only needed for position=0.
-
-    Returns:
-        list[dict] — job list on success
-        None — rate-limit exhaustion, caller should stop pagination
-        Raises SessionExpiredError on 401 so caller can re-auth and retry.
-    """
+    """Fetch a page of recommendations; refresh=True (position=0 only) forces Jobright to regenerate its pool. Returns None when rate-limit retries are exhausted (caller should stop), or raises SessionExpiredError on 401."""
     params = {"position": position, "count": count}
     if refresh:
         params["refresh"] = "true"
@@ -191,7 +166,6 @@ async def _fetch_search_ssr(keyword: str, location: str = "") -> tuple[list[dict
         resp = await client.get(f"{SITE_BASE}/jobs/search", params=params)
         resp.raise_for_status()
 
-        # Extract __NEXT_DATA__ JSON
         match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', resp.text, re.DOTALL)
         if not match:
             logger.warning("Jobright SSR: __NEXT_DATA__ not found")
@@ -232,15 +206,7 @@ def _parse_salary(salary_desc: str) -> tuple:
 
 
 def _build_description(jr: dict) -> str:
-    """Assemble description from all available text fields.
-
-    Confirmed API fields (tested across 40+ jobs):
-    - jobSummary: always present, ~250-490 chars
-    - coreResponsibilities: always present, list of 4-32 items
-    - requirements: always present, list of 5-39 items
-    - jobDescription: rare fallback for jobSummary
-    - skillSummaries: never seen but handled just in case
-    """
+    """Assemble description from Jobright's text fields (summary, responsibilities, requirements, skills)."""
     parts = []
 
     summary = jr.get("jobSummary") or jr.get("jobDescription") or ""
@@ -283,7 +249,6 @@ def _parse_job(raw: dict) -> dict:
     salary_desc = jr.get("salaryDesc") or ""
     salary_min, salary_max = _parse_salary(salary_desc)
 
-    # Glassdoor rating
     grating = cr.get("grating") or {}
     glassdoor_rating = grating.get("rating") if isinstance(grating, dict) else None
 
@@ -317,7 +282,6 @@ async def run(search: Search) -> dict:
     try:
         session_id = await _ensure_session()
 
-        # Determine mode: keyword search or recommendations
         use_search = bool(search.search_term and search.search_term.strip())
         results_wanted = search.results_wanted or 100
 
@@ -333,9 +297,8 @@ async def run(search: Search) -> dict:
             all_jobs = [_parse_job(r) for r in raw_list]
             logger.info(f"Jobright search '{search.search_term}': {len(all_jobs)} jobs (total: {total})")
         else:
-            # Paginate recommendations with delay between pages.
-            # refresh=true on first page forces Jobright to regenerate its
-            # recommendation pool (cache empties after prior scrapes).
+            # Paginate with a delay between pages; refresh=true on the first page forces
+            # Jobright to regenerate its pool (cache empties after prior scrapes).
             position = 0
             page_size = 20
             empty_pages = 0

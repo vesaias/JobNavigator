@@ -1,4 +1,4 @@
-"""Scoring source migrated from CV table to Resume table (Task 5)."""
+"""Resume scoring reads résumés from the Resume table."""
 import pytest
 from backend.models.db import Resume, Setting
 
@@ -37,7 +37,6 @@ def test_get_resume_texts_skips_tailored_resumes(test_db):
     """is_base=False rows must NOT show up in scoring."""
     from backend.analyzer.cv_scorer import _get_resume_texts
     base = _seed_resume(test_db, "PM", "summary")
-    # Tailored child
     test_db.add(Resume(
         name="PM → Acme tailored",
         is_base=False,

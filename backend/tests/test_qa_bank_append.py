@@ -1,4 +1,4 @@
-"""POST /api/persona/qa-bank — flywheel save (Task 4 of application-autofill plan)."""
+"""POST /api/persona/qa-bank — flywheel save."""
 from backend.models.db import Setting, Persona
 
 

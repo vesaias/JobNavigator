@@ -1,9 +1,4 @@
-"""R3-A-07: run summaries must use a real plural, not noun + "s".
-
-The email-check summary read "1 repl" / "2 repls" because the only way to get
-"replies" out of the "+s" rule was to pass the stem "repl". _activity_summary now
-takes an explicit plural.
-"""
+"""Run summaries must use a real plural, not noun + "s"; _activity_summary takes an explicit plural."""
 from datetime import datetime, timedelta, timezone
 
 import pytest

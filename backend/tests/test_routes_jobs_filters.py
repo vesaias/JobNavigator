@@ -93,18 +93,12 @@ def test_list_jobs_filters_by_source(api_client, test_db):
 
 
 def test_list_jobs_sort_by_score(api_client, test_db):
-    """sort_by=score descends on best_cv_score with NULLs last.
-
-    The response exposes `best_score` (derived from cv_scores JSON), not
-    `best_cv_score` directly. Since we seed cv_scores to mirror best_cv_score,
-    asserting order on best_score validates the ORDER BY.
-    """
+    """sort_by=score descends on best_cv_score with NULLs last; asserting order on the response's best_score (mirrors best_cv_score here) validates the ORDER BY."""
     _seed_first_run(test_db)
     _seed_jobs(test_db)
     resp = api_client.get("/api/jobs?sort_by=score")
     data = resp.json()
     jobs = data["jobs"]
-    # Order should be: 82, 65, 40 (descending by score)
     scores = [j.get("best_score") for j in jobs if j.get("best_score")]
     assert len(scores) >= 2
     assert scores == sorted(scores, reverse=True), f"Expected desc sort, got: {scores}"

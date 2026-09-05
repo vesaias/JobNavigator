@@ -1,14 +1,4 @@
-"""OPEN-12: POST /jobs/save-from-extension must say why a job never reached the feed.
-
-The Extension search's title/company filters (merged with the global
-`title_exclude_global` list) store a rejected posting as `ignored` — that is
-deliberate, it makes the dedup keys stick so the same job can't be re-saved over
-and over. But the response said nothing, so from the extension's side a filtered
-save was indistinguishable from a successful one.
-
-`save_from_extension` is a plain async route function taking its Session as a
-parameter, so these call it directly — no backend.main, no TestClient.
-"""
+"""POST /jobs/save-from-extension must say why a job never reached the feed; save_from_extension is a plain async route function taking its Session as a parameter, so tests call it directly (no backend.main, no TestClient)."""
 import pytest
 
 from backend.models.db import Job, Search, Setting
@@ -16,8 +6,7 @@ from backend.models.db import Job, Search, Setting
 
 @pytest.fixture
 def _no_h1b(monkeypatch):
-    """The body-exclusion scan does a live MyVisaJobs lookup for unknown
-    companies. Stub it — these tests are about the title/company layer."""
+    """The body-exclusion scan does a live MyVisaJobs lookup for unknown companies; stub it since these tests are about the title/company layer."""
     import backend.analyzer.h1b_checker as h1b
 
     async def _noop(job, db=None, **kw):
@@ -68,8 +57,7 @@ async def test_per_search_title_exclude_names_the_keyword(test_db, _no_h1b):
 
 @pytest.mark.asyncio
 async def test_global_title_exclude_names_the_keyword(test_db, _no_h1b):
-    """The layer the finding was actually raised against: `title_exclude_global`
-    applied silently, with the search's own list empty."""
+    """`title_exclude_global` applies silently, with the search's own list empty."""
     import json
     test_db.add(Setting(key="title_exclude_global", value=json.dumps(["intern", "contract"])))
     test_db.commit()
@@ -116,8 +104,7 @@ async def test_body_exclusion_is_explained(test_db, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_resaving_a_filtered_job_still_says_it_is_out(test_db, _no_h1b):
-    """The second save hits the dedup branch, which used to return a bare
-    `new: False` — no way to tell it from a job sitting happily in the feed."""
+    """The second save hits the dedup branch; the response must distinguish it from a job sitting happily in the feed."""
     _ext_search(test_db, exclude=["intern"])
     first = await _save(test_db, title="Product Intern")
     second = await _save(test_db, title="Product Intern")

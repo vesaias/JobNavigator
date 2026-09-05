@@ -23,14 +23,11 @@ class RunningJob:
     task: Optional[asyncio.Task] = None
     scope_key: Optional[str] = None
     target_job_id: Optional[uuid.UUID] = None
-    # The Company this run targets, when it has one (company_scrape). Carried
-    # separately from scope_key so the dashboard can match a running scrape to a
-    # row by id instead of guessing from the company name + start time.
+    # The Company this run targets, when it has one (company_scrape); carried separately from
+    # scope_key so the dashboard can match a running scrape to a row by id, not by name+time.
     company_id: Optional[str] = None
-    # One-line "what this run did", shown in Stats > Run history. A tracked_run
-    # body assigns it (`run.summary = ...`); a launch_background coroutine gets
-    # the same effect by returning a string. Left None, the run reads as bare
-    # status + duration, which is what every run looked like before.
+    # "What this run did", shown in Stats > Run history; set via `run.summary = ...` in
+    # tracked_run, or by a launch_background coroutine returning a string.
     summary: Optional[str] = None
 
 
@@ -208,8 +205,7 @@ def launch_background(
     target_job_id: Optional[uuid.UUID] = None,
     company_id: Optional[str] = None,
 ) -> str:
-    """Launch a coroutine as a background asyncio.Task with tracking. Returns run_id immediately.
-    Raises JobAlreadyRunningError if already running."""
+    """Launch a coroutine as a background asyncio.Task with tracking; returns run_id immediately, raising JobAlreadyRunningError if already running."""
     key = _make_key(job_type, scope_key)
 
     existing = _running.get(key)

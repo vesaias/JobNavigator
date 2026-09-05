@@ -84,7 +84,6 @@ async def test_dispatch_falls_back_to_generic(monkeypatch):
         called["which"] = "generic"
         return []
 
-    # Also mock all specific ATS to return False detection
     monkeypatch.setattr("backend.scraper.ats.generic.scrape", fake_generic)
 
     from backend.scraper.sources.company_pages import _dispatch_ats

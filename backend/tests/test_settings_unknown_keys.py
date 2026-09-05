@@ -1,10 +1,4 @@
-"""SET-28: PATCH /api/settings must reject keys nothing in the app reads.
-
-The endpoint used to create a Setting row for any key it was handed, so a typo
-(or a stale frontend field) silently wrote a dead row. Writable keys = the seeded
-DEFAULT_SETTINGS plus seed.RUNTIME_SETTING_KEYS (written by the app at runtime
-but never seeded).
-"""
+"""PATCH /api/settings must reject keys nothing in the app reads; writable keys are the seeded DEFAULT_SETTINGS plus seed.RUNTIME_SETTING_KEYS (written by the app at runtime but never seeded)."""
 import importlib.util
 
 import pytest
@@ -16,8 +10,7 @@ from backend.seed import (
 
 
 def _seed_first_run(db):
-    """Empty dashboard_api_key = first-run mode, so the auth middleware lets the
-    TestClient through (same helper as test_routes_settings.py)."""
+    """Empty dashboard_api_key = first-run mode, so the auth middleware lets the TestClient through."""
     db.add(Setting(key="dashboard_api_key", value=""))
     db.commit()
 

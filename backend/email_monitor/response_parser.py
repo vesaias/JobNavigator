@@ -71,12 +71,9 @@ AUTO_REPLY_PHRASES = [
 
 
 def classify_email(subject: str, body: str) -> dict:
-    """Classify an email response.
-    Returns dict with classification and confidence.
-    """
+    """Classify an email response; returns dict with classification and confidence."""
     combined = f"{subject} {body}".lower()
 
-    # Count all signals first
     strong_positive = sum(1 for p in STRONG_POSITIVE_PHRASES if p in combined)
     weak_positive = sum(1 for p in WEAK_POSITIVE_PHRASES if p in combined)
     rejection_count = sum(1 for p in REJECTION_PHRASES if p in combined)
@@ -96,9 +93,8 @@ def classify_email(subject: str, body: str) -> dict:
     if strong_positive > 0 and rejection_count > 0:
         return {"classification": "ambiguous", "confidence": 0.4}
 
-    # No strong signal: an acknowledgment ("thanks for applying", "application received")
-    # is an auto-reply EVEN IF it contains friendly weak-positive boilerplate. This is the
-    # Amazon case — polite "we're excited to ... connect with you" must not read as an interview.
+    # No strong signal: an acknowledgment is an auto-reply even if it contains friendly
+    # weak-positive boilerplate (e.g. "we're excited to ... connect with you").
     if auto_reply_count > 0:
         return {"classification": "auto_reply", "confidence": 0.9}
 
@@ -110,20 +106,16 @@ def classify_email(subject: str, body: str) -> dict:
 
 
 async def classify_email_llm(from_header: str, subject: str, body: str, active_apps: list) -> dict | None:
-    """Classify an ambiguous email using LLM. Returns dict with match_index, status, confidence, summary or None on failure.
-
-    active_apps: list of dicts with keys: index (1-based), id, company, title, status, applied_at
-    """
+    """Classify an ambiguous email via LLM; returns dict with match_index/status/confidence/summary, or None on failure.
+    active_apps: list of dicts with keys index (1-based), id, company, title, status, applied_at."""
     from backend.models.db import SessionLocal, Setting
 
     db = SessionLocal()
     try:
-        # Check if LLM email classification is enabled
         enabled_row = db.query(Setting).filter(Setting.key == "email_llm_enabled").first()
         if not enabled_row or enabled_row.value != "true":
             return None
 
-        # Load prompt template
         prompt_row = db.query(Setting).filter(Setting.key == "email_llm_prompt").first()
         if not prompt_row or not prompt_row.value:
             logger.warning("email_llm_prompt setting is empty, skipping LLM classification")
@@ -132,13 +124,11 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
     finally:
         db.close()
 
-    # Build numbered applications list
     app_lines = []
     for app in active_apps:
         app_lines.append(f"{app['index']}. {app['company']} — {app['title']} ({app['status']} since {app['applied_at']})")
     applications_text = "\n".join(app_lines) if app_lines else "(no active applications)"
 
-    # Build prompt from template
     truncated_body = body[:1500] if body else ""
     prompt = prompt_template.replace("{applications}", applications_text)
     prompt = prompt.replace("{from}", from_header)
@@ -151,8 +141,8 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
         from backend.analyzer.llm_client import call_email_llm
         from backend.analyzer.llm_logger import track_llm_call
         import json
-        # Determine model for logging — the same resolver call_email_llm dispatches
-        # with, so the log row can't name a model that was never called (R2-H-15).
+        # Use the same resolver call_email_llm dispatches with, so the log row can't
+        # name a model that was never called.
         from backend.analyzer.llm_client import resolve_llm_config
         _cfg = resolve_llm_config("email")
         _provider, _model = _cfg["provider"], _cfg["model"]
@@ -164,7 +154,6 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
         # Extract JSON from response — handles markdown fences and trailing commentary
         import re
         text = raw.strip()
-        # Try to extract JSON object between { and }
         match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
         if match:
             text = match.group(0)
@@ -178,7 +167,6 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
 
         result = json.loads(text)
 
-        # Validate required fields
         if not isinstance(result.get("confidence"), (int, float)):
             logger.warning(f"Email LLM: missing/invalid confidence in response: {raw[:200]}")
             return None
@@ -186,7 +174,6 @@ async def classify_email_llm(from_header: str, subject: str, body: str, active_a
             logger.warning(f"Email LLM: invalid status '{result.get('status')}' in response")
             result["status"] = "no_change"
 
-        # Validate match_index
         match_idx = result.get("match_index")
         if match_idx is not None:
             if not isinstance(match_idx, int) or match_idx < 1 or match_idx > len(active_apps):

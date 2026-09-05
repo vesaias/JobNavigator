@@ -1,10 +1,4 @@
-"""LLM helper endpoints — live model catalogs for the Settings model picker.
-
-OpenRouter's catalog is public; OpenAI and Anthropic (claude_api) require the
-provider's own API key, which we resolve from whatever slot already has one
-(or the env fallback). Results are cached per provider (~1h) since the catalogs
-change slowly.
-"""
+"""LLM helper endpoints — live model catalogs for the Settings model picker; OpenRouter's is public, OpenAI/Anthropic require a resolved API key, and results are cached ~1h per provider."""
 import os
 import re
 import time
@@ -91,13 +85,7 @@ async def _fetch_anthropic(key: str) -> list:
 
 @router.get("/models")
 async def list_models(provider: str = "openrouter"):
-    """Live model catalog for a provider. Cached ~1h per provider.
-
-    Response: {"models": [{id, name, ...}], "cached": bool}
-    - openrouter: public, no key.
-    - openai / claude_api: uses a key already configured for that provider
-      (any slot) or the env fallback; 400 if none, 502 if the provider rejects it.
-    """
+    """Live model catalog for a provider, cached ~1h; openrouter needs no key, openai/claude_api use a configured key or env fallback (400 if none, 502 if the provider rejects it)."""
     now = time.time()
     hit = _cache.get(provider)
     if hit and (now - hit["at"]) < _CACHE_TTL:

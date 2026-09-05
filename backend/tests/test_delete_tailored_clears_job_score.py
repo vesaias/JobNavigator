@@ -1,11 +1,4 @@
-"""R3-B-05: deleting a tailored copy must take its `Tailored` score off the job.
-
-`tailored_resume_id` is derived from the surviving Resume rows, so it vanishes on
-its own — but `cv_scores["Tailored"]`, the scoring report keyed "Tailored" and a
-`best_cv` pointing at it used to stay behind. The Feed then rendered a score and
-a report tab for a document that no longer existed, and that number could still
-win `best_cv`.
-"""
+"""Deleting a tailored copy must clear its `Tailored` cv_scores entry, scoring_report entry, and any best_cv pointing at it."""
 from backend.api.routes_resumes import delete_resume
 from backend.models.db import Job, Resume
 

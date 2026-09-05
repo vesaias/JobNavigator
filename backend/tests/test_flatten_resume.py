@@ -1,5 +1,4 @@
-"""_flatten_resume must include all sections (header, summary, experience, skills,
-education, projects, publications) with section headers for readability by the LLM."""
+"""_flatten_resume must include all sections (header, summary, experience, skills, education, projects, publications) with section headers for readability by the LLM."""
 from backend.analyzer.cv_scorer import _flatten_resume
 
 

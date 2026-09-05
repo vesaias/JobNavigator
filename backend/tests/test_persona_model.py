@@ -1,4 +1,4 @@
-"""Persona model has the right column shape (Phase 1 / Task 1)."""
+"""Persona model has the right column shape."""
 from backend.models.db import Persona
 
 

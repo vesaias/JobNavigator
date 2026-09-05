@@ -1,17 +1,5 @@
-"""LLM pricing and cost calculation.
-
-Prices in USD per million tokens.
-- claude_api / openai: static tables below, **as of August 2026**
-  (sources: platform.claude.com/docs/en/about-claude/pricing,
-   developers.openai.com/api/docs/pricing). Update when models change.
-- openrouter: LIVE pricing pulled from OpenRouter's catalog
-  (refresh_openrouter_prices), refreshed on startup and at most every 12h.
-- claude_code / ollama: always $0 (flat subscription / local compute).
-
-Keyed by (provider, model) because the same model can be billed differently via
-different providers — e.g. claude-sonnet-5 costs $2/MTok on the Anthropic API but
-is covered by the Max/Pro subscription when used via the Claude Code CLI.
-"""
+"""LLM pricing and cost calculation, in USD per million tokens, keyed by (provider, model) since the same model can be billed differently across providers (e.g. Anthropic API vs. Claude Code subscription).
+claude_api/openai use static tables (update when models change); openrouter is fetched live (refresh_openrouter_prices); claude_code/ollama are always $0."""
 import time as _time
 import logging
 from typing import Optional
@@ -79,10 +67,7 @@ _OR_TTL = 12 * 3600  # refresh at most every 12h
 
 
 async def refresh_openrouter_prices(force: bool = False) -> None:
-    """Pull live per-model pricing from OpenRouter and cache it (per-Mtok).
-
-    Non-fatal: on any error the previous cache is kept. TTL-gated unless force.
-    """
+    """Pull live per-model pricing from OpenRouter and cache it (per-Mtok); non-fatal (keeps previous cache on error), TTL-gated unless force."""
     global _OR_FETCHED_AT
     if not force and _OR_PRICES and (_time.time() - _OR_FETCHED_AT) < _OR_TTL:
         return
@@ -130,11 +115,7 @@ def calc_cost(provider: str, model: str,
               output_tokens: int = 0,
               cache_read_tokens: int = 0,
               cache_write_tokens: int = 0) -> float:
-    """Calculate USD cost for a single LLM call.
-
-    Returns 0.0 for FREE_PROVIDERS (claude_code subscription, local ollama) or when
-    the (provider, model) combo isn't priced (unknown model / empty OpenRouter cache).
-    """
+    """Calculate USD cost for a single LLM call; returns 0.0 for FREE_PROVIDERS (claude_code, ollama) or an unpriced (provider, model) combo."""
     if provider in FREE_PROVIDERS:
         return 0.0
     p = get_pricing(provider, model)

@@ -1,10 +1,5 @@
-"""Canonical schema for structured application autofill.
-
-Single source of truth for the fixed-answer fields the extension fills. Each key
-maps to a value stored in one persona JSONB node. `project_answers` flattens a
-persona dict into {canonical_key: value}, omitting blanks so the extension never
-fills an unset answer.
-"""
+"""Canonical schema for structured application autofill: maps each fixed-answer field the
+extension fills to the persona JSONB node/key that holds its value."""
 
 ANSWER_SCHEMA = {
     # EEO self-ID (persona.demographics)
@@ -19,9 +14,8 @@ ANSWER_SCHEMA = {
                         "enum": ["yes", "no", "decline"]},
     "disability_status": {"node": "demographics", "kind": "enum",
                           "enum": ["yes", "no", "decline"]},
-    # Extended diversity self-ID (persona.demographics). Optional & sensitive —
-    # default to "decline" when unset (see SELF_ID_DEFAULT_DECLINE below), but the
-    # persona editor can override with a real value.
+    # Extended diversity self-ID (persona.demographics). Optional & sensitive — defaults to
+    # "decline" when unset; the persona editor can override with a real value.
     "age_range": {"node": "demographics", "kind": "enum",
                   "enum": ["under_30", "30_39", "40_49", "50_59", "60_plus", "decline"]},
     "transgender": {"node": "demographics", "kind": "enum",
@@ -60,9 +54,8 @@ ANSWER_SCHEMA = {
 }
 
 
-# Demographic self-ID enum fields. When the persona's `decline_demographics` flag
-# is set, every one of these is answered "decline" (I prefer not to answer) unless
-# the user gave it a specific value — that single checkbox is the decline control.
+# Demographic self-ID enum fields. When persona's `decline_demographics` flag is set, every one
+# of these is answered "decline" unless the user gave it a specific value.
 DEMOGRAPHIC_ENUM_KEYS = (
     "gender", "race_ethnicity", "veteran_status", "hispanic_latino",
     "disability_status", "age_range", "transgender", "sexual_orientation",
@@ -100,11 +93,8 @@ _DIAL_CODES = {
 
 
 def project_answers(persona: dict) -> dict:
-    """Flatten persona nodes into {canonical_key: value}, omitting blank/missing.
-
-    A blank is None or an empty/whitespace string. Explicit booleans (incl. False)
-    are always kept — a stored `requires_sponsorship_now: False` is a real answer.
-    """
+    """Flatten persona nodes into {canonical_key: value}, omitting blank (None/whitespace) values;
+    explicit booleans (incl. False) are always kept as real answers."""
     out = {}
     for key, spec in ANSWER_SCHEMA.items():
         node = persona.get(spec["node"]) or {}

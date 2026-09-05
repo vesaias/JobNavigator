@@ -58,7 +58,6 @@ def test_path_contains_no_match():
 
 
 def test_clean_application_url_strips_utm(monkeypatch):
-    # Stub the setting getter to return a known tracking set
     monkeypatch.setattr(
         "backend.scraper._shared.urls._get_url_tracking_params",
         lambda: {"utm_source", "utm_campaign", "utm_medium"}

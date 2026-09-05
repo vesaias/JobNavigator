@@ -8,7 +8,6 @@ async def test_progress_records_analysis_error(monkeypatch):
     """When analysis fails for a job, progress dict should include a non-zero 'errors' count."""
     import backend.scraper.sources.linkedin_extension as ext
 
-    # Reset progress
     ext._linkedin_import_progress.clear()
 
     # Session present (persisted cookies) so enrich proceeds past the session gate
@@ -40,13 +39,11 @@ async def test_progress_records_analysis_error(monkeypatch):
 
     monkeypatch.setattr(ext, "_voyager_fetch", fake_voyager)
 
-    # Break check_job_h1b so the analysis inside the enrich loop raises
     async def broken_h1b(job, db=None, **kwargs):
         raise RuntimeError("h1b broken")
 
     monkeypatch.setattr(ext, "check_job_h1b", broken_h1b)
 
-    # Stub DB session so we don't need real Postgres
     fake_db = MagicMock()
 
     def _query_side_effect(model, *args, **kwargs):
@@ -67,7 +64,6 @@ async def test_progress_records_analysis_error(monkeypatch):
 
     await ext.enrich(["12345"])
 
-    # After the run, progress dict should reflect the error
     errs = ext._linkedin_import_progress.get("errors", 0)
     details = ext._linkedin_import_progress.get("error_details", [])
     assert errs > 0 or len(details) > 0, (

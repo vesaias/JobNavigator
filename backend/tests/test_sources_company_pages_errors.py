@@ -47,11 +47,9 @@ async def test_scrape_single_career_page_reports_url_errors(monkeypatch):
     ])
     result = await scrape_single_career_page(company)
 
-    # The key assertion: error is NOT None
     assert result.get("error") is not None, (
         f"Expected error field to contain URL failure details, got None. Full result: {result}"
     )
-    # And it should mention the failing URL or the exception text
     err = str(result["error"]).lower()
     assert "fails-company" in err or "simulated" in err
 

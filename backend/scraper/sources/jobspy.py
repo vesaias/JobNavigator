@@ -1,8 +1,4 @@
-"""JobSpy-backed keyword search source.
-
-Uses the `jobspy` pip library to search LinkedIn, Indeed, ZipRecruiter, Google Jobs
-via a single multi-board request. Returns a dict with jobs_found, new_jobs, error, duration.
-"""
+"""JobSpy-backed keyword search source — searches LinkedIn, Indeed, ZipRecruiter, Google Jobs via a single multi-board request."""
 import asyncio
 import json
 import logging
@@ -21,14 +17,7 @@ logger = logging.getLogger("jobnavigator.scraper.sources.jobspy")
 
 
 def _clean(v):
-    """Null-safe scalar → clean string, or None when the cell is empty/missing.
-
-    JobSpy rows come from a pandas DataFrame, so absent cells are None or NaN. A bare
-    ``str(cell)`` turns those into the literal text ``'None'`` / ``'nan'``, which then
-    passes every ``if description:`` / ``.strip()`` emptiness check downstream and
-    masquerades as real content (it broke resume tailoring). Detect the actual null
-    here so an empty cell is stored as real emptiness, not a lie.
-    """
+    """Null-safe scalar → clean string, or None when empty; a bare str(cell) on a pandas NaN yields the literal text 'nan', which passes emptiness checks downstream and broke resume tailoring."""
     import pandas as pd
     try:
         if v is None or pd.isna(v):
@@ -40,15 +29,7 @@ def _clean(v):
 
 
 def _apply_h1b_inline(job, db=None, company_lookup=None, phrases=None, loop=None) -> None:
-    """Sync-safe H-1B JD scan.
-
-    Runs the async check_job_h1b inside an event loop so this is safe to call
-    from inside asyncio.to_thread() workers (which are sync contexts that may or may not
-    have an event loop attached depending on Python config).
-
-    Batch callers should pass a shared `loop` (one per run, not one per job) plus
-    `company_lookup`/`phrases` so per-job DB lookups are skipped.
-    """
+    """Sync-safe H-1B JD scan: runs check_job_h1b in an event loop for asyncio.to_thread() workers; batch callers should pass a shared `loop` plus `company_lookup`/`phrases` to skip per-job DB lookups."""
     import asyncio as _asyncio
     from backend.analyzer.h1b_checker import check_job_h1b
 
@@ -65,13 +46,8 @@ def _apply_h1b_inline(job, db=None, company_lookup=None, phrases=None, loop=None
         logger.warning(f"_apply_h1b_inline failed for job {getattr(job, 'id', '?')}: {e}")
 
 
-# ── Per-source outcome (R3-A-03) ─────────────────────────────────────────────
-# jobspy runs every configured board inside a single scrape_jobs() call and
-# swallows per-board failures into its own loggers ("JobSpy:ZipRecruiter - …
-# response status code 403"). Nothing about them reaches the return value, so a
-# board that hard-failed used to be indistinguishable from one that legitimately
-# found nothing: the run finished `completed`, is_warning False, and the summary
-# read "9 seen, +0 new". Capture those records for the duration of the call.
+# jobspy swallows per-board failures into its own loggers instead of the return
+# value, so a hard-failed board looks identical to one that found nothing; capture those records here.
 
 _JOBSPY_SITE_KEYS = {
     "linkedin": "linkedin",
@@ -85,12 +61,8 @@ _JOBSPY_SITE_KEYS = {
 }
 
 
-# jobspy's create_logger() builds "JobSpy:<DisplayName>" per board. Two spellings
-# reach the logging module for the same board: the module-level one
-# (create_logger("LinkedIn") / ("BDJobs") in each scraper package) and the one
-# scrape_jobs() itself emits (site.value.capitalize() → "Linkedin" / "Bdjobs",
-# special-cased to "ZipRecruiter"). _site_key() lowercases, so both collapse to
-# the same key; the map below only has to cover the site values we configure.
+# jobspy logs each board under two spellings (e.g. "LinkedIn" vs "Linkedin"); _site_key()
+# lowercases both to the same key, so this map only needs the site values we configure.
 _JOBSPY_LOGGER_DISPLAY = {
     "linkedin": "LinkedIn",
     "indeed": "Indeed",
@@ -144,24 +116,7 @@ class _SourceLogCapture(logging.Handler):
 
 
 def _capture_targets(sites=None):
-    """Every logger the capture handler has to sit on, for one scrape_jobs() call.
-
-    jobspy's create_logger() does ``logger.propagate = False`` (jobspy/util.py),
-    so a board's WARNING/ERROR records never reach the root logger and a handler
-    installed there is a no-op — the bug this replaces. The handler has to be
-    attached to each "JobSpy:<Board>" logger directly.
-
-    Two sources of names, deliberately unioned:
-      * every already-created ``JobSpy*`` logger — this is the one that matters,
-        and it is complete in practice because ``from jobspy import scrape_jobs``
-        runs before this and imports every board package, each of which creates
-        its logger at import time;
-      * the configured sites' expected names, as a backstop for a board whose
-        logger is created later (jobspy's own ``scrape_site`` re-derives one).
-
-    The root logger is kept as a final fallback so a record from a logger that
-    *does* propagate is still seen.
-    """
+    """Every logger the capture handler must attach to for one scrape_jobs() call; jobspy's create_logger() sets propagate=False, so a handler on the root logger alone would miss board records."""
     names = set()
     for raw in list(logging.Logger.manager.loggerDict):
         if str(raw).startswith("JobSpy"):
@@ -175,12 +130,7 @@ def _capture_targets(sites=None):
 
 @contextmanager
 def _capture_source_errors(sites=None):
-    """Attach the capture handler to every JobSpy board logger for one call.
-
-    Deliberately does not touch any logger's level or its `propagate` flag:
-    these records already reach the backend log, and changing either mid-run
-    would leak into every other request sharing the process.
-    """
+    """Attach the capture handler to every JobSpy board logger for one call, without touching level/propagate since that would leak into other requests sharing the process."""
     handler = _SourceLogCapture()
     targets = _capture_targets(sites)
     for lg in targets:
@@ -206,8 +156,7 @@ def get_setting_value(db: Session, key: str, default: str = "") -> str:
 
 
 def apply_title_filters(jobs_df, include_keywords: list, exclude_keywords: list):
-    """Filter jobs by title include/exclude keywords (whole-word matching).
-    Returns (kept_df, rejected_df)."""
+    """Filter jobs by title include/exclude keywords (whole-word matching); returns (kept_df, rejected_df)."""
     import pandas as pd
 
     if jobs_df is None or jobs_df.empty:
@@ -237,9 +186,8 @@ def apply_company_filter(jobs_df, company_filter: list):
 def _run_sync(search, proxy_url: str = None) -> dict:
     """Execute a single JobSpy search and return results dict."""
     start_time = time.time()
-    # R3-A-03: one entry per configured board, so a 403 is visible next to the
-    # boards that worked. Seeded here (not after the call) so the failure paths
-    # below can still say which boards were asked for.
+    # One entry per configured board so a failure is visible next to boards that worked;
+    # seeded here (not after the call) so failure paths can still say what was asked for.
     breakdown = {}
 
     try:
@@ -326,14 +274,11 @@ def _run_sync(search, proxy_url: str = None) -> dict:
         # Save to DB, dedup via external_id
         db = SessionLocal()
         new_jobs = 0
-        # OPEN-03: the title filters reject postings, but the rejected rows are
-        # still written to `jobs` (status "ignored") so the next run dedups them.
-        # They were counted nowhere, so a run that stored 8 rows reported
-        # "6 seen, +6 new" with nothing to explain the other two. Count them.
+        # Rejected rows are still written as status "ignored" so the next run dedups them;
+        # count them too, since otherwise storing 8 rows could report only "6 seen, +6 new".
         ignored_jobs = 0
-        # Per-run hoists: one event loop, one company lookup, one parsed phrase
-        # list — previously rebuilt per job (fresh loop + full company scan +
-        # Settings read/JSON-parse, thousands of times per scrape).
+        # Hoisted per run (not per job): one event loop, one company lookup, one parsed phrase list —
+        # avoids a fresh loop + full company scan + Settings JSON-parse thousands of times per scrape.
         import asyncio as _asyncio
         from backend.models.db import build_company_lookup
         from backend.analyzer.h1b_checker import load_exclusion_phrases
@@ -349,13 +294,11 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                 url = _clean(row.get("job_url")) or ""
                 ext_id = make_external_id(company, title, url)
 
-                # Skip if already exists (URL-based dedup)
                 if ext_id in existing_ids:
                     continue
 
                 content_hash = make_content_hash(company, title)
 
-                # Map source name
                 site = str(row.get("site", "")).lower()
                 source_map = {
                     "linkedin": "jobspy_linkedin",
@@ -397,8 +340,7 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                     except (ValueError, TypeError):
                         pass
 
-                # Run H-1B check + language check + salary extraction inline.
-                # Shared loop + prebuilt lookup/phrases — hoisted above the loop.
+                # H-1B check + salary extraction inline, using the shared loop/lookup/phrases hoisted above.
                 _apply_h1b_inline(job, db, company_lookup=company_lookup, phrases=phrases, loop=h1b_loop)
                 try:
                     from backend.analyzer.salary_extractor import apply_salary_to_job
@@ -407,7 +349,6 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                 except Exception as analysis_err:
                     logger.warning(f"Inline salary analysis failed for {title}: {analysis_err}")
 
-                # Skip jobs whose description contains exclusion phrases
                 if job.h1b_jd_flag:
                     _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
                     logger.info(f"Skipping job (body exclusion): {title} @ {company} — matched phrase: {_phrase!r}")
@@ -470,7 +411,6 @@ def _run_sync(search, proxy_url: str = None) -> dict:
 
             db.commit()
 
-            # Update search last_run_at
             search_obj = db.query(Search).filter(Search.id == search.id).first()
             if search_obj:
                 search_obj.last_run_at = datetime.now(timezone.utc)

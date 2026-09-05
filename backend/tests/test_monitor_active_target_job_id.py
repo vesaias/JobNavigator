@@ -1,4 +1,4 @@
-"""get_all_running() exposes target_job_id (Task 10 of 12)."""
+"""get_all_running() exposes target_job_id."""
 import uuid
 from datetime import datetime, timezone
 
@@ -37,7 +37,7 @@ def test_active_includes_target_job_id(monkeypatch):
 
 
 def test_active_includes_company_id_for_company_scrape(monkeypatch):
-    """X-01: a company_scrape entry carries the Company id, not just a scope_key."""
+    """A company_scrape entry carries the Company id, not just a scope_key."""
     from backend.job_monitor import RunningJob, get_all_running
     import backend.job_monitor as mon
 

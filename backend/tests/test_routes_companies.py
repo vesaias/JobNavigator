@@ -1,12 +1,4 @@
-"""Tests for /api/companies CRUD + detect_scrape_type ATS dispatch.
-
-Note: routes_companies.py exposes no DELETE endpoint and no HTTP detect-scrape-type
-endpoint (the latter is a module-level helper consumed internally). We cover:
-  - POST /api/companies            (create)
-  - GET  /api/companies            (list)
-  - PATCH /api/companies/{id}      (update)
-  - detect_scrape_type(url)        (unit test of the URL classifier)
-"""
+"""Tests for /api/companies CRUD + detect_scrape_type ATS dispatch (no DELETE endpoint; detect_scrape_type is an internal helper, not an HTTP endpoint)."""
 import pytest
 
 

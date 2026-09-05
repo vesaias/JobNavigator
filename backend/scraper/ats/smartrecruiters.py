@@ -1,20 +1,5 @@
-"""SmartRecruiters ATS handler — GET api.smartrecruiters.com/v1/companies/{slug}/postings.
-
-Detection: host match on `jobs.smartrecruiters.com`, `careers.smartrecruiters.com`,
-or `api.smartrecruiters.com` (strict hostname parse via host_matches to resist
-attacker-controlled paths like `https://evil.com/?u=smartrecruiters.com`).
-Public interface: is_smartrecruiters(url), scrape(url, debug=False).
-
-The public SmartRecruiters API returns all postings for a given company slug.
-The listing endpoint paginates with limit/offset (max limit=100).
-
-Filter forwarding: the API accepts single-value `country=XX` (lowercase), `city=Name`,
-and `q=text-search`. We forward those if present in the input URL's query string;
-multi-value forms (repeated, comma, brackets) all return 0 from the API, so to
-filter multiple countries the user adds two scrape_urls (e.g. `?country=ch` and
-`?country=de`). Other query params (customField filters etc.) are NOT forwarded
-because their syntax is per-tenant.
-"""
+"""SmartRecruiters ATS handler — GET api.smartrecruiters.com/v1/companies/{slug}/postings, paginated via limit/offset (max 100).
+Only single-value country/city/q filters are forwarded from the input URL; multi-value forms return 0 from the API, so multiple countries need separate scrape_urls."""
 import json
 import logging
 from urllib.parse import parse_qs, urlparse
@@ -29,15 +14,12 @@ logger = logging.getLogger("jobnavigator.scraper.ats.smartrecruiters")
 _PAGE_LIMIT = 100
 _MAX_PAGES = 50  # 5000 postings cap — defensive against runaway pagination
 
-# Whitelist of query params we forward from the input URL to the API.
-# Anything else is dropped to keep the dispatch deterministic and avoid
-# accidentally injecting per-tenant customField params that the API would
-# reject or interpret unexpectedly.
+# Query params forwarded to the API; others are dropped to avoid per-tenant customField params the API might reject.
 _FORWARDABLE_PARAMS = ("country", "city", "q")
 
 
 def is_smartrecruiters(url: str) -> bool:
-    """Check if URL is a SmartRecruiters job board."""
+    """Check if URL is a SmartRecruiters job board (strict hostname match, not substring, to resist spoofed paths)."""
     return host_matches(
         url,
         "jobs.smartrecruiters.com",
@@ -47,25 +29,16 @@ def is_smartrecruiters(url: str) -> bool:
 
 
 def _extract_company_slug(url: str) -> str | None:
-    """First non-empty path segment is the company slug.
-
-    Handles all three host shapes:
-      - jobs.smartrecruiters.com/{slug}
-      - careers.smartrecruiters.com/{slug}
-      - api.smartrecruiters.com/v1/companies/{slug}/postings/...
-    """
+    """First non-empty path segment is the company slug, handling all three host shapes (jobs/careers/api)."""
     parsed = urlparse(url)
     parts = [p for p in parsed.path.strip("/").split("/") if p]
     if not parts:
         return None
-    # api.smartrecruiters.com/v1/companies/{slug}/...
     if (parsed.hostname or "").lower() == "api.smartrecruiters.com":
-        # Expect /v1/companies/{slug}/...
         for i, p in enumerate(parts):
             if p == "companies" and i + 1 < len(parts):
                 return parts[i + 1]
         return None
-    # jobs/careers hosts: first segment is the slug
     return parts[0]
 
 
@@ -80,9 +53,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
     api_base = f"https://api.smartrecruiters.com/v1/companies/{company_slug}/postings"
 
-    # Build the forwarded-filter suffix once. parse_qs returns {key: [values]}; we
-    # take the first value because the API rejects multi-value forms (see module
-    # docstring). Operators wanting two countries paste two scrape_urls.
+    # parse_qs returns {key: [values]}; we take the first since the API rejects
+    # multi-value filters (see module docstring) — two countries need two scrape_urls.
     qs = parse_qs(urlparse(url).query)
     filter_suffix = ""
     forwarded_filters = {}
