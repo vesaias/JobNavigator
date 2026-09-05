@@ -495,6 +495,31 @@ H1B_SLUG_OVERRIDES = {
 }
 
 
+def run_migration_statements(db, statements) -> list:
+    """Execute each statement in its own SAVEPOINT and return the ones that failed.
+
+    Postgres aborts the *whole* transaction on any error, so a bare try/except
+    around one shared session turns the first failure into
+    `InFailedSqlTransaction` for every statement after it — the rest silently
+    no-op and log a misleading reason (R4-T0-01). One nested transaction per
+    statement keeps each outcome independent, so a genuinely broken migration is
+    the only thing that reports as broken.
+    """
+    failed = []
+    for sql in statements:
+        try:
+            with db.begin_nested():
+                db.execute(text(sql))
+        except Exception as e:
+            failed.append(sql)
+            logger.warning(
+                "Migration skipped: %s -- statement: %s",
+                str(e).strip()[:300], " ".join(sql.split())[:120],
+            )
+    db.commit()
+    return failed
+
+
 def run_migrations(db):
     """Run ALTER TABLE migrations for columns that create_all() won't add to existing tables."""
     migrations = [
@@ -552,13 +577,17 @@ def run_migrations(db):
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS best_cv_score FLOAT",
         "CREATE INDEX IF NOT EXISTS ix_jobs_best_cv_score ON jobs(best_cv_score)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS cache_error TEXT",
+        # cv_scores is declared Column(JSON), so create_all() builds it as native
+        # `json` on a fresh DB and as `jsonb` on DBs predating that change. The
+        # jsonb_* functions have no `json` overload, so every reference is cast
+        # explicitly — the statement then works on both shapes.
         """UPDATE jobs SET best_cv_score = (
             SELECT MAX(CAST(value AS FLOAT))
-            FROM jsonb_each_text(cv_scores)
+            FROM jsonb_each_text(cv_scores::jsonb)
             WHERE value ~ '^[0-9]+(\\.[0-9]+)?$'
         ) WHERE cv_scores IS NOT NULL
-          AND jsonb_typeof(cv_scores) = 'object'
-          AND cv_scores != '{}'
+          AND jsonb_typeof(cv_scores::jsonb) = 'object'
+          AND cv_scores::jsonb != '{}'::jsonb
           AND best_cv_score IS NULL""",
         # Retire screening/phone_screen/final_round statuses onto
         # applied/interview/offer/rejected; status_transitions is left as-is.
@@ -623,12 +652,7 @@ END $$;""",
         "ALTER TABLE searches ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
     ]
-    for sql in migrations:
-        try:
-            db.execute(text(sql))
-        except Exception as e:
-            logger.warning(f"Migration skipped: {e}")
-    db.commit()
+    run_migration_statements(db, migrations)
 
     _rewrite_retired_status_transitions(db)
 

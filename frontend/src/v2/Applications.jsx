@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSettled } from './hooks'
-import { Button, Card, Check, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
+import { useEscape, useSettled, NBSP, DASH } from './hooks'
+import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -131,16 +131,19 @@ export default function Applications() {
   }, [])
   // Escape closes filter menus, prep, interview edit and Log (its dirty-discard confirm still fires) via the shared hook, which claims the event.
   // Gated on !confirm so ConfirmDialog's own Escape wins while open; closeLog() is gated on logOpen so a stale dirty flag can't fire the discard confirm with no form open.
-  useEscape(() => { closeAll(); setPrep(null); setEditIv(null); if (logOpen) closeLog() }, !confirm)
+  useEscape(() => { closeAll(); setPrep(null); setEditIv(null); setIntForm(false); if (logOpen) closeLog() }, !confirm)
 
   // ── derived ──
   const nInterview = apps.filter((a) => a.status === 'interview').length
   const nOffer = apps.filter((a) => a.status === 'offer').length
   const nStale = apps.filter(isStale).length
   const shown = total ?? apps.length
-  const countLine = `${shown} application${shown === 1 ? '' : 's'} · ${nInterview} interviewing · ${nOffer} offer${nOffer === 1 ? '' : 's'}`
-    + (nStale ? ` · ${nStale} with no reply for 7+ days` : '')
-    + (total > apps.length ? ` · showing ${apps.length}` : '')
+  // Three states, never "0" by accident: NBSP holds the line's box while the one
+  // request is in flight, an em dash says the load failed, numbers mean numbers.
+  const countLine = !loaded ? NBSP : loadErr ? DASH
+    : `${shown} application${shown === 1 ? '' : 's'} · ${nInterview} interviewing · ${nOffer} offer${nOffer === 1 ? '' : 's'}`
+      + (nStale ? ` · ${nStale} with no reply for 7+ days` : '')
+      + (total > apps.length ? ` · showing ${apps.length}` : '')
 
   const companyOf = (a) => a.company_canonical || a.company || 'Unknown Company'
   // live companies (≥1 non-rejected application) first, then a rule, then the closed ones
@@ -303,8 +306,6 @@ export default function Applications() {
     return h.sort((a, b) => new Date(b.at) - new Date(a.at))
   }, [d])
 
-  if (!loaded) return <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)' }} />
-
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* header */}
@@ -337,7 +338,7 @@ export default function Applications() {
             Company{companies.length ? ` · ${companies.length}` : ''}<span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
           </Pill>
           {openFlt === 'company' && (
-            <Menu ariaLabel="Filter by company" className="v2-scroll" style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, maxHeight: 340, overflow: 'auto' }}>
+            <Menu ariaLabel="Filter by company" className="v2-scroll" onDismiss={() => setOpenFlt(null)} style={{ ...POPOVER, left: 0, marginTop: 5, width: 240, maxHeight: 340, overflow: 'auto' }}>
               {['live', 'closed'].map((band) => companyOpts[band].map(([name, e], i) => {
                 const on = companies.includes(name)
                 const first = band === 'closed' && i === 0 && companyOpts.live.length > 0
@@ -363,7 +364,7 @@ export default function Applications() {
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
             {openFlt === 'sort' && (
-              <Menu ariaLabel="Sort applications" style={{ ...POPOVER, right: 0, marginTop: 8, width: 190 }}>
+              <Menu ariaLabel="Sort applications" onDismiss={() => setOpenFlt(null)} style={{ ...POPOVER, right: 0, marginTop: 8, width: 190 }}>
                 {SORTS.map(([id, label]) => {
                   const on = sortBy === id
                   return (
@@ -391,7 +392,7 @@ export default function Applications() {
                   style={{ gap: 8, padding: '12px 8px 5px', lineHeight: '16px' }}>
                   <Dot style={{ background: st.dot }} />
                   <Label>{st.label}</Label>
-                  <Mono tone="faint">{rows.length}</Mono>
+                  <Mono tone="faint">{!loaded ? NBSP : loadErr ? DASH : rows.length}</Mono>
                 </SectionHead>
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
@@ -426,7 +427,7 @@ export default function Applications() {
               </React.Fragment>
             )
           })}
-          {visible.length === 0 && (loadErr ? (
+          {loaded && visible.length === 0 && (loadErr ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '34px 8px' }}>
               {/* ui: keep — the empty-state's 13px --bad headline, off the helper step */}
               <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load your applications</span>
@@ -506,7 +507,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             <div onClick={() => setMenuOpen((v) => !v)} className="v2-bd" title="More actions"
               style={{ ...ACT_BTN, width: 30, padding: 0, justifyContent: 'center', border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', cursor: 'pointer' }}>⋯</div>
             {menuOpen && (
-              <Menu ariaLabel="Application actions" style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, textAlign: 'left' }}>
+              <Menu ariaLabel="Application actions" onDismiss={() => setMenuOpen(false)} style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
                   ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => navigate(`/v2/cover-letters?job=${d.job_id}`)]] : [])].map(([g, label, act]) => (
                   <MenuItem key={label} icon={g} onClick={() => { setMenuOpen(false); act() }}>{label}</MenuItem>
@@ -538,7 +539,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               <Label>Interviews · {ivs.length}</Label>
               <Pill size="sm" onClick={openPrep} style={{ marginLeft: 'auto' }}
                 title="Builds one text block with the role, your résumé, the posting and the questions to ask, to paste into any AI chat">
-                <span style={{ fontSize: 11 }}>⧉</span>Generate prep handover for AI
+                <CopyGlyph />Generate prep handover for AI
               </Pill>
             </div>
             {ivs.map((iv) => (
@@ -673,7 +674,7 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
           <Helper>Edit the questions added at the end in Settings → AI</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</Button>
           <Button size="sm" onClick={onCopy} busy={busy}>
-            <span style={{ fontSize: 11 }}>⧉</span>{copied ? 'Copied ✓' : 'Copy to clipboard'}
+            <CopyGlyph />{copied ? 'Copied ✓' : 'Copy to clipboard'}
           </Button>
         </FooterRow>
     </ModalPanel>

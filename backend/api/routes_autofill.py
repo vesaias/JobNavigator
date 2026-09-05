@@ -207,14 +207,22 @@ def autofill_config():
         db.close()
 
 
-@router.post("/answer")
-async def autofill_answer(body: dict):
+def _build_autofill_prompt(body: dict, *, want_provider: bool = False) -> dict:
+    """Shared prompt construction for both /answer and /answer/stream.
+
+    Both variants must honour the editable `autofill_prompt` setting — the
+    streaming path used to build its own hardcoded prefix, so editing the prompt
+    in Settings had no effect on the answers the extension actually renders
+    (R4-T1-22). Returns the cacheable prefix, the per-question suffix and the
+    resolved character budget.
+    """
     question = (body.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "question is required")
     company = (body.get("company") or "").strip() or "(unknown company)"
     position = (body.get("position") or "").strip() or "(unknown role)"
 
+    provider = model = None
     db = SessionLocal()
     try:
         persona = db.query(Persona).filter(Persona.id == 1).first()
@@ -227,11 +235,12 @@ async def autofill_answer(body: dict):
         persona_txt = _flatten_persona(persona) if persona else "(no persona)"
         qa_txt = _flatten_qa_bank(persona.qa_bank if persona else [])
 
-        # Resolve provider/model for logging with the same resolver call_autofill_llm
-        # dispatches through, so both stay in sync.
-        from backend.analyzer.llm_client import resolve_llm_config
-        _cfg = resolve_llm_config("autofill", db=db)
-        provider, model = _cfg["provider"], _cfg["model"]
+        if want_provider:
+            # Resolve provider/model for logging with the same resolver
+            # call_autofill_llm dispatches through, so both stay in sync.
+            from backend.analyzer.llm_client import resolve_llm_config
+            _cfg = resolve_llm_config("autofill", db=db)
+            provider, model = _cfg["provider"], _cfg["model"]
     finally:
         db.close()
 
@@ -256,6 +265,16 @@ async def autofill_answer(body: dict):
               .replace("{position}", position)
               .replace("{question}", question)
               .replace("{max_chars}", str(max_chars)))
+    return {"cached_prefix": cached_prefix, "suffix": suffix,
+            "max_chars": max_chars, "provider": provider, "model": model}
+
+
+@router.post("/answer")
+async def autofill_answer(body: dict):
+    built = _build_autofill_prompt(body, want_provider=True)
+    cached_prefix, suffix = built["cached_prefix"], built["suffix"]
+    max_chars = built["max_chars"]
+    provider, model = built["provider"], built["model"]
     system = "You write concise, truthful first-person job-application answers grounded only in the provided profile."
 
     # token budget: char budget (~4 chars/token) + headroom for the JSON wrapper
@@ -284,34 +303,11 @@ async def autofill_answer(body: dict):
 @router.post("/answer/stream")
 async def autofill_answer_stream(body: dict):
     """SSE variant of /answer that streams the drafted answer as plain-text chunks (no JSON wrapper) so the extension can render it into the field live, sharing the persona/qa_bank cache prefix with /answer."""
-    question = (body.get("question") or "").strip()
-    if not question:
-        raise HTTPException(400, "question is required")
-    company = (body.get("company") or "").strip() or "(unknown company)"
-    position = (body.get("position") or "").strip() or "(unknown role)"
-
-    db = SessionLocal()
-    try:
-        persona = db.query(Persona).filter(Persona.id == 1).first()
-        len_row = db.query(Setting).filter(Setting.key == "autofill_default_length").first()
-        default_len = int(len_row.value) if len_row and (len_row.value or "").isdigit() else 120
-        persona_txt = _flatten_persona(persona) if persona else "(no persona)"
-        qa_txt = _flatten_qa_bank(persona.qa_bank if persona else [])
-    finally:
-        db.close()
-
-    max_chars = body.get("max_chars")
-    max_chars = int(max_chars) if isinstance(max_chars, (int, str)) and str(max_chars).isdigit() else default_len
-
-    # Dedicated plain-prose prefix rather than the /answer template, which steers
-    # toward a JSON wrapper that leaked into the streamed field.
-    cached_prefix = (
-        "You are the candidate, writing concise first-person answers to job-application "
-        "questions. Use ONLY facts from the profile and reusable Q&A bank below — never "
-        "invent employers, titles, metrics, or skills.\n\n"
-        f"CANDIDATE PROFILE:\n{persona_txt}\n\n"
-        f"REUSABLE Q&A BANK:\n{qa_txt}\n"
-    )
+    # Same editable `autofill_prompt` template as /answer, so what the user edits
+    # in Settings governs the variant the extension actually streams (R4-T1-22).
+    built = _build_autofill_prompt(body)
+    cached_prefix = built["cached_prefix"]
+    max_chars = built["max_chars"]
 
     # Refinements: ordered change requests already applied ("shorter", "mention
     # fintech work"), appended to the suffix so the cache prefix stays untouched.
@@ -320,12 +316,13 @@ async def autofill_answer_stream(body: dict):
     if isinstance(refinements, list):
         lines = "\n".join(f"- {str(r).strip()}" for r in refinements if str(r).strip())
         if lines:
-            refine_block = f"Apply these changes the candidate requested, in order:\n{lines}\n\n"
+            refine_block = f"\n\nApply these changes the candidate requested, in order:\n{lines}"
 
+    # The template steers toward the {"answer": …} envelope /answer parses; this
+    # path renders straight into a form field, so the envelope is suppressed here
+    # rather than by forking the whole prompt.
     suffix = (
-        f"Company: {company}\nRole: {position}\n"
-        f"Question: {question}\n\n"
-        f"{refine_block}"
+        f"{built['suffix']}{refine_block}\n\n"
         f"Write a first-person answer in AT MOST {max_chars} characters — this is a "
         f"hard limit, not a target. Be concise and finish a sentence before reaching it. "
         f"Output only the answer text — no JSON, no quotes, no preamble, no labels."

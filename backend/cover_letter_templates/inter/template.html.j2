@@ -13,6 +13,16 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 .page { width: {{ '8.5in' if page_format == 'letter' else '210mm' }}; padding: 0.75in 0.85in; margin: 0 auto; }
+/* R4-T3-01 (parity with the resume templates): the flow's trailing whitespace --
+   the page block's bottom padding and the last paragraph's bottom margin -- is
+   counted against the final line at a page break and pushes it onto a near-blank
+   second page. None of it paints, so drop it when paginating, and keep the
+   sign-off with the signature. */
+@media print {
+  .page { padding-bottom: 0; }
+  .body p:last-child { margin-bottom: 0; }
+  .closing { break-after: avoid; }
+}
 .header { margin-bottom: 22pt; }
 .header h1 { font-size: 20pt; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 4pt; }
 .header .contact { font-size: 9.5pt; color: #555; }

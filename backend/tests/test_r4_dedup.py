@@ -79,28 +79,24 @@ def test_spelling_collapses_onto_canonical_id(label):
 
 # ── Spellings that do NOT converge — defects pinned to the right behaviour ────
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-01")
 def test_trailing_slash_is_the_same_posting():
     """`/jobs/123` and `/jobs/123/` are one posting on every board we scrape."""
     assert _id(CANON + "/") == _id(CANON)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-02")
 def test_www_prefix_is_the_same_host():
     """`www.host` and `host` serve the same posting."""
     assert _id("https://www.example.com/jobs/4012345") == \
            _id("https://example.com/jobs/4012345")
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-03")
 def test_http_and_https_are_the_same_posting():
     """A board that upgrades http→https must not mint a second job row."""
     assert _id("http://boards.greenhouse.io/acme/jobs/4012345") == _id(CANON)
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-04")
 def test_query_param_order_does_not_change_the_id():
-    """_normalize_url claims to 'sort params for stable hashing' — it does not."""
+    """The hash sorts params; the stored URL keeps the board's own order."""
     a = _id("https://job-boards.greenhouse.io/acme/jobs/9?gh_jid=9&location=us")
     b = _id("https://job-boards.greenhouse.io/acme/jobs/9?location=us&gh_jid=9")
     assert a == b
@@ -112,7 +108,6 @@ def test_percent_encoded_unreserved_chars_are_equivalent():
     assert _id("https://x.com/jobs/senior%2Dpm") == _id("https://x.com/jobs/senior-pm")
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-01")
 def test_all_twenty_spellings_share_one_external_id():
     """The whole property: 20 spellings → 1 id."""
     ids = {_id(u) for _, u in SPELLINGS}
@@ -120,12 +115,37 @@ def test_all_twenty_spellings_share_one_external_id():
 
 
 def test_current_spelling_fanout_is_bounded():
-    """Regression guard: today the 20 spellings fan out to exactly 5 ids.
+    """Regression guard: the 20 spellings fan out to exactly 1 id (was 5 before R4).
 
-    If a normalisation change lands, this number must move *down*, never up.
+    If a normalisation change lands, this number must never move back up.
     """
     ids = {_id(u) for _, u in SPELLINGS}
-    assert len(ids) <= 5
+    assert len(ids) == 1
+
+
+# ── Regression: the STORED url is not folded, only the hash is ───────────────
+
+def test_normalize_url_keeps_the_trailing_slash_the_board_gave_us():
+    """`_normalize_url` feeds Job.url on the company-page path; some ATS WAFs
+    403 without the exact path they linked, so folding belongs to the hash only."""
+    assert _normalize_url("https://x.com/jobs/1/") == "https://x.com/jobs/1/"
+    assert _normalize_url("https://www.x.com/jobs/1") == "https://www.x.com/jobs/1"
+    assert _normalize_url("http://x.com/jobs/1") == "http://x.com/jobs/1"
+    assert _normalize_url("https://x.com/jobs/9?loc=us&gh_jid=9") == \
+           "https://x.com/jobs/9?loc=us&gh_jid=9"
+
+
+@pytest.mark.parametrize("a,b", [
+    ("https://x.com/jobs/1/", "https://x.com/jobs/1"),
+    ("https://www.x.com/jobs/1", "https://x.com/jobs/1"),
+    ("http://x.com/jobs/1", "https://x.com/jobs/1"),
+    ("https://x.com/jobs/1/apply/", "https://x.com/jobs/1"),
+    ("https://x.com/jobs/1/Apply/", "https://x.com/jobs/1"),
+    ("https://x.com/jobs/9?loc=us&gh_jid=9", "https://x.com/jobs/9?gh_jid=9&loc=us"),
+    ("HTTP://WWW.X.COM/Jobs/1/thanks/#top", "https://x.com/jobs/1"),
+])
+def test_hash_folds_the_spellings_that_mean_one_posting(a, b):
+    assert _id(a) == _id(b)
 
 
 # ── Identity params survive normalisation ────────────────────────────────────

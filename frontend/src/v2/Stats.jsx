@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-import { useEscape, useSettled, useWarm, NBSP } from './hooks'
+import { useEscape, useSettled, useWarm, NBSP, DASH } from './hooks'
 import { Card, GlyphBadge, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, Mono, PageTitle, Pill as UiPill, Spinner, TableHead, TableRow } from './ui'
 import './theme.css'
 
@@ -87,7 +87,7 @@ const decodeCron = (expr) => {
 // ui: keep — H serves only the run-history/activity-log tabs (kb() control + accent underline); Heading covers everything else.
 const H = { fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, letterSpacing: '-.015em' }
 // ui: keep — COL serves only the LLM-cost card's 9px column strip (h22/9px, smaller than TableHead's 9.5 step) inside a scroll-gutter head.
-const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--muted)' }
+const COL = { fontSize: 9.5, lineHeight: '14px', letterSpacing: 'var(--label-tracking-strip)', textTransform: 'var(--label-case)', color: 'var(--muted)' }
 // ui: keep — MONO covers the funnel count, LLM model cell and peak caption, each overriding font-size (11.5/10/10) vs Mono's 10.5 step; everything else uses <Mono>.
 const MONO = { fontFamily: 'var(--mono)', fontSize: 10.5, lineHeight: '16px' }
 // Same badge idiom as Companies: mono, 9.5px, .05em, 2px 7px, full radius.
@@ -375,11 +375,12 @@ export default function Stats() {
 
   // Warm start: the header line (last sweep, sources needing attention, spend) matches
   // the pre-refresh frame. Only the timestamp is cached — "3h ago" recomputes at render.
+  // `!coreErr` — see R4-T2B-03: a failed load must not cache or claim its zeroes.
   const { warm: sub, style: subStyle } = useWarm('stats', ready ? {
     has: !!sweep, status: sweep?.status || null, at: sweep ? (sweep.finished_at || sweep.started_at) : null,
     failing, spend: spend == null ? null : spend, period,
-  } : null, ready)
-  const subLine = !sub ? NBSP : (
+  } : null, ready, !coreErr)
+  const subLine = !sub ? (coreErr ? DASH : NBSP) : (
     <>
       {sub.has ? `Last scrape run ${sub.status === 'failed' ? 'failed ' : ''}${ago(sub.at) || '—'}` : 'No scrape recorded yet'}
       {sub.failing > 0 && <> · <span style={{ color: 'var(--warn)' }}>{sub.failing} source{sub.failing === 1 ? ' needs' : 's need'} attention</span></>}
@@ -524,6 +525,7 @@ export default function Stats() {
               )}
             </div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 14, minHeight: 118, padding: '0 6px' }}>
+              {buckets.length === 0 && <Helper style={{ alignSelf: 'center', margin: '0 auto' }}>No scored jobs yet.</Helper>}
               {buckets.map((b) => (
                 <div key={b.range} title={`${b.count} jobs scored ${b.range}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <Mono line={14} tone="base">{b.count}</Mono>
@@ -579,7 +581,7 @@ export default function Stats() {
             </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <div className="v2-gutter-head" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: 22, ...COL, fontSize: 9, borderBottom: '1px solid var(--line-strong)' }}>
-                <span style={{ flex: 1.1 }}>Purpose</span><span style={{ flex: 1.4 }}>Model</span>
+                <span style={{ flex: 1.1, minWidth: 0, paddingRight: 8 }}>Purpose</span><span style={{ flex: 1.4, minWidth: 0, paddingRight: 8 }}>Model</span>
                 <span style={{ flex: '0 0 42px', textAlign: 'right' }}>Calls</span><span style={{ flex: '0 0 58px', textAlign: 'right' }}>Cost</span>
                 <span title="Share of calls that reused a cached prompt" style={{ flex: '0 0 44px', textAlign: 'right' }}>Cache</span>
               </div>
@@ -649,6 +651,7 @@ export default function Stats() {
               </TableRow>
             )
           })}
+          {ordered.length === 0 && <Helper style={{ display: 'block', padding: '16px 20px 20px' }}>No scheduled jobs.</Helper>}
           </>)}
         </Card>
 

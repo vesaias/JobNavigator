@@ -346,6 +346,15 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         logger.error(f"LLM call failed: {e}")
     finally:
         duration_ms = int((time.monotonic() - started) * 1000)
+        if not call_success:
+            # The caller turns this into the string "Scoring failed", which
+            # launch_background would otherwise record as a successful run — a
+            # provider outage then shows green in Stats (R4-T1-28).
+            try:
+                from backend.job_monitor import mark_run_failed
+                mark_run_failed(f"Scoring failed: {call_error or 'unknown LLM error'}")
+            except Exception:
+                pass
         try:
             log_llm_call(
                 purpose=purpose,

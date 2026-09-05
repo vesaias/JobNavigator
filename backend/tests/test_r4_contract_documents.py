@@ -26,7 +26,6 @@ def test_create_resume_rejects_a_blank_name(client, name):
 
 
 @pytest.mark.parametrize("name", [5, None, [], {}])
-@pytest.mark.xfail(strict=True, reason="R4-T1-20")
 def test_create_resume_wrongly_typed_name_is_400_not_500(client, name):
     """`body.get("name", "").strip()` raises AttributeError on a non-string."""
     assert client.post("/api/resumes", json={"name": name}).status_code in (400, 422)
@@ -310,7 +309,6 @@ def test_create_cover_letter_rejects_a_blank_name(client, name):
 
 
 @pytest.mark.parametrize("name", [5, ["L"], {"n": 1}])
-@pytest.mark.xfail(strict=True, reason="R4-T1-20")
 def test_create_cover_letter_wrongly_typed_name_is_400_not_500(client, name):
     assert client.post("/api/cover-letters", json={"name": name}).status_code in (400, 422)
 
@@ -498,7 +496,6 @@ def test_qa_bank_appends_and_counts(client, test_db):
 
 
 @pytest.mark.parametrize("bad", [5, ["q"], {"a": 1}])
-@pytest.mark.xfail(strict=True, reason="R4-T1-20")
 def test_qa_bank_wrongly_typed_fields_are_400_not_500(client, test_db, bad):
     make_persona(test_db)
     assert client.post("/api/persona/qa-bank",
@@ -522,3 +519,45 @@ def test_persona_import_without_a_file_or_body_is_400(client, test_db):
     make_persona(test_db)
     r = client.post("/api/persona/import")
     assert_clean(r, 400, 415, 422)
+
+
+# ── R4 fix-loop regressions (R4-T1-20) ───────────────────────────────────────
+
+@pytest.mark.parametrize("bad", [5, 1.5, [], {}, True, ["x"], {"n": 1}])
+def test_create_resume_rejects_every_wrongly_typed_name(client, bad):
+    assert_clean(client.post("/api/resumes", json={"name": bad}), 400)
+
+
+@pytest.mark.parametrize("bad", [5, 1.5, [], {}, True, ["x"], {"n": 1}])
+def test_create_cover_letter_rejects_every_wrongly_typed_name(client, bad):
+    assert_clean(client.post("/api/cover-letters", json={"name": bad}), 400)
+
+
+@pytest.mark.parametrize("field", ["question", "answer"])
+@pytest.mark.parametrize("bad", [5, ["x"], {"n": 1}, True])
+def test_qa_bank_rejects_every_wrongly_typed_field(client, test_db, field, bad):
+    make_persona(test_db)
+    body = {"question": "q", "answer": "a"}
+    body[field] = bad
+    assert_clean(client.post("/api/persona/qa-bank", json=body), 400)
+
+
+def test_qa_bank_still_appends_a_well_typed_pair(client, test_db):
+    make_persona(test_db)
+    r = assert_clean(client.post("/api/persona/qa-bank",
+                                 json={"question": "q", "answer": "a"}), 200)
+    assert r.json()["count"] == 1
+
+
+def test_cover_letters_malformed_job_id_filter_is_422_not_404(client):
+    """R4-T1-09: the list used to answer "Not found" for a bad filter value."""
+    assert_clean(client.get("/api/cover-letters?job_id=not-a-uuid"), 422)
+
+
+def test_cover_letters_valid_job_id_filter_still_works(client, test_db):
+    from backend.models.db import CoverLetter
+    job = make_job(test_db)
+    test_db.add(CoverLetter(name="L", job_id=job.id, json_data={}))
+    test_db.commit()
+    r = assert_clean(client.get(f"/api/cover-letters?job_id={job.id}"), 200)
+    assert len(r.json()) == 1

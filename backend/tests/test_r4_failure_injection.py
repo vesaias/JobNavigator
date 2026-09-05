@@ -152,7 +152,6 @@ async def test_llm_failure_run_is_visible_in_the_run_history(test_db, monkeypatc
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(strict=True, reason="R4-T1-28")
 async def test_llm_failure_marks_the_run_failed_not_completed(test_db, monkeypatch):
     """A provider outage reads as a green run in Stats and as an OK toast in the UI,
     because the scorer swallows the error and returns a summary string."""
@@ -523,3 +522,75 @@ async def test_telegram_test_trigger_survives_a_dead_bot(client, test_db, monkey
     assert row.status == "failed"
     # The failure reason stays in the run history, not in the HTTP response.
     assert "telegram down" not in client.post("/api/telegram/test").text
+
+
+# ── R4 fix-loop regressions (R4-T1-28) ───────────────────────────────────────
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fault", list(FAULTS))
+async def test_every_llm_fault_kind_marks_the_run_failed(test_db, monkeypatch, fault):
+    """All four fault kinds must reach the JobRun as `failed`, not just 529."""
+    import backend.analyzer.llm_client as lc
+    import backend.job_monitor as jm
+    from backend.analyzer.cv_scorer import score_single_job
+    from backend.models.db import JobRun
+
+    resume = _seed_scoring(test_db)
+    job = _scored_job(test_db)
+
+    async def _boom(*a, **k):
+        raise FAULTS[fault]
+    monkeypatch.setattr(lc, "_dispatch", _boom)
+
+    jm.launch_background("analyze_job", score_single_job, trigger="manual",
+                         scope_key=str(job.id), target_job_id=job.id,
+                         func_kwargs={"job_id": str(job.id), "cv_ids": [str(resume.id)],
+                                      "depth": "light"})
+    await asyncio.sleep(0.2)
+    test_db.expire_all()
+    row = test_db.query(JobRun).filter(JobRun.job_type == "analyze_job").first()
+    assert row.status == "failed"
+    # The summary the user sees is kept; the reason lands on `error`.
+    assert row.result_summary == "Scoring failed"
+    assert row.error and "Scoring failed" in row.error
+
+
+@pytest.mark.asyncio
+async def test_a_healthy_run_is_still_completed(test_db):
+    """The failure flag must not leak into a run that did nothing wrong."""
+    import backend.job_monitor as jm
+    from backend.models.db import JobRun
+
+    async def _fine():
+        return "All good"
+
+    jm.launch_background("r4_ok_probe", _fine, trigger="manual")
+    await asyncio.sleep(0.1)
+    test_db.expire_all()
+    row = test_db.query(JobRun).filter(JobRun.job_type == "r4_ok_probe").first()
+    assert row.status == "completed" and row.result_summary == "All good" and not row.error
+
+
+@pytest.mark.asyncio
+async def test_a_failure_flag_does_not_leak_into_the_next_run(test_db, monkeypatch):
+    """mark_run_failed is per-run: the flag is cleared when the run is recorded."""
+    import backend.job_monitor as jm
+    from backend.models.db import JobRun
+
+    async def _bad():
+        jm.mark_run_failed("provider down")
+        return "Tried and failed"
+
+    async def _good():
+        return "Fine"
+
+    jm.launch_background("r4_leak_a", _bad, trigger="manual")
+    await asyncio.sleep(0.1)
+    jm.launch_background("r4_leak_b", _good, trigger="manual")
+    await asyncio.sleep(0.1)
+    test_db.expire_all()
+    bad = test_db.query(JobRun).filter(JobRun.job_type == "r4_leak_a").first()
+    good = test_db.query(JobRun).filter(JobRun.job_type == "r4_leak_b").first()
+    assert bad.status == "failed" and bad.error == "provider down"
+    assert bad.result_summary == "Tried and failed"
+    assert good.status == "completed" and not good.error

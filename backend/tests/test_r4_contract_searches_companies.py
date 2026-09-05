@@ -319,7 +319,6 @@ def test_bulk_activate_coerces_boolish_strings(client):
 
 
 @pytest.mark.parametrize("tiers", [["banana"], ["1", "x"], [""]])
-@pytest.mark.xfail(strict=True, reason="R4-T1-19")
 def test_bulk_activate_rejects_a_non_numeric_tier(client, test_db, tiers):
     """`int(t)` on a free-text tier is an unguarded ValueError -> 500."""
     make_company(test_db, name="Acme", tier=1)
@@ -368,3 +367,19 @@ def test_scrape_company_second_trigger_on_the_same_scope_is_409(client, test_db,
     assert_clean(client.post(f"/api/scrape/company/{c.id}"), 202)
     assert_clean(client.post(f"/api/scrape/company/{c.id}"), 409)
     gate.set()
+
+
+# ── R4 fix-loop regression (R4-T1-19) ────────────────────────────────────────
+
+@pytest.mark.parametrize("tiers", [["banana"], ["1", "x"], [""], ["1.5"], ["none", "x"]])
+def test_bulk_activate_rejects_every_non_numeric_tier(client, test_db, tiers):
+    make_company(test_db, name="Acme", tier=1)
+    assert_clean(client.post("/api/companies/bulk-activate",
+                             json={"active": False, "tiers": tiers}), 422)
+
+
+@pytest.mark.parametrize("tiers", [["1"], ["1", "2"], ["none"], ["none", "1"]])
+def test_bulk_activate_still_accepts_real_tiers(client, test_db, tiers):
+    make_company(test_db, name="Acme", tier=1)
+    assert_clean(client.post("/api/companies/bulk-activate",
+                             json={"active": True, "tiers": tiers}), 200)

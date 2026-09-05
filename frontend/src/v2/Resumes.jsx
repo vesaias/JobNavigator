@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
-import { useFlashToast, useSettled, useWarm, NBSP } from './hooks'
+import { useFlashToast, useSettled, useWarm, NBSP, DASH } from './hooks'
 import { EMPTY } from './ResumeSections'
 import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
@@ -85,7 +85,9 @@ export default function V2Resumes() {
   const { ready } = useSettled([() => load()], reload)
   // the subtitle's three numbers are the same on the frame after a refresh as
   // they were before it: paint them from the cache, reconcile on settle
-  const { warm: sub, style: subStyle } = useWarm('resumes', ready ? { b: bases.length, c: totalCopies, a: archived.length } : null, ready)
+  // `!loadErr` — a 500 used to write {b:0,c:0,a:0} to the cache, so the NEXT
+  // visit opened by asserting "0 bases · 0 tailored copies" (R4-T2B-03).
+  const { warm: sub, style: subStyle } = useWarm('resumes', ready ? { b: bases.length, c: totalCopies, a: archived.length } : null, ready, !loadErr)
 
   // in-flight tailors: poll /monitor/active; refresh the shelf when the set shrinks
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function V2Resumes() {
       <HeaderRow pad="22px 30px 16px 24px" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Résumés</PageTitle>
-          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...subStyle }}>{sub ? `${sub.b} base${sub.b === 1 ? '' : 's'} · ${sub.c} tailored cop${sub.c === 1 ? 'y' : 'ies'}, listed under their jobs${sub.a ? ` · ${sub.a} archived` : ''}` : NBSP}</span>
+          <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...subStyle }}>{sub ? `${sub.b} base${sub.b === 1 ? '' : 's'} · ${sub.c} tailored cop${sub.c === 1 ? 'y' : 'ies'}, listed under their jobs${sub.a ? ` · ${sub.a} archived` : ''}` : loadErr ? DASH : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <SearchInput variant="underline" width="300px" value={q} onChange={(v) => { setQ(v); setShowArchived(false) }}

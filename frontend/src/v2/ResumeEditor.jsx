@@ -551,9 +551,15 @@ export default function ResumeEditor() {
                   {changes.length > 0 && <MenuItem icon="≋" hint={`${changes.length} to review`} onClick={() => { setHeadMenu(false); setReviewOpen(true) }}>Review changes</MenuItem>}
                   <Rule style={{ margin: '4px 8px' }} />
                   <MenuHead>Job</MenuHead>
-                  <MenuItem icon="✉" hint="c" onClick={goCover}>Cover letter</MenuItem>
-                  {doc.job_id && <MenuItem icon="↗" hint="e" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
-                  {doc.job_id && <MenuItem icon="✓" hint="a" onClick={markApplied}>Mark applied</MenuItem>}
+                  {/* `hint` slots deliberately empty: they read as single-letter
+                      shortcuts (the Feed really binds f/j/s/x/e/o), and nothing on
+                      this screen implements c/e/a — its only key handlers are
+                      Escape and ⌘B inside a bullet (R4-T2B-05). Binding them here
+                      is not a one-liner: the editor is a page of text fields, so a
+                      bare letter key needs a target/isContentEditable guard first. */}
+                  <MenuItem icon="✉" onClick={goCover}>Cover letter</MenuItem>
+                  {doc.job_id && <MenuItem icon="↗" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
+                  {doc.job_id && <MenuItem icon="✓" onClick={markApplied}>Mark applied</MenuItem>}
                   <MenuItem danger icon="✕" onClick={deleteResume}>Delete copy</MenuItem>
                 </Menu>
               </>

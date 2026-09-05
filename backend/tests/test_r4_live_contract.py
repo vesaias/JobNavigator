@@ -73,13 +73,17 @@ def test_malformed_uuid_in_a_path_is_404(live, path):
 # ── Malformed UUID in a query filter ─────────────────────────────────────────
 
 @pytest.mark.parametrize("path", ["/api/jobs?search_id=abc", "/api/cover-letters?job_id=abc"])
-def test_malformed_uuid_in_a_filter_is_currently_404(live, path):
-    """Current contract, recorded: a list endpoint answers "Not found"."""
-    _clean(live.get(path), 404)
+def test_malformed_uuid_in_a_filter_is_not_a_404(live, path):
+    """R4-T1-09: a bad filter used to answer "Not found" via the DataError handler.
+
+    The handler still maps a bad *path* segment to 404 (F-007) — only the filter
+    case was carved out.
+    """
+    r = _clean(live.get(path))
+    assert r.status_code != 404
 
 
 @pytest.mark.parametrize("path", ["/api/jobs?search_id=abc", "/api/cover-letters?job_id=abc"])
-@pytest.mark.xfail(strict=True, reason="R4-T1-09")
 def test_malformed_uuid_in_a_filter_should_be_422(live, path):
     """A bad *filter* value is a request error, not a missing resource."""
     assert live.get(path).status_code == 422
@@ -106,7 +110,6 @@ NEGATIVE_LIMIT_PATHS = [
 
 
 @pytest.mark.parametrize("path", NEGATIVE_LIMIT_PATHS)
-@pytest.mark.xfail(strict=True, reason="R4-T1-07")
 def test_negative_limit_is_rejected_not_a_500(live, path):
     assert live.get(path).status_code == 422
 
@@ -122,27 +125,25 @@ def test_negative_offset_is_clamped_not_an_error(live):
 
 # ── Other numeric edges ──────────────────────────────────────────────────────
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-10")
 def test_health_entities_rejects_a_negative_window(live):
     assert live.get("/api/health/entities?window=-1").status_code == 422
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-10")
 def test_health_entities_window_zero_does_not_flag_everything(live):
     """window=0 makes `all([])` true, so every active entity looks broken."""
     r = live.get("/api/health/entities?window=0")
     assert r.status_code == 422 or r.json()["count"] == 0
 
 
-@pytest.mark.xfail(strict=True, reason="R4-T1-08")
 def test_timeline_rejects_an_out_of_range_day_count(live):
     assert live.get("/api/stats/timeline?days=999999999").status_code == 422
 
 
-def test_timeline_out_of_range_returns_a_bare_body_not_a_trace(live):
+def test_timeline_out_of_range_never_leaks_internals(live):
+    """R4-T1-08: it used to escape as a bare Starlette 500 body."""
     r = live.get("/api/stats/timeline?days=999999999")
     _clean(r)
-    assert r.text.strip() in ("Internal Server Error", '{"detail":"Internal server error"}')
+    assert r.status_code != 500
 
 
 # ── Things that already behave ───────────────────────────────────────────────

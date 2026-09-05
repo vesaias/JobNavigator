@@ -1,7 +1,9 @@
 """FastAPI entry point for JobNavigator."""
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from typing import Annotated
+
+from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -167,7 +169,12 @@ from fastapi import Response as _Response
 @app.post("/api/auth/verify", tags=["auth"], summary="Verify an API key without setting a session")
 async def verify_api_key(body: dict):
     """Validate API key. Returns 200 {ok: true} on match, 401 otherwise."""
+    # hmac.compare_digest() raises TypeError on a non-string, and this endpoint is
+    # unauthenticated — anything that is not a string is simply not the key
+    # (R4-T1-24).
     api_key = (body or {}).get("api_key", "")
+    if not isinstance(api_key, str):
+        api_key = ""
     db = SessionLocal()
     try:
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
@@ -184,7 +191,12 @@ async def verify_api_key(body: dict):
 @app.post("/api/auth/set-session", tags=["auth"], summary="Set session cookie from API key")
 async def set_session(body: dict, response: _Response):
     """Verify API key and set httpOnly jn_session cookie (also sent on iframe/download requests)."""
+    # hmac.compare_digest() raises TypeError on a non-string, and this endpoint is
+    # unauthenticated — anything that is not a string is simply not the key
+    # (R4-T1-24).
     api_key = (body or {}).get("api_key", "")
+    if not isinstance(api_key, str):
+        api_key = ""
     db = SessionLocal()
     try:
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
@@ -431,6 +443,13 @@ async def trigger_h1b_refresh():
 async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
     """Re-run resume scoring for a specific job. depth: 'light' or 'full' (default)."""
     import uuid as _uuid
+    # uuid.UUID(job_id) used to be evaluated inside the launch_background(...)
+    # call, so a malformed id raised ValueError instead of answering the way
+    # every other id route does (R4-T1-23).
+    try:
+        target_job_uuid = _uuid.UUID(job_id)
+    except (ValueError, AttributeError, TypeError):
+        raise HTTPException(status_code=404, detail="Not found")
     cv_ids = (body or {}).get("cv_ids")
 
     async def _do():
@@ -443,7 +462,7 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
     try:
         run_id = launch_background(
             "analyze_job", _do, trigger="manual", scope_key=scope,
-            target_job_id=_uuid.UUID(job_id),
+            target_job_id=target_job_uuid,
         )
         return {"run_id": run_id, "status": "running", "job_id": job_id}
     except JobAlreadyRunningError as e:
@@ -921,7 +940,8 @@ def get_in_flight(job_ids: str = None):
 
 
 @app.get("/api/monitor/finished", tags=["monitor"], summary="Recently finished per-job runs")
-def get_finished(job_ids: str = None, since: str = None, limit: int = 200):
+def get_finished(job_ids: str = None, since: str = None,
+                 limit: Annotated[int, Query(ge=0, le=1000)] = 200):
     """Return recently finished (completed/failed) runs for the given jobs, so the dashboard can resolve OK/NOK for an op that just left /monitor/in-flight from the run's actual status rather than job fields."""
     import uuid as _uuid
     from datetime import datetime as _dt, timezone as _tz
@@ -977,7 +997,8 @@ def get_finished(job_ids: str = None, since: str = None, limit: int = 200):
 
 
 @app.get("/api/monitor/history", tags=["monitor"], summary="Run history")
-def get_run_history(limit: int = 30, offset: int = 0, job_type: str = None, status: str = None):
+def get_run_history(limit: Annotated[int, Query(ge=0, le=1000)] = 30, offset: int = 0,
+                    job_type: str = None, status: str = None):
     """Return recent job run history, newest first.
 
     `offset` skips that many rows so the dashboard can page ("Load more").
@@ -1035,7 +1056,7 @@ def get_run_detail(run_id: str):
 
 @app.get("/api/activity-log", tags=["scheduler"], summary="Activity log")
 def get_activity_log(
-    limit: int = 50,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 50,
     offset: int = 0,
     type: str = None,
     company: str = None,
@@ -1067,7 +1088,7 @@ def get_activity_log(
 
 @app.get("/api/scrape-log", tags=["stats"], summary="Scrape log history")
 def get_scrape_log(
-    limit: int = 50,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 50,
     errors_only: bool = False,
     warnings_only: bool = False,
 ):
@@ -1104,8 +1125,13 @@ def get_scrape_log(
 
 
 @app.get("/api/stats/timeline", tags=["stats"], summary="Job discovery timeline")
-def get_stats_timeline(days: int = 30):
-    """Daily job counts for the last N days."""
+def get_stats_timeline(days: Annotated[int, Query(le=3650)] = 30):
+    """Daily job counts for the last N days.
+
+    Only the upper bound is enforced: `days <= 0` is a legal "everything from now
+    on" window that returns an empty series, while an absurd value overflowed
+    `timedelta` and escaped as a bare 500 (R4-T1-08).
+    """
     from backend.models.db import Job
     from sqlalchemy import func, cast, Date
     from datetime import datetime, timedelta, timezone
@@ -1135,8 +1161,13 @@ def get_stats_timeline(days: int = 30):
 
 
 @app.get("/api/health/entities", tags=["stats"], summary="Companies/searches needing attention")
-def get_failing_entities(window: int = 3):
-    """Active companies/searches whose last `window` scrapes all errored or returned 0 results (a likely broken/moved ATS or dead URL); acknowledged warnings drop out until a newer run fails again."""
+def get_failing_entities(window: Annotated[int, Query(ge=1, le=100)] = 3):
+    """Active companies/searches whose last `window` scrapes all errored or returned 0 results (a likely broken/moved ATS or dead URL); acknowledged warnings drop out until a newer run fails again.
+
+    `window` must be at least 1: `window=0` made `all([])` true and reported every
+    active company and search as broken, and a negative one reached `LIMIT -1`
+    (R4-T1-10).
+    """
     from backend.models.db import ScrapeLog, Company, Search, is_acknowledged
     from backend.scraper.orchestrator import source_errors, source_label
     db = SessionLocal()

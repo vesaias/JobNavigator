@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useSettled, useWarm, NBSP } from './hooks'
-import { Button, Card, Check, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
+import { useSettled, useWarm, NBSP, DASH } from './hooks'
+import { Button, Card, Check, CopyGlyph, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -64,6 +64,26 @@ const isSearchRun = (r) => r?.job_type === 'search_run'
 const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
 const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
+
+// A Test run is invisible to the run monitor: `POST /searches/{id}/test` runs the
+// keyword modes inline and the slow ones through a bare asyncio task into a
+// module-level dict, so `GET /monitor/active` is empty for the whole preview and
+// a reload lost both the spinner and the result while the backend was still
+// finishing (R4-T2A-07). Registering the run with `job_monitor` is the better fix
+// and belongs on the backend; this is the frontend half — park the run in
+// sessionStorage keyed by the search, so a refresh picks it back up. One record:
+// only one Test may be in flight at a time.
+const TEST_KEY = 'jobnavigator_v2_searchtest'
+const TEST_TTL = 10 * 60 * 1000     // matches the poller's own 5-minute ceiling, doubled
+const readTestRec = () => {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(TEST_KEY) || 'null')
+    return v && typeof v === 'object' && Date.now() - (v.at || 0) < TEST_TTL ? v : null
+  } catch { return null }
+}
+const writeTestRec = (v) => {
+  try { if (v) sessionStorage.setItem(TEST_KEY, JSON.stringify({ ...v, at: Date.now() })); else sessionStorage.removeItem(TEST_KEY) } catch { /* private mode / quota: the run just won't survive a reload */ }
+}
 
 // `dots` is a COUNT, not a glyph string — Segmented draws that many accent Dots
 // before the label; 0 must draw nothing, not an empty span (that shifts centering).
@@ -401,7 +421,7 @@ export default function Searches() {
     const onKey = (e) => {
       if (e.key !== 'Escape') return
       setMenuFor(null)
-      if (test) { setTest(null); return }
+      if (test) { setTest(null); writeTestRec(null); return }   // dismissed on purpose — don't restore it on the next load
       if (editing) setEditing(null)
       if (newOpen) { setNewOpen(false); setNewDraft(NEW_DRAFT) }
     }
@@ -435,11 +455,13 @@ export default function Searches() {
   const nWarn = searches.filter((s) => s.active && downMap[s.id]).length
   // Warm start: counts and next-sweep time match the pre-refresh frame (the
   // countdown recomputes from the cached timestamp), then reconcile on settle.
+  // `!loadErr`: a settled-but-failed load carries zeroes, and neither the cache
+  // nor the subtitle may claim them (R4-T2A-08 / R4-T2B-03).
   const { warm: sub, style: subStyle } = useWarm('searches', ready
     ? { n: searches.length, active: nActive, warn: nWarn, next: nextRun }
-    : null, ready)
+    : null, ready, !loadErr)
   const countLine = useMemo(() => {
-    if (!sub) return NBSP
+    if (!sub) return loadErr ? DASH : NBSP
     const nxt = until(sub.next)
     return [
       `${sub.n} config${sub.n === 1 ? '' : 's'}`,
@@ -448,7 +470,7 @@ export default function Searches() {
       ...(nxt ? [nxt === 'due now' ? 'next scheduled run due now' : `next scheduled run in ${nxt}`] : []),
     ].join(' · ')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sub && sub.n, sub && sub.active, sub && sub.warn, sub && sub.next, tick])
+  }, [sub && sub.n, sub && sub.active, sub && sub.warn, sub && sub.next, tick, loadErr])
 
   const openEdit = (s) => { setMenuFor(null); if (editing === s.id) { setEditing(null); return } setEditing(s.id); setDraft(draftOf(s)) }
   const fail = (e, fallback) => { console.error(e); pushToast({ kind: 'error', msg: errText(e, fallback) }) }
@@ -512,29 +534,51 @@ export default function Searches() {
     try { await api.post('/searches', { ...toPayload(draftOf(s)), name: `${s.name} (copy)` }); load(); loadAux(); bumpCounts() } catch (e) { fail(e, `Could not duplicate “${s.name}”`) }
   }
 
+  // Every landing point goes through here, so the outcome is both shown and parked.
+  const landTest = useCallback((id, t) => { setTest(t); writeTestRec({ id, ...t }) }, [])
+  // Every preview path reports failure as {"error": …} with HTTP 200 — without this
+  // the modal renders the data branch and claims "No results returned." on a real error.
+  const settleTest = useCallback((id, name, data) => landTest(id, data?.error ? { name, error: data.error } : { name, data }), [landTest])
+  const pollTest = useCallback(async (id, name, runId) => {
+    for (let i = 0; i < 100; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 3000))
+      if (!mounted.current) return
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const p = await api.get(`/searches/test-result/${runId}`, { timeout: 10000 })
+        if (p.status === 200) { settleTest(id, name, p.data); setTestingId(null); return }
+      } catch (err) {
+        if (err.response?.status === 404) { landTest(id, { name, error: 'Test run expired or not found' }); setTestingId(null); return }
+      }
+    }
+    landTest(id, { name, error: 'Test timed out after 5 minutes — check Stats › Run History' })
+    if (mounted.current) setTestingId(null)
+  }, [landTest, settleTest])
+
+  // On mount, pick a Test back up: its result if it already landed, its poll if
+  // the backend is still working on it.
+  useEffect(() => {
+    const rec = readTestRec()
+    if (!rec) return
+    if (rec.data || rec.error) { setTest({ name: rec.name, data: rec.data, error: rec.error }); return }
+    if (rec.runId && rec.id) { setTestingId(rec.id); setTestTab('all'); pollTest(rec.id, rec.name, rec.runId) }
+  }, [pollTest])
+
   const runTest = async (s) => {
     if (testingId) return                       // one Test at a time
     setMenuFor(null); setTestingId(s.id); setTestTab('all')
-    // Every preview path reports failure as {"error": …} with HTTP 200 — without this
-    // the modal renders the data branch and claims "No results returned." on a real error.
-    const settle = (data) => setTest(data?.error ? { name: s.name, error: data.error } : { name: s.name, data })
+    writeTestRec({ id: s.id, name: s.name })    // in flight, no run id yet (the inline modes never get one)
     try {
       const res = await api.post(`/searches/${s.id}/test`, null, { timeout: 30000 })
       if (res.status === 202 && res.data?.run_id) {
-        for (let i = 0; i < 100; i++) {
-          await new Promise((r) => setTimeout(r, 3000))
-          if (!mounted.current) return
-          try {
-            const p = await api.get(`/searches/test-result/${res.data.run_id}`, { timeout: 10000 })
-            if (p.status === 200) { settle(p.data); setTestingId(null); return }
-          } catch (err) {
-            if (err.response?.status === 404) { setTest({ name: s.name, error: 'Test run expired or not found' }); setTestingId(null); return }
-          }
-        }
-        setTest({ name: s.name, error: 'Test timed out after 5 minutes — check Stats › Run History' })
-      } else settle(res.data)
+        writeTestRec({ id: s.id, name: s.name, runId: res.data.run_id })
+        await pollTest(s.id, s.name, res.data.run_id)
+        return
+      }
+      settleTest(s.id, s.name, res.data)
     } catch (e) {
-      setTest({ name: s.name, error: errText(e, e.message) })
+      landTest(s.id, { name: s.name, error: errText(e, e.message) })
     }
     if (mounted.current) setTestingId(null)
   }
@@ -652,10 +696,10 @@ export default function Searches() {
                       onClick={() => setMenuFor(menuFor === s.id ? null : s.id)}
                       title="More actions" ariaExpanded={menuFor === s.id} ariaHaspopup="menu">⋯</IconButton>
                     {menuFor === s.id && (
-                      <Menu ariaLabel={`${s.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
+                      <Menu ariaLabel={`${s.name} actions`} onDismiss={() => setMenuFor(null)} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
                           ['☰', 'View results in feed', () => navigate(`/v2/feed?search=${s.id}`)],
-                          ['⧉', 'Duplicate', () => duplicate(s)]].map(([g, label, act]) => (
+                          [<CopyGlyph key="dup" />, 'Duplicate', () => duplicate(s)]].map(([g, label, act]) => (
                           <MenuItem key={label} icon={g} onClick={act}>{label}</MenuItem>
                         ))}
                         <MenuItem danger icon="✕" onClick={() => remove(s)}>Delete search</MenuItem>
@@ -700,7 +744,7 @@ export default function Searches() {
         )}
       </div>
 
-      {test && <TestModal test={test} tab={testTab} setTab={setTestTab} onClose={() => setTest(null)} />}
+      {test && <TestModal test={test} tab={testTab} setTab={setTestTab} onClose={() => { setTest(null); writeTestRec(null) }} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>

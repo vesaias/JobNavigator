@@ -203,6 +203,21 @@ export default function CoverLetterEditor() {
   }
 
   const regenRun = useRef(null)   // run_id of the regenerate in flight
+  // A regenerate outlives this component but `regening` did not: a reload left an
+  // idle-looking editor while an LLM call rewrote the document underneath, and the
+  // letter then changed with no notice (R4-T2B-02). Ask the server what is live for
+  // THIS letter on mount, the way the Résumés shelf re-derives its tailors — the
+  // watcher below picks it up from there (spinner, then reload when it lands).
+  useEffect(() => {
+    let dead = false
+    api.get('/monitor/active').then(({ data }) => {
+      const run = (data || []).find((r) => r.job_type === 'generate_cover_letter' && r.scope_key === `cl:${id}`)
+      if (dead || !run) return
+      regenRun.current = run.run_id || null
+      setRegening(true)
+    }).catch(() => { /* silent: worst case the editor looks idle, as it did before */ })
+    return () => { dead = true }
+  }, [id])
   const regenerate = async () => {
     if (regening || !rSource) return
     setRegening(true); setErr('')
@@ -314,7 +329,10 @@ export default function CoverLetterEditor() {
 
   const paras = data.body_paragraphs || []
   const stage = doc.stage
-  const badge = stage ? stage.toUpperCase() : 'DRAFT'
+  // Sentence case at the source: the span below already reads --label-case, but
+  // an upper-cased STRING has nothing left to lower, so win98 (--label-case:none)
+  // still drew "DRAFT" after the case fix landed (R4-T3-08).
+  const badge = stage ? stage.charAt(0).toUpperCase() + stage.slice(1) : 'Draft'
   const voiceLabel = presets.find((p) => p.id === doc.voice)?.label || doc.voice
   const lengthLabel = LENGTHS.find(([lid]) => lid === doc.length)?.[1] || doc.length
   const voiceLen = [voiceLabel, lengthLabel].filter(Boolean).join(' · ') || 'voice and length unknown for this letter'
@@ -516,7 +534,10 @@ export default function CoverLetterEditor() {
               )}
             </span>}
 
-            {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>Preview failed. Showing the previous version · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
+            {/* `pdfUrl` is only ever assigned on success, so on a FIRST failure there is
+                no previous version and the pane below reads "Rendering the preview…"
+                while this line claimed one was showing (R4-T2B-08). */}
+            {pdfErr && <span style={{ fontSize: 11, lineHeight: '14px', color: 'var(--bad)', whiteSpace: 'nowrap' }}>{pdfUrl ? 'Preview failed. Showing the previous version' : 'Preview failed — the PDF could not be rendered.'} · <span onClick={() => setPdfNonce((n) => n + 1)} style={{ cursor: 'pointer', borderBottom: '1px dotted currentColor' }}>Retry</span></span>}
             <Button size="xs" onClick={download} style={{ marginLeft: 'auto' }}>↓ Download PDF</Button>
           </HeaderRow>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
