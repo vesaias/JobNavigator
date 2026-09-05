@@ -227,6 +227,14 @@
      The offset is the same at sm and md, since only the gap and track decide it.
      0px here: the base theme draws `ring`, so nothing reads this. */
   --ring-bar-shift-sm:0px; --ring-bar-shift-md:0px;
+  /* the bar's own geometry, per size: the 4px gap and 3px track it has always
+     drawn. A theme that wants a shorter mark shrinks them (saas sm: 2/2). */
+  --ring-bar-gap-sm:4px; --ring-bar-gap-md:4px; --ring-bar-track-sm:3px; --ring-bar-track-md:3px;
+  /* the `pill` variant's tile height, per size: 44 is what it has always drawn.
+     A theme with a `pill` ring shortens the sm tile here (cobalt: 29px) and
+     sizes both numerals with the same --ring-numeral-scale-* the bar uses —
+     one theme only ever draws one variant, so the pair is not ambiguous. */
+  --ring-pill-h-sm:44px; --ring-pill-h-md:44px;
   /* .v2-scroll's own bar. Base = the values it has always drawn (a --muted thumb
      on nothing); a theme may re-point both, but the bar stays slim. */
   --scroll-thumb:var(--muted); --scroll-track:transparent;
@@ -534,6 +542,14 @@
      The offset is the same at sm and md, since only the gap and track decide it.
      0px here: the base theme draws `ring`, so nothing reads this. */
   --ring-bar-shift-sm:0px; --ring-bar-shift-md:0px;
+  /* the bar's own geometry, per size: the 4px gap and 3px track it has always
+     drawn. A theme that wants a shorter mark shrinks them (saas sm: 2/2). */
+  --ring-bar-gap-sm:4px; --ring-bar-gap-md:4px; --ring-bar-track-sm:3px; --ring-bar-track-md:3px;
+  /* the `pill` variant's tile height, per size: 44 is what it has always drawn.
+     A theme with a `pill` ring shortens the sm tile here (cobalt: 29px) and
+     sizes both numerals with the same --ring-numeral-scale-* the bar uses —
+     one theme only ever draws one variant, so the pair is not ambiguous. */
+  --ring-pill-h-sm:44px; --ring-pill-h-md:44px;
   /* .v2-scroll's own bar. Base = the values it has always drawn (a --muted thumb
      on nothing); a theme may re-point both, but the bar stays slim. */
   --scroll-thumb:var(--muted); --scroll-track:transparent;
@@ -905,7 +921,12 @@
   --accent:#1c1917; --accent-ink:#fafaf9; --accent-soft:#f0efec;
   --good:#166534; --warn:#a16207; --warn-soft:#fef3c7; --warn-line:#d6b24a;
   --bad:#b91c1c; --bad-soft:#fee2e2; --bad-faint:#fef2f2;
-  --change-soft:#bbf7d0; --change-bg:#f4fbf6; --hover-soft:#f0efec;
+  /* Tailoring is achromatic here like everything else: the green pair was the
+     default palette carried in. Both values are that pair desaturated onto the
+     stone hue with their lightness kept, so the diff tint holds the contrast the
+     default pair has; --change-ink is the theme's own ink, since in an achromatic
+     theme the accent IS the ink. */
+  --change-soft:#ded9d4; --change-bg:#f8f8f7; --change-ink:var(--text); --hover-soft:#f0efec;
   --ring-accent:rgba(28,25,23,.18); --scrim:rgba(28,25,23,.45); --recessed:#faf9f7;
   /* applied is neutral ink here, not a blue: the theme has no blue to spend */
   --stage-applied:#44403c; --stage-interview:#a16207; --stage-offer:#166534;
@@ -952,7 +973,28 @@
   --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:var(--btn-primary-hover-bg); --btn-ai-pressed-bg:var(--btn-primary-pressed-bg);
   --sc-hi-bg:#dcfce7; --sc-hi:#166534; --sc-mid-bg:#fef3c7; --sc-mid:#a16207; --sc-lo-bg:#fee2e2; --sc-lo:#b91c1c; --sc-none-bg:#f0efec; --sc-none:#78716c;
-  --ring-variant:pill; --ctl-line:1.4;   /* a webfont ink box taller than 1em needs more than `line-height: 1` where a run is clipped */
+  --ring-variant:pill;
+  /* Leftovers of the default palette, fixed with SaaS's own audit run on this
+     theme: a hovered chip's ink means "accent", and --good is the same colour as
+     --accent only in the DEFAULT palette, so the base layer's var(--good) turned
+     the Résumés shelf's copy chips green here. A hovered card's border takes the
+     stone step rather than the near-black accent, which read as a heavy outline.
+     --seg-dot-on is written as var(--text) to say what it means: this theme's
+     accent IS the ink. Both dot values already resolved to exactly this. */
+  --chip-ink-hover:var(--accent); --card-border-hover:var(--line-strong);
+  --seg-dot-on:var(--text); --seg-dot-off:var(--line-strong);
+  /* Geist's ink box is 1.30em against Newsreader's 1.0em in the same pinned 30px
+     line box, which puts the KPI baseline ~2.3px lower; whole pixels. */
+  --kpi-shift:-2px;
+  /* The score element here is the `pill` tile, not the bar: a 40x44 rounded
+     rect painted from --sc-*, with the numeral over a 9px FIT caption. It is
+     one size at both call sites today, so "bigger digits in the large one,
+     the small one 1.5x shorter" becomes: md keeps the 44px tile and takes a
+     1.8x numeral (14 -> 25.2px, measured to clear the caption inside 44), and
+     sm drops to 29px (44 / 1.5) with a .85x numeral (11.9px) so the shorter
+     tile is not cramped. Both tiles stay dead-centred on their row. */
+  --ring-numeral-scale-sm:.85; --ring-numeral-scale-md:1.8;
+  --ring-pill-h-sm:29px; --ring-pill-h-md:44px; --ctl-line:1.4;   /* a webfont ink box taller than 1em needs more than `line-height: 1` where a run is clipped */
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* same split as saas: --muted is too dark to read as "off" here */
   /* on-state is a FILLED primary now, not an accent-soft wash */
   --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent) 88%, var(--bg)); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
@@ -969,7 +1011,8 @@
   --accent:#f5f5f4; --accent-ink:#1c1917; --accent-soft:#3a342f;
   --good:#6fdc8c; --warn:#f2c94c; --warn-soft:#3a2f10; --warn-line:#8a6d1a;
   --bad:#f87171; --bad-soft:#4a1f1c; --bad-faint:#3a1a18;
-  --change-soft:#2f6b45; --change-bg:#1f2e24; --hover-soft:#3a342f;
+  /* the same desaturation as the light block — see there */
+  --change-soft:#554d45; --change-bg:#2a2623; --change-ink:var(--text); --hover-soft:#3a342f;
   --ring-accent:rgba(245,245,244,.22); --scrim:rgba(0,0,0,.55); --recessed:#292420;
   --stage-applied:#d6d3d1; --stage-interview:#f2c94c; --stage-offer:#6fdc8c;
   --stage-rejected:#f87171; --stage-new:#8a837c;
@@ -1007,8 +1050,28 @@
   --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:var(--btn-primary-hover-bg); --btn-ai-pressed-bg:var(--btn-primary-pressed-bg);
   --sc-hi-bg:#14361f; --sc-hi:#6fdc8c; --sc-mid-bg:#3a2f10; --sc-mid:#f2c94c; --sc-lo-bg:#4a1f1c; --sc-lo:#f87171; --sc-none-bg:#38322e; --sc-none:#b8b1aa;
-  --ring-variant:pill; --ctl-line:1.4;
-  --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);
+  --ring-variant:pill;
+  /* Leftovers of the default palette, fixed with SaaS's own audit run on this
+     theme: a hovered chip's ink means "accent", and --good is the same colour as
+     --accent only in the DEFAULT palette, so the base layer's var(--good) turned
+     the Résumés shelf's copy chips green here. A hovered card's border takes the
+     stone step rather than the near-black accent, which read as a heavy outline.
+     --seg-dot-on is written as var(--text) to say what it means: this theme's
+     accent IS the ink. Both dot values already resolved to exactly this. */
+  --chip-ink-hover:var(--accent); --card-border-hover:var(--line-strong);
+  --seg-dot-on:var(--text); --seg-dot-off:var(--line-strong);
+  /* Geist's ink box is 1.30em against Newsreader's 1.0em in the same pinned 30px
+     line box, which puts the KPI baseline ~2.3px lower; whole pixels. */
+  --kpi-shift:-2px;
+  /* The score element here is the `pill` tile, not the bar: a 40x44 rounded
+     rect painted from --sc-*, with the numeral over a 9px FIT caption. It is
+     one size at both call sites today, so "bigger digits in the large one,
+     the small one 1.5x shorter" becomes: md keeps the 44px tile and takes a
+     1.8x numeral (14 -> 25.2px, measured to clear the caption inside 44), and
+     sm drops to 29px (44 / 1.5) with a .85x numeral (11.9px) so the shorter
+     tile is not cramped. Both tiles stay dead-centred on their row. */
+  --ring-numeral-scale-sm:.85; --ring-numeral-scale-md:1.8;
+  --ring-pill-h-sm:29px; --ring-pill-h-md:44px; --ctl-line:1.4;
   --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent) 88%, var(--bg)); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:var(--text); --link-ink-hover:var(--muted); --link-decoration:underline;
   --title-bar:none; --title-bar-ink:var(--heading-ink);
@@ -1076,7 +1139,8 @@
   --btn-ai-hover-bg:color-mix(in oklab, var(--ai) 88%, black); --btn-ai-pressed-bg:color-mix(in oklab, var(--ai) 78%, black);
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
-  --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
+  --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;
+  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* depth discs: blue-600 picked, gray-400 unpicked */
   /* Fields rest on --surface, not the base layer's --surface-2: on Tailwind greys
      a gray-100 ground next to a white card reads as a disabled control. The
@@ -1167,7 +1231,8 @@
   --btn-ai-hover-bg:color-mix(in oklab, var(--ai) 88%, black); --btn-ai-pressed-bg:color-mix(in oklab, var(--ai) 78%, black);
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
-  --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
+  --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;
+  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* depth discs: blue-600 picked, gray-400 unpicked */
   /* Fields rest on --surface, not the base layer's --surface-2: on Tailwind greys
      a gray-100 ground next to a white card reads as a disabled control. The

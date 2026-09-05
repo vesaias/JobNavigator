@@ -1281,14 +1281,20 @@ const RING_VB = 88
 // The tone tokens are shared with the ring (--ring-*-ink); `pill` is the one that
 // needs a ground as well, which is what the --sc-* pairs are for.
 const SC_KEY = (s) => (s == null ? 'none' : s >= 70 ? 'hi' : s >= 50 ? 'mid' : 'lo')
-function ScorePill({ value, busy }) {   // the tile paints from --sc-*, not the ring's ink
+function ScorePill({ value, busy, size }) {   // the tile paints from --sc-*, not the ring's ink
   const k = SC_KEY(value)
+  const sm = size === 'sm'
+  // Per size, like ScoreBar: the tile's height is --ring-pill-h-* (44px in the base
+  // blocks, which is what it has always drawn) and the numeral multiplies the 14px
+  // stop by the same --ring-numeral-scale-* the bar uses — a theme draws one variant,
+  // so the pair is unambiguous. The FIT caption keeps its 9px step at both sizes.
   return (
     <span style={{
-      flex: '0 0 40px', width: 40, height: 44, borderRadius: 'var(--radius-field)',
+      flex: '0 0 40px', width: 40, height: `var(--ring-pill-h-${sm ? 'sm' : 'md'})`, borderRadius: 'var(--radius-field)',
       background: `var(--sc-${busy ? 'none' : k}-bg)`, color: `var(--sc-${k})`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--t-14)',
+      fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-semibold)',
+      fontSize: `calc(var(--t-14) * var(--ring-numeral-scale-${sm ? 'sm' : 'md'}))`,
       lineHeight: 1, letterSpacing: '-.01em',
     }}>
       {busy ? <Spinner size={12} /> : (
@@ -1316,7 +1322,7 @@ function ScoreBar({ value, busy, ink, size }) {
   return (
     <span style={{
       flex: '0 0 auto', minWidth: 40, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 4,
+      alignItems: 'center', justifyContent: 'center', gap: `var(--ring-bar-gap-${sm ? 'sm' : 'md'})`,
       // Per SIZE, like --ring-shift-*: the sm bar sits in the report band, whose
       // neighbours it already lines up with, so its shift stays 0; md is the one
       // measured against the feed row. Both 0px in the base blocks.
@@ -1331,7 +1337,7 @@ function ScoreBar({ value, busy, ink, size }) {
             fontSize: sm ? 'calc(var(--t-16) * var(--ring-numeral-scale-sm))' : 'calc(var(--t-16) * var(--ring-numeral-scale-md))',
             lineHeight: 1, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
           }}>{value == null ? '—' : value}</span>
-          <Meter value={(value || 0) / 100} tone={ink} height={3} radius="var(--radius-mark)" style={{ width: 32 }} />
+          <Meter value={(value || 0) / 100} tone={ink} height={`var(--ring-bar-track-${sm ? 'sm' : 'md'})`} radius="var(--radius-mark)" style={{ width: 32 }} />
         </>
       )}
     </span>
