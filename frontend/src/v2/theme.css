@@ -12,6 +12,9 @@
      colour that site wrote by hand; a theme whose tailoring is not green
      re-points it (saas: --ai). */
   --change-ink:var(--good);
+  /* an optional 2px rule down a marked row's left edge, as an INSET shadow so it
+     costs no layout: `none` here, so only a theme that asks for one draws it. */
+  --change-edge:none;
   --warn-line:#d4a06a; --line-strong:#c9c3b4; --bad-faint:#fdf6f4;
   /* One stage, one colour everywhere: Applications dots/stepper, Stats funnel
      bars, Sankey nodes. --stage-new covers pre-application nodes, not a real status. */
@@ -335,6 +338,9 @@
   --good:#8dbb9f; --warn:#d4a06a; --warn-soft:#2a2118; --bad:#d98a7e; --bad-soft:#2a1a17;
   --change-soft:#33503f; --change-bg:#212a24; --hover-soft:#2e2b20; --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.58);
   --change-ink:var(--good);
+  /* an optional 2px rule down a marked row's left edge, as an INSET shadow so it
+     costs no layout: `none` here, so only a theme that asks for one draws it. */
+  --change-edge:none;
   --warn-line:#6b5638; --line-strong:#4a4638; --bad-faint:#241a18;
   --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#8dbb9f;
   --stage-rejected:#d98a7e; --stage-new:#4a4638;
@@ -926,7 +932,12 @@
      stone hue with their lightness kept, so the diff tint holds the contrast the
      default pair has; --change-ink is the theme's own ink, since in an achromatic
      theme the accent IS the ink. */
-  --change-soft:#ded9d4; --change-bg:#f8f8f7; --change-ink:var(--text); --hover-soft:#f0efec;
+  /* Achromatic, but it has to be obvious: the desaturated tints were a stone
+     wash on stone and vanished. The marked row now takes the RECESSED ground,
+     the strong line as its border, and a 2px ink rule down its left edge —
+     three steps at once, none of them a hue. */
+  --change-soft:var(--line-strong); --change-bg:var(--surface-2); --change-ink:var(--text);
+  --change-edge:inset 2px 0 0 var(--text); --hover-soft:#f0efec;
   --ring-accent:rgba(28,25,23,.18); --scrim:rgba(28,25,23,.45); --recessed:#faf9f7;
   /* applied is neutral ink here, not a blue: the theme has no blue to spend */
   --stage-applied:#44403c; --stage-interview:#a16207; --stage-offer:#166534;
@@ -993,7 +1004,10 @@
      1.8x numeral (14 -> 25.2px, measured to clear the caption inside 44), and
      sm drops to 29px (44 / 1.5) with a .85x numeral (11.9px) so the shorter
      tile is not cramped. Both tiles stay dead-centred on their row. */
-  --ring-numeral-scale-sm:.85; --ring-numeral-scale-md:1.8;
+  /* the pill numeral multiplies the --t-14 stop: 14 x 1.571 = 22.0px large,
+     14 x 1.071 = 15.0px small. Both measured centred (delta 0.0) with the FIT
+     caption inside their 44 / 29px tiles. */
+  --ring-numeral-scale-sm:1.071; --ring-numeral-scale-md:1.571;
   --ring-pill-h-sm:29px; --ring-pill-h-md:44px; --ctl-line:1.4;   /* a webfont ink box taller than 1em needs more than `line-height: 1` where a run is clipped */
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* same split as saas: --muted is too dark to read as "off" here */
   /* on-state is a FILLED primary now, not an accent-soft wash */
@@ -1012,7 +1026,9 @@
   --good:#6fdc8c; --warn:#f2c94c; --warn-soft:#3a2f10; --warn-line:#8a6d1a;
   --bad:#f87171; --bad-soft:#4a1f1c; --bad-faint:#3a1a18;
   /* the same desaturation as the light block — see there */
-  --change-soft:#554d45; --change-bg:#2a2623; --change-ink:var(--text); --hover-soft:#3a342f;
+  /* the same three steps as the light block */
+  --change-soft:var(--line-strong); --change-bg:var(--surface-2); --change-ink:var(--text);
+  --change-edge:inset 2px 0 0 var(--text); --hover-soft:#3a342f;
   --ring-accent:rgba(245,245,244,.22); --scrim:rgba(0,0,0,.55); --recessed:#292420;
   --stage-applied:#d6d3d1; --stage-interview:#f2c94c; --stage-offer:#6fdc8c;
   --stage-rejected:#f87171; --stage-new:#8a837c;
@@ -1070,7 +1086,10 @@
      1.8x numeral (14 -> 25.2px, measured to clear the caption inside 44), and
      sm drops to 29px (44 / 1.5) with a .85x numeral (11.9px) so the shorter
      tile is not cramped. Both tiles stay dead-centred on their row. */
-  --ring-numeral-scale-sm:.85; --ring-numeral-scale-md:1.8;
+  /* the pill numeral multiplies the --t-14 stop: 14 x 1.571 = 22.0px large,
+     14 x 1.071 = 15.0px small. Both measured centred (delta 0.0) with the FIT
+     caption inside their 44 / 29px tiles. */
+  --ring-numeral-scale-sm:1.071; --ring-numeral-scale-md:1.571;
   --ring-pill-h-sm:29px; --ring-pill-h-md:44px; --ctl-line:1.4;
   --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:color-mix(in oklab, var(--accent) 88%, var(--bg)); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:var(--text); --link-ink-hover:var(--muted); --link-decoration:underline;

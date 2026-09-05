@@ -833,7 +833,7 @@ function ReviewModal({ changes, onClose, onApply }) {
             const added = c.kind === 'modified' ? (off ? c.removed : c.added) : c.added
             const removed = c.kind === 'modified' ? (off ? c.added : c.removed) : ''
             return (
-              <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 'var(--radius-card)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)' }}>
+              <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 'var(--radius-card)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)', boxShadow: live && !pending ? 'var(--change-edge)' : undefined }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Label>{c.where}</Label>
                   {/* ui: keep — state badge; dashed --warn-line edge marks a suggestion, not a dashed add-line */}
