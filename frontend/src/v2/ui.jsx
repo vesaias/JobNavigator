@@ -141,30 +141,41 @@ const BTN_SIZE = {
 // `ai` is the tailoring button (Skins handoff §4.1): primary's geometry on the
 // --ai / --ai-ink pair, which is the accent in every theme that has no violet of
 // its own. It takes primary's state class the way the board does.
+//
+// S5 / U-05 — the DISABLED ink is a two-token read, `var(--disabled-ink, <the
+// button's own disabled ink>)`, and the fallback is what makes it free: in the
+// base blocks --disabled-ink is the CSS-wide keyword `inherit`, which on a custom
+// property means "inherit it" and lands on the guaranteed-invalid value (nothing
+// above .jn-v2 sets the name) — so the fallback is taken and the default theme
+// still paints --muted on --line, exactly as before. win98 sets the name to a
+// real colour (#808080) and takes over. --disabled-engrave (`none` in the base
+// blocks, `1px 1px 0 #fff` in win98) is the matching text-shadow, written in the
+// style object below. Button keeps its token swap rather than the --disabled-opacity
+// dim the other primitives take — D-08 in DECISIONS.md, unchanged here.
 const BTN_LOOK = {
   primary: {
     rest: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-ink)' },
-    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
+    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--disabled-ink, var(--btn-primary-disabled-ink))' },
     hover: '', state: 'v2-btn-primary',
   },
   ai: {
     rest: { background: 'var(--ai)', color: 'var(--ai-ink)' },
-    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
+    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--disabled-ink, var(--btn-primary-disabled-ink))' },
     hover: '', state: 'v2-btn-primary',
   },
   danger: {
     rest: { background: 'var(--btn-danger-bg)', color: 'var(--btn-danger-ink)' },
-    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--btn-primary-disabled-ink)' },
+    off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--disabled-ink, var(--btn-primary-disabled-ink))' },
     hover: '', state: 'v2-btn-danger',
   },
   secondary: {
     rest: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)', border: 'var(--bw-control) solid var(--btn-secondary-border)' },
-    off: { background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-disabled-ink)', border: 'var(--bw-control) solid var(--btn-secondary-disabled-border)' },
+    off: { background: 'var(--btn-secondary-bg)', color: 'var(--disabled-ink, var(--btn-secondary-disabled-ink))', border: 'var(--bw-control) solid var(--btn-secondary-disabled-border)' },
     hover: 'v2-bdc',
   },
   ghost: {
     rest: { background: 'transparent', color: 'var(--btn-ghost-ink)' },
-    off: { background: 'transparent', color: 'var(--btn-secondary-disabled-ink)' },
+    off: { background: 'transparent', color: 'var(--disabled-ink, var(--btn-secondary-disabled-ink))' },
     hover: 'v2-hover-accent',
   },
 }
@@ -201,6 +212,10 @@ export function Button({
       // --disabled-opacity, and Button keeps its token swap (--btn-*-disabled-*)
       // instead — the decision recorded in the design pass, D-08 in DECISIONS.md.
       opacity: busy && !disabled ? 0.6 : 1,
+      // the engraved half of the disabled pair (see BTN_LOOK). `none` in the base
+      // blocks — the initial value of text-shadow — so a disabled button in the
+      // default theme computes exactly what it computed before.
+      ...(off ? { textShadow: 'var(--disabled-engrave)' } : null),
       ...(native ? { margin: 0, border: 'none', appearance: 'none', WebkitAppearance: 'none' } : null),
       ...s, ...(off ? look.off : look.rest), ...style,
     },
@@ -258,9 +273,11 @@ export function Pill({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      // `v2-raised` is the bevel hook (theme.css --bevel-raised-*): `none` /
-      // `transparent` in every theme but win98, and the inline border below beats
-      // the rule outright wherever it is inert, so it paints nothing here.
+      // `v2-raised` is the bevel hook (theme.css --bevel-raised-*). S5: the rule
+      // is scoped to the skins that declare a bevel and carries `!important`
+      // there — it HAS to, or the inline border and shadow below would beat it
+      // (which is exactly what used to happen: the bevel never rendered). In
+      // every other theme the selector does not match and this paints nothing.
       className={cx('v2-ctl', 'v2-raised', !disabled && hover, className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -337,8 +354,9 @@ export function IconButton({
 // --input-ring-error. The attribute is the whole implementation — no second set
 // of style props — so Textarea and Select get the state for free.
 // `v2-inset` is the bevel hook (theme.css --bevel-inset-*): inert everywhere but
-// win98, where a field is sunk instead of outlined. The inline border and shadow
-// below beat the rule wherever it is inert.
+// win98, where a field is sunk instead of outlined. S5: that rule is scoped to
+// the bevelled skins and marked `!important` there, because the inline border and
+// shadow below would otherwise beat it — the reason no field was ever sunk.
 const FIELD = {
   width: '100%', minWidth: 0, border: 'var(--bw-control) solid var(--input-border)',
   borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', color: 'var(--input-ink)',

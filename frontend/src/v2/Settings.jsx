@@ -617,7 +617,10 @@ function Row({ r, ctx }) {
               </span>
             )}
             {/* ui: keep — a Tag (D4d): uppercase on a --surface-2 r99 chip, not a Label */}
-            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: '.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
+            {/* S5: the one hand-drawn caps badge on this screen (the side-nav group
+                headers are already `Label`, which reads the tokens). Its .06em IS
+                --tag-tracking's base value, so the token read is exact. */}
+            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" ariaLabel={`${r.label} — override the Primary model`} onPick={async () => {
                 const next = !on
