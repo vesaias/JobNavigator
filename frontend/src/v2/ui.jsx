@@ -101,7 +101,51 @@ const bpad = (v) => `calc(${v} + var(--bevel-pad))`
 // token. `weight="bold"` is the 2px band used at larger diameters (e.g. the
 // Feed's 28px score ring), where a hairline reads as a different control.
 const SPIN_WEIGHT = { bold: '2px' }
+// ── the segmented loader (--loader-style: blocks) ───────────────────────────
+// A theme may replace this DRAWING the way --ring-variant replaces the score
+// mark and --check-style the tick box. Windows 98 had no spinner at all: a wait
+// was an hourglass cursor plus, where there was progress to show, the segmented
+// bar — Hilight blocks in a sunken client-white trough. So win98 asks for
+// `blocks` and every Spinner in the app becomes that bar instead of an arc.
+//
+// Geometry is the board's ("Spinner · Progress", the `in Button` row): a 34x12
+// trough with 5px blocks and a 1px gap is what fits a 36px button, and that is
+// the size nearly every Spinner call site is. Larger `size` scales the trough,
+// never the blocks — 98's blocks were a fixed 5-7px whatever the bar's length.
+//
+// It is INDETERMINATE only: the two blocks march left to right on a linear loop,
+// which is exactly what Spinner has always meant. The determinate form (a filled
+// block count) belongs to a progress primitive the app does not have yet.
+const BLOCK_W = 5, BLOCK_GAP = 1, BLOCKS = 2
+function BlockLoader({ size, color, style }) {
+  // the trough grows with the requested diameter but never below the 34px that
+  // reads as a bar rather than a smudge; the pad is the bevel's own 2px inset
+  const w = Math.max(34, Math.round(size * 2.6))
+  const h = Math.max(10, Math.min(14, size + 3))
+  const run = w - 4   // the trough's inner width: how far the band has to travel
+  return (
+    <span className="v2-inset" aria-hidden="true" style={{
+      flex: '0 0 auto', display: 'inline-block', position: 'relative', overflow: 'hidden',
+      width: w, height: h, padding: 2,
+      background: 'var(--surface-2)', borderRadius: 'var(--radius-mark)', ...style,
+    }}>
+      <span className="v2-march" style={{
+        position: 'absolute', top: 2, bottom: 2, left: 0, display: 'flex', gap: BLOCK_GAP,
+        // --march-run is read by the @keyframes in theme.css: the band starts one
+        // band-width off the left edge and walks the full inner width.
+        '--march-run': `${run}px`, '--march-dur': '1.2s',
+      }}>
+        {Array.from({ length: BLOCKS }, (_, i) => (
+          <span key={i} style={{ flex: '0 0 auto', width: BLOCK_W, height: '100%', background: color || 'var(--accent)' }} />
+        ))}
+      </span>
+    </span>
+  )
+}
 export function Spinner({ size = 9, weight, color, style }) {
+  // a shape switch, so it comes back out of the cascade like --ring-variant
+  const blocks = useThemeVar('--loader-style', 'arc') === 'blocks'
+  if (blocks) return <BlockLoader size={size} color={color} style={style} />
   return (
     <span className="v2-spin" aria-hidden="true" style={{
       flex: '0 0 auto', display: 'inline-block', width: size, height: size,
@@ -650,8 +694,16 @@ export const Card = React.forwardRef(function Card(
 ) {
   const live = interactive || !!onClick
   return (
+    // `v2-cardbox` is a paint hook, not a style: 98 has no card, only the GROUP BOX
+    // (an etched rectangle: a shadow line with a highlight line offset one pixel
+    // down-right), and two borders' worth of paint cannot be one border token.
+    // theme.css names win98 for it; the class computes nothing anywhere else.
+    // NB not `v2-card`: that name is already an OPT-IN hover hook a few screens
+    // pass by hand (.v2-card:hover paints --card-border-hover / --card-bg-hover),
+    // so putting it on every Card would have given every card in every theme a
+    // hover it never had.
     <div ref={ref} id={id} {...act(onClick, false)} title={title} aria-label={ariaLabel}
-      className={cx(live && 'v2-act', className)}
+      className={cx('v2-cardbox', live && 'v2-act', className)}
       style={{
         background: 'var(--card-bg)', border: 'var(--bw-panel) solid var(--card-border)',
         borderRadius: 'var(--radius-card)', padding: '10px 14px',
@@ -1105,12 +1157,17 @@ export function Switch({ on, onChange, label, title, ariaLabel, size = 'md', dis
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled || !fire ? 'default' : 'pointer', ...style,
       }}>
       {label ? <Helper>{label}</Helper> : null}
-      <span aria-hidden="true" style={{
+      {/* `v2-inset` on the track and `v2-raised` on the knob are the bevel hooks
+          (round-6 #10): in 98 the OFF track is a sunken client-white field, not a
+          filled black bar, and the knob is a raised push button either way. Both
+          classes are inert outside win98 — the bevel rules name that theme — and
+          the paint stays tokened (--switch-track-off / --switch-knob-*). */}
+      <span aria-hidden="true" className="v2-inset v2-swtrack" style={{
         flex: '0 0 auto', position: 'relative', width: z.w, height: z.h,
         borderRadius: 'var(--radius-control)',
         background: on ? 'var(--switch-track-on)' : 'var(--switch-track-off)',
       }}>
-        <span style={{
+        <span className="v2-raised" style={{
           position: 'absolute', top: z.pad, left: on ? z.w - z.knob - z.pad : z.pad,
           width: z.knob, height: z.knob, borderRadius: 'var(--radius-control)',
           background: on ? 'var(--switch-knob-on)' : 'var(--switch-knob-off)', transition: 'left 150ms',
@@ -1344,7 +1401,13 @@ function ScoreBar({ value, busy, ink, size }) {
   )
 }
 function ScoreAscii({ value, busy, ink }) {
-  const n = value == null ? 0 : Math.max(0, Math.min(10, Math.round(value / 10)))
+  // --ring-ascii-glyphs is the run's LENGTH, not its paint, so it comes back out
+  // of the cascade like --ring-variant itself. Ten glyphs is what the bar has
+  // always drawn; win98 asks for five (round-6 #2) because at ten the run is
+  // ~60px — wider than the Feed's 64px score column, which is what put the
+  // "+N reports" pin on top of the bar.
+  const g = Math.round(Number(useThemeVar('--ring-ascii-glyphs', '10'))) || 10
+  const n = value == null ? 0 : Math.max(0, Math.min(g, Math.round(value / (100 / g))))
   return (
     <span style={{
       flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 2,
@@ -1354,10 +1417,10 @@ function ScoreAscii({ value, busy, ink }) {
       fontFamily: 'var(--font-ascii)', lineHeight: 1,
       color: busy ? 'var(--ring-neutral-ink)' : ink,
     }}>
-      {busy ? <span style={{ fontSize: 'var(--t-9)' }}>[..........]</span> : (
+      {busy ? <span style={{ fontSize: 'var(--t-9)' }}>{`[${'.'.repeat(g)}]`}</span> : (
         <>
           <span style={{ fontSize: 'var(--t-13)', fontWeight: 700 }}>{value == null ? '--' : value}</span>
-          <span style={{ fontSize: 'var(--t-9)', letterSpacing: '-.02em' }}>{`[${'█'.repeat(n)}${'░'.repeat(10 - n)}]`}</span>
+          <span style={{ fontSize: 'var(--t-9)', letterSpacing: '-.02em' }}>{`[${'█'.repeat(n)}${'░'.repeat(g - n)}]`}</span>
         </>
       )}
     </span>
@@ -1623,10 +1686,12 @@ export function HeaderRow({
 }) {
   const tone = line || (strong ? 'strong' : soft ? 'soft' : 'line')
   const El = as === 'header' ? 'header' : 'div'
-  // The caption bar: 22px, the caption on the gradient, and the _ □ × group of
-  // bevelled glyph boxes pinned right (only × acts — a modal has no minimise or
-  // maximise, and a dead control is worse than none, so the other two are inert
-  // and hidden from the accessibility tree with the group).
+  // The caption bar: 22px, the caption on the gradient, and ONE bevelled glyph
+  // box pinned right. It used to draw the full `_ □ ×` group with the first two
+  // inert — round-6 #4 threw them out: a 98 DIALOG never had a minimise or a
+  // maximise (only a document window did), and with the modal header's own close
+  // also on screen the panel showed two crosses. The caption bar now owns the
+  // only one, and theme.css hides the header's while this chrome is mounted.
   if (variant === 'titlebar') {
     return (
       <El id={id} className={className} {...rest} style={{
@@ -1638,16 +1703,14 @@ export function HeaderRow({
       }}>
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
-          {['_', '□', '×'].map((g) => (
-            <span key={g} className="v2-raised"
-              {...(g === '×' && onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
-              style={{
-                width: 16, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)',
-                fontFamily: 'var(--font-mono)', fontSize: 'var(--t-9)', lineHeight: 1,
-                cursor: g === '×' && onClose ? 'pointer' : 'default',
-              }}>{g}</span>
-          ))}
+          <span className="v2-raised"
+            {...(onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
+            style={{
+              width: 16, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)',
+              fontFamily: 'var(--font-mono)', fontSize: 'var(--t-9)', lineHeight: 1,
+              cursor: onClose ? 'pointer' : 'default',
+            }}>×</span>
         </span>
       </El>
     )

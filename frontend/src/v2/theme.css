@@ -223,6 +223,10 @@
   /* The rail is dark in every appearance, so the content ring (--focus-ring on
      a light ground) is invisible there; the rail's own accent is the ring. */
   --rail-focus:var(--rail-accent);
+  /* 98's tree pane rings the selected row in a 1px dotted YELLOW rect on top of
+     the Hilight fill. Nothing outside win98's Explorer rail draws it, so the base
+     value is the one that paints nothing at all. */
+  --rail-tree-focus:transparent;
   /* The active rail item's count. The default rail marks `active` with a left
      bar over a near-transparent wash, so the count keeps its own --rail-accent;
      a theme that FILLS the tile has to hand the count the tile's ink instead, at
@@ -324,6 +328,19 @@
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
   --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ring;
+  /* ScoreRing `ascii`: how many glyphs the [█░] run is. 10 is the width the bar
+     has always drawn, so no theme moves; win98 asks for 5 so the run fits the Feed's
+     64px score column and stops colliding with the "+N reports" pin (round-6 #2). */
+  --ring-ascii-glyphs:10;
+  /* Which drawing Spinner renders. `arc` is the rotating band every theme has always
+     had; `blocks` is win98's segmented progress bar (98 drew no spinners at all). A
+     shape switch like --ring-variant / --check-style, read back through useThemeVar. */
+  --loader-style:arc;
+  /* The ground under a LIST scroller (the Feed's job column, Applications' pipeline).
+     `transparent` is what those panes have always computed — they show --bg through.
+     win98 paints its one lighter grey here so the list reads as a sunken well
+     instead of sitting on the window chrome (round-6 addendum, "List well"). */
+  --list-well:transparent;
   /* ScoreRing `bar`: the numeral's multiplier on the --t-16 stop, per ring size.
      1 = the 16px the bar has always drawn, so no other theme moves; a theme whose
      bar wants a bigger figure raises it (saas: 1.3 sm / 1.5 md). */
@@ -560,6 +577,10 @@
   /* The rail is dark in every appearance, so the content ring (--focus-ring on
      a light ground) is invisible there; the rail's own accent is the ring. */
   --rail-focus:var(--rail-accent);
+  /* 98's tree pane rings the selected row in a 1px dotted YELLOW rect on top of
+     the Hilight fill. Nothing outside win98's Explorer rail draws it, so the base
+     value is the one that paints nothing at all. */
+  --rail-tree-focus:transparent;
   /* The active rail item's count. The default rail marks `active` with a left
      bar over a near-transparent wash, so the count keeps its own --rail-accent;
      a theme that FILLS the tile has to hand the count the tile's ink instead, at
@@ -661,6 +682,19 @@
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn);
   --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:ring;
+  /* ScoreRing `ascii`: how many glyphs the [█░] run is. 10 is the width the bar
+     has always drawn, so no theme moves; win98 asks for 5 so the run fits the Feed's
+     64px score column and stops colliding with the "+N reports" pin (round-6 #2). */
+  --ring-ascii-glyphs:10;
+  /* Which drawing Spinner renders. `arc` is the rotating band every theme has always
+     had; `blocks` is win98's segmented progress bar (98 drew no spinners at all). A
+     shape switch like --ring-variant / --check-style, read back through useThemeVar. */
+  --loader-style:arc;
+  /* The ground under a LIST scroller (the Feed's job column, Applications' pipeline).
+     `transparent` is what those panes have always computed — they show --bg through.
+     win98 paints its one lighter grey here so the list reads as a sunken well
+     instead of sitting on the window chrome (round-6 addendum, "List well"). */
+  --list-well:transparent;
   /* ScoreRing `bar`: the numeral's multiplier on the --t-16 stop, per ring size.
      1 = the 16px the bar has always drawn, so no other theme moves; a theme whose
      bar wants a bigger figure raises it (saas: 1.3 sm / 1.5 md). */
@@ -1350,7 +1384,7 @@
    two border pixels that buys back are returned as --bevel-pad (see the base
    block and every `calc(… + var(--bevel-pad))` in ui.jsx). */
 .jn-v2[data-theme="win98"] {
-  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#c0c0c0; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#dfdfdf; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#808080; --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000; --accent:#000080; --accent-ink:#ffffff; --accent-soft:#dfdfdf; --good:#005a00; --warn:#555500; --warn-soft:#ffffe1; --warn-line:#808000; --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0; --change-soft:#008000; --change-bg:#e4ffe4; --hover-soft:#dfdfdf; --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#b5b5b5; --stage-applied:#000080; --stage-interview:#555500; --stage-offer:#005a00; --stage-rejected:#800000; --stage-new:#808080; --series-new:#8f4a00; --amber-bg:#ffffe1; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc; --sand:#b5b5b5; --gold:#808000; --funnel-low:#1084d0; --funnel-mid:#000080; --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#005a00; --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000; --rail:#c0c0c0; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080; --rail-line:#808080; --rail-ink:#000000;
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#c0c0c0; --surface:#c0c0c0; --surface-2:#ffffff; --line:#808080; --line-soft:#dfdfdf; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#808080; --text:#000000; --text-2:#000000; --muted:#404040; --ink-2:#000000; --accent:#000080; --accent-ink:#ffffff; --accent-soft:#dfdfdf; --good:#005a00; --warn:#555500; --warn-soft:#ffffe1; --warn-line:#808000; --bad:#800000; --bad-soft:#ffd0d0; --bad-faint:#fff0f0; --change-soft:#808000; --change-bg:#ffffe1; --hover-soft:#ffffff; --ring-accent:rgba(0,0,128,.22); --scrim:rgba(0,0,0,.42); --recessed:#dfdfdf; --stage-applied:#000080; --stage-interview:#555500; --stage-offer:#005a00; --stage-rejected:#800000; --stage-new:#808080; --series-new:#8f4a00; --amber-bg:#ffffe1; --amber-line:#808000; --amber-line-soft:#c0c080; --amber-hover:#ffffcc; --sand:#b5b5b5; --gold:#808000; --funnel-low:#1084d0; --funnel-mid:#000080; --toast-ok-bg:#e4ffe4; --toast-ok-line:#008000; --toast-ok-ink:#005a00; --toast-bad-bg:#ffd0d0; --toast-bad-line:#800000; --toast-bad-ink:#800000; --rail:#ffffff; --rail-tree-focus:#ffff00; --rail-text:#000000; --rail-dim:#404040; --rail-accent:#000080; --rail-line:#808080; --rail-ink:#000000;
   /* 98.css's own bitmap face, shipped under /fonts/98 (see the @font-face pair
      at the foot of this file). Tahoma is the fallback if it fails to load.
      --mono is the SANS stack on purpose: §4 of the handover takes every numeral
@@ -1363,8 +1397,10 @@
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;   /* 98 had no drop shadows at all */
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
-  /* whole pixels, not the old half-px steps: a bitmap face has no fractional stem */
-  --t-7-5:7px; --t-9:8px; --t-9-5:9px; --t-10:9px; --t-10-5:10px; --t-11:10px; --t-11-5:11px; --t-12:11px; --t-12-5:12px; --t-13:12px; --t-13-5:12px; --t-14:13px; --t-15:14px; --t-15-5:14px; --t-16:15px; --t-17:16px; --t-18:17px; --t-19:17px; --t-22:20px; --t-30:28px;
+  /* Round 6 #8: scale 1.0 with an 11px FLOOR, not the old ×.92 ramp. Tahoma 8pt = 11px
+     is 98's own UI size and its legibility floor, so every stop at or under 11 lands on
+     11 and the rest are whole pixels (no fractional stem on a UI face). */
+  --t-7-5:11px; --t-9:11px; --t-9-5:11px; --t-10:11px; --t-10-5:11px; --t-11:11px; --t-11-5:12px; --t-12:12px; --t-12-5:13px; --t-13:13px; --t-13-5:14px; --t-14:14px; --t-15:15px; --t-15-5:16px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
   --weight-medium:400; --weight-semibold:700;   /* the pixel face has 400 and 700 only */
   /* the DEFAULT PUSH BUTTON: grey face, bold label, and the 1px window-frame
@@ -1375,7 +1411,13 @@
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
   --input-border-error:var(--bad); --input-ring-error:none;
-  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-hover:var(--hover-soft); --row-line:var(--line); --row-line-style:solid; --divider:1px solid var(--line);
+  /* the grid line, off --line-soft. Base points --row-line at --line-soft, which
+     here is #dfdfdf — the very grey the list well below is painted, so every row
+     divider vanished. 98's own list grid is the button-shadow line anyway. */
+  /* the list scroller's own well: 98's one grey lighter than the chrome (#dfdfdf),
+     so rows sit in a well and the hover above lifts them to client white. */
+  --list-well:var(--recessed);
   --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:3px solid transparent; --rail-count-active:var(--rail-active-ink); --rail-item-inset:0;
   --focus-shadow:none; --focus-ring:none; --focus-outline:1px dotted #000000;
   /* Corner-pixel bevel: all four 98.css tones in one inset stack, border 0.
@@ -1389,6 +1431,10 @@
   --bevel-inset-shadow:inset -1px -1px 0 #ffffff, inset 1px 1px 0 #808080, inset -2px -2px 0 #dfdfdf, inset 2px 2px 0 #0a0a0a;
   --bevel-pad:1px;   /* the two border pixels the stack gives up, handed back as padding */
   --check-style:win98;   /* 13px sunken tick box / 12px round radio, drawn in ui.jsx */
+  /* 98's toggle: the OFF track is the client white of a sunken field, not a filled
+     black bar, and the knob is a raised grey push button in BOTH states. The bevels
+     come from .v2-inset / .v2-raised on the two spans; only the paint is tokened. */
+  --switch-track-off:var(--surface-2); --switch-knob-off:var(--surface); --switch-knob-on:var(--surface);
   /* 98 repaints nothing on hover, so the ai button holds its rest paint like every
      other button here (the base 90%/82% mixes would darken it on their own). */
   --ai:var(--accent); --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
@@ -1397,7 +1443,7 @@
   --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--btn-primary-ink);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
-  --ring-variant:ascii; --ctl-line:1;   /* Tahoma at 1 is what 98 drew; declared so the geometry set stays a superset of cobalt's */
+  --ring-variant:ascii; --ring-ascii-glyphs:5; --loader-style:blocks; --ctl-line:1;   /* Tahoma at 1 is what 98 drew; declared so the geometry set stays a superset of cobalt's */
   --seg-dot-on:var(--dot-accent); --seg-dot-off:var(--dot-neutral);   /* the base pair, declared to keep the set a superset of cobalt's */
   /* the bevel IS the rest border here, so field-hover is a genuine no-op (D-06) */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
@@ -1409,14 +1455,14 @@
   --head-bg-page:var(--surface); --chip-bg:var(--surface);
 }
 .jn-v2[data-theme="win98"][data-appearance="dark"] {
-  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#3e4c4c; --surface:#3e4c4c; --surface-2:#1e2828; --line:#6f8484; --line-soft:#4a5a5a; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#6f8484; --text:#ffffff; --text-2:#e4ecec; --muted:#b4c5c5; --ink-2:#ffffff; --accent:#008080; --accent-ink:#ffffff; --accent-soft:#0c3d3d; --good:#6fdc8c; --warn:#ffd166; --warn-soft:#4a3d12; --warn-line:#b59a3a; --bad:#ff7b72; --bad-soft:#4a1f1c; --bad-faint:#33191a; --change-soft:#3fa66b; --change-bg:#163322; --hover-soft:#4a5a5a; --ring-accent:rgba(0,128,128,.4); --scrim:rgba(0,0,0,.6); --recessed:#33403f; --stage-applied:#008080; --stage-interview:#ffd166; --stage-offer:#6fdc8c; --stage-rejected:#ff7b72; --stage-new:#6f8484; --series-new:#ffa657; --amber-bg:#3a3212; --amber-line:#b59a3a; --amber-line-soft:#6e5f2a; --amber-hover:#4a4018; --sand:#6f8484; --gold:#ffd166; --funnel-low:#4fd1c5; --funnel-mid:#008080; --toast-ok-bg:#163322; --toast-ok-line:#3fa66b; --toast-ok-ink:#6fdc8c; --toast-bad-bg:#4a1f1c; --toast-bad-line:#ff7b72; --toast-bad-ink:#ff7b72; --rail:#3e4c4c; --rail-text:#ffffff; --rail-dim:#b4c5c5; --rail-accent:#4fd1c5; --rail-line:#6f8484; --rail-ink:#ffffff;
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px; --bg:#3e4c4c; --surface:#3e4c4c; --surface-2:#1e2828; --line:#6f8484; --line-soft:#4a5a5a; --line-strong:#0a0a0a; --edge:#0a0a0a; --track:#6f8484; --text:#ffffff; --text-2:#e4ecec; --muted:#b4c5c5; --ink-2:#ffffff; --accent:#008080; --accent-ink:#ffffff; --accent-soft:#0c3d3d; --good:#6fdc8c; --warn:#ffd166; --warn-soft:#4a3d12; --warn-line:#b59a3a; --bad:#ff7b72; --bad-soft:#4a1f1c; --bad-faint:#33191a; --change-soft:#b59a3a; --change-bg:#3a2f10; --hover-soft:#4a5a5a; --ring-accent:rgba(0,128,128,.4); --scrim:rgba(0,0,0,.6); --recessed:#2f3b3b; --stage-applied:#008080; --stage-interview:#ffd166; --stage-offer:#6fdc8c; --stage-rejected:#ff7b72; --stage-new:#6f8484; --series-new:#ffa657; --amber-bg:#3a3212; --amber-line:#b59a3a; --amber-line-soft:#6e5f2a; --amber-hover:#4a4018; --sand:#6f8484; --gold:#ffd166; --funnel-low:#4fd1c5; --funnel-mid:#008080; --toast-ok-bg:#163322; --toast-ok-line:#3fa66b; --toast-ok-ink:#6fdc8c; --toast-bad-bg:#4a1f1c; --toast-bad-line:#ff7b72; --toast-bad-ink:#ff7b72; --rail:#1e2828; --rail-tree-focus:#ffff00; --rail-text:#ffffff; --rail-dim:#b4c5c5; --rail-accent:#4fd1c5; --rail-line:#6f8484; --rail-ink:#ffffff;
   --serif:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --sans:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
   --font-ascii:'Lucida Console','Courier New',Consolas,monospace;
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
   --bw-hair:1px; --bw-control:1px; --bw-panel:1px;
   --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
-  --t-7-5:7px; --t-9:8px; --t-9-5:9px; --t-10:9px; --t-10-5:10px; --t-11:10px; --t-11-5:11px; --t-12:11px; --t-12-5:12px; --t-13:12px; --t-13-5:12px; --t-14:13px; --t-15:14px; --t-15-5:14px; --t-16:15px; --t-17:16px; --t-18:17px; --t-19:17px; --t-22:20px; --t-30:28px;
+  --t-7-5:11px; --t-9:11px; --t-9-5:11px; --t-10:11px; --t-10-5:11px; --t-11:11px; --t-11-5:12px; --t-12:12px; --t-12-5:13px; --t-13:13px; --t-13-5:14px; --t-14:14px; --t-15:15px; --t-15-5:16px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
   --weight-medium:400; --weight-semibold:700;
   --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
@@ -1426,7 +1472,13 @@
   --input-border-error:var(--bad); --input-ring-error:none;
   /* the light block's #4a6a99 special case is gone: teal Hilight separates a
      picked row from the chrome on its own */
-  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
+  --row-selected:var(--accent); --row-selected-ink:var(--accent-ink); --row-selected-edge:none; --row-hover:var(--hover-soft); --row-line:var(--line); --row-line-style:solid; --divider:1px solid var(--line);
+  /* the grid line, off --line-soft. Base points --row-line at --line-soft, which
+     here is #dfdfdf — the very grey the list well below is painted, so every row
+     divider vanished. 98's own list grid is the button-shadow line anyway. */
+  /* the list scroller's own well: 98's one grey lighter than the chrome (#dfdfdf),
+     so rows sit in a well and the hover above lifts them to client white. */
+  --list-well:var(--recessed);
   --rail-active-bg:var(--accent); --rail-active-ink:var(--accent-ink); --rail-active-mark:3px solid transparent; --rail-count-active:var(--rail-active-ink); --rail-item-inset:0;
   --focus-shadow:none; --focus-ring:none; --focus-outline:1px dotted #ffffff;
   --bevel-raised-border:0; --bevel-raised-color:transparent;
@@ -1435,13 +1487,17 @@
   --bevel-inset-shadow:inset -1px -1px 0 #8fa3a3, inset 1px 1px 0 #26302f, inset -2px -2px 0 #58696a, inset 2px 2px 0 #0a0a0a;
   --bevel-pad:1px;
   --check-style:win98;
+  /* 98's toggle: the OFF track is the client white of a sunken field, not a filled
+     black bar, and the knob is a raised grey push button in BOTH states. The bevels
+     come from .v2-inset / .v2-raised on the two spans; only the paint is tokened. */
+  --switch-track-off:var(--surface-2); --switch-knob-off:var(--surface); --switch-knob-on:var(--surface);
   --ai:var(--accent); --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
   /* 98 has no filled buttons (D-22), so the ai button wears the same grey face
      as primary/danger; --ai itself stays the accent for the ✦ badge and Tag. */
   --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--btn-primary-ink);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
-  --ring-variant:ascii; --ctl-line:1;   /* Tahoma at 1 is what 98 drew; declared so the geometry set stays a superset of cobalt's */
+  --ring-variant:ascii; --ring-ascii-glyphs:5; --loader-style:blocks; --ctl-line:1;   /* Tahoma at 1 is what 98 drew; declared so the geometry set stays a superset of cobalt's */
   --seg-dot-on:var(--dot-accent); --seg-dot-off:var(--dot-neutral);   /* the base pair, declared to keep the set a superset of cobalt's */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#8ab4ff; --link-ink-hover:#ffffff;
@@ -1584,6 +1640,14 @@
 
 @keyframes v2-spin { to { transform:rotate(360deg); } }
 .v2-spin { animation:v2-spin .9s linear infinite; }
+/* The segmented loader's marching band (--loader-style: blocks). The run is the
+   trough's inner width, which only the primitive knows, so it arrives as
+   --march-run on the strip itself; the `-100%` start walks the band fully out of
+   the trough on the left before it re-enters. Declared here, not in a theme
+   block, because the drawing itself is theme-independent — only which themes ask
+   for it is. `.v2-spin` above is untouched. */
+@keyframes v2-march { from { transform:translateX(-100%); } to { transform:translateX(var(--march-run,140px)); } }
+.v2-march { animation:v2-march var(--march-dur,1.4s) linear infinite; }
 /* beat the classic UI's global `.dark input::placeholder` (Tailwind gray-500) that bleeds in at equal specificity */
 /* A Menu is a column flex box, so a child's height is only a flex-basis: once
    the list exceeds maxHeight the browser shrinks children instead of scrolling. */
@@ -1668,6 +1732,116 @@
 .jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-track { background:repeating-conic-gradient(var(--surface) 0 25%, #ffffff 0 50%) 0 0 / 2px 2px; }
 .jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-track { background:repeating-conic-gradient(var(--surface) 0 25%, #58696a 0 50%) 0 0 / 2px 2px; }
 .jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-thumb { background:var(--surface); border:0; box-shadow:var(--bevel-raised-shadow); }
+/* Round 6, "classic 98 scroll but thin": 11px (98's own bar is 16), and the two
+   arrow BUTTONS the flat bar was missing — a raised grey box with a 5x3 pixel
+   triangle, drawn `crispEdges` so it stays a bitmap at any zoom. Chromium/Safari
+   only; Firefox has no ::-webkit-scrollbar-button and keeps the two-grey bar. */
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar { width:11px; height:11px; }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-button:single-button {
+  display:block; width:11px; height:11px; background-color:var(--surface);
+  box-shadow:var(--bevel-raised-shadow); background-repeat:no-repeat; background-position:center;
+}
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-button:single-button:vertical:decrement { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='5' height='3' shape-rendering='crispEdges'><path d='M0 3h5v-1H4V1H3V0H2v1H1v1H0z' fill='%23000'/></svg>"); }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-button:single-button:vertical:increment { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='5' height='3' shape-rendering='crispEdges'><path d='M0 0h5v1H4v1H3v1H2V2H1V1H0z' fill='%23000'/></svg>"); }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-button:single-button:horizontal:decrement { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='5' shape-rendering='crispEdges'><path d='M3 0v5H2V4H1V3H0V2h1V1h1V0z' fill='%23000'/></svg>"); }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-button:single-button:horizontal:increment { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='5' shape-rendering='crispEdges'><path d='M0 0v5h1V4h1V3h1V2H2V1H1V0z' fill='%23000'/></svg>"); }
+.jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-corner { background:var(--surface); }
+/* the glyphs are black pixels: on the teal-tinted dark chrome they need the
+   light tone instead, so the four rules above are re-pointed by appearance */
+.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-button:single-button:vertical:decrement { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='5' height='3' shape-rendering='crispEdges'><path d='M0 3h5v-1H4V1H3V0H2v1H1v1H0z' fill='%23fff'/></svg>"); }
+.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-button:single-button:vertical:increment { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='5' height='3' shape-rendering='crispEdges'><path d='M0 0h5v1H4v1H3v1H2V2H1V1H0z' fill='%23fff'/></svg>"); }
+.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-button:single-button:horizontal:decrement { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='5' shape-rendering='crispEdges'><path d='M3 0v5H2V4H1V3H0V2h1V1h1V0z' fill='%23fff'/></svg>"); }
+.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-scroll::-webkit-scrollbar-button:single-button:horizontal:increment { background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='5' shape-rendering='crispEdges'><path d='M0 0v5h1V4h1V3h1V2H2V1H1V0z' fill='%23fff'/></svg>"); }
+
+/* ── Round 6 #6 · Card is a GROUP BOX ─────────────────────────────────────────
+   98 has no "card": the nearest object is the group box, an etched rectangle —
+   a #808080 line with a #ffffff line offset one pixel down-right, which is two
+   borders' worth of paint and so cannot be a single `border` token. An
+   INTERACTIVE card (`.v2-act`) then lifts to the raised button shading on hover
+   instead of the accent hairline every other theme draws, and presses in when it
+   is the current one. A static card never moves. !important: Card writes border
+   and box-shadow inline. */
+.jn-v2[data-theme="win98"] .v2-cardbox { border:var(--bw-panel) solid var(--line) !important; box-shadow:inset -1px -1px 0 var(--line-soft), 1px 1px 0 var(--line-soft) !important; }
+/* A card that reacts at all — `.v2-act` (Card interactive/onClick) or the opt-in
+   `.v2-card` a few screens pass by hand — takes the raised button shading. Both
+   of those hover rules paint --card-border-hover (the ACCENT: the "thin blue
+   line" of round-6 #6) and --card-bg-hover; they sit earlier in this file, so
+   these later !importants replace the line AND hold the card's own ground. */
+.jn-v2[data-theme="win98"] .v2-cardbox.v2-act:hover,
+.jn-v2[data-theme="win98"] .v2-cardbox.v2-card:hover { border:var(--bevel-raised-border) !important; border-color:var(--bevel-raised-color) !important; box-shadow:var(--bevel-raised-shadow) !important; background:var(--card-bg) !important; }
+.jn-v2[data-theme="win98"] .v2-cardbox[aria-current="true"] { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
+
+/* Round 6 #4 · one × per window. The caption bar's close is the real one (ui.jsx
+   no longer draws the inert _ and □); a dialog that ALSO carries a hand-rolled
+   close in its own header would show two, so the header's is hidden while the
+   chrome is mounted. Scoped to a dialog's header row so a Close button anywhere
+   else in the body is untouched. */
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-headerrow [title="Close"] { display:none; }
+
+/* Round 6 "Loaders" · a busy region shows 98's hourglass. The blocks drawing in
+   ui.jsx replaces the arc; this is the pointer half, and it is CSS only. */
+.jn-v2[data-theme="win98"] [aria-busy="true"] { cursor:wait; }
+
+/* ── Round 6 · the rail as Explorer's left pane ───────────────────────────────
+   Picked 1a of `Win98 Rail Sketches.dc.html`, as built in `Feed - Win98.dc.html`:
+   a sunken client-white well between two chrome-grey bands — Explorer's caption
+   strip above and its status bar below — with the groups as tree nodes (a 9px ⊟
+   twisty) and the items as children on a dotted connector.
+
+   Composition, but NOT a JSX branch: every element the tree needs already exists
+   in V2App's rail, so the twisty and the two connector rules are ::before /
+   ::after on rows that are already there, and the geometry is re-stated here.
+   That keeps one rail in the JSX — the class names V2App now carries compute
+   nothing at all in the other themes, where none of these rules match.
+   Everything is gated on [data-open="true"]: the 50px collapsed rail is an icon
+   strip, and a tree with no labels is not a tree.
+
+   !important is on nearly every declaration for the usual reason (D-17): V2App
+   writes height, padding, margin, font-size, border-left and background inline,
+   and an inline value beats a class rule. */
+.jn-v2[data-theme="win98"] .v2-rail { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] { margin:4px 0 4px 4px; }
+/* caption strip: the brand band stops being rail-coloured and becomes chrome,
+   closed by the etched pair (shadow line under it, highlight line under that) */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand {
+  height:48px !important; padding:0 14px !important; background:var(--surface); color:var(--text) !important;
+  border-bottom:var(--bw-hair) solid var(--line); box-shadow:0 1px 0 var(--line-soft);
+}
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand > span:first-child { font-size:var(--t-15) !important; font-weight:var(--title-weight); }
+/* the tree itself */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll { gap:8px !important; padding:8px 4px !important; }
+/* group = a tree node: sentence case at the row size, with the ⊟ twisty in front.
+   The twisty is decorative until the groups are made collapsible (handover). */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead { height:24px !important; padding:0 8px !important; margin-bottom:0 !important; gap:6px; }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead > span:first-child { font-size:var(--t-12) !important; line-height:24px !important; color:var(--rail-text) !important; }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead::before {
+  content:"\2212"; order:-1; flex:0 0 auto; width:9px; height:9px;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--text);
+  font-size:8px; line-height:7px; text-align:center;
+}
+/* child row: 28px, indented clear of the connector, 98's dotted focus rect when
+   it is the current one (the Hilight fill itself is --rail-active-bg already) */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem {
+  height:28px !important; margin:0 4px 0 0 !important; padding:0 8px 0 26px !important;
+  font-size:var(--t-12) !important; border:1px dotted transparent !important;
+}
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem[aria-current="page"] { border-color:var(--rail-tree-focus) !important; }
+/* the connector: a dotted trunk down the group and a 9px elbow into each row */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem::before {
+  content:""; position:absolute; left:12px; top:0; bottom:0; border-left:1px dotted var(--line);
+}
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem::after {
+  content:""; position:absolute; left:12px; top:50%; width:9px; border-top:1px dotted var(--line);
+}
+/* the last child closes the trunk at its own elbow instead of running past it */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem:last-child::before { bottom:50%; }
+/* status bar: the matching chrome band under the well. The three bottom rows are
+   one band, so only the first of them carries the etch. */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot {
+  background:var(--surface); color:var(--text);
+  border-top:var(--bw-hair) solid var(--line) !important; box-shadow:inset 0 1px 0 var(--line-soft);
+}
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot ~ .v2-railfoot { border-top:0 !important; box-shadow:none; }
 
 /* Live in every theme since D-07 (1px shift + a --surface-2 wash). The wash is a
    background-image overlay, not `background:`, so it leaves the control's own ground visible instead of erasing it. */
@@ -1686,7 +1860,11 @@
    without this the hover border (which comes later in the file) beat
    `.v2-fieldwrap:focus-within`'s accent on a hovered focused field. On a bare
    `<input>` the two selectors match the same states, so nothing else moves. */
-.jn-v2 .v2-inset:not(.v2-underline):not([aria-expanded="true"]):hover:not(:focus):not(:focus-within) { border-color:var(--input-border-hover) !important; }
+/* `.v2-swtrack` (the Switch track, round-6 #10) is carved out for the same reason
+   as `.v2-underline`: it wears `.v2-inset` only to pick up win98's sunken bevel and
+   has no border of its own, so without this the field-hover rule would move its
+   computed border-color in every OTHER theme to paint nothing at all. */
+.jn-v2 .v2-inset:not(.v2-underline):not(.v2-swtrack):not([aria-expanded="true"]):hover:not(:focus):not(:focus-within) { border-color:var(--input-border-hover) !important; }
 /* Transitions only — zeroing animation-duration too would stop .v2-spin and the
    ScoreRing's busy arc, which are progress indicators, not decoration. */
 @media (prefers-reduced-motion: reduce) { .jn-v2 * { transition-duration:0s !important; } }

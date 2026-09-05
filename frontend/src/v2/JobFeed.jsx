@@ -964,7 +964,11 @@ export default function V2JobFeed() {
             the detail pane and at 1024 its header actions were cut off the screen
             with no way to scroll to them (R4-T2A-01). The detail's `1 0 420px` basis
             is the width its three header controls need; the list floors at 340. */}
-        <section style={{ position: 'relative', width: 472, flex: '0 1 472px', minWidth: 340, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* --list-well is the ground a LIST scroller sits on. `transparent` in every
+            theme but win98 — the pane has always shown --bg through here — where 98's
+            one grey lighter than the chrome (#dfdfdf) turns the column into a sunken
+            well, so the rows have something to lift off on hover (round-6 addendum). */}
+        <section style={{ position: 'relative', width: 472, flex: '0 1 472px', minWidth: 340, borderRight: '1px solid var(--line)', background: 'var(--list-well)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ position: 'relative', padding: '12px 14px 8px 24px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
             <UICheck checked={allChecked} indeterminate={someChecked && !allChecked} ariaLabel="Select all shown" title="Select all shown" style={{ flex: '0 0 auto' }}
               onChange={() => setChecked(allChecked ? new Set() : new Set(jobs.map((j) => j.id)))} />

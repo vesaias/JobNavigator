@@ -173,16 +173,25 @@ export default function V2App() {
   const padX = open ? 20 : 13
   return (
     <div className="jn-v2" {...themeAttrs(look)} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-      <aside style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .32s ease', overflow: 'hidden' }}>
-        <div style={{ height: 64, flex: '0 0 auto', position: 'relative', display: 'flex', alignItems: 'center', padding: `0 ${padX}px`, color: 'var(--rail-ink)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+      {/* The class names on the rail and its parts are PAINT HOOKS, not styles.
+          win98's rail is Explorer's left pane — a sunken client-white well between
+          a chrome caption strip and a chrome status bar, with the groups as tree
+          nodes and the items as children on a dotted connector — and theme.css
+          builds all of that from these hooks plus ::before/::after, so there is
+          still one rail in this file rather than a second JSX branch. Every one of
+          those rules names win98; in every other theme the classes match nothing
+          and not a pixel moves. `data-open` gates them on the EXPANDED rail: at
+          50px this is an icon strip, and a tree with no labels is not a tree. */}
+      <aside className="v2-rail" data-open={open ? 'true' : 'false'} style={{ width: W, flex: `0 0 ${W}px`, background: 'var(--rail)', display: 'flex', flexDirection: 'column', padding: '0 0 8px', transition: 'width .32s ease', overflow: 'hidden' }}>
+        <div className="v2-railbrand" style={{ height: 64, flex: '0 0 auto', position: 'relative', display: 'flex', alignItems: 'center', padding: `0 ${padX}px`, color: 'var(--rail-ink)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '-.01em', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>JobNavigator</span>
           <span style={{ position: 'absolute', left: 0, width: W, display: 'flex', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 17, letterSpacing: '.02em', opacity: open ? 0 : 1, transition: 'opacity .2s, width .32s ease', pointerEvents: 'none' }}>JN</span>
         </div>
 
         <nav className="v2-railscroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '6px 0', overflowX: 'hidden', overflowY: 'auto' }}>
           {GROUPS.map((g) => (
-            <div key={g.label} style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+            <div key={g.label} className="v2-railgroup" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="v2-railgrouphead" style={{ position: 'relative', height: 18, padding: '0 20px', marginBottom: 4, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                 {/* group header case/tracking are theme-controlled (some skins are
                     sentence case, no tracking); rail keeps its own wider stop
                     rather than being folded into --label-tracking's .13em */}
@@ -240,22 +249,22 @@ export default function V2App() {
                     {!open && warned && <span title="Needs attention" style={{ position: 'absolute', top: 8, left: 'calc(50% + 5px)', width: 5, height: 5, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                   </>
                 )
-                if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" title={tip} className="v2-navdark" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
-                if (!it.ready) return <div key={it.to} title={tip || 'Coming in the redesign'} style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
-                return <NavLink key={it.to} to={it.to} title={tip} className="v2-navdark" style={{ ...base, color: active ? 'var(--rail-active-ink)' : 'var(--rail-text)' }}>{inner}</NavLink>
+                if (it.external) return <a key={it.to} href={it.to} target="_blank" rel="noopener noreferrer" title={tip} className="v2-navdark v2-railitem" style={{ ...base, color: 'var(--rail-text)' }}>{inner}</a>
+                if (!it.ready) return <div key={it.to} title={tip || 'Coming in the redesign'} className="v2-railitem" style={{ ...base, color: 'var(--rail-dim)', cursor: 'default' }}>{inner}</div>
+                return <NavLink key={it.to} to={it.to} title={tip} className="v2-navdark v2-railitem" style={{ ...base, color: active ? 'var(--rail-active-ink)' : 'var(--rail-text)' }}>{inner}</NavLink>
               })}
             </div>
           ))}
         </nav>
 
-        <a href="/" className="v2-navdark" title={open ? undefined : 'Classic UI'} style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+        <a href="/" className="v2-navdark v2-railfoot" title={open ? undefined : 'Classic UI'} style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: `0 0 ${open ? 0 : 24}px`, display: 'flex', justifyContent: 'center', overflow: 'hidden', opacity: open ? 0 : 1, transition: 'opacity .2s, flex-basis .32s ease' }}>←</span>
           <span style={{ opacity: open ? 1 : 0, transition: 'opacity .2s' }}>← Classic UI</span>
         </a>
 
         {/* pipeline pulse — the dot yields its slot to the theme toggle when collapsed */}
         {/* tooltip promises Run history, the last card on the page — deep-link to it */}
-        <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+        <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark v2-railfoot" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
               /* ui: keep — 7px scrape-health rail dot, not a control */
@@ -267,7 +276,7 @@ export default function V2App() {
           <span style={{ fontSize: 11.5, lineHeight: '18px', color: 'var(--rail-dim)', opacity: open ? 1 : 0, transition: 'opacity .2s', overflow: 'hidden', textOverflow: 'ellipsis' }}>{healthText}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', height: 34, padding: `0 12px 0 ${padX}px`, borderTop: '1px solid var(--rail-line)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+        <div className="v2-railfoot" style={{ display: 'flex', alignItems: 'center', height: 34, padding: `0 12px 0 ${padX}px`, borderTop: '1px solid var(--rail-line)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span onClick={toggleRail} title={open ? 'Collapse to icons' : 'Expand navigation'} className="v2-navdark" style={{ flex: '0 0 24px', fontSize: 13, color: 'var(--rail-dim)', cursor: 'pointer', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>{open ? '‹' : '›'}</span>
           <span onClick={toggleRail} className="v2-navdark" style={{ flex: 1, fontSize: 12, lineHeight: '18px', color: 'var(--rail-dim)', cursor: 'pointer', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>Collapse</span>
           {/* ui: keep — rail-dark theme toggle (--rail-dim ink, v2-navdark + v2-appearancebtn rail hovers); IconButton reads the light-surface tokens */}

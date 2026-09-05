@@ -381,7 +381,9 @@ export default function Applications() {
       {/* split body */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
-        <div className="v2-scroll" style={{ flex: '0 0 472px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* --list-well: transparent everywhere but win98, where the list column is a
+            sunken #dfdfdf well (round-6 addendum) — same hook as the Feed's. */}
+        <div className="v2-scroll" style={{ flex: '0 0 472px', borderRight: '1px solid var(--line)', background: 'var(--list-well)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {/* Nothing about the list is drawn before /applications settles: the four
               stage headers would otherwise paint with NBSP counts under a title that
               already says how many there are, and the row groups would fill in one
