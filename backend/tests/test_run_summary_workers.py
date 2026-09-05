@@ -1,10 +1,4 @@
-"""R2-H-13: every background job type must describe what it did.
-
-launch_background() stores a worker's returned string as JobRun.result_summary,
-but only trigger_company_scrape returned one — Stats → Run history showed "—"
-for scores, tailors, cover letters and search runs. These tests pin the return
-value of each worker (the string itself is free-form; that it exists is not).
-"""
+"""Every background job type's worker must return a summary string for JobRun.result_summary (free-form; that it exists is what's pinned)."""
 import pytest
 
 from backend.models.db import Company, Job, Resume, Search, Setting

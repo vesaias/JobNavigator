@@ -1,12 +1,4 @@
-"""Pin that Playwright-based ATS scrapers (Google, Meta) honour max_pages.
-
-The actual scrape coroutine launches a real browser, which is too heavy for
-unit tests. Instead we verify:
-  1. Both signatures accept `max_pages`
-  2. The pagination guard reads from `max_pages` (not the legacy hardcoded
-     constants 50 / 20) — guarded via static source inspection
-  3. _dispatch_ats forwards `max_pages` to google + meta scrapers
-"""
+"""Pin that Playwright-based ATS scrapers (Google, Meta) honour max_pages, checked via signature + static source inspection since scrape() needs a real browser."""
 import inspect
 import re
 

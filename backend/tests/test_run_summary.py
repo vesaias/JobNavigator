@@ -1,13 +1,4 @@
-"""JobRun.result_summary must actually reach the DB.
-
-Before this, both tracked_run and launch_background hard-coded None, so every
-completed run in Stats > Run history showed a bare status with no account of
-what it did. Two routes now carry a summary: a tracked_run body assigns
-`run.summary`, and a launch_background coroutine returns a string.
-
-SQLite fixtures mirror test_job_monitor.py — see its module docstring for why
-the tz listener and the query-by-job_type pattern are needed.
-"""
+"""JobRun.result_summary must actually reach the DB: a tracked_run body assigns `run.summary`, and a launch_background coroutine's returned string is stored."""
 import asyncio
 from datetime import timezone
 

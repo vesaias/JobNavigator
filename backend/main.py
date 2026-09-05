@@ -183,8 +183,7 @@ async def verify_api_key(body: dict):
 
 @app.post("/api/auth/set-session", tags=["auth"], summary="Set session cookie from API key")
 async def set_session(body: dict, response: _Response):
-    """Verify API key and set httpOnly jn_session cookie. Cookie is sent on all
-    same-origin requests (including iframe/download URLs)."""
+    """Verify API key and set httpOnly jn_session cookie (also sent on iframe/download requests)."""
     api_key = (body or {}).get("api_key", "")
     db = SessionLocal()
     try:
@@ -228,7 +227,7 @@ app.include_router(llm_router, prefix="/api")
 
 
 # A malformed UUID in a path (/api/jobs/abc) makes Postgres raise DataError deep in
-# the query; without this every id route answers 500 instead of 404 (FEED-10).
+# the query; without this every id route answers 500 instead of 404.
 from sqlalchemy.exc import DataError as _SADataError
 
 
@@ -247,11 +246,7 @@ def health_check():
 
 
 async def _tracer_click_and_redirect(token: str, request: Request):
-    """Log the click (best-effort) and 302 to the link's destination.
-
-    Shared by both link shapes: path style (/cv/{token}) and param style
-    (/?cv={token}). Any resume/cover-letter exported in either format resolves here.
-    """
+    """Log the click (best-effort) and 302 to the link's destination; shared by both link shapes (path /cv/{token} and param /?cv={token})."""
     import re
     import hashlib
     from backend.models.db import TracerLink, TracerClickEvent
@@ -262,7 +257,6 @@ async def _tracer_click_and_redirect(token: str, request: Request):
         if not link:
             raise HTTPException(404, "Link not found")
 
-        # Parse user-agent
         ua = (request.headers.get("user-agent") or "").lower()
         device_type = "mobile" if any(m in ua for m in ("mobile", "android", "iphone", "ipad")) else \
                       "tablet" if "tablet" in ua else "desktop"
@@ -276,7 +270,6 @@ async def _tracer_click_and_redirect(token: str, request: Request):
                     "android" if "android" in ua else \
                     "linux" if "linux" in ua else "unknown"
 
-        # Bot detection
         bot_pattern = re.compile(
             r'\b(bot|crawler|spider|preview|scanner|headless|curl|wget|'
             r'slackbot|discordbot|facebookexternalhit|whatsapp|'
@@ -284,7 +277,6 @@ async def _tracer_click_and_redirect(token: str, request: Request):
         )
         is_bot = bool(bot_pattern.search(request.headers.get("user-agent") or ""))
 
-        # Hash IP /24 prefix
         ip = request.client.host if request.client else None
         ip_hash = None
         if ip:
@@ -295,7 +287,6 @@ async def _tracer_click_and_redirect(token: str, request: Request):
                 prefix = ip
             ip_hash = hashlib.sha256(prefix.encode()).hexdigest()
 
-        # Referrer hostname
         referrer = request.headers.get("referer")
         referrer_host = None
         if referrer:
@@ -305,12 +296,10 @@ async def _tracer_click_and_redirect(token: str, request: Request):
             except Exception:
                 pass
 
-        # Capture destination BEFORE the click-log write so we can always redirect,
-        # even if the click-log commit fails (e.g., constraint violation, transient
-        # DB error). Click logging is best-effort.
+        # Capture destination before the click-log write so redirect still happens
+        # even if the click-log commit fails (best-effort logging).
         destination = link.destination_url
 
-        # Log click — best-effort. Failures here must not break the redirect.
         try:
             event = TracerClickEvent(
                 tracer_link_id=link.id,
@@ -446,7 +435,7 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
 
     async def _do():
         from backend.analyzer.cv_scorer import score_single_job
-        # Forwarded so the run's summary reaches JobRun.result_summary (R2-H-13).
+        # Forwarded so the run's summary reaches JobRun.result_summary.
         return await score_single_job(job_id, cv_ids=cv_ids, depth=depth)
 
     # Include cv_ids in scope_key so scoring the same job with different CVs doesn't conflict
@@ -682,8 +671,8 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
             c = db2.query(C).filter(C.id == company_id).first()
             if c:
                 result = await scrape_single_career_page(c)
-                # Same audit row the batch path writes — a manual run must show up
-                # in /api/scrape-log, is_warning and /health/entities too (R2-H-02).
+                # Same audit row the batch path writes, so a manual run also shows
+                # up in /api/scrape-log, is_warning and /health/entities.
                 record_company_scrape_log(c.id, c.name, result or {}, db=db2)
                 should_score = auto_score if auto_score is not None else (c.auto_scoring_depth in ("light", "full"))
                 if should_score and result and result.get("new_jobs", 0) > 0:
@@ -711,16 +700,7 @@ async def trigger_company_scrape(company_id: str, auto_score: bool = None):
 
 @app.post("/api/telegram/webhook", tags=["telegram"], summary="Telegram webhook")
 async def telegram_webhook(update: dict, request: Request):
-    """Handle incoming Telegram bot updates (callback queries from inline buttons).
-    This is called by Telegram's webhook system, not manually.
-
-    **Payload:** Raw Telegram Update object (see Telegram Bot API docs).
-
-    **Auth:** validates the `X-Telegram-Bot-Api-Secret-Token` header against the
-    `telegram_webhook_secret` setting. Telegram sends this header on every call
-    once the webhook is registered with a `secret_token`. Missing or mismatched
-    header → 401.
-    """
+    """Handle a Telegram webhook update (callback queries from inline buttons); validates X-Telegram-Bot-Api-Secret-Token against the telegram_webhook_secret setting."""
     import hmac as _hmac
     db = SessionLocal()
     try:
@@ -761,12 +741,7 @@ async def telegram_webhook(update: dict, request: Request):
 
 @app.post("/api/telegram/register-webhook", tags=["telegram"], summary="Register Telegram webhook")
 async def telegram_register_webhook(body: dict):
-    """Tell Telegram to POST updates to `{public_url}/api/telegram/webhook`, signed
-    with `telegram_webhook_secret`. `public_url` is the externally reachable base URL
-    (e.g. `https://jobs.example.com`). Must be HTTPS — Telegram rejects plaintext.
-
-    Safe to call multiple times; each call replaces the previous registration.
-    """
+    """Register {public_url}/api/telegram/webhook with Telegram, signed with telegram_webhook_secret; public_url must be HTTPS."""
     from backend.notifier.telegram import register_webhook
     public_url = (body.get("public_url") or "").strip().rstrip("/")
     if not public_url.startswith("https://"):
@@ -926,13 +901,7 @@ def get_active_jobs():
 
 @app.get("/api/monitor/in-flight", tags=["monitor"], summary="Per-job active operations")
 def get_in_flight(job_ids: str = None):
-    """Return {job_id: [job_types]} for currently-running operations tagged with target_job_id.
-
-    Scheduler-level operations (scrape_all, email_check, etc.) are omitted
-    because they have no target_job_id.
-
-    Optional `job_ids` query param: comma-separated UUIDs to filter by.
-    """
+    """Return {job_id: [job_types]} for running ops tagged with target_job_id (scheduler-level ops like scrape_all have none, so are omitted); optional job_ids filters by comma-separated UUIDs."""
     import backend.job_monitor as mon
 
     wanted: set[str] | None = None
@@ -953,13 +922,7 @@ def get_in_flight(job_ids: str = None):
 
 @app.get("/api/monitor/finished", tags=["monitor"], summary="Recently finished per-job runs")
 def get_finished(job_ids: str = None, since: str = None, limit: int = 200):
-    """Return recently finished (completed/failed) runs for the given jobs, with status.
-
-    The dashboard uses this to resolve OK/NOK for an op that just left
-    /monitor/in-flight — the run's ACTUAL status, not inferred from job fields
-    (which is unreliable for re-runs, e.g. a failed re-tailor still leaves an old
-    tailored_resume_id in place).
-    """
+    """Return recently finished (completed/failed) runs for the given jobs, so the dashboard can resolve OK/NOK for an op that just left /monitor/in-flight from the run's actual status rather than job fields."""
     import uuid as _uuid
     from datetime import datetime as _dt, timezone as _tz
 
@@ -1077,16 +1040,7 @@ def get_activity_log(
     type: str = None,
     company: str = None,
 ):
-    """Recent activity log entries across all subsystems.
-
-    **Types:** `scrape`, `h1b`, `cv_score`, `email`, `telegram`
-
-    **Filters:**
-    - `type` — exact match on activity type
-    - `company` — case-insensitive substring match on company name
-    - `limit` — max entries to return (default 50)
-    - `offset` — skip this many entries, so the dashboard can page ("Load more")
-    """
+    """Recent activity log entries, optionally filtered by exact `type` and case-insensitive `company` substring, paginated with limit/offset."""
     from backend.models.db import ActivityLog
     db = SessionLocal()
     try:
@@ -1117,16 +1071,7 @@ def get_scrape_log(
     errors_only: bool = False,
     warnings_only: bool = False,
 ):
-    """Raw scrape run history with per-search/company details.
-
-    Each entry includes: source, jobs_found, new_jobs, error, duration, and
-    `source_breakdown` — per-board `{seen, new}` plus an `error` key for any
-    board that failed inside an otherwise successful run.
-
-    **Filters:**
-    - `errors_only` — only show runs that had errors
-    - `warnings_only` — only show runs with 0 results (warnings)
-    """
+    """Raw scrape run history with per-search/company details, including per-board `source_breakdown`; optionally filtered to errored or 0-result (warning) runs."""
     from backend.models.db import ScrapeLog
     db = SessionLocal()
     try:
@@ -1147,8 +1092,8 @@ def get_scrape_log(
                 "error": log.error,
                 "is_warning": log.is_warning,
                 "duration_seconds": log.duration_seconds,
-                # R3-A-03: per-board {seen, new, error?} — without it a run whose
-                # ZipRecruiter leg 403'd is indistinguishable here from a clean one.
+                # Per-board {seen, new, error?} — without it a run whose ZipRecruiter
+                # leg 403'd is indistinguishable here from a clean one.
                 "source_breakdown": log.source_breakdown or None,
                 "ran_at": log.ran_at.isoformat() if log.ran_at else None,
             }
@@ -1191,13 +1136,7 @@ def get_stats_timeline(days: int = 30):
 
 @app.get("/api/health/entities", tags=["stats"], summary="Companies/searches needing attention")
 def get_failing_entities(window: int = 3):
-    """Active companies + searches whose last `window` scrapes ALL errored or returned
-    0 results — a likely broken/moved ATS or dead URL. Computed from ScrapeLog.
-
-    Paused/inactive entities are never listed (nothing is scraping them, so their
-    last-run state is history), and an entity whose warning has been acknowledged
-    via POST /api/{searches,companies}/{id}/acknowledge drops out until a run
-    newer than the acknowledgement goes wrong."""
+    """Active companies/searches whose last `window` scrapes all errored or returned 0 results (a likely broken/moved ATS or dead URL); acknowledged warnings drop out until a newer run fails again."""
     from backend.models.db import ScrapeLog, Company, Search, is_acknowledged
     from backend.scraper.orchestrator import source_errors, source_label
     db = SessionLocal()
@@ -1205,17 +1144,12 @@ def get_failing_entities(window: int = 3):
         def _reason(entity_col, entity_id, acknowledged_at=None):
             recent = (db.query(ScrapeLog).filter(entity_col == entity_id)
                       .order_by(ScrapeLog.ran_at.desc()).limit(window).all())
-            # An operator who has seen the warning and decided to live with it
-            # acknowledges it; the entity then reads healthy until something
-            # *newer* than the acknowledgement goes wrong. Comparing against the
-            # newest run (not "now") is what makes a later failed run re-raise it
-            # without any expiry timer.
+            # Acknowledging reads healthy until something *newer* than the
+            # acknowledgement goes wrong (compared against the newest run, not "now").
             if recent and is_acknowledged(recent[0].ran_at, acknowledged_at):
                 return None
-            # R3-A-03: one configured board refusing the request is worth
-            # flagging on its own — it needs neither `window` consecutive bad
-            # runs nor a run that returned nothing overall, because the other
-            # boards can mask it entirely.
+            # One configured board refusing the request is worth flagging on its
+            # own, since the other boards can mask it entirely.
             if recent:
                 failed = source_errors(recent[0].source_breakdown)
                 if failed:
@@ -1227,11 +1161,8 @@ def get_failing_entities(window: int = 3):
             err = next((r.error for r in recent if r.error), None)
             return err[:160] if err else f"No results in the last {window} scrapes"
 
-        # Paused/inactive entities are excluded on purpose: they are not being
-        # scraped, so their last-run state is history, not an open problem. The
-        # row itself still shows that history (muted, labelled "paused" /
-        # "inactive"); it just no longer feeds the rail dot, the header
-        # "N need attention" counts or the scheduler health line.
+        # Paused/inactive entities are excluded on purpose (their last-run state
+        # is history, not an open problem) but still show up muted in the row.
         companies = []
         for c in db.query(Company).filter(Company.active == True).all():
             reason = _reason(ScrapeLog.company_id, c.id, c.warning_acknowledged_at)
@@ -1252,24 +1183,13 @@ def get_failing_entities(window: int = 3):
 
 @app.get("/api/stats/score-distribution", tags=["stats"], summary="Resume score distribution")
 def get_score_distribution(detail: bool = False):
-    """Distribution of best resume scores across all scored jobs.
-
-    Default response is the bare bucket list the classic Stats page expects.
-    `detail=true` wraps it with the averages the v2 Stats screen shows:
-
-        {buckets: [...5...], scored_count, avg, tailored_count, tailored_avg}
-
-    `avg` averages the best score per job (the same number the buckets bin on);
-    `tailored_avg` averages only the "Tailored" entry, which the scorer writes
-    when a job is scored against a tailored copy.
-    """
+    """Distribution of best resume scores across all scored jobs; `detail=true` adds scored_count/avg/tailored_count/tailored_avg on top of the bare bucket list."""
     from backend.models.db import Job
 
     db = SessionLocal()
     try:
-        # Only the scores column: loading whole Job rows (descriptions, cached page
-        # text) to read one JSON field cost ~800ms on a few thousand jobs and was
-        # the single thing the Stats page waited on.
+        # Only the scores column: loading whole Job rows to read one JSON field
+        # cost ~800ms on a few thousand jobs and was the single thing Stats waited on.
         rows = db.query(Job.cv_scores).filter(Job.cv_scores != None).all()
         buckets = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0}
         bests: list[float] = []
@@ -1402,9 +1322,7 @@ async def llm_costs(days: int = 7):
 
 @app.get("/api/stats", tags=["stats"], summary="Dashboard statistics")
 def get_stats():
-    """Aggregate counts: total jobs, new jobs, saved jobs, total applications,
-    and application status breakdown.
-    """
+    """Aggregate counts: total jobs, new jobs, saved jobs, total applications, and application status breakdown."""
     from backend.models.db import Job, Application
     from sqlalchemy import func
     db = SessionLocal()

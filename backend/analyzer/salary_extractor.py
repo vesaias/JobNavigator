@@ -6,9 +6,7 @@ logger = logging.getLogger("jobnavigator.salary")
 
 
 def extract_salary(description: str, h1b_median_salary: int = None) -> dict:
-    """Extract salary range from job description text.
-    Falls back to H-1B LCA median if no salary found in text.
-    """
+    """Extract salary range from job description text, falling back to H-1B LCA median if none found."""
     if not description:
         if h1b_median_salary:
             return {
@@ -18,18 +16,16 @@ def extract_salary(description: str, h1b_median_salary: int = None) -> dict:
             }
         return {"salary_min": None, "salary_max": None, "salary_source": "unknown"}
 
-    # Cap input size before any regex runs. Matches the scraper's existing 30K truncation.
-    # Bounds polynomial-time HTML stripper + salary regex to defend against pathological input.
+    # Cap input size before any regex runs (matches the scraper's 30K truncation) to bound the
+    # HTML stripper + salary regex against pathological input.
     description = description[:30_000]
 
-    # Strip HTML tags and decode entities before parsing
     if "<" in description and ">" in description:
         import html as _html
         description = _html.unescape(re.sub(r'<[^>]+>', ' ', description))
 
-    # Pattern 1: $XXX,XXX - $XXX,XXX (full dollar amounts with range)
-    # Handles: $140,000 USD - $210,000 USD, USD$150,000 - USD$200,000,
-    #          173,900.00 - 235,200.00 USD, $122,550.00-$201,000.00
+    # Pattern 1: $XXX,XXX - $XXX,XXX (full dollar amounts with range), e.g. $140,000 USD - $210,000 USD,
+    # USD$150,000 - USD$200,000, 173,900.00 - 235,200.00 USD, $122,550.00-$201,000.00.
     match = re.search(
         r'(?:USD\s*)?\$\s*(\d{1,3}(?:,\d{3})*)(?:\.\d{1,2})?\s*(?:USD|per\s*year|annually|/\s*yr|/\s*year|a\s*year)?\s*(?:[-–—/]+|(?:and\s+)?up\s+to|to|and)\s*(?:USD\s*)?\$?\s*(\d{1,3}(?:,\d{3})*)(?:\.\d{1,2})?',
         description
@@ -89,9 +85,7 @@ def extract_salary(description: str, h1b_median_salary: int = None) -> dict:
 
 
 def apply_salary_to_job(job, company_h1b_median: int = None) -> None:
-    """Extract salary from job description and update job fields.
-    Only updates if no salary already set from scraper.
-    """
+    """Extract salary from job description and update job fields; only updates if no salary is already set from the scraper."""
     if job.salary_min and job.salary_source == "posting":
         return  # Already have salary from scraper
 

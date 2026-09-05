@@ -119,7 +119,6 @@ def list_jobs(
 
     total = q.count()
 
-    # Sort
     if sort_by == "score":
         q = q.order_by(desc(Job.best_cv_score).nullslast())
     elif sort_by == "salary":
@@ -165,11 +164,7 @@ def list_jobs(
 
 
 def _expand_company_filter(db, company):
-    """Expand a comma-separated list of company names to include all aliases
-    of each. Picking 'Amazon' will match jobs whose Job.company is 'Audible',
-    'AWS', or 'Prime Video & Amazon MGM Studios'. Returns a comma-separated
-    string of names + aliases. Empty input returns None. Orphan names (no
-    matching Company record) pass through unchanged."""
+    """Expand a comma-separated list of company names to include all aliases of each (e.g. 'Amazon' also matches 'Audible', 'AWS'); empty input returns None, and orphan names pass through unchanged."""
     if not company:
         return None
     vals = [c.strip() for c in company.split(",") if c.strip()]
@@ -221,8 +216,7 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
 
 @router.get("/feed-stats")
 def feed_stats(db: Session = Depends(get_db)):
-    """Global counts for the v2 feed header — arrived today + not-yet-scored.
-    (The paged /jobs response only sees the current page.)"""
+    """Global counts for the v2 feed header — arrived today + not-yet-scored — since the paged /jobs response only sees the current page."""
     from datetime import datetime, timezone
     from sqlalchemy import func, text
     start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -236,9 +230,7 @@ def feed_stats(db: Session = Depends(get_db)):
 
 @router.get("/unscored-ids")
 def unscored_ids(limit: int = 500, db: Session = Depends(get_db)):
-    """IDs of not-yet-scored new/saved jobs — the header 'Score N unscored'
-    action scores exactly these (they sort to the bottom by score, so the feed
-    page won't contain them)."""
+    """IDs of not-yet-scored new/saved jobs; the header's "Score N unscored" action scores exactly these, since they sort to the bottom by score and won't be on the feed page."""
     from sqlalchemy import text
     rows = db.execute(text(
         "select id from jobs where status in ('new','saved') "
@@ -263,10 +255,7 @@ def list_job_companies(
     counts: Optional[bool] = None,
     db: Session = Depends(get_db),
 ):
-    """Return distinct CANONICAL company names from jobs matching current filters,
-    sorted. Aliases collapse to their parent (e.g. 'Audible' and 'Prime Video &
-    Amazon MGM Studios' both surface as 'Amazon'). With ?counts=1, returns
-    [{name, count}] sorted by open-role count (for the v2 Company filter)."""
+    """Return distinct canonical company names from jobs matching current filters, sorted, with aliases collapsed to their parent (e.g. 'Audible' -> 'Amazon'); with ?counts=1, returns [{name, count}] sorted by open-role count."""
     from backend.models.db import build_company_lookup
     if counts:
         from sqlalchemy import func
@@ -313,7 +302,7 @@ def list_job_sources(
 ):
     """Return distinct source values from jobs matching current filters, sorted."""
     company = _expand_company_filter(db, company)
-    # FEED-26: ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
+    # ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
     q = (db.query(Job.source, func.count(Job.id)) if counts else db.query(Job.source).distinct()).filter(Job.source.isnot(None), Job.source != "")
     q = _apply_common_filters(q, status=status, company=company, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
@@ -342,7 +331,7 @@ def list_job_verdicts(
 ):
     """Return distinct h1b_verdict values from jobs matching current filters."""
     company = _expand_company_filter(db, company)
-    # FEED-26: ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
+    # ?counts=1 returns [{name, count}] so the dropdown can show how many jobs each value has
     q = (db.query(Job.h1b_verdict, func.count(Job.id)) if counts else db.query(Job.h1b_verdict).distinct()).filter(Job.h1b_verdict.isnot(None), Job.h1b_verdict != "")
     q = _apply_common_filters(q, status=status, company=company, source=source,
                               min_score=min_score, saved=saved, title_search=title_search,
@@ -356,15 +345,7 @@ def list_job_verdicts(
 
 @router.post("/save-from-extension")
 async def save_from_extension(body: dict, db: Session = Depends(get_db)):
-    """Save a job from the Chrome Extension to the Job Feed (no application created).
-
-    Runs the same enrichment pipeline as LinkedIn passive capture:
-      • title-include / title-exclude / company-exclude filters from the linked
-        'Extension' search (matches linkedin_extension.py behavior)
-      • salary extraction
-      • H-1B / body-exclusion scan (flagged jobs go to status='ignored')
-      • auto-score chain when the 'Extension' search has auto_scoring_depth set
-    """
+    """Save a job from the Chrome Extension to the Job Feed (no application created), running the same enrichment as LinkedIn passive capture: Extension search title/company filters, salary extraction, H-1B/body-exclusion scan, and auto-score when configured."""
     from backend.analyzer.h1b_checker import check_job_h1b
     from backend.models.db import Search
     import uuid as _uuid
@@ -383,9 +364,8 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     external_id = make_external_id(company, title, url)
     content_hash = make_content_hash(company, title)
 
-    # Two-layer dedup: check external_id (URL-based) first, fall back to content_hash
-    # (company+title) for cross-source catches where the same job was saved via a
-    # different URL shape.
+    # Two-layer dedup: external_id (URL-based) first, falling back to content_hash
+    # (company+title) for cross-source catches where the same job was saved via a different URL.
     existing = db.query(Job).filter(
         (Job.external_id == external_id) | (Job.content_hash == content_hash)
     ).first()
@@ -399,28 +379,20 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
             _hd = await resolve_company_h1b(db, existing.company or "", allow_live=False)
             apply_salary_to_job(existing, (_hd or {}).get("median_salary"))
         db.commit()
-        # OPEN-12: `saved` is the field the extension reads — a row sitting at
-        # `ignored` never reaches the feed, and re-saving it will not change that.
+        # `saved` is the field the extension reads — a row sitting at `ignored` never
+        # reaches the feed, and re-saving it will not change that.
         out = {"id": str(existing.id), "company": existing.company, "title": existing.title,
                "new": False, "saved": existing.status != "ignored", "status": existing.status}
         if existing.status == "ignored":
             out["reason"] = "already saved earlier and filtered out then — it stays out of the feed"
         return out
 
-    # Link to the hardcoded "Extension" search (manual Save-to-Job-Feed flow).
-    # The "Extension LI" search (search_mode=linkedin_extension) is reserved for the
-    # passive LinkedIn-collections capture path so the two flows can have independent
-    # auto-score / title-filter configs.
+    # Link to the hardcoded "Extension" search (manual Save-to-Job-Feed flow); "Extension LI"
+    # is reserved for passive LinkedIn-collections capture so the two flows can have independent configs.
     ext_search = db.query(Search).filter(Search.search_mode == "extension").first()
 
-    # Apply per-search title + company filters (full parity with linkedin_extension flow):
-    # title-exclude matched case-insensitively, AND merged with global title-exclude phrases.
-    # Rejected jobs are still saved as 'ignored' so the dedup keys stick — this prevents
-    # the user from re-saving the same rejected job over and over.
-    # OPEN-12: the filters used to run silently — the job was stored `ignored`,
-    # never appeared in the feed, and the person who saved it was told nothing.
-    # `reject_message` is the sentence the extension shows; `filter_reject_reason`
-    # stays the operator-facing log line.
+    # Apply per-search title + company filters (parity with linkedin_extension); rejected jobs
+    # are still saved as 'ignored' so dedup keys stick. reject_message is user-facing, filter_reject_reason is the log line.
     filter_reject_reason = None
     reject_message = None
     if ext_search is not None:
@@ -508,8 +480,8 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
         "company": job.company,
         "title": job.title,
         "new": True,
-        # OPEN-12: the row is always written (the dedup keys have to stick), but
-        # `saved` says whether it actually reached the feed.
+        # The row is always written (the dedup keys have to stick), but `saved`
+        # says whether it actually reached the feed.
         "saved": job.status == "new",
         "status": job.status,
         "h1b_jd_flag": bool(job.h1b_jd_flag),
@@ -521,11 +493,7 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
 
 @router.post("/bulk-update")
 def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
-    """Bulk update multiple jobs at once. Allowed fields: status, seen, saved.
-
-    Returns {"updated": count, "not_found": [<ids>]} so the frontend can
-    reconcile IDs that failed to resolve (e.g. stale client-side selections).
-    """
+    """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>]} so the frontend can reconcile stale client-side selections."""
     job_ids = body.get("job_ids", [])
     updates = body.get("updates", {})
     allowed = {"status", "seen", "saved"}
@@ -560,10 +528,8 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
 
 @router.patch("/{job_id}")
 async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # NOTE: must be async — launch_background() below uses asyncio.create_task(), which
-    # needs a running event loop. A sync endpoint runs in a threadpool with no loop, so
-    # the task would silently fail to start (JobRun row created but never registered in
-    # _running → invisible to /monitor/in-flight → no scoring toast).
+    # Must be async — launch_background() uses asyncio.create_task(), which needs a running
+    # event loop; a sync endpoint's threadpool has none, so the task would silently never start.
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -574,9 +540,8 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
             setattr(job, key, value)
     db.commit()
 
-    # Trigger CV scoring when job is saved (respects on_save_action setting). Launched
-    # as a TRACKED op so it shows in /monitor/in-flight + /monitor/finished — that's
-    # what drives the dashboard's scoring badge and start/OK-NOK toasts.
+    # Trigger CV scoring when job is saved (respects on_save_action); launched as a tracked
+    # op so it shows in /monitor/in-flight + /monitor/finished, driving the dashboard's scoring toasts.
     if updates.get("saved") is True and not job.cv_scores:
         from backend.models.db import Setting
         on_save_row = db.query(Setting).filter(Setting.key == "on_save_action").first()
@@ -597,19 +562,16 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
             except Exception as e:
                 logger.warning(f"on-save auto-score launch failed for {job.id}: {e}")
 
-    # R2-H-05: "Applied" is a compound action — it can create an Application and a
-    # Company alongside the status change. Report what it created so the Feed's
-    # Undo can reverse all of it instead of leaving orphans behind.
+    # "Applied" is a compound action that can create an Application and a Company alongside
+    # the status change; report what it created so the Feed's Undo can reverse all of it.
     created_application_id = None
     created_company_id = None
 
-    # Auto-cache page and create Application when status changes to applied
     if updates.get("status") == "applied":
         if job.url and not job.has_cached_page:
             from backend.api.routes_applications import _cache_job_page
             background_tasks.add_task(_cache_job_page, str(job.id), job.url)
 
-        # Auto-create Application record if none exists
         from backend.models.db import Application
         from datetime import datetime, timezone
         existing_app = db.query(Application).filter(Application.job_id == job.id).first()
@@ -620,7 +582,6 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
             db.commit()
             created_application_id = str(app.id)
 
-        # Auto-create company if it doesn't exist
         if job.company and job.company.strip():
             from backend.models.db import Company, Setting
             from backend.models.db import find_company_by_name
@@ -661,8 +622,7 @@ def cache_applied_jobs(background_tasks: BackgroundTasks, db: Session = Depends(
 
 
 def _reader_html(body_html: str, meta: str) -> str:
-    """Wrap cleaned posting HTML in the shared reader shell (used by the cached-page
-    and live-page endpoints)."""
+    """Wrap cleaned posting HTML in the shared reader shell (used by the cached-page and live-page endpoints)."""
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -707,10 +667,7 @@ def get_cached_page(job_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{job_id}/frame-check")
 async def frame_check(job_id: str, db: Session = Depends(get_db)):
-    """Report whether the posting can be embedded in an iframe without the extension.
-    Blocks only when we CONFIDENTLY see a framing block (X-Frame-Options, or a CSP
-    frame-ancestors directive) on a successful fetch; any fetch error → embeddable
-    True so the feed still tries the live preview."""
+    """Report whether the posting can be embedded in an iframe without the extension; blocks only on a confident framing signal (X-Frame-Options or a CSP frame-ancestors directive) on a successful fetch, and treats a fetch error as embeddable so the feed still tries the live preview."""
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -732,9 +689,7 @@ async def frame_check(job_id: str, db: Session = Depends(get_db)):
 
 
 def _inject_base(raw_html: str, url: str) -> str:
-    """Return the page's own HTML with a <base href> so its relative CSS/images/links
-    resolve against the source, and its embedded CSP <meta> stripped (would otherwise
-    block the inlined render). Scripts are neutered by the iframe sandbox, not here."""
+    """Return the page's own HTML with a <base href> so its relative CSS/images/links resolve against the source, with its embedded CSP <meta> stripped (would otherwise block the render); scripts are neutered by the iframe sandbox, not here."""
     import re
     import html as _html
     raw_html = re.sub(
@@ -749,10 +704,7 @@ def _inject_base(raw_html: str, url: str) -> str:
 
 @router.get("/{job_id}/live-page")
 async def get_live_page(job_id: str, db: Session = Depends(get_db)):
-    """Fetch the posting from the backend (SSRF-guarded) and return its OWN HTML so the
-    feed can show the real page — not a reader extraction — even when the browser
-    extension isn't stripping X-Frame-Options. Warms the cached_page_* columns as a
-    side effect (cleaned text, for scoring)."""
+    """Fetch the posting from the backend (SSRF-guarded) and return its own HTML so the feed can show the real page even when the extension isn't stripping X-Frame-Options; warms the cached_page_* columns as a side effect."""
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -776,10 +728,8 @@ async def get_live_page(job_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=502, detail=f"Could not fetch posting: {e}")
     if not (raw or "").strip():
         raise HTTPException(status_code=502, detail="Posting returned no content")
-    # Probe: is there real server-rendered content, or just a client-side app shell?
-    # JS-rendered postings (Workday, Jobright, …) come back as a near-empty shell that
-    # would only show a spinner without scripts — treat those as a failure so the feed
-    # falls back to the extension message instead of a blank/spinning frame.
+    # Probe: is there real server-rendered content, or a client-side app shell? JS-rendered
+    # postings come back near-empty (just a spinner without scripts) — treat that as a failure.
     clean_html, text = _extract_clean_content(raw)
     if len((text or "").strip()) < 200:
         raise HTTPException(status_code=502, detail="Posting is rendered client-side — needs the extension")

@@ -1,9 +1,4 @@
-"""Tests for gmail_client email→application matching + sender verification.
-
-Guards the Amazon bug: an email from company A must never be applied to company B's
-application just because they share a generic job title ("Product Manager"). Matching
-is anchored on the *sender* (From header / domain / subject), never on job title alone.
-"""
+"""Tests gmail_client email→application matching: matching is anchored on the sender (From header/domain/subject), never on job title alone, so a shared title never matches the wrong company."""
 from unittest.mock import MagicMock
 
 
@@ -81,9 +76,7 @@ def test_helper_short_token_no_substring_false_positive():
 # --- _match_email_to_application (keyword-path matcher) ---
 
 def test_amazon_email_does_not_match_kpler_or_docusign_by_shared_title():
-    """The reported bug, end to end through the matcher: an Amazon acknowledgment must
-    NOT match Kpler/DocuSign applications that happen to share the title 'Product Manager'.
-    """
+    """End to end through the matcher: an Amazon acknowledgment must not match Kpler/DocuSign applications sharing the title 'Product Manager'."""
     from backend.email_monitor.gmail_client import _match_email_to_application
     apps = [_app("Kpler", "Product Manager"), _app("DocuSign", "Product Manager")]
     matched = _match_email_to_application(

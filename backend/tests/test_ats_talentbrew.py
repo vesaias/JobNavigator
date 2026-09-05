@@ -3,10 +3,7 @@ import pytest
 
 
 def test_is_talentbrew_positive():
-    """Original _is_talentbrew_ajax checks for '/search-jobs/results?' substring
-    in the URL (case-insensitive). Used by BlackRock, Intuit, and other legacy
-    TalentBrew-hosted career pages.
-    """
+    """Checks for the '/search-jobs/results?' substring (case-insensitive); used by BlackRock, Intuit, and other TalentBrew career pages."""
     from backend.scraper.ats.talentbrew import is_talentbrew
     assert is_talentbrew("https://careers.blackrock.com/search-jobs/results?keywords=engineer")
 

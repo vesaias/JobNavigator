@@ -63,12 +63,9 @@ def test_extract_salary_input_capped_at_30k_chars():
 
 
 def test_extract_salary_single_value_not_picked_as_range():
-    """A single salary mention (no range) should not populate min AND max to the same value
-    unless that's the documented behavior. Verify actual: range-only patterns win."""
+    """A single salary mention (no range) does not populate both min and max to the same value; range-only patterns win."""
     from backend.analyzer.salary_extractor import extract_salary
     result = extract_salary("Starting salary $100,000")
-    # Depending on impl, this may return None/None OR 100000/100000.
-    # Just assert we get SOME sensible result without crashing.
     assert isinstance(result, dict)
     assert "salary_min" in result
     assert "salary_max" in result

@@ -153,9 +153,8 @@ def list_companies(
         open_week = sum(week_by_key.get(k, 0) for k in keys)
         fs = sum(fitsum_by_key.get(k, 0) for k in keys)
         fc = sum(fitcnt_by_key.get(k, 0) for k in keys)
-        # Applications summed over name + aliases too: "Open", "+7d" and "Ø Fit"
-        # already are, so a name-only count made the Apps column disagree with
-        # its neighbours for any company that has applications under an alias.
+        # Applications summed over name + aliases too, matching Open/+7d/Ø Fit — a
+        # name-only count would disagree with its neighbours for aliased companies.
         apps = sum(app_counts.get(k, 0) for k in keys)
         return open_jobs, open_week, (round(fs / fc) if fc else None), apps
 
@@ -216,7 +215,6 @@ def create_company(data: CompanyCreate, background_tasks: BackgroundTasks, db: S
     db.add(company)
     db.commit()
 
-    # Fire H-1B lookup in background
     company_id = str(company.id)
     background_tasks.add_task(_fire_h1b_async, company_id)
 
@@ -243,7 +241,6 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
             setattr(company, key, value)
     db.commit()
 
-    # Re-fetch H-1B if slug or name changed
     if updates.get("h1b_slug") != old_slug or updates.get("name") != old_name:
         if "h1b_slug" in updates or "name" in updates:
             background_tasks.add_task(_fire_h1b_async, company_id)
@@ -257,14 +254,7 @@ def update_company(company_id: str, updates: dict, background_tasks: BackgroundT
 
 @router.post("/{company_id}/acknowledge")
 def acknowledge_company_warning(company_id: str, db: Session = Depends(get_db)):
-    """Mark this company's current scrape warning as seen.
-
-    /api/health/entities stops counting the company (rail dot, header "N need
-    attention") while its newest ScrapeLog row is no newer than this stamp. The
-    row keeps showing the warning, muted, so the history stays visible; a run
-    that fails *after* the acknowledgement is newer, so it raises it again with
-    no expiry timer to tune.
-    """
+    """Mark this company's current scrape warning as seen so /api/health/entities stops counting it until a newer ScrapeLog row appears; the warning stays visible but muted, and a later failure raises it again with no expiry timer."""
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -276,19 +266,12 @@ def acknowledge_company_warning(company_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/{company_id}")
 def delete_company(company_id: str, db: Session = Depends(get_db)):
-    """Delete a company record. Jobs already found under this company are kept
-    (they carry the company name, not an FK), so the feed is unaffected."""
+    """Delete a company record; jobs already found under it are kept (they carry the company name, not an FK), so the feed is unaffected."""
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    # R3-A-08: ScrapeLog.company_id is a plain FK with no ON DELETE in the live
-    # schema, so deleting a company that has ever been scraped raised
-    # ForeignKeyViolation and the endpoint returned a bare 500. Every scheduled
-    # scrape writes one of these rows, and since R2-H-02 every manual scrape does
-    # too — which made essentially every real company undeletable. Orphan the audit
-    # rows rather than deleting them: a run that happened still happened, and the
-    # Stats run history stays readable. (models/db.py now declares SET NULL, but
-    # there is no Alembic here, so this is what takes effect on the existing DB.)
+    # ScrapeLog.company_id has no ON DELETE in the live schema (models/db.py declares
+    # SET NULL, but there is no Alembic here), so orphan the audit rows instead of deleting them.
     db.query(ScrapeLog).filter(ScrapeLog.company_id == company.id).update(
         {"company_id": None}, synchronize_session=False)
     db.delete(company)
@@ -331,7 +314,6 @@ def auto_create_from_jobs(background_tasks: BackgroundTasks, db: Session = Depen
         created += 1
     db.commit()
 
-    # Fire H-1B lookups for all newly created companies
     for cid in new_ids:
         background_tasks.add_task(_fire_h1b_async, cid)
 
@@ -453,15 +435,12 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
 
     include_expr = company.title_include_expr
     exclude_kws = [kw.lower() for kw in (company.title_exclude_keywords or [])]
-    # Mirror the live scraper: global title_exclude_global is applied at INSERT time
-    # (see scraper/sources/company_pages.py:_apply_company_filters call), so the test
-    # endpoint should report what would actually save — not just per-company filters.
+    # Mirrors the live scraper: title_exclude_global is applied at INSERT time (see
+    # scraper/sources/company_pages.py:_apply_company_filters), so this reports what would actually save.
     from backend.models.db import get_global_title_exclude
     global_exclude_kws = [kw.lower() for kw in (get_global_title_exclude(db) or [])]
-    # R3-A-01: the run also drops jobs whose *body* matches a body_exclusion_phrases
-    # entry (stored as `ignored`), which the preview never showed — "14 kept" then
-    # became "+13 new" with nothing saying why. Same pure phrase scan the run uses;
-    # no live MyVisaJobs lookup, so this stays a local, network-free check.
+    # The run also drops jobs whose body matches body_exclusion_phrases (stored as
+    # `ignored`); mirrored here with the same phrase scan, no live MyVisaJobs lookup.
     from backend.analyzer.h1b_checker import load_exclusion_phrases, scan_jd_for_h1b_flags
     body_phrases = load_exclusion_phrases(db) or []
 
@@ -554,7 +533,6 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 await _setup_route_blocks(page)
                 await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
                 await _wait_for_content(page, company.wait_for_selector)
-                # Capture viewport screenshot before extraction
                 png_bytes = await page.screenshot(full_page=True)
                 screenshots.append({
                     "url": target_url,
@@ -571,11 +549,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 if page:
                     await _close_page(page)
 
-        # Classify valid jobs with keyword filter reasons.
-        # Two filter layers run in production:
-        #   1. Per-company:  title_exclude_keywords + title_include_expr
-        #   2. Global:       title_exclude_global setting (applied at INSERT time)
-        # Both are reported here so the test result matches what would actually save.
+        # Classify jobs with filter reasons across the layers the live run applies
+        # (per-company title filters, then the global title_exclude_global setting).
         results = []
         after_company_count = 0   # passes per-company only
         would_save_count = 0      # passes per-company, global AND the body scan
@@ -599,7 +574,6 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
             body_checked = False
             if passes_company:
                 after_company_count += 1
-                # Run global title-exclude on the same title (case-insensitive word boundary)
                 global_excluded_by = [
                     kw for kw in global_exclude_kws
                     if re.search(r'\b' + re.escape(kw) + r'\b', title_orig, re.IGNORECASE)
@@ -632,9 +606,8 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 "reason": reason,
                 "passes_company_filter": passes_company,
                 "global_excluded_by": global_excluded_by,
-                # R3-A-01: the phrase that would make the run store this as
-                # `ignored`, or null. body_checked is false when the preview had
-                # no description to scan.
+                # The phrase that would make the run store this as `ignored`, or null;
+                # body_checked is false when the preview had no description to scan.
                 "body_excluded_by": body_excluded_by,
                 "body_checked": body_checked,
             })
@@ -662,7 +635,7 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
             "total_rejected": len(all_rejected),
             "after_company_filter": after_company_count,  # passes per-company only
             "after_filter": would_save_count,             # passes all three — what'd actually save
-            # R3-A-01 footer arithmetic: kept · title-filtered · would-be-ignored
+            # Footer arithmetic: kept · title-filtered · would-be-ignored
             "body_excluded_count": body_excluded_count,
             "body_unchecked_count": body_unchecked_count,
             "body_phrase_count": len(body_phrases),

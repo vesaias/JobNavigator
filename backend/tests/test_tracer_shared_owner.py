@@ -1,15 +1,4 @@
-"""R3-B-03: a résumé and its cover letter must both report their tracer link.
-
-Both documents are written for the same job, so both derive the same
-`{short_id}{stub}` token — that sharing is deliberate (one job, one tracked
-destination). `_repoint` used to hand the row to whoever rendered last and NULL
-the other owner's FK, so `/resumes/{id}/tracer-stats` came back empty whenever
-the letter had rendered more recently, and vice versa: per-document attribution
-flipped on every render.
-
-The row now carries both FKs at once. Rendering order stops mattering, and the
-click history (which hangs off the TracerLink) is never re-parented away.
-"""
+"""A résumé and its cover letter for the same job share one tracer link/token; the row carries both FKs so rendering order never re-parents the click history."""
 from backend.api.routes_resumes import _rewrite_urls_with_tracers, get_tracer_stats
 from backend.api.routes_cover_letters import get_tracer_stats as get_cl_tracer_stats
 from backend.models.db import CoverLetter, Job, Resume, Setting, TracerClickEvent, TracerLink
@@ -53,7 +42,7 @@ def test_both_documents_report_after_every_render_order(test_db):
     assert len(get_tracer_stats(RESUME_ID, db=test_db)) == 1
 
     _render_letter(test_db)
-    # the letter now reports it — and, unlike before, so does the résumé
+    # the letter now reports it, and so does the résumé
     assert len(get_cl_tracer_stats(CL_ID, db=test_db)) == 1
     assert len(get_tracer_stats(RESUME_ID, db=test_db)) == 1, \
         "rendering the letter must not empty the résumé's tracer stats"
@@ -63,7 +52,7 @@ def test_both_documents_report_after_every_render_order(test_db):
     assert len(get_cl_tracer_stats(CL_ID, db=test_db)) == 1, \
         "re-rendering the résumé must not empty the letter's tracer stats"
 
-    # one shared row, one token, owned by both — not two rows and not a flip-flop
+    # one shared row, one token, owned by both
     links = test_db.query(TracerLink).all()
     assert len(links) == 1
     assert links[0].token == "20892li"

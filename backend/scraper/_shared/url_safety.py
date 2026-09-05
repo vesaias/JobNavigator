@@ -1,17 +1,5 @@
-"""URL safety checks to prevent SSRF.
-
-Anyone who can submit a job URL (Chrome extension, scraped JD, tracer config)
-can make the backend fetch arbitrary URLs. Without validation this lets an
-attacker reach:
-  - http://169.254.169.254/latest/meta-data/  — cloud metadata service
-  - http://127.0.0.1:5432/                    — internal Postgres
-  - http://10.x / 192.168.x.x / 100.64/10     — LAN / Tailscale peers
-A redirect can also chain a public URL to a private one (DNS rebinding too).
-
-Public API:
-  - assert_public_http_url(url)  — synchronous scheme + DNS validation
-  - safe_get(url, ...)           — httpx.get that re-validates every redirect hop
-"""
+"""URL safety checks to prevent SSRF: anyone who can submit a job URL could otherwise
+make the backend fetch cloud metadata, internal services, or LAN peers, including via redirect/DNS rebinding."""
 import asyncio
 import ipaddress
 import logging
@@ -29,18 +17,13 @@ class UnsafeURLError(ValueError):
     """Raised when a URL fails SSRF validation."""
 
 
-# RFC 6598 carrier-grade NAT. Python's ipaddress does NOT flag this as private,
-# but Tailscale + some self-hosting setups (including ElfHosted's overlay net)
-# live here, so we treat it as off-limits for outbound fetches.
+# RFC 6598 carrier-grade NAT: Python's ipaddress does NOT flag this as private,
+# but Tailscale and some self-hosting overlay nets live here, so it's off-limits.
 _CGNAT_NET = ipaddress.ip_network("100.64.0.0/10")
 
 
 def _is_public_ip(ip: str) -> bool:
-    """Return True iff ip is a globally routable public address.
-
-    Rejects: private, loopback, link-local (incl. cloud metadata 169.254/16),
-    multicast, reserved, unspecified, and RFC 6598 CGNAT (Tailscale).
-    """
+    """True iff ip is a globally routable public address (rejects private, loopback, link-local/cloud-metadata, multicast, reserved, and RFC 6598 CGNAT)."""
     try:
         addr = ipaddress.ip_address(ip)
     except ValueError:
@@ -55,12 +38,7 @@ def _is_public_ip(ip: str) -> bool:
 
 
 def assert_public_http_url(url: str) -> None:
-    """Raise UnsafeURLError if url is not a safe public http(s) URL.
-
-    Resolves DNS and requires ALL resolved A/AAAA records to be public. A
-    host that returns even one private/loopback record (classic DNS-rebinding
-    payload) is rejected.
-    """
+    """Raise UnsafeURLError if url is not a safe public http(s) URL; requires ALL resolved A/AAAA records to be public, rejecting classic DNS-rebinding payloads."""
     if not url:
         raise UnsafeURLError("Empty URL")
     parsed = urlparse(url)
@@ -104,14 +82,7 @@ async def safe_get(
     timeout: float = 15.0,
     headers: dict | None = None,
 ) -> httpx.Response:
-    """httpx.get with SSRF protection.
-
-    Auto-follow is disabled; we walk up to MAX_REDIRECTS hops manually,
-    re-validating each Location target so the final resolved host is always
-    public — even under DNS rebinding.
-
-    Raises UnsafeURLError on any unsafe URL in the chain.
-    """
+    """httpx.get with SSRF protection: walks up to MAX_REDIRECTS hops manually, re-validating each Location target, and raises UnsafeURLError on any unsafe URL in the chain."""
     current = url
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
         for _ in range(MAX_REDIRECTS + 1):

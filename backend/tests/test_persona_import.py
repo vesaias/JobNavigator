@@ -1,9 +1,4 @@
-"""POST /api/persona/import — populate the persona from a base résumé or a PDF.
-
-Import is *initial population*: it replaces `contact` and `resume_content` and
-leaves the five autofill nodes (work_auth, demographics, compensation,
-preferences, qa_bank) exactly as they were.
-"""
+"""POST /api/persona/import: replaces `contact` and `resume_content`; leaves the five autofill nodes untouched."""
 import uuid
 
 import pytest
@@ -94,8 +89,7 @@ def test_import_from_base_resume_maps_contact_and_content(api_client, test_db):
 
 
 def test_import_overwrites_and_leaves_other_nodes_alone(api_client, test_db):
-    """contact + resume_content are replaced wholesale; the five autofill nodes
-    keep every value they had."""
+    """contact + resume_content are replaced wholesale; the five autofill nodes keep every value they had."""
     _seed(test_db)
     p = test_db.query(Persona).filter(Persona.id == 1).first()
     p.contact = {"first_name": "Old", "email": "old@example.com", "current_company": "Nowhere"}
@@ -190,8 +184,7 @@ def test_import_without_resume_id_or_file_400(api_client, test_db):
 # ── from a PDF ──────────────────────────────────────────────────────────────
 
 def test_import_pdf_uses_the_resume_parser(api_client, test_db, monkeypatch):
-    """The PDF path calls routes_resumes.parse_resume_pdf — the same single-LLM-call
-    parser /api/resumes/import-pdf uses — and creates no Resume row."""
+    """The PDF path calls routes_resumes.parse_resume_pdf, the same parser /api/resumes/import-pdf uses, and creates no Resume row."""
     _seed(test_db)
 
     seen = {}

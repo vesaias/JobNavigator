@@ -1,28 +1,12 @@
-"""Title/URL filtering helpers + title expression parser.
-
-Central gate for "is this actually a valid job posting?" logic. All scrapers
-run jobs through _apply_company_filters and _validate_job before DB insert.
-
-Public:
-  - match_title_expr(expr, title) — AND/OR/parens/quoted-phrase matcher
-  - _validate_job(title, url) — returns None if valid, else rejection reason string
-  - _apply_company_filters(jobs, company, global_title_exclude=None) — returns (kept, rejected)
-  - build_search_exclude_sets(db, search) — (global_set, search_set) for company-name dedup
-  - GARBAGE_TITLES, GARBAGE_SUBSTRINGS, _LOCALE_NAMES — exported for direct use in generic fallback
-"""
+"""Title/URL filtering helpers + title expression parser: the central "is this a
+valid job posting?" gate all scrapers run jobs through before DB insert."""
 import json
 import re
 from urllib.parse import urlparse
 
 
 def build_search_exclude_sets(db, search) -> tuple[set, set]:
-    """Return (global_exclude_set, search_exclude_set) of lowercased company names.
-
-    The search-level set is the union of:
-      • search.company_exclude (explicit per-search list), and
-      • every active Company's name + aliases when search.exclude_active_companies is true
-        (lets a keyword/URL search skip companies we already scrape directly).
-    """
+    """Return (global_exclude_set, search_exclude_set) of lowercased company names; the search set adds every active Company's name+aliases when exclude_active_companies is true."""
     from backend.models.db import Setting, Company
 
     global_row = db.query(Setting).filter(Setting.key == "company_exclude_global").first()
@@ -36,10 +20,8 @@ def build_search_exclude_sets(db, search) -> tuple[set, set]:
 
     search_set = {(e or "").lower() for e in (search.company_exclude or []) if e}
     if getattr(search, "exclude_active_companies", False):
-        # Only exclude companies that actually produce competing jobs from a Company
-        # scrape — i.e. have at least one scrape_url. An active Company with no URLs
-        # never duplicates this search's results, so excluding it would only hide
-        # legitimate keyword/URL hits.
+        # Only exclude companies with at least one scrape_url — one with no URLs
+        # never duplicates this search's results, so excluding it would hide real hits.
         for c in db.query(Company).filter(Company.active == True).all():  # noqa: E712
             if not c.scrape_urls:
                 continue
@@ -213,8 +195,7 @@ def _validate_job(title: str, url: str) -> str | None:
 # ── Per-company keyword filters ───────────────────────────────────────────────
 
 def _apply_company_filters(jobs: list[dict], company, global_title_exclude: list = None) -> tuple[list[dict], list[dict]]:
-    """Filter job list using per-company title_include_expr and title_exclude_keywords.
-    Returns (kept, rejected) tuples."""
+    """Filter jobs using per-company title_include_expr and title_exclude_keywords; returns (kept, rejected)."""
     include_expr = company.title_include_expr
     merged = list(set((company.title_exclude_keywords or []) + (global_title_exclude or [])))
     exclude_kws = [kw.lower() for kw in merged]

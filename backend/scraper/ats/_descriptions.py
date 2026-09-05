@@ -1,9 +1,5 @@
-"""ATS-specific job description fetchers.
-
-_fetch_description_ats is a dispatcher that tries each supported ATS's description
-API (Oracle HCM ById, Workday JSON, Lever, Greenhouse, etc.) before falling back to
-generic HTML extraction via _fetch_job_description.
-"""
+"""ATS-specific job description fetchers; _fetch_description_ats dispatches to each
+supported ATS's API before _fetch_job_description falls back to generic HTML extraction."""
 import asyncio
 import functools
 import html as _html_module
@@ -21,31 +17,14 @@ from backend.scraper._shared.urls import host_matches as _host_matches
 logger = logging.getLogger("jobnavigator.scraper.ats.descriptions")
 
 
-# Greenhouse slugs are constrained: alphanumerics + hyphens. Everything else is
-# rejected before we put it into a URL path — closes the door on punycode/IDN
-# weirdness from malformed hostnames silently composing into a request URL.
+# Greenhouse slugs are constrained to alphanumerics + hyphens, rejecting anything
+# else before it goes into a URL path — closes the door on punycode/IDN weirdness.
 _GH_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
 @functools.lru_cache(maxsize=256)
 def _resolve_branded_greenhouse_slug(host: str) -> str | None:
-    """Look up the Greenhouse board slug for a customer host like `careers.nebius.com`.
-
-    Walks Company.scrape_urls — for any company with a `job-boards.greenhouse.io/{slug}`
-    URL, we treat their other scrape_urls (and aliases / common branded patterns) as
-    redirect targets to that slug.
-
-    Cached: results are stable for the process lifetime, and the alternative is one
-    full Companies-table scan per description fetch (5 concurrent workers × N jobs).
-    Cache invalidates only on process restart — fine for our use case.
-
-    Synchronous SQLAlchemy I/O — call sites must wrap with `asyncio.to_thread()` to
-    avoid blocking the event loop.
-
-    The lookup is best-effort and only used when the bare hostname inference would
-    yield the wrong slug (e.g. `c3.ai` → `c3iot`, `arize.com` → `arizeai`).
-    Returns None if no match.
-    """
+    """Look up the Greenhouse board slug for a customer host like `careers.nebius.com` by walking Company.scrape_urls; cached for process lifetime, and synchronous — callers must wrap with `asyncio.to_thread()`."""
     if not host:
         return None
     host = host.lower()
@@ -54,7 +33,6 @@ def _resolve_branded_greenhouse_slug(host: str) -> str | None:
     db = SessionLocal()
     try:
         # Build {host: slug} from companies that have a Greenhouse scrape_url.
-        # Each company's name → slug from its job-boards.greenhouse.io URL.
         for c in db.query(Company).all():
             slug = None
             for u in (c.scrape_urls or []):
@@ -71,10 +49,8 @@ def _resolve_branded_greenhouse_slug(host: str) -> str | None:
                 u_host = (urlparse(u).hostname or "").lower()
                 if u_host == host:
                     return slug
-            # Best-effort: derive candidate company-domain keys from name and check
-            # for `careers.{name}.com`, `{name}.com`, `{name}.ai` style matches.
-            #   Variant A: dotted name preserved (handles C3.ai → c3.ai)
-            #   Variant B: dots/spaces stripped (handles "JPMorgan Chase" → jpmorganchase)
+            # Best-effort: derive candidate company-domain keys from the name (dotted
+            # form, e.g. C3.ai -> c3.ai; and stripped, e.g. "JPMorgan Chase" -> jpmorganchase).
             name_lower = (c.name or "").lower().strip()
             name_dotted = name_lower.replace(" ", "")           # "C3.ai" → "c3.ai"
             name_stripped = name_dotted.replace(".", "")        # "c3.ai" → "c3ai"
@@ -93,10 +69,7 @@ def _resolve_branded_greenhouse_slug(host: str) -> str | None:
 
 
 async def _fetch_job_description(url: str) -> str | None:
-    """Fetch a job page and extract plaintext description.
-    Uses ATS-specific APIs for Oracle HCM, Workday, Lever, Greenhouse;
-    falls back to generic HTML extraction for everything else.
-    """
+    """Fetch a job page and extract plaintext description via ATS-specific APIs, falling back to generic HTML extraction."""
     from backend.scraper._shared.url_safety import (
         assert_public_http_url,
         safe_get,
@@ -128,8 +101,8 @@ async def _fetch_job_description(url: str) -> str | None:
         text = soup.get_text(separator="\n", strip=True)[:30_000]
         if len(text) < 100:
             return None
-        # Detect SPA garbage: JSON config blobs from JS-rendered pages
-        # Check first 500 non-title chars for JSON object start
+        # Detect SPA garbage (JSON config blobs from JS-rendered pages): check the
+        # first 500 non-title chars for a JSON object/array start.
         body = text[text.index('\n'):] if '\n' in text[:200] else text
         body_start = body.lstrip()[:500]
         if body_start.startswith('{') or body_start.startswith('['):
@@ -152,8 +125,7 @@ async def _fetch_job_description(url: str) -> str | None:
 async def _fetch_description_ats(url: str) -> str | None:
     """Try ATS-specific APIs to get job description. Returns plaintext or None."""
 
-    # Lazy imports for helpers still in playwright_scraper.py (avoid circular imports).
-    # These will move into ats/ modules in Tasks 7-15.
+    # Lazy imports to avoid circular imports.
     from backend.scraper.ats.oracle_hcm import _oracle_hcm_host
     from backend.scraper.ats.workday import _parse_workday_url, _LOCALE_PATH_RE
 
@@ -410,9 +382,8 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── SmartRecruiters: jobs.smartrecruiters.com/{slug}/{id}[-name] ──
-    # Note: api.smartrecruiters.com is intentionally excluded — JD URLs come from
-    # listing output (jobs.* host), and the api.* path shape is /v1/companies/...
-    # which would not parse with the {slug}/{id} extraction below.
+    # api.smartrecruiters.com is intentionally excluded: its /v1/companies/... path
+    # shape wouldn't parse with the {slug}/{id} extraction below.
     if _host_matches(url, "jobs.smartrecruiters.com", "careers.smartrecruiters.com"):
         path_parts = [p for p in parsed.path.strip("/").split("/") if p]
         if len(path_parts) >= 2:
@@ -453,12 +424,9 @@ async def _fetch_description_ats(url: str) -> str | None:
         return None
 
     # ── Branded Greenhouse: customer host with ?gh_jid={id} ──
-    # Customer career sites like careers.nebius.com, jobs.coinbase.com, c3.ai/...
-    # embed Greenhouse jobs via the gh_jid query param. Their slugs don't always
-    # match the hostname (Nebius=nebius works, but C3.ai=c3iot, Arize=arizeai),
-    # so we (1) consult a host→slug map built from Company.scrape_urls, then
-    # (2) fall back to common hostname patterns. Skip greenhouse.io itself —
-    # those are direct URLs, handled by the next branch.
+    # Customer career sites embed Greenhouse jobs via gh_jid; their slugs don't
+    # always match the hostname, so we consult a host->slug map before falling
+    # back to common hostname patterns. greenhouse.io itself is handled below.
     qs = parse_qs(parsed.query)
     gh_jid_vals = qs.get("gh_jid") or []
     if gh_jid_vals and gh_jid_vals[0].isdigit() and not _host_matches(url, "greenhouse.io"):
@@ -485,10 +453,8 @@ async def _fetch_description_ats(url: str) -> str | None:
                 and host_parts[0] not in (s for s, _ in slug_candidates):
             slug_candidates.append((host_parts[0], "host-bare"))
 
-        # Source URL's registrable-ish domain — used to confirm the API result
-        # came from a slug owned by the same tenant we scraped, preventing the
-        # case where an inferred slug accidentally matches a different
-        # Greenhouse customer with the same gh_jid.
+        # Source URL's registrable-ish domain, used to confirm the API result came
+        # from a slug owned by the same tenant (an inferred slug can collide with another).
         src_host = (parsed.hostname or "").lower()
         src_root = ".".join(src_host.split(".")[-2:]) if "." in src_host else src_host
 
@@ -510,9 +476,7 @@ async def _fetch_description_ats(url: str) -> str | None:
                 except (ValueError, json.JSONDecodeError):
                     continue
                 # For inferred (non-mapped) slugs, confirm the API response's
-                # absolute_url host shares the source URL's root domain. Stops
-                # cross-tenant collision: gh_jid 12345 might exist on slug `acme`
-                # AND `acme-co`; we should only accept the one we actually scraped.
+                # absolute_url host shares the source URL's root domain (stops a cross-tenant collision).
                 if source != "mapped":
                     api_abs = (data.get("absolute_url") or "").lower()
                     api_host = (urlparse(api_abs).hostname or "").lower()
@@ -541,9 +505,7 @@ async def _fetch_description_ats(url: str) -> str | None:
     # ── Greenhouse: boards.greenhouse.io/{company}/jobs/{id} OR ?gh_jid={id} ──
     if _host_matches(url, "greenhouse.io"):
         path_parts = [p for p in parsed.path.strip("/").split("/") if p]
-        # Two URL shapes:
-        #   /{company}/jobs/{id}                     — old-style direct path
-        #   /{company}?gh_jid={id}                   — board page with embed param
+        # Two URL shapes: /{company}/jobs/{id} (direct path) or /{company}?gh_jid={id} (embed param).
         company_slug = job_id = ""
         for i, p in enumerate(path_parts):
             if p == "jobs" and i + 1 < len(path_parts):

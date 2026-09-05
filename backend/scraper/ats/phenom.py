@@ -1,10 +1,5 @@
-"""Phenom People ATS handler — POST to custom API endpoint with JSON payload.
-
-Phenom company URLs are stored in this project as:
-    POST|{api_url}|{json_payload_string}
-This format is required because Phenom has no public API; each company has a
-custom search endpoint + filter schema.
-"""
+"""Phenom People ATS handler — POST to a custom API endpoint with a JSON payload.
+Company URLs are stored as 'POST|{api_url}|{json_payload}' since Phenom has no public API; each company has its own endpoint and filter schema."""
 import json
 import logging
 import re
@@ -40,7 +35,6 @@ async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
     parsed = urlparse(endpoint)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
-    # Ensure we fetch all results in large batches
     base_payload["from"] = 0
     base_payload["size"] = 200
     base_payload.setdefault("jobs", True)

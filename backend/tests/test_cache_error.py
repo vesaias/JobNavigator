@@ -28,16 +28,13 @@ async def test_cache_job_page_populates_cache_error_on_playwright_failure(monkey
     test_db.add(job)
     test_db.commit()
 
-    # Point backend.api.routes_applications's SessionLocal at our test DB
     from sqlalchemy.orm import sessionmaker
     TestSession = sessionmaker(bind=test_db.get_bind())
     monkeypatch.setattr("backend.api.routes_applications.SessionLocal", TestSession, raising=False)
 
-    # Force the Playwright fallback to raise
     async def broken_fetch(*a, **kw):
         raise RuntimeError("browser connection refused")
 
-    # The fallback function name may vary — guess common names
     for attr in ("_fetch_with_playwright", "_cache_with_playwright", "_playwright_fetch"):
         if hasattr(__import__("backend.api.routes_applications", fromlist=[""]), attr):
             monkeypatch.setattr(
@@ -47,7 +44,6 @@ async def test_cache_job_page_populates_cache_error_on_playwright_failure(monkey
             )
             break
     else:
-        # Also try patching httpx directly as the primary fetch
         import httpx
         client = AsyncMock()
         client.get = AsyncMock(side_effect=RuntimeError("network error"))
@@ -69,15 +65,13 @@ async def test_cache_job_page_populates_cache_error_on_playwright_failure(monkey
     except Exception:
         pass  # cache_error should still be populated even if the function raises
 
-    # Re-query for fresh state. cached_page_html is a deferred column — read it
-    # while the session is still open (post-close access raises DetachedInstanceError).
+    # cached_page_html is a deferred column — read it before closing the session (else DetachedInstanceError).
     s = TestSession()
     back = s.query(Job).filter(Job.id == job.id).first()
     cache_error = back.cache_error
     cached_html = back.cached_page_html
     s.close()
-    # The cache_error field should contain something — exact text depends on the error path
-    # Relaxed assertion: it's non-empty
+    # Exact text depends on the error path; relaxed assertion just checks it's non-empty.
     assert cache_error is not None or cached_html is not None, (
         f"Expected either cache_error or cached_page_html to be set; both are None. "
         f"cache_error={cache_error}, cached_page_html={cached_html}"

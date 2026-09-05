@@ -1,9 +1,4 @@
-"""LinkedIn Personal source — scrapes /jobs/collections/recommended/ + /jobs/collections/top-applicant/.
-
-Public entry points:
-- `run(search)` — full scrape entry point for the scheduler / dispatch.
-- `preview(search, db)` — UI dry-run endpoint that returns filtering diagnostics.
-"""
+"""LinkedIn Personal source — scrapes /jobs/collections/recommended/ + /jobs/collections/top-applicant/."""
 import asyncio
 import json
 import logging
@@ -91,7 +86,6 @@ async def _get_linkedin_browser():
         "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
     )
 
-    # Load cookies if they exist
     if os.path.exists(COOKIE_PATH):
         try:
             with open(COOKIE_PATH, "r") as f:
@@ -140,7 +134,6 @@ async def _login(page, context, email: str, password: str):
     await asyncio.sleep(random.uniform(0.5, 1.0))
     await page.click('button[type="submit"]')
 
-    # Wait for navigation
     try:
         await page.wait_for_url(
             lambda url: "/feed" in url or "/jobs" in url or "/mynetwork" in url,
@@ -162,7 +155,6 @@ async def _login(page, context, email: str, password: str):
         if not await _is_logged_in(page):
             raise RuntimeError(f"LinkedIn login failed — landed on unexpected page: {current_url}")
 
-    # Save cookies
     await _save_cookies(context)
     logger.info("LinkedIn login successful, cookies saved")
 
@@ -240,12 +232,7 @@ async def _extract_detail_description(page) -> str:
 
 
 async def _extract_detail_salary(page) -> str:
-    """Extract salary text from the detail panel top card / insights area.
-
-    LinkedIn renders salary in the job insights section above the description.
-    It lives inside the top card alongside location, workplace type, etc.
-    We scan all text nodes in the insights/top-card area for dollar amounts.
-    """
+    """Extract salary text from the detail panel top card / insights area, since LinkedIn renders it there alongside location/workplace type with no dedicated selector."""
     # Strategy 1: specific salary selectors
     for sel in [
         '[class*="salary-main-rail"]',
@@ -291,11 +278,7 @@ async def _extract_detail_salary(page) -> str:
 
 
 async def _extract_apply_url(page, job_id: str = "") -> str:
-    """Extract external apply URL from the Apply button or embedded data.
-
-    LinkedIn external Apply buttons are <a> tags with href pointing to
-    /redir/redirect/?url=<encoded_real_url>. Easy Apply is a <button> (no href).
-    """
+    """Extract the external apply URL from the Apply button or embedded data; external Apply buttons are <a> tags linking to /redir/redirect/?url=..., while Easy Apply is a <button> with no href."""
     from urllib.parse import urlparse, parse_qs, unquote
 
     # Strategy 1: Find <a> tags whose text is "Apply" (not "Easy Apply")
@@ -438,11 +421,7 @@ async def _search_code_elements_for_apply_url(page, job_id: str = "") -> str:
 
 
 async def _enrich_apply_urls(page, jobs: list[dict]):
-    """Navigate to individual job pages to extract apply URLs for jobs that don't have one.
-
-    Called as a separate pass after all cards are collected from a collection,
-    so it won't break card element references during the main scrape loop.
-    """
+    """Navigate to individual job pages to backfill apply URLs, as a separate pass after all cards are collected so it doesn't break card element references during the main scrape loop."""
     needs_enrichment = [j for j in jobs if not j.get("apply_url")]
     if not needs_enrichment:
         logger.info("All jobs already have apply URLs, skipping enrichment")
@@ -467,7 +446,6 @@ async def _enrich_apply_urls(page, jobs: list[dict]):
                 if rate_limit_hits >= 2:
                     logger.warning(f"Hit 429 twice during enrichment, skipping remaining {len(needs_enrichment) - idx} URLs")
                     break
-                # Retry after wait
                 await page.goto(
                     f"https://www.linkedin.com/jobs/view/{job_id}/",
                     wait_until="domcontentloaded",
@@ -478,7 +456,6 @@ async def _enrich_apply_urls(page, jobs: list[dict]):
                     logger.warning(f"Still rate-limited after retry, skipping remaining {len(needs_enrichment) - idx} URLs")
                     break
 
-            # Use _extract_apply_url which finds <a> Apply button with /redir/redirect href
             url = await _extract_apply_url(page, job_id)
             if url:
                 j["apply_url"] = url
@@ -492,11 +469,7 @@ async def _enrich_apply_urls(page, jobs: list[dict]):
 
 
 async def _scroll_job_list(page):
-    """Scroll the left-side job list panel via mouse wheel to load all lazy-rendered cards.
-
-    LinkedIn only renders ~7 cards initially and lazy-loads more on scroll.
-    Mouse wheel on the job list area is the reliable trigger.
-    """
+    """Scroll the left-side job list panel via mouse wheel to load lazy-rendered cards, since LinkedIn renders only ~7 initially and mouse wheel is the reliable trigger."""
     count_js = "() => document.querySelectorAll('a[href*=\"/jobs/view/\"]').length"
     initial_count = await page.evaluate(count_js)
 
@@ -508,7 +481,6 @@ async def _scroll_job_list(page):
     if not box:
         return
 
-    # Move mouse over the job list area
     await page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
 
     prev_count = initial_count
@@ -531,12 +503,7 @@ async def _scroll_job_list(page):
 
 
 async def _scrape_page_with_clicks(page, seen_ids: set, collection_name: str) -> list[dict]:
-    """Extract all cards on the current page by clicking each to load the detail panel.
-
-    For each card: extract title/company/location from the card, then click it
-    to load the right-side detail panel for salary + description.
-    Returns list of fully enriched job dicts.
-    """
+    """Extract all cards on the page by clicking each to load its detail panel for salary + description, returning fully enriched job dicts."""
     await _scroll_job_list(page)
 
     job_links = await page.query_selector_all('a[href*="/jobs/view/"]')
@@ -636,7 +603,6 @@ async def _scrape_page_with_clicks(page, seen_ids: set, collection_name: str) ->
             salary_info = _parse_salary_text(salary_text)
             apply_url = await _extract_apply_url(page, job_id)
 
-            # Use external apply URL as primary if available
             primary_url = apply_url if apply_url else job_url
 
             jobs.append({
@@ -677,10 +643,8 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
         await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
         await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
 
-        # 429 detection with retry
         if await _handle_rate_limit(page, f"page {page_num + 1}"):
             rate_limit_hits += 1
-            # Retry the same page after wait
             await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
             if await _check_rate_limit(page):
@@ -720,7 +684,6 @@ async def run(search: Search) -> dict:
     browser = None
     context = None
     try:
-        # Read credentials from settings
         db_settings = SessionLocal()
         try:
             email_row = db_settings.query(Setting).filter(Setting.key == "linkedin_email").first()
@@ -730,13 +693,11 @@ async def run(search: Search) -> dict:
         finally:
             db_settings.close()
 
-        # Determine which collections to scrape
         collections_to_scrape = search.sources or ["recommended", "top-applicant"]
         collections_to_scrape = [c for c in collections_to_scrape if c in ALL_COLLECTIONS]
         if not collections_to_scrape:
             collections_to_scrape = list(ALL_COLLECTIONS.keys())
 
-        # Launch browser and log in
         pw, browser, context, page = await _get_linkedin_browser()
         await _ensure_logged_in(page, context, email, password)
 
@@ -817,7 +778,6 @@ async def run(search: Search) -> dict:
                 job_url = j.get("apply_url") or j["url"]
                 linkedin_url = j.get("linkedin_url") or j["url"]
 
-                # Check if this LinkedIn ID was already imported via extension
                 li_id = j.get("job_id") or ""
                 if li_id and li_id in existing_li_ids:
                     continue
@@ -916,11 +876,7 @@ async def run(search: Search) -> dict:
 
 
 async def preview(search, db) -> dict:
-    """Test endpoint handler — scrape collections, apply filters, enrich URLs, return results.
-
-    Resilient: errors in individual stages (collection scrape, enrichment) don't
-    discard results from earlier stages. Partial results returned with warnings.
-    """
+    """Test endpoint handler — scrape collections, apply filters, enrich URLs, and return partial results with warnings if a stage fails rather than discarding earlier results."""
     import time as _time
     start = _time.time()
 
@@ -1082,7 +1038,6 @@ async def preview(search, db) -> dict:
             "config": {"mode": "linkedin_personal", "collections": collections_to_scrape},
         }
 
-    # Build final results list
     final_results = []
     for r in results:
         j = r["job"]

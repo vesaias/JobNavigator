@@ -23,17 +23,7 @@ def _flatten_persona(p: Persona) -> str:
 
 
 def _trim_to_chars(text: str, max_chars: int):
-    """Cut `text` to at most `max_chars`, on a sentence or word boundary.
-
-    R3-B-04: `max_chars` reaches the model as prose ("keep it under N characters")
-    and the model treats it as a suggestion — a 120-char ask came back at 137, a
-    600-char ask at 714. The extension only capped answers for fields that declare
-    a `maxLength`, which the common ATS textarea does not, so the picked length was
-    silently ignored on exactly the fields it was picked for. Enforce it here.
-
-    Prefers the last sentence end in the budget; falls back to the last word
-    boundary, and only hard-cuts if neither exists. Returns (text, trimmed).
-    """
+    """Cut text to at most max_chars on a sentence or word boundary, enforced here since the model treats a character limit as a suggestion; returns (text, trimmed)."""
     if not text or max_chars <= 0 or len(text) <= max_chars:
         return text, False
     cut = text[:max_chars]
@@ -63,14 +53,7 @@ def _strip_code_fences(text: str) -> str:
 
 
 def _first_json_object(text: str):
-    r"""The first *balanced* {...} in `text`, or None.
-
-    The old salvage regex (r'\{[\s\S]*\}') matched from the first brace to the
-    LAST one anywhere in the reply, so any prose or second object after the
-    envelope made the whole match unparseable and the raw text was served
-    instead. A depth scan that knows about strings and escapes finds the object
-    the model actually emitted.
-    """
+    r"""Return the first balanced {...} in text (string/escape aware), or None; a naive brace regex would span to the last "}" in the reply and break on trailing prose."""
     depth = 0
     start = -1
     in_str = False
@@ -99,11 +82,7 @@ def _first_json_object(text: str):
 
 
 def _last_unescaped_quote(body: str) -> int:
-    """Index of the last `"` that is not itself escaped, or -1.
-
-    A plain rfind lands on the `\"` inside `... a \"quoted\" bit ...` and cuts a
-    truncated answer off at its last quotation mark instead of keeping all of it.
-    """
+    """Index of the last `"` that is not itself escaped, or -1; a plain rfind would land on an escaped quote and cut a truncated answer short."""
     i = len(body) - 1
     while i >= 0:
         if body[i] == '"':
@@ -134,23 +113,7 @@ def _unescape_json_fragment(body: str) -> str:
 
 
 def _extract_answer(raw: str) -> str:
-    """Pull the answer text out of whatever the model returned.
-
-    DS-B-03: the model is asked for {"answer": "..."} and usually obliges, but a
-    malformed or truncated envelope fell through to `answer = raw`, and the
-    endpoint served the literal `{"answer": "At additiv I owned …` to the
-    extension — which pastes it straight into a real application form. The order
-    below is widest-net-last, and the last net is never a JSON envelope:
-
-      1. strip a ``` fence,
-      2. parse the whole reply,
-      3. parse the first balanced {...} inside it,
-      4. salvage a truncated `{"answer": "…` by hand,
-      5. accept plain prose — but only if it does not start with `{`.
-
-    Returns "" when nothing usable is left; the caller turns that into the 502
-    it already raises for a failed generation, rather than handing back a wrapper.
-    """
+    """Pull the answer text out of the model's reply, trying a fenced JSON envelope, the whole reply, the first balanced object, a hand-salvaged truncated envelope, then plain prose, so a malformed wrapper is never pasted into a real application form; returns "" when nothing usable is left."""
     text = _strip_code_fences(raw)
     if not text:
         return ""
@@ -186,13 +149,7 @@ def _extract_answer(raw: str) -> str:
 
 
 def _qa_pair(entry) -> tuple:
-    """Normalise one qa_bank entry to (question, answer).
-
-    Canonical shape is {"question": ..., "answer": ...} — what POST /persona/qa-bank
-    writes and what the Persona editor saves. Hand-written banks also used a
-    single-key map {"<question>": "<answer>"}; those silently flattened to blank
-    Q/A pairs, so the whole bank vanished from the prompt. Accept both.
-    """
+    """Normalise one qa_bank entry to (question, answer); accepts both the canonical {"question","answer"} shape written by POST /persona/qa-bank and a legacy single-key {"<question>": "<answer>"} map."""
     if not isinstance(entry, dict):
         return "", ""
     if "question" in entry or "answer" in entry:
@@ -226,8 +183,7 @@ def _json_setting(db, key, default):
 
 @router.get("/config")
 def autofill_config():
-    """Serve everything the extension needs to fill structured fields:
-    the projected fixed answers, the matching dictionaries, and the schema."""
+    """Serve everything the extension needs to fill structured fields: the projected fixed answers, matching dictionaries, and the schema."""
     db = SessionLocal()
     try:
         p = db.query(Persona).filter(Persona.id == 1).first()
@@ -243,11 +199,8 @@ def autofill_config():
             "field_patterns": _json_setting(db, "autofill_field_patterns", {}),
             "option_synonyms": _json_setting(db, "autofill_option_synonyms", {}),
             "schema": ANSWER_SCHEMA,
-            # One source of truth: the Persona's own "prefer not to answer"
-            # checkbox. autofill_schema already fills unset demographics with
-            # "decline" from the same flag; this carries it to the extension so
-            # it can pick a decline option on questions the Persona has no field
-            # for at all.
+            # Mirrors the Persona's "prefer not to answer" checkbox so the extension
+            # can decline questions the Persona has no field for at all.
             "decline_self_id": bool((persona.get("demographics") or {}).get("decline_demographics")),
         }
     finally:
@@ -274,8 +227,8 @@ async def autofill_answer(body: dict):
         persona_txt = _flatten_persona(persona) if persona else "(no persona)"
         qa_txt = _flatten_qa_bank(persona.qa_bank if persona else [])
 
-        # Resolve provider/model for logging with the very resolver
-        # call_autofill_llm dispatches through — one source of truth (R2-H-15).
+        # Resolve provider/model for logging with the same resolver call_autofill_llm
+        # dispatches through, so both stay in sync.
         from backend.analyzer.llm_client import resolve_llm_config
         _cfg = resolve_llm_config("autofill", db=db)
         provider, model = _cfg["provider"], _cfg["model"]
@@ -285,9 +238,8 @@ async def autofill_answer(body: dict):
     max_chars = body.get("max_chars")
     max_chars = int(max_chars) if isinstance(max_chars, (int, str)) and str(max_chars).isdigit() else default_len
 
-    # Stable prefix (persona + bank + instructions) is cacheable; the per-question
-    # suffix (company/position/question) is not. Split at the first {company}
-    # placeholder so the model sees each part exactly once: [cached_prefix, suffix].
+    # Stable prefix (persona+bank+instructions) is cacheable; the per-question suffix
+    # isn't. Split at the first {company} placeholder so the model sees each part once.
     if "{company}" in template:
         before, after = template.split("{company}", 1)
         suffix_template = "{company}" + after
@@ -315,28 +267,23 @@ async def autofill_answer(body: dict):
                                            cached_prefix=cached_prefix)
             tracker.record(resp)
         raw = (resp.get("text") or "").strip()
-        # The model returns {"answer": "..."}; extract it so any leaked reasoning /
-        # preamble outside the JSON is discarded. DS-B-03: an envelope that cannot
-        # be salvaged is a failed generation, not an answer - the 502 below is the
-        # honest outcome, since a JSON wrapper pasted into an application form is
-        # worse than an error the user can retry.
+        # Extract the answer from the model's {"answer": ...} wrapper, discarding any
+        # leaked preamble; an unsalvageable envelope is a failed generation (502)
+        # rather than raw JSON pasted into the user's application form.
         answer = _extract_answer(raw)
         if not answer:
             raise ValueError(f"unusable model output: {raw[:160]!r}")
     except Exception as e:
         logger.error(f"autofill generation failed: {e}")
         raise HTTPException(502, "autofill generation failed") from e
-    # R3-B-04: the length the user picked is a contract, not a hint.
+    # The length the user picked is a contract, not a hint.
     answer, trimmed = _trim_to_chars(answer, max_chars)
     return {"answer": answer, "trimmed": trimmed, "max_chars": max_chars}
 
 
 @router.post("/answer/stream")
 async def autofill_answer_stream(body: dict):
-    """Server-Sent Events variant of /answer: streams the drafted answer as
-    plain-text chunks so the extension can render it into the field live.
-    Unlike /answer this asks for prose (no JSON wrapper) so tokens render
-    directly. Shares the persona/qa_bank prompt-cache prefix with /answer."""
+    """SSE variant of /answer that streams the drafted answer as plain-text chunks (no JSON wrapper) so the extension can render it into the field live, sharing the persona/qa_bank cache prefix with /answer."""
     question = (body.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "question is required")
@@ -356,10 +303,8 @@ async def autofill_answer_stream(body: dict):
     max_chars = body.get("max_chars")
     max_chars = int(max_chars) if isinstance(max_chars, (int, str)) and str(max_chars).isdigit() else default_len
 
-    # Build a dedicated PLAIN-PROSE prefix rather than reusing the /answer template
-    # (which steers the model to a JSON {"answer": ...} wrapper — that leaked into
-    # the streamed field). Persona + qa_bank is stable per user, so it still caches
-    # across refinements/length changes.
+    # Dedicated plain-prose prefix rather than the /answer template, which steers
+    # toward a JSON wrapper that leaked into the streamed field.
     cached_prefix = (
         "You are the candidate, writing concise first-person answers to job-application "
         "questions. Use ONLY facts from the profile and reusable Q&A bank below — never "
@@ -368,10 +313,8 @@ async def autofill_answer_stream(body: dict):
         f"REUSABLE Q&A BANK:\n{qa_txt}\n"
     )
 
-    # Refinements: the ordered list of change requests the candidate has applied to
-    # this answer ("shorter", "mention my fintech work"). Sent in full so they
-    # compound; appended to the per-question suffix so the persona/qa_bank cache
-    # prefix is untouched.
+    # Refinements: ordered change requests already applied ("shorter", "mention
+    # fintech work"), appended to the suffix so the cache prefix stays untouched.
     refinements = body.get("refinements") or []
     refine_block = ""
     if isinstance(refinements, list):
@@ -390,8 +333,7 @@ async def autofill_answer_stream(body: dict):
     system = ("You write concise, truthful first-person job-application answers grounded "
               "only in the provided profile. Respect the character limit strictly. "
               "Output only the answer as plain prose.")
-    # ~4 chars/token, so cap tokens near the char budget (+ small buffer) instead of
-    # the old 256-token floor that let a 250-char ask balloon past 500 chars.
+    # ~4 chars/token, so cap tokens near the char budget plus a small buffer.
     max_tokens = max(48, min(800, max_chars // 4 + 24))
 
     async def _events():

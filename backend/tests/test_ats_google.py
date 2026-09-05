@@ -14,8 +14,5 @@ def test_is_google_rejects_non_google():
 
 def test_is_google_rejects_path_injection():
     from backend.scraper.ats.google import is_google
-    # NOTE: is_google uses a plain substring check ("google.com/about/careers" in url.lower())
-    # so a query string like ?url=google.com/about/careers WOULD match (false positive).
-    # Flagged as a production weakness — test adjusted to use a URL that doesn't contain
-    # the substring. See Task 15 report.
+    # is_google uses a plain substring check, so ?url=google.com/about/careers would false-positive.
     assert not is_google("https://evil.com/?dest=some-other-careers")

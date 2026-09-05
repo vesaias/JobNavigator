@@ -35,12 +35,7 @@ def test_tracer_redirect_succeeds_normally(api_client, test_db):
 
 
 def test_tracer_redirect_bypasses_api_key(api_client, test_db):
-    """With a dashboard API key configured, the public /cv/{token} redirect must still
-    work WITHOUT the key header — recruiters click it from a PDF and have no key.
-
-    Regression for issue #3: the /cv/ bypass prefix had a trailing slash, so it never
-    matched a real token path and every click 401'd once a key was set.
-    """
+    """With a dashboard API key configured, the public /cv/{token} redirect must still work WITHOUT the key header — recruiters click it from a PDF with no key."""
     from backend.models.db import Setting, Resume, TracerLink
     test_db.add(Setting(key="dashboard_api_key", value="secret-key-123"))
     resume = Resume(id=uuid.uuid4(), name="Test", is_base=True, json_data={})
@@ -72,11 +67,7 @@ def test_tracer_redirect_bypasses_api_key(api_client, test_db):
 
 
 def test_tracer_redirect_param_style_bypasses_and_redirects(api_client, test_db):
-    """Param-style links (?cv=token on root) must also bypass auth and redirect.
-
-    Resumes were exported over time in both shapes — /cv/{token} (path) AND
-    ?cv={token} (param) — so both must resolve. Regression + coverage for all styles.
-    """
+    """Param-style links (?cv=token on root) must also bypass auth and redirect, since resumes were exported in both /cv/{token} and ?cv={token} shapes."""
     from backend.models.db import Setting, Resume, TracerLink
     test_db.add(Setting(key="dashboard_api_key", value="secret-key-123"))
     resume = Resume(id=uuid.uuid4(), name="Test", is_base=True, json_data={})
@@ -127,9 +118,8 @@ def test_tracer_redirect_survives_commit_failure(api_client, test_db, monkeypatc
     test_db.add(link)
     test_db.commit()
 
-    # Force the TracerClickEvent insert commit to raise by patching Session.commit.
-    # Only a commit involving a pending TracerClickEvent should fail; other commits
-    # (e.g., seeding above has already completed) would still work if they occurred.
+    # Patch Session.commit to fail only when a pending TracerClickEvent is being flushed —
+    # other commits (e.g. the seeding above) succeed normally.
     from sqlalchemy.orm import Session as SASession
     original_commit = SASession.commit
 

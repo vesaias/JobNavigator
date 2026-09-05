@@ -16,8 +16,7 @@ async def test_analyze_endpoint_threads_target_job_id(test_db, api_client):
     test_db.commit()
     job_id = str(job.id)
 
-    # Stub score_single_job to a slow no-op so we can observe the in-flight registration
-    # without invoking the LLM.
+    # Stub score_single_job to a slow no-op so we can observe the in-flight registration.
     async def slow_noop(*args, **kwargs):
         import asyncio
         await asyncio.sleep(0.5)

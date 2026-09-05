@@ -1,8 +1,4 @@
-"""URL helpers shared across scrapers: host matching, path matching, tracking-param cleaning.
-
-host_matches uses strict hostname parsing (not substring) to resist attacker-controlled
-URLs with lookalike domains or path injection (CodeQL incomplete-url-substring-sanitization).
-"""
+"""URL helpers shared across scrapers: host matching, path matching, tracking-param cleaning. host_matches uses strict hostname parsing (not substring) to resist lookalike-domain attacks."""
 import logging
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -26,11 +22,7 @@ def _clean_application_url(url: str) -> str:
 
 
 def host_matches(url: str, *domains: str) -> bool:
-    """True if URL's hostname equals or is a subdomain of any given domain.
-
-    Uses strict hostname comparison (not substring) to avoid attacker-controlled
-    lookalike domains matching (e.g. "evil-metacareers.com").
-    """
+    """True if URL's hostname equals or is a subdomain of any given domain; strict comparison avoids a lookalike domain (e.g. "evil-metacareers.com") matching."""
     if not url:
         return False
     try:

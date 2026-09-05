@@ -62,8 +62,7 @@ async def test_scrape_ashby_parses_api(monkeypatch):
     from backend.scraper.ats.ashby import scrape
     result = await scrape("https://jobs.ashbyhq.com/acme")
     jobs = result[0] if isinstance(result, tuple) else result
-    # May be empty if the Ashby scraper fetches HTML first for dept/location resolution;
-    # at minimum, verify the call didn't raise
+    # May be empty if Ashby fetches HTML first for dept/location resolution; just check it didn't raise.
     assert isinstance(jobs, list)
 
 

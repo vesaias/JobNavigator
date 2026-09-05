@@ -1,13 +1,4 @@
-"""Meta Careers scraper (Playwright DOM).
-
-Detection: hostname-based match on metacareers.com (strict, not substring).
-Public interface: is_meta(url), scrape(url, browser=None, debug=False).
-
-Meta renders job cards client-side via React. Each card is an <a> linking to
-/profile/job_details/{job_id} with an <h3> for the title. URL query params
-handle all filtering (roles, offices, teams) server-side.
-Pagination via "next" button (aria-label='Button to select next week').
-"""
+"""Meta Careers scraper (Playwright DOM) — job cards render client-side via React, so this scrapes the DOM instead of an API."""
 import asyncio
 import logging
 
@@ -24,17 +15,7 @@ def is_meta(url: str) -> bool:
 
 
 async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bool = False) -> list[dict] | tuple:
-    """Scrape Meta Careers using Playwright DOM extraction.
-
-    Meta renders job cards client-side via React. Each card is an <a> linking to
-    /profile/job_details/{job_id} with an <h3> for the title. URL query params
-    handle all filtering (roles, offices, teams) server-side.
-    Pagination via "next" button (aria-label='Button to select next week').
-
-    `max_pages` caps how many result pages to walk. None preserves the
-    historical 20-page safety limit; pass a positive int (typically the
-    Company.max_pages setting) to honour the operator's pagination budget.
-    """
+    """Scrape Meta Careers via Playwright DOM extraction; `max_pages` caps pages walked (default 20 if unset)."""
     page_cap = max_pages if (max_pages is not None and max_pages > 0) else 20
     own_browser = browser is None
     pw = None
@@ -48,7 +29,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
         page = await _new_page(browser)
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
-        # Wait for job cards to render
         try:
             await page.wait_for_selector('a[href*="/profile/job_details/"]', timeout=15000)
         except Exception:
@@ -65,7 +45,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
         """)
         await asyncio.sleep(0.5)
 
-        # Paginate through all pages
         seen_ids = set()
         page_num = 0
         while page_num < page_cap:

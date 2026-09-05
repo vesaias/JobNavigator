@@ -1,5 +1,4 @@
-"""POST /api/resumes/tailor with base_resume_id='persona' uses Persona.resume_content
-as the base, producing a Resume row with parent_id=None."""
+"""POST /api/resumes/tailor with base_resume_id='persona' uses Persona.resume_content as the base, producing a Resume row with parent_id=None."""
 import uuid
 import pytest
 from backend.models.db import Resume, Persona, Setting, Job

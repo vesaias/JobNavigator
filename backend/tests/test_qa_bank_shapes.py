@@ -1,11 +1,4 @@
-"""_flatten_qa_bank must read both qa_bank shapes.
-
-The canonical entry is {"question": ..., "answer": ...} — what POST /persona/qa-bank
-writes and what the Persona editor saves. Hand-written banks used a single-key map
-{"<question>": "<answer>"} instead, and the reader only understood the canonical
-form, so every such entry flattened to a blank "Q: \nA: " block and the whole bank
-silently vanished from the autofill prompt. Both shapes are accepted now.
-"""
+"""_flatten_qa_bank must read both qa_bank shapes: the canonical {"question": ..., "answer": ...} (what POST /persona/qa-bank writes) and a legacy single-key map {"<question>": "<answer>"}."""
 from backend.api.routes_autofill import _flatten_qa_bank, _qa_pair
 
 

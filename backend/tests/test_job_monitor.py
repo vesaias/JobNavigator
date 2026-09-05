@@ -1,15 +1,4 @@
-"""Tests for job_monitor — tracked_run + launch_background + cleanup_stale_runs.
-
-Notes on SQLite compatibility:
-- SQLite does not preserve timezone on DateTime(timezone=True) columns. Values stored
-  tz-aware come back tz-naive on read. Production code in job_monitor computes
-  `datetime.now(timezone.utc) - run.started_at`, which raises TypeError under SQLite.
-  We attach a SQLAlchemy 'load' event listener on JobRun that re-applies UTC after
-  load, matching PostgreSQL behavior in production.
-- The UUID column of JobRun.id is mapped to CHAR(32) under SQLite. Production code
-  passes `uuid.UUID` objects which work for insert; for queries we look up by
-  `job_type` to avoid UUID-type binding quirks.
-"""
+"""Tests for job_monitor — tracked_run + launch_background + cleanup_stale_runs. SQLite strips tz from DateTime(timezone=True) columns (a 'load' listener re-applies UTC) and maps JobRun.id to CHAR(32) (so tests look up rows by job_type, not id)."""
 import asyncio
 import pytest
 from datetime import datetime, timezone

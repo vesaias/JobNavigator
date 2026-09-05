@@ -1,13 +1,4 @@
-"""Ashby ATS handler — GET api.ashbyhq.com/posting-api/job-board/{company}.
-
-Detection: host match on `jobs.ashbyhq.com` (prevents matching attacker-controlled
-paths like `https://evil.com/?u=ashbyhq.com`).
-Public interface: is_ashby(url), scrape(url, debug=False).
-
-The public Ashby API returns all postings for a company. Department/location/team
-filtering is applied client-side by resolving the filter IDs to names via the
-board HTML (Ashby embeds ID→name mappings there, not in the API response).
-"""
+"""Ashby ATS handler: GET api.ashbyhq.com/posting-api/job-board/{company}; host-matched (not substring) to avoid attacker-controlled paths, with department/location/team filters applied client-side by resolving IDs to names from the board HTML since the API doesn't return names itself."""
 import json
 import logging
 import re
@@ -28,12 +19,8 @@ def is_ashby(url: str) -> bool:
 
 
 def _resolve_group_names(page_text: str, filter_ids: set) -> set:
-    """Resolve department/team filter IDs to their names, expanding to include any
-    child teams/departments (Ashby's board filters a node AND its descendants).
-
-    The board HTML embeds `{"id","name",...,"parentTeamId"|"parentDepartmentId"}`
-    entities. We map id→name and parent→children, then BFS from each filter id.
-    """
+    """Resolve department/team filter IDs to their names, including descendants, since Ashby's board
+    filters a node and all its children (BFS over parent->children built from the embedded id/name JSON)."""
     if not filter_ids:
         return set()
     name_by_id = dict(re.findall(r'"id"\s*:\s*"([0-9a-f-]{36})"\s*,\s*"name"\s*:\s*"([^"]+)"', page_text))
@@ -53,12 +40,9 @@ def _resolve_group_names(page_text: str, filter_ids: set) -> set:
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
-    """Fetch jobs from Ashby's public JSON API.
-
-    API returns all jobs; departmentId/locationId filtering is applied client-side.
-    """
+    """Fetch jobs from Ashby's public JSON API; departmentId/locationId filtering is applied
+    client-side since the API returns all jobs unfiltered."""
     parsed = urlparse(url)
-    # Company slug from path: /ramp or /ramp/
     path_parts = [p for p in parsed.path.strip("/").split("/") if p]
     if not path_parts:
         if debug:
@@ -66,7 +50,6 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
         return []
     company_slug = path_parts[0]
 
-    # Extract filter params from URL query string
     qs = parse_qs(parsed.query)
     filter_dept_ids = set(qs.get("departmentId", []))
     filter_location_ids = set(qs.get("locationId", []))
@@ -90,9 +73,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
         # Ashby embeds ID→name mappings in the page HTML, not in the API response.
         # Fetch page once to resolve the filter IDs to names.
-        group_names = set()   # department + team names to match (the URL's departmentId
-                              # is Ashby's generic grouping filter — on some boards it's
-                              # a department, on others a team, e.g. Plaid groups by team)
+        group_names = set()  # departmentId is Ashby's generic grouping filter — some boards group by
+                              # department, others by team (e.g. Plaid), so it may resolve to either
         loc_names = set()
         if filter_dept_ids or filter_location_ids or filter_team_ids:
             try:
@@ -118,10 +100,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
             title = (posting.get("title") or "").strip()
             job_url = posting.get("jobUrl") or ""
 
-            # Department/team filter: a posting passes if EITHER its department or its
-            # team is in the resolved group names. Ashby boards vary in which field the
-            # grouping lives in (Plaid uses team; department is uniformly "All
-            # Departments"), so matching either avoids dropping everything.
+            # A posting passes if EITHER its department or team is in the resolved group names —
+            # boards vary in which field carries the real grouping (e.g. Plaid uses team, not department).
             if group_names:
                 job_dept = (posting.get("department") or "").strip()
                 job_team = (posting.get("team") or "").strip()
@@ -130,7 +110,6 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                         rejected.append({"title": title, "url": job_url, "selector": "ashby_api", "reason": f"Dept '{job_dept}' / team '{job_team}' not in filter {group_names}"})
                     continue
 
-            # Apply location filter if specified
             if loc_names:
                 job_loc = (posting.get("location") or "").strip()
                 if not any(ln.lower() in job_loc.lower() for ln in loc_names):

@@ -12,7 +12,6 @@ def test_db(monkeypatch):
     LlmCallLog.__table__.create(engine)
     Session = sessionmaker(bind=engine)
 
-    # Patch SessionLocal used by llm_logger
     import backend.analyzer.llm_logger as llm_logger
     monkeypatch.setattr(llm_logger, "SessionLocal", Session)
 

@@ -1,12 +1,4 @@
-"""Company career-pages source — orchestrates ATS dispatch per URL.
-
-Entry points:
-  - scrape_single_career_page(company, shared_browser=None) — scrape one company's scrape_urls
-  - scrape_career_pages(force=False) — batch over all active companies
-
-Dispatch: _dispatch_ats(url, ...) detects the ATS by URL and calls the matching
-ats.<name>.scrape; falls through to ats.generic.scrape if nothing matches.
-"""
+"""Company career-pages source — orchestrates ATS dispatch per URL; _dispatch_ats detects the ATS and calls the matching ats.<name>.scrape, falling through to ats.generic.scrape if nothing matches."""
 import asyncio
 import logging
 import time
@@ -32,17 +24,7 @@ logger = logging.getLogger("jobnavigator.scraper.sources.company_pages")
 # ── ATS dispatcher ───────────────────────────────────────────────────────────
 
 async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None, max_pages: int | None = None):
-    """Detect ATS by URL; call the matching scraper; fall back to generic.
-
-    Preserves the exact order of the original if/elif chain in
-    scrape_single_career_page so behavior is identical.
-
-    `max_pages` is forwarded to scrapers that paginate via Playwright DOM
-    walks (Google, Meta) so the operator's Company.max_pages setting is
-    honoured. HTTP-only scrapers (Lever, Greenhouse, Workday, …) ignore it
-    today; pagination there is API-driven and unbounded.
-    """
-    # HTTP-based scrapers (no Playwright needed)
+    """Detect ATS by URL and call the matching scraper, falling back to generic; order must match the if/elif chain in scrape_single_career_page, and `max_pages` only affects Playwright-paginated scrapers (Google, Meta) since HTTP-only ones are API-driven and unbounded."""
     if phenom.is_phenom(url):
         return await phenom.scrape(url, debug=debug)
     if talentbrew.is_talentbrew(url):
@@ -61,23 +43,15 @@ async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None, max_
         return await rippling.scrape(url, debug=debug)
     if smartrecruiters.is_smartrecruiters(url):
         return await smartrecruiters.scrape(url, debug=debug)
-    # Playwright-based ATS scrapers (need browser)
     if meta.is_meta(url):
         return await meta.scrape(url, browser=shared_browser, max_pages=max_pages, debug=debug)
     if google.is_google(url):
         return await google.scrape(url, browser=shared_browser, max_pages=max_pages, debug=debug)
-    # No ATS matched — generic fallback
     return await generic.scrape(url, browser=shared_browser, debug=debug)
 
 
 def _ats_labels_for(urls) -> str:
-    """Return a comma-separated list of distinct ATS labels for these URLs.
-
-    Used in activity-log messages so users see e.g. "Acme (Greenhouse): 3 new"
-    instead of the old "Playwright Acme: 3 new" — even pure-API scrapers were
-    getting tagged as "Playwright" before. Strips the "API"/"AJAX"/"(Playwright)"
-    suffix from detect_scrape_type's labels for compactness.
-    """
+    """Return a comma-separated list of distinct ATS labels for these URLs, for activity-log messages (e.g. "Acme (Greenhouse): 3 new"); strips the API/AJAX/(Playwright) suffix from detect_scrape_type's labels for compactness."""
     from backend.api.routes_companies import detect_scrape_type
     labels = set()
     for u in urls:
@@ -93,15 +67,7 @@ def _ats_labels_for(urls) -> str:
 
 
 def record_company_scrape_log(company_id, company_name: str, result: dict, db=None):
-    """Write the per-company ScrapeLog row for one career-page scrape.
-
-    Single source of truth for the audit trail: both the batch path
-    (scrape_career_pages) and the manual single-company trigger
-    (POST /api/scrape/company/{id}) go through here, so /api/scrape-log,
-    is_warning and /health/entities see manual runs exactly like scheduled ones.
-
-    `db` lets a caller reuse an open session; otherwise one is opened and closed.
-    """
+    """Write the per-company ScrapeLog row for one career-page scrape; single source of truth for both the batch path and the manual single-company trigger so /api/scrape-log, is_warning and /health/entities see manual runs like scheduled ones. `db` lets a caller reuse an open session."""
     own_db = db is None
     if own_db:
         db = SessionLocal()
@@ -146,27 +112,18 @@ def _needs_browser(urls):
 
 async def scrape_single_career_page(company: Company, shared_browser=None,
                                      known_external_ids: set = None) -> dict:
-    """Scrape a single company career page using Playwright.
-
-    Uses company.scrape_urls (unified list of career/search URLs).
-    If shared_browser is provided, uses it instead of launching a new one.
-    `known_external_ids` lets the batch caller load the dedup set once for the
-    whole run instead of re-materializing all ~14k IDs per company; it is
-    mutated in place (new IDs added) so later companies see earlier inserts.
-    """
+    """Scrape a single company career page via company.scrape_urls, optionally reusing shared_browser; `known_external_ids`, when passed, is the batch's dedup set loaded once and mutated in place so later companies see earlier inserts."""
     start_time = time.time()
 
     target_urls = company.scrape_urls or []
 
-    # Filter empty strings
     target_urls = [u.strip() for u in target_urls if u and u.strip()]
 
     if not target_urls:
         return {"jobs_found": 0, "new_jobs": 0, "error": "No career page URLs"}
 
-    # Only launch a browser if at least one URL actually needs one. API-only
-    # ATS batches (Lever, Greenhouse, etc.) don't need Chromium — skipping the
-    # launch avoids failures on hosts without Playwright browsers installed (CI).
+    # Only launch a browser if a URL needs one; API-only ATS batches (Lever, Greenhouse, etc.)
+    # skip Chromium, avoiding failures on hosts without Playwright browsers installed (CI).
     needs_browser = _needs_browser(target_urls)
     own_browser = shared_browser is None and needs_browser
     pw = None
@@ -181,10 +138,8 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
 
         for target_url in target_urls:
             try:
-                # Known-ATS dispatch; falls through to generic DOM scraper.
-                # Generic path uses company.wait_for_selector + max_pages, so
-                # keep its explicit handling here instead of routing through
-                # _dispatch_ats's generic branch (which uses defaults).
+                # Handled explicitly here (not via _dispatch_ats's generic branch) because generic
+                # needs company.wait_for_selector + max_pages, not _dispatch_ats's defaults.
                 if (phenom.is_phenom(target_url) or talentbrew.is_talentbrew(target_url)
                         or oracle_hcm.is_oracle_hcm(target_url) or lever.is_lever(target_url)
                         or workday.is_workday(target_url) or ashby.is_ashby(target_url)
@@ -193,7 +148,6 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                         or meta.is_meta(target_url) or google.is_google(target_url)):
                     page_jobs = await _dispatch_ats(target_url, debug=False, shared_browser=browser, max_pages=max_pages)
                 else:
-                    # Generic fallback with per-company wait_for_selector + max_pages
                     page = await _new_page(browser)
                     await generic._setup_route_blocks(page)
                     await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
@@ -220,7 +174,6 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                 "duration": duration,
             }
 
-        # Apply per-company + global title filters
         from backend.models.db import get_global_title_exclude
         _gte_db = SessionLocal()
         try:
@@ -240,18 +193,16 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                 f"Keyword filter for {company.name}: {before_count} -> {len(unique_jobs)} kept, {len(filtered_out)} ignored"
             )
 
-        # Save to DB
         db = SessionLocal()
         new_jobs = 0
         try:
             existing_ids = known_external_ids if known_external_ids is not None else get_existing_external_ids(db)
-            # Per-company hoists for the per-job H-1B scan (avoids a Settings
-            # read + JSON parse and a company lookup per job).
+            # Per-company hoist for the per-job H-1B scan, avoiding a Settings read + JSON parse
+            # and a company lookup per job.
             from backend.analyzer.h1b_checker import load_exclusion_phrases
             _phrases = load_exclusion_phrases(db)
             _company_lookup = {company.name.strip().lower(): company}
 
-            # Pre-filter jobs that need description fetching (not already in DB)
             jobs_needing_desc = []
             for j in unique_jobs:
                 ext_id = make_external_id(company.name, j["title"], j["url"])
@@ -262,7 +213,6 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                 j["_content_hash"] = content_hash
                 jobs_needing_desc.append(j)
 
-            # Fetch descriptions in parallel for new jobs
             if jobs_needing_desc:
                 desc_results = await _fetch_descriptions_parallel(jobs_needing_desc)
                 desc_map = {}
@@ -292,8 +242,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                     description=desc,
                 )
 
-                # Run H-1B check + salary extraction
-                # Always run even without description — company-level LCA check doesn't need it
+                # Always run even without a description — the company-level LCA check doesn't need it.
                 try:
                     from backend.analyzer.h1b_checker import check_job_h1b
                     from backend.analyzer.salary_extractor import apply_salary_to_job
@@ -302,7 +251,6 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                 except Exception as analysis_err:
                     logger.warning(f"Inline analysis failed for {j['title']}: {analysis_err}")
 
-                # Skip jobs flagged for body exclusion
                 if job.h1b_jd_flag:
                     _phrase = getattr(job, "_h1b_matched_phrase", None) or "?"
                     logger.info(f"Skipping job (body exclusion): {j['title']} @ {j.get('company', '?')} — matched phrase: {_phrase!r}")
@@ -385,35 +333,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
 # ── Batch scraper ────────────────────────────────────────────────────────────
 
 async def scrape_career_pages(force: bool = False) -> dict:
-    """Scrape career pages for every active company that has scrape URLs.
-
-    Per-company intervals: if company.scrape_interval_minutes is set, skip
-    companies that were scraped more recently than their interval. Otherwise
-    use the global scrape_interval_minutes setting (companies are always
-    scraped when the global scheduler fires, unless they have a custom interval).
-
-    If force=True, skip interval checks entirely (used by manual triggers).
-
-    The only gates are `active` and "has at least one scrape URL". The old
-    `playwright_enabled == True` filter silently dropped every company the app
-    had created for the user — routes_applications / routes_jobs create a company
-    on "applied" with playwright_enabled=False, and nothing in the UI ever sets
-    it — so a company you activated and gave URLs to was never scraped by
-    run-all, while POST /api/scrape/company/{id} (which never looked at the flag)
-    scraped it fine. Measured on the live DB: run-all 2026-09-04 10:58-11:11
-    wrote ScrapeLog rows for 55 of the 61 eligible companies; the six with
-    playwright_enabled=False (Anthropic, Arize, Scale, Sierra, Snorkelai,
-    Airtable) had to be run one by one afterwards.
-
-    One company's failure never ends the batch: the error is logged and recorded
-    as its own ScrapeLog row, and the loop moves on.
-
-    Returns {"scraped": n, "skipped": [{"name", "reason"}, ...], "failed": n} so
-    the caller's run summary can name what did not run and why.
-
-    Launches ONE shared browser for all companies that need Playwright,
-    instead of one browser per company.
-    """
+    """Scrape career pages for every active company with a scrape URL (gated only on `active` and having a URL, deliberately not `playwright_enabled`), honoring per-company or global scrape_interval_minutes unless force=True skips interval checks; one company's failure is logged to its own ScrapeLog row without ending the batch, and one shared Playwright browser serves all companies that need it."""
     from backend.models.db import Setting
     db = SessionLocal()
     shared_pw = None
@@ -422,7 +342,6 @@ async def scrape_career_pages(force: bool = False) -> dict:
     scraped = 0
     failed = 0
     try:
-        # Read global default interval
         global_interval_row = db.query(Setting).filter(Setting.key == "scrape_interval_minutes").first()
         global_interval = int(global_interval_row.value) if global_interval_row else 60
 
@@ -440,22 +359,20 @@ async def scrape_career_pages(force: bool = False) -> dict:
             + (f", {len(skipped)} active without URLs" if skipped else "")
         )
 
-        # Launch shared browser if any company needs it
         any_needs_browser = any(_needs_browser(c.scrape_urls or []) for c in companies)
         if any_needs_browser:
             shared_pw, shared_browser = await _get_browser()
             logger.info("Playwright: launched shared browser for batch scrape")
 
-        # Dedup set loaded ONCE for the whole batch (was re-materializing all
-        # ~14k external_ids per company). scrape_single_career_page mutates it
-        # in place, so later companies also dedup against earlier inserts.
+        # Dedup set loaded once for the whole batch (avoids re-materializing ~14k external_ids
+        # per company); mutated in place so later companies dedup against earlier inserts.
         batch_external_ids = get_existing_external_ids(db)
 
         now = datetime.now(timezone.utc)
         sweep_needed = False
         for company in companies:
-            # Per-company interval check. A manual run (force=True) runs every
-            # active company with URLs: the interval only paces the scheduler.
+            # Per-company interval check; a manual run (force=True) runs every active company
+            # with URLs — the interval only paces the scheduler.
             if not force:
                 interval = company.scrape_interval_minutes or global_interval
                 if company.last_scraped_at:
@@ -472,11 +389,9 @@ async def scrape_career_pages(force: bool = False) -> dict:
                         })
                         continue
 
-            # One company must never take the batch down with it. Everything from
-            # here on is contained: the scraper's own errors already come back as
-            # a result dict, and anything it cannot catch (browser death, a DB
-            # error while logging) is recorded as this company's failure and the
-            # loop carries on to the next one.
+            # One company's failure must never take the batch down: the scraper's own errors come
+            # back as a result dict, and anything else (browser death, a DB error while logging)
+            # is recorded as this company's failure so the loop carries on.
             try:
                 result = await scrape_single_career_page(company, shared_browser=shared_browser,
                                                          known_external_ids=batch_external_ids)
@@ -489,10 +404,8 @@ async def scrape_career_pages(force: bool = False) -> dict:
                     f"Playwright {company.name}: found={result['jobs_found']}, new={result['new_jobs']}"
                 )
 
-                # Auto CV-score: mark for ONE pool sweep at batch end. The sweep
-                # itself is a common pool (it picks up any unscored auto-score jobs,
-                # including retries from earlier failed passes) — running it after
-                # every company just re-walked the same pool N times per batch.
+                # Mark for one pool sweep at batch end rather than per company — the sweep picks up
+                # all unscored auto-score jobs (including retries), so per-company would re-walk it N times.
                 if company.auto_scoring_depth in ("light", "full") and result.get("new_jobs", 0) > 0:
                     sweep_needed = True
             except Exception as e:

@@ -16,8 +16,7 @@ def test_autofill_prompt_has_placeholders():
 
 
 def test_structured_autofill_settings_present(test_db):
-    # The enabled/trigger toggles now live in the extension popup (chrome.storage),
-    # not in DB settings. The dictionaries + decline policy are seeded here.
+    # enabled/trigger toggles live in the extension popup (chrome.storage), not in DB settings.
     seed_settings(test_db)
     keys = {s.key: s.value for s in test_db.query(Setting).all()}
     assert "autofill_decline_self_id" not in keys  # retired: Persona owns the decline flag

@@ -1,10 +1,4 @@
-"""R3-B-01: `header.title` prints in every résumé template, and only when set.
-
-The field round-tripped through the API and printed in three templates but had no
-editor in v2 — invisible and uneditable. Now that the header editor exposes it,
-the other templates need the slot too, and an empty value must render nothing so
-no layout shifts for the résumés that don't use it.
-"""
+"""`header.title` prints in every résumé template, and only when set; an empty value renders nothing so no layout shifts."""
 import re
 from pathlib import Path
 

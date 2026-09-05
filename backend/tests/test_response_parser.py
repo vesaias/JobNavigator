@@ -32,11 +32,7 @@ def test_classify_auto_reply():
 
 
 def test_classify_rejection_trumps_auto_reply():
-    """Subject says 'application received' (auto-reply), body says 'not moving forward' (rejection).
-
-    Rejection wins — more specific signal. This guards against the common case where
-    a rejection email contains boilerplate like 'thank you for your interest'.
-    """
+    """Subject reads auto-reply ('application received'), body reads rejection ('not moving forward') — rejection wins as the more specific signal."""
     from backend.email_monitor.response_parser import classify_email
     result = classify_email(
         subject="Application received",
@@ -94,10 +90,7 @@ def test_classify_confidence_scales_with_signal_count():
 
 
 def test_acknowledgment_with_positive_boilerplate_is_auto_reply():
-    """The Amazon bug: a 'thanks for applying' acknowledgment whose boilerplate contains
-    weak-positive phrases ('excited to', 'connect with you', 'next steps') must NOT be
-    read as a real advance. With no *strong* scheduling/invitation signal, it's auto_reply.
-    """
+    """A 'thanks for applying' acknowledgment with weak-positive boilerplate ('excited to', 'next steps') and no strong scheduling signal is auto_reply, not positive."""
     from backend.email_monitor.response_parser import classify_email
     result = classify_email(
         subject="Thanks for applying to Amazon",
@@ -110,10 +103,7 @@ def test_acknowledgment_with_positive_boilerplate_is_auto_reply():
 
 
 def test_genuine_advance_stays_positive_despite_applying_phrase():
-    """Guards the ordering: a real interview invite that also opens with 'thank you for
-    applying' must still classify as positive — the strong signal ('schedule a call',
-    'availability for') wins over the acknowledgment phrase.
-    """
+    """A real interview invite that opens with 'thank you for applying' still classifies as positive — the strong signal wins over the acknowledgment phrase."""
     from backend.email_monitor.response_parser import classify_email
     result = classify_email(
         subject="Interview scheduling — PM role",

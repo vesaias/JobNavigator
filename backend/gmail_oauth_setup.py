@@ -1,12 +1,5 @@
-"""One-time Gmail OAuth2 setup script.
-Run this locally to get a refresh token, then add it to .env as GMAIL_REFRESH_TOKEN.
-
-Works with Web application type OAuth credentials by spinning up a temporary
-localhost server to catch the redirect.
-
-Usage:
-  py backend/gmail_oauth_setup.py
-"""
+"""One-time Gmail OAuth2 setup script: run locally (`py backend/gmail_oauth_setup.py`) to get a
+refresh token for .env's GMAIL_REFRESH_TOKEN, catching the redirect via a temporary localhost server."""
 import http.server
 import json
 import os
@@ -94,12 +87,10 @@ print()
 print("Opening browser for authorization...")
 print()
 
-# Start temporary local server
 server = http.server.HTTPServer(("localhost", REDIRECT_PORT), OAuthHandler)
 server_thread = threading.Thread(target=server.handle_request)
 server_thread.start()
 
-# Open browser
 webbrowser.open(AUTH_URL)
 
 print("Waiting for Google authorization callback...")
@@ -108,7 +99,6 @@ print()
 print(AUTH_URL)
 print()
 
-# Wait for callback
 server_thread.join(timeout=120)
 server.server_close()
 
@@ -123,7 +113,6 @@ if not auth_code:
 
 print("Authorization code received! Exchanging for tokens...")
 
-# Exchange code for tokens
 data = urllib.parse.urlencode({
     "client_id": CLIENT_ID,
     "client_secret": CLIENT_SECRET,

@@ -1,9 +1,4 @@
-"""freehire orchestrator wiring + preview/run pipeline (no network).
-
-Uses the shared `test_db` fixture (conftest), which rebinds the module-level
-SessionLocal to an in-memory SQLite DB — so run()'s internal SessionLocal() and
-log_activity hit the test DB automatically.
-"""
+"""freehire orchestrator wiring + preview/run pipeline (no network); uses the shared `test_db` fixture, which rebinds the module-level SessionLocal so run()'s internal session hits the test DB."""
 import json
 import pytest
 

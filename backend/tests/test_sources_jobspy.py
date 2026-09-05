@@ -27,8 +27,6 @@ async def test_run_handles_empty_sources():
         hours_old = 168
         require_salary = False
 
-    # Should not raise; may return an empty/error result dict
     result = await run(FakeSearch())
     assert isinstance(result, dict)
-    # Common keys in the result
     assert "jobs_found" in result or "error" in result

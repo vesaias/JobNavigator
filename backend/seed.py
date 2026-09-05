@@ -33,7 +33,7 @@ DEFAULT_SETTINGS = {
     "jobright_email": ("", "Jobright.ai account email"),
     "jobright_password": ("", "Jobright.ai account password"),
     "jobright_session_id": ("", "Jobright.ai session cookie (auto-managed, 60-day expiry)"),
-    # OPEN-16: the cookie itself is write-only to the UI (redacted on GET), so the
+    # The cookie itself is write-only to the UI (redacted on GET), so the
     # Accounts tab needs a plain timestamp to say how long it is still good for.
     "jobright_session_obtained_at": ("", "UTC ISO timestamp of the last successful Jobright login. Read-only; set by the scraper."),
     "reject_cron": ("0 4 * * *", "Auto-reject cron (min hour day month dow). Empty = disabled"),
@@ -271,8 +271,8 @@ DEFAULT_SETTINGS = {
         "__jvsd", "__jvst", "jobpipeline", "cmpid", "codes", "feedid",
         "partnerid", "siteid", "bid", "customredirect",
         "chnlid", "v", "ccd", "frd", "r", "a",
-        # R3-A-02: "jk" deliberately absent — it is Indeed's job identity, and
-        # stripping it collapsed every Indeed posting onto one external_id.
+        # "jk" deliberately absent — it is Indeed's job identity, and stripping
+        # it collapsed every Indeed posting onto one external_id.
         # Search-context noise (career page filters that leak into job hrefs):
         "categories", "cities", "locations", "departments", "teams", "regions", "country", "category",
     ]), "URL query params stripped before dedup hashing — tracking/referral noise"),
@@ -313,8 +313,7 @@ DEFAULT_SETTINGS = {
 }
 
 # Settings the app writes at runtime but never seeds. PATCH /api/settings rejects
-# keys outside DEFAULT_SETTINGS (SET-28: a typo used to silently create a dead row
-# that no reader ever looks at), so these have to be listed explicitly.
+# keys outside DEFAULT_SETTINGS, so these have to be listed explicitly.
 RUNTIME_SETTING_KEYS = {
     "gmail_processed_ids",   # email_monitor/gmail_client.py — processed-message dedup
     "gmail_refresh_token",   # Gmail OAuth setup (gmail_oauth_setup.py)
@@ -332,23 +331,12 @@ def unknown_setting_keys(keys) -> list:
     return [k for k in keys if not is_known_setting(k)]
 
 
-# ── Value validation (OPEN-01) ──────────────────────────────────────────────
-# SET-27 added a digit filter and a cron guard to the Settings screen, but the
-# API accepted anything: a non-numeric interval was written happily and then blew
-# up in configure_scheduler(), i.e. the backend could no longer start. The three
-# value shapes the app actually parses are validated here, next to the defaults
-# they are derived from.
+# ── Value validation ─────────────────────────────────────────────────────────
+# The value shapes the app actually parses (int, cron, enum) are validated here,
+# so an unparseable value can't reach configure_scheduler() and crash the backend.
 
 def _int_setting_keys() -> set:
-    """Every seeded key whose default is a plain integer.
-
-    Derived rather than listed so a new numeric default can't be added without
-    picking up the guard. Matches the nine rows Settings.jsx marks `int: true`
-    (scoring_max_concurrent, tailoring_max_concurrent, autofill_default_length,
-    email_llm_confidence_threshold, scrape_interval_minutes,
-    email_check_interval_minutes, job_archive_after_days, auto_reject_after_days,
-    fit_score_threshold).
-    """
+    """Every seeded key whose default is a plain integer, derived (not listed) so a new numeric default automatically picks up the guard."""
     keys = set()
     for key, (value, _desc) in DEFAULT_SETTINGS.items():
         if not isinstance(value, str):
@@ -405,11 +393,7 @@ def _cron_error(value: str) -> str | None:
 
 
 def invalid_setting_values(updates: dict) -> list:
-    """Human-readable complaints for every value the app could not parse back.
-
-    One entry per offending key so PATCH can reject the whole request with a
-    single 400 listing all of them, the way the unknown-key guard already does.
-    """
+    """Human-readable complaints for every value the app could not parse back, one entry per offending key so PATCH can reject the whole request at once."""
     problems = []
     for key, value in sorted(updates.items()):
         if key in INT_SETTING_KEYS:
@@ -481,10 +465,8 @@ def seed_settings(db):
         if key not in existing:
             db.add(Setting(key=key, value=value, description=desc))
     db.commit()
-    # One-shot: ensure the Telegram webhook secret has a cryptographically random
-    # value. We seed an empty string above so operators can see the row exists in
-    # /api/settings; the real value is generated here on first run (or if the
-    # operator manually clears it to force a rotation).
+    # One-shot: seeded empty above so the row is visible in /api/settings; the
+    # real cryptographically random value is generated here on first run.
     row = db.query(Setting).filter(Setting.key == "telegram_webhook_secret").first()
     if row is not None and not (row.value or "").strip():
         row.value = secrets.token_urlsafe(32)
@@ -561,9 +543,8 @@ def run_migrations(db):
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_created_at ON llm_call_log(created_at)",
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_purpose ON llm_call_log(purpose)",
         "CREATE INDEX IF NOT EXISTS ix_llm_call_log_job_id ON llm_call_log(job_id)",
-        # Fix FK drift: the CREATE TABLE above is a no-op on live DBs where SQLAlchemy's
-        # create_all() already built the table with no ondelete (NO ACTION). Re-align
-        # the live constraint to ON DELETE SET NULL. Safe idempotent SQL.
+        # Fix FK drift: the CREATE TABLE above is a no-op on live DBs where
+        # create_all() already built the table with no ondelete; re-align to SET NULL.
         """ALTER TABLE llm_call_log DROP CONSTRAINT IF EXISTS llm_call_log_job_id_fkey""",
         """ALTER TABLE llm_call_log ADD CONSTRAINT llm_call_log_job_id_fkey FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL""",
         "ALTER TABLE llm_call_log ADD COLUMN IF NOT EXISTS provider VARCHAR NOT NULL DEFAULT ''",
@@ -578,10 +559,8 @@ def run_migrations(db):
           AND jsonb_typeof(cv_scores) = 'object'
           AND cv_scores != '{}'
           AND best_cv_score IS NULL""",
-        # 2026-04-23: Retire screening / phone_screen / final_round statuses.
-        # Board collapses to applied / interview / offer / rejected. Existing
-        # row statuses are remapped; status_transitions history is preserved
-        # as-is so the audit trail still shows the original transitions.
+        # Retire screening/phone_screen/final_round statuses onto
+        # applied/interview/offer/rejected; status_transitions is left as-is.
         "UPDATE applications SET status = 'applied' WHERE status = 'screening'",
         "UPDATE applications SET status = 'interview' WHERE status IN ('phone_screen', 'final_round')",
         "ALTER TABLE job_runs ADD COLUMN IF NOT EXISTS target_job_id UUID",
@@ -633,16 +612,13 @@ END $$;""",
         # resume_id to nullable. Idempotent for existing DBs.
         "ALTER TABLE tracer_links ADD COLUMN IF NOT EXISTS cover_letter_id UUID REFERENCES cover_letters(id) ON DELETE CASCADE",
         "ALTER TABLE tracer_links ALTER COLUMN resume_id DROP NOT NULL",
-        # Task 11: drop the legacy cvs table — Resume + Persona is the new world.
-        # Idempotent: subsequent restarts no-op once the table is gone.
+        # Drop the legacy cvs table — Resume + Persona is the new world.
         "DROP TABLE IF EXISTS cvs",
-        # R3-A-03: per-source outcome for multi-board search runs, so a source
-        # that hard-fails (ZipRecruiter 403) stops looking like one that simply
-        # found nothing. create_all() never adds columns to an existing table.
+        # Per-source outcome for multi-board search runs, so a source that hard-fails
+        # (ZipRecruiter 403) stops looking like one that simply found nothing.
         "ALTER TABLE scrape_log ADD COLUMN IF NOT EXISTS source_breakdown JSONB",
         # Per-entity acknowledgement of a scrape warning: /health/entities stops
-        # counting the entity while its newest ScrapeLog row is no newer than
-        # this stamp. A later failed run is newer, so it re-raises on its own.
+        # counting it while its newest ScrapeLog row is no newer than this stamp.
         "ALTER TABLE searches ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS warning_acknowledged_at TIMESTAMPTZ",
     ]
@@ -664,14 +640,7 @@ _RETIRED_STATUS_REMAP = {
 
 
 def _rewrite_retired_status_transitions(db):
-    """One-shot: rewrite Application.status_transitions JSON to match the
-    2026-04-23 status-ladder simplification. Remaps retired statuses, drops
-    self-transitions that result from the remap, and collapses consecutive
-    duplicates so the Sankey diagram no longer shows ghost `screening` /
-    `phone_screen` / `final_round` nodes.
-
-    Idempotent: scans only rows that still contain a retired label.
-    """
+    """One-shot: remap retired statuses in Application.status_transitions, drop resulting self-transitions and collapse duplicates, so Sankey shows no ghost nodes."""
     from backend.models.db import Application
     retired = tuple(_RETIRED_STATUS_REMAP)
     rows = db.query(Application).filter(
@@ -729,20 +698,18 @@ def cleanup_removed_settings(db):
         "h1b_exclusion_phrases",
         "language_exclude_phrases",
         "default_cv_id",
-        # Orphaned 2026-06: seeded but read by no code. max_jobs_per_scrape
-        # promised a per-run cap nothing enforced (sources use results_wanted /
-        # max_pages); company_domains/ats_domains were a retired Gmail-detection design.
+        # Seeded but read by no code: max_jobs_per_scrape promised a per-run cap
+        # nothing enforced; company_domains/ats_domains were a retired Gmail-detection design.
         "max_jobs_per_scrape",
         "company_domains",
         "ats_domains",
-        # Retired 2026-09: duplicated the Persona's own decline_demographics
-        # checkbox, which Persona.jsx documents as the single decline control.
+        # Duplicated the Persona's own decline_demographics checkbox.
         "autofill_decline_self_id",
-        # 2026-07: openai_compat provider removed — these endpoints were only for it
+        # openai_compat provider removed — these were only for it.
         "llm_base_url",
         "llm_fallback_base_url",
-        # 2026-08: structured-autofill on/off + trigger live in the extension popup,
-        # not server settings — they're per-browser preferences.
+        # structured-autofill on/off + trigger live in the extension popup, not
+        # server settings — they're per-browser preferences.
         "autofill_structured_enabled",
         "autofill_structured_trigger",
     ]
@@ -754,12 +721,7 @@ def cleanup_removed_settings(db):
 
 
 def migrate_cv_terminology(db):
-    """Rename the user-facing word 'CV'/'CVs' -> 'Resume'/'Resumes' in editable
-    prompt-text settings, preserving user edits.
-
-    Word-boundary matching leaves the functional template tokens intact
-    (CV_NAMES_HERE / best_cv / CV_NAME are not \\bCV\\b matches). Idempotent.
-    """
+    """Rename 'CV'/'CVs' -> 'Resume'/'Resumes' in editable prompt-text settings; word-boundary matching leaves template tokens like CV_NAMES_HERE intact."""
     import re
     for key in ("scoring_rubric",):
         row = db.query(Setting).filter(Setting.key == key).first()
@@ -773,17 +735,9 @@ def migrate_cv_terminology(db):
 
 
 def migrate_llm_settings(db):
-    """One-shot migrations for the 2026-07 model-list refresh + openai_compat removal.
-
-    - Refresh non-custom entries in llm_models_list to the current DEFAULT_SETTINGS
-      list (preserving user-added custom entries; openai_compat entries are dropped
-      even if custom — the provider no longer exists).
-    - Re-point any provider setting still on openai_compat to openai.
-    - Rename the dated claude-haiku-4-5-20251001 model setting values to the alias.
-    """
-    # Additive seed: default models are offered ONCE (tracked in llm_seeded_models).
-    # After that the user's list is authoritative — deleting a default keeps it gone
-    # across restarts, while genuinely-new defaults still propagate to existing installs.
+    """Refresh llm_models_list to current defaults, re-point openai_compat settings to openai, and rename the dated haiku model alias."""
+    # Additive seed: default models are offered ONCE (tracked in llm_seeded_models);
+    # after that the user's list is authoritative, but genuinely-new defaults still propagate.
     row = db.query(Setting).filter(Setting.key == "llm_models_list").first()
     seen_row = db.query(Setting).filter(Setting.key == "llm_seeded_models").first()
     if seen_row is None:
@@ -962,10 +916,8 @@ def seed_searches(db):
     for s in SEED_SEARCHES:
         if s["search_mode"] not in existing_modes:
             db.add(Search(**s))
-    # Idempotent rename: the linkedin_extension search was originally seeded as
-    # "LinkedIn Extension"; after the Extension/Extension-LI split it should read
-    # "Extension LI" so the UI labels match. Self-heal here so fresh DB clones
-    # (where the manual rename never ran) end up consistent.
+    # Idempotent rename: self-heal any linkedin_extension search still named
+    # "LinkedIn Extension" so fresh DB clones end up labeled "Extension LI".
     legacy = db.query(Search).filter(
         Search.search_mode == "linkedin_extension",
         Search.name == "LinkedIn Extension",
@@ -976,11 +928,7 @@ def seed_searches(db):
 
 
 def seed_mock_resume(db):
-    """Seed a mock base Resume for demonstration. Sets it as default Resume for all companies.
-
-    Idempotent: bails if any base Resume already exists. (Replaces the legacy
-    seed_mock_cv from before Task 11 dropped the cvs table.)
-    """
+    """Seed a mock base Resume for demonstration and set it as default for all companies; bails if any base Resume already exists."""
     if db.query(Resume).filter(Resume.is_base == True).count() > 0:
         return  # User already has a base resume
 
@@ -997,13 +945,11 @@ def seed_mock_resume(db):
         db.commit()
         db.refresh(resume)
 
-    # Set as default Resume for scoring
     default_row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
     if default_row:
         default_row.value = str(resume.id)
     db.commit()
 
-    # Pre-select this Resume for all seeded companies
     for company in db.query(Company).all():
         company.selected_resume_ids = [str(resume.id)]
     db.commit()
@@ -1033,9 +979,7 @@ def seed_persona(db):
 
 
 def migrate_h1b_to_visa_cache(db):
-    """One-time: copy legacy companies.h1b_* into the visa_cache table, then drop
-    those columns. Idempotent — no-op once the columns are gone (fresh installs
-    never have them). Postgres only for the DROP; SQLite/tests skip via detection."""
+    """One-time: copy legacy companies.h1b_* into visa_cache then drop those columns (Postgres only for the DROP; no-op once the columns are gone)."""
     from backend.models.db import VisaCache
     from sqlalchemy import text
 
@@ -1089,14 +1033,7 @@ def migrate_h1b_to_visa_cache(db):
 
 
 def migrate_autofill_dicts(db):
-    """Merge newly-added canonical keys into the editable autofill dictionaries.
-
-    autofill_field_patterns / autofill_option_synonyms are add-only user-editable
-    settings, so seed_settings never touches them once they exist. When new answer
-    keys ship (age_range, transgender, sexual_orientation, …) their default label
-    synonyms and option synonyms must be merged in without clobbering the user's
-    edits: only top-level keys the stored dict is missing are added.
-    """
+    """Merge newly-added canonical keys into autofill_field_patterns/autofill_option_synonyms without clobbering the user's edits (only missing top-level keys are added)."""
     for setting_key in ("autofill_field_patterns", "autofill_option_synonyms"):
         row = db.query(Setting).filter(Setting.key == setting_key).first()
         if not row:
@@ -1118,14 +1055,7 @@ def migrate_autofill_dicts(db):
 
 
 def migrate_dedup_tracking_params(db):
-    """R3-A-02: take "jk" out of an already-stored `dedup_tracking_params`.
-
-    Settings are seeded once, so dropping the entry from DEFAULT_SETTINGS does
-    nothing for an existing install — and every Indeed posting stays invisible
-    until the stored list is corrected. Idempotent, and it leaves the rest of the
-    operator's edits alone. (`_IDENTITY_PARAMS` in scraper/_shared/dedup.py is the
-    belt to this one's braces: it protects the host even if "jk" is put back.)
-    """
+    """Take "jk" out of an already-stored `dedup_tracking_params`, since settings are seeded once and DEFAULT_SETTINGS alone won't fix an existing install."""
     row = db.query(Setting).filter(Setting.key == "dedup_tracking_params").first()
     if not row or not row.value:
         return

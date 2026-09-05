@@ -1,11 +1,4 @@
-"""OPEN-01: PATCH /api/settings must reject values the app cannot parse back.
-
-SET-27 added the digit filter and the cron guard to the Settings *screen* only.
-The API still accepted anything, so a non-numeric interval was written happily
-and then raised inside `configure_scheduler()` — after which the backend could
-not start. The value guard lives in `seed.invalid_setting_values()`, next to the
-defaults the integer set is derived from.
-"""
+"""PATCH /api/settings must reject values it can't parse back; the guard lives in seed.invalid_setting_values()."""
 import importlib.util
 
 import pytest
@@ -17,8 +10,7 @@ from backend.seed import (
 
 
 def _seed_first_run(db):
-    """Empty dashboard_api_key = first-run mode, so the auth middleware lets the
-    TestClient through (same helper as test_settings_unknown_keys.py)."""
+    """Empty dashboard_api_key means first-run mode, so the auth middleware lets the TestClient through."""
     db.add(Setting(key="dashboard_api_key", value=""))
     db.commit()
 
@@ -36,8 +28,7 @@ needs_apscheduler = pytest.mark.skipif(
 # ── the derived key sets ────────────────────────────────────────────────────
 
 def test_int_keys_match_the_nine_rows_settings_marks_int():
-    """Derived from the seeded defaults; must equal what Settings.jsx types as
-    numeric, or the screen and the API would disagree about a field."""
+    """Derived from the seeded defaults; must equal what Settings.jsx types as numeric."""
     assert INT_SETTING_KEYS == {
         "fit_score_threshold",
         "scrape_interval_minutes",
@@ -226,8 +217,7 @@ def test_patch_accepts_valid_values(api_client, test_db):
 
 @needs_container
 def test_patch_ignores_the_redacted_placeholder(api_client, test_db):
-    """A GET returns '••••••' for secrets; PATCHing that back must not be
-    validated (or written) as a real value."""
+    """A GET returns '••••••' for secrets; PATCHing that back must not be validated or written as a real value."""
     _seed_first_run(test_db)
     resp = api_client.patch("/api/settings", json={"llm_api_key": "•" * 6})
     assert resp.status_code == 200

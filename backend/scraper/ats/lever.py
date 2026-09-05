@@ -1,13 +1,6 @@
-"""Lever ATS handler — GET api.lever.co/v0/postings/{company}.
-
-Detection: substring match on `jobs.lever.co/` (the board host + trailing slash
-prevents matching attacker-controlled paths like `https://evil.com/?u=lever.co`).
-Public interface: is_lever(url), scrape(url, debug=False).
-
-The public Lever API returns all postings for the given company slug. Supported
-filters (department, team, location, commitment) are forwarded from the original
-URL's query string.
-"""
+"""Lever ATS handler: GET api.lever.co/v0/postings/{company}; matched on `jobs.lever.co/` (trailing
+slash guards against attacker-controlled paths) with department/team/location/commitment filters
+forwarded from the original query string."""
 import json
 import logging
 from urllib.parse import parse_qs, urlparse
@@ -25,13 +18,9 @@ def is_lever(url: str) -> bool:
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
-    """Fetch jobs from Lever's public JSON API.
-
-    Forwards supported filters from the original URL query string:
-    department, team, location, commitment.
-    """
+    """Fetch jobs from Lever's public JSON API, forwarding department/team/location/commitment
+    filters from the original URL query string."""
     parsed = urlparse(url)
-    # Extract company slug from path: /plaid or /plaid/
     path_parts = [p for p in parsed.path.strip("/").split("/") if p]
     if not path_parts:
         if debug:
@@ -39,7 +28,6 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
         return []
     company_slug = path_parts[0]
 
-    # Build API URL, forwarding supported Lever filters
     api_url = f"https://api.lever.co/v0/postings/{company_slug}?mode=json"
     qs = parse_qs(parsed.query)
     for param in ("department", "team", "location", "commitment"):

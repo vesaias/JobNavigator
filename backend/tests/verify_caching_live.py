@@ -1,18 +1,6 @@
-"""Live Anthropic caching verification — not a pytest test, run manually via python -m.
-
-Makes 3 identical `call_llm(..., cached_prefix=...)` calls in quick succession, then
-inspects `llm_call_log` to confirm:
-  - Call 1: cache_write_tokens > 0 (cache miss, writes the prefix)
-  - Calls 2 & 3: cache_read_tokens > 0 (cache hit, reads the prefix ~10x cheaper)
-
-Requirements:
-  - backend container running
-  - `llm_provider='claude_api'` setting in DB (or env-var ANTHROPIC_API_KEY available as fallback)
-  - cached_prefix must be ≥ 1024 tokens for Sonnet/Opus caching
-
-Run inside the backend container:
-  docker compose exec -T backend python -m backend.tests.verify_caching_live
-"""
+"""Live Anthropic caching verification — not a pytest test; run with `docker compose exec -T backend python -m backend.tests.verify_caching_live`."""
+# Requires llm_provider='claude_api' (or ANTHROPIC_API_KEY) and a cached_prefix >= ~2000 tokens.
+# Checks llm_call_log: call 1 should show cache_write_tokens > 0, calls 2-3 cache_read_tokens > 0.
 import asyncio
 import sys
 
@@ -131,9 +119,8 @@ async def main():
     # Force module re-import of settings so any cached DB connection sees current values
     from backend.analyzer.llm_client import call_llm
 
-    # Anthropic's docs say 1024-token minimum for Sonnet, but in practice caching only
-    # kicks in when the cacheable block is comfortably above that — likely 2000+ tokens.
-    # Double the prefix to stay safely past any threshold.
+    # Docs say 1024 tokens is the minimum, but caching seems to need ~2000+ in practice —
+    # double the prefix to stay safely past any threshold.
     doubled_prefix = CACHED_PREFIX + "\n\n" + CACHED_PREFIX
 
     print(f"cached_prefix length: {len(doubled_prefix)} chars (~{len(doubled_prefix) // 4} tokens)")

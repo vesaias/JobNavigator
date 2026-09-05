@@ -1,10 +1,4 @@
-"""R3-A-03: a JobSpy board that hard-fails must not look like one that found nothing.
-
-jobspy runs every configured board inside one `scrape_jobs()` call and swallows
-per-board failures into its own loggers, so a ZipRecruiter 403 used to finish
-`completed`, `is_warning=False`, summary "9 seen, +0 new". These tests pin the
-per-source breakdown, the warning flag and the run summary.
-"""
+"""A JobSpy board that hard-fails must not look like one that found nothing; jobspy swallows per-board failures into its own loggers, so these tests pin the per-source breakdown, warning flag and run summary."""
 import logging
 import sys
 import types
@@ -15,20 +9,7 @@ from backend.models.db import ScrapeLog, Search
 
 
 def _board_logger(name):
-    """A logger shaped exactly like jobspy's own create_logger() makes them.
-
-    jobspy/util.py::create_logger does:
-
-        logger = logging.getLogger(f"JobSpy:{name}")
-        logger.propagate = False
-        if not logger.handlers:
-            logger.setLevel(logging.INFO)
-            logger.addHandler(logging.StreamHandler())
-
-    ``propagate = False`` is the whole point of these tests: it is why a capture
-    handler on the *root* logger never sees a board failure. Reproduce it here
-    so the tests fail against the root-only capture they replaced.
-    """
+    """A logger shaped like jobspy's own create_logger(): propagate=False, which is why a root-only capture handler never sees a board failure."""
     logger = logging.getLogger(name)
     logger.propagate = False
     if not logger.handlers:
@@ -38,16 +19,10 @@ def _board_logger(name):
 
 
 def _fake_jobspy(rows, log_errors=()):
-    """Install a stand-in `jobspy` module whose scrape_jobs returns `rows`.
-
-    `log_errors` is a list of (logger_name, message) the fake emits before
-    returning — exactly how the real library reports a refused board, down to
-    the non-propagating logger it emits on.
-    """
+    """Install a stand-in jobspy module whose scrape_jobs returns rows and emits log_errors on non-propagating loggers, like the real library does."""
     import pandas as pd
 
-    # Created at import time by the real library, so they already exist by the
-    # time _capture_source_errors() enumerates them. Same here.
+    # loggers must exist before _capture_source_errors() enumerates them
     boards = [_board_logger(name) for name, _ in log_errors]
 
     def scrape_jobs(**kwargs):
@@ -70,8 +45,7 @@ def _row(site, title, company, url):
 
 
 def _first_run_auth(db):
-    """Empty dashboard_api_key → the middleware's first-run bypass, so the
-    endpoint tests below exercise the serializer and not the 401."""
+    """Empty dashboard_api_key triggers the middleware's first-run bypass, so endpoint tests exercise the serializer, not the 401."""
     from backend.models.db import Setting
     db.add(Setting(key="dashboard_api_key", value=""))
     db.commit()
@@ -131,12 +105,7 @@ def test_breakdown_records_a_refused_board(test_db, monkeypatch):
 
 
 def test_board_logger_does_not_propagate_to_root():
-    """Pin the library behaviour the capture has to work around.
-
-    If this ever stops holding, the root-logger fallback would be enough and the
-    per-board attachment could go — but as long as it holds, a root-only handler
-    is a no-op against a real board failure.
-    """
+    """Pins the library behavior the capture works around: while it holds, a root-only handler is a no-op against a real board failure."""
     from backend.scraper.sources.jobspy import _SourceLogCapture
 
     board = _board_logger("JobSpy:ZipRecruiter")
@@ -312,11 +281,7 @@ def test_search_dict_exposes_last_source_errors(test_db):
 
 
 def test_scrape_log_endpoint_serializes_source_breakdown(test_db, api_client):
-    """R3-A-03: the run-history endpoint has to carry the per-board outcome.
-
-    A row can hold a perfectly populated breakdown and still be useless if the
-    endpoint drops the column on the way out.
-    """
+    """The run-history endpoint has to carry the per-board outcome — a populated row is still useless if the endpoint drops the column on the way out."""
     _first_run_auth(test_db)
     search = _search(test_db, ["indeed", "zip_recruiter"])
     test_db.add(ScrapeLog(

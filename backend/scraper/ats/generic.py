@@ -1,10 +1,5 @@
-"""Generic CSS-selector fallback for career pages with no ATS match.
-
-Launches a headless browser, extracts links matching common job-card selectors
-(anchor tags with job-ish attributes, job title classes, etc.), paginates as
-far as possible, and returns a list of {title, url} dicts filtered through
-_validate_job.
-"""
+"""Generic CSS-selector fallback for career pages with no ATS match: launches a headless browser,
+extracts job-card links, paginates, and returns {title, url} dicts filtered through _validate_job."""
 import asyncio
 import logging
 import re
@@ -44,10 +39,8 @@ async def _wait_for_content(page, wait_for_selector: str = None):
 # ── Extract job links from current page ───────────────────────────────────────
 
 async def _extract_job_links_from_page(page, base_url: str, debug: bool = False) -> list[dict]:
-    """Extract and validate job links from the currently loaded page.
-
-    If debug=True, returns ALL found links with validation status/reason.
-    """
+    """Extract and validate job links from the currently loaded page; if debug=True, returns
+    all found links with their validation status/reason."""
     jobs_by_url = {}      # URL -> job dict (valid jobs)
     rejected = []         # debug: rejected entries
 
@@ -93,7 +86,6 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
                     elif not href.startswith("http"):
                         continue
 
-                    # Skip entirely if we've already processed this href
                     if href in seen_hrefs:
                         continue
                     seen_hrefs.add(href)
@@ -125,10 +117,8 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
             except Exception:
                 continue
 
-    # Run specific selectors first
     await _run_selectors(specific_selectors)
 
-    # Only fall back to broad selectors if specific ones found nothing
     if not jobs_by_url:
         await _run_selectors(broad_selectors)
 
@@ -187,10 +177,8 @@ async def _extract_all_pages(page, base_url: str, max_pages: int = 5, debug: boo
 
 
 async def _click_next_page(page, debug: bool = False) -> bool | dict:
-    """Try to click a next page or load more button.
-
-    Returns True/False normally. When debug=True, returns a dict with details.
-    """
+    """Try to click a next page or load more button; returns True/False normally,
+    or a details dict when debug=True."""
     debug_info = {"clicked": False, "candidates": []}
 
     # Detect eightfold pages by checking for their CSS module classes in the DOM
@@ -307,11 +295,8 @@ async def _click_next_page(page, debug: bool = False) -> bool | dict:
 # ── Public entry point ───────────────────────────────────────────────────────
 
 async def scrape(url: str, browser=None, max_pages: int = 5, debug: bool = False) -> list[dict] | tuple:
-    """Fallback scraper for career pages with no ATS match.
-
-    Launches its own browser if one isn't passed. Navigates, waits for content,
-    extracts job links via CSS selectors, paginates, returns jobs.
-    """
+    """Fallback scraper for career pages with no ATS match; launches its own browser if one isn't
+    passed, then navigates, waits, extracts links, and paginates."""
     own_browser = browser is None
     pw = None
     if own_browser:

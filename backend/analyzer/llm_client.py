@@ -16,20 +16,7 @@ def _get_setting(db, key, default=""):
 
 
 def resolve_llm_config(feature: str = "", db=None) -> dict:
-    """Resolve the provider/model/api_key a feature will actually dispatch with.
-
-    Order: ``<feature>_llm_*`` setting → primary ``llm_*`` setting → shipped default.
-
-    This is the single source of truth for dispatch (the ``call_*_llm`` helpers
-    below) AND for logging (``track_llm_call`` / ``log_llm_call``). Before this,
-    the logging side of each feature re-derived the pair with its own fallback
-    chain — cover letters logged ``claude_api``/``claude-sonnet-4-6`` while the
-    call actually ran on the primary pair (R2-H-15), and tailor/email/pdf
-    disagreed on the final default model.
-
-    feature: "" (primary), "email", "cv_tailor", "cover_letter", "autofill",
-    "scoring". Pass an open session as ``db`` to reuse it.
-    """
+    """Resolve the provider/model/api_key a feature dispatches with: `<feature>_llm_*` setting -> primary `llm_*` setting -> shipped default. Single source of truth for both dispatch and logging."""
     own_db = db is None
     if own_db:
         db = SessionLocal()
@@ -56,12 +43,7 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
                    cached_prefix: str | None = None,
                    provider: str | None = None, model: str | None = None,
                    api_key: str | None = None) -> dict:
-    """Route to configured LLM provider with retry + automatic fallback.
-    Returns {text, usage} dict. Pass cached_prefix to enable prompt caching on Claude API.
-
-    provider/model/api_key override the Primary for this call (used by resume scoring's
-    optional per-feature override); when None they fall back to the llm_* settings.
-    The Fallback (llm_fallback_*) is always read from settings."""
+    """Route to the configured LLM provider with retry + automatic fallback; provider/model/api_key override the Primary for this call when given, else fall back to the llm_* settings."""
     MAX_ATTEMPTS = 4
     BACKOFF_BASE = 2  # seconds: 2, 4, 8
 
@@ -151,12 +133,7 @@ async def call_cv_tailor_llm(prompt: str, system: str, max_tokens: int = 3000) -
 
 async def call_cover_letter_llm(prompt: str, system: str, max_tokens: int = 1500,
                                 cached_prefix: str | None = None) -> dict:
-    """Route to cover-letter-specific LLM provider. Returns {text, usage}.
-
-    Supports prompt caching (Claude API): the resume + persona-preferences prefix
-    is stable per resume, so regenerating in a different voice/length only pays
-    for the JD suffix.
-    """
+    """Route to cover-letter-specific LLM provider; the resume + persona-preferences prefix caches on Claude API so regenerating in a different voice/length only pays for the JD suffix."""
     cfg = resolve_llm_config("cover_letter")
     provider, model = cfg["provider"], cfg["model"]
 
@@ -169,12 +146,7 @@ async def call_cover_letter_llm(prompt: str, system: str, max_tokens: int = 1500
 
 async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
                             cached_prefix: str | None = None) -> dict:
-    """Route to autofill-specific LLM provider. Returns {text, usage}.
-
-    Supports prompt caching (Claude API): the persona + qa_bank prefix is stable
-    per request, so regenerating with a different length/company only pays for
-    the per-question suffix.
-    """
+    """Route to autofill-specific LLM provider; the persona + qa_bank prefix caches on Claude API so regenerating with a different length/company only pays for the per-question suffix."""
     cfg = resolve_llm_config("autofill")
     provider, model = cfg["provider"], cfg["model"]
 
@@ -187,9 +159,7 @@ async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
 
 async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 400,
                                    cached_prefix: str | None = None):
-    """Streaming version of call_autofill_llm — async-yields text chunks as the
-    model generates them. claude_api + openai/openrouter stream natively; other
-    providers fall back to a single chunk with the full answer."""
+    """Streaming version of call_autofill_llm; claude_api and openai/openrouter stream natively, other providers fall back to a single full-answer chunk."""
     cfg = resolve_llm_config("autofill")
     provider, model, api_key = cfg["provider"], cfg["model"], cfg["api_key"]
 
@@ -203,9 +173,8 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
         async for c in _stream_openai(combined, system, model, api_key, max_tokens, base):
             yield c
         return
-    # non-streaming providers (claude_code, ollama, …) can't emit tokens as they
-    # generate, so simulate streaming: fetch the full answer, then yield it in
-    # word-sized chunks so the in-field draft still animates instead of popping.
+    # Non-streaming providers can't emit tokens as they generate, so simulate it:
+    # fetch the full answer, then yield word-sized chunks so the draft still animates.
     import asyncio, re
     res = await _dispatch(provider, model, api_key, prompt, system, max_tokens, cached_prefix=cached_prefix)
     text = res.get("text", "") or ""
@@ -247,12 +216,7 @@ async def _stream_openai(prompt, system, model, api_key, max_tokens, base_url=No
 async def _dispatch(provider: str, model: str, api_key: str,
                     prompt: str, system: str, max_tokens: int,
                     cached_prefix: str | None = None) -> dict:
-    """Route to the correct provider. All providers return {text, usage} dict.
-
-    Only `claude_api` supports Anthropic prompt caching — for other providers the
-    cached_prefix is concatenated into the prompt so the full content still reaches
-    the model (without the cache discount).
-    """
+    """Route to the correct provider; only `claude_api` supports prompt caching, others get cached_prefix concatenated into the prompt (no cache discount)."""
     if provider == "claude_api":
         return await _call_claude_api(prompt, system, model, api_key, max_tokens, cached_prefix=cached_prefix)
     combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
@@ -273,13 +237,7 @@ async def _dispatch(provider: str, model: str, api_key: str,
 
 async def _call_claude_api(prompt: str, system: str, model: str, api_key: str,
                            max_tokens: int, cached_prefix: str | None = None) -> dict:
-    """Call Claude via Anthropic SDK. Returns {text, usage} dict.
-
-    When cached_prefix is provided, it's sent as a separate message block with
-    cache_control={"type": "ephemeral"} so subsequent calls with the same prefix
-    are served at cache-read price (~10x cheaper). The prefix should be >= 1024
-    tokens (Sonnet/Opus minimum) or it's ignored for caching.
-    """
+    """Call Claude via the Anthropic SDK; cached_prefix is sent as a separate cache_control block for ~10x cheaper reuse, but is ignored below the 1024-token (Sonnet/Opus) minimum."""
     import anthropic
     key = api_key or __import__('os').getenv("ANTHROPIC_API_KEY", "")
     client = anthropic.AsyncAnthropic(api_key=key)
@@ -353,8 +311,7 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
 
 async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_tokens: int,
                        base_url: str | None = None) -> dict:
-    """Call the OpenAI API (or any OpenAI-compatible endpoint via base_url).
-    Returns {text, usage}."""
+    """Call the OpenAI API, or any OpenAI-compatible endpoint via base_url."""
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=api_key, base_url=base_url)  # base_url=None → OpenAI default
     response = await client.chat.completions.create(

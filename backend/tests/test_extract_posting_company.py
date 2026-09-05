@@ -1,14 +1,4 @@
-"""Tests for the Log-application URL reader's employer detection (R3-A-05).
-
-The reader used to fill Company with the ATS's own brand ("Greenhouse", "Lever",
-"Linkedin") because og:site_name / the hostname are the only signals an
-ATS-hosted board gives. These cover the two helpers behind the fix:
-
-  - _company_from_url(url)  — employer from a known ATS board slug/subdomain
-  - _is_ats_brand(name)     — suppresses a brand-looking fallback
-
-Both are pure functions, so nothing here imports backend.main or hits the network.
-"""
+"""Tests the Log-application URL reader's employer detection: _company_from_url() pulls the employer from a known ATS board slug, _is_ats_brand() suppresses a brand-looking fallback like "Greenhouse" or "Linkedin"."""
 import pytest
 
 from backend.api.routes_applications import (
@@ -18,7 +8,7 @@ from backend.api.routes_applications import (
 )
 
 
-# ── the five ATS URL shapes from the finding ─────────────────────────────────
+# ── the five ATS URL shapes ───────────────────────────────────────────────────
 
 @pytest.mark.parametrize("url,expected", [
     # Greenhouse — both board hosts, and the embed form.
@@ -131,7 +121,7 @@ def _offline_fetch(monkeypatch):
 
 
 # A Greenhouse-hosted board: no JSON-LD hiringOrganization, og:site_name is the
-# ATS brand, <title> is the SPA shell. Exactly the R3-A-05 repro.
+# ATS brand, and <title> is the SPA shell.
 _GREENHOUSE_HTML = """
 <html><head><title>Duolingo Careers</title>
 <meta property="og:site_name" content="Greenhouse">
@@ -181,11 +171,9 @@ async def test_extract_posting_keeps_jsonld_hiring_organization(_offline_fetch):
     assert out == {"title": "SOX Manager", "company": "Vercel Inc."}
 
 
-# ── OPEN-04: HTML entities in the extracted fields ───────────────────────────
-# The R3-A-05 fix returned the right employer, but the LinkedIn path still handed
-# the Log-application modal a raw "&amp;" in the title. JSON-LD lives inside a
-# <script>, whose contents BeautifulSoup hands back as raw text — nothing there
-# decodes an entity, and json.loads has no reason to.
+# ── HTML entities in the extracted fields ────────────────────────────────────
+# JSON-LD lives inside a <script>, which BeautifulSoup hands back as raw text —
+# nothing there decodes an entity like "&amp;", and json.loads has no reason to.
 
 @pytest.mark.parametrize("raw,expected", [
     ("AI Strategy &amp; Health Plan Tech", "AI Strategy & Health Plan Tech"),
@@ -203,7 +191,7 @@ def test_decode_entities(raw, expected):
 
 @pytest.mark.asyncio
 async def test_extract_posting_decodes_entities_in_a_jsonld_title(_offline_fetch):
-    """The exact round-3 case: LinkedIn's JSON-LD title carries `&amp;`."""
+    """LinkedIn's JSON-LD title carries `&amp;`, which must be decoded."""
     from backend.api.routes_applications import ExtractRequest, extract_posting
     _offline_fetch("""
     <html><head>

@@ -1,4 +1,4 @@
-"""Tests for SSRF defense in scraper/_shared/url_safety.py (#4)."""
+"""Tests for SSRF defense in scraper/_shared/url_safety.py."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -102,7 +102,6 @@ class TestAssertPublicURL:
             "backend.scraper._shared.url_safety.socket.getaddrinfo",
             lambda host, port: [(None, None, None, None, ("8.8.8.8", 0))],
         )
-        # Should NOT raise
         assert_public_http_url("https://jobs.lever.co/acme/abc-123")
 
     def test_rejects_unresolvable_host(self, monkeypatch):
@@ -172,8 +171,7 @@ class TestSafeGet:
             call_count["n"] += 1
             if host == "10.0.0.1":
                 return [(None, None, None, None, ("10.0.0.1", 0))]
-            # Treat literal IPs transparently — the validator short-circuits
-            # on ipaddress.ip_address before calling getaddrinfo for them.
+            # Literal IPs short-circuit on ipaddress.ip_address before getaddrinfo is called.
             return [(None, None, None, None, ("8.8.8.8", 0))]
 
         monkeypatch.setattr(

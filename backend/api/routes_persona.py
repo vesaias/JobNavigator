@@ -53,11 +53,7 @@ def get_persona(db: Session = Depends(get_db)):
 
 @router.patch("")
 def update_persona(updates: dict, db: Session = Depends(get_db)):
-    """Replace one or more node values. PATCH replaces a whole node atomically;
-    callers must send the complete intended value of each node they update.
-
-    Unknown top-level keys → 400.
-    """
+    """Replace one or more node values atomically; callers must send the complete intended value of each node they update. Unknown top-level keys → 400."""
     unknown = set(updates.keys()) - _NODES
     if unknown:
         raise HTTPException(status_code=400, detail=f"Unknown persona node(s): {sorted(unknown)}")
@@ -68,11 +64,8 @@ def update_persona(updates: dict, db: Session = Depends(get_db)):
 
     for k, v in updates.items():
         setattr(p, k, v)
-        # JSON columns compare by value, and two dicts with the same items are
-        # equal regardless of key order — so an order-only change (reordering
-        # resume_content.skills from the editor) produced no UPDATE at all and
-        # was silently dropped. Flag every touched node explicitly, the way
-        # POST /qa-bank below already does.
+        # JSON columns compare by value, so an order-only change (e.g. reordering
+        # resume_content.skills) produces no UPDATE unless the node is flagged explicitly.
         flag_modified(p, k)
     p.updated_at = utcnow()
     db.commit()
@@ -81,14 +74,11 @@ def update_persona(updates: dict, db: Session = Depends(get_db)):
 
 
 # ── Import (résumé → persona) ────────────────────────────────────────────────
-# Initial population: the imported document *replaces* `contact` and
-# `resume_content`. The other five nodes (work_auth, demographics, compensation,
-# preferences, qa_bank) are never touched — nothing in a résumé answers them.
+# Initial population: the imported document replaces `contact` and `resume_content`;
+# the other five nodes are never touched since nothing in a résumé answers them.
 
-# The header fills first_name, last_name, email, phone, city, state, country,
-# linkedin, github and portfolio. `current_company` is the one contact key with no
-# résumé source, and the node has no title/headline key at all (see
-# backend/autofill_schema.py ANSWER_SCHEMA), so the header's `title` is dropped.
+# The header fills contact's name/email/phone/location/social keys; `current_company`
+# has no résumé source and there's no title key (see autofill_schema.py ANSWER_SCHEMA), so `title` is dropped.
 _EMAIL_RE = re.compile(r"[\w.+%-]+@[\w-]+\.[\w.-]+")
 # a phone is digits with the usual separators — no letters, at least 7 digits
 _PHONE_RE = re.compile(r"^\+?[\d][\d\s().+/-]{5,}$")
@@ -102,15 +92,7 @@ def _digits(s: str) -> int:
 
 
 def _split_location(text: str) -> dict:
-    """Split a location line into city / state / country.
-
-    'Boston, MA' · 'Berlin, Germany' · 'Austin, TX, USA'.
-
-    A two-part location is a country when the second half names one (reusing the
-    dial-code table's country names, which is the only country list we ship) and
-    a state otherwise — "Boston, Massachusetts" stays a state, "Berlin, Germany"
-    becomes a country.
-    """
+    """Split a location line ('Boston, MA' / 'Berlin, Germany' / 'Austin, TX, USA') into city/state/country; a two-part location is a country when the second half names one (reusing the dial-code table), else a state."""
     parts = [x.strip() for x in text.split(",") if x.strip()]
     if not parts:
         return {}
@@ -125,20 +107,7 @@ def _split_location(text: str) -> dict:
 
 
 def _contact_from_header(header: dict) -> dict:
-    """Map a résumé header {name, contact_items[{text,url}]} onto the persona's
-    `contact` node keys (first_name, last_name, email, phone, city, state,
-    country, linkedin, github, portfolio).
-
-    Each contact item is classified by its text *and* its url, first match wins,
-    and the first item of a kind wins over later ones:
-      mailto:/an e-mail address        → email
-      tel:/a digits-only string        → phone
-      "linkedin" anywhere              → linkedin
-      "github" anywhere                → github
-      portfolio/website/blog/any other
-        leftover link                  → portfolio
-      the remaining url-less item      → city / state / country
-    """
+    """Map a résumé header {name, contact_items[{text,url}]} onto the persona's contact keys (first_name, last_name, email, phone, city, state, country, linkedin, github, portfolio); each item is classified by its text and url, first match wins, and the first item of a kind wins over later ones."""
     out = {}
     name = str((header or {}).get("name") or "").strip()
     if name:
@@ -185,9 +154,8 @@ def _contact_from_header(header: dict) -> dict:
     return out
 
 
-# The résumé sections the Persona editor renders (ResumeSections.jsx SECTION_ORDER
-# minus Header, which lives in `contact`). Defaults keep the node's shape stable
-# so the editor never has to special-case a missing key.
+# The résumé sections the Persona editor renders (ResumeSections.jsx SECTION_ORDER minus
+# Header, which lives in `contact`); defaults keep the node's shape stable for the editor.
 _CONTENT_DEFAULTS = (
     ("summary", ""), ("experience", []), ("skills", {}),
     ("education", []), ("projects", []), ("publications", []),
@@ -195,8 +163,7 @@ _CONTENT_DEFAULTS = (
 
 
 def _resume_content_from(json_data: dict) -> dict:
-    """The résumé's own sections, copied verbatim — that is exactly what the
-    Persona editor edits via ResumeSections."""
+    """The résumé's own sections, copied verbatim — exactly what the Persona editor edits via ResumeSections."""
     src = json_data or {}
     return {k: copy.deepcopy(src[k]) if src.get(k) else copy.deepcopy(default)
             for k, default in _CONTENT_DEFAULTS}
@@ -218,16 +185,7 @@ def _import_summary(contact: dict, content: dict, source: str) -> dict:
 
 @router.post("/import")
 async def import_persona(request: Request, file: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
-    """Populate the persona from a base résumé or a résumé PDF.
-
-    Body is either ``{"resume_id": "<base id>"}`` (JSON) or a multipart upload
-    with a ``file`` field. The PDF path runs the *same* parser as
-    POST /api/resumes/import-pdf (routes_resumes.parse_resume_pdf) — one LLM
-    call, tracked by llm_logger — and stores nothing as a Resume row.
-
-    `contact` and `resume_content` are replaced wholesale; the five autofill
-    nodes are untouched.
-    """
+    """Populate the persona from a base résumé (`{"resume_id": ...}`) or an uploaded résumé PDF (same parser as POST /api/resumes/import-pdf, stores nothing as a Resume row), replacing `contact` and `resume_content` wholesale while leaving the other nodes untouched."""
     p = db.query(Persona).filter(Persona.id == 1).first()
     if not p:
         raise HTTPException(status_code=500, detail="Persona singleton missing")
@@ -281,13 +239,7 @@ async def import_persona(request: Request, file: Optional[UploadFile] = File(Non
 
 @router.post("/qa-bank")
 def append_qa_bank(body: dict, db: Session = Depends(get_db)):
-    """Append one {question, answer} entry to the singleton Persona's qa_bank.
-    Creates the Persona row if missing. Empty question/answer -> 400.
-
-    This is the "flywheel" save used by the extension's autofill review
-    popover: whenever the user edits/approves a generated answer, it can be
-    saved back into the bank to improve future generations.
-    """
+    """Append one {question, answer} entry to the singleton Persona's qa_bank, creating the Persona row if missing (empty question/answer -> 400); used by the extension's autofill review popover to save edited answers back into the bank."""
     question = (body.get("question") or "").strip()
     answer = (body.get("answer") or "").strip()
     if not question or not answer:

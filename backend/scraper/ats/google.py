@@ -1,14 +1,6 @@
-"""Google Careers scraper (Playwright DOM).
-
-Detection: substring check on "google.com/about/careers" (NOTE: lenient — a URL with
-that substring anywhere, including in query strings, matches. Kept verbatim from
-original production code).
-Public interface: is_google(url), scrape(url, browser=None, debug=False).
-
-Job cards are <li class="lLd3Je"> with <h3 class="QJPWVe"> for titles
-and <a href="jobs/results/{id}-slug"> for links.
-Pagination via <a aria-label="Go to next page">.
-"""
+"""Google Careers scraper (Playwright DOM); job cards are <li class="lLd3Je"> with
+<h3 class="QJPWVe"> titles and <a href="jobs/results/{id}-slug"> links, paginated
+via <a aria-label="Go to next page">."""
 import asyncio
 import logging
 
@@ -19,21 +11,14 @@ logger = logging.getLogger("jobnavigator.scraper.ats.google")
 
 
 def is_google(url: str) -> bool:
-    """Check if URL is a Google Careers job search page."""
+    """Check if URL is a Google Careers job search page (lenient substring match on
+    "google.com/about/careers" — may match anywhere in the URL, including query strings)."""
     return "google.com/about/careers" in url.lower()
 
 
 async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bool = False) -> list[dict] | tuple:
-    """Scrape Google Careers using Playwright DOM extraction.
-
-    Job cards are <li class="lLd3Je"> with <h3 class="QJPWVe"> for titles
-    and <a href="jobs/results/{id}-slug"> for links.
-    Pagination via <a aria-label="Go to next page">.
-
-    `max_pages` caps how many result pages to walk. None preserves the
-    historical 50-page safety limit; pass a positive int (typically the
-    Company.max_pages setting) to honour the operator's pagination budget.
-    """
+    """Scrape Google Careers using Playwright DOM extraction; max_pages caps how many
+    result pages to walk (None defaults to 50)."""
     page_cap = max_pages if (max_pages is not None and max_pages > 0) else 50
     own_browser = browser is None
     pw = None
@@ -47,7 +32,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
         page = await _new_page(browser)
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
-        # Wait for job card links to render
         try:
             await page.wait_for_selector("a[href*='jobs/results/']", timeout=15000)
         except Exception:
@@ -55,7 +39,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
             await asyncio.sleep(5)
         await asyncio.sleep(2)
 
-        # Dismiss cookie consent if present
         try:
             consent = page.locator('button:has-text("Accept all")')
             if await consent.count() > 0:
@@ -64,7 +47,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
         except Exception:
             pass
 
-        # Paginate through all pages
         seen_ids = set()
         page_num = 0
         while page_num < page_cap:
@@ -77,7 +59,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
                 if not href:
                     continue
 
-                # Extract job ID from path
                 # href: jobs/results/141618563805782726-product-manager-i-geo?...
                 path_part = href.split("jobs/results/")[-1].split("?")[0]
                 job_id = path_part.split("-")[0] if path_part else ""
@@ -90,7 +71,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
                 h3_handle = await link.evaluate_handle("el => (el.closest('li') || el.parentElement).querySelector('h3')")
                 title = (await h3_handle.evaluate("el => el ? el.innerText : ''")).strip()
 
-                # Build canonical URL
                 job_url = f"https://www.google.com/about/careers/applications/jobs/results/{path_part}"
 
                 reason = _validate_job(title, job_url)
@@ -101,7 +81,6 @@ async def scrape(url: str, browser=None, max_pages: int | None = None, debug: bo
 
             logger.info(f"Google Careers: page {page_num} — {page_count} new jobs")
 
-            # Click next page
             next_link = page.locator("a[aria-label='Go to next page']")
             if await next_link.count() == 0:
                 break

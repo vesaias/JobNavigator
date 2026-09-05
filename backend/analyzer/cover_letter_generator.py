@@ -1,14 +1,5 @@
-"""Cover-letter generation — builds the prompt and calls the LLM.
-
-Voice comes from the paired resume (already in the candidate's voice) plus a
-selectable voice preset; the persona `preferences` node supplies the "why this
-role/company" beat. writing_samples are intentionally NOT used (retired).
-
-Prompt-caching split (Anthropic): the cacheable PREFIX = flattened resume +
-persona preferences + output schema (stable per resume), the per-job SUFFIX =
-JD + voice + length. So switching voice/length and regenerating reuses the
-cached prefix.
-"""
+"""Cover-letter generation — builds the prompt and calls the LLM. Voice comes from the paired resume plus a selectable voice preset, with persona preferences supplying the "why this role/company" beat.
+Prompt-caching split: cacheable PREFIX = resume + preferences + schema (stable per resume), per-job SUFFIX = JD + voice + length, so switching voice/length reuses the cached prefix."""
 import json
 import logging
 import re
@@ -27,11 +18,7 @@ _LENGTH_INSTRUCTIONS = {
 
 
 def resolve_voice_instruction(db, voice_id: str | None) -> tuple[str, str]:
-    """Return (voice_id, instruction) for the given preset id.
-
-    Falls back to cover_letter_default_voice, then to the first preset, then to a
-    neutral instruction. Returns the resolved id so callers can persist it.
-    """
+    """Return (voice_id, instruction) for the given preset id, falling back to cover_letter_default_voice, then the first preset, then a neutral instruction; returns the resolved id so callers can persist it."""
     presets = []
     row = db.query(Setting).filter(Setting.key == "cover_letter_voice_presets").first()
     if row and row.value:
@@ -56,11 +43,7 @@ def resolve_voice_instruction(db, voice_id: str | None) -> tuple[str, str]:
 def build_cover_letter_prompt(resume_data: dict, preferences: dict, jd_text: str,
                               voice_instruction: str, length: str,
                               prompt_template: str) -> tuple[str, str]:
-    """Return (cached_prefix, suffix_prompt).
-
-    cached_prefix = resume + preferences + schema (stable per resume).
-    suffix        = the editable prompt with JD/voice/length filled in.
-    """
+    """Return (cached_prefix, suffix_prompt): the prefix is resume + preferences + schema (stable per resume), the suffix is the editable prompt with JD/voice/length filled in."""
     resume_text = _flatten_resume(resume_data or {})
     pref_text = ""
     if preferences:
@@ -94,7 +77,6 @@ def parse_cover_letter_response(raw: str) -> dict:
     if match:
         text = match.group(0)
     data = json.loads(text)
-    # Normalize shape
     return {
         "greeting": (data.get("greeting") or "Dear Hiring Team,").strip(),
         "body_paragraphs": [str(p).strip() for p in (data.get("body_paragraphs") or []) if str(p).strip()],
@@ -118,7 +100,7 @@ async def generate_cover_letter_body(resume_data: dict, preferences: dict, jd_te
     resp = await call_cover_letter_llm(suffix, system, max_tokens=1500, cached_prefix=cached_prefix)
     parsed = parse_cover_letter_response(resp["text"])
     parsed["_usage"] = resp.get("usage", {})
-    # What actually dispatched, for the caller's llm_call_log row (R2-H-15).
+    # What actually dispatched, for the caller's llm_call_log row.
     parsed["_llm"] = {
         "usage": resp.get("usage", {}),
         "provider": resp.get("provider"),

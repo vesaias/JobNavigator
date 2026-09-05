@@ -1,19 +1,6 @@
-"""freehire.me source — open aggregator REST API (no auth).
+"""freehire.me source — open aggregator REST API (no auth); returns the employer's own apply URL, a full HTML description, location, skills and enrichment in the search response, so no per-hit detail fetch is needed.
 
-freehire crawls company career boards/ATS directly and returns the employer's own
-apply URL, a full (HTML) description, location, skills and enrichment in the search
-response — so no per-hit detail fetch is needed.
-
-Public entry points:
-- `run(search)`     — full scrape for the scheduler / dispatch.
-- `preview(search, db)` — UI dry-run returning filtering diagnostics (no DB writes).
-
-Configuration (on the Search):
-- `direct_url`  — a freehire URL whose query params (q, category, seniority, …) are
-  forwarded to the API verbatim. The operator builds a search on freehire and pastes
-  the URL. `limit`/`offset`/`page` are ignored (we paginate).
-- `search_term` — used as `q=` (overrides any q in direct_url).
-At least one of the two must be set.
+Configured via the Search's `direct_url` (a freehire URL whose query params are forwarded verbatim, `limit`/`offset`/`page` ignored since we paginate) and/or `search_term` (used as `q=`, overriding any q in direct_url); at least one must be set.
 """
 import logging
 import re
@@ -41,11 +28,7 @@ _DROP_PARAMS = {"limit", "offset", "page", "per_page"}
 
 
 def _strip_html(html_str: str) -> str:
-    """freehire descriptions are HTML — flatten to plaintext for scoring/display.
-
-    Newlines are inserted only at block boundaries (</p>, </li>, <br>, …) so
-    inline markup (<b>, <a>) doesn't split words; inline text keeps its spacing.
-    """
+    """freehire descriptions are HTML; flatten to plaintext, inserting newlines only at block boundaries (</p>, </li>, <br>, …) so inline markup (<b>, <a>) doesn't split words."""
     if not html_str:
         return ""
     try:
@@ -95,10 +78,7 @@ def _parse_job(raw: dict) -> dict:
 
 
 def _annual_salary(j: dict) -> tuple:
-    """Return (min, max) from freehire enrichment when it's an annual figure.
-
-    Non-annual periods (month/hour) are skipped rather than mis-stored as yearly.
-    """
+    """Return (min, max) from freehire enrichment only when the period is annual, skipping month/hour periods rather than mis-storing them as yearly."""
     if not j.get("salary_min"):
         return None, None
     if j.get("salary_period") not in ("year", None):
@@ -210,8 +190,7 @@ async def run(search: Search) -> dict:
                     saved=False,
                 )
 
-                # Structured salary from freehire enrichment (annual only) — set
-                # before analyze_inline so the JD extractor doesn't override it.
+                # Structured salary from freehire enrichment (annual only) — set before analyze_inline so the JD extractor doesn't override it.
                 sal_min, sal_max = _annual_salary(j)
                 if sal_min:
                     job.salary_min = sal_min

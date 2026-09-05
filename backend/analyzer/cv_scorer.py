@@ -38,11 +38,7 @@ def reset_scoring_semaphore():
 
 
 def _flatten_resume(json_data: dict) -> str:
-    """Render a Resume.json_data dict (or Persona.resume_content — same shape) to plaintext
-    for LLM scoring. Uses '## Section' headers so the LLM sees clear structure, and
-    includes all six standard sections (header, summary, experience, skills, education,
-    projects, publications) when present. Empty sections are omitted entirely.
-    """
+    """Render a Resume.json_data dict (or Persona.resume_content) to plaintext with '## Section' headers for LLM scoring; empty sections are omitted."""
     if not json_data:
         return ""
     parts = []
@@ -137,9 +133,7 @@ _PERSONA_DISPLAY = "Persona"
 
 
 def _get_persona_text(db) -> dict:
-    """Return {'Persona': flattened_text} when the singleton persona has non-empty
-    resume_content, else {}. Other persona nodes (contact, qa_bank, etc.) are
-    NOT used for scoring — only resume_content."""
+    """Return {'Persona': flattened_text} when the singleton persona has non-empty resume_content, else {} — only resume_content is used for scoring."""
     from backend.models.db import Persona
     p = db.query(Persona).filter(Persona.id == 1).first()
     if not p:
@@ -151,9 +145,7 @@ def _get_persona_text(db) -> dict:
 
 
 def _get_resume_texts(db) -> dict:
-    """Return {Resume.name: flattened_text} for every base Resume + Persona (if populated).
-    Persona always appears last. Replaces _get_cv_texts. Ordered by Resume.id for stable cache keys.
-    """
+    """Return {Resume.name: flattened_text} for every base Resume + Persona (if populated, always last), ordered by Resume.id for stable cache keys."""
     from backend.models.db import Resume
     out = {}
     for r in db.query(Resume).filter(Resume.is_base == True).order_by(Resume.id).all():
@@ -165,8 +157,7 @@ def _get_resume_texts(db) -> dict:
 
 
 def _get_default_resume(db) -> dict:
-    """Return {Resume.name: flat_text} for the default Resume. Special id 'persona'
-    returns persona text. Empty dict if not set or not found."""
+    """Return {Resume.name: flat_text} for the default Resume (special id 'persona' returns persona text); empty dict if not set or not found."""
     from backend.models.db import Resume
     row = db.query(Setting).filter(Setting.key == "default_resume_id").first()
     if not row or not row.value:
@@ -183,9 +174,7 @@ def _get_default_resume(db) -> dict:
 
 
 def _get_resume_texts_for_company(db, company) -> dict:
-    """Return resume texts for a company. Honors company.selected_resume_ids,
-    which can mix Resume UUIDs with the special 'persona' key.
-    Falls back to default; last resort all base resumes (+ persona if populated)."""
+    """Return resume texts for a company from company.selected_resume_ids (which can mix Resume UUIDs with 'persona'), falling back to the default, then all base resumes."""
     from backend.models.db import Resume
     selected = getattr(company, "selected_resume_ids", None) or []
     if selected:
@@ -207,26 +196,20 @@ def _get_resume_texts_for_company(db, company) -> dict:
 
 
 async def _get_job_text(job: Job, db=None) -> str | None:
-    """Get job text from description, cached page, or live fetch (with caching).
-    Returns text string or None if no text available.
-    """
-    # 1. Use description if available
+    """Get job text from description, cached page, or a live fetch (with caching); returns None if no text is available."""
     if job.description and len(job.description.strip()) > 50:
         return job.description.strip()
 
-    # 2. Fall back to cached page text
     if job.cached_page_text and len(job.cached_page_text.strip()) > 50:
         logger.info(f"Job {job.id}: using cached_page_text (no description)")
         return job.cached_page_text.strip()
 
-    # 3. Fetch live page, cache it, use text
     url = job.url
     if url and db:
         logger.info(f"Job {job.id}: no text available, fetching live page")
         try:
             from backend.api.routes_applications import _cache_job_page
             await _cache_job_page(str(job.id), url)
-            # Re-read job to get cached text
             db.refresh(job)
             if job.cached_page_text and len(job.cached_page_text.strip()) > 50:
                 return job.cached_page_text.strip()
@@ -237,33 +220,14 @@ async def _get_job_text(job: Job, db=None) -> str | None:
 
 
 async def score_job_sync(job: Job, cv_texts: dict, db=None, depth="light", preloaded_text: str = None) -> dict:
-    """Score a single job against all provided CV versions using LLM.
-    Acquires the global scoring semaphore to limit concurrent LLM calls.
-    Returns dict with scores and best_cv. depth='full' includes detailed report.
-    """
+    """Score a job against all provided CV versions under the global scoring semaphore; depth='full' includes a detailed report."""
     sem = _get_scoring_semaphore()
     async with sem:
         return await _score_job_inner(job, cv_texts, db, depth, preloaded_text)
 
 
 async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", preloaded_text: str = None) -> dict:
-    """Inner scoring logic (called under semaphore).
-
-    Prompt is split into a cacheable prefix (rubric + CVs + schema) and a per-job suffix
-    (just the JD). On Claude API this uses Anthropic prompt caching — subsequent calls
-    with the same CV set hit the cache for ~10x cheaper input tokens.
-
-    Return contract (important for rescoring):
-    - dict with scores → success
-    - ``None`` → no text / no CVs (intentional skip, caller may pre-check via
-      ``_get_job_text`` / ``cv_texts`` before calling to distinguish) OR transient
-      LLM failure (exception in ``call_llm``, JSON parse error).
-
-    Callers that persist a ``_skipped`` sentinel so the job won't be retried MUST
-    pre-check for empty ``cv_texts`` and missing job text *before* calling this
-    function. A ``None`` return from inside ``call_llm`` MUST be treated as a
-    transient failure so the scheduler can rescore on the next pass.
-    """
+    """Inner scoring logic (called under the semaphore); returns a dict on success, or None for either an intentional skip (no text/CVs — callers must pre-check before calling) or a transient LLM failure that should be retried next pass."""
     job_text = preloaded_text or await _get_job_text(job, db)
     if not job_text:
         logger.warning(f"Job {job.id} has no text (description, cache, or live), skipping scoring")
@@ -281,9 +245,8 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         schema_key = "scoring_output_full" if depth == "full" else "scoring_output_light"
         schema_row = settings_db.query(Setting).filter(Setting.key == schema_key).first()
         output_schema = schema_row.value if schema_row and schema_row.value else ""
-        # Scoring can override the Primary model (empty = use Primary). The Fallback
-        # (llm_fallback_*) is applied inside call_llm regardless — and when it fires,
-        # the response reports the pair that answered and we log that instead.
+        # Scoring can override the Primary model (empty = use Primary); the Fallback
+        # is applied inside call_llm regardless, which reports the pair that answered.
         from backend.analyzer.llm_client import resolve_llm_config
         _cfg = resolve_llm_config("scoring", db=settings_db)
         provider_for_log = _cfg["provider"]
@@ -295,13 +258,11 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
         if not db:
             settings_db.close()
 
-    # Build CV sections dynamically
     cv_sections = []
     cv_names = list(cv_texts.keys())
     for i, (name, text) in enumerate(cv_texts.items(), 1):
         cv_sections.append(f"Resume Version {i} — {name}:\n{text}")
 
-    # Replace CV_NAMES_HERE placeholder in output schema
     score_fields = ", ".join(f'"{name}": 0-100' for name in cv_names)
     if output_schema:
         output_schema = output_schema.replace("CV_NAMES_HERE", score_fields)
@@ -349,12 +310,8 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
             cleaned = match.group(0)
         result = json.loads(cleaned)
 
-        # Validate the shape before returning success. A confused model can emit
-        # {"scores": null} or a non-dict — .get("scores", {}) does NOT catch an
-        # explicit null (the default only applies when the key is absent), and
-        # callers do scores.values(). Treat malformed output as a transient
-        # failure (return None) so the job is retried next pass instead of
-        # crashing the whole analyze/scrape run.
+        # A confused model can emit {"scores": null}; .get's default doesn't catch
+        # an explicit null, so validate the shape and treat malformed output as a transient failure.
         if not isinstance(result.get("scores"), dict) or not result["scores"]:
             call_success = False
             call_error = "malformed LLM response: 'scores' missing, null, or not a dict"
@@ -413,9 +370,7 @@ def _find_company_for_job(db, job: Job):
 
 
 async def analyze_unscored_jobs(status: str = "saved"):
-    """Score all unscored jobs against uploaded CVs. Processes in batches of 20 until done.
-    status='saved' scores saved jobs; status='new' scores new jobs (only from auto_scoring_depth != 'off' entities).
-    """
+    """Score all unscored jobs against uploaded CVs in batches of 20; status='saved' scores saved jobs, status='new' scores new jobs from auto_scoring_depth != 'off' entities only."""
     db = SessionLocal()
     try:
         default_cv_texts = _get_default_resume(db) or _get_resume_texts(db)
@@ -480,11 +435,9 @@ async def analyze_unscored_jobs(status: str = "saved"):
             # text per job; persist _skipped sentinels for jobs with no text.
             to_score = []  # (job, cv_texts, depth, preloaded_text)
             for job in unscored:
-                # Look up company to get per-company CV selection
                 company = _find_company_for_job(db, job)
                 cv_texts = _get_resume_texts_for_company(db, company) if company else default_cv_texts
 
-                # Determine depth based on auto_scoring_depth
                 if status == "saved":
                     depth = "full"  # Saved jobs always get full report
                 elif company and company.auto_scoring_depth in ("light", "full"):
@@ -499,19 +452,10 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 else:
                     depth = default_depth
 
-                # Pre-check: does the job have any text available (description,
-                # cached page, or live fetch)? If not, mark _skipped now — this is
-                # a permanent condition (no JD to score against) so we persist a
-                # sentinel to avoid re-processing on every pass.
-                #
-                # This pre-check is what distinguishes "intentional skip" from
-                # "transient LLM failure" at the caller. If we skipped this check
-                # and relied only on score_job_sync returning None, we'd also mark
-                # LLM outages as _skipped, permanently preventing rescoring.
+                # Pre-check for job text so a permanent "no JD" condition gets a
+                # sentinel here, distinct from a transient LLM failure inside score_job_sync.
                 preloaded_text = await _get_job_text(job, db)
                 if not preloaded_text:
-                    # Mark with sentinel so it won't match the unscored filter again.
-                    # (LLM was not called — this is a true skip, not a transient failure.)
                     job.cv_scores = {"_skipped": "no_text_available"}
                     job.best_cv_score = None
                     total_scored += 1
@@ -519,12 +463,8 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 to_score.append((job, cv_texts, depth, preloaded_text))
             db.commit()  # persist sentinels
 
-            # ── Phase 2 (parallel): LLM calls. db=None — with preloaded_text the
-            # inner scorer never touches the shared session (it opens its own
-            # short-lived one for settings), so gather is session-safe. Actual
-            # concurrency is capped by the scoring semaphore inside score_job_sync
-            # (scoring_max_concurrent, default 5); previously this loop awaited
-            # jobs one at a time, so the semaphore never saw >1.
+            # ── Phase 2 (parallel): LLM calls. db=None so the inner scorer never
+            # touches the shared session, making gather session-safe; concurrency is capped by the scoring semaphore.
             results = await asyncio.gather(
                 *[score_job_sync(j, c, db=None, depth=d, preloaded_text=t)
                   for (j, c, d, t) in to_score],
@@ -541,9 +481,8 @@ async def analyze_unscored_jobs(status: str = "saved"):
                     total_scored += 1
                     continue
                 if result:
-                    # Belt-and-braces: _score_job_inner validates this, but a
-                    # null/non-dict scores here must degrade to a per-job retry,
-                    # never crash the batch (and with it the whole scrape run).
+                    # Belt-and-braces: a null/non-dict scores here must degrade to a
+                    # per-job retry, never crash the batch (and the whole scrape run).
                     scores = result.get("scores")
                     if not isinstance(scores, dict):
                         logger.warning(
@@ -553,7 +492,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
                         total_scored += 1
                         continue
                     job.cv_scores = scores
-                    # Precompute max score for fast DB filtering (Task 2)
+                    # Precompute max score for fast DB filtering
                     try:
                         _scores = job.cv_scores or {}
                         _numeric = [float(v) for v in _scores.values() if isinstance(v, (int, float))]
@@ -594,10 +533,8 @@ async def analyze_unscored_jobs(status: str = "saved"):
                         except Exception as e:
                             logger.error(f"Failed to send Telegram alert: {e}")
                 else:
-                    # Transient LLM failure (exception or JSON parse error).
-                    # Do NOT persist a _skipped sentinel — that would permanently
-                    # mark the job as un-rescoreable. Leave cv_scores as-is so the
-                    # next scheduler pass retries this job.
+                    # Transient LLM failure: do NOT persist a _skipped sentinel, so
+                    # the next scheduler pass retries this job.
                     logger.warning(
                         f"Job {job.id} ({job.company} - {job.title}): score_job_sync "
                         "returned None after pre-check passed — transient failure, "
@@ -605,7 +542,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
                     )
 
                 total_scored += 1
-            db.commit()  # one commit per batch (was per job)
+            db.commit()  # one commit per batch
 
         logger.info(f"Analysis pipeline complete: {total_scored} jobs processed")
 
@@ -618,13 +555,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
 
 
 async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"):
-    """Re-run CV analysis for a specific job. Optionally score only against specific CV IDs.
-    DB sessions are opened and closed around each phase to avoid holding connections during LLM calls.
-
-    Returns a one-line summary string. launch_background() stores it as
-    JobRun.result_summary, so Stats -> Run history shows what an analyze_job run
-    actually produced instead of a bare status (R2-H-13).
-    """
+    """Re-run CV analysis for a job, optionally against specific CV IDs; DB sessions are opened/closed per phase to avoid holding connections during LLM calls. Returns a one-line summary stored as JobRun.result_summary."""
     # ── Phase 1: Read job + CVs from DB, then release connection ──
     db = SessionLocal()
     try:
@@ -637,19 +568,15 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         job_company = job.company
 
         if cv_ids:
-            # cv_ids may reference base Resumes, tailored Resumes (is_base=False), or
-            # the reserved 'persona' magic id (a virtual Resume backed by Persona.resume_content).
-            # No is_base filter — explicit IDs are the caller's responsibility.
+            # cv_ids may reference base Resumes, tailored Resumes, or the reserved
+            # 'persona' id; no is_base filter — explicit IDs are the caller's responsibility.
             from backend.models.db import Resume
             cv_texts = {}
             resume_ids = [c for c in cv_ids if c != _PERSONA_KEY]
             if resume_ids:
                 resumes = db.query(Resume).filter(Resume.id.in_(resume_ids)).order_by(Resume.id).all()
-                # Single tailored (is_base=False) → label "Tailored" so the frontend's
-                # tailored-link handler picks it up and the chip stays short. Multiple
-                # tailored in one batch (rare) → fall back to Resume.name to avoid
-                # silent dict-key collision dropping all but one. Same convention as
-                # POST /resumes/{id}/score-check.
+                # A single tailored resume is labeled "Tailored" so the frontend's tailored-link
+                # handler picks it up; multiple in one batch fall back to Resume.name to avoid a dict-key collision.
                 tailored_count = sum(1 for r in resumes if not r.is_base)
                 for r in resumes:
                     text = _flatten_resume(r.json_data or {})

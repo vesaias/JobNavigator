@@ -1,4 +1,4 @@
-"""GET/PATCH /api/persona — singleton CRUD (Task 3 of plan)."""
+"""GET/PATCH /api/persona — singleton CRUD."""
 from backend.models.db import Setting
 
 

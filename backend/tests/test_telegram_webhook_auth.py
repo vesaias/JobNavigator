@@ -1,4 +1,4 @@
-"""Tests for the Telegram webhook secret-token validation (#11)."""
+"""Tests for the Telegram webhook secret-token validation."""
 from backend.models.db import Setting
 
 

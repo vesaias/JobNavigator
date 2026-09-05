@@ -1,8 +1,4 @@
-"""Workday ATS handler — JSON API via POST /wday/cxs/{company}/{site}/jobs.
-
-Detection: hostname-based match on myworkdayjobs.com.
-Public interface: is_workday(url), scrape(url, debug=False).
-"""
+"""Workday ATS handler — JSON API via POST /wday/cxs/{company}/{site}/jobs; detected by hostname match on myworkdayjobs.com."""
 import json
 import logging
 import re
@@ -24,13 +20,7 @@ def is_workday(url: str) -> bool:
 
 
 def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
-    """Parse Workday URL into (origin, company_slug, site, applied_facets).
-
-    URL formats:
-      https://{company}.wd{N}.myworkdayjobs.com/{site}/?params
-      https://{company}.wd{N}.myworkdayjobs.com/en-US/{site}/?params
-    API endpoint: https://{host}/wday/cxs/{company}/{site}/jobs
-    """
+    """Parse Workday URL (https://{company}.wd{N}.myworkdayjobs.com/[locale/]{site}/?params) into (origin, company_slug, site, applied_facets); API endpoint is https://{host}/wday/cxs/{company}/{site}/jobs."""
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -47,7 +37,6 @@ def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
         site = part
         break
 
-    # Convert query params to Workday appliedFacets format
     qs = parse_qs(parsed.query)
     applied_facets = {}
     skip_params = {"source", "utm_source", "utm_medium", "utm_campaign", "utm_content"}

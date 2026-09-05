@@ -1,10 +1,4 @@
-"""R3-A-01: the test previews must show the body-exclusion layer.
-
-Both previews used to apply only the *title* layers, so a job whose description
-matches a `body_exclusion_phrases` entry looked "kept" — then the real run stored
-it as `ignored`. The Companies preview promised 14 kept and the run reported
-"+13 new" with nothing anywhere saying which one went missing or why.
-"""
+"""The test previews must show the body-exclusion layer, not just the title layers."""
 import json
 import types
 

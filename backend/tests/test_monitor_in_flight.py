@@ -1,4 +1,4 @@
-"""GET /api/monitor/in-flight — per-job active-op lookup (Task 6 of 12)."""
+"""GET /api/monitor/in-flight — per-job active-op lookup."""
 import asyncio
 import pytest
 import uuid

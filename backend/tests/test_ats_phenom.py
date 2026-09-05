@@ -5,7 +5,6 @@ import pytest
 def test_is_phenom_detects_post_format():
     """Phenom URLs are formatted as 'POST|api_url|json_payload' strings."""
     from backend.scraper.ats.phenom import is_phenom
-    # Must read original _is_phenom_post logic — likely checks string starts with "POST|"
     assert is_phenom('POST|https://jobs.example.com/api/search|{"query":"..."}')
 
 

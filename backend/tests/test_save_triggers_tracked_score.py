@@ -1,7 +1,4 @@
-"""Saving a job triggers scoring as a TRACKED op (launch_background), so the
-dashboard's in-flight/finished monitors (and thus the toasts) can see it — but only
-when the on_save_action setting enables it and the job isn't already scored.
-"""
+"""Saving a job triggers scoring as a TRACKED op (launch_background) so dashboard monitors/toasts can see it, but only when on_save_action enables it and the job isn't already scored."""
 import uuid
 import pytest
 from backend.models.db import Setting, Job
@@ -36,9 +33,7 @@ def _capture_launch(monkeypatch):
 
 
 def test_update_job_is_async():
-    """launch_background() needs a running event loop (asyncio.create_task), so the
-    PATCH handler MUST be async — a sync endpoint runs in a threadpool with no loop and
-    the scoring task silently fails to register. Guards against reverting to `def`."""
+    """launch_background() needs a running event loop, so the PATCH handler must stay `async def` — a sync endpoint runs in a threadpool with no loop and the scoring task silently fails to register."""
     import inspect
     from backend.api.routes_jobs import update_job
     assert inspect.iscoroutinefunction(update_job), "update_job must be `async def`"

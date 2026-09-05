@@ -1,4 +1,4 @@
-"""Tailoring semaphore + background-job behavior (Task 3 of 12)."""
+"""Tailoring semaphore + background-job behavior."""
 import asyncio
 import pytest
 from unittest.mock import AsyncMock

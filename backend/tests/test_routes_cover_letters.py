@@ -94,8 +94,7 @@ def test_templates_endpoint(api_client, test_db):
     resp = api_client.get("/api/cover-letters/templates")
     assert resp.status_code == 200
     ids = {t["id"] for t in resp.json()}
-    # Assert tracked templates only — `garamond` is gitignored (licensed fonts)
-    # and absent on fresh clones / CI.
+    # tracked templates only — `garamond` is gitignored (licensed fonts), absent on fresh clones / CI
     assert {"garamond_alt", "inter", "traditional"} <= ids
 
 
@@ -125,9 +124,7 @@ def test_generate_400_on_job_without_description(api_client, test_db):
 
 
 def test_generate_happy_path_returns_202(api_client, test_db, monkeypatch):
-    """Valid (resume, job) returns 202 + run_id. launch_background is stubbed so no
-    real LLM call / asyncio task runs — generation itself is covered by the
-    generator unit tests."""
+    """Valid (resume, job) returns 202 + run_id; launch_background is stubbed so no real LLM call runs."""
     _seed_first_run(test_db)
     resume = _make_resume(test_db)
     job = _make_job(test_db)
@@ -183,19 +180,10 @@ def test_generate_persona_base_validates_content(api_client, test_db, monkeypatc
     assert resp.status_code == 202
 
 
-# ── Tracer cross-owner sharing (R3-B-03) ────────────────────────────────────
+# ── Tracer cross-owner sharing ───────────────────────────────────────────────
 
 def test_tracer_link_is_shared_by_both_owners(test_db):
-    """A resume and a cover letter for the same job derive the same {short_id}{stub}
-    token. The link is therefore owned by BOTH.
-
-    This used to assert the opposite — the rewrite handed the row to whoever
-    rendered last and NULLed the other FK. That made per-document attribution flip
-    on every render: /resumes/{id}/tracer-stats came back empty whenever the letter
-    had rendered more recently, and the letter's came back empty after the next
-    résumé render (measured in R3-B-03). Sharing one token for one job is the
-    deliberate design; what was wrong was modelling ownership as exclusive.
-    See backend/tests/test_tracer_shared_owner.py for the stats-level assertions."""
+    """A resume and a cover letter for the same job derive the same {short_id}{stub} token, owned by both (see test_tracer_shared_owner.py for stats-level assertions)."""
     import uuid
     from backend.models.db import Setting, Resume, Job, CoverLetter, TracerLink
     from backend.api.routes_resumes import _rewrite_urls_with_tracers
@@ -228,9 +216,7 @@ def test_tracer_link_is_shared_by_both_owners(test_db):
 
 
 def test_base_resume_stub_uses_zero_prefix(test_db):
-    """A base resume has no job_id, so there's no job short_id to namespace the token.
-    In a *_jobid style, when the contact item provides an explicit stub, the token is
-    '0{stub}' instead of a random string."""
+    """A base resume has no job_id to namespace the token; in a *_jobid style with an explicit stub, the token is '0{stub}'."""
     import uuid
     from backend.models.db import Setting, Resume, TracerLink
     from backend.api.routes_resumes import _rewrite_urls_with_tracers

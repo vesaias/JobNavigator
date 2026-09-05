@@ -67,15 +67,12 @@ class Search(Base):
     require_salary = Column(Boolean, default=False)  # Filter out jobs without salary info
     auto_scoring_depth = Column(String, default="off")  # off | light | full
     run_interval_minutes = Column(Integer, default=0)
-    # When true, treat every active Company's name + aliases as additional company_exclude
-    # entries at scrape time so a keyword/URL search won't surface jobs we already get
-    # from a company-specific scrape.
+    # When true, treat every active Company's name + aliases as additional
+    # company_exclude entries so a keyword/URL search doesn't overlap a company scrape.
     exclude_active_companies = Column(Boolean, default=False)
     last_run_at = Column(DateTime(timezone=True), nullable=True)
-    # Operator acknowledgement of the current scrape warning. /health/entities
-    # treats the entity as healthy while the newest ScrapeLog row is not newer
-    # than this stamp, so a known-broken board stops holding the rail dot amber
-    # until it fails again. NULL = never acknowledged.
+    # /health/entities treats the entity as healthy while the newest ScrapeLog row
+    # is no newer than this stamp. NULL = never acknowledged.
     warning_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
@@ -109,10 +106,7 @@ class Company(Base):
 
 
 class VisaCache(Base):
-    """Cached work-visa/immigration data per company name (independent of the
-    companies table), so jobs from any source can show H-1B info. `country`
-    keeps it extensible (US H-1B now; CA/UK later). `has_data=False` is a
-    negative-cache entry so companies with no records aren't re-fetched."""
+    """Cached work-visa/immigration data per company name, independent of the companies table, so jobs from any source can show H-1B info."""
     __tablename__ = "visa_cache"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -143,9 +137,8 @@ class Job(Base):
     title = Column(String, nullable=True)
     url = Column(String, nullable=True)
     source = Column(String, nullable=True)  # jobspy_linkedin | jobspy_indeed | etc.
-    # R3-A-08: SET NULL so deleting a search never orphans a stored job. The
-    # existing database predates this (no Alembic), so the delete handlers null
-    # these columns themselves; this is what a fresh DB gets.
+    # SET NULL so deleting a search never orphans a stored job. No Alembic, so the
+    # delete handlers null this column themselves on existing databases.
     search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id", ondelete="SET NULL"), nullable=True)
     description = Column(Text, nullable=True)
     location = Column(String, nullable=True)
@@ -163,9 +156,7 @@ class Job(Base):
     best_cv = Column(String, nullable=True)
     scoring_report = Column(JSON, nullable=True)  # Structured report: summary, keywords, requirement mapping
     # deferred: avg 16 KB / 7 KB per row — list queries were hydrating both just to
-    # compute one boolean. They lazy-load on attribute access (single-row contexts:
-    # /cached-page endpoint, _get_job_text fallback). Use `has_cached_page` (SQL
-    # expression, no blob load) for the boolean.
+    # compute one boolean. Use `has_cached_page` (SQL expression) for that instead.
     cached_page_html = deferred(Column(Text, nullable=True))
     cached_page_text = deferred(Column(Text, nullable=True))
     page_cached_at = Column(DateTime(timezone=True), nullable=True)
@@ -175,10 +166,8 @@ class Job(Base):
     status = Column(String, default="new")  # new | saved | applied | skip
     discovered_at = Column(DateTime(timezone=True), default=utcnow)
 
-    # Computed in SQL at query time — answers "is a page cached?" without ever
-    # loading the deferred blob columns. (.columns[0] reaches the raw Column
-    # inside the deferred() ColumnProperty — calling .isnot on the property
-    # itself yields NotImplemented, not a SQL expression.)
+    # Computed in SQL without loading the deferred blob columns; .columns[0] reaches
+    # the raw Column since .isnot on the deferred() property itself yields NotImplemented.
     has_cached_page = column_property(cached_page_html.columns[0].isnot(None))
 
     search = relationship("Search", backref="jobs")
@@ -209,10 +198,8 @@ class Application(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
     status = Column(String, default="applied")
-    # applied|interview|offer|rejected — simplified 2026-04-23. The retired
-    # screening/phone_screen/final_round values are backfilled to applied or
-    # interview in seed.run_migrations; historical status_transitions rows
-    # are preserved unchanged.
+    # applied|interview|offer|rejected. Retired screening/phone_screen/final_round
+    # values are backfilled by seed.run_migrations; status_transitions is left unchanged.
     applied_at = Column(DateTime(timezone=True), default=utcnow)
     cv_version_used = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
@@ -229,8 +216,7 @@ class Application(Base):
 
 
 class Interview(Base):
-    """One interview round on an application: what it is, when it is (calendar),
-    where/how it happens, and a free-text prep note."""
+    """One interview round on an application: what it is, when, where/how, and a free-text prep note."""
     __tablename__ = "interviews"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -267,10 +253,8 @@ class ScrapeLog(Base):
     __tablename__ = "scrape_log"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    # R3-A-08: the audit trail outlives the entity it describes — a run that
-    # happened still happened. SET NULL keeps the row readable instead of
-    # blocking the delete with a ForeignKeyViolation (500). Same no-Alembic
-    # caveat as Job.search_id: the delete handlers null these explicitly.
+    # The audit trail outlives the entity it describes; SET NULL keeps the row
+    # readable instead of blocking the delete with a ForeignKeyViolation (500).
     search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id", ondelete="SET NULL"), nullable=True)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
     source = Column(String, nullable=True)
@@ -278,11 +262,8 @@ class ScrapeLog(Base):
     new_jobs = Column(Integer, default=0)
     error = Column(Text, nullable=True)
     is_warning = Column(Boolean, default=False)
-    # R3-A-03: per-source outcome for multi-board runs, e.g.
-    #   {"indeed": {"seen": 9, "new": 0}, "zip_recruiter": {"error": "403"}}
-    # A source that hard-fails used to be indistinguishable from one that found
-    # nothing: the run finished `completed`, is_warning False, and the summary
-    # read like a legitimate quiet day. Single-source scrapes leave this NULL.
+    # Per-source outcome for multi-board runs, e.g. {"indeed": {"seen": 9, "new": 0},
+    # "zip_recruiter": {"error": "403"}}. Single-source scrapes leave this NULL.
     source_breakdown = Column(JSON, nullable=True)
     duration_seconds = Column(Float, nullable=True)
     ran_at = Column(DateTime(timezone=True), default=utcnow)
@@ -368,13 +349,8 @@ class Resume(Base):
 
 
 # ── Cover Letter ──────────────────────────────────────────────────────────────
-# Job-specific (no is_base — every cover letter is generated for a job). Mirrors
-# Resume's storage so the PDF render + tracer-rewrite helpers are reused as-is.
-#   json_data shape:
-#     header{name, contact_items[{text,url}]}, recipient{company, manager, address},
-#     date, greeting, body_paragraphs[], closing, signature
-#   resume_id → the resume this letter pairs with (its evidence source)
-#   parent_id → previous version when regenerated
+# Job-specific (no is_base). Mirrors Resume's storage so the PDF render + tracer-
+# rewrite helpers are reused as-is; json_data holds header/recipient/date/greeting/body_paragraphs/closing/signature.
 class CoverLetter(Base):
     __tablename__ = "cover_letters"
 
@@ -388,9 +364,8 @@ class CoverLetter(Base):
     template = Column(String, default="garamond_alt")
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
-    # How this draft was written. Kept so the list and the editor can say what
-    # produced a letter, and so Regenerate can preselect the same settings —
-    # without them the UI can only show what the generate panel happens to hold.
+    # How this draft was written; lets the list/editor show it and Regenerate
+    # preselect the same settings.
     voice = Column(String, nullable=True)          # voice preset id
     length = Column(String, nullable=True)         # concise | standard | detailed
     # NULL resume_id + from_persona=True means the evidence came from the
@@ -399,9 +374,8 @@ class CoverLetter(Base):
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
-    # passive_deletes lets the DB's ON DELETE SET NULL fire without the ORM
-    # eagerly loading + null-ing related cover letters when a Job/Resume/parent
-    # is deleted (matches the FK ondelete on job_id/resume_id/parent_id above).
+    # passive_deletes lets the DB's ON DELETE SET NULL fire without the ORM eagerly
+    # loading + null-ing related cover letters (matches the FK ondelete above).
     parent = relationship("CoverLetter", remote_side=[id],
                           backref=backref("revisions", passive_deletes=True))
     job = relationship("Job", backref=backref("cover_letters", passive_deletes=True))
@@ -409,14 +383,8 @@ class CoverLetter(Base):
 
 
 # ── Persona ──────────────────────────────────────────────────────────────────
-# Singleton row (id=1). Each column is a JSON node consumed by a specific feature:
-#   contact          → tailoring, cover letter, autofill
-#   work_auth        → autofill
-#   demographics     → autofill (default to "decline")
-#   compensation     → autofill
-#   preferences      → autofill, cover letter (the "why this role/company" beat)
-#   resume_content   → tailoring (rich pool of bullets, skills, etc.)
-#   qa_bank          → autofill (reusable Q&A library for application questions)
+# Singleton row (id=1). contact/preferences feed tailoring + cover letter + autofill;
+# work_auth/demographics/compensation/qa_bank feed autofill; resume_content feeds tailoring.
 class Persona(Base):
     __tablename__ = "personas"
 
@@ -438,10 +406,8 @@ class TracerLink(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     token = Column(String(10), unique=True, nullable=False, index=True)
-    # A tracer link belongs to a resume, a cover letter, or — when the two were
-    # written for the same job and therefore derive the same {short_id}{stub}
-    # token — to both at once (R3-B-03). Each document's /tracer-stats filters on
-    # its own FK, so shared ownership is what lets both of them report the link.
+    # A tracer link belongs to a resume, a cover letter, or — when the two share the
+    # same job and token — both at once; each document's /tracer-stats filters on its own FK.
     resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="CASCADE"), nullable=True)
     cover_letter_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="CASCADE"), nullable=True)
     destination_url = Column(String, nullable=False)
@@ -470,12 +436,7 @@ class TracerClickEvent(Base):
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def is_acknowledged(last_run_at, acknowledged_at) -> bool:
-    """True when a scrape warning has been acknowledged and nothing has gone
-    wrong since — i.e. the entity's newest run is not newer than the stamp.
-
-    Postgres hands back tz-aware datetimes; SQLite (tests) drops the offset, so
-    both sides are normalised to UTC before comparing rather than assuming.
-    """
+    """True when the entity's newest run is not newer than the acknowledgement stamp; both sides are normalised to UTC since SQLite drops the offset Postgres keeps."""
     if acknowledged_at is None or last_run_at is None:
         return False
 
@@ -491,11 +452,9 @@ def find_company_by_name(db, name: str):
         return None
     from sqlalchemy import func
     nl = name.strip().lower()
-    # Try exact name match first
     co = db.query(Company).filter(func.lower(Company.name) == nl).first()
     if co:
         return co
-    # Check aliases
     for co in db.query(Company).filter(Company.aliases.isnot(None)).all():
         if any(a.lower() == nl for a in (co.aliases or [])):
             return co

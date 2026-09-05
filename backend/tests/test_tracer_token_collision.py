@@ -1,17 +1,4 @@
-"""Two job-less résumés with the same contact stub must not fight over a token.
-
-(Ids here carry hex letters on purpose: an all-digit UUID hexes to an all-digit
-string, which SQLite's numeric affinity reads back as a float.)
-
-With tracer_links_url_style = param_jobid, a résumé that has no linked job falls
-back to reserving "0{stub}" — but that is not unique: every job-less owner with a
-stub of "l" wants "0l". Rendering the second one reassigned its existing row to
-the token the first already held and committed without a guard, so the PDF
-endpoint raised IntegrityError and returned 500.
-
-The deterministic token is a preference now: taken only when free, otherwise the
-owner keeps (or is given) a token of its own.
-"""
+"""Two job-less résumés with the same stub must not collide on the deterministic "0{stub}" token — it's a preference, taken only if free (ids use hex letters so SQLite's numeric affinity doesn't turn an all-digit UUID into a float)."""
 import pytest
 from sqlalchemy import func
 

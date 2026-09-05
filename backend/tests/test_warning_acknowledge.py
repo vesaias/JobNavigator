@@ -1,12 +1,4 @@
-"""Acknowledging a scrape warning, and keeping switched-off entities quiet.
-
-A search that is paused (`active=False`) or a company that is inactive is not an
-open problem — it was switched off deliberately — so its last-run state must stop
-driving the rail health dot, the header "N need attention" counts and the run
-summary. For entities that ARE on, the operator can acknowledge a warning they
-have decided to live with; it comes back on its own as soon as a run newer than
-the acknowledgement fails.
-"""
+"""Acknowledging a scrape warning, and keeping switched-off entities (paused searches, inactive companies) out of the rail health dot and attention counts."""
 from datetime import datetime, timezone, timedelta
 
 import pytest
@@ -71,8 +63,7 @@ def test_acknowledge_search_404_on_unknown_id(test_db):
 
 @pytest.mark.parametrize("mode", ["extension", "linkedin_extension"])
 def test_acknowledge_search_409_on_builtin_extension_searches(test_db, mode):
-    """The seeded extension searches never scrape, so there is no scrape health
-    to acknowledge — same guard /run and DELETE use."""
+    """The seeded extension searches never scrape, so there is no scrape health to acknowledge — same guard /run and DELETE use."""
     s = Search(name=f"Extension {mode}", search_mode=mode, active=True)
     test_db.add(s)
     test_db.commit()
@@ -94,8 +85,7 @@ def test_is_acknowledged_compares_against_the_newest_run():
 
 
 def test_is_acknowledged_tolerates_naive_datetimes():
-    """SQLite (and any row written before the column was tz-aware) hands back a
-    naive datetime; comparing it with an aware one would raise TypeError."""
+    """SQLite (and any row written before the column was tz-aware) hands back a naive datetime; comparing it with an aware one would raise TypeError."""
     ack = _now()
     naive_run = (ack - timedelta(minutes=1)).replace(tzinfo=None)
     assert is_acknowledged(naive_run, ack) is True
