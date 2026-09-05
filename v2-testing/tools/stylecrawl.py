@@ -13,15 +13,32 @@ PROPS = ['backgroundColor', 'color', 'borderTopWidth', 'borderTopColor', 'border
 JS_REST = """(props) => {
   const out = {};
   const path = (e) => { const p = []; while (e && e.nodeType === 1 && !e.classList.contains('jn-v2')) { let s = e.tagName.toLowerCase(); if (e.className && typeof e.className === 'string') s += '.' + e.className.trim().split(/\\s+/).join('.'); const sib = [...e.parentElement.children].filter(x => x.tagName === e.tagName); if (sib.length > 1) s += ':' + sib.indexOf(e); p.unshift(s); e = e.parentElement; } return p.join('>'); };
+  window.__jnPath = path;
+  window.__jnEls = new Map();
   for (const e of document.querySelectorAll('.jn-v2 *')) {
-    const r = e.getBoundingClientRect(); if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > innerHeight) continue;
+    const r = e.getBoundingClientRect(); if (e.getClientRects().length === 0 || r.width < 1 || r.height < 4 || r.bottom < 0 || r.top > innerHeight) continue;
     const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
     const t = {}; for (const p of props) t[p] = cs[p];
     const txt = (e.childNodes.length && e.childNodes[0].nodeType === 3) ? e.childNodes[0].textContent.trim().slice(0, 24) : '';
     const hoverable = cs.cursor === 'pointer' || /\\bv2-/.test(e.className || '');
-    out[path(e) + (txt ? '|' + txt : '')] = { rest: t, hoverable, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + Math.min(r.height / 2, 12)) };
+    const ep = path(e);
+    const key = ep + (txt ? '|' + txt : '');
+    window.__jnEls.set(key, e);
+    out[key] = { rest: t, hoverable, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + Math.min(r.height / 2, 12)), path: ep };
   }
   return out;
+}"""
+JS_HOVER = """([x, y, key, path0, props]) => {
+  const e2 = document.elementFromPoint(x, y);
+  if (!e2) return null;
+  const pathFn = window.__jnPath;
+  const path2 = pathFn ? pathFn(e2) : null;
+  const matched = path2 === path0;
+  const target = matched ? e2 : (window.__jnEls && window.__jnEls.get(key));
+  if (!target) return null;
+  const cs = getComputedStyle(target);
+  const t = {}; for (const p of props) t[p] = cs[p];
+  return { style: t, matched };
 }"""
 def unwrap(d): return d if isinstance(d, list) else (d.get('resumes') or d.get('items') or [])
 st, bases = get('/resumes?is_base=true'); bases = unwrap(bases)
@@ -33,6 +50,8 @@ if bases: ROUTES.append(f"/v2/resumes/{bases[0]['id']}")
 if withjob: ROUTES.append(f"/v2/resumes/{withjob['id']}")
 if cls: ROUTES.append(f"/v2/cover-letters/{cls[0]['id']}")
 data = {}
+hover_total = 0
+hover_match = 0
 with browser() as b:
     for th in ('light', 'dark'):
         for r in ROUTES:
@@ -48,10 +67,16 @@ with browser() as b:
                 v = els[k]
                 try:
                     pg.mouse.move(v['x'], v['y']); pg.wait_for_timeout(30)
-                    v['hover'] = pg.evaluate("([x, y, props]) => { const e = document.elementFromPoint(x, y); if (!e) return null; const cs = getComputedStyle(e); const t = {}; for (const p of props) t[p] = cs[p]; return t }", [v['x'], v['y'], PROPS])
-                except Exception: v['hover'] = None
+                    res = pg.evaluate(JS_HOVER, [v['x'], v['y'], k, v['path'], PROPS])
+                except Exception: res = None
+                if res:
+                    v['hover'] = res['style']
+                    hover_total += 1
+                    if res['matched']: hover_match += 1
+                else:
+                    v['hover'] = None
             pg.mouse.move(0, 0)
             for k, v in els.items(): data[f'{th}|{r}|{k}'] = {'rest': v['rest'], 'hover': v.get('hover')}
             pg.context.close()
 json.dump(data, open(f'{OUT}/styles.json', 'w'))
-print(f'{len(data)} elements → {OUT}/styles.json')
+print(f'{len(data)} elements, hover {hover_match}/{hover_total} matched keyed path → {OUT}/styles.json')

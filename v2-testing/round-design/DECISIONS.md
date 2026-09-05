@@ -9,6 +9,8 @@ One entry per question. Status: **needs decision** · **decided: …** (with the
 
 ## Decided
 
+- D-19 crawl hover artefact fixed in `stylecrawl.py` (hover tuple kept only when the pointer element equals the keyed element, else the keyed element's own hovered style; width filter on client rects); round-4 baseline `R4_0` = 5493 elements, 2226/3493 hover records direct (2026-09-05).
+
 - Skins may set radius, shadow, border width and type (2026-09-05).
 - Vocabulary: the twelve cover-all decisions in `round2/text-suggestions.md` §0 (2026-09-05).
 - Settings rows renamed Appearance (light/dark/system) and Theme (look); section title Display; storage keys migrated (2026-09-05).
