@@ -37,11 +37,8 @@ const srcLabel = (v) => ({
   extension: 'the extension', freehire: 'freehire.me',
 }[v] || (v ? v.replace(/^jobspy_/, '').replace(/_/g, ' ') : 'the Job Feed'))
 
-// R3-U-01: the dots read the shared --stage-* tokens (theme.css) rather than the
-// generic --warn/--good/--bad status hues, so a stage is the same colour here, in
-// the Stats funnel and on the Sankey nodes of the Flow view. The values are
-// unchanged — --stage-interview/-offer/-rejected were seeded from --warn/--good/
-// --bad; what moved is which screens are guaranteed to track them.
+// Dots read the shared --stage-* tokens (theme.css), not generic --warn/--good/--bad,
+// so a stage is the same colour here, in the Stats funnel, and on the Sankey nodes.
 const STAGES = [
   { id: 'applied', label: 'Applied', dot: 'var(--stage-applied)', hint: 'Waiting on a first response' },
   { id: 'interview', label: 'Interview', dot: 'var(--stage-interview)', hint: 'Interviewing' },
@@ -49,20 +46,16 @@ const STAGES = [
   { id: 'rejected', label: 'Rejected', dot: 'var(--stage-rejected)', hint: 'Closed — kept in Stats' },
 ]
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
-// APPS-22: legacy rows (ghosted / withdrawn) have no stage of their own — they are closed, so they list under Rejected
+// legacy rows (ghosted / withdrawn) have no stage of their own — closed, so they list under Rejected
 const groupOf = (status) => (STAGE[status] ? status : 'rejected')
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
 // where a popover sits; how it looks is `Menu`'s.
 const POPOVER = { position: 'absolute', top: '100%', zIndex: 40 }
-// Header action pill — same metrics as the Feed's "Open ↗" (collapsed header).
-// lineHeight:1 is local to these fixed-height controls: at the inherited 1.5 the
-// line box stops centring in the pill and the label rides ~1px high, and under
-// `normal` a fallback-font glyph (the ↗) drags it 1px the other way. Because the
-// height is fixed, this cannot affect any surrounding layout.
-// ui: keep — the detail header's own action pill (h30 · 13 · pad 0 14), shared by
-// the two anchors and the ⋯ beside them; Pill md is 31/12.5/pad 0 15.
+// Header action pill — same metrics as the Feed's collapsed-header "Open ↗".
+// lineHeight:1 is required: at the inherited 1.5 the label rides ~1px high in this fixed-height pill.
+// ui: keep — the detail header's own action pill (h30 · 13 · pad 0 14); Pill md is 31/12.5/pad 0 15.
 const ACT_BTN = {
   height: 30, padding: '0 14px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
@@ -75,9 +68,8 @@ const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — 
 export default function Applications() {
   const navigate = useNavigate()
   const [apps, setApps] = useState([])
-  // hold the screen back until the first fetch lands — otherwise the chrome
-  // paints with "0 applications" and an empty list, then everything pops in
-  // APPS-02: a failed fetch must not read as "you have no applications"
+  // null (not 0) until the first fetch lands, so the empty state doesn't flash before data arrives;
+  // a failed fetch must not read as "you have no applications" either.
   const [total, setTotal] = useState(null)
   const [loadErr, setLoadErr] = useState(null)
   const [sel, setSel] = useState(null)
@@ -89,11 +81,10 @@ export default function Applications() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [intForm, setIntForm] = useState(false)
   const [intWhat, setIntWhat] = useState(''); const [intWhen, setIntWhen] = useState('')
-  const [intBusy, setIntBusy] = useState(false)   // APPS-11: one POST at a time
+  const [intBusy, setIntBusy] = useState(false)   // one POST at a time
   const [intWhere, setIntWhere] = useState(''); const [intPrep, setIntPrep] = useState('')
-  // R3-A-06: an interview row could only be deleted and retyped. A reschedule is
-  // the most common change there is, and the PATCH the status chip already uses
-  // takes every field — so the row reopens into the same four-field form.
+  // Reschedule reuses the same PATCH the status chip uses (it takes every field),
+  // so editing reopens the same four-field form.
   const [editIv, setEditIv] = useState(null)      // interview id being edited
   const [ivDraft, setIvDraft] = useState({ what: '', when: '', where: '', prep: '' })
   const [prep, setPrep] = useState(null)           // {text} | 'loading'
@@ -103,12 +94,12 @@ export default function Applications() {
   const notesTimer = useRef(null)
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(notesTimer.current) }, [])
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
-  const [confirm, setConfirm] = useState(null)   // R2-A-01 / R2-H-08: the shared destructive-confirm dialog
+  const [confirm, setConfirm] = useState(null)   // shared destructive-confirm dialog state
 
   const load = useCallback(async (keep) => {
     try {
       const { data } = await api.get('/applications', { params: { limit: 2000 } })
-      setTotal(typeof data?.total === 'number' ? data.total : null)   // APPS-22: the header counts what the server has, not what fits in one page
+      setTotal(typeof data?.total === 'number' ? data.total : null)   // header counts what the server has, not what fits in one page
       const list = data.applications || []
       setApps(list); setLoadErr(null)
       setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
@@ -118,18 +109,16 @@ export default function Applications() {
       pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) })
     }
   }, [pushToast])
-  // DESIGN-LOAD: this screen already waited for its one request before drawing
-  // anything (an empty pane, never a spinner) — it is the shape the other screens
-  // were brought to. Same behaviour, now through the shared hook.
+  // waits for the one request before drawing anything (an empty pane, never a spinner), via the shared hook.
   const { ready: loaded } = useSettled([() => load()])
-  // APPS-06: the interview draft belongs to the application it was opened on —
+  // the interview draft belongs to the application it was opened on —
   // carrying it to the next row posted it against the wrong application
   useEffect(() => { setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); setEditIv(null) }, [sel])
 
   const closeAll = () => { setOpenFlt(null); setMenuOpen(false) }
-  const logDirty = useRef(false)   // APPS-22: typed fields survive a stray Escape
-  // R2-A-01: the styled dialog, not the browser's. Every handler it touches is a
-  // setter or a ref, so the once-registered Escape effect below keeps working.
+  const logDirty = useRef(false)   // typed fields survive a stray Escape
+  // styled dialog, not the browser's; every handler here is a setter or ref,
+  // so the once-registered Escape effect below keeps working.
   const dropLog = () => { logDirty.current = false; setLogOpen(false) }
   const closeLog = () => {
     if (!logDirty.current) { dropLog(); return }
@@ -140,22 +129,8 @@ export default function Applications() {
     document.addEventListener('click', onDoc)
     return () => document.removeEventListener('click', onDoc)
   }, [])
-  // OPEN-08: was this screen's own `document` keydown listener, the last one of
-  // its kind. Same behaviour — one Escape closes the filter menus, the prep
-  // modal, the interview edit (R3-A-06) and the Log modal (whose dirty-discard
-  // confirm still fires) — but through the shared hook, which claims the event
-  // so nothing behind it also acts on the same keypress.
-  //
-  // Ordering: this listener is registered at mount, i.e. *before* a
-  // ConfirmDialog that opens later, so it would otherwise fire first and swallow
-  // the Escape meant for the dialog. Gating it on `!confirm` hands the key to the
-  // dialog's own useEscape while one is open — the same guard Settings' model
-  // catalog uses for its dropdown.
-  //
-  // DS-A-03: `closeLog()` is gated on `logOpen`. Unguarded it ran on *every*
-  // Escape, so a stale dirty flag could raise the discard confirm — and its
-  // click-blocking scrim — over a screen with no form on it. The guard is the
-  // real fix; clearing the flag on save (see LogModal's onSaved) is the belt.
+  // Escape closes filter menus, prep, interview edit and Log (its dirty-discard confirm still fires) via the shared hook, which claims the event.
+  // Gated on !confirm so ConfirmDialog's own Escape wins while open; closeLog() is gated on logOpen so a stale dirty flag can't fire the discard confirm with no form open.
   useEscape(() => { closeAll(); setPrep(null); setEditIv(null); if (logOpen) closeLog() }, !confirm)
 
   // ── derived ──
@@ -194,7 +169,7 @@ export default function Applications() {
     })
     const byName = (x, y) => (x.title || '').localeCompare(y.title || '')
     const cmp = {
-      recent: (x, y) => ts(y.updated_at) - ts(x.updated_at) || byName(x, y),   // APPS-22: whole-day buckets tied every row touched today
+      recent: (x, y) => ts(y.updated_at) - ts(x.updated_at) || byName(x, y),   // whole-day buckets tied every row touched today
       oldest: (x, y) => ts(x.updated_at) - ts(y.updated_at) || byName(x, y),
       company: (x, y) => companyOf(x).localeCompare(companyOf(y)) || byName(x, y),
     }[sortBy]
@@ -215,7 +190,7 @@ export default function Applications() {
     const run = () => {
       setApps((p) => p.map((a) => (a.id === id ? { ...a, notes: value } : a)))
       api.patch(`/applications/${id}`, { notes: value })
-        .then(() => load(id))   // APPS-22: the row's age and the header follow the server's updated_at
+        .then(() => load(id))   // the row's age and the header follow the server's updated_at
         .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not save notes' + errSuffix(e) }) })
     }
     if (now) run(); else notesTimer.current = setTimeout(run, 700)
@@ -223,8 +198,7 @@ export default function Applications() {
 
   const remove = (a) => {
     setMenuOpen(false)
-    // R2-H-08: the styled dialog — deleting an application is the most
-    // destructive action on this screen and looked the least considered.
+    // styled dialog: deleting an application is the most destructive action on this screen.
     setConfirm({
       title: `Delete the application for “${a.title}”?`,
       body: 'The job goes back to Saved in the feed. This cannot be undone.',
@@ -236,13 +210,13 @@ export default function Applications() {
       },
     })
   }
-  const canAddInterview = !intBusy && (!!intWhat.trim() || !!intWhen)   // APPS-12: a blank form adds nothing
+  const canAddInterview = !intBusy && (!!intWhat.trim() || !!intWhen)   // a blank form adds nothing
   const addInterview = async () => {
     if (!d || !canAddInterview) return
     setIntBusy(true)
     try {
       await api.post(`/applications/${d.id}/interviews`, {
-        // APPS-03: datetime-local is wall-clock in the viewer's zone; send an instant so the server's UTC store round-trips
+        // datetime-local is wall-clock in the viewer's zone; send an instant so the server's UTC store round-trips
         what: intWhat.trim() || 'Interview', when_at: intWhen ? new Date(intWhen).toISOString() : null,
         where_text: intWhere.trim() || null, status: 'scheduled', prep: intPrep.trim() || null,
       })
@@ -253,7 +227,7 @@ export default function Applications() {
   const delInterview = async (iv) => {
     try {
       await api.delete(`/applications/interviews/${iv.id}`); load(d.id)
-      // APPS-13: no confirm — an undo toast re-creates the interview from the row we still hold
+      // no confirm — an undo toast re-creates the interview from the row we still hold
       pushToast({ kind: 'undo', msg: `Removed “${iv.what || 'Interview'}”`, action: 'Undo', onAction: async () => {
         try { await api.post(`/applications/${d.id}/interviews`, { what: iv.what, when_at: iv.when_at, where_text: iv.where_text, status: iv.status || 'scheduled', prep: iv.prep }); load(d.id) }
         catch (e) { pushToast({ kind: 'error', msg: 'Could not restore the interview' + errSuffix(e) }) }
@@ -261,8 +235,8 @@ export default function Applications() {
     }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not remove the interview' + errSuffix(e) }) }
   }
-  // R3-A-06: ISO instant → the wall-clock string <input type="datetime-local">
-  // wants, in the viewer's own zone — the mirror of what addInterview sends.
+  // ISO instant → the wall-clock string <input type="datetime-local"> wants,
+  // in the viewer's own zone — the mirror of what addInterview sends.
   const toLocalInput = (iso) => {
     if (!iso) return ''
     const dt = new Date(iso)
@@ -303,7 +277,7 @@ export default function Applications() {
       pushToast({ kind: 'error', msg: 'Could not build the prep handover' + errSuffix(e) })
     }
   }
-  // APPS-05: "Copied ✓" only after the write actually resolved; nothing to copy
+  // "Copied ✓" only after the write actually resolved; nothing to copy
   // while the bundle is still loading or after it failed
   const copyPrep = async () => {
     if (prep === 'loading' || prep?.failed) return
@@ -339,8 +313,7 @@ export default function Applications() {
           <PageTitle>Applications</PageTitle>
           {/* integer line-height: at the inherited 1.5 this span is 19.5px, which
               lands the whole list pane on a half pixel and every row on x.25 */}
-          {/* ui: keep — the count line is 13/20px, off the 11.5 helper step, and its
-              integer line-height is what keeps the pane on whole pixels */}
+          {/* ui: keep — the count line is 13/20px, off the 11.5 helper step; integer line-height keeps the pane on whole pixels */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -350,11 +323,9 @@ export default function Applications() {
 
       {/* toolbar */}
       <HeaderRow pad="0 30px 14px 24px" align="center" style={{ gap: 8 }}>
-        {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks
-            ui.jsx's boxed SearchInput so the two read as one control */}
+        {/* ui: keep — search field wrapper (Input role), not a pill; h32 tracks ui.jsx's boxed SearchInput so the two read as one control */}
         <div className="v2-fieldwrap" style={{ flex: '0 1 210px', minWidth: 0, height: 32, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
-          {/* ui: keep — the search field's own ⌕ glyph, on the control's icon scale
-              (like the ▾ carets), not a helper sub-line */}
+          {/* ui: keep — the search field's own ⌕ glyph, on the control's icon scale (like the ▾ carets), not a helper sub-line */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or company…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -387,8 +358,7 @@ export default function Applications() {
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {visible.length !== apps.length && <Helper style={{ whiteSpace: 'nowrap' }}>{visible.length} of {apps.length} shown</Helper>}
           <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
-            {/* ui: keep — a menu disclosure trigger (muted 12.5 + value + caret), not a
-                link: it opens the Sort menu and carries the trigger's own hover */}
+            {/* ui: keep — a menu disclosure trigger (muted 12.5 + value + caret), not a link: opens the Sort menu, carries the trigger's own hover */}
             <div onClick={() => setOpenFlt(openFlt === 'sort' ? null : 'sort')} className="v2-hover-accent-text" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}>
               Sort<span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{SORTS.find((s) => s[0] === sortBy)?.[1]}</span><span style={{ fontSize: 10 }}>▾</span>
             </div>
@@ -416,9 +386,7 @@ export default function Applications() {
             const shut = !!closed[st.id]
             return (
               <React.Fragment key={st.id}>
-                {/* every collapsible header in v2 washes to --surface-2 on hover
-                    (theme.css .v2-hover-accent) — the stage bands were the last
-                    ones with no hover at all */}
+                {/* collapsible headers wash to --surface-2 on hover (theme.css .v2-hover-accent) */}
                 <SectionHead boxed caret="pin" open={!shut} onToggle={() => setClosed((p) => ({ ...p, [st.id]: !p[st.id] }))}
                   style={{ gap: 8, padding: '12px 8px 5px', lineHeight: '16px' }}>
                   <Dot style={{ background: st.dot }} />
@@ -428,9 +396,8 @@ export default function Applications() {
                 {!shut && rows.map((a) => {
                   const stale = isStale(a)
                   const unknownTitle = !a.title || a.title === 'Unknown Role'
-                  // D-POST-07: selection is `Row selected` and nothing else — a
-                  // background wash, no accent bar and no left-pad compensation, so
-                  // a picked row's text sits on the same axis as every other row's.
+                  // selection is `Row selected` and nothing else — a background wash, no
+                  // accent bar and no left-pad compensation, so text stays on the same axis.
                   return (
                     <Row key={a.id} selected={sel === a.id} onClick={() => { closeAll(); setSel(a.id) }} className="v2-arow"
                       style={{ gap: 8, flex: '0 0 46px', marginBottom: 3 }}>
@@ -487,10 +454,8 @@ export default function Applications() {
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
-      {/* DS-A-03: `dropLog()`, not a bare `setLogOpen(false)` — a save leaves the
-          form submitted and unmounted, so the dirty flag has to go with it or the
-          next Escape offers to discard a form that no longer exists. The draft
-          itself is LogModal's own state and dies with the unmount. */}
+      {/* dropLog(), not a bare setLogOpen(false): a save unmounts the form, so the dirty flag
+          must go with it or the next Escape offers to discard a form that no longer exists. */}
       {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
@@ -502,9 +467,8 @@ export default function Applications() {
 function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete, navigate,
                   intForm, setIntForm, intWhat, setIntWhat, intWhen, setIntWhen,
                   intWhere, setIntWhere, intPrep, setIntPrep, intBusy,
-                  // R3-A-06: the inline interview editor's state lives in the parent
-                  // (the Escape handler there clears it) — Detail is a separate closure,
-                  // so every one of these has to arrive as a prop, like canAddInterview.
+                  // interview editor state lives in the parent (its Escape handler clears it); Detail is a
+                  // separate closure, so each of these arrives as a prop, like canAddInterview.
                   editIv, setEditIv, ivDraft, setIvDraft, openIvEdit, saveInterview,
                   addInterview, canAddInterview, delInterview, toggleInterview, openPrep }) {
   const meta = [fmtSalary(d.salary_min, d.salary_max), d.location].filter(Boolean).join(' · ') || 'No posting details captured'
@@ -520,15 +484,13 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             <Label>
               {d.short_id ? `#${d.short_id} · ` : ''}{d.company_canonical || d.company}
             </Label>
-            {/* ui: keep — serif 23/26px: the detail title's own step, between
-                Heading's 22 and the 30px page title */}
+            {/* ui: keep — serif 23/26px: the detail title's own step, between Heading's 22 and the 30px page title */}
             <span style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px', textWrap: 'pretty' }}>
               {d.title || 'Unknown Role'}
               {(d.last_email_received || d.last_email_snippet) &&
                 <span title="Reply detected in Gmail" style={{ marginLeft: 8, fontSize: 13, color: 'var(--accent)', verticalAlign: 'middle' }}>✉</span>}
             </span>
-            {/* ui: keep — a 12.5/18px sentence, and the résumé link inside it inherits
-                that run; Link's 11.5/500/17px would break the line */}
+            {/* ui: keep — a 12.5/18px sentence, and the résumé link inside it inherits that run; Link's 11.5/500/17px would break the line */}
             <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>
               {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
@@ -536,8 +498,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             </span>
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-            {/* ui: keep — the three header actions are ACT_BTN pills; two of them are real
-                anchors so ⌘/middle-click still opens the posting, and Button/Pill render a div. */}
+            {/* ui: keep — the three header actions are ACT_BTN pills; two are real anchors so ⌘/middle-click still opens the posting, and Button/Pill render a div */}
             {d.has_cached_page && <a href={`/api/jobs/${d.job_id}/cached-page`} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Snapshot of the posting from application day"
               style={{ ...ACT_BTN, textDecoration: 'none' }}>Cached</a>}
             {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Open the live posting"
@@ -556,8 +517,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
           </div>
         </div>
 
-        {/* stage stepper — Segmented's lg cells (h34) with the per-stage dot as
-            `dotColor`, and the Rejected cell closing in the `bad` tone */}
+        {/* stage stepper: Segmented lg cells (h34) with per-stage dot as dotColor; Rejected closes in `bad` tone */}
         <Segmented size="lg" gap={6} ariaLabel="Application stage" value={d.status} onChange={onStage}
           options={STAGES.map((s) => ({ value: s.id, label: s.label, hint: s.hint, dotColor: s.dot, tone: s.id === 'rejected' ? 'bad' : 'accent' }))} />
       </HeaderRow>
@@ -584,14 +544,11 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             {ivs.map((iv) => (
               <Card key={iv.id} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: editIv === iv.id ? 8 : 3, ...(editIv === iv.id ? { borderColor: 'var(--accent)' } : { background: 'var(--bg)' }) }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {/* R3-A-06: the row text opens the editor; the status chip and ✕
-                      keep the behaviour they had, so nothing that worked moved. */}
+                  {/* row text opens the editor; the status chip and ✕ keep their own click behavior */}
                   <span onClick={() => (editIv === iv.id ? setEditIv(null) : openIvEdit(iv))} title={editIv === iv.id ? 'Close without saving' : 'Edit this interview'} style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>{iv.what}</span>
-                  {/* ui: keep — an uppercase status badge with a background + r99: the
-                      `Tag` role (D4d), not a Label */}
+                  {/* ui: keep — an uppercase status badge with a background + r99: the `Tag` role, not a Label */}
                   <span onClick={() => toggleInterview(iv)} title="Toggle scheduled / done" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', cursor: 'pointer', background: iv.status === 'scheduled' ? 'var(--accent-soft)' : 'var(--surface-2)', color: iv.status === 'scheduled' ? 'var(--good)' : 'var(--text-2)' }}>{iv.status}</span>
-                  {/* ui: keep — a ✕ with a padded, rounded hover target so the --hover-bad
-                      wash reads as a box on the interview row; RemoveX draws no box */}
+                  {/* ui: keep — a ✕ with a padded, rounded hover target so the --hover-bad wash reads as a box; RemoveX draws no box */}
                   <span onClick={() => delInterview(iv)} title="Remove this interview" className="v2-hover-bad" style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', padding: 2, borderRadius: 'var(--radius-inline)' }}>✕</span>
                 </div>
                 {editIv === iv.id ? (
@@ -622,8 +579,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
                   </>
                 ) : (
                   <>
-                    {/* Helper now takes an onClick (and brings kb() with it), so the
-                        slot line stops being a hand-written span */}
+                    {/* Helper's onClick (with kb()) replaces a hand-written span here */}
                     <Helper size="xs" mono onClick={() => openIvEdit(iv)} title="Edit this interview">
                       {[fmtWhen(iv.when_at), iv.where_text].filter(Boolean).join(' · ') || 'Unscheduled'}
                     </Helper>
@@ -665,9 +621,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Notes · autosaves</Label>
-            {/* rows={2} keeps the intrinsic height (2×19 + 13 = 51) under the 64 px
-                floor, so `minHeight` is the value that actually renders — the pre-D4b
-                box. At rows={3} the intrinsic height wins and the floor is dead code. */}
+            {/* rows={2} keeps the intrinsic height (2×19+13=51) under the 64px floor, so minHeight is what renders.
+                At rows={3} the intrinsic height wins and the floor becomes dead code. */}
             <Textarea key={d.id} defaultValue={d.notes || ''} onChange={(t) => onNotes(t)}
               onBlur={(e) => onNotes(e.target.value, true)} placeholder="Notes…" ariaLabel="Notes"
               rows={2} style={{ minHeight: 64 }} />
@@ -675,7 +630,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
         </div>
 
         {/* history rail */}
-        <div style={{ flex: '1 0 250px', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 6 }}>   {/* APPS-09: wraps under the content when the pane is narrow */}
+        <div style={{ flex: '1 0 250px', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 6 }}>   {/* wraps under the content when the pane is narrow */}
           <Label>History</Label>
           {history.map((h, i) => (
             <div key={i} style={{ display: 'flex', gap: 10 }}>
@@ -689,8 +644,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               </div>
             </div>
           ))}
-          {/* ui: keep — the empty rail sits on the history entries' own 12/18px line
-              rhythm (matching the 12.5/18px event lines), not the helper step */}
+          {/* ui: keep — the empty rail sits on the history entries' own 12/18px line rhythm (matching 12.5/18px event lines), not the helper step */}
           {history.length === 0 && <span style={{ fontSize: 12, lineHeight: '18px', color: 'var(--muted)' }}>No history recorded yet.</span>}
         </div>
       </div>
@@ -702,9 +656,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
 function PrepModal({ prep, company, copied, onCopy, onClose }) {
   const busy = prep === 'loading' || prep?.failed === true
   return (
-    // escape={false}: this screen closes every overlay from one handler that
-    // stands down while a ConfirmDialog is up (see closeAll's useEscape above);
-    // a second listener here would close this modal under that confirm.
+    // escape={false}: this screen closes every overlay from one handler that stands down while
+    // a ConfirmDialog is up; a second listener here would close this modal under that confirm.
     <ModalPanel width={640} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 640, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>Prep handover — {company}</Heading>
@@ -735,21 +688,18 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   const [resumes, setResumes] = useState([])
   const [cv, setCv] = useState('')
   const [stage, setStage] = useState('applied')
-  const [when, setWhen] = useState(() => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` })   // APPS-21: local date
+  const [when, setWhen] = useState(() => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` })   // local date, not UTC
   const [notes, setNotes] = useState('')
-  useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])   // APPS-22
+  useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
 
-  // OPEN-05: converted (the APPS-01 residue). The chips are the modal's only
-  // way to attach a résumé, and the user opened the modal to log an application —
-  // an empty row read as "you have no résumés", which is a different thing.
+  // The chips are the modal's only way to attach a résumé; an empty list must not read as
+  // "you have no résumés" when the user is just here to log an application.
   useEffect(() => { api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — log it now and attach one later.' }) }) }, [pushToast])
 
-  // R2-H-07: `title`/`company` are captured in readUrl's closure at call time —
-  // both empty — so a response landing after the user had typed overwrote what
-  // they typed. Read the live draft off a ref instead, and drop a response whose
-  // URL is no longer the one in the field.
+  // title/company captured in readUrl's closure at call time were often still empty, so a late
+  // response overwrote what the user had typed; read the live draft off a ref, and drop stale responses.
   const draftRef = useRef({ title: '', company: '' })
   draftRef.current = { title, company }
   const urlRef = useRef('')
@@ -776,7 +726,7 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
   const save = async () => {
     if (!title.trim() || !company.trim() || !url.trim()) {
       pushToast({ kind: 'error', msg: !url.trim() ? 'The posting URL is required — it identifies the job' : 'Title and company are required' })
-      const first = [url, title, company].findIndex((v) => !v.trim()); document.querySelectorAll('input[placeholder]')[first]?.focus()   // APPS-17
+      const first = [url, title, company].findIndex((v) => !v.trim()); document.querySelectorAll('input[placeholder]')[first]?.focus()
       return
     }
     setBusy(true)
@@ -784,12 +734,12 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
       const { data } = await api.post('/applications', {
         url: url.trim(), title: title.trim(), company: company.trim(),
         cv_version_used: cv || null, notes: notes.trim() || null,
-        status: stage, applied_at: when ? new Date(when + 'T12:00:00').toISOString() : null,   // APPS-21: local noon, never the previous UTC day
+        status: stage, applied_at: when ? new Date(when + 'T12:00:00').toISOString() : null,   // local noon, never the previous UTC day
       })
       onSaved(data.id)
     } catch (e) {
       const existing = e.response?.status === 409 ? e.response?.data?.detail?.application_id : null
-      if (existing) { pushToast({ kind: 'progress', msg: 'Already logged — opened the existing application.' }); onSaved(existing); return }   // APPS-04
+      if (existing) { pushToast({ kind: 'progress', msg: 'Already logged — opened the existing application.' }); onSaved(existing); return }
       pushToast({ kind: 'error', msg: 'Could not save this application' + errSuffix(e) }); setBusy(false)
     }
   }

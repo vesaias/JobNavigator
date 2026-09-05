@@ -30,13 +30,8 @@ import axios from 'axios'
 import { useTheme } from './v2/theme'
 import { TitleSync } from './useTitle'
 
-// Lab pages (the primitive gallery at /v2/ui, the toast taxonomy lab at
-// /v2/toasts) live in `frontend/src/design-base/`, which is git-ignored: they are
-// a local design workbench, not shipped source, and a clone may simply not have
-// the folder. `import.meta.glob` is resolved by Vite at build time and yields an
-// EMPTY map when it matches nothing, so an absent folder costs the two routes
-// rather than breaking the build the way a static `import` would. Each match is
-// loaded lazily, so the lab never lands in the app's main chunk either.
+// design-base/ (lab pages) is git-ignored and may not exist on a clone.
+// import.meta.glob yields an empty map when it matches nothing, so an absent folder costs the two routes rather than breaking the build.
 const LAB_PAGES = import.meta.glob('./design-base/*.jsx')
 const labRoute = (name, path) => {
   const load = LAB_PAGES[`./design-base/${name}.jsx`]
@@ -58,8 +53,7 @@ const NAV_ITEMS = [
   { to: '/docs', icon: FileCode2, label: 'API Docs', external: true },
 ]
 
-// Classic shell (sidebar + main). Rendered as a layout route so its child
-// routes fill the <Outlet/>. The v2 redesign lives under /v2 with its own shell.
+// Rendered as a layout route so its child routes fill the <Outlet/>.
 function ClassicShell({ darkMode, setDarkMode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   return (
@@ -118,10 +112,8 @@ function ClassicShell({ darkMode, setDarkMode }) {
 }
 
 function App() {
-  // The classic shell no longer keeps its own copy of the flag. One store
-  // (src/v2/theme.js) owns light|dark|system, resolves `system` against
-  // prefers-color-scheme, and stamps `html.dark` itself — so flipping the theme
-  // from the v2 rail moves this shell too, with no reload (SHELL-02 / SHELL-06).
+  // src/v2/theme.js owns light|dark|system and stamps html.dark itself, so
+  // flipping the theme from the v2 rail moves this shell too, with no reload.
   const { resolved, setMode } = useTheme()
   const darkMode = resolved === 'dark'
   const setDarkMode = (v) => setMode(v ? 'dark' : 'light')
@@ -178,9 +170,7 @@ function App() {
           <Route path="persona" element={<V2Persona />} />
           <Route path="stats" element={<V2Stats />} />
         </Route>
-        {/* The two lab pages are optional: `labRoute` returns null when
-            frontend/src/design-base/ is not present (it is git-ignored), and
-            React.Children skips a null child, so the route simply does not exist. */}
+        {/* labRoute returns null when design-base/ is absent; React skips a null child. */}
         {labRoute('ToastLab', '/v2/toasts')}
         {labRoute('UiGallery', '/v2/ui')}
 

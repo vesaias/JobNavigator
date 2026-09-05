@@ -1,15 +1,5 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// v2 primitive layer  (design pass D3)
-//
-// WHAT THIS IS
-// One component per *role* — the kinds of element the D1 scan found repeated
-// across `frontend/src/v2/*.jsx` (see `v2-testing/round-design/scan.md` and
-// `D1-D2.md`). Each primitive renders the role's **canonical signature**: the
-// dominant signature of that role in the scan, as approved in D1-D2 §"D2
-// decision". Swapping a screen's dominant-signature site for the primitive is
-// meant to produce zero visual change; every other signature in the role either
-// becomes the canonical one (a drift fix, listed in that step's
-// `expected-<step>.md`) or a named variant here.
+// v2 primitive layer: one component per element role, each rendering that
+// role's canonical signature. Screens compose these instead of styling inline.
 //
 // HOW TO USE
 //   import { Button, Pill, Input, Card, Helper } from './ui'
@@ -24,35 +14,28 @@
 // `[tabindex="0"]:focus-visible`; fields signal focus by turning their border
 // accent (`:focus-visible`), never a ring.
 //
-// HOW TO ADD A VARIANT
-// A variant is a *named* entry in the role's size/look map below — never an
-// inline exception at a call site. Add the key, give it semantic tokens only,
-// render it on `/v2/ui` (UiGallery.jsx) next to its siblings, and record the
-// before → after in the step's `expected-<step>.md` so the style crawl can
-// accept the diff.
+// HOW TO ADD A VARIANT: a named entry in the role's size/look map below, with
+// semantic tokens only — never an inline exception at a call site.
 //
-// THE RULE
-// **Never inline a colour, radius, shadow, font family or font size in a
-// screen.** Those live in `theme.css` as semantic tokens (`--btn-primary-bg`,
-// `--radius-card`, `--menu-shadow`, `--font-body`, `--t-12-5`, …), each of which
-// points at a palette token, so a new theme is a wholesale replacement of the
-// palette block and nothing else. Primitives read semantic tokens only; they
-// never read a palette token (`--accent`, `--line`, …) directly. D5's
-// `tools/stylelint.py` enforces this — `theme.css` and this file are the only
-// two places a literal is allowed.
+// THE RULE: never inline a colour, radius, shadow, font family or font size in
+// a screen. Those live in `theme.css` as semantic tokens (`--btn-primary-bg`,
+// `--radius-card`, `--menu-shadow`, `--font-body`, `--t-12-5`, …), each pointing
+// at a palette token, so a new theme is a wholesale replacement of the palette
+// block and nothing else. Primitives read semantic tokens only, never a palette
+// token directly. `tools/stylelint.py` enforces this — theme.css and this file
+// are the only two places a literal is allowed.
 //
 // LINE-HEIGHTS are whole pixels. Fixed-height flex controls carry `v2-ctl`
-// (line-height:1) the way the rest of v2 does; a single line centred in a fixed
-// box renders identically at any line-height, so that is pixel-safe.
-// ─────────────────────────────────────────────────────────────────────────────
+// (line-height:1); a single line centred in a fixed box renders identically at
+// any line-height, so that is pixel-safe.
 import React, { useEffect, useRef, useState } from 'react'
 import './theme.css'
 import { useEscape, useSnapTop } from './hooks'
 import { useTheme } from './theme'
 
-// PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them would be
-// focusable or operable from the keyboard. Spread `kb(fn)` onto such an element.
-// Same contract as the copies in ResumeSections.jsx and Settings.jsx — declared
+// v2 draws its controls as span/div, so none of them would be focusable or
+// operable from the keyboard. Spread `kb(fn)` onto such an element. Same
+// contract as the copies in ResumeSections.jsx and Settings.jsx — declared
 // here rather than imported so `ui.jsx` stays a leaf of the v2 import graph.
 export const kb = (fn, role = 'button') => ({
   tabIndex: 0,
@@ -64,28 +47,23 @@ const cx = (...v) => v.filter(Boolean).join(' ')
 // `kb()` only when the control can actually act — a disabled control must not be
 // a tab stop, and an inert one (a Card with no onClick) is not a button.
 //
-// DS-B-01: a disabled/busy control keeps its ROLE, though. Dropping `role` along
-// with the click and key handlers left a `Parsing…` button reading to a screen
-// reader as loose text rather than a disabled button, and threw away the focus
-// that was on it. Keep the role and the caller's `aria-disabled`/`aria-busy`, and
-// take away only the interactivity: no handlers, and `tabIndex -1` so it leaves
-// the tab order while staying focusable (and focused, if it already was).
+// A disabled/busy control keeps its ROLE: dropping it along with the click/key
+// handlers made a `Parsing…` button read as loose text to a screen reader and
+// lost its focus. Keep role and the caller's aria-disabled/aria-busy, drop only
+// the interactivity — no handlers, `tabIndex -1` so it stays focusable but leaves the tab order.
 const act = (fn, off, role) => (
   fn ? (off ? { role: role || 'button', tabIndex: -1 } : { onClick: fn, ...kb(fn, role) }) : {}
 )
 
 // ── theme variables a primitive has to READ, not write ──────────────────────
-// Two of the theme names are not paint but *shape*: `--ring-variant` picks which
-// drawing ScoreRing renders (ring · bar · pill · ascii) and `--title-bar` decides
-// whether a panel wears a window chrome bar. Neither can be expressed as a value
-// on a style object, so both have to come back out of the cascade.
+// `--ring-variant` and `--title-bar` are shape switches, not paint, so they
+// can't live on a style object and have to come back out of the cascade.
 //
-// One getComputedStyle per (theme, appearance, name) — cached, NOT one per mount:
-// a Feed page holds fifty rings and a layout read per ring on every render is a
-// forced reflow each time. The read happens in an effect, never during render:
-// theme.js stamps <html> synchronously, but every `.jn-v2` root takes the two
-// attributes as React props, so during the render that follows a theme change the
-// DOM still carries the old ones and the palette cascade is a commit behind.
+// getComputedStyle result is cached per (theme, appearance, name), not read per
+// mount — a Feed page holds fifty rings, so an uncached read forces a reflow
+// each render. Read happens in an effect: theme.js stamps <html> synchronously,
+// but `.jn-v2` roots take theme/skin as React props, so mid-transition the DOM
+// is a commit behind the props.
 const VAR_CACHE = new Map()
 const readThemeVar = (name) => {
   try {
@@ -106,11 +84,9 @@ function useThemeVar(name, fallback) {
 }
 
 // ── Spinner ─────────────────────────────────────────────────────────────────
-// dominant: 1.5px accent · r99 · 9px (9 sites). `color` lets a button spin in
-// its own ink (currentColor) without a second token.
-// `weight="bold"` is the 2px band: the Feed's 28px score ring is drawn heavy on
-// purpose (user decision, D1-D2 §"Decisions during D4"), and a hairline reads as
-// a different control at that diameter.
+// `color` lets a button spin in its own ink (currentColor) without a second
+// token. `weight="bold"` is the 2px band used at larger diameters (e.g. the
+// Feed's 28px score ring), where a hairline reads as a different control.
 const SPIN_WEIGHT = { bold: '2px' }
 export function Spinner({ size = 9, weight, color, style }) {
   return (
@@ -124,8 +100,6 @@ export function Spinner({ size = 9, weight, color, style }) {
 }
 
 // ── Button ──────────────────────────────────────────────────────────────────
-// canonical (primary/md): accent bg · accent-ink · r99 · h36 · 13.5/500 · pad 0 18
-// variants sm (h33, 13/500, pad 0 15) and xs (h28, 12.5) per D1-D2.
 const BTN_SIZE = {
   md: { height: 36, fontSize: 'var(--t-13-5)', padding: '0 18px' },
   sm: { height: 33, fontSize: 'var(--t-13)', padding: '0 15px' },
@@ -133,25 +107,18 @@ const BTN_SIZE = {
 }
 // `state` is the class the theme's own hover/pressed rules hang on
 // (theme.css: `.v2-btn-primary:hover` → --btn-primary-hover-bg, `:active` →
-// --btn-primary-pressed-bg + --pressed-shift). Both names resolve to the button's
-// own rest paint in the default theme — U-02/D-07 are proposals — so the class is
-// inert here and only cobalt/saas/win98 darken. It is dropped while the button is
-// off: a disabled control has no hover.
+// --btn-primary-pressed-bg + --pressed-shift). Dropped while the button is off:
+// a disabled control has no hover.
 //
-// `ai` is the tailoring button (Skins handoff §4.1): primary's geometry on the
-// --ai / --ai-ink pair, which is the accent in every theme that has no violet of
-// its own. It takes primary's state class the way the board does.
+// `ai` is the tailoring button: primary's geometry on the --ai / --ai-ink pair,
+// the accent in every theme with no violet of its own.
 //
-// S5 / U-05 — the DISABLED ink is a two-token read, `var(--disabled-ink, <the
-// button's own disabled ink>)`, and the fallback is what makes it free: in the
-// base blocks --disabled-ink is the CSS-wide keyword `inherit`, which on a custom
-// property means "inherit it" and lands on the guaranteed-invalid value (nothing
-// above .jn-v2 sets the name) — so the fallback is taken and the default theme
-// still paints --muted on --line, exactly as before. win98 sets the name to a
-// real colour (#808080) and takes over. --disabled-engrave (`none` in the base
-// blocks, `1px 1px 0 #fff` in win98) is the matching text-shadow, written in the
-// style object below. Button keeps its token swap rather than the --disabled-opacity
-// dim the other primitives take — D-08 in DECISIONS.md, unchanged here.
+// The DISABLED ink is a two-token read, `var(--disabled-ink, <the button's own
+// disabled ink>)`: in the base blocks --disabled-ink is `inherit`, a guaranteed-
+// invalid value here, so the fallback (--muted on --line) is taken; a theme that
+// sets --disabled-ink for real (e.g. win98) takes over. --disabled-engrave is
+// the matching text-shadow. Button keeps this token swap rather than the
+// --disabled-opacity dim the other primitives use.
 const BTN_LOOK = {
   primary: {
     rest: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-ink)' },
@@ -179,11 +146,9 @@ const BTN_LOOK = {
     hover: 'v2-hover-accent',
   },
 }
-// `as="button"` renders a real <button type=…> instead of the div, for the one
-// case where the element *is* the semantics: a form's submit control (LoginModal),
-// where Enter-in-a-field must submit the form. The UA button styles it would
-// otherwise inherit (border, margin, appearance) are reset first, and it keeps
-// `tabindex="0"` so theme.css's focus ring still applies — zero-pixel either way.
+// `as="button"` renders a real <button type=…> instead of the div, for a form's
+// submit control (LoginModal) where Enter-in-a-field must submit. UA button
+// styles are reset first; keeps `tabindex="0"` so theme.css's focus ring still applies.
 export function Button({
   variant = 'primary', size = 'md', as, type = 'button', disabled, busy, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
@@ -197,25 +162,19 @@ export function Button({
     'aria-label': ariaLabel,
     'aria-expanded': ariaExpanded,
     'aria-haspopup': ariaHaspopup,
-    // DS-B-01: `busy` is the state a screen reader needs; the prop stays an
-    // explicit override for the callers that set it themselves.
+    // `busy` is the state a screen reader needs; the prop stays an explicit
+    // override for callers that set it themselves.
     'aria-busy': ariaBusy !== undefined ? ariaBusy : (busy || undefined),
     className: cx('v2-ctl', !off && look.state, !off && look.hover, className),
     style: {
       flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 'var(--btn-weight)',
-      // `none` in the default theme; saas lifts every button 1px and cobalt gives
-      // the filled ones a tinted drop. A disabled button never floats.
-      boxShadow: off ? 'none' : 'var(--btn-shadow)',
+      boxShadow: off ? 'none' : 'var(--btn-shadow)', // some themes lift/tint buttons; a disabled one never floats
       whiteSpace: 'nowrap', cursor: off ? 'default' : 'pointer',
-      // the explicit 1 matters: theme.css dims `[aria-disabled="true"]` to
-      // --disabled-opacity, and Button keeps its token swap (--btn-*-disabled-*)
-      // instead — the decision recorded in the design pass, D-08 in DECISIONS.md.
+      // explicit 1: Button keeps its own disabled token swap rather than the
+      // --disabled-opacity dim theme.css applies to [aria-disabled="true"].
       opacity: busy && !disabled ? 0.6 : 1,
-      // the engraved half of the disabled pair (see BTN_LOOK). `none` in the base
-      // blocks — the initial value of text-shadow — so a disabled button in the
-      // default theme computes exactly what it computed before.
-      ...(off ? { textShadow: 'var(--disabled-engrave)' } : null),
+      ...(off ? { textShadow: 'var(--disabled-engrave)' } : null), // engraved half of the disabled pair; `none` by default
       ...(native ? { margin: 0, border: 'none', appearance: 'none', WebkitAppearance: 'none' } : null),
       ...s, ...(off ? look.off : look.rest), ...style,
     },
@@ -239,14 +198,10 @@ export function Button({
 // canonical: on ? accent-soft/accent : surface/text-2 · 1px border · r99,
 // hover always `v2-bd` (accent border, no wash). sizes md h31/12.5, sm h26/11.5.
 //
-// `xs` (S4, Skins handoff §4.10) is the **25px Run/Test pill**: the row-level
-// action drawn by hand at seven sites (Companies, Searches, Stats) because "Pill
-// sm is 26". Its box is h25 / pad 0 10 / 11.5 with a tighter 5px gap — the glyph
-// and its word sit closer than on the 31px filter pill. Same paint, same tokens.
-// A separate `PillXs` export was the alternative; `size="xs"` won because every
-// one of those seven sites already needs `on` (the Test twin lights accent while
-// it runs) or `disabled` (the quiet siblings), so a second component would have
-// had to re-declare Pill's whole prop surface to say one number.
+// `xs` is the 25px Run/Test row-level pill (Companies, Searches, Stats): h25 /
+// pad 0 10 / 11.5 with a tighter 5px gap than the 31px filter pill. Same paint,
+// same tokens — a variant rather than a separate component, since every site
+// already needs `on` or `disabled`.
 const PILL_SIZE = {
   md: { height: 31, fontSize: 'var(--t-12-5)', padding: '0 15px' },
   sm: { height: 26, fontSize: 'var(--t-11-5)', padding: '0 13px' },
@@ -254,15 +209,11 @@ const PILL_SIZE = {
 }
 // `hover` names the class the theme's rule hangs on. The default is the role's
 // own `v2-bd` (accent border, no wash); the 25px row pills ask for `v2-act`
-// (border + wash) or `v2-bdc` (border + ink) because that is what they draw
-// today and the three of them disagree — logged as D-13, not silently unified.
+// (border + wash) or `v2-bdc` (border + ink) since those sites disagree on the look.
 //
-// `line` overrides `v2-ctl`'s `line-height: 1` (an inline value beats the class).
-// It exists for the hand-drawn 25px pills, which never carried `v2-ctl` and
-// centred their glyph inside an INHERITED 1.5 line box; handing them the opt-out
-// re-rounds the half-leading and lifts the glyph a pixel. `line="inherit"` keeps
-// the box they had. See D-16 — adopting `v2-ctl` there is a decision, not a
-// side effect of taking the primitive.
+// `line` opts a pill out of `v2-ctl`'s line-height:1 — needed for the
+// hand-drawn 25px pills, which centre their glyph inside an inherited 1.5 line
+// box; `line="inherit"` keeps that box instead of re-rounding it.
 export function Pill({
   on, size = 'md', disabled, hover = 'v2-bd', line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
@@ -273,17 +224,14 @@ export function Pill({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} aria-busy={ariaBusy}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      // `v2-raised` is the bevel hook (theme.css --bevel-raised-*). S5: the rule
-      // is scoped to the skins that declare a bevel and carries `!important`
-      // there — it HAS to, or the inline border and shadow below would beat it
-      // (which is exactly what used to happen: the bevel never rendered). In
-      // every other theme the selector does not match and this paints nothing.
+      // `v2-raised` is the bevel hook (theme.css --bevel-raised-*), scoped to
+      // bevelled skins with `!important` there since the inline border/shadow
+      // below would otherwise beat it; a no-op in every other theme.
       className={cx('v2-ctl', 'v2-raised', !disabled && hover, className)}
       style={{
         flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
-        // the on-trio is the same one Segmented and ChoiceCard read; win98 fills it navy
-        background: on ? 'var(--pill-on-bg)' : 'var(--pill-bg)',
+        background: on ? 'var(--pill-on-bg)' : 'var(--pill-bg)', // same on-trio Segmented/ChoiceCard read
         color: on ? 'var(--pill-on-ink)' : 'var(--pill-ink)',
         border: `var(--bw-control) solid ${on ? 'var(--pill-on-border)' : 'var(--pill-border)'}`,
         boxShadow: 'var(--pill-shadow)',
@@ -294,17 +242,14 @@ export function Pill({
 }
 
 // ── IconButton ──────────────────────────────────────────────────────────────
-// 26 = the bare glyph button (muted · r99 · 26×26 · 13px · hover v2-hover-accent,
-//      7 sites — the dominant).
-// 36 = the bordered "⋯" head button (1px edge on surface, 15px, hover v2-act,
+// 26 = bare glyph button (muted · r99 · 26×26 · 13px · hover v2-hover-accent).
+// 36 = bordered "⋯" head button (1px edge on surface, 15px, hover v2-act,
 //      accent border + accent-soft when `on`).
-// 25 = the SAME bordered look one step down (S4): the ⋯ twin of the 25px row
-//      pill on Companies and Searches, which was hand-drawn because "IconButton's
-//      bordered look is 36". Its glyph keeps the 13px of the small size — a 15px
-//      ⋯ in a 25px box reads as a different control.
-// `hover` overrides the size's default class, the way Pill's does, and `line`
-// is Pill's line-box opt-out for the same reason (the 25×25 ⋯ never carried
-// `v2-ctl`; D-16).
+// 25 = the same bordered look, sized for the 25px row pill on Companies and
+//      Searches; keeps the 13px glyph since 15px reads as a different control
+//      at that size.
+// `hover` overrides the size's default class, like Pill's; `line` is Pill's
+// line-box opt-out for the same reason.
 export function IconButton({
   size = 26, on, disabled, hover, line, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, children, style, className,
@@ -323,10 +268,8 @@ export function IconButton({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
       aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup}
       aria-pressed={on === undefined ? undefined : !!on} aria-disabled={disabled || undefined}
-      // the bevel hook goes on the bordered sizes only. The 26 is a bare glyph with
-      // no border of its own, so `v2-raised` would have nothing to beat and would
-      // hand it the rule's own `border-color:transparent` — a computed-style move
-      // for zero pixels. win98 draws its small glyph buttons flat.
+      // bevel hook goes on the bordered sizes only — the 26 is a bare glyph with
+      // no border, so win98 draws it flat instead.
       className={cx('v2-ctl', bordered && 'v2-raised', !disabled && (hover || (bordered ? 'v2-act' : 'v2-hover-accent')), className)}
       style={{
         flex: '0 0 auto', width: size, height: size, borderRadius: 'var(--radius-control)',
@@ -340,32 +283,26 @@ export function IconButton({
 // ── Input / Textarea ────────────────────────────────────────────────────────
 // canonical field: h32 · 1px --input-border · r6 · 12.5 · bg --input-bg.
 // Focus = accent border, no ring (theme.css `input:focus-visible`).
-// D4b shipped h29 and D4b's reconciliation raised the mismatch it left: `Select`
-// is h32, so any row that pairs a field with a dropdown (Persona's autofill grid,
-// Searches' Cell grid, Settings' value rows) mixed 29 and 32. User decision in
-// D1-D2 §"Decisions during D4": **32 px everywhere**. `Textarea` has no fixed
-// height — its box is intrinsic to `rows` — so the 32 is expressed as its
-// *single-line* basis: 19 px line + 2×5.5 px padding + 2×1 px border = 32, the
-// same box a one-line `Input` draws. `minHeight` then equals that intrinsic
-// height exactly (rows·19 + 13) instead of being a dead floor.
+// Fields and `Select` are both 32px so a row pairing the two (Persona's autofill
+// grid, Searches' Cell grid, Settings' value rows) lines up. `Textarea` has no
+// fixed height — its box is intrinsic to `rows` — so the 32 is expressed as its
+// single-line basis: 19px line + 2×5.5px padding + 2×1px border = 32, matching a
+// one-line `Input`; `minHeight` equals that intrinsic height (rows·19 + 13).
 //
-// `invalid` is the error state (U-06): it writes `aria-invalid="true"`, and
-// theme.css repaints the border with --input-border-error and adds
-// --input-ring-error. The attribute is the whole implementation — no second set
-// of style props — so Textarea and Select get the state for free.
+// `invalid` writes `aria-invalid="true"`; theme.css repaints the border with
+// --input-border-error and adds --input-ring-error from that attribute alone,
+// so Textarea and Select get the state for free.
 // `v2-inset` is the bevel hook (theme.css --bevel-inset-*): inert everywhere but
-// win98, where a field is sunk instead of outlined. S5: that rule is scoped to
-// the bevelled skins and marked `!important` there, because the inline border and
-// shadow below would otherwise beat it — the reason no field was ever sunk.
+// win98, where a field is sunk instead of outlined; scoped `!important` there
+// since the inline border/shadow below would otherwise beat it.
 const FIELD = {
   width: '100%', minWidth: 0, border: 'var(--bw-control) solid var(--input-border)',
   borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', color: 'var(--input-ink)',
   boxShadow: 'var(--field-shadow)',
   fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', outline: 'none',
 }
-// `defaultValue` (instead of `value`) renders the field *uncontrolled* — the shape
-// Applications' autosaving notes box needs, where every keystroke must not round-trip
-// through React state. Zero-pixel either way.
+// `defaultValue` (instead of `value`) renders the field *uncontrolled* — needed
+// by Applications' autosaving notes box, where keystrokes must not round-trip through React state.
 export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, invalid, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
   const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
   return (
@@ -397,10 +334,9 @@ export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3,
 // ── SearchInput ─────────────────────────────────────────────────────────────
 // boxed (Companies toolbar): h32, r99, 1px --input-border on --search-bg, ⌕ inset.
 // underline (Cover Letters header): h36, no box, 1px --input-underline beneath.
-// Both take the accent on focus from theme.css — no ring either way.
-// The boxed one is a *box* like Input/Select and moved 30 → 32 with them (D4b
-// fix-up); the underline one is a visually different control — no box at all —
-// and keeps its own 36.
+// Both take the accent on focus from theme.css — no ring either way. The boxed
+// variant matches Input/Select's 32px box; the underline variant is a visually
+// different control with its own 36.
 export function SearchInput({ value, onChange, placeholder = 'Search…', variant = 'boxed', width, invalid, ariaLabel, style, className }) {
   const under = variant === 'underline'
   const field = under
@@ -415,21 +351,18 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
       color: 'var(--input-ink)', fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', outline: 'none',
     }
   return (
-    // DS-S-11/DS-S-12: the wrapper carries a real `width`, not just a flex-basis.
-    // A flex item's *intrinsic contribution* to its parent is measured from its
-    // content, and the content here is a bare <input> whose default intrinsic
-    // width is ~178px — so a parent sized to max-content (a header's action
-    // group) budgeted 178px for a field that then laid out at its 300px basis
-    // and shoved the sibling Button past the header's overflow:hidden edge.
-    // With `width` set, the contribution equals the declared width; `0 1 auto`
-    // + minWidth:0 keeps the field (never the button) as the thing that yields.
+    // Wrapper needs a real `width`, not just a flex-basis: a flex item's
+    // intrinsic contribution is measured from its content, and a bare <input>'s
+    // default intrinsic width (~178px) would under-budget the item in a
+    // max-content parent (a header's action group), shoving sibling buttons
+    // past the header's overflow:hidden edge. `0 1 auto` + minWidth:0 keeps the
+    // field, not the button, as the thing that yields.
     <span className={className} style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, width: width || 226, flex: '0 1 auto', ...style }}>
       {!under && (
         <span aria-hidden="true" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 'var(--t-12)', color: 'var(--search-glyph)', pointerEvents: 'none' }}>⌕</span>
       )}
-      {/* `v2-underline` is a carve-out, not decoration: theme.css's field-hover
-          rule reads --input-border-hover, which is the BOXED field's rest border,
-          and this variant rests on --input-underline instead. */}
+      {/* `v2-underline`: theme.css's field-hover rule reads --input-border-hover
+          (the boxed field's rest border); this variant rests on --input-underline instead. */}
       <input type="text" value={value ?? ''} placeholder={placeholder} aria-label={ariaLabel || placeholder}
         aria-invalid={invalid ? 'true' : undefined} className={cx('v2-inset', under && 'v2-underline')}
         onChange={onChange ? (e) => onChange(e.target.value, e) : undefined} style={field} />
@@ -443,15 +376,11 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
 // role="option" rows. `options` is [[value, label], …].
 export function Select({ value, options = [], onPick, width, mono, placeholder, invalid, ariaLabel, emptyText, disabled, style, className }) {
   const [open, setOpen] = useState(false)
-  // DS-S-21/DS-S-32: Escape closes the listbox — and only the listbox, so a
-  // Select inside a modal doesn't take the modal down with it. The key listener
-  // is registered in the *capture* phase because `useEscape` (hooks.js) listens
-  // on document in the bubble phase: a parent modal registers its listener when
-  // it mounts, long before this popover opens, so mount order can't be relied on
-  // here the way it can for two components that mount together. Capture always
-  // runs first; preventDefault + stopPropagation then claim the event, the same
-  // swallow the Settings model-catalog typeahead does for its own dropdown.
-  // While the listbox is closed nothing is registered, so Escape falls through.
+  // Escape closes only this listbox, not a modal it might sit inside. The key
+  // listener runs in the *capture* phase since `useEscape` (hooks.js) listens on
+  // document in the bubble phase and a parent modal's listener registers well
+  // before this popover opens — capture always runs first, and
+  // preventDefault+stopPropagation claim the event ahead of it.
   useEffect(() => {
     if (!open) return undefined
     const c = () => setOpen(false)
@@ -473,22 +402,17 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
   return (
     <span className={className} onClick={(e) => e.stopPropagation()}
       style={{ position: 'relative', display: 'flex', flex: `0 1 ${width || '220px'}`, minWidth: 0, ...style }}>
-      {/* `v2-select-trigger` is what theme.css's field-hover rule targets — the
-          trigger is a field, but it is a div, so `input:hover` never reaches it.
-          `v2-inset` is the win98 bevel hook, inert elsewhere. */}
+      {/* `v2-select-trigger`: the trigger is a div, so `input:hover` in
+          theme.css never reaches it. `v2-inset` is the win98 bevel hook, inert elsewhere. */}
       <div {...act(toggle, disabled)} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-disabled={disabled || undefined}
         aria-invalid={invalid ? 'true' : undefined} className="v2-inset v2-select-trigger"
         style={{
           flex: 1, minWidth: 0, height: 32, padding: '0 10px',
           border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
           boxShadow: 'var(--field-shadow)',
-          // D-POST-04: the trigger is a *field*, so it takes --input-bg like Input
-          // and Textarea. It shipped on --search-bg (= --surface, white) and any
-          // form that pairs a Select with an Input — Searches' New/Edit grid,
-          // Settings' value rows, Persona's enum fields — drew two backgrounds
-          // for one row of controls. --search-bg stays what it says it is: the
-          // ground of a *search* box (SearchInput boxed), which is a different
-          // control with a different job.
+          // trigger is a field, so it takes --input-bg like Input/Textarea —
+          // not --search-bg, which is reserved for SearchInput so a form pairing
+          // a Select with an Input doesn't draw two backgrounds for one row.
           borderRadius: 'var(--radius-field)', background: 'var(--input-bg)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7,
           fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', color: 'var(--input-ink)',
@@ -534,18 +458,13 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
 }
 
 // ── ToolbarTrigger ──────────────────────────────────────────────────────────
-// The 24px picker in a PDF-preview toolbar (S4, Skins handoff §4.10 / board
-// `toolbarTrigger`): four hand-drawn sites — the Template and Paper triggers in
-// ResumeEditor and CoverLetterEditor — that exist because "Select's box is 32".
-// h24 · pad 0 8 · 1px --input-border · r6 · 11.5 · a 9px ▾, and **no ground**:
-// it sits directly on the toolbar strip, which is why it is not a short Select.
-// Slots: `label` (the muted caption) · `value` (the picked one) · a caret that
-// is drawn unless `caret={false}`. `open` swings the border accent the way
-// Select's trigger does — none of the four sites passes it today (their border
-// stays at rest while the menu is up), so it is a named variant, not a default.
-// `line` is Pill's line-box opt-out: the cover-letter editor's two triggers carry
-// `v2-ctl` today, the résumé editor's two do not, and the difference is a pixel of
-// half-leading under the glyph (D-16).
+// The 24px picker in a PDF-preview toolbar (Template/Paper triggers in
+// ResumeEditor and CoverLetterEditor). h24 · pad 0 8 · 1px --input-border · r6 ·
+// 11.5 · a 9px ▾, and no ground — it sits directly on the toolbar strip, unlike
+// a short Select. Slots: `label` (muted caption), `value` (picked one), a caret
+// unless `caret={false}`. `open` swings the border accent like Select's
+// trigger, as a named variant since none of the four sites passes it today.
+// `line` is Pill's line-box opt-out.
 export function ToolbarTrigger({
   label, value, open, disabled, hover = 'v2-bd', line, caret = true, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup = 'listbox', children, style, className,
@@ -555,17 +474,13 @@ export function ToolbarTrigger({
       {...act(onClick, disabled, 'button')} title={title} aria-label={ariaLabel || title}
       aria-expanded={ariaExpanded !== undefined ? ariaExpanded : (open || undefined)}
       aria-haspopup={ariaHaspopup} aria-disabled={disabled || undefined}
-      // deliberately NOT `v2-inset`: that hook's hover rule is (0,6,0) with
-      // `!important` and would beat this control's own `v2-bd` / `v2-act` accent
-      // hover, silently replacing it with --input-border-hover. The field-hover
-      // proposal (D-06) has to reach the trigger some other way, or D-13 has to
-      // settle which hover the role wears first.
+      // deliberately NOT `v2-inset`: that hook's hover rule carries `!important`
+      // and would beat this control's own `v2-bd`/`v2-act` accent hover.
       className={cx('v2-ctl', !disabled && hover, className)}
       style={{
         height: 24, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 6,
         borderRadius: 'var(--radius-field)', fontSize: 'var(--t-11-5)',
         border: `var(--bw-control) solid ${open ? 'var(--input-border-focus)' : 'var(--input-border)'}`,
-        // `none` in the default theme — the four sites draw no shadow; saas lifts it
         boxShadow: 'var(--field-shadow)',
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
         ...(line ? { lineHeight: line } : null), ...style,
@@ -580,14 +495,11 @@ export function ToolbarTrigger({
 
 // ── Row ─────────────────────────────────────────────────────────────────────
 // canonical: h46 · r7 · pad 0 10 · hover --row-hover · selected = --row-selected.
-// D-POST-07: selection is a **background wash and nothing else**. APPS-20 added a
-// 3px --row-selected-mark bar with a compensating left pad; Applications never
-// had one (nor does any other row list in v2), and the pad swap shifted every
-// cell in the picked row by 3px. The token went with it.
-// `flush` is the named variant for a **full-bleed table row** (Companies): the
-// list has no side padding, so a 7px radius would round the hover fill away from
-// the pane edges and leave a notch under the square sticky actions cell. Radius
-// only — height, hover, selection and divider are the canonical ones.
+// Selection is a background wash and nothing else — no left-pad marker bar,
+// since that would shift every cell in the picked row.
+// `flush` is the named variant for a full-bleed table row (Companies): no side
+// padding, so a 7px radius would round the hover fill away from the pane edges.
+// Radius only — height, hover, selection and divider stay canonical.
 // `...rest` carries the `data-*` hooks a screen already relies on (the Feed keys
 // its scroll-into-view and its harness selectors off `data-row={i}`).
 export function Row({ selected, divider, flush, onClick, title, ariaLabel, children, style, className, ...rest }) {
@@ -597,35 +509,28 @@ export function Row({ selected, divider, flush, onClick, title, ariaLabel, child
       style={{
         display: 'flex', alignItems: 'center', gap: 10, height: 46,
         borderRadius: flush ? 0 : 'var(--radius-row)',
-        // the picked row is a token TRIO, not just a wash: theme.css's
-        // `.v2-row[aria-current="true"]` writes the same three names (it has to,
-        // because the Feed draws its own row), and the two agree by construction —
-        // --row-selected-ink is `inherit` and --row-selected-edge `none` in every
-        // theme but cobalt (a 3px inset accent bar) and win98 (navy fill, white ink).
+        // picked row is a token trio: theme.css's `.v2-row[aria-current="true"]`
+        // writes the same three names (needed since the Feed draws its own row).
         background: selected ? 'var(--row-selected)' : 'transparent',
         ...(selected ? { color: 'var(--row-selected-ink)', boxShadow: 'var(--row-selected-edge)' } : null),
         borderBottom: divider ? 'var(--bw-hair) var(--row-line-style) var(--row-line)' : undefined,
         padding: '0 10px',
-        // conditional spread, never `cursor: … : undefined`: a present-but-undefined
-        // key clears the property (and, where a shorthand set it, half of that
-        // shorthand). An inert row leaves `cursor` unset so its text keeps the I-beam.
+        // conditional spread, never `cursor: … : undefined` — an undefined key
+        // still clears the property, and an inert row needs `cursor` left unset to keep the I-beam.
         ...(onClick ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
 }
 
 // ── TableRow ────────────────────────────────────────────────────────────────
-// The BODY row of a flat table — TableHead's partner, and the role five sites
-// drew by hand (Companies' test list, Stats' schedules / runs / activity, the
-// Feed's requirement table) because "Row is 46px with a hover and a --row-line
-// divider". This one is 32/34/38, its rule is the row divider (--row-line
-// through --row-line-style, so win98 gets its dotted separator), and it has
-// **no hover at all** unless it is given an `onClick`: a table body is read, not
-// picked, and a wash on every line would make the divider the noise.
-// `size` pins the row's own type where the cells inherit it (Stats' two logs run
-// 11.5/18, the Feed's requirement table 12/18); left off, the row inherits.
-// `align` is the one geometry knob: the requirement table tops-aligns its cells
-// because a wrapped requirement must not centre against a one-line verdict.
+// The BODY row of a flat table — TableHead's partner (Companies' test list,
+// Stats' schedules/runs/activity, the Feed's requirement table). 32/34/38
+// height, divider via --row-line/--row-line-style (win98 gets a dotted
+// separator), and no hover at all unless given an `onClick` — a table body is
+// read, not picked, and a wash on every line would make the divider the noise.
+// `size` pins the row's own type where cells inherit it; left off, the row
+// inherits. `align` is the one geometry knob (a wrapped requirement must not
+// centre against a one-line verdict).
 const TROW_SIZE = {
   sm: { fontSize: 'var(--t-11-5)', lineHeight: '18px' },
   md: { fontSize: 'var(--t-12)', lineHeight: '18px' },
@@ -649,15 +554,12 @@ export function TableRow({
 }
 
 // ── FooterRow ───────────────────────────────────────────────────────────────
-// HeaderRow's mirror (S4, spec §E.1 "modal / drawer FOOTER bar", 12 sites): the
-// action bar at the bottom of a modal or drawer, whose rule is on TOP. It reads
-// `--divider` — the one name that carries the whole rule (win98's `2px groove`
-// cannot be spelled as a colour) — where HeaderRow reads a colour and writes its
-// own 1px. `soft` is the lighter hairline (WelcomeModal), `bg` the same named
-// ground map HeaderRow uses.
-// It does NOT claim `flex: 0 0 auto` the way HeaderRow does: eight of the twelve
-// sites set it and four do not, and pinning it here would change the computed
-// flex of the four. It stays a layout decision at the call site.
+// HeaderRow's mirror: the action bar at the bottom of a modal or drawer, rule
+// on TOP. Reads `--divider` — the one name carrying the whole rule (win98's
+// `2px groove` can't be spelled as a colour) — where HeaderRow reads a colour
+// and writes its own 1px. `soft` is the lighter hairline (WelcomeModal), `bg`
+// the same named ground map HeaderRow uses. Does NOT claim `flex: 0 0 auto`
+// like HeaderRow — left as a layout decision at the call site.
 const FOOT_PAD = { modal: '12px 22px', compact: '11px 22px', wide: '14px 24px 18px' }
 export function FooterRow({
   as, variant = 'modal', pad, bg, soft, align = 'center', gap = 9,
@@ -690,11 +592,9 @@ export const Card = React.forwardRef(function Card(
       style={{
         background: 'var(--card-bg)', border: 'var(--bw-panel) solid var(--card-border)',
         borderRadius: 'var(--radius-card)', padding: '10px 14px',
-        // `none` here; saas is the one board that lifts its cards off the page
         boxShadow: 'var(--card-shadow)',
-        // `cursor` is inherited: setting `default` on a *static* card pushed the plain
-        // arrow down through every text node inside it, so selectable card text lost
-        // its I-beam hint. Only an interactive card claims a cursor.
+        // `cursor` is inherited: setting `default` on a static card pushed the
+        // plain arrow through every text node inside it, killing the I-beam on selectable text.
         ...(live ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
   )
@@ -742,13 +642,9 @@ export function MenuHead({ children, style }) {
 // `role` is a prop because the same box serves an action menu (role="menu") and
 // an option picker (role="listbox" — Settings' typeahead, the cover-letter
 // template/paper pickers). Positioning is the caller's, passed as `style`.
-// D-POST-01: `v2-menu` is not decoration — theme.css pins `flex-shrink:0` on
-// every direct child. The box is a *column* flex container, so a child's
-// declared height is only a flex-basis: once the menu is taller than its
-// `maxHeight` (the Feed's Company filter lists ~1300 companies), the browser
-// shrinks every shrinkable child to fit, and the in-menu search field collapsed
-// from its canonical 32 px to 17. Menu rows are fixed-height by definition; a
-// scrolling menu scrolls, it never squashes.
+// `v2-menu` is not decoration — theme.css pins `flex-shrink:0` on every direct
+// child, since without it a menu taller than its `maxHeight` (the Feed's
+// Company filter with ~1300 rows) shrinks the search field from 32px to 17.
 export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
   return (
     <div role={role} aria-label={ariaLabel} className={cx('v2-menu', 'v2-raised', className)} style={{
@@ -759,16 +655,12 @@ export function Menu({ role = 'menu', children, ariaLabel, style, className }) {
   )
 }
 // canonical: text-2 · r6 · 12.5 · pad 7 11 · hover v2-menuitem.
-// `danger` → --menu-item-danger-ink + v2-hover-bad, and (matching all three
-// danger sites in the scan) a --menu-item-sep rule above it; pass
-// `divider={false}` for a danger item that is not the last of its menu.
-// `selected` is the picked row of an option menu (sort, template, paper size,
-// filter value): --menu-item-on-bg / -on-ink at weight 500 — the same tint the
-// Select listbox paints, named once.
-// `icon` sits in a fixed 16 px gutter so every label in a menu starts on one
-// axis whatever glyph precedes it (the shape every icon menu in v2 already drew
-// by hand). `hint` is the trailing shortcut/count; `hintMono` sets it in the
-// mono face, the way keyboard hints and counts are written elsewhere.
+// `danger` → --menu-item-danger-ink + v2-hover-bad, plus a --menu-item-sep rule
+// above it; pass `divider={false}` for a danger item that is not the last of its menu.
+// `selected` is the picked row of an option menu: --menu-item-on-bg/-on-ink at
+// weight 500, the same tint the Select listbox paints.
+// `icon` sits in a fixed 16px gutter so every label in a menu starts on one
+// axis. `hint` is the trailing shortcut/count; `hintMono` sets it in the mono face.
 // `href` renders a real <a> — a menu row that navigates must stay ⌘/middle-
 // clickable (Companies' "View jobs in feed", the cover-letter editor's job link).
 export function MenuItem({
@@ -796,8 +688,7 @@ export function MenuItem({
       {icon != null && icon !== false && (
         <span aria-hidden="true" style={{
           flex: '0 0 16px', textAlign: 'center', fontSize: 'var(--t-11)',
-          // a flex box, not just text-align: the gutter also holds the filter
-          // menus' 14/15px checkbox, which is a block and would sit left of centre
+          // flex box, not just text-align: also holds filter menus' checkbox (a block, would sit left of centre otherwise)
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           ...(danger ? null : { color: 'var(--label-ink)' }),
         }}>{icon}</span>
@@ -824,32 +715,23 @@ export function MenuItem({
 // ── SectionHead ─────────────────────────────────────────────────────────────
 // canonical: --section-head-ink · 12.5/18px · gap 6 · hover v2-hover-accent, the
 // caret first, `aria-expanded` and Enter/Space driven by `open`/`onToggle`.
-// The caret glyph is ⌄ / › — the pair every screen in v2 already draws (D3's
-// ▾ / ▸ had no call site outside the gallery).
+// The caret glyph is ⌄ / ›.
 // Variants:
-//   `boxed` — r6 · pad 2 4: a hover target slightly larger than the label, the
-//             form the Feed's report heads use.
-//   `card`  — the collapsible **card header** (Persona's autofill groups, the
-//             résumé sections, the cover-letter editor): gap 9, the card's own
-//             radius, ink inherited from the card rather than muted. Its padding
-//             is layout and is passed in `style`.
-// `caret="end"` puts the glyph last, adjacent to the last child (a head that
-// reads label → rule → caret); `caret="pin"` puts it last and pins it to the
-// right edge (`margin-left:auto`); `caret={false}` draws none, for a head that
-// supplies its own (the cover-letter editor's rotating SVG chevron).
-// Children render as-is, so a head that is a row of its own — a hairline, a
-// count, a status — lays itself out.
+//   `boxed` — r6 · pad 2 4: a hover target slightly larger than the label (the Feed's report heads).
+//   `card`  — the collapsible card header (Persona's autofill groups, résumé
+//             sections, cover-letter editor): gap 9, card's own radius, ink
+//             inherited from the card. Padding is layout, passed in `style`.
+// `caret="end"` puts the glyph last, adjacent to the last child; `caret="pin"`
+// pins it to the right edge (`margin-left:auto`); `caret={false}` draws none,
+// for a head with its own (the cover-letter editor's rotating SVG chevron).
 export function SectionHead({
   open = true, onToggle, count, boxed, card, caret = 'start', hover = 'v2-hover-accent',
   title, ariaLabel, children, style, className,
 }) {
   const glyph = onToggle && caret ? (
-    // explicit lineHeight: without one the caret box is the row's 18px line-height,
-    // and in a `alignItems:'baseline'` head (ResumeSections' entry heads) a 10px
-    // glyph in an 18px box sits at a font-dependent offset from the shared
-    // baseline, so the head grew 36→37px under the alt theme. `1` pins the box to
-    // the glyph's own 10px; with `center` the content area stays centred, so the
-    // glyph does not move in either alignment.
+    // explicit lineHeight:1 pins the caret box to the glyph's own 10px — without
+    // it, a baseline-aligned head (ResumeSections) sits the glyph at a
+    // font-dependent offset and the head's height shifts between themes.
     <span aria-hidden="true" style={{
       flex: '0 0 auto', fontSize: 'var(--t-10)', lineHeight: 1, color: 'var(--label-ink)',
       ...(caret === 'pin' ? { marginLeft: 'auto' } : null),
@@ -878,11 +760,9 @@ export function SectionHead({
 // the shelf copy chip: --chip-bg · 1px --chip-border · r99 · 11.5 · h26.
 // hover (v2-chip) turns the border accent, the ink --chip-ink-hover and adds a
 // 2px --chip-ring-hover halo.
-// `on` is the picked chip (Skins handoff §2): the same accent-soft fill Pill and
-// Segmented use, and a navy fill in win98. It is written inline from the
-// --chip-on-* trio rather than through the `[aria-pressed]` rule the generated
-// stylesheet proposes, so the state is a prop like every other on-state here and
-// no cascade fires for a chip that never sets it.
+// `on` is the picked chip: the same accent-soft fill Pill and Segmented use,
+// navy in win98. Written inline from the --chip-on-* trio (a prop, like every
+// other on-state here) rather than an `[aria-pressed]` CSS rule.
 export function Chip({ on, disabled, onClick, title, ariaLabel, children, style, className }) {
   return (
     <div {...act(onClick, disabled)} title={title} aria-label={ariaLabel} aria-disabled={disabled || undefined}
@@ -903,9 +783,9 @@ export function Chip({ on, disabled, onClick, title, ariaLabel, children, style,
 
 // ── Tag / Dot ───────────────────────────────────────────────────────────────
 // Tag canonical: r99 · 10px · pad 2 8 · .06em uppercase, tinted by tone.
-// `tone="none"` sets no colour at all: the ATS / search-mode / tier badges are a
-// separate hue taxonomy that theme.css paints from a `cc-*` / `sm-*` class, and
-// an inline tone would beat that class. Everything else about the box is shared.
+// `tone="none"` sets no colour: the ATS/search-mode/tier badges are a separate
+// hue taxonomy theme.css paints from a `cc-*`/`sm-*` class, and an inline tone
+// would beat that class.
 const TAG_TONE = {
   none: {},
   neutral: { background: 'var(--tag-neutral-bg)', color: 'var(--tag-neutral-ink)' },
@@ -919,9 +799,8 @@ export function Tag({ tone = 'neutral', title, children, style, className }) {
     <span title={title} className={className} style={{
       flex: '0 0 auto', display: 'inline-flex', alignItems: 'center',
       borderRadius: 'var(--radius-control)', fontSize: 'var(--t-10)', lineHeight: '15px',
-      // Tag is tracked TIGHTER than Label (.06em vs .13em) and always was; the two
-      // are not one caps scale, so the badge keeps a name of its own rather than
-      // being folded into --label-tracking (Skins handoff §4.7, "do not unify").
+      // Tag is tracked tighter than Label (.06em vs .13em); not one caps scale,
+      // so it keeps its own token rather than folding into --label-tracking.
       padding: '2px 8px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)',
       fontWeight: 'var(--label-weight)',
       whiteSpace: 'nowrap', ...(TAG_TONE[tone] || TAG_TONE.neutral), ...style,
@@ -943,17 +822,13 @@ export function Dot({ tone = 'neutral', size = 7, title, style, className }) {
 }
 
 // ── GlyphBadge ──────────────────────────────────────────────────────────────
-// The round box with ONE glyph in it (S4, board `glyphBadge`): the toast's ✓/✕
-// mark, the sign-in tick, the error band's !, the welcome step numeral, the
-// settings "i". Nine hand-drawn sites, because "Dot draws a bare tone disc with
-// no glyph and IconButton's smallest box is 26 and is a control".
-// Four boxes, each with the glyph size its sites already use — the board's
-// `round(size × .58)` is close but not what any of them draw:
+// The round box with ONE glyph in it: the toast's ✓/✕ mark, the sign-in tick,
+// the error band's !, the welcome step numeral, the settings "i".
+// Four sizes, each with the glyph size its sites already use:
 //   15 → 9 · 16 → 9.5 · 22 → 11 · 34 → 16
-// `tone="outline"` is the bordered form (the settings "i"), and `on` gives it the
+// `tone="outline"` is the bordered form (the settings "i"); `on` gives it the
 // same accent-soft trio a Pill wears. `mono` is the numeral form. `tone="none"`
-// paints nothing at all, for the one caller whose ground is its own (the toast
-// mark, which is tinted per kind).
+// paints nothing, for the one caller whose ground is its own (the toast mark, tinted per kind).
 const GLYPH_SIZE = { 15: 'var(--t-9)', 16: 'var(--t-9-5)', 22: 'var(--t-11)', 34: 'var(--t-16)' }
 const GLYPH_TONE = {
   accent: { background: 'var(--glyph-accent-bg)', color: 'var(--glyph-accent-ink)' },
@@ -970,18 +845,11 @@ const GLYPH_ON = {
   background: 'var(--glyph-on-bg)', color: 'var(--glyph-on-ink)',
   border: 'var(--bw-hair) solid var(--glyph-on-border)',
 }
-// `hover` is opt-in and unset by default: a badge that acts is still a badge, and
-// none of the nine sites draws a hover today — handing one to every clickable
-// GlyphBadge would repaint the settings "i" and the Feed's "?" on the pointer.
-//
-// `line` is opt-in for the same reason, and it is NOT cosmetic. Three of the
-// sites pin `line-height: 1` (the sign-in tick, the welcome step numeral, the
-// toast mark); the other four let the badge inherit its parent's line box — 18px
-// on the settings row, 15px in the Feed's bulk bar. A glyph centred in a flex box
-// sits at the centre of ITS OWN line box, and half-leading rounds differently at
-// 18px than at 9px: writing `1` here lifted the settings "i" by a device pixel.
-// So the primitive writes nothing unless a site asks, and the three that pinned
-// it pass `line={1}`. D-16 covers unifying them.
+// `hover` is opt-in and unset by default — not every clickable badge wants one.
+// `line` is opt-in too and not cosmetic: a glyph centred in a flex box sits at
+// the centre of its own line box, and half-leading rounds differently at
+// different line-heights, so forcing `line={1}` everywhere would shift some
+// badges by a device pixel. Only the sites that need it pass it.
 export function GlyphBadge({
   size = 16, tone = 'accent', on, mono, hover, line, onClick, disabled, title, ariaLabel,
   ariaExpanded, children, style, className,
@@ -1007,13 +875,13 @@ export function GlyphBadge({
 }
 
 // ── Check / Radio ───────────────────────────────────────────────────────────
-// The tick box and the radio disc that five screens drew by hand (the Feed's row
-// selector and its "select all shown" head cell, the Feed's in-menu company
-// checks, Searches' import-rules checks, the drawer/modal option lists). One
-// indicator, one set of tokens: --check-border at rest, the accent trio when on.
-// `label` is optional — a bare indicator (a table's select cell) passes none and
-// keeps its own `ariaLabel`. `indeterminate` is the "some but not all" tick the
-// select-all cell shows over a partial selection.
+// The tick box and the radio disc (Feed row selector and its "select all shown"
+// head cell, Feed's in-menu company checks, Searches' import-rules checks,
+// drawer/modal option lists). One indicator, one set of tokens: --check-border
+// at rest, the accent trio when on.
+// `label` is optional — a bare indicator (a table's select cell) passes none
+// and keeps its own `ariaLabel`. `indeterminate` is the "some but not all" tick
+// the select-all cell shows over a partial selection.
 const BOX_SIZE = { sm: 14, md: 15 }
 function Indicator({ round, checked, indeterminate, size }) {
   const px = BOX_SIZE[size] || BOX_SIZE.sm
@@ -1032,11 +900,9 @@ function Indicator({ round, checked, indeterminate, size }) {
 function Ticker({ round, checked, indeterminate, onChange, label, title, ariaLabel, size = 'sm', disabled, style, className }) {
   const fire = onChange ? () => onChange(!checked) : undefined
   return (
-    // A non-interactive indicator (the tick that rides in a MenuItem's icon
-    // gutter, where the row itself owns the click) still needs its role: act()
-    // hands back an empty object without a handler, and aria-checked on a
-    // role-less span is ignored. Name the role either way, add the tab stop only
-    // when there is something to click.
+    // A non-interactive indicator (a tick riding in a MenuItem's icon gutter,
+    // where the row owns the click) still needs its role — act() hands back an
+    // empty object without a handler, and aria-checked on a role-less span is ignored.
     <span role={round ? 'radio' : 'checkbox'} {...act(fire, disabled, round ? 'radio' : 'checkbox')}
       aria-checked={indeterminate && !round ? 'mixed' : !!checked}
       aria-label={ariaLabel || (typeof label === 'string' ? label : undefined)}
@@ -1058,8 +924,8 @@ export function Radio(props) { return <Ticker {...props} round indeterminate={fa
 
 // ── Switch ──────────────────────────────────────────────────────────────────
 // Track + sliding knob, the Settings geometry (26x15 track, 11px knob, 2px
-// inset). SET-14: --switch-knob-on is --surface-2 so the knob reads as a surface
-// disc on the accent track in light and dark; OFF keeps --knob on a neutral track.
+// inset). --switch-knob-on is --surface-2 so the knob reads as a surface disc
+// on the accent track in light and dark; OFF keeps --knob on a neutral track.
 const SWITCH_SIZE = {
   md: { w: 26, h: 15, knob: 11, pad: 2 },
   sm: { w: 22, h: 13, knob: 9, pad: 2 },
@@ -1096,14 +962,12 @@ export function Switch({ on, onChange, label, title, ariaLabel, size = 'md', dis
 // depth/tier cells, Searches' auto-scoring Off/Light/Full. `options` is
 // [{ value, label, hint, dots, dotColor, tone }].
 //   dots      — how many status discs precede the label (Searches: 0/1/2). An
-//                *absent* dot draws nothing at all: an empty span would still eat
-//                a gap and push its label off the cell's centre, which is exactly
-//                what happened to the "Off" cell before this primitive existed.
+//                absent dot draws nothing at all, since an empty span would
+//                still eat a gap and push its label off the cell's centre.
 //   dotColor  — a fixed disc colour (the stage stepper's per-stage hue), drawn
 //                whether or not the cell is picked.
 //   tone      — 'accent' (default) or 'bad' for the picked look, so the
-//                stepper's Rejected cell can close in red without an inline
-//                exception.
+//                stepper's Rejected cell can close in red.
 // `variant="inset"` is the framed two-cell toggle (the Feed's Live / Cached
 // switch): one border run around the group, borderless cells inside it.
 // Keyboard: the group is a radiogroup with a roving tabstop; left/right move and
@@ -1146,9 +1010,8 @@ export function Segmented({
         return (
           <div key={String(o.value)} role="radio" aria-checked={on} aria-disabled={disabled || undefined}
             title={o.hint || undefined} tabIndex={disabled ? -1 : ((on || (idx < 0 && i === 0)) ? 0 : -1)}
-            // the bevel hook rides the bordered cells only — an `inset` cell is
-            // borderless inside one shared frame, so the rule would have nothing
-            // to beat and would recolour a border that is not drawn
+            // bevel hook rides the bordered cells only — an `inset` cell is
+            // borderless inside one shared frame
             className={cx(!inset && 'v2-raised', !inset && !disabled && 'v2-bd')}
             onClick={pick}
             onKeyDown={(e) => {
@@ -1222,7 +1085,7 @@ export function Meter({ value = 0, tone = 'accent', height = 4, track, radius, a
 // `children` ride in the ring's own relative box — that is where the Feed's
 // "+N reports" count badge pins itself.
 const RING_SIZE = {
-  sm: { box: 34, vb: 78, shift: 2, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },  // vb 78: the pre-pass band ring (r 15.26 px, stroke 2.18) — fits a 34 box without clipping
+  sm: { box: 34, vb: 78, shift: 2, num: 'var(--t-14)', track: 5, letterSpacing: '-.02em', unscored: 'var(--t-7-5)' },  // vb 78 (r 15.26px, stroke 2.18) fits a 34 box without clipping
   md: { box: 44, vb: 88, shift: 1, num: 'var(--t-19)', track: 5, letterSpacing: undefined, unscored: 'var(--t-9-5)' },
 }
 const RING_TONE = {
@@ -1235,19 +1098,16 @@ const RING_TONE = {
 // the score bands each screen used to re-declare as its own `scoreColor()`
 export const scoreTone = (s) => (s == null ? 'neutral' : s >= 70 ? 'good' : s >= 50 ? 'warn' : 'bad')
 const RING_R = 35   // the arc radius every ring site drew
-// D-POST-16: the viewBox is a **constant**, not `2 x box`. With a per-size
-// viewBox, `r=35 + stroke/2` is a *fixed 37.5px* outer radius whatever the box
-// is: it fits md's 44px box (37.5 < 44) and overflowed sm's 34px one, where the
-// SVG root's UA `overflow:hidden` sliced 1.75px off all four sides — the ring
-// rendered as a squircle (measured on the Feed's report band: viewBox 0 0 68 68,
-// r 35, stroke 5, svg 34x34). Pinning the viewBox to md's 88 makes every size a
-// uniform scale of the same drawing — md is pixel-identical, sm draws a whole
-// ring, and an explicit numeric `size` scales too instead of clipping.
+// The viewBox is a constant (88, md's), not `2 x box`: a per-size viewBox would
+// give a fixed 37.5px outer radius (r 35 + stroke/2) regardless of box, which
+// overflows sm's 34px box and gets clipped by the SVG root's UA
+// `overflow:hidden`. A constant viewBox makes every size a uniform scale of the
+// same drawing, so an explicit numeric `size` scales cleanly too.
 const RING_VB = 88
-// ── the three non-ring variants (Skins handoff §3, Primitives Board `ring()`) ──
+// ── the three non-ring variants ──────────────────────────────────────────────
 // A theme may replace the DRAWING, not just its colours: `--ring-variant` names
-// one of a closed set and ScoreRing renders it. The ring is the default and is
-// untouched; the other three are the boards' own score marks —
+// one of a closed set and ScoreRing renders it. The ring is the default; the
+// other three are alternate score marks —
 //   pill   a 40x44 tile, mono numeral over a small "fit" cap (cobalt)
 //   bar    a mono numeral over a 32x3 track (saas)
 //   ascii  `87 [████████░░]`, the bar filled from Math.round(score/10) (win98)
@@ -1424,11 +1284,9 @@ export function NavLink({ pad, onClick, title, ariaLabel, children, style, class
 }
 
 // ── RemoveLink / RemoveX / MoveArrows ───────────────────────────────────────
-// The three row affordances every list editor carries. They were written once in
-// `ResumeSections.jsx` (RemoveLink/RemoveX) and hand-copied twice more there and
-// once in the cover-letter editor (the ▲▼ pair); D5 moves them here so the role
-// has one definition and one hover, and re-exports the two old names from
-// `ResumeSections.jsx` so existing imports are untouched.
+// The three row affordances every list editor carries, given one definition and
+// one hover here; `ResumeSections.jsx` re-exports the two old names so existing
+// imports are untouched.
 //
 // RemoveLink is the worded form ("Remove role") that closes a card; RemoveX the
 // glyph a single row carries. Both are muted at rest and swing to --hover-bad-*
@@ -1442,9 +1300,7 @@ export const RemoveX = ({ onClick, title = 'Remove', size = 11, lh }) => (
     style={{ flex: '0 0 auto', color: 'var(--helper-ink)', fontSize: size, cursor: 'pointer', lineHeight: lh }}>✕</span>
 )
 // The reorder pair: an 8px ▲▼ column at --helper-ink, each arrow a `v2-navlink`.
-// `upOff` / `downOff` dim an end of the list to 0.35 and take the hover and the
-// pointer away — the cover-letter editor's contact rows need that, the résumé's
-// never do, and before this both drew their own pair with different hovers.
+// `upOff` / `downOff` dim an end of the list to 0.35 and take the hover and pointer away.
 export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
   const arrow = (fn, off, title, glyph) => (
     <span {...act(fn, off)} title={title} aria-disabled={off || undefined} className={off ? undefined : 'v2-navlink'}
@@ -1463,25 +1319,21 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 
 // ── ModalPanel / Drawer ─────────────────────────────────────────────────────
 // ModalPanel canonical: surface · 1px --modal-border · r12 · --modal-shadow,
-// on a --scrim-bg scrim. Escape closes (useEscape, RES-15) and the panel is
-// pulled back onto the pixel grid (useSnapTop, RES-32).
+// on a --scrim-bg scrim. Escape closes (useEscape) and the panel is pulled back
+// onto the pixel grid (useSnapTop).
 //
 // `as="form"` + `onSubmit` renders the panel as a real <form>, for the sign-in
-// overlay where Enter-in-the-field must submit. `scrimProps` carries the two
-// attributes the two *global* overlays put on the scrim (`className="jn-v2"` +
-// the pair `themeAttrs()` spreads, `data-appearance` and `data-theme`), because
-// they mount outside the v2 shell and have to bring the look with them;
-// `zIndex` is theirs too — they sit above everything, including
-// an open modal. A panel with no `onClose` (sign-in: there is nowhere to go) also
-// takes no Escape listener, rather than one that swallows the key and does
-// nothing.
+// overlay where Enter-in-the-field must submit. `scrimProps` carries the
+// attributes the two global overlays (which mount outside the v2 shell) put on
+// the scrim to bring the theme look with them; `zIndex` is theirs too, since
+// they sit above everything including an open modal. A panel with no `onClose`
+// takes no Escape listener rather than one that swallows the key and does nothing.
 // `escape={false}` is for a screen that already owns Escape for its whole modal
-// set and guards it (Applications and Settings both close every overlay from one
-// handler that stands down while a ConfirmDialog is up). A second, unguarded
-// listener here would close the modal *under* that confirm.
-// `titlebar` is the caption a themed window chrome shows. The strip mounts only
-// where `--title-bar` is a gradient (win98); everywhere else useTitleBar() is
-// false and the panel is exactly the box it has always been.
+// set (Applications and Settings close every overlay from one handler that
+// stands down while a ConfirmDialog is up) — a second listener here would close
+// the modal under that confirm.
+// `titlebar` is the caption a themed window chrome shows, mounted only where
+// `--title-bar` is a gradient (win98).
 export function ModalPanel({
   width = 480, as, onSubmit, onClose, escape = true, labelledBy, zIndex = 70, titlebar,
   children, style, className, scrimStyle, scrimProps,
@@ -1509,8 +1361,8 @@ export function ModalPanel({
     </div>
   )
 }
-// The drawer is positioned against its *pane*, not the viewport, so its scrim is
-// absolute too (COMP: the rail stays reachable while a company is open).
+// The drawer is positioned against its pane, not the viewport, so its scrim is
+// absolute too (Companies: the rail stays reachable while a company is open).
 export function Drawer({ width = 720, onClose, labelledBy, titlebar, children, style, className }) {
   useEscape(onClose)
   const chrome = useTitleBar()
@@ -1541,8 +1393,8 @@ export function Drawer({ width = 720, onClose, labelledBy, titlebar, children, s
 // --head-line-strong.
 // `pad` is the escape hatch for the handful of heads whose gutter is set by the
 // pane they sit in (a toolbar inset to a list's own 24/30px rails, the PDF
-// preview strip). It stays a *named prop* rather than an inline `padding` so the
-// site still reads as a HeaderRow and D5's lint has one thing to look at.
+// preview strip). It stays a named prop rather than an inline `padding` so the
+// site still reads as a HeaderRow and the stylelint has one thing to look at.
 // `id` is a zero-pixel passthrough (the Feed's sticky head is measured by id).
 // `bg` is the head's ground for the strips that are painted rather than
 // transparent — a sticky pane head on --head-bg, a column strip on --head-bg-page,
@@ -1557,9 +1409,8 @@ const HEAD_BG = { surface: 'var(--head-bg)', page: 'var(--head-bg-page)', recess
 const HEAD_LINE = { line: 'var(--head-line)', soft: 'var(--head-line-soft)', strong: 'var(--head-line-strong)' }
 // `--title-bar` is `none` in every theme but win98, where it is the two-stop
 // gradient of a Windows caption bar. A panel asks this hook whether the chrome
-// exists before it mounts a `variant="titlebar"` head — the one *composition*
-// change a theme is allowed to make (Skins handoff §4.8), so it must be a
-// question about the cascade rather than a style value.
+// exists before it mounts a `variant="titlebar"` head — a question about the
+// cascade rather than a style value, since a theme is allowed to change composition here.
 export function useTitleBar() {
   const bar = useThemeVar('--title-bar', 'none')
   return !!bar && bar !== 'none'
@@ -1673,12 +1524,9 @@ export function Surface({ as, radius = 'card', pad, children, style, className, 
 }
 
 // ── Notice ──────────────────────────────────────────────────────────────────
-// The tinted banner with a mark, a body and an action (S4, board `notice`): the
-// company drawer's scrape-warning band is the shipped one — a warn/bad/quiet
-// ground with a ▲, the message, and "Acknowledge" pinned right.
-// The board draws it on --warn-line at --radius-cell; the code draws it on
-// --warn at --radius-card, and the code is what ships, so the tokens point at
-// the code's paint and the difference is logged (D-14) rather than drifted.
+// The tinted banner with a mark, a body and an action: the company drawer's
+// scrape-warning band is the shipped example — a warn/bad/quiet ground with a
+// ▲, the message, and "Acknowledge" pinned right.
 // `action` is rendered as a direct child, not in a wrapper: the CTA brings its
 // own alignment (the acknowledge link tops itself against a two-line body).
 const NOTICE_TONE = {
@@ -1734,9 +1582,8 @@ export function Helper({ size = 'md', mono, onClick, title, ariaLabel, children,
   )
 }
 // ── Mono ────────────────────────────────────────────────────────────────────
-// The monospaced RUN — an id, a timestamp, a count, a score numeral (S4, board
-// `textRoles`). Twelve hand-drawn sites and no primitive: "Helper's `mono`
-// covers only --helper-ink", and this role takes five inks.
+// The monospaced RUN — an id, a timestamp, a count, a score numeral. Separate
+// from Helper's `mono` since this role takes five inks, not just --helper-ink.
 // Sizes are the five stops the sites use; `md` (10.5) is the dominant. `line`
 // pins the whole-pixel leading where the run has to sit on a shared baseline
 // (a 16px row, an 18px table line); left off, the run inherits.
@@ -1768,20 +1615,15 @@ const HEADING_SIZE = {
   19: { fontSize: 'var(--t-19)', lineHeight: '26px' },
   22: { fontSize: 'var(--t-22)', lineHeight: '30px' },
 }
-// `strong` is v2's **second** serif family: the card / column / drawer-section
-// title, set heavier (500, or 600 where the design asks for it) and tracked
-// tighter than the 400-weight display scale — -.01em up to 16, -.015em from 17.
-// D4e left its sites inline because collapsing the two families is a design
-// decision; D4f names the family instead of collapsing it (allowed sizes
-// **15 · 15.5 · 16 · 17 · 18 · 19**, exactly the sizes already drawn).
-// Its line-height is **pinned to a whole pixel per size** (D5, per the user's
-// consistency rule in D1-D2 §"Heading strong line-heights"). Left unset these
-// titles inherited preflight's 1.5, so 15/15.5/17/19 landed on 22.5/23.25/25.5/28.5
-// and every card that holds one measured x.5 — the height Chrome rounds a 1px
-// border away from. 19 takes 26 so the two 19s (400- and 500-weight) share a box.
-// A card that has to hold a *different* integer height still passes its own
-// line-height in `style`, with the reason at the call site: the cover-letter row
-// (22) and the Feed's two-line title block (1.15) are the two that do.
+// `strong` is v2's second serif family: the card/column/drawer-section title,
+// set heavier (500, or 600 where asked for) and tracked tighter than the
+// 400-weight display scale — -.01em up to 16, -.015em from 17. Allowed sizes
+// are 15 · 15.5 · 16 · 17 · 18 · 19, exactly the sizes already drawn.
+// Line-height is pinned to a whole pixel per size: left unset these titles
+// inherit preflight's 1.5 and land on a .5px height that Chrome rounds a 1px
+// border away from. 19 takes 26 so the 400- and 500-weight 19s share a box.
+// A card needing a different integer height passes its own line-height in
+// `style` (the cover-letter row at 22, the Feed's two-line title block at 1.15).
 const HEADING_STRONG = {
   15: { fontSize: 'var(--t-15)', lineHeight: '22px', letterSpacing: '-.01em' },
   15.5: { fontSize: 'var(--t-15-5)', lineHeight: '23px', letterSpacing: '-.01em' },
@@ -1791,10 +1633,8 @@ const HEADING_STRONG = {
   19: { fontSize: 'var(--t-19)', lineHeight: '26px', letterSpacing: '-.015em' },
 }
 export function Heading({ size, strong, id, title, children, style, className }) {
-  // `strong` is v2's second display family and keeps its OWN weight and tracking
-  // (500/600 at -.01/-.015em, per size): --title-weight/--display-tracking are the
-  // 400-weight display scale's names, and unifying the two would collapse a
-  // distinction the design makes. Only the plain scale reads them.
+  // `strong` keeps its OWN weight/tracking (500/600 at -.01/-.015em, per size);
+  // --title-weight/--display-tracking belong to the 400-weight plain scale only.
   const look = strong
     ? { fontWeight: strong === 600 ? 600 : 500, ...(HEADING_STRONG[size ?? 15.5] || HEADING_STRONG[15.5]) }
     : { fontWeight: 'var(--title-weight)', letterSpacing: 'var(--display-tracking)', ...(HEADING_SIZE[size ?? 18] || HEADING_SIZE[18]) }
@@ -1830,13 +1670,10 @@ export function ShowMore({ n, onClick, label, style, className }) {
 }
 
 // ── ChoiceCard / ChoiceRow / ChoiceModal ────────────────────────────────────
-// The "pick one thing, then commit" modal three screens draw identically: the
-// résumé editor's Tailor and Re-tailor modals and the Persona's Import. The
-// shell was copied between the first two and the Persona import used a Menu +
-// a picker panel + a ConfirmDialog instead; naming the shape here is what stops
-// the three drifting again. The geometry below IS the Re-tailor modal's, to the
-// pixel — 480 panel · modal head (16/22/13) · body 14/22 on a 460 cap · footer
-// 12/22 over a --modal-border rule.
+// The "pick one thing, then commit" modal three screens share: the résumé
+// editor's Tailor and Re-tailor modals and the Persona's Import. Geometry
+// matches the Re-tailor modal — 480 panel · modal head (16/22/13) · body 14/22
+// on a 460 cap · footer 12/22 over a --modal-border rule.
 //
 //   ChoiceCard  — the option cards at the top of the body ("✦ Tailor" vs
 //     "Copy", "From a résumé" vs "From a PDF"): a padded cell with a title and
@@ -1946,7 +1783,7 @@ export function ChoiceModal({
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{note}</div>
         <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>{cancel}</Button>
         {action != null && action !== false && (
-          // RES-17: a disabled primary is --line on --muted (Button's own `off` look)
+          // a disabled primary is --line on --muted (Button's own `off` look)
           <Button size="sm" variant={actionVariant} busy={actionBusy} disabled={actionDisabled} onClick={onAction}>{action}</Button>
         )}
       </div>

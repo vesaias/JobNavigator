@@ -4,8 +4,7 @@ import { Button, GlyphBadge, Heading, Helper, Label, ModalPanel } from './ui'
 import { useTheme, themeAttrs } from './theme'
 import './theme.css'
 
-// Sign-in overlay (System Overlays.dc.html · 1). The design draws the resting
-// state only; the loading, error and success states are v1's and are kept —
+// Sign-in overlay. Loading, error and success states are kept from v1 —
 // signing in is the one place the app can strand you with no way forward.
 export default function LoginModal({ onSuccess }) {
   const [apiKey, setApiKey] = useState('')
@@ -13,8 +12,8 @@ export default function LoginModal({ onSuccess }) {
   const [error, setError] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [success, setSuccess] = useState(false)
-  // this overlay mounts outside the v2 shell, so it carries the theme itself —
-  // from the shared store, not a private read of the flag (SHELL-02)
+  // this overlay mounts outside the v2 shell, so it carries the theme itself
+  // from the shared store
   const look = useTheme()
 
   const submit = async (e) => {
@@ -42,11 +41,8 @@ export default function LoginModal({ onSuccess }) {
   }
 
   return (
-    // The sign-in overlay mounts outside the v2 shell, so the scrim carries the
-    // look root (`jn-v2` + data-appearance + data-theme) and its own z-index; the panel is a real
-    // <form> so Enter in the key field submits. No `onClose`: there is nothing
-    // behind this overlay to go back to, so it takes no Escape/scrim dismissal —
-    // the same as before.
+    // Scrim carries the look root and its own z-index; panel is a real <form>
+    // so Enter submits. No `onClose`: nothing to go back to, so no Escape/scrim dismissal.
     <ModalPanel as="form" onSubmit={submit} width={360} zIndex={9999}
       scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       style={{ padding: '26px 26px 22px', gap: 14 }}>
@@ -69,14 +65,11 @@ export default function LoginModal({ onSuccess }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>API key</Label>
             <div className="v2-fieldwrap" style={{ height: 36, padding: '0 12px', border: `1px solid ${error ? 'var(--bad)' : 'var(--edge)'}`, borderRadius: 'var(--radius-row)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              {/* ui: keep — the API-key field is a bare input inside a v2-fieldwrap that also
-                  holds the show/hide toggle and turns --bad on an error; Input draws its own
-                  box, so it cannot render this composite */}
+              {/* ui: keep — bare input in a v2-fieldwrap with the show/hide toggle; Input can't render this composite */}
               <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type={showKey ? 'text' : 'password'}
                 placeholder="jn_live_…" autoFocus autoComplete="current-password"
                 style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)' }} />
-              {/* ui: keep — the show/hide toggle is deliberately out of the tab order (tabIndex -1)
-                  beside the key field, and Link is a tab stop with role="link" */}
+              {/* ui: keep — show/hide toggle deliberately out of tab order (tabIndex -1); Link is a tab stop with role="link" */}
               <span onClick={() => setShowKey((v) => !v)} className="v2-anchor" role="button" tabIndex={-1}
                 aria-label={showKey ? 'Hide API key' : 'Show API key'}
                 style={{ fontSize: 10.5, lineHeight: '14px', color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>{showKey ? 'hide' : 'show'}</span>

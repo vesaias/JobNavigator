@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
-// RES-16: this dialog started here (COMP-28) and now serves the résumé and
-// cover-letter deletes too, so it lives in its own file.
+// shared dialog also serves résumé and cover-letter deletes, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSettled, useWarm, NBSP } from './hooks'
 import { Button, DashedAdd, Dot, Drawer as UiDrawer, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
@@ -21,11 +20,8 @@ const ago = (iso) => {
   return `${d}d ago`
 }
 
-// A paused company is not an open problem: it was switched off deliberately, so
-// its last-run state stays on the row as history — muted, labelled "inactive" —
-// rather than driving the ▲, the header "need attention" count and the rail dot.
-// Same for a warning the operator has acknowledged, until a newer run fails
-// (the backend re-raises it on its own; `warning_acknowledged` says which).
+// A paused company's last-run state stays on the row as muted "inactive" history rather than
+// driving the ▲/attention count/rail dot; same for an acknowledged warning until a newer run fails.
 const warnTextOf = (c, downReason) => c.last_error || downReason
   || (c.last_run_warning ? `last run found nothing · ${ago(c.last_scraped_at)}` : null)
 const warnMuted = (c) => !c.active || !!c.warning_acknowledged
@@ -57,9 +53,8 @@ const pathHas = (url, ...needles) => {
   let p; try { p = new URL(url).pathname.toLowerCase() } catch { return false }
   return needles.some((n) => n && p.includes(n))
 }
-// Rules mirror backend/api/routes_companies.py:detect_scrape_type (and the
-// scraper/ats/*.is_* predicates it calls) so the live chip in the drawer/add
-// modal agrees with the row chip the backend computes. Keep them in step.
+// Mirrors backend/api/routes_companies.py:detect_scrape_type (and the scraper/ats/*.is_* predicates)
+// so the live chip in the drawer/add modal agrees with the row chip the backend computes.
 const detectAts = (url) => {
   if (!url) return 'Generic'
   if (url.toUpperCase().startsWith('POST|')) return 'Phenom'
@@ -94,9 +89,8 @@ const DEPTHS = [
 ]
 const TIER_BTNS = [{ v: 1, label: tierLabel(1) }, { v: 2, label: tierLabel(2) }, { v: 3, label: tierLabel(3) }, { v: null, label: 'None' }]
 
-// COMP-26: a Playwright board can return ~600 rows and the modal rendered every
-// one of them in a single pass. Page them client-side with the pager the
-// résumé shelf and the Stats logs already use.
+// A Playwright board can return ~600 rows; page them client-side with the pager
+// the résumé shelf and Stats logs already use.
 const TEST_PAGE = 100
 const fieldLabel = { fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }
 
@@ -121,9 +115,8 @@ function UrlEditor({ urls, onChange }) {
   )
 }
 
-// `opts` keeps this screen's two shapes — DEPTHS keys on `id`, TIER_BTNS on `v`
-// — so the three call sites stay as they were; the cells themselves are the
-// Segmented primitive now.
+// `opts` keeps this screen's two shapes — DEPTHS keys on `id`, TIER_BTNS on `v` — so the
+// three call sites don't need to change; cells render via the Segmented primitive.
 const Seg = ({ opts, value, onPick, valueKey = 'id' }) => (
   <Segmented value={value} onChange={onPick}
     options={opts.map((o) => ({ value: o[valueKey] !== undefined ? o[valueKey] : o.v, label: o.label, hint: o.hint }))} />
@@ -155,21 +148,14 @@ export default function Companies() {
   const [menuId, setMenuId] = useState(null)
   const [drawer, setDrawer] = useState(null)          // {company, draft}
   const [addOpen, setAddOpen] = useState(false)
-  const [confirm, setConfirm] = useState(null)   // COMP-28/37: styled confirm {title, body, label, danger, onConfirm}
+  const [confirm, setConfirm] = useState(null)   // styled confirm {title, body, label, danger, onConfirm}
   const [test, setTest] = useState(null)              // test-scrape result
   const [testingId, setTestingId] = useState(null)
   const [showShots, setShowShots] = useState(false)
   const [reload, setReload] = useState(0)   // "Try again" re-arms the settle below
   const [loadErr, setLoadErr] = useState(null)
-  // R3-S-01 (= R2-S-01): the row's fixed columns summed to ~1130px of container
-  // before either flexible column reached its minWidth, so at 1024 with the rail
-  // open (818px of pane) the row ran ~300px past the viewport and the page grew a
-  // horizontal scrollbar. R2-S-01 pinned the actions column so the sticky ⋯ stayed
-  // reachable, but the overflow itself remained. Shed the four lowest-value
-  // columns as the pane narrows instead — all four are visible in the edit drawer,
-  // none is a control. Same ResizeObserver shape Settings (SET-11) and the Stats
-  // scheduler table already use. Thresholds are the container width at which the
-  // column *above* it stops fitting, so each one drops exactly when it has to.
+  // Fixed columns overflow the container at narrow widths, so the four lowest-value columns (all
+  // visible in the edit drawer) shed as the pane narrows, same ResizeObserver shape as Settings/Stats.
   const tableRef = useRef(null)
   const [tblW, setTblW] = useState(1400)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
@@ -177,12 +163,10 @@ export default function Companies() {
   const mounted = useRef(true)
   useEffect(() => () => { mounted.current = false }, [])
 
-  // only company_scrape runs belong on this screen; /monitor/active also carries
-  // scoring and search runs whose scope_key is a job/search id. X-01: the run now
-  // carries company_id explicitly — prefer it, and keep the scope_key reading as a
-  // fallback for runs started before the field existed.
+  // only company_scrape runs belong on this screen; /monitor/active also carries scoring/search runs
+  // keyed by job/search id. Prefer company_id when present; scope_key is the fallback for older runs.
   const runMap = (data) => { const m = {}; (data || []).forEach((r) => { if (r.job_type !== 'company_scrape') return; const id = r.company_id || r.scope_key; if (id) m[id] = true }); return m }
-  // COMP-06: health is refetched with the list, so a run that clears (or causes)
+  // health is refetched with the list, so a run that clears (or causes)
   // a failure updates the row ▲, the header count and the sort without a reload.
   const fetchHealth = useCallback(async () => {
     try { const { data } = await api.get('/health/entities'); const m = {}; (data.companies || []).forEach((c) => { m[c.id] = c.reason }); setDownMap(m) }
@@ -193,10 +177,8 @@ export default function Companies() {
     catch (e) { console.error(e); const msg = 'Could not load companies' + errSuffix(e); setLoadErr(msg); pushToast({ kind: 'error', msg }) }
     return fetchHealth()
   }, [pushToast, fetchHealth])
-  // DESIGN-LOAD: list, health, résumé names and the running scrapes settle as one.
-  // The table, the tier counts, the bulk buttons and the subtitle used to arrive in
-  // that order — an empty table under "0 tracked · 0 active", then rows, then the
-  // ▲ marks as /health/entities landed.
+  // list, health, résumé names and running scrapes settle together via useSettled, so the table,
+  // tier counts, bulk buttons and subtitle never render in a staggered, half-loaded order.
   const { ready } = useSettled([
     () => fetchCompanies(),
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(Array.isArray(data) ? data : [])).catch(() => { /* silent: the résumé chips are decoration on this screen; the list load has its own error state */ }),
@@ -212,8 +194,7 @@ export default function Companies() {
     return () => ro.disconnect()
   }, [ready])
 
-  // COMP-05: a fixed 2.6 s timer used to declare the scrape finished; poll the
-  // real run registry instead and refresh the list once a run disappears.
+  // polls the real run registry and refreshes the list once a run disappears, rather than a fixed timer.
   useEffect(() => {
     if (!Object.keys(scraping).length) return
     const h = setInterval(async () => {
@@ -254,9 +235,8 @@ export default function Companies() {
       const hay = [c.name, ...(c.aliases || []), ...(c.scrape_urls || []), ...Object.values(c.detected_scrape_types || {})].join(' ').toLowerCase()
       return hay.includes(q)
     })
-    // COMP-07: the row ▲, the health line and the drawer banner all treat a
-    // last_error as "needs attention"; the sort and the count must agree —
-    // including on skipping paused and acknowledged rows.
+    // row ▲, health line and drawer banner all treat last_error as "needs attention"; sort and
+    // count must agree, including skipping paused/acknowledged rows.
     const down = (c) => isAlarming(c, downMap[c.id])
     const cmp = {
       health: (a, b) => (down(b) - down(a)) || ((b.active ? 1 : 0) - (a.active ? 1 : 0)) || a.name.localeCompare(b.name),
@@ -324,9 +304,8 @@ export default function Companies() {
       setScraping((m) => { const n = { ...m }; delete n[id]; return n })
     }
   }
-  // COMP-26: one test at a time (the same rule as Searches' SRCH-23) — the POST
-  // is synchronous and can take tens of seconds on a Playwright board, and a
-  // second click used to start a parallel run and race its result into the modal.
+  // one test at a time: the POST is synchronous and can take tens of seconds on a Playwright
+  // board; a second click would race its own result into the modal.
   const runTest = async (id) => {
     if (testingId) return
     setTestingId(id); setShowShots(false)
@@ -334,7 +313,7 @@ export default function Companies() {
     catch (e) { setTest({ error: e.response?.data?.detail || e.message }) }
     setTestingId(null)
   }
-  const deleteCompany = (c) => setConfirm({ title: `Delete ${c.name}?`, body: 'Jobs already found are kept.', label: 'Delete', danger: true, onConfirm: async () => {   // COMP-28: styled, not window.confirm
+  const deleteCompany = (c) => setConfirm({ title: `Delete ${c.name}?`, body: 'Jobs already found are kept.', label: 'Delete', danger: true, onConfirm: async () => {   // styled, not window.confirm
     setConfirm(null)
     try { await api.delete(`/companies/${c.id}`); setMenuId(null); setDrawer(null); fetchCompanies(); pushToast({ kind: 'success', msg: `${c.name} deleted` }) }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not delete ${c.name}` + errSuffix(e) }) }
@@ -346,8 +325,8 @@ export default function Companies() {
     if (!ids.length) return null
     const names = resumes.filter((r) => ids.includes(r.id)).map((r) => r.name)
     if (ids.includes('persona')) names.push('Persona')
-    // COMP-13: ids that resolve to nothing (list not loaded, or deleted résumés)
-    // must still read as a selection — "Selected" alone contradicted the drawer.
+    // ids that resolve to nothing (list not loaded, or deleted résumés) must still
+    // read as a selection, matching what the drawer shows.
     if (names.length) return names.join(', ')
     return `${ids.length} selected`
   }
@@ -358,13 +337,13 @@ export default function Companies() {
     if (warn && warnMuted(c)) return { dot: 'var(--edge)', fg: 'var(--muted)',
       text: `${c.last_error ? `error · ${warn}` : warn} · ${c.active ? `acknowledged ${ago(c.warning_acknowledged_at)}` : 'inactive'}` }
     if (c.last_error) return { dot: 'var(--bad)', fg: 'var(--bad)', text: `error · ${warn}` }
-    if (warn) return { dot: 'var(--warn)', fg: 'var(--warn)', text: warn }   // COMP-19
-    if (c.active && !c.last_scraped_at) return { dot: 'var(--edge)', fg: 'var(--muted)', text: 'not scraped yet' }   // COMP-18
+    if (warn) return { dot: 'var(--warn)', fg: 'var(--warn)', text: warn }
+    if (c.active && !c.last_scraped_at) return { dot: 'var(--edge)', fg: 'var(--muted)', text: 'not scraped yet' }
     if (c.active) return { dot: 'var(--good)', fg: 'var(--text-2)', text: `healthy · scraped ${ago(c.last_scraped_at)}` }
     return { dot: 'var(--edge)', fg: 'var(--muted)', text: `inactive · last run ${ago(c.last_scraped_at)}` }
   }
   const fitColor = (f) => (f == null ? 'var(--muted)' : f >= 80 ? 'var(--good)' : f >= 65 ? 'var(--text-2)' : 'var(--warn)')
-  const testBusy = !!testingId   // COMP-26: a running test locks every other Test/Run pill
+  const testBusy = !!testingId   // a running test locks every other Test/Run pill
 
   const clearFilters = () => { setQuery(''); setTiers([]) }
   const toDraft = (c) => ({
@@ -378,10 +357,8 @@ export default function Companies() {
       wait_for_selector: c.wait_for_selector || '', max_pages: c.max_pages ?? 5,
       h1b_slug: c.h1b_slug || '', active: c.active,
   })
-  // R3-S-01: 1130 is the container width at which every column still fits; each
-  // lower number is that figure minus the columns already dropped. Below the last
-  // one the Health column also gives up 40px of its minimum, which keeps ~50px of
-  // slack at 1024 with the rail open rather than the 14px the raw arithmetic left.
+  // 1130 is the width at which every column fits; each lower threshold is that minus columns
+  // already dropped. Below the last, Health also gives up 40px of its minimum, keeping ~50px slack at 1024.
   const showResumes = tblW >= 1130
   const showAts = tblW >= 998
   const showFit = tblW >= 890
@@ -391,7 +368,7 @@ export default function Companies() {
   const drawerRef = useRef(null)
   useEffect(() => { drawerRef.current = drawer }, [drawer])
   const drawerDirty = (d) => !!d && JSON.stringify(d.draft) !== JSON.stringify(toDraft(d.company))
-  // COMP-37: Escape, the ✕ and clicking another row used to drop an edited draft silently
+  // Escape, the ✕, and clicking another row all route through here so an edited draft is never dropped silently
   const closeDrawer = () => {
     const cur = drawerRef.current
     if (drawerDirty(cur)) { setConfirm({ title: 'Discard changes?', body: `Edits to ${cur.company.name} have not been saved.`, label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); setDrawer(null) } }); return }
@@ -409,9 +386,8 @@ export default function Companies() {
       <HeaderRow as="header" pad="22px 30px 16px 24px" line="none" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <PageTitle>Companies</PageTitle>
-          {/* explicit integer line-height: at the inherited 1.5 this 13px line is
-              19.5px tall, so the header ends on a half pixel and every row below
-              lands on x.5 and drops its 1px border on alternating rows. */}
+          {/* integer line-height: at inherited 1.5 this 13px line is 19.5px tall, ending the header
+              on a half pixel and dropping the 1px border on alternating rows below. */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...warmStyle }}>{countLine}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -528,14 +504,9 @@ export default function Companies() {
                 <Pill size="sm" on={c.active} onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }}
                   title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'}>{c.active ? 'Active' : 'Inactive'}</Pill>
               </span>
-              {/* actions — R2-S-01: pinned to the right edge of the scroller so the
-                  ⋯ stays reachable when the row is wider than the pane at 1024px */}
-              {/* `position: sticky` makes this cell its own stacking context, so the
-                  menu's z-index 40 is trapped inside it and every later row's cell —
-                  a sibling context at z-index auto, painted after it, on an opaque
-                  --bg ground — covered the open menu. Raise the cell itself while its
-                  menu is open: 28 clears the sticky column head (3) and every row,
-                  and stays under the drawer scrim (29) and the drawer (30). */}
+              {/* actions: pinned to the right edge of the scroller so the ⋯ stays reachable when the row is wider than the pane at 1024px */}
+              {/* position:sticky makes this cell its own stacking context, trapping the menu's z-index 40 inside it;
+                  raise the cell itself while its menu is open: 28 clears the sticky head (3)/rows, stays under drawer (29/30). */}
               <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8, zIndex: menuId === c.id ? 28 : undefined }} onClick={(e) => e.stopPropagation()}>
                 <Pill size="xs" hover="v2-act" line="inherit" disabled={testBusy} onClick={() => runScrape(c.id)}
                   title={testBusy ? 'A test is already running' : 'Scrape this company now'}>
@@ -544,16 +515,13 @@ export default function Companies() {
                     : <span style={{ fontSize: 11 }}>↻</span>}
                   {scraping[c.id] ? 'Running' : 'Run'}
                 </Pill>
-                {/* COMP-26: the running test names itself, every other pill goes quiet —
-                    so the running one keeps full opacity while it is un-clickable. */}
+                {/* the running test names itself; every other pill goes quiet, so the running one keeps full opacity while un-clickable */}
                 <Pill size="xs" hover="v2-act" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
                   style={testingId === c.id ? { opacity: 1 } : undefined}
                   title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'}>
                   {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </Pill>
-                {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its
-                    ink: the glyph has always stayed --text-2 here (and on Searches).
-                    Pinned rather than drifted; D-15 decides whether it should swing. */}
+                {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its ink: the glyph stays --text-2 here (and on Searches) */}
                 <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
                   style={{ color: 'var(--pill-ink)' }}
                   title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>
@@ -570,11 +538,8 @@ export default function Companies() {
             </Row>
           )
         })}
-        {/* DESIGN-LOAD: no "Loading companies…" row — the table keeps its container
-            and stays empty until the settle, then draws once. */}
-        {/* a failed GET used to fall through to the filter-miss copy, so a server
-            outage read as "nothing matches your search" and Clear filters "fixed"
-            nothing; and that copy also flashed before the first response landed. */}
+        {/* no "Loading companies…" row — the table keeps its container and stays empty until the settle, then draws once */}
+        {/* loadErr is checked separately so a failed GET never reads as "nothing matches your search", where Clear filters would fix nothing */}
         {ready && loadErr && companies.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--bad)' }}>Couldn’t load companies</span>
@@ -585,16 +550,14 @@ export default function Companies() {
         {ready && filtered.length === 0 && !(loadErr && companies.length === 0) && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '44px 28px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{companies.length === 0 ? 'No companies yet' : 'No companies match'}</span>
-            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs appear in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>   {/* COMP-29 */}
+            <Helper>{companies.length === 0 ? 'Add one with + Add company — its career page is scraped and the jobs appear in the Feed.' : query.trim() ? `Nothing matches "${query}" in names, aliases, URLs or ATS.` : `No companies in ${tiers.map((t) => (t === null || t === 'none' || t === 'untiered' ? 'Untiered' : tierLabel(t, { long: true }))).join(', ')}.`}</Helper>
             {companies.length > 0 && <Link onClick={clearFilters} style={{ paddingTop: 2 }}>Clear filters</Link>}
           </div>
         )}
       </div>
 
-      {/* COMP-02: `drawer.company` is a snapshot from openDrawer; every refetch
-          (Save, the status pill, bulk, the /monitor poll) leaves it stale, so the
-          banner, subtitle and tuning note lied. Re-read the row by id each render
-          and keep only `draft` in drawer state. */}
+      {/* drawer.company is a snapshot from openDrawer and goes stale on any refetch (Save, status
+          pill, bulk, /monitor poll); re-read the row by id each render, keep only `draft` in state. */}
       {drawer && (() => {
         const live = companies.find((c) => c.id === drawer.company.id) || drawer.company
         return <Drawer state={{ ...drawer, company: live }} setState={setDrawer} onClose={closeDrawer} resumes={resumes} personaPopulated={personaPopulated} onSave={patchCompany} onDelete={deleteCompany} onTest={runTest} testingId={testingId} downReason={downMap[live.id]} onAcknowledge={acknowledgeCompany} />
@@ -618,7 +581,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   const set = (patch) => setState((s) => ({ ...s, draft: { ...s.draft, ...patch } }))
   const toggleResume = (id) => set({ selected_resume_ids: draft.selected_resume_ids.includes(id) ? draft.selected_resume_ids.filter((x) => x !== id) : [...draft.selected_resume_ids, id] })
   const nUrl = draft.scrape_urls.filter(Boolean).length, nApp = company.application_count || 0
-  const subtitle = `${tierLabel(draft.tier, { long: true })} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`   // COMP-32
+  const subtitle = `${tierLabel(draft.tier, { long: true })} · ${nUrl} career URL${nUrl === 1 ? '' : 's'} · ${nApp} application${nApp === 1 ? '' : 's'}`
   const lca = company.h1b_lca_count
   const lcaLine = lca ? `${lca} H-1B filings on record${company.h1b_approval_rate ? ` · ${company.h1b_approval_rate}% approved` : ''}. Each job's H-1B verdict is based on these.` : 'No H-1B filings on record, so jobs show H-1B Unknown. Leave blank to detect the company from its name.'
   const selNames = [...resumes.filter((r) => draft.selected_resume_ids.includes(r.id)).map((r) => r.name), ...(draft.selected_resume_ids.includes('persona') ? ['Persona'] : [])]
@@ -641,14 +604,14 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       auto_scoring_depth: draft.auto_scoring_depth,
       selected_resume_ids: draft.selected_resume_ids,
       tier: draft.tier,
-      // COMP-12: `min`/`max` on <input type=number> block neither typing nor a
-      // paste, so 999 pages / a negative interval used to round-trip to the DB.
+      // min/max on <input type=number> block neither typing nor a paste, so out-of-range
+      // values (999 pages, a negative interval) must be clamped here before the PATCH.
       scrape_interval_minutes: draft.scrape_interval_minutes === '' ? null : (parseInt(draft.scrape_interval_minutes) > 0 ? parseInt(draft.scrape_interval_minutes) : null),
       wait_for_selector: draft.wait_for_selector || null,
       max_pages: Math.min(20, Math.max(1, parseInt(draft.max_pages) || 5)),
       h1b_slug: draft.h1b_slug || null,
     }
-    // COMP-01: wait for the PATCH; only close on success, otherwise say so and keep the edit
+    // wait for the PATCH; only close on success, otherwise say so and keep the edit
     setSaving(true)
     const ok = await onSave(company.id, payload)
     setSaving(false)
@@ -656,13 +619,8 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   }
 
   return (
-    // R3-S-02: the drawer had no backdrop, so it was the one overlay on this
-    // screen that survived a click outside it. ui's Drawer draws that scrim
-    // (scoped to the pane, matching the drawer's own absolute positioning) and
-    // routes it through onClose, so the dirty-discard confirm still fires instead
-    // of dropping unsaved edits. Escape reaches the same onClose — the screen's
-    // own Escape handler already called closeDrawer(), and a second call is
-    // idempotent (same confirm object, same setDrawer(null)).
+    // ui's Drawer draws the backdrop (scoped to the pane) and routes outside clicks through onClose, so
+    // the dirty-discard confirm still fires; Escape hits the same onClose and is idempotent with closeDrawer().
     <UiDrawer width={720} onClose={onClose}>
       <HeaderRow>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -679,8 +637,7 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
              the history is still worth reading, it just isn't an open problem */
           <Notice tone={bannerMuted ? 'quiet' : company.last_error ? 'bad' : 'warn'}
             action={!bannerMuted && onAcknowledge && (
-              /* ui: keep — "Acknowledge" is the quiet inline action on the banner: --muted 11 at
-                 normal weight, where Link is --link-ink 11.5/500. Same call as Searches' twin. */
+              /* ui: keep — "Acknowledge" is the quiet inline action on the banner: --muted 11 normal weight, where Link is --link-ink 11.5/500 */
               <span onClick={() => onAcknowledge(company)} className="v2-hover-accent-text"
                 title="Stop counting this company as needing attention. The warning stays here; a run that fails after this raises it again."
                 style={{ flex: '0 0 auto', alignSelf: 'flex-start', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>Acknowledge</span>
@@ -812,7 +769,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
   const toggle = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
 
   const save = async () => {
-    if (saving) return   // COMP-27
+    if (saving) return
     if (!name.trim()) { pushToast({ kind: 'error', msg: 'Company name is required' }); return }
     setSaving(true)
     try {
@@ -871,8 +828,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
             <ResumeChips resumes={resumes} personaPopulated={personaPopulated} selected={selected} toggle={toggle} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 2 }}>
               <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Depth</span>
-              {/* the same auto_scoring_depth control the drawer draws with Seg — it
-                  was the one place this field wore Pills instead of segmented cells */}
+              {/* same auto_scoring_depth control as the drawer, via Seg, for a consistent segmented control */}
               <Segmented size="sm" ariaLabel="Auto-scoring depth" value={depth} onChange={setDepth}
                 options={DEPTHS.map((d) => ({ value: d.id, label: d.label, hint: d.hint }))}
                 style={{ flex: 1 }} />
@@ -892,7 +848,7 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
 
 // ── test scrape modal ─────────────────────────────────────────────────────────
 function TestModal({ test, onClose, showShots, setShowShots }) {
-  const [limit, setLimit] = useState(TEST_PAGE)   // COMP-26
+  const [limit, setLimit] = useState(TEST_PAGE)
   useEffect(() => { setLimit(TEST_PAGE) }, [test])   // a fresh run starts at page 1
   if (test.error) {
     return (
@@ -910,9 +866,8 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   // total_found already excludes the validation-rejected rows (routes_companies.py:
   // len(all_jobs) vs len(all_rejected)), so the four numbers add up to the rows shown.
   const passCo = typeof test.after_company_filter === 'number' ? test.after_company_filter : null
-  // R3-A-01: the run drops a third class of job the preview never showed — a body
-  // whose text matches a body_exclusion_phrases entry, stored as `ignored`. That
-  // is why "14 kept" used to become "+13 new" with nothing saying why.
+  // the run also drops jobs whose body matches a body_exclusion_phrases entry, stored as `ignored` —
+  // a class the preview above doesn't count, so "kept" can exceed what's actually saved.
   const bodyExcluded = test.body_excluded_count ?? 0
   const bodyUnchecked = test.body_unchecked_count ?? 0
   const bodyPhrases = test.body_phrase_count ?? 0
@@ -926,15 +881,14 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   const shots = test.screenshots || []
   const jobState = (j) => {
     if (j.reason?.startsWith('[Validation]')) return { tag: 'Drop', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Validation] ', '') }
-    // R3-A-01: a body-phrase drop is stored as `ignored`, not filtered out of the
-    // feed — label it as what it becomes, with the phrase that did it.
+    // a body-phrase drop is stored as `ignored`, not filtered out of the feed; label it with the phrase that did it.
     if (j.body_excluded_by) return { tag: 'Ignored', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason || `Body exclusion: ${j.body_excluded_by}` }
     if (j.kept) return {
       tag: 'Kept', tagBg: 'var(--accent-soft)', tagFg: 'var(--good)', reasonFg: 'var(--muted)',
       // a kept row the body scan couldn't run on is not a promise — say so
       reason: j.reason || (bodyPhrases > 0 && j.body_checked === false ? 'body check needs the description' : ''),
     }
-    if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // COMP-24: the global exclude list, not this company's filters
+    if (j.reason?.startsWith('[Global]')) return { tag: 'Global', tagBg: 'var(--warn-soft)', tagFg: 'var(--warn)', reasonFg: 'var(--warn)', reason: j.reason.replace('[Global] ', '') }   // the global exclude list, not this company's filters
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
@@ -996,8 +950,7 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
                 {/* ui: keep — the test row's kept/dropped tag (9.5 · pad 2 7, tinted from `st`); Tag is 10/pad 2 8 */}
                 <span style={{ flex: '0 0 62px' }}><span style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: st.tagBg, color: st.tagFg }}>{st.tag}</span></span>
                 <span title={st.reason} style={{ flex: '0 0 260px', fontSize: 11, color: st.reasonFg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{st.reason}</span>
-                {/* Link takes `rel` now, so the ↗ stops being a hand-written anchor;
-                    it keeps the row's own 11px glyph size */}
+                {/* Link takes `rel`, so the ↗ isn't a hand-written anchor; it keeps the row's own 11px glyph size */}
                 <span style={{ flex: '0 0 40px', textAlign: 'right' }}><Link href={j.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, fontWeight: 400, lineHeight: 'inherit' }}>↗</Link></span>
               </TableRow>
             )

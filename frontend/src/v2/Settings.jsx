@@ -21,28 +21,18 @@ const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code']
 // providers that need no key
 const KEYLESS = ['claude_code', 'ollama', '']
 
-// ui: keep — the box every *value* row on this screen wears. It is ui.jsx's
-// `Select` trigger, to the pixel (h32 · pad 0 10 · 1px --input-border · r6 ·
-// --search-bg · 12.5), because the rows pair a Select with a TextBox and the two
-// have to line up. The bare inputs inside it stay bare: the box is a
-// `v2-fieldwrap`, so it — not the field — carries the focus signal, and it also
-// holds the show/hide affordance. Change this only alongside `Select` in ui.jsx.
+// ui: keep — matches ui.jsx's Select trigger box exactly so Select + TextBox rows line up; change only alongside Select in ui.jsx
 const BOX = {
   height: 32, minWidth: 0, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)',
   background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 7, fontSize: 12.5, color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', lineHeight: 1,
 }
-// SET-23: with no options the menu chrome used to open as a bare empty box — say
-// why it is empty instead. ui.jsx's Select takes it as `emptyText`.
+// Empty-options menu needs a reason string, not a bare box — ui.jsx's Select takes it as `emptyText`.
 const NO_MODELS = 'no models for this provider — add one under Model catalog'
 const MASK = '••••••'
 
-// SET-12: every control on this screen is a span/div with onClick, so none of
-// them were tabbable and none announced a role. Spread kb(fn) onto such an
-// element: it becomes focusable, announces a role, and fires the same handler
-// on Enter/Space that the click does. Local copy of the helper in
-// ResumeSections.jsx:16-24 — same contract, no cross-screen import.
-// The focus ring is theme.css's `[tabindex="0"]:focus-visible`.
+// Spread kb(fn) onto a span/div with onClick to make it focusable, announce a role, and fire fn on Enter/Space.
+// Local copy of the same helper in ResumeSections.jsx; focus ring is theme.css's `[tabindex="0"]:focus-visible`.
 const kb = (fn, role = 'button') => ({
   tabIndex: 0,
   role,
@@ -55,19 +45,14 @@ const asJson = (v) => {
   try { return JSON.stringify(v, null, 2) } catch { return '' }
 }
 
-// Free-text box; secrets mask until revealed.
-// GET /settings returns a set secret as the literal six-bullet MASK string, so
-// three things have to be true at once: an *unset* secret must not look set,
-// revealing must not leave the mask in the box (typing after it used to PATCH
-// "••••••<typed>", and the server only drops an exact mask — that silently
-// destroyed the stored secret), and clearing the box must not wipe the secret.
+// Free-text box; secrets mask until revealed as the literal MASK string GET /settings returns for a set secret.
+// Three invariants: an unset secret must not look set, revealing must not leave the mask in the box (typing after it would PATCH "<mask><typed>", destroying the secret), and clearing the box must not wipe it.
 function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, int, cron, onInvalid, onLocal }) {
   const [shown, setShown] = useState(false)
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => { setLocal(value ?? '') }, [value])
-  // SET-CRON: the cron rows read their expression back as it is TYPED, not only
-  // after it is saved, so the box publishes its local value. Held in a ref so an
-  // inline arrow at the call site can't re-fire this effect on every render.
+  // Cron rows need the live-typed expression, not just the saved one, so the box publishes its local value.
+  // Held in a ref so an inline arrow at the call site can't re-fire this effect on every render.
   const localCb = useRef(onLocal)
   localCb.current = onLocal
   useEffect(() => { if (localCb.current) localCb.current(local) }, [local])
@@ -80,8 +65,7 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
     if (local === MASK) return                  // untouched mask — nothing to save
     if (local === '' && isMask) return          // emptied but nothing typed — don't wipe the stored secret
     if (local === (value ?? '')) return
-    // SET-27: a malformed cron never reaches configure_scheduler() — an empty
-    // one is legal (= off), anything else has to be the five standard fields
+    // A malformed cron must never reach configure_scheduler(); empty is legal (off), otherwise the five standard fields are required.
     if (cron && local.trim() !== '' && local.trim().split(/\s+/).length !== 5) {
       if (onInvalid) onInvalid('Cron needs 5 fields')
       return
@@ -89,13 +73,11 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
     onSave(local)
   }
   return (
-    // ui: keep — the value box is a v2-fieldwrap (it carries the focus signal and
-    // the secret show/hide), and it is h32 so it lines up with the Select rows
+    // ui: keep — value box is a v2-fieldwrap (carries focus + secret show/hide), h32 to line up with Select rows
     <span className="v2-fieldwrap" style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
       <input
         value={masked ? MASK : local}
-        // SET-27: the integer rows feed unguarded int() calls in the backend, so
-        // keep anything but digits out of the box (empty stays legal)
+        // Integer rows feed unguarded int() calls in the backend — keep anything but digits out (empty stays legal)
         onChange={(e) => !masked && setLocal(int ? e.target.value.replace(/[^0-9]/g, '') : e.target.value)}
         onFocus={() => { if (masked) reveal() }}
         onBlur={commit}
@@ -115,25 +97,13 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
 }
 
 // ── cron row ─────────────────────────────────────────────────────────────────
-// SET-27 stopped a malformed cron from reaching configure_scheduler(); it did not
-// help anyone write a correct one. Five raw expressions with nothing but a
-// "5 fields" rule behind them is the least legible row on this screen, so the
-// field now carries two things: a line saying what the expression MEANS and when
-// it next fires (live, from the box's own value — not only after a save), and a
-// picker for the six schedules people actually want.
-//
-// `describeCron` lives in time.js and is documented there. The one thing to know
-// at this call site: it reads the fifth field the way the BACKEND does
-// (APScheduler numbers weekdays 0 = Monday), so `0 9 * * 1-5` reads back as
-// "every Tue, Wed, Thu, Fri, Sat" rather than "weekdays" — which is what that
-// expression actually schedules. The presets are written with names for exactly
-// that reason (DECISIONS D-20).
+// Shows what the expression means and when it next fires, live from the box's own value, plus a picker for common schedules.
+// `describeCron` (time.js) reads the weekday field as APScheduler does (0 = Monday), so `0 9 * * 1-5` is NOT "weekdays" — presets use names for that reason.
 function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
   const [live, setLive] = useState(value ?? '')
   const [open, setOpen] = useState(false)
   useEscape(() => setOpen(false), open)
-  // the closer the PDF-preview pickers use (RES-28): the trigger's own container
-  // swallows its clicks, so any click elsewhere in the document closes the menu
+  // The trigger's own container swallows its clicks, so a document-level listener closes the menu on any other click (same pattern the PDF-preview pickers use).
   useEffect(() => {
     if (!open) return undefined
     const close = () => setOpen(false)
@@ -142,15 +112,13 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
   }, [open])
 
   const expr = (live || '').trim()
-  // the same five-part gate TextBox refuses to save on, so the line agrees with
-  // what the blur will do
+  // Same five-part gate TextBox refuses to save on, so this line agrees with what a blur will do.
   const parsed = expr && expr.split(/\s+/).length === 5 ? describeCron(expr) : null
   const bad = !!expr && !parsed
   const line = !expr ? 'off'
     : bad ? 'invalid expression'
-      // no `next` means one of two different things: an expression that can never
-      // fire (31 February), or one describeCron chose not to evaluate (an
-      // APScheduler extension it echoes back). Only the first is a warning.
+      // No `next` means either an expression that can never fire (31 February) — a warning — or one describeCron
+      // declined to evaluate (an APScheduler extension it echoes back), which is not.
       : `${parsed.text} UTC${parsed.next ? ` · next ${whenShort(parsed.next)} (your time)`
         : (parsed.unparsed ? '' : ' · never fires')}`
 
@@ -162,8 +130,7 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
         <TextBox value={value} onSave={onSave} onLocal={setLive} width={width} mono cron
           ariaLabel={ariaLabel} onInvalid={onInvalid} />
         <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-          {/* the picker role, at ToolbarTrigger's canonical 24 next to a 32px
-              field — the size disagreement is D-21, not a local override */}
+          {/* Picker sits at ToolbarTrigger's canonical 24px next to the 32px field — the size mismatch is intentional, not a local override */}
           <ToolbarTrigger label="Preset" open={open} ariaExpanded={open} title="Common schedules"
             ariaLabel={`${ariaLabel} — pick a common schedule`} onClick={() => setOpen((v) => !v)} />
           {open && (
@@ -172,9 +139,7 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
               {CRON_PRESETS.map(([label, preset]) => (
                 <MenuItem key={label} role="option" ariaSelected={preset === expr} selected={preset === expr}
                   hint={preset} hintMono
-                  // through `save`, exactly like a blur: one PATCH, one flash, and
-                  // the row re-reads the stored value (so a failed PATCH rolls the
-                  // box back the way a typed one does)
+                  // Goes through `save` like a blur: one PATCH, one flash, and a failed PATCH rolls the box back same as a typed one.
                   onClick={() => { setOpen(false); if (preset !== (value ?? '')) onSave(preset) }}>{label}</MenuItem>
               ))}
             </Menu>
@@ -187,9 +152,7 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
 }
 
 function Toggle({ on, label, onPick, ariaLabel }) {
-  // SET-14 lives on `Switch` in ui.jsx now (--switch-knob-on = --surface-2 so the
-  // ON knob reads as a surface disc on the accent track in light and dark). This
-  // wrapper only keeps the local name + no-arg `onPick` its call sites pass.
+  // ON-knob styling (--switch-knob-on = --surface-2) lives on Switch in ui.jsx; this wrapper just keeps the local name + no-arg onPick call sites pass.
   return <Switch on={on} onChange={() => onPick()} label={label} ariaLabel={ariaLabel} />
 }
 
@@ -200,8 +163,7 @@ export default function Settings() {
   const [resumes, setResumes] = useState([])
   const [personaAvailable, setPersonaAvailable] = useState(false)
   const [query, setQuery] = useState('')
-  // the anchor rail highlights where the scroller is parked, and it opens at the
-  // top — which is now Display, the first section
+  // Anchor rail highlights where the scroller is parked; opens at the top (Display, the first section).
   const [active, setActive] = useState('appearance')
   const [info, setInfo] = useState(null)      // which row's info panel is open
   const [ovr, setOvr] = useState({})          // which override rows are expanded
@@ -210,12 +172,10 @@ export default function Settings() {
   const [modelsOpen, setModelsOpen] = useState(false)
   const [li, setLi] = useState(null)          // linkedin session status
   const [toast, setToast] = useState(null)
-  const [loadErr, setLoadErr] = useState(null)   // SET-06: a failed GET /settings
-  const [narrow, setNarrow] = useState(false)    // SET-11: stack rows when the pane is tight
-  // R2-A-01: the last native dialogs in v2 lived here — a confirm before rotating
-  // the webhook secret, and two prompts (reveal the new secret, ask for the public
-  // base URL). Row actions are already `async` and awaited by runAction, so the
-  // styled dialog can simply be awaited in their place.
+  const [loadErr, setLoadErr] = useState(null)   // set on a failed GET /settings
+  const [narrow, setNarrow] = useState(false)    // stack rows when the pane is tight
+  // Replaces the last native dialogs in v2 (confirm before rotating the webhook secret; prompts for the new secret + public base URL).
+  // Row actions are already async and awaited by runAction, so the styled dialog can simply be awaited in their place.
   const [dialog, setDialog] = useState(null)
   const ask = useCallback((spec) => new Promise((resolve) => {
     setDialog({ kind: 'confirm', ...spec, onConfirm: () => { setDialog(null); resolve(true) }, onCancel: () => { setDialog(null); resolve(false) } })
@@ -245,11 +205,8 @@ export default function Settings() {
     }
   }, [])
 
-  // SET-11: the row is label(340) + gap(24) + controls, and the pill + Override
-  // toggle on the six LLM rows are both flex:0 0 auto, so below a certain pane
-  // width the toggle was simply clipped off the right edge and unreachable.
-  // 720px of pane is roughly a 1150px window with the nav rail expanded; below
-  // that the label goes above the controls instead of beside them.
+  // Row is label(340) + gap(24) + controls; the pill + Override toggle on the six LLM rows are flex:0 0 auto, so a narrow pane clips the toggle off the right edge.
+  // Below 720px (~1150px window with the nav rail expanded), the label moves above the controls instead of beside them.
   useEffect(() => {
     const el = scrollRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
@@ -261,20 +218,17 @@ export default function Settings() {
     return () => ro.disconnect()
   }, [!!S])
 
-  // DESIGN-LOAD: the settings blob and the three lists that fill pickers on top of
-  // it settle as one, so the rows are drawn once — never a pane of rows whose
-  // Default-résumé picker and LinkedIn line fill in afterwards.
+  // Settings blob + the three list fetches that fill pickers settle together, so rows draw once instead of the
+  // Default-résumé picker/LinkedIn line filling in after.
   const { ready } = useSettled([
     () => load(),
-    // OPEN-05: converted — this is the Default résumé picker's entire option
-    // list. Empty, it looks like a setting with nothing to choose.
+    // This is the Default résumé picker's entire option list — empty, it looks like a setting with nothing to choose.
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) }),
     () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ }),
     () => api.get('/linkedin/session').then(({ data }) => setLi(data)).catch(() => { /* silent: the LinkedIn row reads “unknown” and its own actions report their failures */ }),
   ])
 
-  // one timer, not one per flash: two saves inside 2.2 s used to leave the
-  // first flash's timer running, which cleared the second message early
+  // One shared timer, not one per flash — otherwise two saves inside 2.2s let the first timer clear the second message early.
   const flash = (msg, bad = false) => {
     setToast({ msg, bad })
     clearTimeout(flashTimer.current)
@@ -282,30 +236,25 @@ export default function Settings() {
     timers.current.push(flashTimer.current)
   }
 
-  // returns whether the PATCH landed, so callers with side effects of their own
-  // (ApiKeyRow writes localStorage + refreshes the session cookie) can bail out
+  // Returns whether the PATCH landed, so callers with side effects of their own (e.g. ApiKeyRow's localStorage write) can bail out.
   const save = useCallback(async (key, value) => {
-    // SET-06: never PATCH from a pane that never loaded — a blur would write a
-    // control's placeholder over the real stored value.
+    // Never PATCH from a pane that never loaded — a blur would write a control's placeholder over the real stored value.
     if (!S) { flash('Settings are not loaded yet', true); return false }
     const prev = S[key]
     setS((p) => ({ ...p, [key]: value }))
     try {
       const { data } = await api.patch('/settings', { [key]: value })
-      // SET-27: the row is stored either way, but a failed side effect (the
-      // scheduler, the scoring semaphore, the dedup reload) comes back as a
-      // warning — a green "Saved" over that reads as if nothing went wrong
+      // The row is stored either way, but a failed side effect (scheduler, scoring semaphore, dedup reload) comes back as a
+      // warning — a green "Saved" over that would read as if nothing went wrong.
       const w = Array.isArray(data?.warnings) ? data.warnings.filter(Boolean) : []
       if (w.length) flash(String(w[0]), true)
       else flash('Saved')
       return true
     } catch (e) {
       console.error(e)
-      // SET-08: the optimistic value stayed on screen after a failed PATCH, so
-      // the UI disagreed with the server until a reload — put the old one back
+      // Roll back the optimistic value on a failed PATCH, otherwise the UI disagrees with the server until a reload.
       setS((p) => { const n = { ...p }; if (prev === undefined) delete n[key]; else n[key] = prev; return n })
-      // OPEN-01: the server now validates int / cron / enum values and says which
-      // key it refused and why — show that instead of a generic failure.
+      // Server validates int/cron/enum values and says which key it refused and why — show that instead of a generic failure.
       const detail = e?.response?.status === 400 ? e?.response?.data?.detail : null
       flash(typeof detail === 'string' && detail ? detail : 'Could not save — try again', true)
       return false
@@ -340,9 +289,8 @@ export default function Settings() {
   const SW = (label, help, offHelp, key, o = {}) => ({ kind: 'switch', label, help, offHelp, key, ...o })
   const E = (label, help, key, o = {}) => ({ kind: 'edit', label, help, key, ...o })
   const BT = (label, help, btnLabel, act, o = {}) => ({ kind: 'button', label, help, btnLabel, act, ...o })
-  // OPEN-16: a value the app writes and the user may only look at (and clear).
-  // `key` is redacted by GET /settings, so all the row can show is "set / not set"
-  // plus how long it is still good for, from `sinceKey` + `days`.
+  // A value the app writes and the user may only look at (and clear); `key` is redacted by GET /settings.
+  // The row can only show "set / not set" plus remaining validity, from `sinceKey` + `days`.
   const RO = (label, help, key, o = {}) => ({ kind: 'readonly', label, help, key, ...o })
   const LLM = (label, help, base, o = {}) => ({ kind: 'llm', label, help, base, ...o })
 
@@ -350,8 +298,7 @@ export default function Settings() {
     if (trig[id]) return
     setTrig((t) => ({ ...t, [id]: 'running' }))
     try {
-      // R2-A-01: an action that returns false was cancelled in its dialog — it
-      // must not flash "Done ✓"
+      // An action that returns false was cancelled in its dialog — must not flash "Done ✓".
       if (await fn() === false) { setTrig((t) => ({ ...t, [id]: '' })); return }
       setTrig((t) => ({ ...t, [id]: 'done' }))
       timers.current.push(setTimeout(() => setTrig((t) => ({ ...t, [id]: '' })), 2600))
@@ -368,9 +315,8 @@ export default function Settings() {
       ...(personaAvailable ? [['persona', 'Persona']] : []),
       ...resumes.map((r) => [r.id, r.name])]
 
-    // Default voice has to name an id from the presets, so offer exactly those
-    // rather than a free-text box you can typo. A stored id that no longer
-    // exists is kept as an option so the row doesn't silently read as unset.
+    // Default voice must name a preset id, so offer exactly those rather than a free-text box you can typo.
+    // A stored id no longer in presets is kept as an option so the row doesn't silently read as unset.
     let vp = S.cover_letter_voice_presets
     if (typeof vp === 'string') { try { vp = JSON.parse(vp) } catch { vp = [] } }
     const voiceOpts = (Array.isArray(vp) ? vp : []).filter((v) => v && v.id).map((v) => [v.id, v.label || v.id])
@@ -378,8 +324,7 @@ export default function Settings() {
     if (curVoice && !voiceOpts.some((o) => o[0] === curVoice)) voiceOpts.push([curVoice, `${curVoice} — not in presets`])
 
     return [
-      // The one group that isn't a DB setting: both rows live in this browser's
-      // localStorage (theme.js), so they take no `key` and never PATCH /settings.
+      // The one group that isn't a DB setting: both rows live in this browser's localStorage (theme.js), so they take no `key` and never PATCH /settings.
       // They sit first because they change what every screen below looks like.
       ['appearance', 'GENERAL', 'Display', '', [
         { kind: 'appearance', label: 'Appearance', help: 'Light, dark, or follow your OS. Saved in this browser.' },
@@ -530,10 +475,8 @@ export default function Settings() {
     sec[4].some((r) => `${r.label} ${r.help || ''}`.toLowerCase().includes(q))
   const visible = sections.filter(matches)
 
-  // SET-06: a failed load used to render an empty pane identical to the loading
-  // state, so a hard failure and a hung request were indistinguishable. The
-  // failure still says so; the wait is now silent (DESIGN-LOAD) — the pane keeps
-  // its box and the rows appear in one render.
+  // A failed load must not render the same empty pane as the loading state — a hard failure and a hung request would be indistinguishable.
+  // The wait itself is silent; rows appear in one render once settled.
   if (!ready || !S) return (
     <div style={{ flex: 1, minWidth: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {ready && loadErr ? (
@@ -564,11 +507,9 @@ export default function Settings() {
             {toast ? toast.msg : 'Saves automatically · everything stays on this machine'}
           </span>
         </div>
-        {/* ui: keep — settings search field wrapper (Input role), not a pill; h32
-            tracks ui.jsx's boxed SearchInput so the two read as one control */}
+        {/* ui: keep — settings search field wrapper (Input role), not a pill; h32 tracks ui.jsx's boxed SearchInput */}
         <div className="v2-fieldwrap" style={{ marginLeft: 'auto', flex: '0 0 auto', height: 32, width: 230, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 7 }}>
-          {/* ui: keep — the field's search glyph (an icon adornment), not a helper
-              sub-line; Helper's 11.5 would grow the glyph inside the h32 box */}
+          {/* ui: keep — the field's search glyph (an icon adornment), not a helper sub-line; Helper's 11.5 would grow the glyph */}
           <span style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--muted)' }}>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search settings…"
             style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
@@ -581,11 +522,10 @@ export default function Settings() {
           {sections.map(([id, group, title]) => (
             <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
               {group && <Label style={{ padding: '14px 26px 6px 30px' }}>{group}</Label>}
-              {/* ui: keep — a nav row, not an inline link: h29 with a selected state
-                  (accent border-left, 600 weight) on the settings anchor rail */}
+              {/* ui: keep — a nav row, not an inline link: h29 with a selected state (accent border-left, 600 weight) */}
               <div onClick={() => jump(id)} {...kb(() => jump(id), 'link')} aria-label={`Jump to ${title}`} className="v2-anchor" style={{ display: 'flex', alignItems: 'center', height: 29, padding: '0 26px 0 29px', fontSize: 12.5, cursor: 'pointer',
                 color: active === id && !q ? 'var(--text)' : 'var(--text-2)', fontWeight: active === id && !q ? 600 : 400,
-                /* 3px accent + 29px pad keeps the label on the same axis as the 2px version */
+                /* 3px accent border + 29px left pad keeps the label position consistent whether or not the border shows */
                 borderLeft: `3px solid ${active === id && !q ? 'var(--accent)' : 'transparent'}` }}>{title}</div>
             </div>
           ))}
@@ -596,20 +536,14 @@ export default function Settings() {
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 980 }}>
             {visible.map(([id, , title, sub, rows]) => (
               <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
-                {/* alignItems center, not baseline: both children are exactly 26px tall
-                    (the shared line-height below), so centring places them identically
-                    to baseline in the default theme — but baseline made the row's height
-                    the union of two font-dependent baseline offsets, which grew the head
-                    56→59px under the alt theme. Centring pins it to the 26px line. */}
+                {/* alignItems center, not baseline: both children are 26px tall (shared line-height below), so centring matches baseline in the default theme
+                    but avoids baseline's font-dependent offset union, which grew the head 56→59px under the alt theme. */}
                 <div data-sec={`sec-${id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '26px 0 4px' }}>
-                  {/* integer line-heights: at the inherited 1.5 these are 28.5 and
-                      17.25, which puts every row below the header on a half pixel
-                      and drops its 1px bottom rule */}
-                  {/* the 26px line-height is load-bearing (see the note above): it keeps
-                      every row under this head on the whole-pixel grid, so it stays here */}
+                  {/* integer line-heights: at the inherited 1.5 these would be 28.5 and 17.25, putting rows on a half pixel
+                      and dropping the 1px bottom rule */}
+                  {/* 26px line-height keeps every row under this head on the whole-pixel grid (load-bearing) */}
                   <Heading strong size={19}>{title}</Heading>
-                  {/* ui: keep — the 26px line-height is the alignment (see above): Helper's
-                      16px would drop this section head off the whole-pixel grid */}
+                  {/* ui: keep — the 26px line-height is the alignment (see above): Helper's 16px would drop this off the grid */}
                   <span style={{ fontSize: 11.5, lineHeight: '26px', color: 'var(--muted)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
                 </div>
                 {rows.filter((r) => !(r.hide && r.hide())).map((r) => (
@@ -621,18 +555,16 @@ export default function Settings() {
               <div style={{ padding: '44px 0', fontSize: 12.5, color: 'var(--muted)' }}>No settings match “{query}”.</div>
             )}
 
-            {/* colophon — API docs lives here now rather than in the nav rail.
-                SET-13: --edge as 11px body text is 3.69:1 on --bg (3.95:1 dark),
-                under AA; --muted clears it at 5.5:1 / 6.2:1 with the same tone. */}
+            {/* colophon — API docs link lives here, not the nav rail.
+                --edge at 11px is 3.69:1 on --bg (3.95:1 dark), under AA; --muted clears it at 5.5:1 / 6.2:1. */}
             <Helper style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '34px 0 6px' }}>
               <span style={{ fontStyle: 'italic' }}>
                 {/* ui: keep — serif 12 wordmark, below the 18/19 Heading scale */}
                 <span style={{ color: 'var(--muted)', fontFamily: 'var(--serif)', fontSize: 12, fontStyle: 'normal' }}>JobNavigator</span>&nbsp;v.2.0
               </span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
-                {/* Link now takes `rel`, so these two stop being hand-written anchors.
-                    Their ink and size are still the colophon's, not the link scale:
-                    they sit inside the running row and stay --muted per SET-13. */}
+                {/* These use Link (not hand-written anchors) but keep the colophon's ink/size, not the link scale —
+                    they sit inside the running row and stay --muted for contrast. */}
                 <Link href="/docs" target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--muted)', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 400, textDecoration: 'none' }}>API docs ↗</Link>
                 <Link href="https://github.com/vesaias/JobNavigator" target="_blank" rel="noopener noreferrer"
@@ -658,17 +590,14 @@ function Row({ r, ctx }) {
   const right = (() => {
     switch (r.kind) {
       case 'box':
-        // a cron box is the same field plus its description line and preset
-        // picker — same `save`, same five-part gate
+        // Cron box is the same field plus its description line + preset picker — same `save`, same five-part gate.
         if (r.cron) return <CronBox value={val(r.key)} onSave={(v) => save(r.key, v)} width={r.w} ariaLabel={r.label} onInvalid={(m) => flash(m, true)} />
         return <TextBox value={val(r.key)} onSave={(v) => save(r.key, v)} width={r.w} mono={r.mono} secret={r.secret} placeholder={r.placeholder}
           ariaLabel={r.label} int={r.int} cron={r.cron} onInvalid={(m) => flash(m, true)} />
       case 'select':
         return <Select value={val(r.key, r.dflt)} options={r.options} onPick={(v) => save(r.key, v)} width={r.w} ariaLabel={r.label} />
-      // Local-only rows: the theme store is the value, so these two read and
-      // write it directly instead of going through `save` (there is nothing on
-      // the server to save) — hence their own components, which can hold the
-      // subscription without dragging it into the sections useMemo.
+      // Local-only rows: the theme store is the value, so these read/write it directly instead of going through `save`.
+      // Own components so the subscription doesn't drag into the sections useMemo.
       case 'appearance':
         return <AppearanceRow label={r.label} />
       case 'theme':
@@ -698,19 +627,16 @@ function Row({ r, ctx }) {
                 <TextBox value={val(`${r.base}_api_key`)} onSave={(v) => save(`${r.base}_api_key`, v)} width="150px" mono secret ariaLabel={`${r.label} — API key`} />
               </span>
             )}
-            {/* ui: keep — a Tag (D4d): uppercase on a --surface-2 r99 chip, not a Label */}
-            {/* S5: the one hand-drawn caps badge on this screen (the side-nav group
-                headers are already `Label`, which reads the tokens). Its .06em IS
-                --tag-tracking's base value, so the token read is exact. */}
+            {/* ui: keep — a Tag: uppercase on a --surface-2 r99 chip, not a Label */}
+            {/* Hand-drawn caps badge (side-nav headers already use `Label`); its .06em matches --tag-tracking exactly. */}
             {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" ariaLabel={`${r.label} — override the Primary model`} onPick={async () => {
                 const next = !on
                 setOvr((o) => ({ ...o, [r.base]: next }))
                 if (!next) {
-                  // SET-08: `ovr` is local state the PATCHes don't own, so if
-                  // either clear fails the row has to reopen — otherwise it reads
-                  // as "inherits Primary" while the server still holds an override
+                  // `ovr` is local state the PATCHes don't own — if either clear fails, reopen the row or it reads
+                  // "inherits Primary" while the server still holds an override.
                   const a = await save(`${r.base}_provider`, '')
                   const b = a && await save(`${r.base}_model`, '')
                   if (!a || !b) setOvr((o) => ({ ...o, [r.base]: true }))
@@ -746,8 +672,7 @@ function Row({ r, ctx }) {
       case 'button':
         return (
           <>
-            {/* SET-22: the webhook secret is a value, not a run summary, so the
-                design puts it in the same bordered box every other value uses */}
+            {/* The webhook secret is a value, not a run summary — same bordered box every other value uses */}
             {r.preview && (r.previewBox
               /* ui: keep — a read-only preview box (a span, no field inside) */
               ? <span style={{ ...BOX, flex: `0 1 ${r.previewBox}`, cursor: 'default' }}>
@@ -797,19 +722,12 @@ function Row({ r, ctx }) {
   })()
 
   return (
-    // SET-11: the label column shrinks rather than holding a hard 340px, and
-    // below ~720px of pane it moves above the controls entirely — otherwise the
-    // pill + Override toggle on the LLM rows are clipped off the right edge.
-    // ui: keep — a settings *row*, not a header row: its bottom rule is the row
-    // divider of a list (the scanner files it under header-row by that rule)
+    // Label column shrinks rather than holding a hard 340px; below ~720px of pane it moves above the controls entirely,
+    // otherwise the pill + Override toggle on the LLM rows clip off the right edge.
+    // ui: keep — a settings row, not a header row: bottom rule is a list row divider (scanner files it under header-row by that rule)
     <div style={{ display: 'flex', flexDirection: narrow ? 'column' : 'row', alignItems: narrow ? 'stretch' : 'center', gap: narrow ? 10 : 24, minHeight: 52, padding: '9px 0', borderBottom: '1px solid var(--line-soft)' }}>
-      {/* D4e fix-up: the shared row help below is `Helper` (11.5px) where it used to
-          be a hand-written 11px span. Text layout is linear in font size, so the
-          column was widened by exactly the same ratio — 340 x 11.5/11 = 355.45,
-          rounded up to 356 (and 200 -> 210) — and every row's help wraps on the
-          same word it did before. Without it the longest string on the page
-          ("Model that answers application-form questions in the extension.")
-          wrapped to a second line and grew its row 55px -> 71px. */}
+      {/* Column width scales with the row-help font size: 340 × 11.5/11 = 355.45 → 356 (200 → 210), so every row's help
+          wraps on the same word. Without it, the longest string on the page grows its row 55px → 71px. */}
       <div style={{ flex: narrow ? '0 0 auto' : '0 1 356px', minWidth: narrow ? 0 : 210, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '18px', fontWeight: 500 }}>
           {r.label}
@@ -860,8 +778,7 @@ function ActionBtn({ label, state, onClick, ariaLabel }) {
   )
 }
 
-// The v1 page wrote the mask into localStorage when you saved without retyping,
-// which locked you out. This only writes a key you actually entered.
+// v1 wrote the mask into localStorage when saved without retyping, locking you out; this only writes a key you actually entered.
 function ApiKeyRow({ value, save, flash }) {
   const [local, setLocal] = useState('')
   const [shown, setShown] = useState(false)
@@ -879,8 +796,7 @@ function ApiKeyRow({ value, save, flash }) {
       </span>
       <ActionBtn label="Save key" state="" ariaLabel="Save the dashboard API key" onClick={async () => {
         if (!local.trim()) { flash('Type the new key first', true); return }
-        // if the PATCH failed, writing the key locally would lock the dashboard
-        // out on the next request — stop before touching localStorage
+        // If the PATCH failed, writing the key locally would lock the dashboard out on the next request — stop before touching localStorage.
         const saved = await save('dashboard_api_key', local.trim())
         if (!saved) return
         try { localStorage.setItem('jobnavigator_api_key', local.trim()) } catch {}
@@ -948,7 +864,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
   const [text, setText] = useState(initial)
   const [err, setErr] = useState('')
   const timer = useRef(null)
-  const pending = useRef(null)   // SET-25: the value the 600ms timer still owes
+  const pending = useRef(null)   // the value the 600ms timer still owes
 
   const write = (value) => {
     if (spec.list) { onSave(spec.key, value.split('\n').map((x) => x.trim()).filter(Boolean)); setErr(''); return }
@@ -966,9 +882,8 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
     timer.current = setTimeout(() => { pending.current = null; write(value) }, 600)
   }
 
-  // SET-25: unmount used to just drop the pending timer, so anything typed in
-  // the last 600ms was silently lost even though the footer promises it saves
-  // as you type. Every exit runs through close(), which flushes first.
+  // Unmount must not just drop the pending timer — anything typed in the last 600ms would be silently lost
+  // even though the footer promises it saves as you type. Every exit runs through close(), which flushes first.
   const flush = () => {
     clearTimeout(timer.current)
     if (pending.current !== null) { const v = pending.current; pending.current = null; write(v) }
@@ -976,9 +891,8 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
   const close = () => { flush(); onClose() }
 
   const reset = () => {
-    // /settings/defaults returns the raw seed *strings*, so a list key arrives
-    // as '["a","b"]'. Feeding that to asList() made one line, which committed
-    // as a single-element list containing JSON text.
+    // /settings/defaults returns raw seed strings, so a list key arrives as '["a","b"]'.
+    // Feeding that straight to asList() makes one line, committing as a single-element list containing JSON text — parse first.
     let d = defaults[spec.key]
     if (d === undefined) { setErr('Defaults are unavailable — nothing was reset'); return }
     if ((spec.list || spec.json) && typeof d === 'string') {
@@ -995,15 +909,13 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') closeRef.current() }
     document.addEventListener('keydown', onKey)
-    // flush, not close, on unmount: close() has already run for every in-modal
-    // exit, and this catches an unmount driven from outside the modal
+    // flush, not close, on unmount: close() already ran for every in-modal exit; this catches an unmount from outside the modal.
     return () => { document.removeEventListener('keydown', onKey); flushRef.current() }
   }, [])
 
   return (
-    // escape={false}: this modal keeps its own Escape effect, which is paired with
-    // the flush-on-unmount in the same cleanup — the pending debounce must be
-    // written whichever way the modal goes away, so the two stay together.
+    // escape={false}: this modal keeps its own Escape effect, paired with the flush-on-unmount in the same cleanup —
+    // the pending debounce must be written however the modal goes away, so the two stay together.
     <ModalPanel width="min(1020px, 94vw)" onClose={close} escape={false} zIndex={60}
       style={{ maxHeight: 'min(1280px, 92vh)', overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
@@ -1012,7 +924,7 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
           <IconButton onClick={close} ariaLabel={`Close ${spec.label}`} style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '16px 22px', minHeight: 0, display: 'flex' }}>
-          {/* 1.5x wider and 2x taller than before, capped so it never exceeds the window */}
+          {/* Capped so it never exceeds the window */}
           <Textarea value={text} onChange={(v) => { setText(v); commit(v) }} ariaLabel={spec.label} mono
             style={{ flex: 1, minHeight: 440, ...(err ? { borderColor: 'var(--bad)' } : null) }} />
         </div>
@@ -1048,9 +960,8 @@ function ModelsModal({ S, save, onClose }) {
     return () => { dead = true }
   }, [provider])
 
-  // SET-16: the design anchors the typeahead under the field as a dropdown with
-  // the first row pre-highlighted, the matched substring bolded and an "N of M
-  // match" footer — not a plain list stacked above the catalog rows.
+  // Typeahead anchors under the field as a dropdown: first row pre-highlighted, matched substring bolded,
+  // "N of M match" footer — not a plain list stacked above the catalog rows.
   const [hi, setHi] = useState(0)
   const [sugOpen, setSugOpen] = useState(true)
   const { matched, suggestions } = useMemo(() => {
@@ -1062,7 +973,7 @@ function ModelsModal({ S, save, onClose }) {
   useEffect(() => { setHi(0); setSugOpen(true) }, [term])
   const showSug = !!term.trim() && sugOpen && suggestions.length > 0
 
-  // bold every occurrence of the typed term, the way the design draws it
+  // Bold every occurrence of the typed term.
   const mark = (name) => {
     const t = term.trim()
     if (!t) return name
@@ -1086,14 +997,10 @@ function ModelsModal({ S, save, onClose }) {
     save('llm_models_list', [...list, { provider, model, label: `${model} (custom)`, custom: true }])
     setTerm('')
   }
-  // R2-A-01: the styled dialog, like every other destructive confirm in v2
+  // Styled dialog, like every other destructive confirm in v2.
   const [confirm, setConfirm] = useState(null)
-  // R3-S-04: EditModal had an Escape handler and this modal did not, so the Model
-  // catalog was the one v2 modal that only closed on its scrim. Held off while the
-  // remove-confirm is up (that dialog registered its own listener later, so ours
-  // would otherwise fire first and take the whole catalog down with it); the
-  // typeahead keeps its own Escape by calling preventDefault, which useEscape
-  // honours, so the first Escape closes the dropdown and the second the modal.
+  // Escape held off while the remove-confirm is up (it registers its own listener later; ours would otherwise fire first and take the catalog down with it).
+  // The typeahead keeps its own Escape via preventDefault, which useEscape honours — first Escape closes the dropdown, second closes the modal.
   useEscape(onClose, !confirm)
   const remove = (m) => setConfirm({
     title: `Remove “${m.model}”?`,
@@ -1104,9 +1011,8 @@ function ModelsModal({ S, save, onClose }) {
 
   return (
     <>
-    {/* escape={false}: R3-S-04's guard lives above (`useEscape(onClose, !confirm)`)
-        so the remove-confirm keeps the key to itself; a second listener here would
-        be unguarded and take the catalog down with the confirm. */}
+    {/* escape={false}: the guard lives above (`useEscape(onClose, !confirm)`) so the remove-confirm keeps the key to itself;
+        a second listener here would be unguarded and take the catalog down with the confirm. */}
     <ModalPanel width={600} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 620, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
           <Heading>Model catalog</Heading>
@@ -1116,8 +1022,7 @@ function ModelsModal({ S, save, onClose }) {
         <HeaderRow pad="12px 22px" soft bg="page" align="center" style={{ gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
-            {/* ui: keep — typeahead composite: the input drives a suggestion listbox
-                (aria-expanded / aria-autocomplete / ↑ ↓ Esc Enter) inside the fieldwrap */}
+            {/* ui: keep — typeahead composite: input drives a suggestion listbox (aria-expanded/autocomplete, ↑↓ Esc Enter) inside the fieldwrap */}
             <span className="v2-fieldwrap" style={{ ...BOX, flex: 1 }}>
               <input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search the model catalog"
                 aria-expanded={showSug} aria-autocomplete="list"
@@ -1134,10 +1039,7 @@ function ModelsModal({ S, save, onClose }) {
             </span>
             {showSug && (
               <Menu role="listbox" ariaLabel="Model suggestions" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, gap: 0 }}>
-                {/* ui: keep — typeahead rows, not MenuItem: the highlight is keyboard-driven
-                    (`hi`), so a row turns its own `v2-menuitem` hover OFF when it is the
-                    highlighted one and needs onMouseEnter/onMouseDown to keep the caret in
-                    the input. MenuItem owns its hover class and takes neither. */}
+                {/* ui: keep — typeahead rows, not MenuItem: highlight is keyboard-driven (`hi`), needs onMouseEnter/onMouseDown to keep the caret in the input */}
                 {suggestions.map((n, i) => (
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
@@ -1158,12 +1060,12 @@ function ModelsModal({ S, save, onClose }) {
         <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '6px 22px 14px' }}>
           {list.map((m) => (
             <div key={`${m.provider}/${m.model}`} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, borderBottom: '1px solid var(--line-soft)' }}>
-              {/* SET-13: --edge at 10px is under 4.5:1 on --surface in light and dark */}
+              {/* --edge at 10px is under 4.5:1 on --surface in light and dark */}
               <Helper size="xs" mono style={{ flex: '0 0 92px' }}>{m.provider}</Helper>
               <Mono size="xl" tone="strong" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</Mono>
               <Helper size="xs" style={{ flex: '0 0 auto', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</Helper>
-              {/* SET-15: the design turns the border --bad on hover too, not just the glyph */}
-              {/* ui: keep — 22x22 bordered x with the SET-15 --bad border+glyph hover (v2-hover-bad-bdc) */}
+              {/* Border turns --bad on hover too, not just the glyph */}
+              {/* ui: keep — 22x22 bordered x with --bad border+glyph hover (v2-hover-bad-bdc) */}
               <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
                 title="Remove from the list (stays removed)" className="v2-hover-bad-bdc"
                 style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>
@@ -1171,9 +1073,8 @@ function ModelsModal({ S, save, onClose }) {
           ))}
         </div>
     </ModalPanel>
-    {/* outside the catalog's scrim, not inside it wrapped in a stopPropagation
-        div: the confirm's own scrim click must not bubble into the catalog's
-        and close that too */}
+    {/* Outside the catalog's scrim (not wrapped in a stopPropagation div): the confirm's own scrim click must not
+        bubble into the catalog's and close that too. */}
     {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
     </>
   )

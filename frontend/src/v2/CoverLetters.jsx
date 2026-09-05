@@ -25,9 +25,7 @@ const POPOVER = { position: 'absolute', top: '100%', left: 0, zIndex: 40, margin
 
 // Design draws these selects as a bordered row with a ▾ — a native <select>
 // can't carry the two-line job labels, so this is a small popover instead.
-// ui: keep — ui.jsx's Select renders single-line `[value, label]` rows; this one
-// carries a second `sub` line per option and claims Escape (RES-15) so the modal
-// it may sit in does not close on the same press. Not an input-role scan site.
+// ui: keep — Select shows single-line rows; this one carries a second sub line and claims Escape so an enclosing modal doesn't also close.
 export function Picker({ value, options, placeholder, onPick, width }) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
@@ -36,9 +34,8 @@ export function Picker({ value, options, placeholder, onPick, width }) {
     document.addEventListener('click', close)
     return () => document.removeEventListener('click', close)
   }, [open])
-  // RES-15: Escape closes the popover and claims the event, so the modal this
-  // picker may be sitting in doesn't close on the same press. Registered on mount
-  // (not on open) so it runs before the modal's own handler.
+  // Escape closes the popover and claims the event, so an enclosing modal doesn't also close.
+  // Registered on mount (not on open) so it runs before the modal's own handler.
   const openRef = useRef(false)
   openRef.current = open
   useEffect(() => {
@@ -59,16 +56,13 @@ export function Picker({ value, options, placeholder, onPick, width }) {
         {/* ui: keep — 9px ▾ glyph, below the Helper scale (md 11.5 / xs 10.5) */}
         <span style={{ flex: '0 0 auto', fontSize: 9, color: 'var(--muted)', marginLeft: 8 }}>▾</span>
       </div>
-      {/* CL-07: the popover physically covers the control below it, so without a
-          scrim the next click lands on an option of *this* picker. The scrim sits
-          just under the popover: clicks on the popover still work, everything else
-          just closes it. */}
+      {/* The popover covers the control below it, so without a scrim the next click lands on
+          one of its own options. Clicks on the popover still work; everything else closes it. */}
       {open && <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />}
       {open && (
         <Menu role="listbox" className="v2-scroll" style={{ ...POPOVER, width: width || '100%' }}>
           {options.length === 0 && <div style={{ padding: '7px 9px', fontSize: 12, color: 'var(--muted)' }}>Nothing to pick yet.</div>}
-          {/* ui: keep — two-line option (label over `sub`); MenuItem draws a single-line
-              row, and this Picker is already a documented keep for the same reason */}
+          {/* ui: keep — two-line option (label + sub); MenuItem only draws single-line rows */}
           {options.map((o) => (
             <div key={o.id} className="v2-menuitem" onClick={() => { onPick(o.id); setOpen(false) }}
               style={{ padding: '7px 9px', borderRadius: 'var(--radius-field)', fontSize: 12.5, cursor: 'pointer', minWidth: 0,
@@ -86,7 +80,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
 
 // Voice chips + length segments are shared with the editor's Regenerate modal.
 export function VoicePicker({ presets, value, onPick }) {
-  if (!presets.length) return <Helper>No voice presets — add them in Settings → AI.</Helper>   // CL-13
+  if (!presets.length) return <Helper>No voice presets — add them in Settings → AI.</Helper>
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
       {presets.map((v) => {
@@ -110,7 +104,7 @@ export function LengthPicker({ value, onPick }) {
 export default function CoverLetters() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()   // CL-18
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
   const [letters, setLetters] = useState([])
   const [resumes, setResumes] = useState([])
   const [jobs, setJobs] = useState([])
@@ -123,13 +117,12 @@ export default function CoverLetters() {
   const [pending, setPending] = useState([])     // active generate_cover_letter runs
   const [query, setQuery] = useState('')
   const [archOpen, setArchOpen] = useState(() => { try { return localStorage.getItem(ARCH_KEY) === '1' } catch { return false } })
-  // While searching, show archived matches too — otherwise a query that only
-  // hits archived letters looks like it found nothing. Doesn't touch the
-  // remembered preference.
+  // While searching, show archived matches too — otherwise a query hitting only archived
+  // letters looks like it found nothing. Doesn't touch the remembered preference.
   const showArch = archOpen || query.trim().length > 0
   useEffect(() => { try { localStorage.setItem(ARCH_KEY, archOpen ? '1' : '0') } catch {} }, [archOpen])
   const [err, setErr] = useState('')
-  const [loadErr, setLoadErr] = useState(null)   // CL-05: failed load ≠ empty account
+  const [loadErr, setLoadErr] = useState(null)   // failed load ≠ empty account
   const [runMeta, setRunMeta] = useState({})   // run_id -> {label, voice, length}
   const pendingRef = useRef([])
   useEffect(() => { pendingRef.current = pending }, [pending])
@@ -144,20 +137,15 @@ export default function CoverLetters() {
     }
   }, [])
 
-  // merge, don't replace: the ?job=/?resume= effect below prepends a row that
-  // isn't in these windows, and the job response usually lands last (the 200-job
-  // list is the slowest call on the screen) — replacing wiped the deep link.
+  // Merge, don't replace: the ?job=/?resume= effect below prepends a row not in these windows,
+  // and the job response (200 jobs, the slowest call here) usually lands last — replacing would wipe the deep link.
   const mergeKeep = (rows) => (p) => [...p.filter((x) => !rows.some((r) => r.id === x.id)), ...rows]
-  // DESIGN-LOAD: the five initial requests settle as one. Until they do, the
-  // subtitle line, the Voice picker and the "All letters" list keep their boxes
-  // and stay empty — instead of reading "0 letters", "No voice presets — add them
-  // in Settings → AI" and "No cover letters yet", each corrected a moment later.
-  // Every loader keeps its own catch, so the error toasts below are unchanged.
+  // The five initial requests settle as one; until then the subtitle, Voice picker and list stay
+  // empty rather than flashing empty-state text. Each loader keeps its own catch.
   const { ready } = useSettled([
     () => load(),
-    // OPEN-05: converted — the generate panel is the point of this screen, and a
-    // disabled button is not an explanation. Same for the job picker and the
-    // voice list below.
+    // The generate panel is the point of this screen; a disabled button alone doesn't explain
+    // why. Same for the job picker and voice list below.
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(mergeKeep(data || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your résumés — there is nothing to generate from.' }) }),
     () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) }),
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
@@ -179,16 +167,15 @@ export default function CoverLetters() {
     if (!j && !r) return
     if (j) {
       setGenJob(j)
-      // make sure the target is pickable even if it's outside the fetched window
-      // R2-A-03: converted — the user followed a link *to this job*; if the row
-      // can't be fetched the picker silently shows an unmatched id
+      // Make sure the target is pickable even if it's outside the fetched window — if the
+      // row can't be fetched, the picker silently shows an unmatched id.
       api.get(`/jobs/${j}`).then(({ data }) => {
         setJobs((p) => p.some((x) => x.id === data.id) ? p : [data, ...p])
       }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the linked job — pick it from the list' }) })
     }
     if (r) {
       setGenResume(r)
-      // R2-A-03: converted — same for the résumé half of the deep link
+      // Same for the résumé half of the deep link.
       api.get(`/resumes/${r}`).then(({ data }) => {
         setResumes((p) => p.some((x) => x.id === data.id) ? p : [data, ...p])
       }).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the linked résumé — pick it from the list' }) })
@@ -203,7 +190,7 @@ export default function CoverLetters() {
     const tick = async () => {
       try {
         const { data } = await api.get('/monitor/active')
-        const runs = (data || []).filter((r) => r.job_type === 'generate_cover_letter' && /^cl:[^:]+:[^:]+$/.test(r.scope_key || ''))   // CL-20: regenerates (cl:{id}) rewrite in place
+        const runs = (data || []).filter((r) => r.job_type === 'generate_cover_letter' && /^cl:[^:]+:[^:]+$/.test(r.scope_key || ''))   // regenerates (cl:{id}) rewrite in place
         if (dead) return
         const before = pendingRef.current
         const ids = runs.map((r) => r.run_id).join(',')
@@ -211,10 +198,9 @@ export default function CoverLetters() {
         const gone = before.filter((b) => !runs.some((r) => r.run_id === b.run_id))
         if (gone.length) {
           load()
-          window.dispatchEvent(new CustomEvent('jn:counts-changed'))   // CL-17
-          // CL-06 / DS-B-02: a failed run leaves /monitor/active exactly like a
-          // successful one — the row just vanishes. Ask the run what happened, and
-          // keep the three answers apart: completed, failed, and "cannot tell".
+          window.dispatchEvent(new CustomEvent('jn:counts-changed'))
+          // A failed run leaves /monitor/active exactly like a successful one — the row just
+          // vanishes. Ask the run what happened, and keep completed / failed / cannot-tell apart.
           for (const g of gone) {
             const run = await fetchRunOutcome(g.run_id, 'generate_cover_letter')
             if (dead) return
@@ -247,22 +233,19 @@ export default function CoverLetters() {
     return letters.filter((c) => `${c.name || ''} ${c.company || ''} ${c.title || ''}`.toLowerCase().includes(q))
   }, [letters, query])
 
-  // Active = still in play. That covers a live application, and also a draft
-  // whose job is still new/saved — you haven't applied yet, so the letter is
-  // work in progress, not history. Only rejected applications and letters for
-  // jobs you skipped (or that are gone) sink into the archive.
+  // Active = still in play: a live application, or a draft whose job is still new/saved.
+  // Only rejected applications and letters for skipped/gone jobs sink into the archive.
   const LIVE_JOB = ['new', 'saved', 'applied']
   const isActive = (c) => (c.stage ? c.stage !== 'rejected' : LIVE_JOB.includes(c.job_status))
   const active = useMemo(() => visible.filter(isActive), [visible])
   const archived = useMemo(() => visible.filter((c) => !isActive(c)), [visible])
 
   const live = letters.filter((c) => c.stage && c.stage !== 'rejected').length
-  // the resting form of the line ("N letters · M live applications") is the same
-  // after a refresh as before it, so it is warm-started; the search form is only
-  // reachable once the letters are in hand anyway
+  // The resting line ("N letters · M live applications") is unchanged by a refresh, so it's
+  // warm-started; the search form is only reachable once the letters are in hand anyway.
   const { warm: sub, style: subStyle } = useWarm('cover-letters', ready ? { n: letters.length, live } : null, ready)
   const countLine = ready && query.trim()
-    ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} open application${live === 1 ? '' : 's'}`   // CL-23
+    ? `${visible.length} of ${letters.length} letter${letters.length === 1 ? '' : 's'} match · ${live} open application${live === 1 ? '' : 's'}`
     : sub ? `${sub.n} letter${sub.n === 1 ? '' : 's'} · ${sub.live} live application${sub.live === 1 ? '' : 's'}` : NBSP
 
   const genJobLabel = jobOpts.find((o) => o.id === genJob)?.label || ''
@@ -357,10 +340,8 @@ export default function CoverLetters() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Voice</Label>
-            {/* DESIGN-LOAD: the picker's own empty state ("No voice presets…") is a
-                real verdict, not a loading state — it may only be drawn once the
-                settings request has settled. The row keeps a pill's height so the
-                panel below it doesn't shift when the presets land. */}
+            {/* "No voice presets…" is a real verdict, not a loading state — drawn only once
+                settings have settled. The row keeps a pill's height so the panel doesn't shift. */}
             <div style={{ minHeight: 26 }}>{ready && <VoicePicker presets={presets} value={genVoice} onPick={setGenVoice} />}</div>
           </div>
 
@@ -369,8 +350,7 @@ export default function CoverLetters() {
             <LengthPicker value={genLength} onPick={setGenLength} />
           </div>
 
-          {/* RES-17: --line on --muted when disabled, like every other primary pill
-              in the three builders — a dimmed accent still reads as live. */}
+          {/* --line on --muted when disabled, like every other primary pill in the three builders — a dimmed accent still reads as live. */}
           <Button onClick={generate} disabled={!canGenerate}
             title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}>
             {thisPairRunning && <Spinner size={10} color="currentColor" />}
@@ -386,17 +366,15 @@ export default function CoverLetters() {
             <Mono line={16} tone="faint">{ready ? letters.length + pending.length : NBSP}</Mono>
           </HeaderRow>
 
-          {/* DESIGN-LOAD: the list container is always here (flex:1, its own
-              scroller); only its contents wait for the settle, so the pane never
-              flips from "No cover letters yet" to the real rows. */}
+          {/* The list container is always here; only its contents wait for the settle, so the
+              pane never flips from empty-state text to the real rows. */}
           <div className="v2-scroll v2-gutter" style={{ flex: 1, overflow: 'auto', padding: '10px 30px 22px', display: 'flex', flexDirection: 'column', gap: 7, minHeight: 0 }}>
             {ready && <>
             {pending.map((r) => (
               <Band key={r.run_id} interactive={false} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', borderColor: 'var(--accent)', background: 'var(--recessed)' }}>
                 <Spinner size={11} />
-                {/* integer line-height: at 1.5 this 12.5px label makes the row
-                    46.75px tall and every letter row below it lands on a half
-                    pixel, which drops their 1px borders on alternating rows */}
+                {/* integer line-height: at 1.5 this 12.5px label makes the row 46.75px tall,
+                    dropping 1px borders on alternating rows below */}
                 <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--accent)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Generating — {rowLabel(r)}
                 </span>

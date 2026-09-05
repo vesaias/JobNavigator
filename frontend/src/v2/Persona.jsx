@@ -10,22 +10,15 @@ import {
   SectionShell, SectionEditor, BulletText, DashedAdd, RemoveX, kb,
 } from './ResumeSections'
 
-// The Persona is the singleton applicant record. Two independent halves:
+// The Persona is the singleton applicant record, in two independent halves:
+// left · resume_content (same shape as a Resume's json_data, edited with ResumeSections.jsx; feeds tailoring, cover letters, scoring).
+// right · autofill nodes (contact/demographics/work_auth/preferences/compensation, read by the extension) plus the Q&A bank.
 //
-//   left  · resume_content — same shape as a Resume's json_data, so it is edited
-//           with the *same* components (see ResumeSections.jsx). Feeds tailoring,
-//           cover-letter anecdotes and job scoring.
-//   right · the autofill nodes — contact / demographics / work_auth / preferences
-//           / compensation, read by the extension on ATS forms, plus the Q&A bank.
-//
-// Every node write spreads the existing node rather than rebuilding it from the
-// field table below: `preferences` in particular carries keys no control shows
-// (e.g. preferred_locations from the retired Preferences card) and is JSON-dumped
-// whole into every cover-letter prompt, so dropping one silently changes output.
+// Every node write spreads the existing node: `preferences` carries keys no control shows
+// (e.g. preferred_locations) and is JSON-dumped whole into every cover-letter prompt, so dropping one silently changes output.
 
 // ── the autofill field table ────────────────────────────────────────────────
-// Mirrors backend/autofill_schema.py ANSWER_SCHEMA one-for-one (31 answerable
-// fields + the decline flag). Order and labels follow the design.
+// Mirrors backend/autofill_schema.py ANSWER_SCHEMA one-for-one (31 answerable fields + the decline flag).
 const GENDER = [['male', 'Male'], ['female', 'Female'], ['nonbinary', 'Non-binary']]
 const RACE = [['hispanic_latino', 'Hispanic/Latino'], ['white', 'White'], ['black', 'Black/African American'],
   ['asian', 'Asian'], ['native_american', 'Native American'], ['pacific_islander', 'Pacific Islander'],
@@ -91,22 +84,12 @@ const isSet = (v) => v !== undefined && v !== null && v !== ''
 // the server's own words for a failure, when it sent any
 const errDetail = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 const plural = (n, word) => `${n || 0} ${word}${(n || 0) === 1 ? '' : 's'}`
-// The Picker's clear row needs a value of its own: an unset answer is rendered
-// as the placeholder (Select shows it whenever no option matches), so '' would
-// make "— not answered" the trigger's *label* instead of the em dash.
+// The Picker's clear row needs a value of its own: an unset answer renders as the
+// placeholder, so '' would make "— not answered" the trigger's *label* instead of the em dash.
 const UNSET = '__unset__'
 
-// qa_bank holds two shapes: the canonical {question, answer} the extension writes,
-// and legacy single-key {"<question>": "<answer>"} maps. Read both, always write
-// canonical (the backend reader is tolerant, but only one shape stays supported).
-// PERS-07: a legacy entry can carry more than one key. Taking only the first
-// dropped the rest, and because any edit rewrites the whole bank canonically the
-// loss became permanent on the next keystroke. Expand: one pair per key.
-// PERS-14: an entry that is not an object (null, a string), an empty object, or a
-// legacy map whose only key is "" carries nothing editable — it used to render as
-// a blank card and count towards "N answers", and the next keystroke made that
-// blank row permanent. Skip them entirely. A canonical {question, answer} pair is
-// always kept, blank or not, so a row you just added still renders.
+// qa_bank holds two shapes: canonical {question, answer}, and legacy single-key
+// {"<question>": "<answer>"} maps (expand to one pair per key). Read both, always write canonical, skipping entries with nothing editable.
 const toPairs = (e) => {
   if (!e || typeof e !== 'object' || Array.isArray(e)) return []
   if ('question' in e || 'answer' in e) return [{ question: e.question == null ? '' : String(e.question), answer: e.answer == null ? '' : String(e.answer) }]
@@ -115,10 +98,8 @@ const toPairs = (e) => {
 
 // layout only — the type (uppercase 10/15px · .13em · --label-ink) comes from Label
 const FIELD_LABEL = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-// A picker styled as the design's box: value + ▾, opening the standard v2 menu.
-// Thin wrapper over ui.jsx's Select — it keeps the "— not answered" row, because
-// clearing an answer is a real action here (an unset field is not the same as an
-// empty one for the autofill extension).
+// Thin wrapper over ui.jsx's Select that keeps the "— not answered" row: clearing an
+// answer is a real action here (unset differs from empty for the autofill extension).
 function Picker({ value, options, onChange, placeholder = '—', ariaLabel }) {
   const opts = useMemo(() => [[UNSET, '— not answered'], ...options], [options])
   return (
@@ -135,8 +116,7 @@ function AutofillField({ node, fkey, label, kind, opts, nodes, write }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: opts?.wide ? 'span 2' : 'auto' }}>
         <div onClick={() => write(node, fkey, !on)} {...kb(() => write(node, fkey, !on), 'checkbox')} aria-checked={on} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
-          {/* ui: keep — checkbox indicator, not a card (the scan's card-static
-              signature catches any bordered, rounded, filled box) */}
+          {/* ui: keep — checkbox indicator, not a card */}
           <span style={{ flex: '0 0 auto', width: 15, height: 15, marginTop: 1, border: `1px solid ${on ? 'var(--accent)' : 'var(--edge)'}`, background: on ? 'var(--accent)' : 'var(--surface)', borderRadius: 'var(--radius-inline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-ink)', fontSize: 9, lineHeight: 1 }}>{on ? '✓' : ''}</span>
           <span style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: '18px', textWrap: 'pretty' }}>{opts.text}</span>
         </div>
@@ -174,7 +154,7 @@ export default function Persona() {
     try { const s = JSON.parse(localStorage.getItem('jobnavigator_v2_persona_sections')); if (Array.isArray(s)) return new Set(s) } catch { /* ignore */ }
     return new Set(['Experience'])
   })
-  const [loadErr, setLoadErr] = useState(false)   // PERS-06: a failed load is not "still loading"
+  const [loadErr, setLoadErr] = useState(false)   // a failed load is not "still loading"
   const [groups, setGroups] = useState(() => {
     try { const s = JSON.parse(localStorage.getItem('jobnavigator_v2_persona_groups')); if (Array.isArray(s)) return new Set(s) } catch { /* ignore */ }
     return new Set(['contact', 'qa'])
@@ -183,11 +163,8 @@ export default function Persona() {
   const flashTimer = useRef(null)
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
-  // PERS-08: pending debounced saves used to be *cleared* on unmount, so an edit
-  // followed within 500 ms by a navigation (or a tab close) was dropped silently
-  // while the header still said "Saves automatically". Flush them instead.
-  // fetch+keepalive rather than axios, because an XHR started in `beforeunload`
-  // is aborted with the page; it carries the same cookie + X-API-Key as api.js.
+  // Flush pending debounced saves on unmount rather than dropping them.
+  // fetch+keepalive rather than axios: an XHR started in `beforeunload` is aborted with the page.
   const flushPending = useCallback(() => {
     const pend = timers.current
     timers.current = {}
@@ -196,8 +173,7 @@ export default function Persona() {
       const headers = { 'Content-Type': 'application/json' }
       try { const k = localStorage.getItem('jobnavigator_api_key'); if (k) headers['X-API-Key'] = k } catch { /* ignore */ }
       try { fetch('/api/persona', { method: 'PATCH', headers, credentials: 'include', keepalive: true, body: JSON.stringify({ [key]: e.value }) }) }
-      // silent: this is the last-chance flush on unmount/beforeunload — the screen
-      // is going away, so there is nowhere to show a toast. PERS-08.
+      // silent: last-chance flush on unmount/beforeunload — nowhere to show a toast.
       catch { api.patch('/persona', { [key]: e.value }).catch(() => { /* silent: see above — nowhere left to report to */ }) }
     })
   }, [])
@@ -207,8 +183,7 @@ export default function Persona() {
       .catch((e) => { console.error(e); setLoadErr(true); pushToast({ kind: 'error', msg: 'Could not load your persona' + (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '') }) })
   ), [pushToast])
 
-  // DESIGN-LOAD: one request, so the screen simply waits for it — no "Loading…"
-  // line that the real editor then replaces.
+  // One request; the screen simply waits for it rather than showing a "Loading…" line.
   const [reload, setReload] = useState(0)
   const { ready } = useSettled([() => loadPersona()], reload)
 
@@ -224,10 +199,7 @@ export default function Persona() {
   }, [])
 
   // One debounce timer per node so an autofill edit never cancels a résumé edit.
-  // timers.current[key] = { timer, value } — the value is kept so a pending save
-  // can be flushed on unmount/unload rather than dropped (PERS-08).
-  // `payload` (PERS-21) lets the local node hold rows the server should not: a
-  // blank Q&A pair renders while you type into it but is never PATCHed.
+  // `payload` lets the local node hold rows the server should not, e.g. a blank Q&A pair.
   const saveNode = useCallback((key, value, payload) => {
     const body = payload === undefined ? value : payload
     setP((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -243,10 +215,8 @@ export default function Persona() {
     timers.current[key] = { timer, value: body }
   }, [flash, pushToast])
 
-  // Spread the live node: keys with no control (preferences.preferred_locations)
-  // must survive, and `undefined` clears a key rather than storing "".
-  // PERS-21: clearing a text field is the same intent as "— not answered", so an
-  // empty string drops the key too rather than persisting "".
+  // Spread the live node: keys with no control (preferences.preferred_locations) must survive.
+  // Clearing a text field is the same intent as "— not answered", so an empty string drops the key too.
   const write = useCallback((node, fkey, value) => {
     const next = { ...((p || {})[node] || {}) }
     if (value === undefined || value === '') delete next[fkey]
@@ -257,16 +227,15 @@ export default function Persona() {
   const resume = p?.resume_content && Object.keys(p.resume_content).length ? p.resume_content : EMPTY
   const { mutate, setField } = makeMutators(resume, (next) => saveNode('resume_content', next))
 
-  // PERS-01: a qa_bank that is not a list (legacy {question: answer} dict, or junk
-  // from the extension) must not .map — it white-screened the whole shell.
+  // qa_bank may not be a list (legacy {question: answer} dict, or junk from the
+  // extension) — guard against .map on it, which used to white-screen the whole shell.
   const qa = useMemo(() => {
     const raw = p?.qa_bank
     const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.entries(raw).map(([question, answer]) => ({ question, answer })) : [])
     return list.flatMap(toPairs)
   }, [p])
-  // PERS-21: a pair with neither half filled is not an answer — the backend's own
-  // POST /persona/qa-bank rejects it with a 400. Keep it locally so the row you
-  // just added stays on screen and editable, but leave it out of the PATCH.
+  // A pair with neither half filled is not an answer (POST /persona/qa-bank rejects it
+  // with a 400) — keep it locally so the row stays editable, but leave it out of the PATCH.
   const writeQa = (list) => {
     const rows = list.map((e) => ({ question: e.question || '', answer: e.answer || '' }))
     saveNode('qa_bank', rows, rows.filter((e) => e.question.trim() || e.answer.trim()))
@@ -287,18 +256,10 @@ export default function Persona() {
   }, [p])
 
   // ── Import ─────────────────────────────────────────────────────────────────
-  // Initial population, from a base résumé or a PDF. The *server* decides what
-  // an import means (POST /api/persona/import replaces `contact` and
-  // `resume_content` and leaves the five autofill nodes alone); everything here
-  // picks the source, warns once, and re-seats the editor on the response.
-  //
-  // DESIGN-CONSISTENCY: this used to be a Menu → a picker ModalPanel → a
-  // ConfirmDialog, three overlays for one decision, none of them shaped like the
-  // Tailor modal the résumé editor uses for exactly the same job ("pick one
-  // source, read what it costs, commit"). It is now the *same* shell —
-  // ui.jsx's ChoiceModal — with the two sources where Tailor puts its mode
-  // choice, the bases as ChoiceRows, and the replace warning in the footer slot
-  // that carries Tailor's chain-score line.
+  // Initial population, from a base résumé or a PDF. The *server* decides what an
+  // import means (POST /api/persona/import replaces `contact` and `resume_content`,
+  // leaves the five autofill nodes alone); this picks the source and re-seats the editor.
+  // Uses ui.jsx's ChoiceModal, the same shell as the résumé editor's Tailor modal.
   const [importOpen, setImportOpen] = useState(false)
   const [importing, setImporting] = useState(false)
 
@@ -306,8 +267,7 @@ export default function Persona() {
     setImporting(true)
     try {
       const { data } = await run()
-      // The import replaced both nodes outright, so a debounced PATCH still
-      // holding the *pre-import* value would land on top of it a moment later.
+      // The import replaced both nodes outright; drop any pending PATCH holding the pre-import value.
       ;['contact', 'resume_content'].forEach((k) => {
         clearTimeout(timers.current[k]?.timer)
         delete timers.current[k]
@@ -320,9 +280,7 @@ export default function Persona() {
       })
       setImportOpen(false)
     } catch (e) {
-      // the modal stays up on a failure: the source is still picked, so
-      // "Replace" is one click away again (the ConfirmDialog used to vanish and
-      // leave the user to walk the whole menu → picker → confirm path anew)
+      // the modal stays up on a failure: the source is still picked, so "Replace" is one click away again
       console.error('persona import', e)
       pushToast({ kind: 'error', msg: 'Import failed' + errDetail(e) })
     } finally { setImporting(false) }
@@ -336,8 +294,7 @@ export default function Persona() {
   const toggleSection = toggler(setSections, 'jobnavigator_v2_persona_sections')
   const toggleGroup = toggler(setGroups, 'jobnavigator_v2_persona_groups')
 
-  // PERS-06: a 500 (the documented "singleton missing — restart to re-seed") or a
-  // `200 null` used to sit on "Loading…" forever with no retry.
+  // A 500 ("singleton missing — restart to re-seed") or a `200 null` needs a retry, not an infinite "Loading…".
   if (!ready || !p) return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--muted)', fontSize: 13 }}>
       {ready && loadErr ? (
@@ -357,18 +314,14 @@ export default function Persona() {
       <HeaderRow as="header" variant="screen" align="flex-end" style={{ gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
           <PageTitle>Persona</PageTitle>
-          {/* integer line-heights throughout: at the inherited 1.5 a 13px line is
-              19.5px, which lands every row below the header on a half pixel and
-              makes Chrome round away their 1px borders on alternating rows */}
-          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance, and the
-              explicit 20px line-height is what keeps this header row on whole
-              pixels (see the note above) */}
+          {/* integer line-heights: at the inherited 1.5, 13px would be 19.5px, landing
+              rows below the header on a half pixel where Chrome rounds borders away */}
+          {/* ui: keep — 13/20px is outside Helper's 11.5/16 tolerance; needed for whole-pixel rows */}
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Saves automatically · autofill {filled} of {ANSWERABLE} set
           </span>
         </div>
-        {/* ui: keep — an accent-ink save indicator, not a link and not a muted
-            helper; Link would add cursor:pointer + a hover class to inert text */}
+        {/* ui: keep — accent-ink save indicator, not a Link (would add cursor:pointer + hover) */}
         <span style={{ marginLeft: 'auto', fontSize: 11.5, lineHeight: '17px', color: 'var(--accent)', visibility: saved ? 'visible' : 'hidden' }}>Saved ✓</span>
         <Button variant="secondary" size="sm" busy={importing} ariaHaspopup="dialog"
           title="Fill contact details and résumé content from a base résumé or a PDF"
@@ -421,11 +374,7 @@ export default function Persona() {
             })}
 
             {/* Q&A bank — the one amber card; answers go to the LLM verbatim */}
-            {/* ui: keep — the only amber-tinted card in v2 (theme.css pins the tint):
-                its answers reach the LLM verbatim, so the design sets it apart from
-                the neutral groups above. Card renders --card-bg/--card-border and has
-                no tone variant; overriding both inline would put two colours back in
-                a screen, which is exactly what the pass removes. */}
+            {/* ui: keep — only amber-tinted card in v2; answers reach the LLM verbatim, sets it apart */}
             <div style={{ border: '1px solid var(--amber-line)', borderRadius: 'var(--radius-card)', background: 'var(--amber-bg)', display: 'flex', flexDirection: 'column' }}>
               <SectionHead card open={groups.has('qa')} onToggle={() => toggleGroup('qa')} hover="v2-qahead" style={{ padding: '11px 14px' }}>
                 <span style={{ flex: '0 0 auto', fontSize: 13, fontWeight: 600 }}>Q&amp;A bank</span>
@@ -434,13 +383,11 @@ export default function Persona() {
               </SectionHead>
               {groups.has('qa') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 14px 14px', borderTop: '1px solid var(--amber-line-soft)' }}>
-                  {/* ui: keep — a row inside the amber card, tinted to it
-                      (--amber-line-soft); a Card here would reintroduce --line */}
+                  {/* ui: keep — row tinted to the amber card (--amber-line-soft); a Card would reintroduce --line */}
                   {qa.map((e, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: '1px solid var(--amber-line-soft)', borderRadius: 'var(--radius-row)', background: 'var(--surface)' }}>
-                      {/* each BulletText needs a ROW flex parent: its flex:1 sizes the
-                          width there, whereas in a column parent flex:1 would drive the
-                          height and override the auto-grow, clipping every answer to one line */}
+                      {/* BulletText needs a ROW flex parent — in a column parent, flex:1 drives
+                          height instead of width and clips the answer to one line */}
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <div style={{ flex: '0 0 auto', display: 'flex', minWidth: 0 }}>
                           <BulletText bold lh="19px" value={e.question} placeholder="Question as the form asks it…"
@@ -471,11 +418,8 @@ export default function Persona() {
 }
 
 // ── Import ──────────────────────────────────────────────────────────────────
-// The résumé editor's Tailor modal, with this screen's two sources in place of
-// its mode choice: same ChoiceModal shell (480 · head · 14/22 body · 12/22
-// footer), same ChoiceCards, same ChoiceRows, and the replace warning sitting
-// where Tailor writes its chain-score line. Escape closes (ModalPanel's
-// useEscape) and Enter picks a row (ChoiceRow's kb()).
+// Same ChoiceModal shell as the résumé editor's Tailor modal, with this screen's two
+// sources as ChoiceCards/ChoiceRows. Escape closes (ModalPanel's useEscape), Enter picks a row (kb()).
 const IMPORT_SOURCES = [
   ['resume', '☰ From a résumé', 'Copies a base résumé’s header and sections — no LLM call'],
   ['pdf', '↑ From a PDF', 'The AI reads the file — one LLM call; nothing is stored as a résumé'],
@@ -490,9 +434,7 @@ function ImportModal({ busy, onClose, onRun, pushToast }) {
   const fileRef = useRef(null)
 
   useEffect(() => {
-    // OPEN-05: the user opened this to pick a source; an empty list with a dead
-    // button says nothing about why. The panel stays open either way — the PDF
-    // half of it still works when the résumé list is the thing that failed.
+    // The panel stays open on failure — the PDF half still works when the résumé list failed to load.
     api.get('/resumes', { params: { is_base: true } })
       .then(({ data }) => setBases(Array.isArray(data) ? data : []))
       .catch((e) => {
@@ -544,8 +486,7 @@ function ImportModal({ busy, onClose, onRun, pushToast }) {
       {source === 'resume' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Label>Which base résumé</Label>
-          {/* DESIGN-LOAD: nothing is drawn while the list is in flight — the rows
-              land once rather than replacing a "Loading…" line. */}
+          {/* nothing drawn while the list is in flight — rows land once, no "Loading…" line */}
           {(bases || []).map((r) => (
             <ChoiceRow key={r.id} on={String(pick) === String(r.id)} label={r.name}
               hint={ago(r.updated_at)} onClick={() => setPick(r.id)} />
@@ -573,8 +514,7 @@ function ImportModal({ busy, onClose, onRun, pushToast }) {
               {dropping ? 'Drop the PDF here' : file ? file.name : 'Choose a PDF…'}
             </span>
           </DashedAdd>
-          {/* clear the value after every pick, or choosing the same PDF twice in a
-              row fires no change event at all (RES-28) */}
+          {/* clear the value after every pick, or choosing the same PDF twice fires no change event */}
           {/* ui: keep — hidden <input type="file">, not a rendered field */}
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; takePdf(f) }} />

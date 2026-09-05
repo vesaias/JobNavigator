@@ -14,7 +14,7 @@ import {
 } from './ResumeSections'
 import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, Mono, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea, ToolbarTrigger } from './ui'
 
-// contiguous prefix/suffix word diff → { before, removed, added, after } (matches the design's model)
+// contiguous prefix/suffix word diff → { before, removed, added, after }
 function wordDiff(a = '', b = '') {
   a = a || ''; b = b || ''
   if (a === b) return null
@@ -61,18 +61,8 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// ── MOVED to ResumeSections.jsx ──────────────────────────────────────────────
-// Field, BulletText, MicroField, RemoveLink, DashedAdd, EmptyState, MenuHead,
-// MenuItem, UPPER and the seven *Editor sections now live there so
-// /v2/persona edits resume_content with the identical components. IconBtn,
-// AddLink and normUrl were unreferenced and were dropped rather than moved.
-// RES-06: "reviewed" was recomputed from the base-vs-copy diff on every render,
-// so every change the user *kept* stayed a diff forever and the "one next step"
-// CTA could never leave "Review N changes". Record the acknowledgement instead.
-// localStorage rather than a json_data marker: it is a per-user UI
-// acknowledgement, needs no backend change, no migration and no extra write on
-// a screen that already saves continuously. Promote it to json_data later if it
-// has to survive a browser change.
+// Shared field/section components live in ResumeSections.jsx so /v2/persona can reuse them.
+// Tracks tailoring-changes acknowledgement in localStorage (per-user UI state); promote to json_data if it must survive a browser change.
 const REVIEWED_KEY = 'jobnavigator_v2_resume_reviewed'
 const readReviewed = () => { try { const a = JSON.parse(localStorage.getItem(REVIEWED_KEY)); return Array.isArray(a) ? a : [] } catch { return [] } }
 const markReviewed = (rid) => { try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...readReviewed().filter((x) => x !== rid), rid].slice(-300))) } catch { /* ignore */ } }
@@ -96,9 +86,9 @@ export default function ResumeEditor() {
   const [fmtOpen, setFmtOpen] = useState(false)
   const [tailorOpen, setTailorOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
-  const [reviewed, setReviewed] = useState(false)   // RES-06: tailoring changes acknowledged for this copy
-  const [pdfErr, setPdfErr] = useState(false)      // RES-08: last preview render failed
-  const [pdfNonce, setPdfNonce] = useState(0)      // RES-08: Retry re-arms the preview effect
+  const [reviewed, setReviewed] = useState(false)   // tailoring changes acknowledged for this copy
+  const [pdfErr, setPdfErr] = useState(false)      // last preview render failed
+  const [pdfNonce, setPdfNonce] = useState(0)      // Retry re-arms the preview effect
   const [baseData, setBaseData] = useState(null)   // parent json_data (for diff + inline marks)
   const [jobData, setJobData] = useState(null)     // the copy's job (cv_scores, status)
   const [tracers, setTracers] = useState([])
@@ -106,30 +96,24 @@ export default function ResumeEditor() {
   const [baseCopyCount, setBaseCopyCount] = useState(null)
   const [scoring, setScoring] = useState(false)
   const [headMenu, setHeadMenu] = useState(false)
-  const [confirm, setConfirm] = useState(null)   // RES-16: v2 dialog, not window.confirm
-  const [jobErr, setJobErr] = useState(false)   // RES-20: the linked job failed to load
-  const [parentName, setParentName] = useState(null)   // R2-H-10: the base this copy came from
-  const [tailorChain, setTailorChain] = useState('light')   // R2-H-09: 'light' | 'full' | null
+  const [confirm, setConfirm] = useState(null)   // v2 dialog, not window.confirm
+  const [jobErr, setJobErr] = useState(false)   // the linked job failed to load
+  const [parentName, setParentName] = useState(null)   // the base this copy came from
+  const [tailorChain, setTailorChain] = useState('light')   // 'light' | 'full' | null
   const saveTimer = useRef(null)
   const pdfTimer = useRef(null)
   const pendingRef = useRef([])   // [{baseId, jobId, company, since}]
 
   const isCopy = doc && !doc.is_base
 
-  // R3-S-03: the ⋯ head menu (base and copy) closed on its backdrop but not on
-  // Escape, while every modal reachable from it already used useEscape (RES-15).
-  // Safe to register unconditionally: every item in the menu calls
-  // setHeadMenu(false) before it opens a modal, so the menu and a modal are never
-  // open at once and the two handlers can't race for one keypress.
+  // The ⋯ head menu closes on backdrop click but needs Escape too, like every modal it can open.
+  // Safe unconditionally: menu items call setHeadMenu(false) before opening a modal, so they never race for one keypress.
   useEscape(() => setHeadMenu(false), headMenu)
 
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
-  // Background tailoring: watch the launched run on /monitor/active by its scope
-  // key (`{base}:{job|freeform}` — routes_resumes.py:715) and report when it is gone.
-  // RES-26: the old watcher only tracked job-linked tailors, and matched on
-  // parent_id + job_id — a persona tailor has parent_id null (routes_resumes.py:776)
-  // and a freeform one has no job at all, so neither ever reported completion.
+  // Background tailoring: watches the launched run on /monitor/active by scope key
+  // `{base}:{job|freeform}` (routes_resumes.py) and reports when it's gone — matched by scope rather than parent_id+job_id, since a persona tailor has parent_id null and a freeform one has no job at all.
   useEffect(() => {
     const iv = setInterval(async () => {
       if (!pendingRef.current.length) return
@@ -146,11 +130,8 @@ export default function ResumeEditor() {
       if (!done.length) return
       let list = []
       try { const { data } = await api.get('/resumes', { params: { is_base: false } }); list = data || [] } catch {}
-      // DS-B-02: the scope leaving /monitor/active only means the run ENDED. It
-      // used to be read as "succeeded", so a tailor that raised in the backend
-      // arrived as a green ✓ and the user hunted for a copy that never existed
-      // — and 'Tailoring finished.' (the copy-not-found branch) is exactly the
-      // failure case. Ask the run for its status and let that pick the toast.
+      // Leaving /monitor/active only means the run ended, not that it succeeded.
+      // Check the run's real status before picking which toast to show.
       for (const p of done) {
         const since = p.since - 1000
         const mine = list.filter((r) => new Date(r.updated_at).getTime() >= since)
@@ -178,9 +159,8 @@ export default function ResumeEditor() {
     setTailorOpen(false)
     try {
       const { data: started } = await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: jobId || undefined, job_description: jobDescription || undefined })
-      // DS-B-02: the run_id is what lets the watcher read the run's real status
+      // the run_id lets the watcher read the run's real status
       pendingRef.current.push({ scope: `${baseId}:${jobId || 'freeform'}`, runId: started?.run_id || null, jobId: jobId || null, company: company || null, since: Date.now() })
-      // RES-26: the old string interpolated an empty slot where the company goes
       pushToast({ kind: 'progress', msg: company ? `Tailoring for ${company}… runs in the background.` : 'Tailoring from a pasted description… runs in the background.' })
     } catch (e) {
       if (e.response?.status === 409) pushToast({ kind: 'error', msg: 'Already tailoring for that job.' })
@@ -188,9 +168,8 @@ export default function ResumeEditor() {
     }
   }, [pushToast])
 
-  // Re-tailor keeps this copy's job and swaps what it is built from: either run
-  // the tailoring LLM against another base, or take a plain copy of that base
-  // (no LLM) purely to get a fresh set of tracer links.
+  // Re-tailor keeps this copy's job but swaps what it's built from: either re-run
+  // the tailoring LLM against another base, or take a plain copy for fresh tracer links.
   const runRetailor = useCallback(async ({ mode, baseId }) => {
     setTailorOpen(false)
     const company = jobData?.company || 'this job'
@@ -209,11 +188,8 @@ export default function ResumeEditor() {
     }
   }, [doc, jobData, pushToast, navigate])
 
-  // RES-28: each dropdown used to own a fixed backdrop, which swallowed every
-  // click — so the other trigger could never be reached and its `set*Open(false)`
-  // was dead code. Close on any click outside the two pickers instead (each picker
-  // stops its own clicks), and let Escape close them. Escape is marked handled so a
-  // modal opened over them can't be closed by the same keypress.
+  // Closes both pickers on any outside click (each picker stops its own clicks) and on Escape.
+  // Escape is marked handled so a modal opened over them isn't closed by the same keypress.
   useEffect(() => {
     if (!tplOpen && !fmtOpen) return undefined
     const close = () => { setTplOpen(false); setFmtOpen(false) }
@@ -223,7 +199,7 @@ export default function ResumeEditor() {
     return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', onKey) }
   }, [tplOpen, fmtOpen])
 
-  useEffect(() => { setReviewed(readReviewed().includes(id)) }, [id])   // RES-06
+  useEffect(() => { setReviewed(readReviewed().includes(id)) }, [id])
 
   useEffect(() => {
     let alive = true
@@ -231,28 +207,22 @@ export default function ResumeEditor() {
       if (!alive) return
       setDoc(d); setData(d.json_data || EMPTY); setTemplate(d.template || ''); setFormat(d.page_format || 'letter'); setSavedAt(d.updated_at)
     }).catch((e) => {
-      // RES-21: a missing/deleted/malformed id used to land on the shelf silently —
-      // indistinguishable from pressing "‹ Résumés". The stack unmounts with this
-      // screen, so the message is handed to the shelf instead of pushed here.
+      // A missing/deleted/malformed id lands on the shelf silently otherwise, indistinguishable from pressing "‹ Résumés".
+      // This screen unmounts, so the message is handed to the shelf instead of pushed here.
       setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
       navigate('/v2/resumes')
     })
     return () => { alive = false }
   }, [id, navigate])
 
-  // DESIGN-LOAD: the preview toolbar's two pickers wait on this list — without it
-  // the Template trigger paints the raw template id and renames itself a moment
-  // later. The document already gates the whole screen (`!doc` below), so this is
-  // the other half of "document + templates have both settled".
-  // OPEN-05: converted — the Layout picker has no options without this, and the
-  // user is looking at the editor they just opened.
+  // The preview toolbar's pickers wait on this list so the Template trigger doesn't paint
+  // the raw id then rename itself a moment later; pairs with the `!doc` gate below.
   const { ready: tplReady } = useSettled([
     () => api.get('/resumes/templates').then(({ data }) => setTemplates(data || [])).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load the layouts — the picker is empty.' }) }),
   ])
 
-  // R2-H-09: a job-linked tailor chains a score of the new copy (routes_resumes.py
-  // reads `tailor_auto_quick_score` and maps it exactly this way). Nothing in the
-  // UI said so, so the second LLM call was invisible — the tailor modals now do.
+  // A job-linked tailor chains a score of the new copy (routes_resumes.py reads
+  // `tailor_auto_quick_score` and maps it this way) — surfaced here so the extra LLM call isn't invisible.
   useEffect(() => {
     api.get('/settings').then(({ data }) => {
       const v = String(data?.tailor_auto_quick_score ?? 'light').trim().toLowerCase()
@@ -260,9 +230,8 @@ export default function ResumeEditor() {
     }).catch(() => { /* silent: the note falls back to the seeded default */ })
   }, [])
 
-  // the document these context loaders belong to — a response that comes back
-  // after the user has moved to another résumé is dropped (what the old `alive`
-  // flags in these two effects did)
+  // The document these context loaders belong to — a response that arrives after
+  // the user has moved to another résumé is dropped.
   const docIdRef = useRef(null)
   docIdRef.current = doc ? String(doc.id) : null
 
@@ -283,11 +252,8 @@ export default function ResumeEditor() {
     ])
   }, [doc])
 
-  // DESIGN-LOAD: everything the context band says about a copy — the fit ring, the
-  // "Tailored for …" line, the "based on <base> ↗" link, the status/tracer line and
-  // the one next-step button — comes from these four requests. Rendered as they
-  // landed, the band wrote "Tailored copy · not scored yet" and then rewrote itself
-  // twice. They settle as one, and the band's two line boxes are held meanwhile.
+  // Everything the context band shows about a copy (fit ring, "Tailored for…" line,
+  // base link, status/tracer line, next-step button) settles as one instead of rewriting itself twice.
   const { ready: ctxReady } = useSettled([
     // parent base data for the diff/marks (tailored copies only); copy count for a base
     () => {
@@ -305,7 +271,7 @@ export default function ResumeEditor() {
     },
     () => {
       if (!doc || doc.is_base) { setJobData(null); setTracers([]); setJobErr(false); return null }
-      if (!doc.job_id) { setJobData(null); setJobErr(false) }   // RES-20: no job to load, so no failure to report
+      if (!doc.job_id) { setJobData(null); setJobErr(false) }   // no job to load, so no failure to report
       const mine = String(doc.id)
       return Promise.all([
         loadJobCtx(),
@@ -314,9 +280,8 @@ export default function ResumeEditor() {
     },
   ], doc ? String(doc.id) : '')
 
-  // RES-20: a copy tailored from a pasted description has no Job row. The JD it was
-  // written against lives on the copy (json_data._tailor_context, routes_resumes.py)
-  // and so does its score (json_data._score) — which is what makes it scoreable.
+  // A copy tailored from a pasted description has no Job row — the JD lives on the
+  // copy (json_data._tailor_context) and so does its score (json_data._score), which makes it scoreable.
   const freeformJd = ((data && data._tailor_context && data._tailor_context.job_description) || '').trim()
   const jobless = !!doc && !doc.is_base && !doc.job_id
 
@@ -335,15 +300,12 @@ export default function ResumeEditor() {
   const runScore = useCallback(async (depth) => {
     if (!doc?.job_id && !freeformJd) { pushToast({ kind: 'error', msg: 'This copy has no job and no saved description to score against.' }); return }
     setHeadMenu(false); setScoring(true)
-    // RES-30: the old poll only asked "is cv_scores.Tailored a number?", so on a
-    // re-score the first tick matched the score already on the job and reported the
-    // OLD value while the run was still going. Watch the run instead (scope
-    // `{job}:resume:{resume}` — routes_resumes.py:1283) and read the score once it
-    // is gone; the base is read at that moment too, never captured in this closure.
+    // Watches the run (scope `{job}:resume:{resume}`, routes_resumes.py) rather than
+    // polling cv_scores.Tailored directly, which would match a re-score's stale value on the first tick.
     const scope = doc.job_id ? `${doc.job_id}:resume:${id}` : `resume:${id}`
     try {
       const { data: started } = await api.post(`/resumes/${id}/score-check`, { depth })
-      const runId = started?.run_id || null   // DS-B-02: identifies the run below
+      const runId = started?.run_id || null   // identifies the run below
       pushToast({ kind: 'progress', msg: `Scoring (${depth}) — runs in the background.` })
       const t0 = Date.now()
       let seen = false
@@ -355,10 +317,8 @@ export default function ResumeEditor() {
           if (live) { seen = true; return }
           if (!seen && Date.now() - t0 < 8000) return   // not started yet ≠ finished
           clearInterval(iv); setScoring(false)
-          // DS-B-02: the run leaving /monitor/active is not "it worked". Read the
-          // run's status before the score — a failed re-score leaves the PREVIOUS
-          // score sitting on the job, which this poll would have re-announced as a
-          // fresh success.
+          // Leaving /monitor/active isn't "it worked" — check run status before reading the score.
+          // A failed re-score leaves the previous score on the job, which would otherwise read as a fresh success.
           const run = await fetchRunOutcome(runId, 'score_resume')
           if (runFailed(run)) { pushToast({ kind: 'error', msg: `Scoring failed — ${runFailureReason(run)}` }); return }
           if (!doc.job_id) {
@@ -405,11 +365,8 @@ export default function ResumeEditor() {
 
   const goCover = () => { setHeadMenu(false); navigate(`/v2/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
 
-  // the "one next step" stage for a tailored copy
-  // RES-20: the Score stage is only offered when there is something to score
-  // against — a job, or the description a freeform tailor saved. A copy with
-  // neither skips straight to the cover letter and ends there; "Mark applied"
-  // needs a job, so it is never the next step without one.
+  // the "one next step" stage for a tailored copy: Score is offered only when there's
+  // something to score against; a copy with neither a job nor a saved description skips straight to the cover letter.
   const stage = useMemo(() => {
     if (!isCopy) return null
     if (changes.length && !reviewed) return { label: `Review ${changes.length} change${changes.length === 1 ? '' : 's'}`, act: () => setReviewOpen(true) }
@@ -427,7 +384,7 @@ export default function ResumeEditor() {
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
       try { await api.patch(`/resumes/${id}`, patch); setSavedAt(new Date().toISOString()) }
-      catch (e) { console.error(e); setSavedAt(null); pushToast({ kind: 'error', msg: `Save failed — your last edit is not stored. ${e.response?.data?.detail || e.message || ''}`.trim() }) }   // RES-01
+      catch (e) { console.error(e); setSavedAt(null); pushToast({ kind: 'error', msg: `Save failed — your last edit is not stored. ${e.response?.data?.detail || e.message || ''}`.trim() }) }
       setSaving(false)
     }, 500)
   }, [id])
@@ -451,8 +408,7 @@ export default function ResumeEditor() {
         setPdfErr(false)
       } catch (e) {
         if (e.code === 'ERR_CANCELED' || e.name === 'CanceledError') return
-        // RES-08: a failed render used to leave the *previous* PDF on screen with
-        // no signal, so a stale preview and a current one looked identical.
+        // Clears the preview on failure instead of leaving a stale PDF that looks current.
         console.error('pdf', e)
         setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null })
         setPdfErr(true)
@@ -483,7 +439,7 @@ export default function ResumeEditor() {
     ;(d.experience || []).forEach((e) => { delete e.suggested_bullets })
     onData(d)
     setReviewOpen(false)
-    markReviewed(id); setReviewed(true)   // RES-06: the diff survives; the acknowledgement is what advances the stage
+    markReviewed(id); setReviewed(true)   // the diff survives; the acknowledgement is what advances the stage
     pushToast({ kind: 'success', msg: 'Review applied — declined changes restored to base.' })
   }, [changes, data, id, onData, pushToast])
 
@@ -501,11 +457,8 @@ export default function ResumeEditor() {
     return `${base}/api/resumes/${id}/pdf?template=${encodeURIComponent(template)}&format=${encodeURIComponent(format)}`
   }, [id, template, format])
 
-  // DESIGN-LOAD: reserve the chrome's own shape while the document fetch is in
-  // flight, instead of a bare "Loading…" that collapses the whole screen to one
-  // centred line and then jumps to the real top-bar + two-pane layout once the
-  // doc lands. NBSP holds the top bar's line height; the panes need no content
-  // to reserve theirs — they already flex to fill what's left.
+  // Reserves the chrome's shape while the document loads, instead of a bare "Loading…"
+  // that collapses the screen then jumps to the real layout once the doc lands.
   if (!doc || !data) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -529,13 +482,9 @@ export default function ResumeEditor() {
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
         <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
-        {/* ui: keep — Tag role (D4d): an uppercase badge with a background and r99, not a Label.
-            S5: the case and the tracking read the theme (--label-case is `uppercase`
-            and --label-tracking-scale 1 in the base blocks, so this is the .08em it
-            always drew); win98 turns both off and the badge reads "Base"/"Tailored". */}
+        {/* ui: keep — Tag-role uppercase badge (bg + r99, not a Label); case/tracking read --label-case/--label-tracking-scale so an alt skin can turn both off */}
         <span style={{ fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
-        {/* R2-S-06: every other v2 screen names itself with an h1; visually this
-            is the same span it always was (margin and font reset inline). */}
+        {/* every other v2 screen names itself with an h1; visually identical to the old span (margin/font reset inline) */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>
         <Helper style={{ marginLeft: 'auto' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</Helper>
       </HeaderRow>
@@ -547,19 +496,16 @@ export default function ResumeEditor() {
             <ScoreRing value={scores.tailored} size="sm" />
           )}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {/* DESIGN-LOAD: both lines keep their boxes (18px and the Helper's own)
-                while the four context requests are in flight, so the band is its
-                final height from the first frame and fills in once. */}
+            {/* Both lines keep their boxes (18px + Helper's own) while the four context requests
+                are in flight, so the band is at final height from the first frame. */}
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, lineHeight: '18px' }}>
               {!ctxReady ? NBSP : <>
               {jobData?.company
                 ? <>Tailored for <span style={{ color: 'var(--text)' }}>{jobData.company}{jobData.title ? ` — ${jobData.title}` : ''}</span></>
                 : (jobless && freeformJd ? 'Tailored from a pasted description' : 'Tailored copy')}
               {doc.parent_id && (() => {
-                // R2-H-10: a freeform copy is named "<base> (tailored)" — no "→" to
-                // split on — so the heuristic returned the copy's own name and the
-                // link read "based on <copy>". Use the parent's name; keep the
-                // split only until that fetch lands.
+                // A freeform copy has no "→" to split on, so the name heuristic returns the
+                // copy's own name; prefer the fetched parent name and use the split only until it lands.
                 const baseName = parentName || ((doc.name || '').includes('→') ? (doc.name || '').split('→')[0].trim() : '') || 'base'
                 const dfg = scores.delta == null ? undefined : (scores.delta >= 0 ? 'var(--accent)' : 'var(--warn)')
                 return (
@@ -575,11 +521,8 @@ export default function ResumeEditor() {
               </>}
             </div>
             <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {/* RES-20: "not scored yet" used to cover three different states — a
-                  copy waiting to be scored, one that can never be, and a job whose
-                  fetch failed. They read differently now.
-                  DESIGN-LOAD: the tracer counts are part of the same settle, so the
-                  line no longer grows a " · tracers: …" tail after the fact. */}
+              {/* Distinguishes "not scored yet" from "can't be scored" and "job failed to load".
+                  Tracer counts are part of the same settle, so the line doesn't grow a tail after the fact. */}
               {!ctxReady ? NBSP : <>
               {jobErr ? 'Couldn’t load the linked job.'
                 : jobless && !freeformJd ? 'No job or description linked, so this copy can’t be scored.'
@@ -619,15 +562,12 @@ export default function ResumeEditor() {
         </HeaderRow>
       ) : (
         <HeaderRow pad="9px 24px" bg="recessed" align="center" style={{ gap: 13, fontSize: 12.5, color: 'var(--text-2)' }}>
-          {/* DESIGN-LOAD: the copy count is part of the context settle — it used to
-              push the rest of the line sideways when it landed on its own. The whole
-              sentence is withheld until ctxReady (not just the copy-count clause), so
-              it paints in one state instead of a bare sentence followed ~100ms later
-              by the same sentence with the clause inserted. */}
+          {/* The copy count is part of the context settle; the whole sentence waits on ctxReady
+              (not just the count) so it paints once instead of inserting the clause later. */}
           <span>{!ctxReady ? NBSP : <>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}edits here affect new copies only</>}</span>
           <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
-          {/* RES-09: bases get the same ⋯ → Delete as copies (the confirm already warns that copies go too).
-              R3-B-06: worded "Delete résumé" here — this document is the base, and deleting it takes every copy with it. */}
+          {/* Bases get the same ⋯ → Delete as copies (the confirm dialog already warns copies go too).
+              Worded "Delete résumé" here since this document is the base and deleting it takes every copy with it. */}
           <div style={{ position: 'relative', flex: '0 0 auto', marginLeft: 8 }}>
             <IconButton size={36} on={headMenu} ariaExpanded={headMenu} ariaHaspopup="menu"
               onClick={() => setHeadMenu((v) => !v)} title="More">⋯</IconButton>
@@ -660,20 +600,14 @@ export default function ResumeEditor() {
 
         {/* right: PDF preview */}
         <Surface as="section" radius="none" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* R2-S-02: wraps rather than overflowing, like the cover-letter
-              editor's identical toolbar */}
+          {/* wraps rather than overflowing, like the cover-letter editor's identical toolbar */}
           <HeaderRow pad="8px 20px" align="center" style={{ flexWrap: 'wrap', rowGap: 6 }}>
             <Label>PDF preview</Label>
-            {/* template picker — the container swallows its own clicks so the
-                document closer below can't undo the toggle (RES-28) */}
+            {/* template picker — the container swallows its own clicks so the document closer below can't undo the toggle */}
             {/* ui: keep — the two 9px muted ▾ carets below are the PDF-preview toolbar's own paper scale (below Helper's tolerance) */}
-            {/* DESIGN-LOAD: both triggers wait for the template list; the row's
-                height is the Download link's, so nothing moves when they land */}
+            {/* both triggers wait for the template list; the row's height is the Download link's, so nothing moves when they land */}
             {tplReady && <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-              {/* ui: keep — `hover="v2-act"` (border + wash) where the cover-letter editor's
-                  twin asks for `v2-bd` (border only). Both are the same role and the two
-                  hovers still disagree — the primitive carries them rather than picking
-                  one; U-31 / D-13 decides. */}
+              {/* ui: keep — `hover="v2-act"` here vs `v2-bd` on the cover-letter editor's identical trigger; same role, hovers intentionally differ */}
               <ToolbarTrigger label="Template" value={tplLabel} hover="v2-act" line="inherit" title="Résumé template"
                 onClick={() => { setTplOpen((v) => !v); setFmtOpen(false) }} />
               {tplOpen && (
@@ -719,9 +653,8 @@ export default function ResumeEditor() {
 }
 
 // ── re-tailor (a tailored copy) ──────────────────────────────────────────────
-// The job is already decided — we are on that job's résumé. What is open is
-// which base to work from, and whether to run the tailoring LLM at all or just
-// take an exact copy for a fresh set of tracer links.
+// The job is already decided; what's open is which base to work from, and whether
+// to run the tailoring LLM or just take an exact copy for a fresh set of tracer links.
 function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   const [mode, setMode] = useState('tailor')
   const [bases, setBases] = useState([])
@@ -729,14 +662,12 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   const [baseId, setBaseId] = useState(doc.parent_id || 'persona')
 
   useEffect(() => {
-    // OPEN-05: converted — the user opened this modal to pick a source, and an
-    // empty list with a disabled button says nothing about why.
+    // an empty list with a disabled button says nothing about why, so surface load failures via toast
     api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setBases(data || [])).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your base résumés — there is nothing to re-tailor from.' }) })
     api.get('/persona').then(({ data }) => setPersona(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) })
   }, [pushToast])
 
-  // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be
-  // tailored from — RES-28: this was a `personaCopyable = false` constant.
+  // /resumes/copy takes a Resume row; the Persona isn't one, so it can only be tailored from, never copied.
   const options = [
     ...(persona ? [{ id: 'persona', name: 'Persona', note: 'your full profile' }] : []),
     ...bases.map((b) => ({ id: String(b.id), name: b.name, note: 'base résumé' })),
@@ -784,9 +715,8 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
   )
 }
 
-// R2-H-09: the tailor endpoint chains a score of the copy it just made, which is
-// a second LLM call the modals never mentioned. One line, read from the setting
-// that controls it — the control itself stays in Settings › AI.
+// The tailor endpoint chains a score of the copy it just made — a second LLM call the
+// modals should mention. Reads the setting that controls it; the control itself stays in Settings › AI.
 const chainNote = (chain) => (chain
   ? `Also scores the copy afterwards at ${chain} depth · 1 more LLM call · change under Settings › AI`
   : 'Scoring after tailoring is off')
@@ -799,14 +729,12 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   const [q, setQ] = useState('')
   const [pick, setPick] = useState(null)
   const [jd, setJd] = useState('')
-  // RES-28: this read `baseId === 'persona'`, which is never true (baseId is the
-  // base's own id) — the box simply starts unticked, so say that.
+  // baseId is always the base's own id, never 'persona', so this box simply starts unticked.
   const [personaBase, setPersonaBase] = useState(false)
 
   useEffect(() => {
     api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60 } })
-      // OPEN-05: converted — this is the modal's own job list; empty with no
-      // explanation reads as "you have no saved jobs", which may not be true.
+      // empty with no explanation would read as "you have no saved jobs", which may not be true
       .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your jobs — paste a description instead.' }) })
     api.get('/resumes', { params: { is_base: false } })
       .then(({ data }) => setExisting(new Set((data || []).filter((r) => String(r.parent_id) === String(baseId)).map((r) => String(r.job_id))))).catch(() => { /* silent: drives only the “✦ exists” hint on a row */ })
@@ -828,8 +756,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   const run = () => onRun({ baseId: personaBase ? 'persona' : baseId, jobId: pick, jobDescription: pick ? '' : jd.trim(), company: chosen?.company })
 
   return (
-    // bodyGap 12 (not the shell's 13) is this modal's own spacing, kept so
-    // naming the shared shell moved no pixel here.
+    // bodyGap 12 (not the shell's default 13) is this modal's own spacing.
     <ChoiceModal
       title={<>Tailor {doc.name} for a job</>}
       sub="Changes are applied automatically. You can decline any of them afterwards."
@@ -873,12 +800,8 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
 function ReviewModal({ changes, onClose, onApply }) {
   const [declined, setDeclined] = useState({})
   const n = Object.values(declined).filter(Boolean).length
-  // R3-B-02: two different things were both chipped "applied". A modified summary
-  // or bullet is genuinely in json_data (and in the PDF) the moment the tailor
-  // finishes; a *suggested* bullet lives in experience[].suggested_bullets, which
-  // no resume template renders, and only reaches json_data.bullets when this modal
-  // is confirmed (applyReview). Telling the user it "landed automatically" was
-  // wrong for exactly the rows that had not landed.
+  // A modified summary/bullet is already in json_data (and the PDF) once the tailor finishes;
+  // a *suggested* bullet lives in experience[].suggested_bullets and only reaches json_data when this modal is confirmed (applyReview).
   const nSuggested = changes.filter((c) => c.kind === 'suggested').length
   const nApplied = changes.length - nSuggested
   const liveApplied = changes.filter((c) => c.kind !== 'suggested' && !declined[c.key]).length
@@ -900,7 +823,7 @@ function ReviewModal({ changes, onClose, onApply }) {
           {changes.length === 0 && <div style={{ padding: 20, fontSize: 12.5, color: 'var(--muted)' }}>No tailoring changes to review.</div>}
           {changes.map((c) => {
             const off = !!declined[c.key]
-            const pending = c.kind === 'suggested'   // R3-B-02: not in json_data yet
+            const pending = c.kind === 'suggested'   // not in json_data yet
             const live = !off
             const added = c.kind === 'modified' ? (off ? c.removed : c.added) : c.added
             const removed = c.kind === 'modified' ? (off ? c.added : c.removed) : ''
@@ -908,8 +831,7 @@ function ReviewModal({ changes, onClose, onApply }) {
               <div key={c.key} style={{ border: `1px solid ${!live ? 'var(--line)' : pending ? 'var(--warn-line)' : 'var(--change-soft)'}`, borderRadius: 'var(--radius-card)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7, background: !live ? 'var(--bg)' : pending ? 'var(--warn-soft)' : 'var(--change-bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Label>{c.where}</Label>
-                  {/* ui: keep — a state badge whose dashed --warn-line edge marks a
-                      suggestion; not a dashed add-line */}
+                  {/* ui: keep — state badge; dashed --warn-line edge marks a suggestion, not a dashed add-line */}
                   <span title={pending ? 'Suggested — not in the document or the PDF yet; added when you finish reviewing' : off ? 'Declined — the base text is restored' : 'Already in the document and in the PDF'}
                     style={{ fontSize: 10, lineHeight: '16px', letterSpacing: '.08em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--accent-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, color: !live ? 'var(--muted)' : pending ? 'var(--warn)' : 'var(--accent)', cursor: 'help' }}>{!live ? (pending ? 'dropped' : 'declined') : pending ? 'suggested' : 'applied'}</span>
                   {live && pending && <Helper size="xs">added when you finish reviewing</Helper>}
@@ -919,8 +841,6 @@ function ReviewModal({ changes, onClose, onApply }) {
                 <span style={{ fontSize: 12.5, lineHeight: '20px', color: 'var(--text-2)' }}>
                   {c.before}
                   {removed && <span style={{ background: 'var(--bad-soft)', textDecoration: 'line-through', opacity: 0.75, borderRadius: 'var(--radius-mark)', padding: '0 3px' }}>{removed}</span>}
-                  {/* RES-28: the old `{added || '(base text restored)'}` fallback sat
-                      inside `{added && …}` and could never render. */}
                   {/* ui: keep — inline diff highlight on a run of text (r3), not a band */}
                   {added && <span style={{ background: !live ? 'var(--surface-2)' : pending ? 'var(--surface)' : 'var(--change-soft)', border: `1px ${live && pending ? 'dashed var(--warn-line)' : 'solid transparent'}`, borderRadius: 'var(--radius-mark)', padding: '0 3px' }}>{added}</span>}
                   {c.after}
@@ -930,8 +850,7 @@ function ReviewModal({ changes, onClose, onApply }) {
           })}
         </div>
         <FooterRow bg="recessed">
-          {/* R3-B-02: the count line separates what is already in the document from
-              what is only proposed, so "Done reviewing" says what it is about to do. */}
+          {/* the count line separates what is already in the document from what's only proposed */}
           <Helper>{nSuggested
             ? `${liveApplied} applied · ${liveSuggested} suggested — added on Done reviewing${nApplied - liveApplied ? ` · ${nApplied - liveApplied} declined` : ''}`
             : n ? `${n} declined and restored to the base text · the other changes are kept` : `All ${changes.length} change${changes.length === 1 ? '' : 's'} applied · decline one to restore its base text`}</Helper>

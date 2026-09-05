@@ -19,9 +19,8 @@ const timeAgo = (s) => {
 }
 const scoreColor = (s) => (s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)')
 
-// RES-19: the archived band and a broad search both render every matching row —
-// 296 rows in 1.56 s on this account. Page them client-side, 100 at a time, with
-// the shared `ShowMore` pager from ./ui (the same one the Stats logs use).
+// Archived band and broad search render every matching row — page client-side,
+// 100 at a time, with the shared `ShowMore` pager from ./ui.
 const PAGE = 100
 
 // company / role label for a copy — from the shelf payload, else parse "Base → Company — Role"
@@ -35,10 +34,8 @@ const copyLabel = (c) => {
   return [company, role].filter(Boolean).join(' · ') || c.name
 }
 
-// RES2-03: a chip can only show the company and a number, so the design puts the
-// rest in its tooltip (Resumes Shelf.dc.html:775-778): base, job, fit and its
-// delta against the base's average, and whether tailoring changes are unreviewed.
-// Parts the shelf payload doesn't carry are simply left out.
+// A chip shows only company + number; the tooltip carries base, job, fit and its
+// delta vs the base average, and whether tailoring changes are unreviewed.
 const chipTitle = (c, baseName, avgFit) => {
   const d = c.score != null && avgFit != null ? c.score - avgFit : null
   return [
@@ -61,18 +58,17 @@ export default function V2Resumes() {
   const [q, setQ] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
-  const [loadErr, setLoadErr] = useState(false)   // RES-07: a failed load is not an empty account
+  const [loadErr, setLoadErr] = useState(false)   // a failed load is not an empty account
   const [inflight, setInflight] = useState([])   // [{baseId, jobId}] tailors in progress
-  const [resLimit, setResLimit] = useState(PAGE)      // RES-19
-  const [archLimit, setArchLimit] = useState(PAGE)    // RES-19
-  // RES-13: "+ N more" used to run a first-word search, which pulled in other
-  // bases' copies and the archived rows the shelf had deliberately folded away.
-  // It expands the card in place instead. Keyed by base id ('persona' for Persona).
+  const [resLimit, setResLimit] = useState(PAGE)
+  const [archLimit, setArchLimit] = useState(PAGE)
+  // "+N more" expands the card in place (not a search) — keyed by base id
+  // ('persona' for Persona).
   const [expanded, setExpanded] = useState(() => new Set())
   const toggleExpand = (key) => setExpanded((p) => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n })
   const inflightKeys = useRef('')
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
-  useFlashToast(pushToast)   // RES-21: the editor's "no longer exists" lands here
+  useFlashToast(pushToast)   // surfaces the editor's "no longer exists" toast
 
   const load = useCallback(async () => {
     try {
@@ -84,9 +80,8 @@ export default function V2Resumes() {
       setLoadErr(false)
     } catch (e) { console.error('shelf load failed', e); setLoadErr(true) }
   }, [])
-  // DESIGN-LOAD: one loader, so the whole screen just waits for it — the shelf and
-  // the subtitle appear together instead of "0 bases · 0 copies" jumping to the
-  // real numbers a moment later.
+  // One loader for the whole screen: shelf and subtitle appear together instead of
+  // "0 bases · 0 copies" jumping to the real numbers a moment later.
   const { ready } = useSettled([() => load()], reload)
   // the subtitle's three numbers are the same on the frame after a refresh as
   // they were before it: paint them from the cache, reconcile on settle
@@ -159,12 +154,10 @@ export default function V2Resumes() {
       </HeaderRow>
 
       <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '6px 30px 26px 24px', minHeight: 0, display: 'flex', flexDirection: 'column', gap: searching || showArchived ? 4 : 12 }}>
-        {/* DESIGN-LOAD: the shelf keeps its (flex:1) container while the request is
-            in flight and renders nothing inside it — no "Loading…" line to replace
-            a frame later, no empty-state copy that would be wrong. */}
+        {/* Shelf keeps its flex:1 container while loading and renders nothing inside —
+            avoids a "Loading…" flash or a wrong empty-state before data arrives. */}
         {!ready ? null
-          /* RES-07: a 500/401 used to render as "No base résumés yet", inviting the
-             user to create a résumé they already have. */
+          /* Error state is shown separately, or a 500/401 renders as "No base résumés yet". */
           : loadErr ? (
             <Band interactive={false} style={{ padding: '20px 14px', borderColor: 'var(--bad)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: 'var(--muted)' }}>
               <span style={{ flex: 1, minWidth: 0 }}>Couldn’t load your résumés. Retry, or check that the backend is running.</span>
@@ -218,11 +211,7 @@ export default function V2Resumes() {
                       <Heading strong size={19}>Persona</Heading>
                       <Helper>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</Helper>
                       {persona.avg_fit != null && (
-                        /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
-                           Helper has no sans reset for a child of a serif parent.
-                           lineHeight 1 on the unit: left on the row's inherited 28px it
-                           baselines at a font-dependent offset inside the numeral's own
-                           28px box, which pushed the numeral to 29px (31px under alt) */
+                        /* ui: keep — serif numeral + nested sans-10 unit; unit needs lineHeight 1 or it inherits the row's 28px line-height and pushes the numeral off (29px, 31px alt). */
                         <span title="Average fit across copies tailored from Persona (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(persona.avg_fit) }}>
                           {persona.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, lineHeight: 1, color: 'var(--muted)' }}> avg fit</span>
                         </span>
@@ -264,11 +253,7 @@ export default function V2Resumes() {
                       <Heading strong size={19} title={b.name} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</Heading>
                       <Helper>{[b.copy_count > 0 ? `${b.copy_count} recent cop${b.copy_count === 1 ? 'y' : 'ies'}` : (b.archived_count > 0 ? 'no recent copies' : 'no copies'), `edited ${timeAgo(b.updated_at)}`].join(' · ')}</Helper>
                       {b.avg_fit != null && (
-                        /* ui: keep — serif 17 score numeral in scoreColor(), plus its nested sans-10 unit:
-                           Helper has no sans reset for a child of a serif parent.
-                           lineHeight 1 on the unit: left on the row's inherited 28px it
-                           baselines at a font-dependent offset inside the numeral's own
-                           28px box, which pushed the numeral to 29px (31px under alt) */
+                        /* ui: keep — serif numeral + nested sans-10 unit; unit needs lineHeight 1 or it inherits the row's 28px line-height and pushes the numeral off (29px, 31px alt). */
                         <span title="Average fit across this base's scored copies (archived included)" style={{ marginLeft: 'auto', fontFamily: 'var(--serif)', fontSize: 17, color: scoreColor(b.avg_fit) }}>
                           {b.avg_fit}<span style={{ fontFamily: 'var(--sans)', fontSize: 10, lineHeight: 1, color: 'var(--muted)' }}> avg fit</span>
                         </span>
@@ -320,8 +305,8 @@ export default function V2Resumes() {
 
 function AddModal({ onClose, onCreated }) {
   const [name, setName] = useState('')
-  // RES-18: one shared flag put the import's busy label on the *other* button.
-  // '' | 'create' | 'import' — the label follows the action that is actually running.
+  // One shared flag ('' | 'create' | 'import') — the busy label follows whichever
+  // action is actually running.
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
   const fileRef = useRef(null)
@@ -363,12 +348,10 @@ function AddModal({ onClose, onCreated }) {
           style={{ marginBottom: 14 }} />
         {err && <div style={{ fontSize: 12, color: 'var(--bad)', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 9 }}>
-          {/* RES-17: a disabled primary pill is --line on --muted (the design's
-              disabled Tailor button); --edge as a fill reads as a second live button. */}
+          {/* Disabled primary button is --line on --muted — --edge as a fill would read as a second live button. */}
           <Button onClick={createScratch} disabled={!canCreate} style={{ flex: 1 }}>{busy === 'create' ? 'Creating…' : 'Create from scratch'}</Button>
           <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={!!busy} style={{ flex: 1 }}>{busy === 'import' ? 'Parsing…' : 'Import PDF ↑'}</Button>
-          {/* RES-28: clear the input after every pick, or choosing the same PDF
-              twice in one modal session fires no change event at all. */}
+          {/* Clear the file input after every pick — re-picking the same file otherwise fires no change event. */}
           {/* ui: keep — hidden <input type="file">, not a rendered field */}
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; importPdf(f) }} />

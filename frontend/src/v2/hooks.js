@@ -4,20 +4,10 @@ import api from '../api'
 // Small cross-screen hooks. Kept out of Toast.jsx so a screen can take the
 // Escape handling without also pulling in the toast host.
 
-// RES-15: Escape closes every v2 modal, from one place rather than a keydown
-// effect copied into each modal.
-//
-//   useEscape(onClose)              — a component that only renders while open
-//   useEscape(onClose, isOpen)      — a screen that holds the modal's flag
-//
-// The handler ignores an event another handler already claimed
-// (`e.defaultPrevented`) and claims the ones it acts on, so a dropdown or menu
-// *inside* a modal can swallow Escape and close only itself. Child effects run
-// before parent effects, so an inner control's listener is registered — and
-// therefore fires — first; the callback is held in a ref so an inline arrow
-// doesn't re-register (and re-order) this listener on every render.
+// Escape closes v2 modals from one place. Ignores events another handler
+// already claimed, so an inner dropdown/menu can swallow Escape without closing everything above it.
 export function useEscape(onClose, active = true) {
-  const cb = useRef(onClose)
+  const cb = useRef(onClose) // ref so an inline arrow doesn't re-register the listener every render
   cb.current = onClose
   useEffect(() => {
     if (!active) return undefined
@@ -31,32 +21,8 @@ export function useEscape(onClose, active = true) {
   }, [active])
 }
 
-// RES-21: a toast pushed immediately before navigate() dies with the screen that
-// pushed it — the ToastStack is per-screen. Hand the message to the destination
-// instead: the leaving screen stores it, the arriving screen pushes it once.
-// RES-32: a flex-centred modal whose panel has an odd height lands on a half
-// pixel in an even viewport (or vice versa), so every 1px border inside it is
-// drawn across two device rows and reads blurred. Measure the panel after
-// layout and pull it back onto the pixel grid.
-//
-//   const panel = useRef(null); useSnapTop(panel)   → ref={panel} on the panel
-//
-// It runs after every render because the panel's height changes with its
-// content (a picker opening, an error line appearing), and re-runs on resize.
-//
-// RES-32 re-open: the correction used to be a `marginTop`, which does NOT move
-// the panel 1:1. Every panel this is wired to sits in a
-// `display:flex; align-items:center` wrapper, where the leftover space is split
-// above and below the child — so a margin-top of d shifts a centred child by
-// only d/2. Measured: a natural top of 151.5 asked for +0.5px and rendered at
-// 151.75, still off the grid, for odd and even panel heights alike. `translateY`
-// is a paint-time offset: exactly 1:1, no effect on the parent's layout (so the
-// centring can't react to it and re-open the gap), and it is only applied when
-// there is a fraction to correct — so a panel that already lands on the grid
-// keeps a clean `transform`, and none of these panels contains a
-// `position: fixed` descendant that a transform's containing block would
-// re-anchor (every fixed element in the v2 modals is the *wrapper*, not a child
-// of the panel).
+// Nudges a flex-centred modal panel whose fractional top blurs 1px borders back
+// onto the pixel grid, via a paint-time translateY; re-runs after every render and on resize.
 export function useSnapTop(ref) {
   useLayoutEffect(() => {
     let busy = false
@@ -65,9 +31,7 @@ export function useSnapTop(ref) {
       if (!el || busy) return
       busy = true                       // a resize during the reflow below must not re-enter
       try {
-        // Measure the *natural* top: clearing the transform first keeps the last
-        // correction out of the reading, otherwise each pass would snap the
-        // already-snapped position and drift.
+        // clear the transform first so the reading isn't the already-corrected position
         el.style.transform = ''
         const delta = (() => {
           const top = el.getBoundingClientRect().top
@@ -83,33 +47,13 @@ export function useSnapTop(ref) {
 }
 
 // ── initial load: settle once, then paint ───────────────────────────────────
-// DESIGN-LOAD: every screen used to render its chrome from empty state and then
-// jump — the subtitle counted 0 bases, the filter pills held no options, the
-// table was an empty box — because each fetch landed in its own render. The rail
-// already solved this (V2App.jsx:46-150): one `Promise.allSettled`, one setState,
-// plus a warm-start snapshot so the numbers are there on the first frame.
-//
-//   const { ready } = useSettled([() => load(), () => loadHealth()])
-//
-// `loaders` is an array of thunks (or promises); it is read from a ref, so an
-// inline array does NOT re-run it — only a change of `key` does (a screen whose
-// document id is in the URL passes that id). The thunks keep doing whatever they
-// already did, including their own setState and their own catch; `ready` simply
-// flips once, after the last of them settles, so the screen can reveal its
-// data-dependent chrome in a single render. `data` carries the fulfilled values
-// (undefined where a loader rejected) for screens that would rather read them
-// here than through their own state.
-//
-// Deliberately no spinner: the wait is a few hundred ms and the layout keeps its
-// boxes, so a spinner would be one more thing appearing and disappearing. The
-// `Spinner` primitive stays for explicit long actions (scoring, tailoring).
+// Settles every loader once (avoids a per-fetch render jump) before revealing data-dependent chrome.
+// `loaders` is read from a ref, so only a `key` change re-runs them; no spinner since the wait is short.
 export function useSettled(loaders, key = '') {
   const ref = useRef(loaders)
   ref.current = loaders
-  // the settled result carries the key it belongs to, and readiness is derived
-  // during render — a key change (another document) is stale *immediately*,
-  // rather than a frame later when an effect could clear it. That frame is the
-  // whole bug: it is where the previous document's numbers get painted.
+  // readiness is derived during render (not in an effect) so a key change goes
+  // stale immediately — one frame later, the previous document's numbers would still paint.
   const [done, setDone] = useState(null)
   useEffect(() => {
     let alive = true
@@ -123,18 +67,8 @@ export function useSettled(loaders, key = '') {
 }
 
 // ── warm start ──────────────────────────────────────────────────────────────
-// The parts of a screen that are the same on the frame after a refresh as they
-// were before it — a subtitle's counts, a filter's option list — are cached and
-// read back synchronously in the initial state, so they paint immediately and are
-// silently reconciled when the real data settles.
-//
-//   const { warm, style } = useWarm('resumes', ready ? { bases, copies } : null, ready)
-//
-// `warm` is the cached snapshot until `ready`, the live value after. A value that
-// comes back equal to its cache causes no render at all; one that differs fades
-// (.15s, from .6) exactly like a rail badge. A first-ever visit has nothing
-// cached: `warm` is null and the screen renders the empty line — with its box
-// reserved (NBSP) so nothing shifts when the text lands.
+// Caches parts of a screen that don't change between refreshes so they paint immediately,
+// then reconciles silently when live data settles, cross-fading (.15s) like a rail badge.
 const WARM_NS = 'jobnavigator_v2_warm:'
 export const NBSP = '\u00A0'
 const readWarm = (screen) => {
@@ -180,18 +114,8 @@ export function useFlashToast(push) {
   }, [push])
 }
 
-// DS-B-02: a background run disappearing from GET /monitor/active only means it
-// ENDED — it says nothing about whether it worked, so a screen that infers
-// "done" from the run vanishing reports a crashed run as a success. Every
-// launcher (POST /resumes/tailor, /resumes/{id}/score-check, /cover-letters/
-// generate) hands back a `run_id`; GET /monitor/run/{id} (main.py:1040) carries
-// the real `status` + `error`, with GET /monitor/history as the fallback for a
-// deployment where the by-id route is missing.
-//
-// Returns the run row, or null when it cannot be identified — callers must treat
-// null as "unknown", never as success. `status === 'running'` is also possible
-// for a moment: the in-memory registry drops a run before its row is finalised,
-// so a caller should not read that as a failure.
+// A run vanishing from GET /monitor/active only means it ended, not that it succeeded.
+// Check GET /monitor/run/{id} for real status (falls back to /monitor/history); returns null when unknown — never treat null as success.
 export async function fetchRunOutcome(runId, jobType) {
   if (!runId) return null
   try {

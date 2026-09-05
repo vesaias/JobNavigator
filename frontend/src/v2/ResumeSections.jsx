@@ -1,15 +1,8 @@
-// Shared résumé-content editors.
+// Shared résumé-content editors. A Resume's `json_data` and a Persona's `resume_content` are the
+// same shape, so /v2/resumes/:id and /v2/persona edit it with the *same* components.
 //
-// A Resume's `json_data` and a Persona's `resume_content` are the same shape, so
-// /v2/resumes/:id and /v2/persona edit it with the *same* components rather than
-// two lookalikes that drift. Everything here was lifted verbatim out of
-// ResumeEditor.jsx; the tailoring-diff props (baseSummary/baseExp/baseSkills) are
-// optional, so Persona simply omits them and no ✦ marks render.
-//
-// Real data is looser than the EMPTY skeleton: live résumés carry keys these
-// editors don't render, and omit whole sections. Every mutation
-// goes through mutate(), which deep-clones and writes one path, so unknown keys
-// survive — never rebuild a node from a known field list.
+// Real data is looser than the EMPTY skeleton (unknown keys, missing sections). Every mutation
+// goes through mutate(), which deep-clones and writes one path, so unknown keys survive.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from './ui'
 
@@ -19,10 +12,8 @@ import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, Re
 export { DashedAdd } from './ui'
 
 export const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
-// PERS-15 / STAT-22: v2 draws its controls as span/div, so none of them were
-// focusable or operable from the keyboard. Spread `kb(fn)` onto such an element:
-// it becomes tabbable, announces a role, and fires the same handler the click
-// does on Enter/Space. The focus ring is theme.css's `[tabindex="0"]:focus-visible`.
+// Spread `kb(fn)` onto a span/div control to make it tabbable, announce a role, and fire
+// the handler on Enter/Space. The focus ring is theme.css's `[tabindex="0"]:focus-visible`.
 export const kb = (fn, role = 'button') => ({
   tabIndex: 0,
   role,
@@ -70,17 +61,13 @@ export function Field({ label, value, onChange, placeholder, multiline, rows, fl
     </label>
   )
 }
-// bullet text: borderless auto-growing textarea so a bullet reads as flowing text
-// (the row supplies the border/highlight) — matches the design's static-text bullets
-// `lh` overrides the 1.5 line-height where the caller needs whole-pixel rows
-// (12.5px * 1.5 = 18.75, which puts a bordered row on a half pixel and lets
-// Chrome round its border away). The default is now 19px so bullet rows stay on whole pixels.
+// Bullet text: borderless auto-growing textarea so a bullet reads as flowing text (the row
+// supplies the border/highlight). Default line-height is 19px so bullet rows stay on whole pixels.
 export function BulletText({ value, onChange, placeholder, bold, lh }) {
   const ref = useRef(null)
   const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }
-  // Measure after layout, and again whenever the box is resized. A plain
-  // useEffect could run while the column was still at its pre-layout width,
-  // which sized long text to a single clipped line that never re-measured.
+  // Measure after layout (useLayoutEffect, not useEffect), and again on resize — otherwise
+  // long text can be measured at a pre-layout width and get stuck clipped to one line.
   useLayoutEffect(fit, [value])
   useEffect(() => {
     const el = ref.current
@@ -97,30 +84,22 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
     if (t.slice(s - 2, s) === '**' && t.slice(en, en + 2) === '**') { onChange(t.slice(0, s - 2) + sel + t.slice(en + 2)); setTimeout(() => { ta.selectionStart = s - 2; ta.selectionEnd = en - 2 }, 0) }
     else { onChange(t.slice(0, s) + '**' + sel + '**' + t.slice(en)); setTimeout(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 }, 0) }
   }
-  // ui: keep — a bullet is flowing text, not a field: no border, no background, no
-  // padding, resize:none + overflow:hidden for the autosize, and the row around it
-  // supplies the box. Textarea would have to be overridden away entirely.
+  // ui: keep — a bullet is flowing text, not a field; the row around it supplies the box.
   return <textarea ref={ref} value={value || ''} onChange={(e) => onChange(e.target.value)} onInput={fit} onKeyDown={boldKey} rows={1} placeholder={placeholder}
     style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: lh || '19px', color: bold ? 'var(--text)' : 'var(--text-2)', fontWeight: bold ? 600 : 400, padding: 0, overflow: 'hidden' }} />
 }
-// The worded remove and the ✕ every row carries now live in ui.jsx (D5) next to
-// the other row affordances — re-exported here so Persona/ResumeEditor keep
-// importing them from this file. The keyboard treatment (PERS-15) comes with them.
+// The worded remove and the ✕ live in ui.jsx; re-exported so Persona/ResumeEditor
+// keep importing them from this file.
 export { RemoveLink, RemoveX } from './ui'
-// PERS-13: removals are undoable rather than confirmed — no window.confirm anywhere.
-// `mutate` closes over the data of the render that produced the toast, so
-// re-inserting through it five seconds later would work off stale state; keep the
-// live one in a ref and restore through that. `onRemoved(label, restore)` is the
-// toast host (Persona / ResumeEditor); without it a removal is simply immediate.
+// Removals are undoable, never confirmed. `mutate` closes over stale render data, so keep the
+// live one in a ref; `onRemoved(label, restore)` is the toast host — without it, removal is immediate.
 export function useUndoRemove(mutate, onRemoved) {
   const live = useRef(mutate)
   live.current = mutate
   return (label, remove, restore) => { mutate(remove); onRemoved?.(label, () => live.current(restore)) }
 }
-// RES2-10: the vertical rule that separates the two halves of an editor's context
-// band. The résumé band drew it as the glyph "  │  " in --line and the letter band
-// as a "·"; the design (Resumes Shelf.dc.html:158) is a 1×11 block in --edge.
-// One component so the two bands cannot drift again.
+// The vertical rule separating the two halves of an editor's context band: a 1×11
+// block in --edge. One shared component so the two bands cannot drift apart.
 export const BandRule = () => (
   <span aria-hidden="true" style={{ display: 'inline-block', width: 1, height: 11, margin: '0 9px', verticalAlign: 'middle', alignSelf: 'center', background: 'var(--edge)' }} />
 )
@@ -188,8 +167,7 @@ export function HeaderEditor({ data, setField, mutate, onRemoved }) {
         <Label>Full name</Label>
         <Input value={data.header?.name || ''} onChange={(v) => setField('header.name', v)} ariaLabel="Full name" />
       </div>
-      {/* R3-B-01: header.title round-trips through the API and prints in the
-          templates, but had no editor — it was invisible and uneditable in v2.
+      {/* header.title round-trips through the API and prints in the templates.
           Optional: an empty value renders nothing at all in the PDF. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Label>Title</Label>
@@ -243,22 +221,18 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
       {exp.map((e, i) => {
         const ch = entryChanged(e, i), isOpen = open.has(i), nb = (e.bullets || []).length
         return (
-          // containers are never tinted — only the prose rows inside them are.
-          // The header's ● still says the entry holds unreviewed changes, and the
-          // bullet rows below carry the --change-soft/--change-bg treatment.
+          // Containers are never tinted — only the prose rows inside them are; the header's
+          // ● flags unreviewed changes, and bullet rows carry the --change-soft/--change-bg treatment.
           <Card key={i} style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* explicit integer line-height: at the inherited 1.5 a 12.5px line is
-                18.75px, which made this row 36.75px tall and put every row below it
-                (and the Skills/Education/Projects cards) on a half pixel, where
-                Chrome rounds their 1px borders away — same fix as SectionShell */}
+            {/* explicit integer line-height: at the inherited 1.5, 12.5px lands this row (and
+                every row below it) on a half pixel, where Chrome rounds 1px borders away */}
             <SectionHead card open={isOpen} onToggle={() => toggle(i)} style={{ alignItems: 'baseline', padding: '9px 11px' }}>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title || 'Untitled role'}</span>
               <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.company}</span>
               <Helper style={{ flex: '0 0 auto', marginLeft: 'auto' }}>{e.date}</Helper>
               <Helper style={{ flex: '0 0 auto' }}>{nb} bullet{nb === 1 ? '' : 's'}</Helper>
-              {/* lineHeight 1: this head is baseline-aligned, so a 10px glyph left on
-                  the row's 18px line-height rides a font-dependent offset from the
-                  shared baseline — it grew the head 36→37px under the alt theme */}
+              {/* lineHeight 1: this head is baseline-aligned, so a 10px glyph on the row's
+                  18px line-height would ride a font-dependent baseline offset */}
               {ch && <span title="Contains unreviewed tailoring changes" style={{ flex: '0 0 auto', fontSize: 10, lineHeight: 1, color: 'var(--warn)' }}>●</span>}
             </SectionHead>
             {isOpen && (
@@ -273,8 +247,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 {(e.bullets || []).map((b, bi) => {
                   const m = bulletMark(i, bi, b)
                   return (
-                    /* ui: keep — a field-shaped prose row (r6 = --radius-field), not a
-                       card: it wraps one BulletText and carries the ✦ tailoring tint */
+                    /* ui: keep — a field-shaped prose row (r6), not a card */
                     <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
                       <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
@@ -294,7 +267,6 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
                   </div>
                 ))}
-                {/* PERS-19: accent like every other add-control on the screen */}
                 <DashedAdd onClick={() => addBullet(i)}>+ Add bullet</DashedAdd>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}><RemoveLink onClick={() => undoRemove('Removed role',
                   (d) => d.experience.splice(i, 1),
@@ -330,13 +302,11 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
 export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onRemoved }) {
   const entries = Object.entries(data.skills || {})
   const undoRemove = useUndoRemove(mutate, onRemoved)
-  // RES-04 / PERS-03: a category name is user text, so routing the value write
-  // through the dotted-path setField silently dropped every write to a category
-  // containing a "." (".NET", "Node.js", "Web3.0"). Write the key directly.
+  // A category name is user text, so the dotted-path setField would silently drop writes
+  // to a category containing a "." (".NET", "Node.js"). Write the key directly instead.
   const setVal = (k, v) => { if (DANGEROUS.has(k)) return; mutate((d) => { d.skills = d.skills || {}; d.skills[k] = v }) }
-  // RES-05 / PERS-04: renaming onto an existing category used to overwrite that
-  // category and destroy its values with no warning and no undo. Refuse the
-  // collision (and a blank name); the caller reverts the uncontrolled input.
+  // Refuse a rename onto an existing category (would silently overwrite its values) and a
+  // blank name; the caller reverts the uncontrolled input.
   const rename = (oldK, newK) => {
     if (oldK === newK) return true
     if (!newK.trim()) { onError?.('A skills category needs a name.'); return false }
@@ -356,21 +326,17 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
         const added = baseSkills != null && !(k in baseSkills)
         const marked = changed || added
         return (
-          // RES-31: the row is keyed by position, not by the category name — a
-          // debounced rename changes the name mid-edit, and a name key would
-          // remount the input and steal the caret on every commit.
+          // Keyed by position, not by category name — a name key would remount the
+          // input and steal the caret on every debounced rename commit.
           <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {arrows(k)}
             <CategoryName name={k} rename={liveRename} />
-            {/* the ✦ and the --change-soft border carry the tailoring signal here;
-                the --change-bg fill is reserved for tailored prose (experience
-                bullets and the summary), so a skills row keeps its field colour. */}
-            {/* ui: keep — a *field* box (h29 · r6 · --edge · --surface-2) that holds a
-                bare input plus the ✦/added/↩ affordances, not a card */}
+            {/* --change-bg fill is reserved for tailored prose (experience bullets, summary);
+                a skills row keeps its field colour and signals via ✦ + --change-soft border. */}
+            {/* ui: keep — a *field* box (h29 · r6), not a card */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 'var(--radius-field)' }}>
               {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
-              {/* ui: keep — bare input inside the row's own bordered box; that box, not
-                  the field, carries the tailoring border and the added/decline affordances */}
+              {/* ui: keep — bare input inside the row's own bordered box, not a field */}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
               {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 'var(--radius-inline)', background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
@@ -387,10 +353,8 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
     </div>
   )
 }
-// RES-31: the Skills category was the one field on the screen that genuinely saved
-// on blur — everything else is a 500 ms trailing debounce. Same debounce here, with
-// the rename-collision refusal intact: a refused name snaps back to the stored one
-// (the caller's onError explains why). Blur flushes any pending rename immediately.
+// Same 500ms trailing debounce as the rest of the screen, with the rename-collision refusal
+// intact: a refused name snaps back to the stored one. Blur flushes any pending rename immediately.
 function CategoryName({ name, rename }) {
   const [draft, setDraft] = useState(name)
   const timer = useRef(null)
