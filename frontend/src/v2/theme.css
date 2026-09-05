@@ -1,5 +1,6 @@
 /* v2 redesign theme tokens, scoped to .jn-v2. Every root carries `data-appearance`
-   (light|dark) and `data-theme` (default|tone1|tone2|tone3|editorial|alt) from theme.js; <html> holds only a boot copy so the page ground never flashes. */
+   (light|dark) and `data-theme` (default|board|cobalt|saas|win98 in the picker;
+   tone1-3|editorial|alt still valid, hidden) from theme.js; <html> holds only a boot copy so the page ground never flashes. */
 .jn-v2 {
   --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;  /* ScoreRing optical centring for the default fonts */
   --bg:#fcfbf7; --surface:#ffffff; --surface-2:#f6f4ee; --line:#e2ddd0; --line-soft:#eeeae0; --edge:#8a826e; --track:#8d8571;
@@ -187,15 +188,17 @@
   /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
      var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
   --label-tracking-scale:1;
-  /* No-ops in the default theme (button doesn't darken on hover, nothing shifts
-     on :active); a skin overrides these four with its own hover/press mix. */
-  --btn-primary-hover-bg:var(--btn-primary-bg);
-  --btn-primary-pressed-bg:var(--btn-primary-bg);
-  --btn-danger-hover-bg:var(--btn-danger-bg);
-  --pressed-shift:none; --pressed-wash:transparent;
+  /* Live in every theme (D-07, D-11): a filled button darkens 10% on hover and
+     18% on press, and every bordered control takes a 1px shift plus a --surface-2
+     wash while held. A skin may re-point them, but none of the four is inert. */
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
+  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
+  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
+  --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 82%, black);
+  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* ink stays inherited so the class rule can't repaint a control that sets no colour of its own */
-  --input-border-hover:var(--input-border);   /* no-op in default theme; a skin can set this to a stronger border */
+  --input-border-hover:var(--text-2);   /* D-06: fields, Select and boxed SearchInput darken their border on hover (--line-strong is lighter than the rest border) */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
@@ -401,15 +404,17 @@
   /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
      var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
   --label-tracking-scale:1;
-  /* No-ops in the default theme (button doesn't darken on hover, nothing shifts
-     on :active); a skin overrides these four with its own hover/press mix. */
-  --btn-primary-hover-bg:var(--btn-primary-bg);
-  --btn-primary-pressed-bg:var(--btn-primary-bg);
-  --btn-danger-hover-bg:var(--btn-danger-bg);
-  --pressed-shift:none; --pressed-wash:transparent;
+  /* Live in every theme (D-07, D-11): a filled button darkens 10% on hover and
+     18% on press, and every bordered control takes a 1px shift plus a --surface-2
+     wash while held. A skin may re-point them, but none of the four is inert. */
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 90%, black);
+  --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 82%, black);
+  --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 90%, black);
+  --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 82%, black);
+  --pressed-shift:translateY(1px); --pressed-wash:var(--surface-2);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:inherit; --disabled-engrave:none;   /* ink stays inherited so the class rule can't repaint a control that sets no colour of its own */
-  --input-border-hover:var(--input-border);   /* no-op in default theme; a skin can set this to a stronger border */
+  --input-border-hover:var(--text-2);   /* D-06: fields, Select and boxed SearchInput darken their border on hover (--line-strong is lighter than the rest border) */
   --input-border-error:var(--bad); --input-ring-error:0 0 0 2px var(--bad-soft);
   --pill-on-hover-bg:color-mix(in oklab, var(--accent-soft) 94%, black);
   --chip-on-bg:var(--accent-soft); --chip-on-ink:var(--accent); --chip-on-border:var(--accent);
@@ -646,6 +651,52 @@
   --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 
+/* board — the "Job Feed 2.0" palette as drawn: paper ground #faf7ef, #f3efe0
+   surface, the #ddd6c2/#e6e0cc/#eee8d5 line ladder, ink #23211a on #4a463a on
+   #5c574a, the deep #2c4f3c green (its rail is green too: #1e3b2d with the
+   #d7c78a gold marker). Dark is the master board's own dark block (#15140f/
+   #1c1b16/#232219, #efeade ink, #8dbb9f accent) with the four ink steps re-tuned
+   onto the current dark ratios, so the two dark palettes are comparable rather
+   than merely different. Palette-only, same 60 names as editorial. */
+.jn-v2[data-theme="board"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#faf7ef; --surface:#ffffff; --surface-2:#f3efe0; --line:#ddd6c2; --line-soft:#eee8d5;
+  --line-strong:#c9c1a8; --edge:#8a826e; --track:#8d8571;
+  --text:#23211a; --text-2:#4a463a; --muted:#5c574a; --ink-2:#33302a;
+  --accent:#2c4f3c; --accent-ink:#f6f3ea; --accent-soft:#e6efe4;
+  --good:#2c4f3c; --warn:#8f5722; --warn-soft:#f4ead9; --warn-line:#cfa25f;
+  --bad:#8f2f21; --bad-soft:#f6e0da; --bad-faint:#fbf0ec;
+  --change-soft:#cfe0cd; --change-bg:#fbf8f0; --hover-soft:#eef4ea;
+  --ring-accent:rgba(44,79,60,.22); --scrim:rgba(35,33,26,.46); --recessed:#f7f3e8;
+  --stage-applied:#2f4d75; --stage-interview:#8f5722; --stage-offer:#2c4f3c; --stage-rejected:#8f2f21; --stage-new:#c9c1a8;
+  --series-new:#a8791f;
+  --amber-bg:#fdfaee; --amber-line:#d9cfa9; --amber-line-soft:#ece5cf; --amber-hover:#f7f1de;
+  --sand:#d3c6a4; --gold:#bf9a45; --funnel-low:#8aab93; --funnel-mid:#4f7a5f;
+  --toast-ok-bg:#e9f1e6; --toast-ok-line:#9db8a5; --toast-ok-ink:#2c4f3c;
+  --toast-bad-bg:#f6e0da; --toast-bad-line:#e4b8ab; --toast-bad-ink:#8f2f21;
+  --rail:#1e3b2d; --rail-text:#b8c9ba; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#2c4f3c; --rail-ink:#f3efe0;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+.jn-v2[data-theme="board"][data-appearance="dark"] {
+  --ring-shift-sm:2px; --ring-shift-md:1px; --ring-label-shift:0px;
+  --bg:#15140f; --surface:#1c1b16; --surface-2:#232219; --line:#323026; --line-soft:#26251d;
+  --line-strong:#474234; --edge:#75705c; --track:#807a66;
+  --text:#cfcbc0; --text-2:#c2bbac; --muted:#a09a8b; --ink-2:#c7c3b8;
+  --accent:#84b096; --accent-ink:#15140f; --accent-soft:#1f2a23;
+  --good:#84b096; --warn:#d4a06a; --warn-soft:#2a2118; --warn-line:#6b5638;
+  --bad:#d98a7e; --bad-soft:#2a1a17; --bad-faint:#221816;
+  --change-soft:#31513c; --change-bg:#1a2019; --hover-soft:#232116;
+  --ring-accent:rgba(141,187,159,.24); --scrim:rgba(0,0,0,.62); --recessed:#191814;
+  --stage-applied:#a3bedd; --stage-interview:#d4a06a; --stage-offer:#84b096; --stage-rejected:#d98a7e; --stage-new:#474234;
+  --series-new:#a1731f;
+  --amber-bg:#241f13; --amber-line:#443b25; --amber-line-soft:#332c1c; --amber-hover:#2d2719;
+  --sand:#6a6244; --gold:#c9a35a; --funnel-low:#5f8a70; --funnel-mid:#79a88c;
+  --toast-ok-bg:#1d2822; --toast-ok-line:#3f6b52; --toast-ok-ink:#9cc6ad;
+  --toast-bad-bg:#291a17; --toast-bad-line:#7a3a31; --toast-bad-ink:#d98a7e;
+  --rail:#14251c; --rail-text:#a9bcae; --rail-dim:#7e9a88; --rail-accent:#d7c78a; --rail-line:#23402f; --rail-ink:#f3efe0;
+  --serif:'Newsreader',Georgia,serif; --sans:'Public Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
 /* — Board themes: cobalt · saas · win98 — three deep-retheme boards from the
    design project; each ships both light and dark, so no mode is derived here. */
 /* These carry more than a palette: a theme block may also set geometry/state
@@ -688,7 +739,7 @@
   --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
   --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
@@ -731,7 +782,7 @@
   --btn-shadow:0 1px 2px rgba(45,91,227,.30); --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:0 1px 2px rgba(0,0,0,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:600; --title-weight:600; --label-weight:600; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.02em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
   --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
@@ -777,7 +828,7 @@
   --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
   --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
@@ -820,7 +871,7 @@
   --btn-shadow:0 1px 2px rgba(16,24,40,.12); --pill-shadow:0 1px 2px rgba(16,24,40,.06); --field-shadow:0 1px 2px rgba(16,24,40,.04); --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); --seg-on-shadow:0 1px 2px rgba(16,24,40,.08);
   --t-7-5:7.5px; --t-9:9px; --t-9-5:9.5px; --t-10:10px; --t-10-5:10.5px; --t-11:11px; --t-11-5:11.5px; --t-12:12px; --t-12-5:12.5px; --t-13:13px; --t-13-5:13.5px; --t-14:14px; --t-15:15px; --t-15-5:15.5px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
   --btn-weight:600; --title-weight:750; --label-weight:700; --label-tracking:.06em; --label-tracking-strip:.06em; --tag-tracking:.06em; --label-case:uppercase; --display-tracking:-.025em;
-  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
+  --btn-primary-hover-bg:color-mix(in oklab, var(--btn-primary-bg) 88%, black); --btn-primary-pressed-bg:color-mix(in oklab, var(--btn-primary-bg) 78%, black); --btn-danger-hover-bg:color-mix(in oklab, var(--btn-danger-bg) 88%, black); --btn-danger-pressed-bg:color-mix(in oklab, var(--btn-danger-bg) 78%, black); --pressed-shift:none; --pressed-wash:var(--line-soft);
   --motion-fast:.12s; --motion-mid:.2s; --ease:cubic-bezier(.2,.7,.2,1);
   --disabled-opacity:.5; --disabled-ink:var(--muted); --disabled-engrave:none;
   --input-border-error:var(--bad); --input-ring-error:0 0 0 3px var(--bad-soft);
@@ -868,7 +919,7 @@
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
-  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
   --input-border-error:var(--bad); --input-ring-error:none;
@@ -914,7 +965,7 @@
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:7px; --t-9:8.5px; --t-9-5:8.5px; --t-10:9px; --t-10-5:9.5px; --t-11:10px; --t-11-5:10.5px; --t-12:11px; --t-12-5:11.5px; --t-13:12px; --t-13-5:12.5px; --t-14:13px; --t-15:14px; --t-15-5:14.5px; --t-16:14.5px; --t-17:15.5px; --t-18:16.5px; --t-19:17.5px; --t-22:20px; --t-30:27.5px;
   --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
-  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
+  --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
   --motion-fast:0s; --motion-mid:0s; --ease:linear;
   --disabled-opacity:1; --disabled-ink:#808080; --disabled-engrave:1px 1px 0 #ffffff;
   --input-border-error:var(--bad); --input-ring-error:none;
@@ -1079,11 +1130,12 @@
 .v2-cactions { background:var(--bg); }
 .v2-crow:hover .v2-cactions { background:var(--row-hover); }
 
-/* Themes layer, state rules: only rules INERT on the default theme today.
-   !important because primitives set these properties inline. */
+/* Themes layer, state rules. !important because primitives set these properties
+   inline. The four filled-button rules below paint in EVERY theme (D-07/D-11). */
 .jn-v2 .v2-btn-primary:hover { background:var(--btn-primary-hover-bg) !important; }
 .jn-v2 .v2-btn-primary:active { background:var(--btn-primary-pressed-bg) !important; transform:var(--pressed-shift); }
 .jn-v2 .v2-btn-danger:hover { background:var(--btn-danger-hover-bg) !important; }
+.jn-v2 .v2-btn-danger:active { background:var(--btn-danger-pressed-bg) !important; transform:var(--pressed-shift); }
 .jn-v2 [aria-invalid="true"], .jn-v2 .v2-fieldwrap[data-invalid="true"] { border-color:var(--input-border-error) !important; box-shadow:var(--input-ring-error) !important; }
 /* --row-selected is what Row and the Feed row already set inline; -ink and
    -edge are inert (inherit/none) except cobalt and win98. */
@@ -1103,8 +1155,8 @@
 .jn-v2[data-theme="win98"] .v2-inset:not(.v2-underline):not([aria-invalid="true"]),
 .jn-v2[data-theme="win98"] .v2-raised:active { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
 
-/* Inert in the default theme (--pressed-shift none, --pressed-wash transparent).
-   The wash is a background-image overlay, not `background:`, so it leaves the control's own ground visible instead of erasing it. */
+/* Live in every theme since D-07 (1px shift + a --surface-2 wash). The wash is a
+   background-image overlay, not `background:`, so it leaves the control's own ground visible instead of erasing it. */
 .jn-v2 .v2-bd:active, .jn-v2 .v2-bdc:active, .jn-v2 .v2-act:active {
   background-image:linear-gradient(var(--pressed-wash), var(--pressed-wash)) !important;
   transform:var(--pressed-shift);
@@ -1112,7 +1164,8 @@
 /* Every primitive writes opacity inline, so this rule is the fallback for
    hand-rolled disabled spans; win98 swaps --disabled-ink/-engrave for its grey. */
 .jn-v2 [aria-disabled="true"] { opacity:var(--disabled-opacity); color:var(--disabled-ink); text-shadow:var(--disabled-engrave); }
-/* Hangs on `.v2-inset`, not `input`, so borderless raw inputs are untouched.
+/* Live in every theme since D-06 (--line-strong in the base blocks). Hangs on
+   `.v2-inset`, not `input`, so borderless raw inputs are untouched.
    Carve-outs: .v2-underline, and [aria-expanded]/:focus (already wear the accent). */
 .jn-v2 .v2-inset:not(.v2-underline):not([aria-expanded="true"]):hover:not(:focus) { border-color:var(--input-border-hover) !important; }
 /* Transitions only — zeroing animation-duration too would stop .v2-spin and the

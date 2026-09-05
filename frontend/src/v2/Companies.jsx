@@ -508,7 +508,7 @@ export default function Companies() {
               {/* position:sticky makes this cell its own stacking context, trapping the menu's z-index 40 inside it;
                   raise the cell itself while its menu is open: 28 clears the sticky head (3)/rows, stays under drawer (29/30). */}
               <span className="v2-cactions" style={{ flex: '0 0 190px', display: 'flex', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', gap: 4, position: 'sticky', right: 0, paddingLeft: 8, zIndex: menuId === c.id ? 28 : undefined }} onClick={(e) => e.stopPropagation()}>
-                <Pill size="xs" hover="v2-act" line="inherit" disabled={testBusy} onClick={() => runScrape(c.id)}
+                <Pill size="xs" line="inherit" disabled={testBusy} onClick={() => runScrape(c.id)}
                   title={testBusy ? 'A test is already running' : 'Scrape this company now'}>
                   {scraping[c.id]
                     ? <Spinner />
@@ -516,14 +516,12 @@ export default function Companies() {
                   {scraping[c.id] ? 'Running' : 'Run'}
                 </Pill>
                 {/* the running test names itself; every other pill goes quiet, so the running one keeps full opacity while un-clickable */}
-                <Pill size="xs" hover="v2-act" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
+                <Pill size="xs" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
                   style={testingId === c.id ? { opacity: 1 } : undefined}
                   title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'}>
                   {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
                 </Pill>
-                {/* ui: keep — the open ⋯ takes the on-trio's fill and border but NOT its ink: the glyph stays --text-2 here (and on Searches) */}
                 <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
-                  style={{ color: 'var(--pill-ink)' }}
                   title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>
                 {menuId === c.id && (
                   <Menu ariaLabel={`${c.name} actions`} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>

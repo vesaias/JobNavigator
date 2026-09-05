@@ -637,7 +637,7 @@ export default function Stats() {
                 </span>
                 <span style={{ flex: '0 0 110px', display: 'flex', justifyContent: 'flex-end' }}>
                   {j.trigger_url
-                    // ui: keep — Pill xs is the role, but this control's paint differs: no ground, pad 0 11 vs 0 9/0 10, gap 6 vs 5, and a running state that quiets border+ink instead of dimming via opacity.
+                    // ui: keep — running-state box (D-13): Pill xs is the role, but the running branch quiets border+ink (--line/--edge) instead of dimming via --disabled-opacity, and its box is pad 0 11 / gap 6 on no ground. The canonical xs paint reproduces none of the three, so this one stays hand-drawn.
                     ? <span onClick={() => !running && trigger(j)} {...kb(() => !running && trigger(j))} aria-disabled={running}
                         title={running ? `${j.name} is running` : `Run ${j.name} now`} aria-label={running ? `${j.name} is running` : `Run ${j.name} now`}
                         className={running ? '' : 'v2-bdc'} style={{ height: 25, padding: '0 11px', border: `1px solid ${running ? 'var(--line)' : 'var(--edge)'}`, borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, lineHeight: 1, color: running ? 'var(--edge)' : 'var(--text-2)', whiteSpace: 'nowrap', cursor: running ? 'default' : 'pointer' }}>

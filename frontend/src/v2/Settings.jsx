@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape, useSettled } from './hooks'
 import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
-import { useTheme, MODE_OPTIONS, THEME_OPTIONS } from './theme'
+import { useTheme, MODE_OPTIONS, themeOptions } from './theme'
 import { describeCron, whenShort, CRON_PRESETS } from './time'
 import api from '../api'
 import './theme.css'
@@ -130,8 +130,8 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
         <TextBox value={value} onSave={onSave} onLocal={setLive} width={width} mono cron
           ariaLabel={ariaLabel} onInvalid={onInvalid} />
         <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-          {/* Picker sits at ToolbarTrigger's canonical 24px next to the 32px field — the size mismatch is intentional, not a local override */}
-          <ToolbarTrigger label="Preset" open={open} ariaExpanded={open} title="Common schedules"
+          {/* md = 32, the field height, so the picker lines up with the cron box beside it (D-21) */}
+          <ToolbarTrigger label="Preset" size="md" open={open} ariaExpanded={open} title="Common schedules"
             ariaLabel={`${ariaLabel} — pick a common schedule`} onClick={() => setOpen((v) => !v)} />
           {open && (
             <Menu role="listbox" ariaLabel="Common schedules" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 5, zIndex: 21, width: 232 }}>
@@ -765,7 +765,7 @@ function AppearanceRow({ label }) {
 }
 function ThemeRow({ label }) {
   const { theme, setTheme } = useTheme()
-  return <Select value={theme} options={THEME_OPTIONS} onPick={setTheme} width="260px" ariaLabel={label} />
+  return <Select value={theme} options={themeOptions(theme)} onPick={setTheme} width="260px" ariaLabel={label} />
 }
 
 function ActionBtn({ label, state, onClick, ariaLabel }) {
@@ -1065,10 +1065,9 @@ function ModelsModal({ S, save, onClose }) {
               <Mono size="xl" tone="strong" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</Mono>
               <Helper size="xs" style={{ flex: '0 0 auto', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</Helper>
               {/* Border turns --bad on hover too, not just the glyph */}
-              {/* ui: keep — 22x22 bordered x with --bad border+glyph hover (v2-hover-bad-bdc) */}
-              <span onClick={() => remove(m)} {...kb(() => remove(m))} aria-label={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
-                title="Remove from the list (stays removed)" className="v2-hover-bad-bdc"
-                style={{ width: 22, height: 22, border: '1px solid var(--line)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--edge)', cursor: 'pointer', flex: '0 0 auto' }}>×</span>
+              <GlyphBadge size={22} tone="outline" hover="v2-hover-bad-bdc" onClick={() => remove(m)}
+                ariaLabel={`Remove ${m.model} from ${PROVIDER_LABEL[m.provider] || m.provider}`}
+                title="Remove from the list (stays removed)" style={{ flex: '0 0 auto' }}>×</GlyphBadge>
             </div>
           ))}
         </div>

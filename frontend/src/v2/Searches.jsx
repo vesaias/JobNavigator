@@ -633,22 +633,22 @@ export default function Searches() {
                     style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'help' }}>extension • passive capture</span>
                 ) : (
                   <span style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                    {/* ui: keep — row's 25px pills padded 0 9, one px tighter than Pill xs's canonical 0 10 (Companies 0 10, Stats 0 11). */}
-                    <Pill size="xs" hover="v2-bdc" line="inherit" onClick={() => runNow(s)}
+                    {/* ui: keep — running-state box: these 25px pills are padded 0 9, and the running "Running" pill was measured at that width; canonical 0 10 would widen it 2px. */}
+                    <Pill size="xs" line="inherit" onClick={() => runNow(s)}
                       title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
                       style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-on-ink)' } : null) }}>
                       {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </Pill>
+                    {/* ui: keep — running-state box: 0 9 like its twin above, so the spinner branch keeps the width it was measured at. */}
                     {TESTABLE.includes(s.search_mode) && (
-                      <Pill size="xs" hover="v2-bdc" line="inherit" disabled={testBlocked} onClick={() => runTest(s)}
+                      <Pill size="xs" line="inherit" disabled={testBlocked} onClick={() => runTest(s)}
                         title={testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.'}
                         style={{ padding: '0 9px' }}>
                         {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
                       </Pill>
                     )}
-                    {/* ui: keep — open ⋯ takes the on-trio's fill/border but not its ink (glyph stays --text-2, as on Companies). */}
-                    <IconButton size={25} hover="v2-bd" line="inherit" on={menuFor === s.id} style={{ color: 'var(--pill-ink)' }}
+                    <IconButton size={25} line="inherit" on={menuFor === s.id}
                       onClick={() => setMenuFor(menuFor === s.id ? null : s.id)}
                       title="More actions" ariaExpanded={menuFor === s.id} ariaHaspopup="menu">⋯</IconButton>
                     {menuFor === s.id && (

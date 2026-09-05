@@ -37,7 +37,7 @@
             ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
             : m;
           d.setAttribute('data-appearance', r);
-          var themes = ['default', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98'];
+          var themes = ['default', 'board', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98'];
           var k = s.getItem('jobnavigator_theme');
           d.setAttribute('data-theme', themes.indexOf(k) >= 0 ? k : 'default');
           d.classList.toggle('dark', r === 'dark');
@@ -55,6 +55,8 @@
     <style>
       :root[data-appearance="light"] { background: #fcfbf7 }
       :root[data-appearance="dark"] { background: #1e1c17 }
+      :root[data-theme="board"][data-appearance="light"] { background: #faf7ef }
+      :root[data-theme="board"][data-appearance="dark"] { background: #15140f }
       :root[data-theme="tone1"][data-appearance="light"] { background: #fbfaf6 }
       :root[data-theme="tone1"][data-appearance="dark"] { background: #1c1a15 }
       :root[data-theme="tone2"][data-appearance="light"] { background: #fbf9f5 }

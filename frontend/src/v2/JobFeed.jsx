@@ -941,10 +941,10 @@ export default function V2JobFeed() {
             {/* the count line keeps its box until the first page answers */}
             <span style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{firstLoaded ? `${jobs.length} shown · ${total} matching` : NBSP}</span>
             <div style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>Shift-click selects a range · {PICK_KEY}-click selects one</span>
-              {/* ui: keep — this badge draws on --line (not --glyph-border), one step softer, no ground, 10px glyph vs the box's 9.5 */}
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.02em' }}>⇧ range · {PICK_KEY} pick</span>
+              {/* ui: keep — 10px glyph vs the box's 9.5; the paint is the primitive's outline tone (D-14) */}
               <GlyphBadge tone="outline" onClick={() => setShortcutsOpen((v) => !v)} title="Keyboard shortcuts"
-                style={{ background: 'transparent', borderColor: 'var(--head-line)', fontSize: 'var(--t-10)' }}>?</GlyphBadge>
+                style={{ fontSize: 'var(--t-10)' }}>?</GlyphBadge>
             </div>
             {shortcutsOpen && (
               <>
