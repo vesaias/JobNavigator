@@ -204,9 +204,21 @@ export default function V2App() {
                   fontSize: 14, whiteSpace: 'nowrap',
                   // active item is a token set (--rail-active-mark/-bg), not a
                   // hard-coded bar; inactive item holds the same 3px transparent
-                  // so labels stay on one axis whichever theme is active
+                  // so labels stay on one axis whichever theme is active.
+                  // --rail-active-mark must therefore always be a 3px BORDER, even
+                  // where a theme draws no visible mark: at `none` the active
+                  // item's content box grew 3px on the left, which slid its icon
+                  // (collapsed) and its label (open) 3px off the axis every other
+                  // item sits on. A full-width-bar theme writes `3px solid
+                  // transparent` — the ground paints under it (background-clip is
+                  // border-box), so the bar still reads full width.
                   borderLeft: active ? 'var(--rail-active-mark)' : '3px solid transparent',
-                  borderRadius: 'var(--radius-rail-item)', margin: 'var(--rail-item-inset)',
+                  // the inset is an OPEN-rail treatment: at 50px the collapsed
+                  // column has 24px of content between the 3px mark and the
+                  // 10/13 padding, so a theme's `0 10px` would leave 4px and
+                  // shove every icon off the axis. `0` in the base blocks, so
+                  // the default theme computes the same margin either way.
+                  borderRadius: 'var(--radius-rail-item)', margin: open ? 'var(--rail-item-inset)' : 0,
                   background: active ? 'var(--rail-active-bg)' : 'transparent', transition: 'padding .32s ease',
                 }
                 const inner = (
@@ -217,7 +229,13 @@ export default function V2App() {
                     <span style={{ flex: open ? 1 : '0 0 0px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', opacity: open ? 1 : 0, transition: 'opacity .2s' }}>{it.label}</span>
                     {/* slot reserved at final width while count is in flight
                         (empty span, never a placeholder 0) so nothing shifts */}
-                    {it.countKey != null && <span style={{ flex: '0 0 auto', minWidth: open ? 18 : 0, width: open ? undefined : 0, textAlign: 'right', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-accent)' : 'var(--rail-dim)', opacity: open ? (fade ? .6 : 1) : 0, transition: 'opacity .15s' }}>{count != null ? count : ''}</span>}
+                    {/* --rail-count-active, not --rail-accent: on the default rail the
+                        active item is a left bar over a near-transparent wash, so the
+                        count reads as the rail's own accent; a theme that FILLS the tile
+                        paints the count in the tile's ink instead (its --rail-accent
+                        would sit on the accent ground at ~1:1). Base value is
+                        --rail-accent, so nothing about the default theme moves. */}
+                    {it.countKey != null && <span style={{ flex: '0 0 auto', minWidth: open ? 18 : 0, width: open ? undefined : 0, textAlign: 'right', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 11, color: active ? 'var(--rail-count-active)' : 'var(--rail-dim)', opacity: open ? (fade ? .6 : 1) : 0, transform: 'translateY(var(--count-shift))', transition: 'opacity .15s' }}>{count != null ? count : ''}</span>}
                     {/* ui: keep — 5px "needs attention" rail dot, not a control */}
                     {!open && warned && <span title="Needs attention" style={{ position: 'absolute', top: 8, left: 'calc(50% + 5px)', width: 5, height: 5, borderRadius: 'var(--radius-control)', background: 'var(--warn)' }} />}
                   </>

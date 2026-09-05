@@ -136,7 +136,7 @@ export default function V2Resumes() {
 
   const BADGE = {
     base: { bg: 'var(--surface-2)', fg: 'var(--muted)' },
-    tailored: { bg: 'var(--accent-soft)', fg: 'var(--accent)' },
+    tailored: { bg: 'var(--ai-soft)', fg: 'var(--ai)' },
     archived: { bg: 'var(--surface-2)', fg: 'var(--faint)' },
   }
 

@@ -366,7 +366,7 @@ export default function CoverLetterEditor() {
           </span>
           <Helper>{voiceLen}</Helper>
         </div>
-        <Button onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length">
+        <Button variant="ai" onClick={() => { setRegenOpen(true); setMenuOpen(false) }} title="Rewrite the letter — pick base résumé, voice and length">
           {regening
             ? <Spinner size={11} color="currentColor" />
             : <span style={{ fontSize: 12 }}>↻</span>}
@@ -559,15 +559,32 @@ export default function CoverLetterEditor() {
               </Helper>
             </HeaderRow>
             <div style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {/* Both settings-fed pickers wait for the SAME settle (`metaReady`), and
+                  each holds its own control box while it waits: the source list is
+                  built from /resumes + /persona and the voice list from /settings, so
+                  rendering either early shows a picker that is empty for a reason it
+                  cannot state ("Select a source…", "No voice presets — add them in
+                  Settings"). Both placeholders are the control's own height with a
+                  centred Spinner, so the settled frame is pixel-identical. `Length`
+                  needs no hold: LENGTHS is a module constant. */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>From résumé</Label>
-                <Picker value={rSource} options={sourceOpts} placeholder="Select a source…" onPick={setRSource} />
+                {metaReady
+                  ? <Picker value={rSource} options={sourceOpts} placeholder="Select a source…" onPick={setRSource} />
+                  : <div style={{ height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size={11} /></div>}
                 <Helper size="xs" style={{ textWrap: 'pretty' }}>Bases and Persona. Switch to use a different set of achievements.</Helper>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Voice</Label>
                 {/* "No voice presets…" is a verdict, not a loading state — the row holds a pill's height until the settle. */}
-                <div style={{ minHeight: 26 }}>{metaReady && <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />}</div>
+                {/* the wrapper stays a plain block: VoicePicker's own row is a
+                    wrapping flex, and making its parent a flex container would size
+                    it to content and change where the pills wrap. */}
+                <div style={{ minHeight: 26 }}>
+                  {metaReady
+                    ? <VoicePicker presets={presets} value={rVoice} onPick={setRVoice} />
+                    : <span style={{ display: 'flex', alignItems: 'center', height: 26 }}><Spinner size={11} /></span>}
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <Label>Length</Label>
@@ -578,7 +595,7 @@ export default function CoverLetterEditor() {
               {err && !regening ? <Helper style={{ color: 'var(--bad)' }}>{err}</Helper> : <Helper>~30 seconds</Helper>}
               <Button variant="secondary" size="sm" onClick={() => !regening && setRegenOpen(false)} style={{ marginLeft: 'auto' }}>Cancel</Button>
               {/* Disabled primary pill is --line on --muted across the three builders — a dimmed accent still reads as live. */}
-              <Button size="sm" onClick={regenerate} disabled={regening || !rSource}>
+              <Button variant="ai" size="sm" onClick={regenerate} disabled={regening || !rSource}>
                 {regening && <Spinner color="currentColor" />}
                 {regening ? 'Regenerating…' : 'Regenerate'}
               </Button>

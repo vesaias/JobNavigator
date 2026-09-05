@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
 import { useEscape, useSettled, NBSP } from './hooks'
-import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
+import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
 import { useTheme, MODE_OPTIONS, themeOptions } from './theme'
 import { describeCron, whenShort, CRON_PRESETS } from './time'
 import api from '../api'
@@ -21,12 +21,11 @@ const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code']
 // providers that need no key
 const KEYLESS = ['claude_code', 'ollama', '']
 
-// ui: keep — matches ui.jsx's Select trigger box exactly so Select + TextBox rows line up; change only alongside Select in ui.jsx
-const BOX = {
-  height: 32, minWidth: 0, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-field)',
-  background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  gap: 7, fontSize: 12.5, color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', lineHeight: 1,
-}
+// The value rows' fields are `Input` now (adornment slot and all), so the box
+// lives in ui.jsx with every other field. What is left here is the type these
+// rows set on a mono field — 11.5 rather than the 12.5 step — passed through
+// `style` so `Input` keeps owning ground, border, radius, shadow and height.
+const MONO_FIELD = { fontSize: 'var(--t-11-5)' }
 // Empty-options menu needs a reason string, not a bare box — ui.jsx's Select takes it as `emptyText`.
 const NO_MODELS = 'no models for this provider — add one under Model catalog'
 const MASK = '••••••'
@@ -73,26 +72,25 @@ function TextBox({ value, onSave, width, mono, secret, placeholder, ariaLabel, i
     onSave(local)
   }
   return (
-    // ui: keep — value box is a v2-fieldwrap (carries focus + secret show/hide), h32 to line up with Select rows
-    <span className="v2-fieldwrap" style={{ ...BOX, flex: `0 1 ${width || '340px'}` }}>
-      <input
-        value={masked ? MASK : local}
-        // Integer rows feed unguarded int() calls in the backend — keep anything but digits out (empty stays legal)
-        onChange={(e) => !masked && setLocal(int ? e.target.value.replace(/[^0-9]/g, '') : e.target.value)}
-        onFocus={() => { if (masked) reveal() }}
-        onBlur={commit}
-        inputMode={int ? 'numeric' : undefined}
-        aria-label={ariaLabel}
-        placeholder={placeholder || (secret && shown && isMask ? 'type a new value to replace it' : '')}
-        autoComplete="off"
-        style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: mono ? 'var(--mono)' : 'var(--sans)', fontSize: mono ? 11.5 : 12.5, color: 'var(--text)' }} />
-      {secret && !!value && (
+    <Input
+      value={masked ? MASK : local}
+      // Integer rows feed unguarded int() calls in the backend — keep anything but digits out (empty stays legal)
+      onChange={(v) => !masked && setLocal(int ? v.replace(/[^0-9]/g, '') : v)}
+      onFocus={() => { if (masked) reveal() }}
+      onBlur={commit}
+      inputMode={int ? 'numeric' : undefined}
+      ariaLabel={ariaLabel}
+      placeholder={placeholder || (secret && shown && isMask ? 'type a new value to replace it' : '')}
+      autoComplete="off"
+      mono={mono} width={width || '340px'}
+      // the show/hide toggle rides INSIDE the field's box — Input's `adornment` slot
+      adornment={secret && !!value ? (
         <Link onClick={toggleShown} ariaLabel={`${shown ? 'Hide' : 'Show'} ${ariaLabel || 'value'}`}
           style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}>
           {shown ? 'hide' : 'show'}
         </Link>
-      )}
-    </span>
+      ) : undefined}
+      style={{ ...(mono ? MONO_FIELD : null), ...(secret && !!value ? null : { flex: `0 1 ${width || '340px'}` }) }} />
   )
 }
 
@@ -697,8 +695,9 @@ function Row({ r, ctx }) {
           <>
             {/* The webhook secret is a value, not a run summary — same bordered box every other value uses */}
             {r.preview && (r.previewBox
-              /* ui: keep — a read-only preview box (a span, no field inside) */
-              ? <span style={{ ...BOX, flex: `0 1 ${r.previewBox}`, cursor: 'default' }}>
+              /* ui: keep — a read-only preview box: a span with no field inside, so it
+                 cannot be an Input; it borrows the field box's own tokens by hand */
+              ? <span style={{ height: 32, minWidth: 0, padding: '0 9px', border: 'var(--bw-control) solid var(--input-border)', borderRadius: 'var(--radius-field)', background: 'var(--input-bg)', boxShadow: 'var(--field-shadow)', display: 'flex', alignItems: 'center', gap: 7, lineHeight: 1, flex: `0 1 ${r.previewBox}`, cursor: 'default' }}>
                   <Helper mono style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>
                 </span>
               : <Helper size="xs" mono style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>)}
@@ -720,7 +719,7 @@ function Row({ r, ctx }) {
         const expired = until && until.getTime() < Date.now()
         return (
           <>
-            <Mono size="xl" tone="base" style={{ flex: '0 0 auto' }}>{'•'.repeat(6)}</Mono>
+            <Mono size="xl" tone="base" code style={{ flex: '0 0 auto' }}>{'•'.repeat(6)}</Mono>
             <Helper style={{ flex: 1, minWidth: 0, color: expired ? 'var(--warn)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {until
                 ? (expired ? `expired ${until.toLocaleDateString()} — renewed on the next run`
@@ -808,15 +807,13 @@ function ApiKeyRow({ value, save, flash }) {
   const isSet = value === MASK || (value && value.length > 0)
   return (
     <>
-      {/* ui: keep — same fieldwrap composite as TextBox: bare input + show/hide */}
-      <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 340px' }}>
-        <input value={local} onChange={(e) => setLocal(e.target.value)} type={shown ? 'text' : 'password'} autoComplete="off"
-          aria-label="Dashboard API key"
-          placeholder={isSet ? 'Set — type a new key to replace it' : 'No key set. Anyone who can reach this address can use the dashboard.'}
-          style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
-        <Link onClick={() => setShown((v) => !v)} ariaLabel={`${shown ? 'Hide' : 'Show'} the dashboard API key`}
-          style={{ whiteSpace: 'nowrap' }}>{shown ? 'hide' : 'show'}</Link>
-      </span>
+      <Input value={local} onChange={setLocal} type={shown ? 'text' : 'password'} autoComplete="off"
+        ariaLabel="Dashboard API key" mono width="340px" style={MONO_FIELD}
+        placeholder={isSet ? 'Set — type a new key to replace it' : 'No key set. Anyone who can reach this address can use the dashboard.'}
+        adornment={(
+          <Link onClick={() => setShown((v) => !v)} ariaLabel={`${shown ? 'Hide' : 'Show'} the dashboard API key`}
+            style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}>{shown ? 'hide' : 'show'}</Link>
+        )} />
       <ActionBtn label="Save key" state="" ariaLabel="Save the dashboard API key" onClick={async () => {
         if (!local.trim()) { flash('Type the new key first', true); return }
         // If the PATCH failed, writing the key locally would lock the dashboard out on the next request — stop before touching localStorage.
@@ -862,11 +859,8 @@ function LinkedInRow({ li, setLi, flash }) {
       </Helper>
       {phase === 'awaiting_pin' && (
         <>
-          {/* ui: keep — the PIN box is a 120px v2-fieldwrap on the LinkedIn status row */}
-          <span className="v2-fieldwrap" style={{ ...BOX, flex: '0 1 120px' }}>
-            <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="6-digit PIN" inputMode="numeric" aria-label="LinkedIn sign-in PIN"
-              style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text)' }} />
-          </span>
+          <Input value={pin} onChange={setPin} placeholder="6-digit PIN" inputMode="numeric"
+            ariaLabel="LinkedIn sign-in PIN" mono style={{ ...MONO_FIELD, flex: '0 1 120px' }} />
           <ActionBtn label="Submit PIN" state="" onClick={async () => {
             try {
               const { data } = await api.post('/linkedin/session/pin', { pin })
@@ -1045,9 +1039,9 @@ function ModelsModal({ S, save, onClose }) {
         <HeaderRow pad="12px 22px" soft bg="page" align="center" style={{ gap: 8 }}>
           <Select value={provider} options={PROVIDERS} onPick={setProvider} width="150px" ariaLabel="Catalog provider" emptyText="no providers" />
           <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
-            {/* ui: keep — typeahead composite: input drives a suggestion listbox (aria-expanded/autocomplete, ↑↓ Esc Enter) inside the fieldwrap */}
-            <span className="v2-fieldwrap" style={{ ...BOX, flex: 1 }}>
-              <input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search the model catalog"
+            {/* the typeahead's field is an Input like every other value row; the
+                listbox below is positioned by this span, which is why the two are nested */}
+            <Input value={term} onChange={setTerm} ariaLabel="Search the model catalog"
                 aria-expanded={showSug} aria-autocomplete="list"
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown' && showSug) { e.preventDefault(); setHi((i) => (i + 1) % suggestions.length); return }
@@ -1058,8 +1052,7 @@ function ModelsModal({ S, save, onClose }) {
                 placeholder={SEARCHABLE.includes(provider)
                   ? (loading ? 'Loading live models…' : `Search ${live.length} models, or paste a model id…`)
                   : 'Enter the local model name…'}
-                style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--text)' }} />
-            </span>
+                style={{ flex: 1, fontSize: 'var(--t-12)' }} />
             {showSug && (
               <Menu role="listbox" ariaLabel="Model suggestions" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, gap: 0 }}>
                 {/* ui: keep — typeahead rows, not MenuItem: highlight is keyboard-driven (`hi`), needs onMouseEnter/onMouseDown to keep the caret in the input */}
@@ -1067,7 +1060,7 @@ function ModelsModal({ S, save, onClose }) {
                   <div key={n} className={i === hi ? '' : 'v2-menuitem'} role="option" aria-selected={i === hi}
                     onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => add(n)}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 'var(--radius-mini)', cursor: 'pointer', background: i === hi ? 'var(--accent-soft)' : 'transparent' }}>
-                    <Mono size="lg" line={16} tone={i === hi ? 'strong' : 'base'} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</Mono>
+                    <Mono size="lg" line={16} code tone={i === hi ? 'strong' : 'base'} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark(n)}</Mono>
                     {i === hi && <span style={{ flex: '0 0 auto', fontSize: 10, lineHeight: '16px', color: 'var(--accent)' }}>↵ to add</span>}
                   </div>
                 ))}
@@ -1085,7 +1078,7 @@ function ModelsModal({ S, save, onClose }) {
             <div key={`${m.provider}/${m.model}`} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, borderBottom: '1px solid var(--line-soft)' }}>
               {/* --edge at 10px is under 4.5:1 on --surface in light and dark */}
               <Helper size="xs" mono style={{ flex: '0 0 92px' }}>{m.provider}</Helper>
-              <Mono size="xl" tone="strong" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</Mono>
+              <Mono size="xl" tone="strong" code style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.model}</Mono>
               <Helper size="xs" style={{ flex: '0 0 auto', color: m.custom ? 'var(--accent)' : 'var(--muted)' }}>{m.custom ? 'added by you' : 'seeded'}</Helper>
               {/* Border turns --bad on hover too, not just the glyph */}
               <GlyphBadge size={22} tone="outline" hover="v2-hover-bad-bdc" onClick={() => remove(m)}

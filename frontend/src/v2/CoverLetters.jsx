@@ -355,7 +355,7 @@ export default function CoverLetters() {
           </div>
 
           {/* --line on --muted when disabled, like every other primary pill in the three builders — a dimmed accent still reads as live. */}
-          <Button onClick={generate} disabled={!canGenerate}
+          <Button variant="ai" onClick={generate} disabled={!canGenerate}
             title={thisPairRunning ? 'Already writing this one' : (!genResume || !genJob ? 'Pick a résumé and a job first' : 'Write the letter — you can start others while it runs')}>
             {thisPairRunning && <Spinner size={10} color="currentColor" />}
             {thisPairRunning ? 'Generating…' : '✦ Generate cover letter'}

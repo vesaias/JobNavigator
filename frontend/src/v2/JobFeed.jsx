@@ -859,7 +859,7 @@ export default function V2JobFeed() {
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--muted)', ...headStyle }}>{head ? `${head.total} open roles · ${head.arrived} arrived today · ${head.unscored} not yet scored` : loadError ? DASH : NBSP}</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          {head && head.unscored > 0 && <Button onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={headStyle}>Score {head.unscored} unscored jobs</Button>}
+          {head && head.unscored > 0 && <Button variant="ai" onClick={openRescoreBulk} title="Pick résumés + depth, then score every unscored job" style={headStyle}>Score {head.unscored} unscored jobs</Button>}
         </div>
       </HeaderRow>
 
@@ -1064,7 +1064,7 @@ export default function V2JobFeed() {
                           {/* `v2-rowink` lets a SELECTED row's --row-selected-ink reach the text (theme.css); it marks
                               reading content only — the status badge keeps its own ground/ink, and doesn't match in the default theme. */}
                           <Heading strong size={16} className="v2-rowink" title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
-                          {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--accent)' }}>✦</a>}
+                          {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--ai)' }}>✦</a>}
                           {/* ui: keep — status badge with background + border + r99: Tag role, not a Label */}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 'var(--radius-control)', border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
@@ -1074,7 +1074,7 @@ export default function V2JobFeed() {
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
                         <div className="v2-rowink" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: '13px', fontWeight: 450, minWidth: 0, marginTop: 2 }}>
-                          <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--mono)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
+                          <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--numeral-face)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
                           {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
                           <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
                         </div>
@@ -1151,7 +1151,7 @@ export default function V2JobFeed() {
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
-                        <span style={{ maxWidth: 230, fontFamily: 'var(--mono)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
+                        <span style={{ maxWidth: 230, fontFamily: 'var(--numeral-face)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
                         {d.location && <><span style={{ color: 'var(--line)' }}>|</span><span style={{ maxWidth: 270, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location}</span></>}
                         <span style={{ color: 'var(--line)' }}>|</span>
                         <span title={visaTitle} style={{ color: visaCol }}>{visaText}</span>
@@ -1164,7 +1164,7 @@ export default function V2JobFeed() {
                     {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
                     {/* Routed through Button (not hand-drawn) so it reads --btn-shadow/--btn-weight/--btn-primary-bg/-ink
                         and the hover/pressed rules; the style override only restores height/padding/line-height, which track the collapsing header. */}
-                    <Button size="sm" onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
+                    <Button variant="ai" size="sm" onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
                       style={{ height: headOpen ? 36 : 30, padding: '0 19px', lineHeight: 'inherit' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</Button>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
                       {/* ui: keep — 36/30 with the collapsing detail header; IconButton's bordered size is a fixed 36 */}
@@ -1212,7 +1212,7 @@ export default function V2JobFeed() {
                       // a Light score has no report to open — say so on the band line, leave the posting below it
                       : <>
                           <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>Score at full depth to see the report</span>
-                          <Button size="xs" onClick={(e) => { e.stopPropagation(); openRescore(d, 'full') }} style={{ flex: '0 0 auto' }}>Full report</Button>
+                          <Button variant="ai" size="xs" onClick={(e) => { e.stopPropagation(); openRescore(d, 'full') }} style={{ flex: '0 0 auto' }}>Full report</Button>
                         </>}
                   </div>
                   {reportShown && (
@@ -1223,7 +1223,7 @@ export default function V2JobFeed() {
                           const onTab = k === Math.min(reportTab, reports.length - 1)
                           return (
                             <div key={r.name} className="v2-tab" onClick={() => { setReportTab(k); setReqFilter('all') }} title={r.name} style={{ padding: '7px 0', marginRight: 22, maxWidth: 230, fontSize: 12.5, color: onTab ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${onTab ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                              {r.tailored && <span style={{ fontSize: 10, color: 'var(--accent)' }}>✦</span>}
+                              {r.tailored && <span style={{ fontSize: 10, color: 'var(--ai)' }}>✦</span>}
                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                               <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, opacity: 0.7 }}>({r.score})</span>
                             </div>
@@ -1354,7 +1354,7 @@ export default function V2JobFeed() {
                     <span style={{ color: 'var(--muted)' }}>{' '}Score against your résumés for the </span>
                     <span style={{ color: 'var(--accent)' }}>fit breakdown, requirements and keywords</span>
                   </div>
-                  <Button size="xs" onClick={() => openRescore(d)}>Score this role</Button>
+                  <Button variant="ai" size="xs" onClick={() => openRescore(d)}>Score this role</Button>
                 </div>
               )}
               {running && !anaCollapsed && (
@@ -1450,7 +1450,7 @@ export default function V2JobFeed() {
               {/* existing-copy banner */}
               {existing && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: 'var(--accent-soft)', borderBottom: '1px solid var(--line)', fontSize: 12.5, color: 'var(--text-2)' }}>
-                  <span style={{ flex: '0 0 auto', color: 'var(--accent)' }}>✦</span>
+                  <span style={{ flex: '0 0 auto', color: 'var(--ai)' }}>✦</span>
                   <span style={{ flex: 1, minWidth: 0 }}>A tailored copy already exists for this job.</span>
                   <Link onClick={() => { setPicker(null); openTailored(single) }} style={{ flex: '0 0 auto' }}>Open it ↗</Link>
                 </div>
@@ -1492,7 +1492,7 @@ export default function V2JobFeed() {
               <FooterRow variant="wide">
                 <Helper>{cvMode === 'tailor' ? 'Runs the LLM on the résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
-                <Button size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
+                <Button variant={cvMode === 'tailor' ? 'ai' : 'primary'} size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
               </FooterRow>
           </ModalPanel>
         )
@@ -1548,7 +1548,7 @@ export default function V2JobFeed() {
             <FooterRow variant="wide">
               <Helper>Runs in the background</Helper>
               <Button variant="secondary" size="sm" onClick={() => setRescoreJob(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
-              <Button size="sm" onClick={runRescore} disabled={!rescoreSel.length} title={rescoreSel.length ? undefined : 'Pick at least one résumé'}>Run scoring</Button>
+              <Button variant="ai" size="sm" onClick={runRescore} disabled={!rescoreSel.length} title={rescoreSel.length ? undefined : 'Pick at least one résumé'}>Run scoring</Button>
             </FooterRow>
         </ModalPanel>
       )}

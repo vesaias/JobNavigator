@@ -124,7 +124,10 @@ const BTN_SIZE = {
 // a disabled control has no hover.
 //
 // `ai` is the tailoring button: primary's geometry on the --ai / --ai-ink pair,
-// the accent in every theme with no violet of its own.
+// the accent in every theme with no violet of its own. It hangs on its OWN state
+// class (`v2-btn-ai` → --btn-ai-hover-bg / --btn-ai-pressed-bg): borrowing
+// `v2-btn-primary` darkened --btn-primary-bg, i.e. the accent, under a button
+// painted --ai, so a violet AI button hovered blue (cobalt, saas).
 //
 // The DISABLED ink is a two-token read, `var(--disabled-ink, <the button's own
 // disabled ink>)`: in the base blocks --disabled-ink is `inherit`, a guaranteed-
@@ -139,9 +142,13 @@ const BTN_LOOK = {
     hover: '', state: 'v2-btn-primary',
   },
   ai: {
-    rest: { background: 'var(--ai)', color: 'var(--ai-ink)' },
+    // --btn-ai-bg/-ink, not --ai/--ai-ink directly: the BUTTON's face is separable
+    // from the AI colour ROLE, which the ✦ badge and Tag tone="ai" also read. Base
+    // points them at --ai (itself --accent outside saas), so nothing moves; win98
+    // points them at its grey default-button face, since 98 has no filled buttons.
+    rest: { background: 'var(--btn-ai-bg)', color: 'var(--btn-ai-ink)' },
     off: { background: 'var(--btn-primary-disabled-bg)', color: 'var(--disabled-ink, var(--btn-primary-disabled-ink))' },
-    hover: '', state: 'v2-btn-primary',
+    hover: '', state: 'v2-btn-ai',
   },
   danger: {
     rest: { background: 'var(--btn-danger-bg)', color: 'var(--btn-danger-ink)' },
@@ -323,17 +330,40 @@ const FIELD = {
 }
 // `defaultValue` (instead of `value`) renders the field *uncontrolled* — needed
 // by Applications' autosaving notes box, where keystrokes must not round-trip through React state.
-export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, invalid, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
+// `adornment` is a trailing slot inside the field's own box — the secret rows'
+// show/hide Link, and anything else that has to sit ON the field rather than
+// beside it. With one, the box moves to a wrapper and the <input> goes bare
+// (transparent, borderless, inheriting the box's type), which is exactly the
+// composite five Settings rows drew by hand before. The wrapper carries both
+// hooks it needs: `v2-inset` for the D-06 hover border and the win98 bevel, and
+// `v2-fieldwrap` for the focus-within accent — theme.css's field-hover rule
+// excludes `:focus-within` so the two cannot fight over a hovered focused box.
+// `width` is the flex basis those rows set (`0 1 <width>`); `data-invalid` is the
+// wrapper's paint hook, `aria-invalid` stays on the input for the screen reader.
+export function Input({ value, defaultValue, onChange, placeholder, type = 'text', mono, invalid, disabled, readOnly, adornment, width, ariaLabel, title, style, className, ...rest }) {
   const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
-  return (
+  const face = { fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)' }
+  const box = { ...FIELD, height: 32, padding: `${BPAD} ${bpad('9px')}`, ...face, opacity: disabled ? 0.6 : 1 }
+  const field = (
     <input
       type={type} {...bind} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
       aria-invalid={invalid ? 'true' : undefined}
-      aria-label={ariaLabel} title={title} className={cx('v2-inset', className)}
+      aria-label={ariaLabel} title={title} className={cx(!adornment && 'v2-inset', !adornment && className)}
       onChange={onChange ? (e) => onChange(e.target.value, e) : undefined}
-      style={{ ...FIELD, height: 32, padding: `${BPAD} ${bpad('9px')}`, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', opacity: disabled ? 0.6 : 1, ...style }}
+      style={adornment
+        ? { flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', color: 'var(--input-ink)', fontSize: 'inherit', ...face }
+        : { ...box, ...style }}
       {...rest} />
   )
+  if (adornment) {
+    return (
+      <span className={cx('v2-inset', 'v2-fieldwrap', className)} data-invalid={invalid ? 'true' : undefined}
+        style={{ ...box, display: 'flex', alignItems: 'center', gap: 7, lineHeight: 1, ...(width ? { flex: `0 1 ${width}` } : null), ...style }}>
+        {field}{adornment}
+      </span>
+    )
+  }
+  return field
 }
 export function Textarea({ value, defaultValue, onChange, placeholder, rows = 3, mono, invalid, disabled, readOnly, ariaLabel, title, style, className, ...rest }) {
   const bind = defaultValue === undefined ? { value: value ?? '' } : { defaultValue }
@@ -436,7 +466,11 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
           borderRadius: 'var(--radius-field)', background: 'var(--input-bg)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7,
           fontFamily: 'var(--font-body)', fontSize: 'var(--t-12-5)', color: 'var(--input-ink)',
-          lineHeight: 1, outline: 'none', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'default' : 'pointer',
+          // --ctl-line, not the bare 1 the other v2-ctl controls carry: the label
+          // span below clips (overflow:hidden, for the ellipsis) and inherits this
+          // line box, so at 1 a descender is cut off — invisible in Public Sans,
+          // plain in IBM Plex, whose ink box is 1.30em. Base value is 1.
+          lineHeight: 'var(--ctl-line)', outline: 'none', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'default' : 'pointer',
         }}>
         <span style={{
           minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -835,6 +869,9 @@ const TAG_TONE = {
   good: { background: 'var(--tag-good-bg)', color: 'var(--tag-good-ink)' },
   warn: { background: 'var(--tag-warn-bg)', color: 'var(--tag-warn-ink)' },
   bad: { background: 'var(--tag-bad-bg)', color: 'var(--tag-bad-ink)' },
+  // the tailored ✦ badge: --ai's soft ground with --ai as ink. Base points
+  // --ai-soft at --accent-soft, so a theme with no violet reads as `accent`.
+  ai: { background: 'var(--tag-ai-bg)', color: 'var(--tag-ai-ink)' },
 }
 export function Tag({ tone = 'neutral', title, children, style, className }) {
   return (
@@ -852,6 +889,12 @@ export function Tag({ tone = 'neutral', title, children, style, className }) {
 const DOT_TONE = {
   neutral: 'var(--dot-neutral)', accent: 'var(--dot-accent)',
   good: 'var(--dot-good)', warn: 'var(--dot-warn)', bad: 'var(--dot-bad)',
+  // The auto-score depth discs (Off · Light · Full) get their own on/off pair so
+  // a theme can part them from the generic --dot-accent/--dot-neutral: at
+  // --muted an "off" disc is nearly as dark as an "on" one on a Tailwind grey
+  // ladder, which is why the SaaS control read as one flat grey. The base blocks
+  // point both names straight back at the old pair, so nothing moves by default.
+  'seg-on': 'var(--seg-dot-on)', 'seg-off': 'var(--seg-dot-off)',
 }
 export function Dot({ tone = 'neutral', size = 7, title, style, className }) {
   return (
@@ -930,6 +973,22 @@ export function CopyGlyph({ size = 12, title, style, className }) {
       style={{ flex: '0 0 auto', display: 'block', ...style }}>
       <path d="M3.5 2.5V0.5h8v8h-2" fill="none" stroke="currentColor" />
       <rect x="0.5" y="3.5" width="8" height="8" fill="none" stroke="currentColor" />
+    </svg>
+  )
+}
+// The Test control's mark. Was `⚗` (U+2697 ALCHEMICAL SYMBOL FOR ALEMBIC), which no
+// UI face carries — every platform fell back to a symbol font, so the one glyph in
+// the pill was drawn in a face the theme does not control and its advance moved with
+// the OS. A conical flask in the same 12-unit box CopyGlyph uses, stroked in
+// currentColor, so it inherits the pill's ink and the theme's own weightless hairline.
+export function FlaskGlyph({ size = 12, title, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className}
+      role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'}
+      style={{ flex: '0 0 auto', display: 'block', ...style }}>
+      <path d="M4.5 0.8v4L1.5 10.2a.9.9 0 0 0 .8 1.3h7.4a.9.9 0 0 0 .8-1.3l-3-5.4v-4"
+        fill="none" stroke="currentColor" strokeLinejoin="round" />
+      <path d="M3.6 0.8h4.8M2.8 8.4h6.4" fill="none" stroke="currentColor" />
     </svg>
   )
 }
@@ -1137,7 +1196,7 @@ export function Segmented({
             }}>
             {o.dotColor ? <Dot style={{ background: o.dotColor }} /> : null}
             {o.dots ? Array.from({ length: o.dots }, (_, k) => (
-              <Dot key={k} tone={on ? 'accent' : 'neutral'} size={6} style={{ marginRight: k === o.dots - 1 ? 0 : -4 }} />
+              <Dot key={k} tone={on ? 'seg-on' : 'seg-off'} size={6} style={{ marginRight: k === o.dots - 1 ? 0 : -4 }} />
             )) : null}
             {o.label}
           </div>
@@ -1239,17 +1298,33 @@ function ScorePill({ value, busy }) {   // the tile paints from --sc-*, not the 
     </span>
   )
 }
-function ScoreBar({ value, busy, ink }) {
+// `size` is the ring's own sm/md, forwarded so the bar can set the numeral per
+// size like the ring does. --ring-numeral-scale-sm/-md multiply the 16px stop
+// (base 1 in both base blocks, so the stop is untouched everywhere but a theme
+// that asks for a bigger numeral; saas takes 1.3 / 1.5). The box is `0 0 auto`
+// with a 40px floor rather than a fixed 40, so a three-digit numeral at 1.5
+// (~43px) still sits inside its own box instead of bleeding over the columns
+// beside it; the 32px track and the 4px gap are unchanged, and the tallest
+// stack (24 + 4 + 3 = 31) still fits the 44px box the `ring` variant occupies.
+function ScoreBar({ value, busy, ink, size }) {
+  const sm = size === 'sm'
   return (
     <span style={{
-      flex: '0 0 40px', width: 40, display: 'flex', flexDirection: 'column',
+      flex: '0 0 auto', minWidth: 40, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 4,
+      // Per SIZE, like --ring-shift-*: the sm bar sits in the report band, whose
+      // neighbours it already lines up with, so its shift stays 0; md is the one
+      // measured against the feed row. Both 0px in the base blocks.
+      transform: `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
     }}>
       {busy ? <Spinner size={12} /> : (
         <>
+          {/* --numeral-face, not --font-mono: this is a numeral, and saas puts
+              numerals on its sans (round-5 handover §2). Base value is --mono. */}
           <span style={{
-            fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--t-16)',
-            lineHeight: 1, color: ink, fontVariantNumeric: 'tabular-nums',
+            fontFamily: 'var(--numeral-face)', fontWeight: 'var(--weight-semibold)',
+            fontSize: sm ? 'calc(var(--t-16) * var(--ring-numeral-scale-sm))' : 'calc(var(--t-16) * var(--ring-numeral-scale-md))',
+            lineHeight: 1, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
           }}>{value == null ? '—' : value}</span>
           <Meter value={(value || 0) / 100} tone={ink} height={3} radius="var(--radius-mark)" style={{ width: 32 }} />
         </>
@@ -1292,7 +1367,9 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
     return (
       <span className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
         style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}>
-        <Alt value={value} busy={busy} ink={t.ink} />
+        {/* the alt drawings take the ring's own sm/md (ScoreBar sizes its numeral
+            from it); a numeric `size` scales md, the same rule --ring-shift-* uses */}
+        <Alt value={value} busy={busy} ink={t.ink} size={size === 'sm' ? 'sm' : 'md'} />
         {children}
       </span>
     )
@@ -1695,11 +1772,19 @@ export function Helper({ size = 'md', mono, onClick, title, ariaLabel, children,
   )
 }
 // ── Mono ────────────────────────────────────────────────────────────────────
-// The monospaced RUN — an id, a timestamp, a count, a score numeral. Separate
+// The fixed-advance RUN — an id, a timestamp, a count, a score numeral. Separate
 // from Helper's `mono` since this role takes five inks, not just --helper-ink.
 // Sizes are the five stops the sites use; `md` (10.5) is the dominant. `line`
 // pins the whole-pixel leading where the run has to sit on a shared baseline
 // (a 16px row, an 18px table line); left off, the run inherits.
+//
+// Two roles, one component (Design round 5). A NUMERAL run — score, count,
+// duration, timestamp, money — takes --numeral-face, which a theme may point at
+// its sans when that sans has lining tabular figures (saas: Plex Sans), plus
+// --numeral-variant for the tabular figures. `code` marks the other role — a
+// cron expression, a model id, a URL, a masked secret — which keeps --font-mono
+// and no numeric variant, because there the fixed advance IS the meaning.
+// Both tokens are --mono / `normal` in the base blocks, so nothing moves by default.
 // `tone` is optional on purpose: three of the sites paint from a score colour
 // the caller computes, and they pass it as `style.color` with no tone at all.
 const MONO_SIZE = {
@@ -1711,10 +1796,12 @@ const MONO_TONE = {
   base: 'var(--mono-ink)', muted: 'var(--mono-ink-muted)', faint: 'var(--mono-ink-faint)',
   strong: 'var(--mono-ink-strong)', accent: 'var(--mono-ink-accent)',
 }
-export function Mono({ size = 'md', tone, line, title, ariaLabel, children, style, className }) {
+export function Mono({ size = 'md', tone, line, code, title, ariaLabel, children, style, className }) {
   return (
     <span title={title} aria-label={ariaLabel} className={className} style={{
-      fontFamily: 'var(--font-mono)', fontSize: MONO_SIZE[size] || MONO_SIZE.md,
+      fontFamily: code ? 'var(--font-mono)' : 'var(--numeral-face)',
+      ...(code ? null : { fontVariantNumeric: 'var(--numeral-variant)' }),
+      fontSize: MONO_SIZE[size] || MONO_SIZE.md,
       ...(tone ? { color: MONO_TONE[tone] || MONO_TONE.base } : null),
       ...(line ? { lineHeight: MONO_LINE[line] || MONO_LINE[16] } : null), ...style,
     }}>{children}</span>

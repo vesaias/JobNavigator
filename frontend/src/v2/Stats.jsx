@@ -448,7 +448,7 @@ export default function Stats() {
             <div key={label} title={hint} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '14px 20px 10px', borderRight: `1px solid ${i === arr.length - 1 ? 'transparent' : 'var(--line-soft)'}` }}>
               <Label style={{ whiteSpace: 'nowrap' }}>{label}</Label>
               {/* ui: keep — KPI numeral is serif 27/30px, its own step (3px off PageTitle's 30, above Heading's 22). */}
-              <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '30px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transform: 'translateY(var(--kpi-shift))' }}>
                 {/* lineHeight 1 on the sub-unit: at the numeral's 30px it baselines at a font-dependent
                     offset, growing the numeral to 33px (35px alt) and the whole strip with it. */}
                 {value}{sub && <span style={{ marginLeft: 7, fontSize: 13, lineHeight: 1, color: String(sub).startsWith('+') ? 'var(--accent)' : 'var(--muted)' }}>{sub}</span>}
@@ -625,7 +625,7 @@ export default function Stats() {
             return (
               <TableRow key={j.id} height={38}>
                 <span title={j.name} style={{ flex: '0 1 250px', minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10 }}>{j.name}</span>
-                {showId && <Mono title={j.id} line={18} tone="muted" style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</Mono>}
+                {showId && <Mono title={j.id} line={18} tone="muted" code style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.id}</Mono>}
                 {showSched && <span title={j.schedule} style={{ flex: '0 0 140px', fontSize: 11.5, lineHeight: '18px', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{decodeCron(j.schedule)}</span>}
                 {showNext && <Mono line={18} tone="muted" style={{ flex: '0 0 132px' }}>{running ? 'now' : when(j.next_run)}</Mono>}
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -703,7 +703,7 @@ export default function Stats() {
                 return (
                   <TableRow key={r.id} size="sm">
                     <Mono line={16} tone="muted" style={{ flex: '0 0 118px' }}>{when(r.started_at)}</Mono>
-                    <Mono line={16} tone="base" style={{ flex: '0 0 140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</Mono>
+                    <Mono line={16} tone="base" code style={{ flex: '0 0 140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{r.job_type}</Mono>
                     <Helper size="xs" style={{ flex: '0 0 90px' }}>{r.trigger}</Helper>
                     <span style={{ flex: '0 0 100px', display: 'flex' }}>
                       <Pill bg={failed ? 'var(--bad-soft)' : r.status === 'running' ? 'var(--accent-soft)' : 'var(--hover-soft)'} fg={failed ? 'var(--bad)' : 'var(--accent)'}>{r.status}</Pill>

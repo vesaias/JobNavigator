@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSettled, NBSP, DASH } from './hooks'
-import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Textarea } from './ui'
+import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Spinner, Textarea } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -382,7 +382,16 @@ export default function Applications() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* list */}
         <div className="v2-scroll" style={{ flex: '0 0 472px', borderRight: '1px solid var(--line)', overflow: 'auto', padding: '6px 14px 14px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {STAGES.map((st) => {
+          {/* Nothing about the list is drawn before /applications settles: the four
+              stage headers would otherwise paint with NBSP counts under a title that
+              already says how many there are, and the row groups would fill in one
+              at a time. The shell around this scroller (title, count line, toolbar)
+              holds its own boxes, so only this pane waits. `loaded` goes true on a
+              FAILED load too (`load()` catches and resolves), which is what hands the
+              error state below its turn. */}
+          {!loaded ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '34px 8px' }}><Spinner /></div>
+          ) : STAGES.map((st) => {
             const rows = visible.filter((a) => groupOf(a.status) === st.id)
             const shut = !!closed[st.id]
             return (
@@ -451,7 +460,10 @@ export default function Applications() {
           editIv={editIv} setEditIv={setEditIv} ivDraft={ivDraft} setIvDraft={setIvDraft}
           openIvEdit={openIvEdit} saveInterview={saveInterview}
           addInterview={addInterview} canAddInterview={canAddInterview} delInterview={delInterview} toggleInterview={toggleInterview} openPrep={openPrep} />
-          : <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13 }}>Select an application.</div>}
+          /* "Select an application." is a verdict about a list that has loaded; while
+             it is still loading the same box holds a Spinner instead. Identical box
+             either way, so the settled frame does not move. */
+          : <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13 }}>{loaded ? 'Select an application.' : <Spinner />}</div>}
       </div>
 
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}

@@ -5,7 +5,7 @@ import { useToasts, ToastStack } from './Toast'
 // shared dialog also serves résumé and cover-letter deletes, so it lives in its own file.
 import ConfirmDialog from './ConfirmDialog'
 import { useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Button, DashedAdd, Dot, Drawer as UiDrawer, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
+import { Button, DashedAdd, Dot, Drawer as UiDrawer, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -524,7 +524,7 @@ export default function Companies() {
                 <Pill size="xs" line="inherit" on={testingId === c.id} disabled={testBusy} onClick={() => runTest(c.id)}
                   style={testingId === c.id ? { opacity: 1 } : undefined}
                   title={testingId === c.id ? 'Reading the board — nothing is saved' : testBusy ? 'A test is already running' : 'Preview run — shows what would be kept, saves nothing'}>
-                  {testingId === c.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}{testingId === c.id ? 'Testing…' : 'Test'}
+                  {testingId === c.id ? <Spinner /> : <FlaskGlyph size={11} />}{testingId === c.id ? 'Testing…' : 'Test'}
                 </Pill>
                 <IconButton size={25} line="inherit" on={menuId === c.id} onClick={() => setMenuId(menuId === c.id ? null : c.id)}
                   title="More actions" ariaExpanded={menuId === c.id} ariaHaspopup="menu">⋯</IconButton>

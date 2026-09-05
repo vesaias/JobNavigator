@@ -483,7 +483,7 @@ export default function ResumeEditor() {
         <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         {/* ui: keep — Tag-role uppercase badge (bg + r99, not a Label); case/tracking read --label-case/--label-tracking-scale so an alt skin can turn both off */}
-        <span style={{ fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--accent-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--accent)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
+        <span style={{ fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--ai-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--ai)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
         {/* every other v2 screen names itself with an h1; visually identical to the old span (margin/font reset inline) */}
         <h1 title={doc.name} style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: '20px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{doc.name}</h1>
         <Helper style={{ marginLeft: 'auto' }}>{saving ? 'Saving…' : savedAt ? `saved ${timeAgo(savedAt)} · autosaves` : 'autosaves'}</Helper>
@@ -571,7 +571,7 @@ export default function ResumeEditor() {
           {/* The copy count is part of the context settle; the whole sentence waits on ctxReady
               (not just the count) so it paints once instead of inserting the clause later. */}
           <span>{!ctxReady ? NBSP : <>Base résumé · {baseCopyCount != null && <><span style={{ color: 'var(--text)', fontWeight: 500 }}>{baseCopyCount} tailored cop{baseCopyCount === 1 ? 'y' : 'ies'}</span> · </>}edits here affect new copies only</>}</span>
-          <Button onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
+          <Button variant="ai" onClick={() => setTailorOpen(true)} style={{ marginLeft: 'auto' }}>✦ Tailor for a job…</Button>
           {/* Bases get the same ⋯ → Delete as copies (the confirm dialog already warns copies go too).
               Worded "Delete résumé" here since this document is the base and deleting it takes every copy with it. */}
           <div style={{ position: 'relative', flex: '0 0 auto', marginLeft: 8 }}>
@@ -694,7 +694,7 @@ function RetailorModal({ doc, job, chain, onClose, onRun, pushToast }) {
         <Helper>{mode === 'tailor' ? 'Runs in the background' : 'Instant — no LLM call'}</Helper>
         {mode === 'tailor' && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
       </>}
-      action={mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'} actionDisabled={!canRun}
+      action={mode === 'tailor' ? '✦ Re-tailor' : 'Make copy'} actionVariant={mode === 'tailor' ? 'ai' : 'primary'} actionDisabled={!canRun}
       onAction={() => onRun({ mode, baseId })}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Label>How</Label>
@@ -772,7 +772,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
             `if chain_depth and job_id`), so a freeform run says nothing */}
         {pick && <Helper size="xs" style={{ textWrap: 'pretty' }}>{chainNote(chain)}</Helper>}
       </>}
-      action="✦ Tailor" actionDisabled={!canRun} onAction={run}>
+      action="✦ Tailor" actionVariant="ai" actionDisabled={!canRun} onAction={run}>
       <Check checked={personaBase} onChange={setPersonaBase} label="Tailor from Persona instead of this base" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Label>Pick a job · saved and scored first</Label>

@@ -249,7 +249,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                   return (
                     /* ui: keep — a field-shaped prose row (r6), not a card */
                     <div key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: `1px solid ${m ? 'var(--change-soft)' : 'var(--line)'}`, background: m ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
-                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
+                      <span title={m?.label || ''} style={{ flex: '0 0 auto', color: m ? 'var(--ai)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{m ? '✦' : '—'}</span>
                       <BulletText value={b} onChange={(v) => setBullet(i, bi, v)} />
                       {m?.kind === 'changed' && <span onClick={() => setBullet(i, bi, m.base)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
                       <RemoveX size={10} lh="19px" onClick={() => undoRemove('Removed bullet',
@@ -261,7 +261,7 @@ export function ExperienceEditor({ emptyNote, data, setField, mutate, baseExp, o
                 {/* ui: keep — same field-shaped prose row, always tinted */}
                 {(e.suggested_bullets || []).map((sb, k) => (
                   <div key={`sb${k}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', border: '1px solid var(--change-soft)', background: 'var(--change-bg)', borderRadius: 'var(--radius-field)' }}>
-                    <span title="Suggested by tailoring. Kept unless you decline it in Review." style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 11, lineHeight: '19px' }}>✦</span>
+                    <span title="Suggested by tailoring. Kept unless you decline it in Review." style={{ flex: '0 0 auto', color: 'var(--ai)', fontSize: 11, lineHeight: '19px' }}>✦</span>
                     <span style={{ flex: 1, fontSize: 12.5, lineHeight: '19px', color: 'var(--text-2)' }}>{sb}</span>
                     {/* ui: keep — the row's markers and this tag ride the 19px prose line of BulletText; Helper's 16px would unalign them */}
                     <span style={{ flex: '0 0 auto', fontSize: 9.5, color: 'var(--muted)', lineHeight: '19px' }}>suggested</span>
@@ -289,7 +289,7 @@ export function SummaryEditor({ data, setField, baseSummary, pageHint = true }) 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
       {/* ui: keep — the summary is one field-shaped prose row (r6), not a card */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', border: `1px solid ${changed ? 'var(--change-soft)' : 'var(--line)'}`, background: changed ? 'var(--change-bg)' : 'var(--surface)', borderRadius: 'var(--radius-field)' }}>
-        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--accent)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{changed ? '✦' : '—'}</span>
+        <span title={changed ? 'Changed by tailoring' : ''} style={{ flex: '0 0 auto', color: changed ? 'var(--ai)' : 'var(--muted)', fontSize: 11, lineHeight: '19px' }}>{changed ? '✦' : '—'}</span>
         <BulletText value={txt} onChange={(v) => setField('summary', v)} />
         {changed && <span onClick={() => setField('summary', baseSummary)} title="Decline this tailoring change — restores the base text" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500, lineHeight: '19px' }}>↩</span>}
       </div>
@@ -335,10 +335,13 @@ export function SkillsEditor({ emptyNote, data, mutate, baseSkills, onError, onR
                 a skills row keeps its field colour and signals via ✦ + --change-soft border. */}
             {/* ui: keep — a *field* box (h29 · r6), not a card */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, height: 29, padding: '0 9px', border: `1px solid ${marked ? 'var(--change-soft)' : 'var(--edge)'}`, background: 'var(--surface-2)', borderRadius: 'var(--radius-field)' }}>
-              {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--accent)', fontSize: 10 }}>✦</span>}
+              {marked && <span title={added ? 'Added by tailoring' : 'Changed by tailoring'} style={{ flex: '0 0 auto', color: 'var(--ai)', fontSize: 10 }}>✦</span>}
               {/* ui: keep — bare input inside the row's own bordered box, not a field */}
               <input value={v} onChange={(e) => setVal(k, e.target.value)} placeholder="Skill values…" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--sans)' }} />
-              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 'var(--radius-inline)', background: 'var(--change-soft)', color: 'var(--good)', fontSize: 11, fontWeight: 500 }}>added</span>}
+              {/* --change-ink, not --good: this mark means "tailoring added it", and the
+                  two are the same colour in the default palette but not in a theme
+                  whose tailoring tint is its own (saas: violet). */}
+              {added && <span title="Added by tailoring" style={{ flex: '0 0 auto', padding: '1px 6px', borderRadius: 'var(--radius-inline)', background: 'var(--change-soft)', color: 'var(--change-ink)', fontSize: 11, fontWeight: 500 }}>added</span>}
               {changed && <span onClick={() => setVal(k, baseSkills[k])} title="Decline this tailoring change" style={{ flex: '0 0 auto', fontSize: 11, color: 'var(--warn)', cursor: 'pointer', fontWeight: 500 }}>↩</span>}
             </div>
             {/* restore rebuilds the key order so the row comes back where it was */}

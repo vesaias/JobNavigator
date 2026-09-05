@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Button, Card, Check, CopyGlyph, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
+import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -642,7 +642,12 @@ export default function Searches() {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     {/* Card's integer height comes from `Heading strong`'s own pinned line-height. */}
-                    <Heading strong size={15.5} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
+                    {/* the name is the only thing that may yield: `0 1 auto` +
+                        minWidth 0 is what a flex item with overflow:hidden already
+                        resolves to, written out so a wider face (Plex) cannot push
+                        the badge instead of ellipsing the name — same geometry in
+                        the default theme, the pattern Companies' name cell uses. */}
+                    <Heading strong size={15.5} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</Heading>
                     <span className={badgeCls} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', padding: '2px 8px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{badge}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -662,7 +667,7 @@ export default function Searches() {
                     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5, cursor: 'help' }}>
                     {/* the same discs the Segmented cells draw — DEPTHS.dots is a count */}
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      {Array.from({ length: dep?.dots || 0 }, (_, k) => <Dot key={k} tone="accent" size={6} />)}
+                      {Array.from({ length: dep?.dots || 0 }, (_, k) => <Dot key={k} tone="seg-on" size={6} />)}
                     </span>{dep?.label}
                   </Label>
                 )}
@@ -689,7 +694,7 @@ export default function Searches() {
                       <Pill size="xs" line="inherit" disabled={testBlocked} onClick={() => runTest(s)}
                         title={testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.'}
                         style={{ padding: '0 9px' }}>
-                        {testingId === s.id ? <Spinner /> : <span style={{ fontSize: 11 }}>⚗</span>}Test
+                        {testingId === s.id ? <Spinner /> : <FlaskGlyph size={11} />}Test
                       </Pill>
                     )}
                     <IconButton size={25} line="inherit" on={menuFor === s.id}
@@ -872,7 +877,7 @@ function TestModal({ test, tab, setTab, onClose }) {
                       {ok && needsDesc(j) && <Helper title="The run scans the description for body_exclusion_phrases; this preview didn’t have one" style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>body check needs the description</Helper>}
                     </span>
                     <Helper title={j.location} style={{ flex: '0 0 116px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{j.location}</Helper>
-                    <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
+                    <span title={j.salary || ''} style={{ flex: '0 0 120px', textAlign: 'right', fontFamily: 'var(--numeral-face)', fontSize: 9.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.salary || '—'}</span>
                     <span style={{ flex: '0 0 44px', textAlign: 'center', fontSize: 11, color: hasDesc ? 'var(--accent)' : 'var(--line-strong)' }}>{hasDesc ? '✓' : '✕'}</span>
                     <span style={{ flex: '0 0 66px', display: 'flex', justifyContent: 'flex-end' }}>
                       {/* A body-phrase drop is stored as `ignored`, not filtered out — label it as what it becomes. */}
