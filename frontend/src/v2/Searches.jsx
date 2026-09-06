@@ -672,7 +672,8 @@ export default function Searches() {
                   </Label>
                 )}
                 {/* fixed width so Active matches Paused and both sit on one vertical axis */}
-                <Pill size="sm" on={s.active} onClick={(e) => { e.stopPropagation(); toggleActive(s) }}
+                {/* round 7 #16: `xs`, matching Run/Test in the same row */}
+                <Pill size="xs" on={s.active} onClick={(e) => { e.stopPropagation(); toggleActive(s) }}
                   title={ext ? (s.active ? 'Pause — captured jobs stop importing' : 'Resume importing captured jobs') : (s.active ? 'Pause. Removed from the schedule, settings kept.' : 'Resume the schedule')}
                   style={{ flex: '0 0 62px' }}>
                   {s.active ? 'Active' : 'Paused'}
@@ -813,9 +814,9 @@ function TestModal({ test, tab, setTab, onClose }) {
 
   return (
     // ModalPanel brings Escape handling and pixel-snap; the scrim click already closes it.
-    <ModalPanel width={980} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
+    <ModalPanel width={980} title={`Test run — ${test.name}`} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
-          <Heading size={18} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
+          <Heading size={18} className="v2-dialogtitle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Test run — {test.name}</Heading>
           <Helper style={{ flex: '0 0 auto' }}>preview run · saves nothing</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>

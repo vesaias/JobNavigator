@@ -49,7 +49,12 @@ export function Picker({ value, options, placeholder, onPick, width }) {
   const cur = options.find((o) => o.id === value)
   return (
     <span style={{ position: 'relative', display: 'block' }} onClick={(e) => e.stopPropagation()}>
-      <div onClick={() => setOpen((v) => !v)} style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
+      {/* `v2-select-trigger` is the SELECT hook, not a style: it is what win98's
+          dropdown rule (98's sunken field + raised ▾ button) hangs on, and it
+          matches nothing in any other theme. aria-expanded goes with it, since
+          that rule presses the button in while the list is open. */}
+      <div onClick={() => setOpen((v) => !v)} className="v2-select-trigger" aria-expanded={open}
+        style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
         <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)' }}>
           {cur ? cur.label : placeholder}
         </span>

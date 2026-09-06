@@ -554,9 +554,9 @@ export default function CoverLetterEditor() {
       {regenOpen && (
         // A run in flight isn't cancellable, so while `regening` the panel takes
         // no `onClose` at all — no scrim click, no Escape.
-        <ModalPanel width={460} zIndex={60} onClose={regening ? undefined : () => setRegenOpen(false)} style={{ overflow: 'hidden' }}>
+        <ModalPanel width={460} title="Regenerate letter" zIndex={60} onClose={regening ? undefined : () => setRegenOpen(false)} style={{ overflow: 'hidden' }}>
             <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-              <Heading>Regenerate letter</Heading>
+              <Heading className="v2-dialogtitle">Regenerate letter</Heading>
               <Helper style={{ textWrap: 'pretty' }}>
                 Rewrites the whole letter for {doc.company || 'this role'} — your edits to this draft are replaced.
               </Helper>

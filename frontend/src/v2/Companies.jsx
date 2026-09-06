@@ -506,7 +506,9 @@ export default function Companies() {
               {showFit && <span title={c.avg_fit == null ? 'No scored roles yet' : `Average fit ${c.avg_fit} across this company's scored roles`} style={{ flex: '0 0 48px', textAlign: 'right', paddingRight: 14, fontFamily: 'var(--mono)', fontSize: 11.5, color: fitColor(c.avg_fit) }}>{c.avg_fit == null ? '–' : c.avg_fit}</span>}
               {/* status */}
               <span style={{ flex: '0 0 88px', display: 'flex', justifyContent: 'center' }}>
-                <Pill size="sm" on={c.active} onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }}
+                {/* round 7 #16: `xs`, the size Run/Test beside it already are —
+                    `sm` is a 26px box against their 25 and read as taller */}
+                <Pill size="xs" on={c.active} onClick={(e) => { e.stopPropagation(); patchCompany(c.id, { active: !c.active }) }}
                   title={c.active ? 'Click to pause scraping' : 'Click to resume scraping'}>{c.active ? 'Active' : 'Inactive'}</Pill>
               </span>
               {/* actions: pinned to the right edge of the scroller so the ⋯ stays reachable when the row is wider than the pane at 1024px */}
@@ -624,11 +626,12 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
   return (
     // ui's Drawer draws the backdrop (scoped to the pane) and routes outside clicks through onClose, so
     // the dirty-discard confirm still fires; Escape hits the same onClose and is idempotent with closeDrawer().
-    <UiDrawer width={720} onClose={onClose}>
+    <UiDrawer width={720} title={draft.name || company.name} onClose={onClose}>
       <HeaderRow>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* ui: keep — the drawer title is serif 20/-.02em; Heading's 400-weight scale is 18/19/22 */}
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
+          {/* round 7 #4: the name goes to the caption bar where a theme draws one */}
+          <span className="v2-dialogtitle" style={{ fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || company.name}</span>
           <Helper>{subtitle}</Helper>
         </div>
         <IconButton onClick={onClose} title="Close" style={{ flex: '0 0 auto' }}>✕</IconButton>
@@ -738,9 +741,15 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
 
       <FooterRow bg="page" gap={8} style={{ flex: '0 0 auto' }}>
         {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
-        <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl" style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
+        {/* round 7 #19: it did not read as a button at all in a bevelled skin — a
+            flat 1px stroke among raised controls. `v2-raised` is the same hook
+            Button/Pill carry, and --bevel-pad returns the pixel the bevel's
+            `border: 0` gives up, so no other theme moves. */}
+        <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl v2-raised" style={{ height: 32, padding: '0 calc(13px + var(--bevel-pad))', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
         {/* ui: keep — footer pill (r99), paired with the tinted one above it */}
-        <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? undefined : 'v2-act'} style={{ height: 32, padding: '0 13px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
+        {/* …and its pair, for the same reason: one bevelled and one flat side by
+            side is worse than either alone */}
+        <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? 'v2-raised' : 'v2-act v2-raised'} style={{ height: 32, padding: '0 calc(13px + var(--bevel-pad))', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
           {testingId === company.id && <Spinner />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
         </div>
@@ -791,9 +800,9 @@ function AddModal({ onClose, resumes, personaPopulated, onCreated, pushToast }) 
   }
 
   return (
-    <ModalPanel width={520} onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
+    <ModalPanel width={520} title="Add company" onClose={onClose} zIndex={60} style={{ overflow: 'hidden' }}>
         <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-          <Heading>Add company</Heading>
+          <Heading className="v2-dialogtitle">Add company</Heading>
           <Helper>Paste a careers URL — the ATS is read from it.</Helper>
         </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
@@ -855,8 +864,8 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
   useEffect(() => { setLimit(TEST_PAGE) }, [test])   // a fresh run starts at page 1
   if (test.error) {
     return (
-      <ModalPanel width={520} onClose={onClose} zIndex={60} style={{ padding: 22 }}>
-        <Heading style={{ display: 'block', marginBottom: 10 }}>Test scrape — Error</Heading>
+      <ModalPanel width={520} title="Test scrape — Error" onClose={onClose} zIndex={60} style={{ padding: 22 }}>
+        <Heading className="v2-dialogtitle" style={{ display: 'block', marginBottom: 10 }}>Test scrape — Error</Heading>
         <div style={{ fontSize: 12.5, color: 'var(--bad)' }}>{test.error}</div>
         <Pill onClick={onClose} style={{ marginTop: 16 }}>Close</Pill>
       </ModalPanel>
@@ -895,9 +904,9 @@ function TestModal({ test, onClose, showShots, setShowShots }) {
     return { tag: 'Out', tagBg: 'var(--bad-soft)', tagFg: 'var(--bad)', reasonFg: 'var(--bad)', reason: j.reason || '' }
   }
   return (
-    <ModalPanel width={840} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
+    <ModalPanel width={840} title={`Test scrape — ${test.company}`} onClose={onClose} zIndex={60} style={{ maxHeight: 660, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
-          <Heading>Test scrape — {test.company}</Heading>
+          <Heading className="v2-dialogtitle">Test scrape — {test.company}</Heading>
           {shots.length > 0 && (
             <Pill size="sm" on={showShots} onClick={() => setShowShots((v) => !v)} style={{ marginLeft: 'auto' }}>{showShots ? 'Hide' : 'Show'} screenshots</Pill>
           )}

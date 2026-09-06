@@ -1,0 +1,13 @@
+Pixelated MS Sans Serif (ms_sans_serif_bold.woff2 / .woff)
+----------------------------------------------------------
+Taken from 98.css by Jordan Scales (jdan) — https://github.com/jdan/98.css
+Source path: fonts/converted/
+
+98.css and its converted font files are distributed under the
+Creative Commons Attribution 4.0 International licence (CC BY 4.0);
+the project's font README additionally notes CC BY-SA 3.0 terms for the
+bitmap conversion. Attribution is retained here and in the @font-face
+comment in frontend/src/v2/theme.css.
+
+Used in this project for ONE role: the win98 theme's window caption bars
+(11px bold, native size), via the --titlebar-face token.

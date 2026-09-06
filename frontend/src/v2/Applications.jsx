@@ -673,9 +673,9 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
   return (
     // escape={false}: this screen closes every overlay from one handler that stands down while
     // a ConfirmDialog is up; a second listener here would close this modal under that confirm.
-    <ModalPanel width={640} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 640, overflow: 'hidden' }}>
+    <ModalPanel width={640} title={`Prep handover — ${company}`} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 640, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
-          <Heading>Prep handover — {company}</Heading>
+          <Heading className="v2-dialogtitle">Prep handover — {company}</Heading>
           <Helper>paste into the AI of your choice</Helper>
           <IconButton onClick={onClose} title="Close" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>
@@ -761,9 +761,9 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
 
   return (
     // escape={false}: as PrepModal — the screen owns Escape for its overlays.
-    <ModalPanel width={520} onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+    <ModalPanel width={520} title="Log application" onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
         <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-          <Heading>Log application</Heading>
+          <Heading className="v2-dialogtitle">Log application</Heading>
           <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app. Jobs marked Applied in the Feed are logged automatically.</Helper>
         </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>

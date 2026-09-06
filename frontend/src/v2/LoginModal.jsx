@@ -43,7 +43,7 @@ export default function LoginModal({ onSuccess }) {
   return (
     // Scrim carries the look root and its own z-index; panel is a real <form>
     // so Enter submits. No `onClose`: nothing to go back to, so no Escape/scrim dismissal.
-    <ModalPanel as="form" onSubmit={submit} width={360} zIndex={9999}
+    <ModalPanel as="form" onSubmit={submit} width={360} title="Sign in" zIndex={9999}
       scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       style={{ padding: '26px 26px 22px', gap: 14 }}>
       {success ? (

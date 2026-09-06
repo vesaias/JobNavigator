@@ -653,7 +653,7 @@ function Row({ r, ctx }) {
             )}
             {/* ui: keep — a Tag: uppercase on a --surface-2 r99 chip, not a Label */}
             {/* Hand-drawn caps badge (side-nav headers already use `Label`); its .06em matches --tag-tracking exactly. */}
-            {!on && <span style={{ fontSize: 9.5, lineHeight: '14px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
+            {!on && <span style={{ fontSize: 'var(--tag-size)', lineHeight: '14px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)', padding: '1px 7px', borderRadius: 'var(--radius-control)', background: 'var(--surface-2)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>inherits Primary</span>}
             <span style={{ marginLeft: 'auto' }}>
               <Toggle on={on} label="Override" ariaLabel={`${r.label} — override the Primary model`} onPick={async () => {
                 const next = !on
@@ -936,10 +936,10 @@ function EditModal({ spec, S, defaults, onSave, onClose }) {
   return (
     // escape={false}: this modal keeps its own Escape effect, paired with the flush-on-unmount in the same cleanup —
     // the pending debounce must be written however the modal goes away, so the two stay together.
-    <ModalPanel width="min(1020px, 94vw)" onClose={close} escape={false} zIndex={60}
+    <ModalPanel width="min(1020px, 94vw)" title={spec.label} onClose={close} escape={false} zIndex={60}
       style={{ maxHeight: 'min(1280px, 92vh)', overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
-          <Heading>{spec.label}</Heading>
+          <Heading className="v2-dialogtitle">{spec.label}</Heading>
           <Helper style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spec.sub || ''}</Helper>
           <IconButton onClick={close} ariaLabel={`Close ${spec.label}`} style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>
@@ -1033,9 +1033,9 @@ function ModelsModal({ S, save, onClose }) {
     <>
     {/* escape={false}: the guard lives above (`useEscape(onClose, !confirm)`) so the remove-confirm keeps the key to itself;
         a second listener here would be unguarded and take the catalog down with the confirm. */}
-    <ModalPanel width={600} onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 620, overflow: 'hidden' }}>
+    <ModalPanel width={600} title="Model catalog" onClose={onClose} escape={false} zIndex={60} style={{ maxHeight: 620, overflow: 'hidden' }}>
         <HeaderRow variant="compact" align="center" style={{ gap: 10 }}>
-          <Heading>Model catalog</Heading>
+          <Heading className="v2-dialogtitle">Model catalog</Heading>
           <Helper>available in every model picker</Helper>
           <IconButton onClick={onClose} ariaLabel="Close the model catalog" style={{ marginLeft: 'auto' }}>✕</IconButton>
         </HeaderRow>

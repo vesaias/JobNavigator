@@ -816,10 +816,10 @@ function ReviewModal({ changes, onClose, onApply }) {
   const liveApplied = changes.filter((c) => c.kind !== 'suggested' && !declined[c.key]).length
   const liveSuggested = changes.filter((c) => c.kind === 'suggested' && !declined[c.key]).length
   return (
-    <ModalPanel width="min(920px, 94vw)" onClose={onClose} zIndex={60} style={{ height: 'min(760px, 90vh)', overflow: 'hidden' }}>
+    <ModalPanel width="min(920px, 94vw)" title={nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'} onClose={onClose} zIndex={60} style={{ height: 'min(760px, 90vh)', overflow: 'hidden' }}>
         <HeaderRow align="center" style={{ gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Heading>{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</Heading>
+            <Heading className="v2-dialogtitle">{nSuggested ? 'Tailoring changes' : 'Tailoring changes — already applied'}</Heading>
             <Helper>
               {nSuggested
                 ? `${nApplied ? 'Applied changes are already in the document — decline any and the base text comes back. ' : ''}Suggested bullets are not in it yet: they are added when you finish reviewing.`

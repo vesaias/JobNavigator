@@ -74,10 +74,36 @@ const readThemeVar = (name) => {
 function useThemeVar(name, fallback) {
   const look = useTheme()
   const key = `${look.theme}|${look.resolved}|${name}`
-  const [val, setVal] = useState(() => VAR_CACHE.get(key))
+  // Round 7 #3: the FIRST paint used to get `undefined` and the real value only
+  // one commit later, because the read lived in the effect alone. For a paint
+  // value (--ring-variant, --check-style) that is a one-frame wobble nobody
+  // sees; for --title-bar it is a COMPOSITION switch, so a modal opened without
+  // its caption bar, then grew one — the "flick on click". The initialiser now
+  // reads through on a cache miss, so the caption is there from frame one.
+  //
+  // The effect stays, and is still the correctness half: `.jn-v2` takes theme
+  // and appearance as React PROPS, so during a theme change the DOM is a commit
+  // behind and a synchronous read would return the outgoing theme's value. The
+  // key changes with the theme, the cache misses on the new key, and the effect
+  // re-reads after the commit that stamped it. Reads are cached per
+  // (theme, appearance, name), so a page of fifty rings still pays exactly one.
+  //
+  // The initialiser caches only a NON-EMPTY read. A component that renders in
+  // the same pass as the `.jn-v2` root itself reads before that root is in the
+  // DOM, so readThemeVar falls back to <html> — which theme.js stamps but the
+  // token blocks do not select — and comes back ''. Caching that would pin the
+  // name at '' for the rest of the session; leaving it uncached lets the effect,
+  // which runs after the commit, do the real read.
+  const [val, setVal] = useState(() => {
+    const hit = VAR_CACHE.get(key)
+    if (hit !== undefined) return hit
+    const v = readThemeVar(name)
+    if (v) VAR_CACHE.set(key, v)
+    return v
+  })
   useEffect(() => {
     let v = VAR_CACHE.get(key)
-    if (v === undefined) { v = readThemeVar(name); VAR_CACHE.set(key, v) }
+    if (v === undefined) { v = readThemeVar(name); if (v) VAR_CACHE.set(key, v) }
     setVal(v)
   }, [key, name])
   return val || fallback
@@ -591,7 +617,10 @@ export function ToolbarTrigger({
       aria-haspopup={ariaHaspopup} aria-disabled={disabled || undefined}
       // deliberately NOT `v2-inset`: that hook's hover rule carries `!important`
       // and would beat this control's own `v2-bdc` accent hover.
-      className={cx('v2-ctl', !disabled && hover, className)}
+      // `v2-select-trigger` only when there IS a caret: the win98 dropdown rule
+      // bevels `> span:last-child` into 98's ▾ button, and with `caret={false}`
+      // the last child is the caller's own content. Inert in every other theme.
+      className={cx('v2-ctl', caret && 'v2-select-trigger', !disabled && hover, className)}
       style={{
         ...s, display: 'flex', alignItems: 'center', gap: 6,
         borderRadius: 'var(--radius-field)', fontSize: 'var(--t-11-5)',
@@ -1442,7 +1471,7 @@ function ScoreBar({ value, busy, ink, size }) {
     </span>
   )
 }
-function ScoreAscii({ value, busy, ink }) {
+function ScoreAscii({ value, busy, ink, size }) {
   // --ring-ascii-glyphs is the run's LENGTH, not its paint, so it comes back out
   // of the cascade like --ring-variant itself. Ten glyphs is what the bar has
   // always drawn; win98 asks for five (round-6 #2) because at ten the run is
@@ -1452,14 +1481,25 @@ function ScoreAscii({ value, busy, ink }) {
   const n = value == null ? 0 : Math.max(0, Math.min(g, Math.round(value / (100 / g))))
   return (
     <span style={{
-      flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 2,
+      // Round 7 #14: `alignItems: center`. The two rows are a 2-3 glyph numeral
+      // over a 7-glyph bracketed run, and with the default `stretch` each was
+      // its own full width with the text left-aligned inside — so the number sat
+      // hard against the left edge of a box twice its width and read as
+      // unaligned with everything around it. Centring is the axis the other two
+      // variants (pill, bar) already stack on.
+      flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
       // --font-ascii, not --font-mono: the block/shade run needs a real fixed
       // advance, and win98 re-points --mono at its pixel sans so every other
       // numeral leaves the mono face (round-5 handover §4). Base value is --mono.
       fontFamily: 'var(--font-ascii)', lineHeight: 1,
       color: busy ? 'var(--ring-neutral-ink)' : ink,
     }}>
-      {busy ? <span style={{ fontSize: 'var(--t-9)' }}>{`[${'.'.repeat(g)}]`}</span> : (
+      {/* Round 7 #15: the busy state was a literal `[......]` — the same glyph
+          run as a real score, which read as "scored, all empty" rather than
+          "working". It is the app's Spinner now, which in this theme IS the 98
+          segmented progress bar (--loader-style: blocks), sized per `size` like
+          ScorePill and ScoreBar. */}
+      {busy ? <Spinner size={size === 'sm' ? 9 : 12} /> : (
         <>
           <span style={{ fontSize: 'var(--t-13)', fontWeight: 700 }}>{value == null ? '--' : value}</span>
           <span style={{ fontSize: 'var(--t-9)', letterSpacing: '-.02em' }}>{`[${'█'.repeat(n)}${'░'.repeat(g - n)}]`}</span>
@@ -1639,8 +1679,13 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 // `escapeCapture` belongs to those same two global overlays: they sit above
 // every screen, so they take Escape in the capture phase and keep it, instead of
 // losing it to the screen that mounted first (see useEscape).
+// `title` (round 7 #4) is the window's NAME: the string a themed caption bar
+// shows. `titlebar` stays as the older, richer spelling for a caller that wants
+// nodes rather than a string; `title` is what every screen passes, because the
+// same string is also the body heading it replaces. `prompt` marks the small
+// message-box form, whose caption carries only ×.
 export function ModalPanel({
-  width = 480, as, onSubmit, onClose, escape = true, escapeCapture = false, labelledBy, zIndex = 70, titlebar,
+  width = 480, as, onSubmit, onClose, escape = true, escapeCapture = false, labelledBy, zIndex = 70, titlebar, title, prompt,
   children, style, className, scrimStyle, scrimProps,
 }) {
   useEscape(onClose, escape && !!onClose, escapeCapture)
@@ -1653,7 +1698,10 @@ export function ModalPanel({
       position: 'fixed', inset: 0, background: 'var(--scrim-bg)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex, ...scrimStyle,
     }}>
+      {/* when the caption bar carries the name, the body's <Heading id={labelledBy}>
+          is gone with it, so the panel names itself from the same string */}
       <Panel ref={panel} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
+        aria-label={chrome && typeof title === 'string' ? title : undefined}
         onSubmit={onSubmit} onClick={(e) => e.stopPropagation()} className={cx('v2-raised', className)}
         style={{
           // `padding` is 0 in every theme but the bevelled one, where it is the
@@ -1662,7 +1710,7 @@ export function ModalPanel({
           borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)', padding: BPAD,
           display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
         }}>
-        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar}</HeaderRow>}
+        {chrome && <HeaderRow variant="titlebar" prompt={prompt} onClose={onClose}>{titlebar ?? title}</HeaderRow>}
         {children}
       </Panel>
     </div>
@@ -1670,7 +1718,7 @@ export function ModalPanel({
 }
 // The drawer is positioned against its pane, not the viewport, so its scrim is
 // absolute too (Companies: the rail stays reachable while a company is open).
-export function Drawer({ width = 720, onClose, labelledBy, titlebar, children, style, className }) {
+export function Drawer({ width = 720, onClose, labelledBy, titlebar, title, children, style, className }) {
   useEscape(onClose)
   const chrome = useTitleBar()
   return (
@@ -1686,7 +1734,7 @@ export function Drawer({ width = 720, onClose, labelledBy, titlebar, children, s
           background: 'var(--drawer-bg)', borderLeft: 'var(--bw-panel) solid var(--drawer-border)',
           boxShadow: 'var(--drawer-shadow)', display: 'flex', flexDirection: 'column', zIndex: 30, ...style,
         }}>
-        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar}</HeaderRow>}
+        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar ?? title}</HeaderRow>}
         {children}
       </div>
     </>
@@ -1722,37 +1770,72 @@ export function useTitleBar() {
   const bar = useThemeVar('--title-bar', 'none')
   return !!bar && bar !== 'none'
 }
+// 98.css's title-bar-control glyphs, verbatim, as data URIs. The close cross is
+// drawn in the window-text black; the two INERT ones are drawn in 98's disabled
+// grey (#808080) instead — 98.css leaves them black because its own demo never
+// disables them, but a black glyph in a box that does nothing reads as broken
+// rather than unavailable.
+const TITLE_GLYPH = {
+  min: "url(\"data:image/svg+xml;charset=utf-8,%3Csvg width='6' height='2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23808080' d='M0 0h6v2H0z'/%3E%3C/svg%3E\")",
+  max: "url(\"data:image/svg+xml;charset=utf-8,%3Csvg width='9' height='9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M9 0H0v9h9V0zM8 2H1v6h7V2z' fill='%23808080'/%3E%3C/svg%3E\")",
+  close: "url(\"data:image/svg+xml;charset=utf-8,%3Csvg width='8' height='7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M0 0h2v1h1v1h2V1h1V0h2v1H7v1H6v1H5v1h1v1h1v1h1v1H6V6H5V5H3v1H2v1H0V6h1V5h1V4h1V3H2V2H1V1H0V0z' fill='%23000'/%3E%3C/svg%3E\")",
+}
 export function HeaderRow({
   as, variant = 'modal', pad, bg, line, soft, strong, height, align = 'flex-start',
-  onClose, id, children, style, className, ...rest
+  onClose, prompt, id, children, style, className, ...rest
 }) {
   const tone = line || (strong ? 'strong' : soft ? 'soft' : 'line')
   const El = as === 'header' ? 'header' : 'div'
-  // The caption bar: 22px, the caption on the gradient, and ONE bevelled glyph
-  // box pinned right. It used to draw the full `_ □ ×` group with the first two
-  // inert — round-6 #4 threw them out: a 98 DIALOG never had a minimise or a
-  // maximise (only a document window did), and with the modal header's own close
-  // also on screen the panel showed two crosses. The caption bar now owns the
-  // only one, and theme.css hides the header's while this chrome is mounted.
+  // The caption bar: 22px, the caption on the gradient, and the control group
+  // pinned right. Round-6 #4 had cut it to a single ×, on the reading that a 98
+  // DIALOG has no minimise or maximise. Round 7 #4 puts all three back, because
+  // that is what the user wants a window to look like — and 98's answer for a
+  // control a window does not support was never to omit it but to draw it
+  // DISABLED: the box is still there, still bevelled, and the glyph is greyed.
+  // So `_` and `□` render at --disabled-ink with no handler, no tab stop and
+  // aria-disabled, and only `×` acts.
+  //
+  // `prompt` is the small-dialog form — ConfirmDialog and Settings' askText —
+  // which keeps the single ×. A 98 message box had exactly one control too, so
+  // this is the same rule applied at the other size rather than an exception.
+  //
+  // The glyphs are 98.css's own pixel SVGs rather than text: `_ □ ×` in a UI
+  // face are three different optical sizes sitting on three different baselines,
+  // and the originals are drawn on the pixel grid at the exact offsets below.
   if (variant === 'titlebar') {
+    const glyphBox = {
+      width: 16, height: 14, flex: '0 0 auto', display: 'block',
+      background: 'var(--btn-secondary-bg)',
+      backgroundRepeat: 'no-repeat',
+    }
     return (
-      <El id={id} className={className} {...rest} style={{
+      <El id={id} className={cx('v2-titlebar', className)} {...rest} style={{
         flex: '0 0 auto', height: 22, padding: '0 3px 0 6px',
         display: 'flex', alignItems: 'center', gap: 8,
         background: 'var(--title-bar)', color: 'var(--title-bar-ink)',
-        fontFamily: 'var(--font-body)', fontSize: 'var(--t-12)', fontWeight: 'var(--label-weight)',
+        // the caption is the one role the 98 bitmap face is right for: 11px bold
+        // at its native size. Every other run in the theme is on the TrueType
+        // successor, which scales.
+        fontFamily: 'var(--titlebar-face)', fontSize: 'var(--t-11)', fontWeight: 'var(--weight-semibold)',
         lineHeight: 1, ...style,
       }}>
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
+          {!prompt && (
+            <>
+              <span className="v2-raised" aria-label="Minimize" aria-disabled="true" title="Minimize"
+                style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundPosition: 'bottom 3px left 4px', cursor: 'default' }} />
+              <span className="v2-raised" aria-label="Maximize" aria-disabled="true" title="Maximize"
+                style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundPosition: 'top 2px left 3px', cursor: 'default' }} />
+            </>
+          )}
           <span className="v2-raised"
             {...(onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
             style={{
-              width: 16, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--btn-secondary-bg)', color: 'var(--btn-secondary-ink)',
-              fontFamily: 'var(--font-mono)', fontSize: 'var(--t-9)', lineHeight: 1,
+              ...glyphBox, marginLeft: prompt ? 0 : 2,
+              backgroundImage: TITLE_GLYPH.close, backgroundPosition: 'top 3px left 4px',
               cursor: onClose ? 'pointer' : 'default',
-            }}>×</span>
+            }} />
         </span>
       </El>
     )
@@ -2085,15 +2168,24 @@ export function ChoiceModal({
   cancel = 'Cancel', action, actionVariant, actionDisabled, actionBusy, onAction,
   bodyGap = 13, bodyMax = 460, onClose, zIndex = 60, children, style, className,
 }) {
+  // Round 7 #4: where a themed caption bar exists, the modal's NAME lives there
+  // and the body stops repeating it — a 98 window says its name once, in the
+  // caption. The subtitle stays: it is the sentence under the name, not the name.
+  // A header with neither left would be an empty 16/22/13 strip, so it is only
+  // mounted when something survives.
+  const chrome = useTitleBar()
+  const head = !chrome || (sub != null && sub !== false)
   return (
-    <ModalPanel width={width} onClose={onClose} zIndex={zIndex} labelledBy={labelledBy}
+    <ModalPanel width={width} title={title} onClose={onClose} zIndex={zIndex} labelledBy={labelledBy}
       className={className} style={{ overflow: 'hidden', ...style }}>
-      <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-        <Heading id={labelledBy}>{title}</Heading>
-        {sub != null && sub !== false && (
-          <Helper style={subClamp ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : undefined}>{sub}</Helper>
-        )}
-      </HeaderRow>
+      {head && (
+        <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
+          {!chrome && <Heading id={labelledBy}>{title}</Heading>}
+          {sub != null && sub !== false && (
+            <Helper style={subClamp ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : undefined}>{sub}</Helper>
+          )}
+        </HeaderRow>
+      )}
       <div className="v2-scroll" style={{
         padding: '14px 22px', display: 'flex', flexDirection: 'column',
         gap: bodyGap, maxHeight: bodyMax, overflow: 'auto',

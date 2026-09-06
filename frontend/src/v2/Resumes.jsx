@@ -342,8 +342,8 @@ function AddModal({ onClose, onCreated }) {
   return (
     // zIndex 60 kept: this modal opens from the Résumés shelf, under the app's
     // ConfirmDialog (70) and the toast stack (80).
-    <ModalPanel width={420} onClose={onClose} zIndex={60} style={{ padding: 22 }}>
-        <Heading size={19} style={{ display: 'block', marginBottom: 4 }}>New base résumé</Heading>
+    <ModalPanel width={420} title="New base résumé" onClose={onClose} zIndex={60} style={{ padding: 22 }}>
+        <Heading size={19} className="v2-dialogtitle" style={{ display: 'block', marginBottom: 4 }}>New base résumé</Heading>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Start from scratch, or import an existing PDF to parse.</div>
         <Input autoFocus value={name} onChange={setName} placeholder="Résumé name (e.g. Backend — Platform v4)"
           ariaLabel="Résumé name" onKeyDown={(e) => e.key === 'Enter' && createScratch()}

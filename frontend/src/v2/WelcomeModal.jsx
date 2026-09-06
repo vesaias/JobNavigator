@@ -29,14 +29,14 @@ export default function WelcomeModal({ onClose }) {
     // `escapeCapture`: this overlay mounts outside the shell, so the screen behind
     // it registers its Escape listener first — capture phase is how the topmost
     // overlay keeps the key (R4-E2E-01).
-    <ModalPanel width={420} onClose={onClose} escapeCapture zIndex={9998}
+    <ModalPanel width={420} title="Welcome to JobNavigator" onClose={onClose} escapeCapture zIndex={9998}
       scrimProps={{ className: 'jn-v2', ...themeAttrs(look) }}
       scrimStyle={{ padding: 16 }}
       style={{ maxWidth: '100%', overflow: 'hidden' }}>
       <div style={{ padding: '22px 24px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
           {/* ui: keep — the welcome title is serif 21/26px; the Heading scale is 18/19/22 */}
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 21, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px' }}>Welcome to JobNavigator</span>
+          <span className="v2-dialogtitle" style={{ fontFamily: 'var(--serif)', fontSize: 21, fontWeight: 400, letterSpacing: '-.02em', lineHeight: '26px' }}>Welcome to JobNavigator</span>
           {/* ui: keep — the modal's own ✕: muted 13 sitting on the title's 26px line box; IconButton is a 26px round box */}
           <span onClick={onClose} className="v2-hover-accent-text" role="button" aria-label="Close"
             style={{ marginLeft: 'auto', fontSize: 13, lineHeight: '26px', color: 'var(--muted)', cursor: 'pointer' }}>✕</span>

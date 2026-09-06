@@ -14,10 +14,15 @@ const PERIODS = [[1, '1d'], [7, '7d'], [30, '30d'], [0, 'all']]
 // Both logs page via limit+offset; the control hides itself when a page comes back short.
 const RUN_PAGE = 30
 const ACT_PAGE = 50
+// Round 7 #6: the five bands are their own token run now. They used to name
+// --line-strong / --sand / --gold / --funnel-mid / --accent directly, and in a
+// theme where the accent and the funnel's mid stop are the same colour (win98:
+// both the Hilight navy) every band from 61 up was one flat fill. The base
+// values of --dist-1..5 ARE those five, so the default theme does not move; a
+// theme that needs a real bad->good ramp now has one place to write it.
 const BUCKET_COLOR = {
-  // --line is a border token; as a fill it vanished into the card in dark mode.
-  '0-20': 'var(--line-strong)', '21-40': 'var(--sand)', '41-60': 'var(--gold)',
-  '61-80': 'var(--funnel-mid)', '81-100': 'var(--accent)',
+  '0-20': 'var(--dist-1)', '21-40': 'var(--dist-2)', '41-60': 'var(--dist-3)',
+  '61-80': 'var(--dist-4)', '81-100': 'var(--dist-5)',
 }
 const TYPE_CLASS = {
   scrape: 'sm-keyword', h1b: 'sm-lipersonal', cv_score: 'sm-levels',
@@ -529,7 +534,7 @@ export default function Stats() {
               {buckets.map((b) => (
                 <div key={b.range} title={`${b.count} jobs scored ${b.range}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <Mono line={14} tone="base">{b.count}</Mono>
-                  <div style={{ width: '100%', height: Math.max(2, Math.round((b.count / maxBucket) * 96)), background: BUCKET_COLOR[b.range] || 'var(--accent)', borderRadius: '5px 5px 0 0' }} />
+                  <div style={{ width: '100%', height: Math.max(2, Math.round((b.count / maxBucket) * 96)), background: BUCKET_COLOR[b.range] || 'var(--accent)', borderRadius: 'var(--radius-bar) var(--radius-bar) 0 0' }} />
                   {/* ui: keep — an axis tick label under a bar, not body helper text */}
                   <span style={{ fontSize: 10, lineHeight: '14px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{b.range}</span>
                 </div>

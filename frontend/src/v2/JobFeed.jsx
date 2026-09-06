@@ -1452,11 +1452,11 @@ export default function V2JobFeed() {
         return (
           // escape={false}: the Feed closes every overlay from one handler that
           // stands down while a ConfirmDialog is up.
-          <ModalPanel width={436} onClose={() => setPicker(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+          <ModalPanel width={436} title={`Create résumé copy — ${single ? single.title : `${picker.jobs.length} selected roles`}`} onClose={() => setPicker(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
               {/* header */}
               <HeaderRow align="stretch" pad="20px 24px 16px" style={{ flexDirection: 'column', gap: 5 }}>
                 <Label>Create résumé copy</Label>
-                <Heading size={19}>{single ? single.title : `${picker.jobs.length} selected roles`}</Heading>
+                <Heading size={19} className="v2-dialogtitle">{single ? single.title : `${picker.jobs.length} selected roles`}</Heading>
                 {single?.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{single.company}</span>}
               </HeaderRow>
               {/* existing-copy banner */}
@@ -1513,11 +1513,11 @@ export default function V2JobFeed() {
       {/* rescore modal — pick résumés + depth */}
       {rescoreJob && (
         // escape={false}: as the picker above — the screen owns Escape.
-        <ModalPanel width={436} onClose={() => setRescoreJob(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+        <ModalPanel width={436} title={`${rescoreJob.verb} against résumés — ${rescoreJob.title}`} onClose={() => setRescoreJob(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
             {/* header */}
             <HeaderRow align="stretch" pad="20px 24px 16px" style={{ flexDirection: 'column', gap: 5 }}>
               <Label>{rescoreJob.verb} against résumés</Label>
-              <Heading size={19}>{rescoreJob.title}</Heading>
+              <Heading size={19} className="v2-dialogtitle">{rescoreJob.title}</Heading>
               {rescoreJob.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{rescoreJob.company}</span>}
             </HeaderRow>
             {/* body */}
