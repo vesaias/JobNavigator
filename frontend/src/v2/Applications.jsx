@@ -53,14 +53,8 @@ const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].i
 
 // where a popover sits; how it looks is `Menu`'s.
 const POPOVER = { position: 'absolute', top: '100%', zIndex: 40 }
-// Header action pill — same metrics as the Feed's collapsed-header "Open ↗".
-// lineHeight:1 is required: at the inherited 1.5 the label rides ~1px high in this fixed-height pill.
-// ui: keep — the detail header's own action pill (h30 · 13 · pad 0 14); Pill md is 31/12.5/pad 0 15.
-const ACT_BTN = {
-  height: 30, padding: '0 14px', borderRadius: 'var(--radius-control)', border: '1px solid var(--edge)',
-  background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
-  fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap',
-}
+// (round 9: ACT_BTN is gone — the three header actions it painted are now
+// `Button variant="secondary"` / `IconButton`, see the detail header below.)
 // FastAPI's `detail` is a plain string for HTTPException; append it when present.
 const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — ' + e.response.data.detail : '')
 
@@ -513,13 +507,19 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             </span>
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', gap: 4, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-            {/* ui: keep — the three header actions are ACT_BTN pills; two are real anchors so ⌘/middle-click still opens the posting, and Button/Pill render a div */}
-            {d.has_cached_page && <a href={`/api/jobs/${d.job_id}/cached-page`} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Snapshot of the posting from application day"
-              style={{ ...ACT_BTN, textDecoration: 'none' }}>Cached</a>}
-            {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-bdc" title="Open the live posting"
-              style={{ ...ACT_BTN, gap: 4, textDecoration: 'none' }}>Live ↗</a>}
-            <div onClick={() => setMenuOpen((v) => !v)} className="v2-bd" title="More actions"
-              style={{ ...ACT_BTN, width: 30, padding: 0, justifyContent: 'center', border: `1px solid ${menuOpen ? 'var(--accent)' : 'var(--edge)'}`, background: menuOpen ? 'var(--accent-soft)' : 'var(--surface)', cursor: 'pointer' }}>⋯</div>
+            {/* Round 9: the three header actions are primitives. The two anchors
+                were hand-drawn only because "Button renders a div" — `Button href`
+                (round 9) renders the real <a>, so ⌘/middle-click still opens the
+                posting — and the ⋯ is IconButton's bordered small size, whose
+                --pill-on-* trio is exactly what the open state drew by
+                hand. Height is the one override (this header's 30, not sm's 33);
+                the padding is now sm's 15px rather than ACT_BTN's 14. */}
+            {d.has_cached_page && <Button variant="secondary" size="sm" href={`/api/jobs/${d.job_id}/cached-page`} target="_blank"
+              title="Snapshot of the posting from application day" style={{ height: 30 }}>Cached</Button>}
+            {d.url && <Button variant="secondary" size="sm" href={d.url} target="_blank"
+              title="Open the live posting" style={{ height: 30 }}>Live ↗</Button>}
+            <IconButton size={25} on={menuOpen} hover="v2-bd" title="More actions"
+              onClick={() => setMenuOpen((v) => !v)} style={{ width: 30, height: 30 }}>⋯</IconButton>
             {menuOpen && (
               <Menu ariaLabel="Application actions" onDismiss={() => setMenuOpen(false)} style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, textAlign: 'left' }}>
                 {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],

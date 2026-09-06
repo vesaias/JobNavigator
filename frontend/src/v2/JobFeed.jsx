@@ -4,7 +4,7 @@ import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSettled, useSingleOpen, useWarm, NBSP, DASH } from './hooks'
-import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
+import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -1053,7 +1053,10 @@ export default function V2JobFeed() {
                         {nsc > 0 ? (
                           <ScoreRing value={score} size="md">
                             {/* ui: keep — "+N reports" badge pinned to the ring: 16px min-width box on --surface with a --line hairline; Tag has no fixed box */}
-                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-control)', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
+                            {/* --ring-count-shift is `-2px` in the base blocks — the literal this
+                                line carried — so only win98 moves the counter (round 9 #3: its
+                                ascii mark is two short rows, and the badge sat on the bar). */}
+                            {nsc > 1 && <div title={`${nsc} résumé reports`} style={{ position: 'absolute', right: -3, bottom: 'var(--ring-count-shift)', minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-control)', background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-2)' }}>{nsc}</div>}
                           </ScoreRing>
                         ) : run ? (
                           // the busy state matches the ring it replaces — same 44px box, same 37.5px arc
@@ -1172,15 +1175,23 @@ export default function V2JobFeed() {
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {/* ui: keep — a real <a href target=_blank>, and its height tracks the collapsing detail header (36/30) */}
-                    {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="v2-act" style={{ height: headOpen ? 36 : 30, padding: '0 14px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)' }}>Open ↗</a>}
+                    {/* Round 9: `Button href` renders the real anchor this needed
+                        (⌘/middle-click still opens the posting) with the secondary
+                        button's own paint; the override is the height, which tracks
+                        the collapsing detail header (36/30) like the ✦ button beside it. */}
+                    {d.url && <Button variant="secondary" size="sm" href={d.url} target="_blank" style={{ height: headOpen ? 36 : 30 }}>Open ↗</Button>}
                     {/* Routed through Button (not hand-drawn) so it reads --btn-shadow/--btn-weight/--btn-primary-bg/-ink
                         and the hover/pressed rules; the style override only restores height/padding/line-height, which track the collapsing header. */}
                     <Button variant="ai" size="sm" onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
                       style={{ height: headOpen ? 36 : 30, padding: '0 19px', lineHeight: 'inherit' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</Button>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
-                      {/* ui: keep — 36/30 with the collapsing detail header; IconButton's bordered size is a fixed 36 */}
-                      <div title="More actions" onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }} className="v2-act" style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30, border: `1px solid ${headMenu ? 'var(--accent)' : 'var(--edge)'}`, background: headMenu ? 'var(--accent-soft)' : 'transparent', color: headMenu ? 'var(--accent)' : 'var(--text-2)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer' }}>⋯</div>
+                      {/* Round 9: IconButton's bordered 36, with a width/height
+                          override so the square still tracks the collapsing header
+                          (36/30). `on` is the open-menu state, which is the same
+                          --pill-on-* trio this row drew by hand. */}
+                      <IconButton size={36} on={headMenu} title="More actions" hover="v2-act"
+                        onClick={(e) => { e.stopPropagation(); setHeadMenu((v) => !v) }}
+                        style={{ width: headOpen ? 36 : 30, height: headOpen ? 36 : 30 }}>⋯</IconButton>
                       {headMenu && (
                         <>
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
@@ -1428,10 +1439,12 @@ export default function V2JobFeed() {
                           <Heading>This page can't be shown here</Heading>
                           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--text-2)' }}>{d.company} does not allow its page to be shown inside another site. {dCached ? 'You applied to this role, so a cached snapshot is available.' : 'Open it in a new tab, or install the Navigator extension, which removes that restriction.'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                            {/* ui: keep — native <a href target=_blank>; Button renders a div and would drop the anchor */}
-                            <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ height: 34, padding: '0 16px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>Open in new tab ↗</a>
+                            {/* round 9: `Button href` renders the real anchor this
+                                needed, on the primary button's own paint (which is
+                                the --accent / --accent-ink pair it drew by hand) */}
+                            <Button size="sm" href={d.url} target="_blank" style={{ height: 34 }}>Open in new tab ↗</Button>
                             {/* ui: keep — h34 to match the native anchor it sits beside (which stays inline) */}
-                            {dCached && <div onClick={() => setViewCached(true)} className="v2-act" style={{ height: 34, padding: '0 15px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>View cached snapshot</div>}
+                            {dCached && <Button variant="secondary" size="sm" hover="v2-act" onClick={() => setViewCached(true)} style={{ height: 34 }}>View cached snapshot</Button>}
                           </div>
                         </div>
                       </div>

@@ -239,14 +239,29 @@ const BTN_LOOK = {
 // `as="button"` renders a real <button type=…> instead of the div, for a form's
 // submit control (LoginModal) where Enter-in-a-field must submit. UA button
 // styles are reset first; keeps `tabindex="0"` so theme.css's focus ring still applies.
+//
+// `href` renders a real <a> with the SAME paint — the round-9 addition. Half a
+// dozen screens hand-drew a bordered anchor ("Open ↗", "Live ↗", "Cached", the
+// PDF download) with the note "Button/Pill render a div, and ⌘/middle-click has
+// to open the posting". It is the same control with a different tag, so it is a
+// prop and not a copy: `act()` is skipped (an <a href> is already focusable and
+// Enter-activated by the UA, and role="button" on a link is a lie), `rel`
+// defaults to `noopener noreferrer` for a `_blank` target, and a disabled/busy
+// one drops the href rather than rendering a live link nobody may click.
+//
+// `hover` overrides the variant's own hover class, like Pill's and IconButton's:
+// `secondary` hangs on `v2-bdc`, which repaints the INK on hover, so a button
+// carrying a tinted label (Companies' --warn "Make N inactive") needs the
+// border-only `v2-bd-warn` instead or the tint vanishes under the pointer.
 export function Button({
-  variant = 'primary', size = 'md', as, type = 'button', disabled, busy, onClick, title, ariaLabel,
+  variant = 'primary', size = 'md', as, type = 'button', href, target, rel, hover, disabled, busy, onClick, title, ariaLabel,
   ariaExpanded, ariaHaspopup, ariaBusy, children, style, className,
 }) {
   const s = BTN_SIZE[size] || BTN_SIZE.md
   const look = BTN_LOOK[variant] || BTN_LOOK.primary
   const off = !!(disabled || busy)
   const native = as === 'button'
+  const anchor = !native && !!href
   const common = {
     title,
     'aria-label': ariaLabel,
@@ -260,7 +275,12 @@ export function Button({
     // border pixel at all, in a skin whose whole idiom is "raised = clickable"
     // (R4-T3-09). Scoped `[data-theme="win98"]` in theme.css — inert elsewhere,
     // and kept on a disabled button too, since a win98 button is still a button.
-    className: cx('v2-ctl', 'v2-raised', !off && look.state, !off && look.hover, className),
+    // `v2-btn` is a NAME, not a style: `v2-ctl` and `v2-raised` are shared with
+    // every pill, field and card in the app, so a theme that wants to say
+    // something about push buttons alone (win98's 75px dialog minimum, round 9
+    // #12d) had nothing to hang it on that did not also catch a 25px square
+    // IconButton. It computes nothing on its own.
+    className: cx('v2-ctl', 'v2-btn', 'v2-raised', !off && look.state, !off && (hover || look.hover), className),
     style: {
       flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       borderRadius: 'var(--radius-control)', fontFamily: 'var(--font-body)', fontWeight: 'var(--btn-weight)',
@@ -271,6 +291,7 @@ export function Button({
       opacity: busy && !disabled ? 0.6 : 1,
       ...(off ? { textShadow: 'var(--disabled-engrave)' } : null), // engraved half of the disabled pair; `none` by default
       ...(native ? { margin: 0, border: 'none', appearance: 'none', WebkitAppearance: 'none' } : null),
+      ...(anchor ? { textDecoration: 'none' } : null),
       ...s, ...(off ? look.off : look.rest), ...style,
     },
   }
@@ -280,6 +301,14 @@ export function Button({
       <button type={type} tabIndex={0} disabled={off} onClick={off ? undefined : onClick} {...common}>
         {body}
       </button>
+    )
+  }
+  if (anchor) {
+    return (
+      <a href={off ? undefined : href} target={target} rel={rel || (target === '_blank' ? 'noopener noreferrer' : undefined)}
+        aria-disabled={off || undefined} onClick={off ? undefined : onClick} {...common}>
+        {body}
+      </a>
     )
   }
   return (
@@ -763,6 +792,29 @@ export function Band({ interactive = true, onClick, title, ariaLabel, children, 
         border: 'var(--bw-panel) dashed var(--band-border)', borderRadius: 'var(--radius-card)',
         padding: '10px 14px', ...(live ? { cursor: 'pointer' } : null), ...style,
       }}>{children}</div>
+  )
+}
+
+// ── ArchiveBand ─────────────────────────────────────────────────────────────
+// The "Archived · N …" shelf both list screens carry (Cover Letters, Résumés):
+// a dashed `Band` whose whole box toggles the archive, with a muted sentence on
+// the left and the accent affordance ("browse ›" / "hide ⌄") pinned right. Both
+// screens hand-drew the same two spans, so the row is one primitive now and the
+// trailing affordance is a real `Link` — which is what makes it read as an
+// action in the themes that paint links themselves (win98's blue, cobalt's and
+// saas's underline) instead of a bare accent-coloured word.
+//
+// `lineHeight: 1` on the Link is deliberate and is the Cover Letters row's own
+// `v2-ctl`: at Link's 17px line box the affordance would be the tallest child
+// and the band would grow 3px. The sentence (12px) stays the tallest child, so
+// the band's height is exactly what both screens drew.
+export function ArchiveBand({ action, onClick, title, ariaLabel, children, style, className }) {
+  return (
+    <Band onClick={onClick} title={title} ariaLabel={ariaLabel} className={className}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, ...style }}>
+      <span style={{ fontSize: 'var(--t-12)', color: 'var(--muted)' }}>{children}</span>
+      <Link style={{ marginLeft: 'auto', lineHeight: 1, whiteSpace: 'nowrap' }}>{action}</Link>
+    </Band>
   )
 }
 
@@ -1501,7 +1553,11 @@ function ScoreAscii({ value, busy, ink, size }) {
           ScorePill and ScoreBar. */}
       {busy ? <Spinner size={size === 'sm' ? 9 : 12} /> : (
         <>
-          <span style={{ fontSize: 'var(--t-13)', fontWeight: 700 }}>{value == null ? '--' : value}</span>
+          {/* Per size, like every other mark here: --ring-ascii-num-sm/-md are
+              both `var(--t-13)` in the base blocks — the stop this line carried —
+              so nothing outside win98 moves. Written as two literal names rather
+              than one interpolated one so `checkvars` can see them both. */}
+          <span style={{ fontSize: size === 'sm' ? 'var(--ring-ascii-num-sm)' : 'var(--ring-ascii-num-md)', fontWeight: 700 }}>{value == null ? '--' : value}</span>
           <span style={{ fontSize: 'var(--t-9)', letterSpacing: '-.02em' }}>{`[${'█'.repeat(n)}${'░'.repeat(g - n)}]`}</span>
         </>
       )}
@@ -1807,34 +1863,41 @@ export function HeaderRow({
   // The glyphs are 98.css's own pixel SVGs rather than text: `_ □ ×` in a UI
   // face are three different optical sizes sitting on three different baselines,
   // and the originals are drawn on the pixel grid at the exact offsets below.
+  // Round 9 #12c · the caption bar grows. This whole branch only ever renders
+  // where `useTitleBar()` is true — i.e. where `--title-bar` is not `none`, which
+  // is win98 and nothing else — so every number here is win98-only by
+  // construction and no other theme can move.
+  //   bar     22 -> 26px
+  //   caption 11 -> 13px (the theme's own UI stop, so the window's name reads at
+  //           the size everything else in it does)
+  //   controls 16x14 -> 20x18, with each pixel glyph scaled 1.5x to fill the
+  //           bigger box. `imageRendering: pixelated` keeps the scaled SVG on
+  //           whole pixels instead of smearing the 1px strokes.
   if (variant === 'titlebar') {
     const glyphBox = {
-      width: 16, height: 14, flex: '0 0 auto', display: 'block',
+      width: 20, height: 18, flex: '0 0 auto', display: 'block',
       background: 'var(--btn-secondary-bg)',
-      backgroundRepeat: 'no-repeat',
+      backgroundRepeat: 'no-repeat', imageRendering: 'pixelated',
     }
     return (
       <El id={id} className={cx('v2-titlebar', className)} {...rest} style={{
-        flex: '0 0 auto', height: 22, padding: '0 3px 0 6px',
+        flex: '0 0 auto', height: 26, padding: '0 3px 0 6px',
         display: 'flex', alignItems: 'center', gap: 8,
         background: 'var(--title-bar)', color: 'var(--title-bar-ink)',
-        // the caption is the one role the 98 bitmap face is right for: 11px bold
-        // at its native size. Every other run in the theme is on the TrueType
-        // successor, which scales.
-        fontFamily: 'var(--titlebar-face)', fontSize: 'var(--t-11)', fontWeight: 'var(--weight-semibold)',
+        fontFamily: 'var(--titlebar-face)', fontSize: 'var(--t-13)', fontWeight: 'var(--weight-semibold)',
         lineHeight: 1, ...style,
       }}>
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
           <span className="v2-raised" aria-label="Minimize" aria-disabled="true" title="Minimize"
-            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundPosition: 'bottom 3px left 4px', cursor: 'default' }} />
+            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundSize: '9px 3px', backgroundPosition: 'bottom 4px left 5px', cursor: 'default' }} />
           <span className="v2-raised" aria-label="Maximize" aria-disabled="true" title="Maximize"
-            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundPosition: 'top 2px left 3px', cursor: 'default' }} />
+            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundSize: '13px 13px', backgroundPosition: 'top 3px left 4px', cursor: 'default' }} />
           <span className="v2-raised"
             {...(onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
             style={{
               ...glyphBox, marginLeft: 2,
-              backgroundImage: TITLE_GLYPH.close, backgroundPosition: 'top 3px left 4px',
+              backgroundImage: TITLE_GLYPH.close, backgroundSize: '12px 11px', backgroundPosition: 'top 4px left 5px',
               cursor: onClose ? 'pointer' : 'default',
             }} />
         </span>

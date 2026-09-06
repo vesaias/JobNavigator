@@ -5,7 +5,7 @@ import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import { useFlashToast, useSettled, useWarm, NBSP, DASH } from './hooks'
 import { EMPTY } from './ResumeSections'
-import { Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
+import { ArchiveBand, Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
 
 const timeAgo = (s) => {
   if (!s) return ''
@@ -290,10 +290,9 @@ export default function V2Resumes() {
                 )
               })}
               {archived.length > 0 && (
-                <Band onClick={() => setShowArchived(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Archived · {archived.length} cop{archived.length === 1 ? 'y' : 'ies'} from rejected or stale applications</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)' }}>browse ›</span>
-                </Band>
+                <ArchiveBand onClick={() => setShowArchived(true)} action="browse ›">
+                  Archived · {archived.length} cop{archived.length === 1 ? 'y' : 'ies'} from rejected or stale applications
+                </ArchiveBand>
               )}
             </>
           )}
@@ -349,16 +348,22 @@ function AddModal({ onClose, onCreated }) {
           ariaLabel="Résumé name" onKeyDown={(e) => e.key === 'Enter' && createScratch()}
           style={{ marginBottom: 14 }} />
         {err && <div style={{ fontSize: 12, color: 'var(--bad)', marginBottom: 10 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 9 }}>
+        {/* Round 9 #12d · a classic dialog footer, which is also the shape every
+            other modal in the app already uses (`ChoiceModal`): one right-aligned
+            row of real buttons, the affirmative first, Cancel last. It replaces
+            two full-width `flex: 1` blocks that read as choice CARDS rather than
+            buttons, and a centred muted "Cancel" that was not a control at all.
+            Sizes drop to `sm` so three buttons fit the 420px panel. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           {/* Disabled primary button is --line on --muted — --edge as a fill would read as a second live button. */}
-          <Button onClick={createScratch} disabled={!canCreate} style={{ flex: 1 }}>{busy === 'create' ? 'Creating…' : 'Create from scratch'}</Button>
-          <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={!!busy} style={{ flex: 1 }}>{busy === 'import' ? 'Parsing…' : 'Import PDF ↑'}</Button>
+          <Button size="sm" onClick={createScratch} disabled={!canCreate} style={{ marginLeft: 'auto' }}>{busy === 'create' ? 'Creating…' : 'Create from scratch'}</Button>
+          <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={!!busy}>{busy === 'import' ? 'Parsing…' : 'Import PDF…'}</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           {/* Clear the file input after every pick — re-picking the same file otherwise fires no change event. */}
           {/* ui: keep — hidden <input type="file">, not a rendered field */}
           <input ref={fileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; importPdf(f) }} />
         </div>
-        <div onClick={onClose} style={{ marginTop: 14, textAlign: 'center', fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Cancel</div>
     </ModalPanel>
   )
 }

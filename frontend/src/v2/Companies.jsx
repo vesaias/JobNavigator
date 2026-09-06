@@ -418,14 +418,15 @@ export default function Companies() {
         })}
         <Rule vertical length={20} tone="line" style={{ margin: '0 2px' }} />
         {inactiveInFilter.length > 0 && (
-          // ui: keep — accent-ink bulk action, paired with the --warn one below; Pill has no tinted variant
-          <div onClick={() => bulkSet(true)} title={bulkHint} className="v2-act"
-            style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {inactiveInFilter.length} active</div>
+          // round 9: `Button` with an explicit `hover`, which is what let the two
+          // tinted bulk actions leave the hand-drawn set — secondary's own v2-bdc
+          // repaints the ink and would wash the accent/--warn label out.
+          <Button variant="secondary" size="sm" hover="v2-act" onClick={() => bulkSet(true)} title={bulkHint}
+            style={{ height: 30, fontSize: 12, color: 'var(--accent)' }}>Make {inactiveInFilter.length} active</Button>
         )}
         {activeInFilter.length > 0 && (
-          // ui: keep — --warn ink + v2-bd-warn hover; Pill has no warn variant
-          <div onClick={() => bulkSet(false)} title={bulkHint} className="v2-bd-warn"
-            style={{ flex: '0 0 auto', height: 30, padding: '0 12px', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--warn)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Make {activeInFilter.length} inactive</div>
+          <Button variant="secondary" size="sm" hover="v2-bd-warn" onClick={() => bulkSet(false)} title={bulkHint}
+            style={{ height: 30, fontSize: 12, color: 'var(--warn)' }}>Make {activeInFilter.length} inactive</Button>
         )}
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ position: 'relative', display: 'flex' }} onClick={(e) => e.stopPropagation()}>
@@ -740,19 +741,29 @@ function Drawer({ state, setState, onClose, resumes, personaPopulated, onSave, o
       </div>
 
       <FooterRow bg="page" gap={8} style={{ flex: '0 0 auto' }}>
-        {/* ui: keep — ink swings --warn/--accent with the company's state; Pill has no tinted variant */}
-        {/* round 7 #19: it did not read as a button at all in a bevelled skin — a
-            flat 1px stroke among raised controls. `v2-raised` is the same hook
-            Button/Pill carry, and --bevel-pad returns the pixel the bevel's
-            `border: 0` gives up, so no other theme moves. */}
-        <div onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }} className="v2-bdc v2-ctl v2-raised" style={{ height: 32, padding: '0 calc(13px + var(--bevel-pad))', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}</div>
-        {/* ui: keep — footer pill (r99), paired with the tinted one above it */}
-        {/* …and its pair, for the same reason: one bevelled and one flat side by
-            side is worse than either alone */}
-        <div onClick={testingId ? undefined : () => onTest(company.id)} title={testingId && testingId !== company.id ? 'A test is already running' : undefined} className={testingId ? 'v2-raised' : 'v2-act v2-raised'} style={{ height: 32, padding: '0 calc(13px + var(--bevel-pad))', border: '1px solid var(--edge)', background: 'var(--surface)', borderRadius: 'var(--radius-control)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', cursor: testingId ? 'default' : 'pointer', opacity: testingId && testingId !== company.id ? 0.5 : 1 }}>
+        {/* Round 9: both drawer-footer controls are `Button variant="secondary"`.
+            They were hand-drawn for one reason — the left one's ink swings
+            --warn/--accent with the company's state and Button had no way to keep
+            a tinted label through its hover — and `hover` (round 9) is that way:
+            `v2-bd-warn` moves the border only, where secondary's own `v2-bdc`
+            would repaint the ink and wash the tint out. With the primitive comes
+            its `v2-raised` bevel hook, so round 7 #19's hand-added hook and the
+            `calc(… + var(--bevel-pad))` padding it needed both go away — `Button`
+            already writes both. Overrides restore this footer's own metrics only:
+            32px tall (not sm's 33) at 12px (not sm's 13). The horizontal padding
+            is now sm's 15px rather than the hand-written 13. */}
+        <Button variant="secondary" size="sm" hover={draft.active ? 'v2-bd-warn' : 'v2-bdc'}
+          onClick={() => { onSave(company.id, { active: !draft.active }); set({ active: !draft.active }) }}
+          style={{ height: 32, fontSize: 12, color: draft.active ? 'var(--warn)' : 'var(--accent)' }}>
+          {draft.active ? 'Make inactive — jobs already found are kept' : 'Make active'}
+        </Button>
+        <Button variant="secondary" size="sm" hover="v2-act"
+          onClick={testingId ? undefined : () => onTest(company.id)}
+          title={testingId && testingId !== company.id ? 'A test is already running' : undefined}
+          style={{ height: 32, gap: 6, fontSize: 12, ...(testingId && testingId !== company.id ? { opacity: 0.5 } : null), ...(testingId ? { cursor: 'default' } : null) }}>
           {testingId === company.id && <Spinner />}
           {testingId === company.id ? 'Testing…' : 'Test scrape'}
-        </div>
+        </Button>
         {saveErr && <Helper style={{ marginLeft: 'auto', color: 'var(--bad)' }}>{saveErr}</Helper>}
         <Button size="sm" onClick={save} busy={saving} style={{ marginLeft: saveErr ? 10 : 'auto' }}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </FooterRow>

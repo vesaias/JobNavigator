@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToasts, ToastStack } from './Toast'
 import api from '../api'
-import { Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, Mono, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
+import { ArchiveBand, Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Mono, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
 import './theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -70,15 +70,18 @@ export function Picker({ value, options, placeholder, onPick, width }) {
       {open && (
         <Menu role="listbox" className="v2-scroll" style={{ ...POPOVER, width: width || '100%' }}>
           {options.length === 0 && <div style={{ padding: '7px 9px', fontSize: 12, color: 'var(--muted)' }}>Nothing to pick yet.</div>}
-          {/* ui: keep — two-line option (label + sub); MenuItem only draws single-line rows */}
+          {/* Round 9: routed through MenuItem. The two lines are one child of the
+              row's own label slot, so `alignItems:center` has nothing to fight,
+              and the row now reads --menu-item-ink / --menu-item-on-bg / -on-ink
+              and win98's Hilight hover instead of restating those four literals.
+              The only override is the padding: MenuItem's is 7px 11px and this
+              popover has always been 7px 9px. */}
           {options.map((o) => (
-            <div key={o.id} className="v2-menuitem" onClick={() => { onPick(o.id); setOpen(false) }}
-              style={{ padding: '7px 9px', borderRadius: 'var(--radius-field)', fontSize: 12.5, cursor: 'pointer', minWidth: 0,
-                color: o.id === value ? 'var(--accent)' : 'var(--text-2)', fontWeight: o.id === value ? 500 : 400,
-                background: o.id === value ? 'var(--accent-soft)' : 'transparent' }}>
+            <MenuItem key={o.id} role="option" selected={o.id === value} ariaSelected={o.id === value}
+              onClick={() => { onPick(o.id); setOpen(false) }} style={{ padding: '7px 9px' }}>
               <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</div>
               {o.sub && <Helper style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.sub}</Helper>}
-            </div>
+            </MenuItem>
           ))}
         </Menu>
       )}
@@ -397,15 +400,11 @@ export default function CoverLetters() {
             {active.map((c) => row(c, false))}
 
             {archived.length > 0 && (
-              <Band onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} title={query.trim() ? 'Archived letters are shown while you search' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
-                </span>
-                <span className="v2-ctl" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  {query.trim() ? 'shown while searching' : showArch ? 'hide ⌄' : 'browse ›'}
-                </span>
-              </Band>
+              <ArchiveBand onClick={() => { if (!query.trim()) setArchOpen((v) => !v) }} title={query.trim() ? 'Archived letters are shown while you search' : undefined}
+                style={{ marginTop: 6 }}
+                action={query.trim() ? 'shown while searching' : showArch ? 'hide ⌄' : 'browse ›'}>
+                Archived · {archived.length} letter{archived.length === 1 ? '' : 's'} from rejected applications &amp; skipped jobs
+              </ArchiveBand>
             )}
             {showArch && archived.map((c) => row(c, true))}
 

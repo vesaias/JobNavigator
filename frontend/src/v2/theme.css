@@ -364,6 +364,12 @@
      has always drawn, so no theme moves; win98 asks for 5 so the run fits the Feed's
      64px score column and stops colliding with the "+N reports" pin (round-6 #2). */
   --ring-ascii-glyphs:10;
+  /* Round 9 #3 · the ascii mark's numeral, per size, and where the Feed's
+     "+N résumé reports" counter sits under it. Both stops are the `var(--t-13)`
+     the run carried and the shift is the `-2px` JobFeed wrote inline, so the
+     default theme computes exactly what it did; win98 takes a bigger numeral
+     and drops the counter clear of it. */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-13); --ring-count-shift:-2px;
   /* Which drawing Spinner renders. `arc` is the rotating band every theme has always
      had; `blocks` is win98's segmented progress bar (98 drew no spinners at all). A
      shape switch like --ring-variant / --check-style, read back through useThemeVar. */
@@ -742,6 +748,12 @@
      has always drawn, so no theme moves; win98 asks for 5 so the run fits the Feed's
      64px score column and stops colliding with the "+N reports" pin (round-6 #2). */
   --ring-ascii-glyphs:10;
+  /* Round 9 #3 · the ascii mark's numeral, per size, and where the Feed's
+     "+N résumé reports" counter sits under it. Both stops are the `var(--t-13)`
+     the run carried and the shift is the `-2px` JobFeed wrote inline, so the
+     default theme computes exactly what it did; win98 takes a bigger numeral
+     and drops the counter clear of it. */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-13); --ring-count-shift:-2px;
   /* Which drawing Spinner renders. `arc` is the rotating band every theme has always
      had; `blocks` is win98's segmented progress bar (98 drew no spinners at all). A
      shape switch like --ring-variant / --check-style, read back through useThemeVar. */
@@ -1482,7 +1494,18 @@
      size (--t-12-5/--t-13), not the 11px floor the small caps stops collapse
      to. A caption at 11 beside body text at 13 read as a different, lesser
      role; 98 sets a label in the same face and size as everything else. */
-  --label-size:13px; --label-size-lg:13px;
+  /* Round 9 #4 · the two stops split again. `md` (--label-size) is what the
+     Stats KPI caption and 86 of the 88 call sites render, and it stays at the
+     theme's 13px UI stop, which is what round 8 #8 was asked for. `lg`
+     (--label-size-lg) is the Résumés shelf heading, the only `size="lg"` in the
+     app (2 sites), and drops to 12 — a heading over a list wants to sit UNDER
+     the row text beside it here, not level with it. */
+  --label-size:13px; --label-size-lg:12px;
+  /* Round 9 #3 · the ascii score's numeral. md is the Feed row's mark and takes
+     the 15px stop (13 -> 15); sm is the report band's, where it already lines up
+     with its neighbours, so it stays. The "+N résumé reports" counter drops 3px
+     with it, clear of the [█░] run the taller numeral pushes down. */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-4px;
   --weight-medium:400; --weight-semibold:700;   /* the pixel face has 400 and 700 only */
   /* the DEFAULT PUSH BUTTON: grey face, bold label, and the 1px window-frame
      ring the theme-named rule at the foot of this file appends to the bevel.
@@ -1529,9 +1552,14 @@
      blue, not the Hilight navy the accent carries. The BUTTON face is separate
      (--btn-ai-* below) and stays grey per D-22. */
   --ai:#0000ff; --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
-  /* 98 has no filled buttons (D-22), so the ai button wears the same grey face
-     as primary/danger; --ai itself stays the link blue for the ✦ badge and Tag. */
-  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--btn-primary-ink);
+  /* 98 has no filled buttons (D-22), so the ai button wears the same grey FACE
+     as primary/danger. Round 9 #1: its INK is not the button ink, it is --ai —
+     the theme's link blue — so the label and its ✦ read as "this goes to
+     something generated", which is the one distinction 98 draws in colour and
+     the only thing left to separate an ai button from a plain one here. The
+     glyph is a text child, so it takes the same ink for free.
+     Contrast: #0000ff on #c0c0c0 = 4.72:1, #9cc0ff on #3e4c4c = 4.86:1. */
+  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--ai);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   /* Round 7 #6: the distribution's five bands were --line-strong / --sand /
@@ -1553,8 +1581,22 @@
      change and never the accent hairline. */
   --chip-ink-hover:var(--text); --card-bg-hover:var(--line-soft); --card-border-hover:var(--line);
   /* the bevel IS the rest border here, so field-hover is a genuine no-op (D-06) */
+  /* Round 9 #13 · a 98 control does not repaint on hover. The two names
+     `.v2-bd:hover` / `.v2-bdc:hover` read were still the base --accent, so every
+     secondary Button, xs Pill, 25px IconButton and ToolbarTrigger in the theme
+     swung its label to the Hilight navy under the pointer — the one place a
+     colour change was left. Both are re-pointed at the control's REST values, so
+     the rules still fire and compute no change: the bevel is the affordance, and
+     :active (the sunken stack, plus --pressed-shift) is the press. */
+  --pill-border-hover:var(--pill-border); --pill-ink-hover:var(--pill-ink);
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#0000ff; --link-ink-hover:#800080;   /* 98's link-blue and its visited purple */
+  /* Round 9 #11 · the dashed add line's ink. The base value is --accent, which
+     in LIGHT is the Hilight navy on the #c0c0c0 chrome (7.7:1) and is kept; in
+     DARK it is #008080 on the #3e4c4c teal chrome — teal on teal, 1.9:1 — so
+     the dark block below takes --text. Declared here at the inherited value so
+     the two win98 blocks keep one name set (checkvars) and light does not move. */
+  --dashadd-ink:var(--accent); --dashadd-ink-hover:var(--accent);
   --tag-size:10.5px;   /* round 7 #1: the hand-drawn caps badges, 9.5 in every other theme */
   /* ── round 8 ────────────────────────────────────────────────────────────
      #6 a hovered menu row takes the HILIGHT — navy fill, white text — which is
@@ -1604,7 +1646,8 @@
   /* round 8 #4 (98 buttons are normal weight) and #8 (the Label role is one
      13px stop here) — see the light block */
   --btn-weight:400; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
-  --label-size:13px; --label-size-lg:13px;
+  --label-size:13px; --label-size-lg:12px;   /* round 9 #4, see the light block */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-4px;   /* round 9 #3 */
   --weight-medium:400; --weight-semibold:700;
   --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
@@ -1635,9 +1678,14 @@
   /* round 7 #18: --ai is the ✦/Tag TEXT ink, the link blue lifted to this
      ground; the button face below stays grey (D-22) */
   --ai:#9cc0ff; --ai-ink:var(--accent-ink); --ai-soft:var(--accent-soft);
-  /* 98 has no filled buttons (D-22), so the ai button wears the same grey face
-     as primary/danger; --ai itself stays the link blue for the ✦ badge and Tag. */
-  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--btn-primary-ink);
+  /* 98 has no filled buttons (D-22), so the ai button wears the same grey FACE
+     as primary/danger. Round 9 #1: its INK is not the button ink, it is --ai —
+     the theme's link blue — so the label and its ✦ read as "this goes to
+     something generated", which is the one distinction 98 draws in colour and
+     the only thing left to separate an ai button from a plain one here. The
+     glyph is a text child, so it takes the same ink for free.
+     Contrast: #0000ff on #c0c0c0 = 4.72:1, #9cc0ff on #3e4c4c = 4.86:1. */
+  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--ai);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   /* round 7 #6: the five distribution bands, bad -> good (see the light block) */
@@ -1647,8 +1695,10 @@
   --ctl-line:1.35;   /* round 7 #2, see the light block */
   --seg-dot-on:var(--dot-accent); --seg-dot-off:var(--dot-neutral);   /* the base pair, declared to keep the set a superset of cobalt's */
   --chip-ink-hover:var(--text); --card-bg-hover:var(--line-soft); --card-border-hover:var(--line);   /* round 7 #11 */
+  --pill-border-hover:var(--pill-border); --pill-ink-hover:var(--pill-ink);   /* round 9 #13, see the light block */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#9cc0ff; --link-ink-hover:#ffffff;   /* #8ab4ff was 4.29:1 on the chrome (round 7 #17) */
+  --dashadd-ink:var(--text); --dashadd-ink-hover:var(--text);   /* round 9 #11: --accent was teal on teal chrome (1.9:1) */
   --tag-size:10.5px;   /* round 7 #1 */
   /* round 8: the Hilight menu hover (#6), the Picker's white field half (#7)
      and the KPI numeral's 2px lift (#9) — see the light block */
@@ -1867,8 +1917,14 @@
    painted in a single tone instead of mitred between two border sides. The box
    is kept identical by --bevel-pad, which every carrier adds to its own padding. */
 .jn-v2[data-theme="win98"] .v2-raised { border:var(--bevel-raised-border) !important; border-color:var(--bevel-raised-color) !important; box-shadow:var(--bevel-raised-shadow) !important; }
+/* Round 9 #12a · `:not([role="dialog"])`. `ModalPanel` wears `v2-raised` for its
+   raised window frame, which is right — but it then also matched the PRESSED
+   half of the same pair, so mousing down anywhere inside a modal flipped the
+   whole window to the sunken bevel for as long as the button was held. A window
+   frame has no pressed state in 98; only the controls inside it do. `Drawer`
+   carries no `v2-raised` at all and was never affected. */
 .jn-v2[data-theme="win98"] .v2-inset:not(.v2-underline):not([aria-invalid="true"]),
-.jn-v2[data-theme="win98"] .v2-raised:active { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
+.jn-v2[data-theme="win98"] .v2-raised:active:not([role="dialog"]) { border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important; box-shadow:var(--bevel-inset-shadow) !important; }
 
 /* The DEFAULT PUSH BUTTON. `primary` and `danger` are both grey-faced in win98
    (--btn-*-bg / -ink do that, and --btn-weight already bolds the label); what no
@@ -1980,10 +2036,17 @@
    `.v2-titlebar + *` is what keeps this off the body and the footer, and off
    the caption bar's own ×, which is the sibling the combinator starts FROM
    rather than one it can select. */
-.jn-v2[data-theme="win98"] [role="dialog"] .v2-headerrow [title="Close"],
-.jn-v2[data-theme="win98"] [role="dialog"] .v2-headerrow [aria-label="Close"],
-.jn-v2[data-theme="win98"] [role="dialog"] > .v2-titlebar + * [title="Close"],
-.jn-v2[data-theme="win98"] [role="dialog"] > .v2-titlebar + * [aria-label="Close"] { display:none; }
+/* Round 9 #12b · the round-7 pair above only reached a close control sitting in
+   a `.v2-headerrow`, or in whatever element followed the caption bar. That missed
+   every other shape a screen uses — WelcomeModal's bare ✕ span, a drawer head
+   that is not a HeaderRow, anything further down the body — so most windows still
+   showed two ways to close. It is a blanket hide now, with the caption bar's own
+   × handed straight back: in this theme the × in the title bar is the close
+   button, and there is never a second one. */
+.jn-v2[data-theme="win98"] [role="dialog"] [title="Close"],
+.jn-v2[data-theme="win98"] [role="dialog"] [aria-label="Close"] { display:none !important; }
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-titlebar [title="Close"],
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-titlebar [aria-label="Close"] { display:block !important; }
 
 /* Round 7 #4 · a window says its name ONCE, in its caption. Each modal now
    passes that name to the panel as `title`, and marks the body heading it
@@ -1998,6 +2061,45 @@
    OWN their heading and can simply not render it. */
 .jn-v2[data-theme="win98"] [role="dialog"] > .v2-titlebar ~ .v2-dialogtitle,
 .jn-v2[data-theme="win98"] [role="dialog"] > .v2-titlebar ~ * .v2-dialogtitle { display:none !important; }
+
+/* Round 9 #13, second half · `.v2-bdc:hover` repaints the ink for every control
+   that wears it, including a PILL THAT IS ON — whose ground is the Hilight navy.
+   Pointing --pill-ink-hover at the rest ink (above) therefore put BLACK on navy
+   under the pointer, where before it had put navy on navy: both illegible, and
+   the second only because the first was. A picked control keeps its own on-ink
+   whatever the pointer does, which is also what 98 does with a depressed
+   toolbar button. */
+.jn-v2[data-theme="win98"] .v2-ctl[aria-pressed="true"]:hover { color:var(--pill-on-ink) !important; }
+
+/* ── Round 9 #2 · where the ink sits in a menu row ───────────────────────────
+   A row is `padding: 7px 9px` with the inherited 1.5 line box, and the run
+   inside it is centred as a LINE BOX, not as ink: Microsoft Sans Serif hangs
+   more of its em box below the baseline than a cap reaches above it, so the
+   visible word rides high in its own band. It shows worst on a picked row,
+   where the --accent-soft plate draws the band the word is meant to sit in the
+   middle of (crop `w98r9-02-select-open-before.png` — the plate has visibly more
+   air under "Light" than over it).
+   The fix is 2px moved from the bottom padding to the top: the row keeps the
+   height it had (7+7 = 9+5) and the ink lands on the band's centre. It is
+   written on `.v2-menu` descendants so it reaches both shapes — `MenuItem`
+   (a flex row) and `Select`'s option (a plain block) — and the danger row, which
+   wears `v2-hover-bad` instead of `v2-menuitem`. !important because the Cover
+   Letters `Picker` writes the `padding` shorthand inline.
+   One row type is not 7/7 and therefore does grow: Settings' model typeahead is
+   6/6, so it becomes 14px of padding instead of 12. */
+.jn-v2[data-theme="win98"] .v2-menu .v2-menuitem,
+.jn-v2[data-theme="win98"] .v2-menu .v2-hover-bad,
+.jn-v2[data-theme="win98"] .v2-menu [role="option"] { padding-top:9px !important; padding-bottom:5px !important; }
+
+/* ── Round 9 #12d · 98's dialog button minimum ───────────────────────────────
+   98.css's `button` is `min-width: 75px`, which is what gives a dialog's footer
+   its even row of same-width buttons — an [OK] next to a [Cancel] next to a
+   [Browse...] all measure the same unless the label is longer. Round 8 left it
+   out because the only hook available then was `.v2-ctl`, which would also have
+   stretched the 25 and 36px square IconButtons that live in the same panels.
+   `v2-btn` (round 9) is Button's own name, so the rule can say what it means.
+   Scoped to dialogs, as 98 did: a toolbar button was never 75px wide. */
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-btn { min-width:75px; }
 
 /* ── Round 7 #7 · the 98 focus rectangle ─────────────────────────────────────
    The token was already right — --focus-outline is `1px dotted`, and the generic
@@ -2118,6 +2220,27 @@
    writes height, padding, margin, font-size, border-left and background inline,
    and an inline value beats a class rule. */
 .jn-v2[data-theme="win98"] .v2-rail { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
+/* Round 9 #6 · V2App writes `padding: 0 0 8px` on the rail, which left a strip
+   of bare rail under the collapse row with nothing in it. 98 closes a pane at
+   its last row. */
+.jn-v2[data-theme="win98"] .v2-rail { padding-bottom:0 !important; }
+/* ── Round 9 #8 · the rail's right edge, at FULL height ───────────────────────
+   The sunken bevel on `.v2-rail` is an inset box-shadow, and a parent's shadow
+   is painted before its children — so the caption band and the three foot rows,
+   which are full-width children with their own `--surface` ground, painted
+   straight over it. The edge only ever showed beside the tree, which is the one
+   band with no opaque child. An ::after overlay is the fix: it is a child too,
+   so it paints after its siblings, and it spans the rail's whole height —
+   caption, tree and foot alike.
+   Two pixels, reading outwards: the window-frame black (--edge, the darkest
+   tone in the bevel stack, which is what "stronger" asks for) and then the
+   ButtonHighlight (--line-soft). That is 98's etched separator with its heavy
+   shadow, the same pair it draws down the side of a toolbar. */
+.jn-v2[data-theme="win98"] .v2-rail { position:relative; }
+.jn-v2[data-theme="win98"] .v2-rail::after {
+  content:""; position:absolute; top:0; right:0; bottom:0; width:2px; z-index:2; pointer-events:none;
+  background:linear-gradient(90deg, var(--edge) 0 1px, var(--line-soft) 1px 2px);
+}
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] { margin:4px 0 4px 4px; }
 /* ── Round 8 Q5 · the COLLAPSED rail is a toolbar, not an empty tree well ─────
    At 206px this pane is Explorer's Folders tree and belongs in a sunken client
@@ -2130,24 +2253,28 @@
    surface. `background` needs !important: V2App writes `var(--rail)` inline. */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="false"] {
   background:var(--surface) !important;
-  box-shadow:inset -1px 0 0 var(--line-soft), inset -2px 0 0 var(--line);
+  box-shadow:none;   /* round 9 #8: the right edge is the ::after above, at full height, in both states */
 }
 /* caption strip: the brand band stops being rail-coloured and becomes chrome,
    closed by the etched pair (shadow line under it, highlight line under that) */
 /* Round 7 #9 gave this band Explorer's "Folders" caption — 20px tall, the name
    at --t-11, and the rail's collapse control lifted into it as a × — from the
-   user's screenshot. Round 8 #1 takes both back: the caption returns to the size
-   and weight it had before round 7 (48px band, --t-15 bold, the brand's own
-   inline letter-spacing kept), and the × goes with it, because the control it
-   was drawn from belongs at the foot of the rail where it started. What stays
-   from round 7 is the band's PAINT: chrome grey rather than rail-coloured,
-   closed by the etched pair (a --line shadow line with a --line-soft highlight
-   under it) that separates a caption from a client area in 98. */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand {
-  height:48px !important; padding:0 14px !important; background:var(--surface); color:var(--text) !important;
+   user's screenshot. Round 8 #1 took the × back; round 9 #9 takes the LAST of it
+   back too. The band is no longer re-sized at all: it keeps V2App's own 64px
+   height and its 20/13px padding, so the logotype sits at exactly the top offset
+   every other theme puts it at, and the name renders at the same 19px stop.
+   What survives from round 7 is the band's PAINT — chrome grey rather than
+   rail-coloured, closed by the etched pair (a --line shadow line with a
+   --line-soft highlight under it) — plus the caption WEIGHT, since a 98 pane
+   caption is bold and nothing else in this theme is.
+   Round 9 #10 · the `[data-open="true"]` gate is gone: the collapsed rail is the
+   same object with the same caption band, the same dividers and the same foot,
+   and only the tree's own indentation is state-dependent. */
+.jn-v2[data-theme="win98"] .v2-railbrand {
+  background:var(--surface); color:var(--text) !important;
   border-bottom:var(--bw-hair) solid var(--line); box-shadow:0 1px 0 var(--line-soft);
 }
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand > span:first-child { font-size:var(--t-15) !important; font-weight:var(--title-weight); }
+.jn-v2[data-theme="win98"] .v2-railbrand > span:first-child { font-size:var(--t-19) !important; font-weight:var(--title-weight); }
 /* the tree itself */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll { gap:8px !important; padding:8px 4px !important; }
 /* Round 8 #3 · a group is separated from the one above it by a single ETCHED
@@ -2157,9 +2284,16 @@
    `.v2-railgroup + .v2-railgroup` rather than `:not(:first-child)`: the rail's
    scroller holds nothing but groups today, but the sibling combinator stays
    right if it ever holds anything else. */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgroup + .v2-railgroup {
-  border-top:var(--bw-hair) solid var(--line); box-shadow:inset 0 1px 0 var(--line-soft); padding-top:7px;
+/* Round 9 #10 · ungated, so the icon strip is divided by the same etched line
+   the tree is. The 7px of air stays open-only: collapsed, the scroller's own
+   14px gap already sits between the groups, and adding to it would slide the
+   icon column down out of step with the expanded one. V2App's collapsed-state
+   16px centred tick is the thing this line replaces, so it is hidden. */
+.jn-v2[data-theme="win98"] .v2-rail .v2-railgroup + .v2-railgroup {
+  border-top:var(--bw-hair) solid var(--line); box-shadow:inset 0 1px 0 var(--line-soft);
 }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgroup + .v2-railgroup { padding-top:7px; }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="false"] .v2-railgrouphead > span:last-child { display:none; }
 /* group = a tree node: sentence case at the row size, with the ⊟ twisty in front.
    The twisty is decorative until the groups are made collapsible (handover).
    Round 8 #2 · the left padding is 3px, not 8: the twisty's centre pixel then
@@ -2188,7 +2322,9 @@
    spans x 11-20, whose middle pixel is the trunk's). */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem {
   height:28px !important; margin:0 4px 0 0 !important; padding:0 8px 0 16px !important;
-  font-size:var(--t-12) !important; border:1px dotted transparent !important;
+  /* round 9 #5: 13px, the theme's own UI stop — the rail read a step under every
+     menu row and field in the pane beside it. */
+  font-size:var(--t-13) !important; border:1px dotted transparent !important;
 }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem[aria-current="page"] { border-color:var(--rail-tree-focus) !important; }
 /* the connector: a dotted trunk down the group and a 7px elbow into each row */
@@ -2210,11 +2346,20 @@
    heights. `.v2-railscroll + .v2-railfoot` and not `:first-of-type`: the three
    rows are an <a> and two <div>s, and `-of-type` counts per element name, so it
    would match the anchor AND the last div rather than the first row. */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot {
+.jn-v2[data-theme="win98"] .v2-rail .v2-railfoot {
   background:var(--surface); color:var(--text);
   border-top:0 !important; margin:0 !important; box-shadow:none;
 }
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll + .v2-railfoot {
+/* Round 9 #7 · the three foot rows are told apart by the app's own divider — one
+   --line hairline, the same rule every card in the pane uses — and not by the
+   blank gaps they had. The thick etched band below still marks where the tree
+   ends and the status rows begin; inside the band a hairline is the right weight.
+   The selector is more specific than the `border-top:0 !important` above it, so
+   the first row (which follows the scroller, not another foot row) keeps none. */
+.jn-v2[data-theme="win98"] .v2-rail .v2-railfoot + .v2-railfoot {
+  border-top:var(--bw-hair) solid var(--line) !important;
+}
+.jn-v2[data-theme="win98"] .v2-rail .v2-railscroll + .v2-railfoot {
   margin-top:2px !important; box-shadow:inset 0 1px 0 var(--line), inset 0 2px 0 var(--line-soft);
 }
 

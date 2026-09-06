@@ -635,8 +635,11 @@ export default function ResumeEditor() {
                   </Menu>
               )}
             </div>}
-            {/* ui: keep — native <a href target=_blank> download link; Button renders a div and would drop the anchor */}
-            <a href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', flex: '0 0 auto', minWidth: 0, height: 29, padding: '0 15px', borderRadius: 'var(--radius-control)', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>↓ Download PDF</a>
+            {/* round 9: `Button href` renders the real download anchor, on the
+                primary paint this toolbar drew by hand (--accent / --accent-ink /
+                500). Overrides restore the toolbar's own 29px height and 12px label. */}
+            <Button size="sm" href={pdfDownloadUrl} target="_blank"
+              style={{ marginLeft: 'auto', minWidth: 0, height: 29, gap: 6, fontSize: 12 }}>↓ Download PDF</Button>
           </HeaderRow>
           <Surface radius="none" style={{ flex: 1, minHeight: 0, position: 'relative' }}>
             {pdfUrl && <iframe title="pdf" src={`${pdfUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} />}
