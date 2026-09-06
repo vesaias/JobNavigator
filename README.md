@@ -1,9 +1,18 @@
 # JobNavigator
 
-Self-hosted job search automation — scrape any career portal or use job aggregator, AI scoring against your profile, resume tailoring with custom themes, persona-based application auto-fill, Telegram notifications and tracking in one system. 
+Self-hosted job search automation — scrape any career portal or job aggregator, score jobs against your résumés with an LLM, tailor résumés and cover letters, auto-fill applications from your persona, get Telegram alerts and track every application, in one system you run yourself.
 
 <p align="center">
-  <img src="docs/jobnavigator.gif" alt="JobNavigator Demo" width="100%">
+  <img src="docs/jobnavigator2.gif" alt="JobNavigator 2.0 — the Jobs feed, a full report, résumé tailoring and the theme switch" width="100%">
+</p>
+
+<p align="center">
+  <a href="docs/board.png"><img src="docs/board.png" alt="Green Paper theme" width="24%"></a>
+  <a href="docs/slate.png"><img src="docs/slate.png" alt="Stone theme" width="24%"></a>
+  <a href="docs/v1like.png"><img src="docs/v1like.png" alt="V1 Style theme" width="24%"></a>
+  <a href="docs/win98.png"><img src="docs/win98.png" alt="Windows 98 theme" width="24%"></a>
+  <br>
+  <sub>Five themes, each in light and dark: Paper (above), Green Paper, Stone, V1 Style, Windows 98 — Settings › Display.</sub>
 </p>
 
 ## How It Works
@@ -84,19 +93,20 @@ Self-hosted job search automation — scrape any career portal or use job aggreg
 | Feature | Description |
 |---------|-------------|
 | **Multi-Source Discovery** | 7 scraping tiers: career pages (Playwright + 11 ATS), JobSpy (4 boards), LinkedIn Personal, Levels.fyi, Jobright.ai, freehire.me, Chrome Extension |
-| **AI Resume Scoring** | Multi-provider (Claude, OpenAI, Ollama), light/full depth, per-resume comparison, keyword analysis, requirement mapping, ATS tips. **Prompt caching** on Anthropic cuts repeat-scoring cost ~50%. |
-| **Resume Builder** | 8 templates (auto-discovered - add yours), AI tailoring per job, PDF export, tracer links to track opens (cover letters too) |
+| **AI Resume Scoring** | Multi-provider (Claude, OpenAI, OpenRouter, Ollama, Claude Code) with live model search and a per-feature model override, Light/Full depth, per-résumé comparison, keyword coverage, requirement mapping. **Prompt caching** on Anthropic cuts repeat-scoring cost ~50%. |
+| **Resume Builder** | Structured base résumés, AI tailoring per job with a review step (decline any change), 8 PDF templates (auto-discovered — add yours), tracked links that record when a recruiter opens your résumé (cover letters too) |
 | **Cover Letters** | AI-generated per job, grounded in the paired resume + persona; editable voice presets, 8 templates, PDF export, prompt-cached generation |
 | **Smart Dedup** | URL-hash dedup with configurable tracking-param stripping; content hash stored per job for cross-source matching |
-| **Job Feed** | Filters, sorting, keyboard shortcuts (j/k/s/x/e), scoring reports, bulk operations, in-app job preview |
-| **Application Board** | Kanban pipeline with drag-and-drop, status transition history |
-| **Chrome Extension** | Passive LinkedIn capture + save any job from any page |
+| **Jobs Feed** | Filters, sorting, keyboard shortcuts (`?` lists them), full scoring report, collapsible analysis pane, bulk actions with undo, in-app posting preview |
+| **Applications** | Stage stepper (applied → interview → offer / rejected), interviews and notes, status history feeding the Stats funnel and Sankey, a prep handover you can paste into any AI chat |
+| **Persona** | One profile (contact, work authorization, compensation, preferences, résumé content, Q&A bank) behind scoring, tailoring, letters and autofill; import it from a résumé or a PDF |
+| **Chrome Extension** | Passive LinkedIn capture, save any job from any page, structured ATS form autofill from your Persona |
 | **Application Autofill** | Generate persona-grounded answers to free-text application questions on any job site, from the extension — review with a length picker, then insert, copy, or save to a reusable Q&A bank |
 | **Gmail Monitor** | OAuth2 polling, auto-classifies responses, updates application status |
 | **Telegram Alerts** | New job alerts, daily digest, scrape health, inline action buttons |
 | **H-1B Data** | Company LCA lookups from MyVisaJobs, JD exclusion scanning |
-| **Scheduling** | Cron-based: scraping, email checks, backups, cleanup, auto-reject |
-| **Dark Mode** | Full Tailwind dark mode across all pages |
+| **Scheduling** | Intervals and crons for scraping, email checks, backups, cleanup and auto-reject, with a plain-language readout ("weekdays at 09:00 UTC · next Mon 07 Sep") and presets |
+| **Themes** | Five themes (Paper, Green Paper, Stone, V1 Style, Windows 98) × Light / Dark / System, switched live from Settings or the rail |
 
 > **Note on the Job Feed preview pane:** the detail panel renders the live job posting in an `iframe`. Many career sites block being framed (via `X-Frame-Options` / CSP `frame-ancestors`, or cross-origin scripts that fail when embedded), so the in-app preview works best with a browser extension that strips frame-blocking headers (e.g. an "ignore X-Frame-Options" extension). Without one, some postings show blank — use the "Open" button to view them in a new tab. Applied jobs fall back to a cached snapshot that always renders.
 
@@ -119,7 +129,8 @@ The previous (v1) interface is still served, at `http://localhost/classic` — S
 1. Settings > AI tab — configure your LLM provider and API key
 2. Companies — activate a few seed companies or add your own
 3. Searches — configure a keyword search or activate LinkedIn Personal
-4. Resumes — create your resume (or import an existing PDF); it powers AI scoring
+4. Résumés — create a base résumé or import a PDF; it powers scoring and tailoring
+5. Persona — import it from that résumé (Persona › Import), then fill the Q&A bank; it powers letters and autofill
 
 ## Chrome Extension ("The Navigator")
 
@@ -146,7 +157,7 @@ The previous (v1) interface is still served, at `http://localhost/classic` — S
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python 3.12, FastAPI, SQLAlchemy, APScheduler, Playwright |
-| Frontend | React 18, Tailwind CSS, Vite, Recharts |
+| Frontend | React 18, Vite, Recharts; token-based design system (`frontend/src/DESIGN-SYSTEM.md`); the classic UI at `/classic` on Tailwind |
 | Database | PostgreSQL 16 |
 | Infrastructure | Docker Compose, Caddy, nginx |
 | AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI |

@@ -146,6 +146,11 @@ backend/cover_letter_templates/garamond/
 .claude/
 CLAUDE.md
 docs/*
+!docs/jobnavigator2.gif
+!docs/win98.png
+!docs/v1like.png
+!docs/slate.png
+!docs/board.png
 !docs/jobnavigator.gif
 docker-compose.test.yml
 
