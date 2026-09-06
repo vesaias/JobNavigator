@@ -1422,7 +1422,7 @@ export default function V2JobFeed() {
                             blocked by their own framing headers either way (R4-T5-02). */}
                         <iframe key={`${frameJobId}|${frameSrc}`} title="posting" src={frameSrc}
                           onLoad={() => settleFrame(frameJobId)} onError={() => settleFrame(frameJobId)}
-                          sandbox="allow-scripts allow-popups allow-forms"
+                          sandbox="allow-scripts allow-popups allow-forms allow-same-origin"
                           style={{ flex: 1, width: '100%', border: 'none', background: 'var(--iframe-bg)' }} />
                         {frameLoadId === frameJobId && (
                           <div style={{ position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>

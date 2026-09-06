@@ -112,6 +112,8 @@ OVERFLOW_JS = """() => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       const ox = getComputedStyle(p).overflowX;
       if (ox === 'auto' || ox === 'scroll') return true;
+      // inline text inside an ellipsised box reports its full width but is clipped
+      if (ox === 'hidden' && getComputedStyle(p).textOverflow === 'ellipsis') return true;
     }
     return false;
   };

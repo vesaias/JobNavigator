@@ -79,8 +79,20 @@ def page(b, appearance="light", **kw):
 
 def attach_log(pg):
     log = {"console": [], "pageerrors": [], "http": [], "reqfailed": []}
-    pg.on("console", lambda m: log["console"].append({"type": m.type, "text": m.text[:400]}) if m.type in ("error", "warning") else None)
-    pg.on("pageerror", lambda e: log["pageerrors"].append(str(e)[:400]))
+    # only our own frames: postings are framed cross-origin and log their own errors
+    def _ours_url(u):
+        return (not u) or u.startswith(BASE) or u.startswith("about:")
+    def _on_console(m):
+        if m.type not in ("error", "warning"): return
+        try: u = (m.location or {}).get("url", "")
+        except Exception: u = ""
+        if _ours_url(u): log["console"].append({"type": m.type, "text": m.text[:400]})
+    def _on_pageerror(e):
+        st = str(getattr(e, "stack", "") or "")
+        if "://" in st and BASE not in st: return
+        log["pageerrors"].append(str(e)[:400])
+    pg.on("console", _on_console)
+    pg.on("pageerror", _on_pageerror)
     pg.on("response", lambda r: log["http"].append({"status": r.status, "url": r.url[-140:], "method": r.request.method}) if r.status >= 400 else None)
     pg.on("requestfailed", lambda r: log["reqfailed"].append({"url": r.url[-140:], "err": (r.failure or "")[:100]}) if "favicon" not in r.url and not r.url.startswith("blob:") else None)
     pg.jn_log = log
