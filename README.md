@@ -5,7 +5,7 @@
 Scrape career pages and aggregators, score jobs against your résumés with an LLM, tailor résumés and cover letters, auto-fill applications from your persona, get Telegram alerts, track every application.
 
 <p align="center">
-  <img src="docs/default.png" alt="JobNavigator 2.0 — Jobs feed, Paper theme" width="100%">
+  <img src="docs/default.png?v=2" alt="JobNavigator 2.0 — Jobs feed, Paper theme" width="100%">
 </p>
 
 <p align="center">
