@@ -827,7 +827,7 @@ export default function V2JobFeed() {
   const d = detail
   // the verdict is the fact the line carries; the LCA count is the evidence
   // behind it, so it moves into the title instead of a second clause
-  const visaText = d ? (H1B[d.h1b_verdict] || H1B.unknown).label : ''
+  const visaText = d && d.h1b_verdict && d.h1b_verdict !== 'unknown' ? (H1B[d.h1b_verdict] || H1B.unknown).label : ''
   const visaTitle = d ? (d.h1b_company_lca_count ? `Based on ${d.h1b_company_lca_count} H-1B filings` : 'No H-1B filings on record') : ''
   const visaCol = d ? (d.h1b_verdict === 'likely' ? 'var(--good)' : d.h1b_verdict === 'unlikely' ? 'var(--warn)' : 'var(--muted)') : ''
 
@@ -1089,9 +1089,9 @@ export default function V2JobFeed() {
                           {j.location && <span title={j.location} style={{ flex: '1 1 auto', minWidth: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.location}</span>}
                         </div>
                         <div className="v2-rowink" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: '13px', fontWeight: 450, minWidth: 0, marginTop: 2 }}>
-                          <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--numeral-face)', color: fmtSalary(j.salary_min, j.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max) || 'Salary not listed'}</span>
-                          {visa && <><span style={{ color: 'var(--line)' }}>·</span><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span></>}
-                          <span style={{ color: 'var(--line)' }}>·</span><span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
+                          {fmtSalary(j.salary_min, j.salary_max) && <><span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--numeral-face)', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max)}</span><span style={{ color: 'var(--line)' }}>·</span></>}
+                          {visa && j.h1b_verdict !== 'unknown' && <><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span><span style={{ color: 'var(--line)' }}>·</span></>}
+                          <span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
                         </div>
                       </div>
                     </div>
@@ -1167,12 +1167,12 @@ export default function V2JobFeed() {
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
                     {headOpen ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: '20px', color: 'var(--text-2)', flexWrap: 'wrap', rowGap: 3 }}>
-                        <span style={{ maxWidth: 230, fontFamily: 'var(--numeral-face)', fontSize: 12.5, color: fmtSalary(d.salary_min, d.salary_max) ? 'var(--text-2)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed'}</span>
-                        {d.location && <><span style={{ color: 'var(--line)' }}>|</span><span style={{ maxWidth: 270, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location}</span></>}
-                        <span style={{ color: 'var(--line)' }}>|</span>
-                        <span title={visaTitle} style={{ color: visaCol }}>{visaText}</span>
+                        {[fmtSalary(d.salary_min, d.salary_max) && <span key="sal" style={{ maxWidth: 230, fontFamily: 'var(--numeral-face)', fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(d.salary_min, d.salary_max)}</span>,
+                          d.location && <span key="loc" style={{ maxWidth: 270, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.location}</span>,
+                          visaText && <span key="visa" title={visaTitle} style={{ color: visaCol }}>{visaText}</span>,
+                        ].filter(Boolean).flatMap((el, i) => i ? [<span key={`sep${i}`} style={{ color: 'var(--line)' }}>|</span>, el] : [el])}
                       </div>
-                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max) || 'Salary not listed', d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
+                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max), d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
