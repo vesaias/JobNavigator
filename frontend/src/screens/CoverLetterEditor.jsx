@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useToasts, ToastStack } from './Toast'
+import { useToasts, ToastStack } from '../Toast'
 import api from '../api'
 import { Picker, VoicePicker, LengthPicker, LENGTHS, STAGE_CLASS } from './CoverLetters'
-import ConfirmDialog from './ConfirmDialog'
+import ConfirmDialog from '../ConfirmDialog'
 // the undo-removal helper and the band rule are shared with the résumé editors
 import { useUndoRemove, BandRule } from './ResumeSections'
-import { Button, Card as UiCard, DashedAdd, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface, ToolbarTrigger } from './ui'
-import './theme.css'
+import { Button, Card as UiCard, DashedAdd, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface, ToolbarTrigger } from '../ui'
+import '../theme.css'
 import { useTitle } from '../useTitle'
-import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useSingleOpen, NBSP } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useSingleOpen, NBSP } from '../hooks'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -20,7 +20,7 @@ const PAGE_FORMATS = [['letter', 'US Letter'], ['a4', 'A4']]
 const UI_KEY = 'v2_cl_sections'
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {} } catch { return {} } }
 
-import { ago } from './time'
+import { ago } from '../time'
 
 // Contact-item cells are 1:1 with the Résumé editor's header — both are `Input` now.
 

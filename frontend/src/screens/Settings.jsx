@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
-import { useEscape, useSettled, useSingleOpen, NBSP } from './hooks'
-import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
-import { useTheme, MODE_OPTIONS, themeOptions } from './theme'
-import { describeCron, whenShort, CRON_PRESETS } from './time'
+import ConfirmDialog, { PromptDialog } from '../ConfirmDialog'
+import { useEscape, useSettled, useSingleOpen, NBSP } from '../hooks'
+import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from '../ui'
+import { useTheme, MODE_OPTIONS, themeOptions } from '../theme'
+import { describeCron, whenShort, CRON_PRESETS } from '../time'
 import api from '../api'
-import './theme.css'
+import '../theme.css'
 
 // ── shared bits ──────────────────────────────────────────────────────────────
 const PROVIDERS = [

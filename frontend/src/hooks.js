@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import api from '../api'
+import api from './api'
 
 // Small cross-screen hooks. Kept out of Toast.jsx so a screen can take the
 // Escape handling without also pulling in the toast host.

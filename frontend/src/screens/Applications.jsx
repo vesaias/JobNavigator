@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import { useToasts, ToastStack } from './Toast'
-import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSettled, NBSP, DASH } from './hooks'
-import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Spinner, Textarea } from './ui'
-import './theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import ConfirmDialog from '../ConfirmDialog'
+import { useEscape, useSettled, NBSP, DASH } from '../hooks'
+import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Spinner, Textarea } from '../ui'
+import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const ts = (iso) => (iso ? new Date(iso).getTime() : 0)

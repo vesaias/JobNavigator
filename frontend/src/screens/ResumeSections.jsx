@@ -4,12 +4,12 @@
 // Real data is looser than the EMPTY skeleton (unknown keys, missing sections). Every mutation
 // goes through mutate(), which deep-clones and writes one path, so unknown keys survive.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from './ui'
+import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from '../ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
 // same name so Persona/ResumeEditor keep importing it from here.
-export { DashedAdd } from './ui'
+export { DashedAdd } from '../ui'
 
 export const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype'])
 // Spread `kb(fn)` onto a span/div control to make it tabbable, announce a role, and fire
@@ -90,7 +90,7 @@ export function BulletText({ value, onChange, placeholder, bold, lh }) {
 }
 // The worded remove and the ✕ live in ui.jsx; re-exported so Persona/ResumeEditor
 // keep importing them from this file.
-export { RemoveLink, RemoveX } from './ui'
+export { RemoveLink, RemoveX } from '../ui'
 // Removals are undoable, never confirmed. `mutate` closes over stale render data, so keep the
 // live one in a ref; `onRemoved(label, restore)` is the toast host — without it, removal is immediate.
 export function useUndoRemove(mutate, onRemoved) {
@@ -112,7 +112,7 @@ export const EmptyState = ({ what, note }) => (
   </Band>
 )
 // MenuHead / MenuItem used to be declared here too. There is now one of each,
-// in ui.jsx — the résumé editor imports them straight from './ui'.
+// in ui.jsx — the résumé editor imports them straight from '../ui'.
 export const MicroField = ({ label, value, onChange, placeholder }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <Label>{label}</Label>

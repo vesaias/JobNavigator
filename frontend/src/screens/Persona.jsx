@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import api from '../api'
-import { useToasts, ToastStack } from './Toast'
-import { useSettled, NBSP } from './hooks'
-import { Band, Button, Card, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from './ui'
-import { ago } from './time'
-import './theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import { useSettled, NBSP } from '../hooks'
+import { Band, Button, Card, ChoiceCard, ChoiceModal, ChoiceRow, Heading, HeaderRow, Helper, Input, Label, PageTitle, Pill, SectionHead, Select } from '../ui'
+import { ago } from '../time'
+import '../theme.css'
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BulletText, DashedAdd, RemoveX, kb,

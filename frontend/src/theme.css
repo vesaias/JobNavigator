@@ -352,7 +352,7 @@
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* V2App widened the accent mark and compensates in the padding */
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* Shell widened the accent mark and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -742,7 +742,7 @@
   --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid;
   --divider:1px solid var(--line);
   --rail-active-bg:var(--rail-active); --rail-active-ink:var(--rail-ink);
-  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* V2App widened the accent mark and compensates in the padding */
+  --rail-active-mark:3px solid var(--rail-accent); --rail-item-inset:0;   /* Shell widened the accent mark and compensates in the padding */
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
@@ -805,7 +805,7 @@
 /* Must declare the identical set of names as [data-appearance="dark"] (same
    specificity) or a name this block skips lets dark's value leak in. */
 .jn-v2[data-theme="alt"] {
-  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default theme, see v2-testing/round-design/ring-sizes.md */
+  --ring-shift-sm:1.25px; --ring-shift-md:.42px; --ring-label-shift:1.58px;  /* Georgia/Inter metrics: digits sit lower, the small-caps label higher — pixel-measured against the default theme, see tests/round-design/ring-sizes.md */
   --bg:#f7f8fa; --surface:#ffffff; --surface-2:#eef1f6; --line:#dbe0e9; --line-soft:#e9edf3;
   --line-strong:#c3cad6; --edge:#7c8698; --track:#828c9e;
   --text:#161a21; --text-2:#4b5468; --muted:#5f6878; --ink-2:#2a3140;
@@ -2375,18 +2375,18 @@
    twisty) and the items as children on a dotted connector.
 
    Composition, but NOT a JSX branch: every element the tree needs already exists
-   in V2App's rail, so the twisty and the two connector rules are ::before /
+   in Shell's rail, so the twisty and the two connector rules are ::before /
    ::after on rows that are already there, and the geometry is re-stated here.
-   That keeps one rail in the JSX — the class names V2App now carries compute
+   That keeps one rail in the JSX — the class names Shell now carries compute
    nothing at all in the other themes, where none of these rules match.
    Everything is gated on [data-open="true"]: the 50px collapsed rail is an icon
    strip, and a tree with no labels is not a tree.
 
-   !important is on nearly every declaration for the usual reason (D-17): V2App
+   !important is on nearly every declaration for the usual reason (D-17): Shell
    writes height, padding, margin, font-size, border-left and background inline,
    and an inline value beats a class rule. */
 .jn-v2[data-theme="win98"] .v2-rail { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
-/* Round 9 #6 · V2App writes `padding: 0 0 8px` on the rail, which left a strip
+/* Round 9 #6 · Shell writes `padding: 0 0 8px` on the rail, which left a strip
    of bare rail under the collapse row with nothing in it. 98 closes a pane at
    its last row. */
 .jn-v2[data-theme="win98"] .v2-rail { padding-bottom:0 !important; }
@@ -2419,7 +2419,7 @@
    that). So the collapsed rail drops the well and the bevel and takes the
    chrome plus the etched pair on its right edge — shadow pixel, then highlight
    pixel, reading outwards, which is how 98 separates two panes of the same
-   surface. `background` needs !important: V2App writes `var(--rail)` inline. */
+   surface. `background` needs !important: Shell writes `var(--rail)` inline. */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="false"] {
   background:var(--surface) !important;
   box-shadow:none;   /* round 9 #8: the right edge is the ::after above, at full height, in both states */
@@ -2429,7 +2429,7 @@
 /* Round 7 #9 gave this band Explorer's "Folders" caption — 20px tall, the name
    at --t-11, and the rail's collapse control lifted into it as a × — from the
    user's screenshot. Round 8 #1 took the × back; round 9 #9 takes the LAST of it
-   back too. The band is no longer re-sized at all: it keeps V2App's own 64px
+   back too. The band is no longer re-sized at all: it keeps Shell's own 64px
    height and its 20/13px padding, so the logotype sits at exactly the top offset
    every other theme puts it at, and the name renders at the same 19px stop.
    What survives from round 7 is the band's PAINT — chrome grey rather than
@@ -2456,7 +2456,7 @@
 /* Round 9 #10 · ungated, so the icon strip is divided by the same etched line
    the tree is. The 7px of air stays open-only: collapsed, the scroller's own
    14px gap already sits between the groups, and adding to it would slide the
-   icon column down out of step with the expanded one. V2App's collapsed-state
+   icon column down out of step with the expanded one. Shell's collapsed-state
    16px centred tick is the thing this line replaces, so it is hidden. */
 .jn-v2[data-theme="win98"] .v2-rail .v2-railgroup + .v2-railgroup {
   border-top:var(--bw-hair) solid var(--line); box-shadow:inset 0 1px 0 var(--line-soft);

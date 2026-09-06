@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import { useToasts, ToastStack } from './Toast'
+import { useToasts, ToastStack } from '../Toast'
 // shared dialog also serves résumé and cover-letter deletes, so it lives in its own file.
-import ConfirmDialog from './ConfirmDialog'
-import { useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Button, DashedAdd, Dot, Drawer as UiDrawer, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from './ui'
-import './theme.css'
+import ConfirmDialog from '../ConfirmDialog'
+import { useSettled, useWarm, NBSP, DASH } from '../hooks'
+import { Button, DashedAdd, Dot, Drawer as UiDrawer, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, Notice, PageTitle, Pill, Row, Rule, SearchInput, Segmented, ShowMore, Spinner, TableHead, TableRow, Tag } from '../ui'
+import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const ago = (iso) => {

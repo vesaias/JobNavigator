@@ -1,6 +1,6 @@
 """One-shot backfill: recompute Job.external_id with the canonical hash.
 
-Context: v2-testing/round4/dup-report.md Section 2 ("Recommended follow-up").
+Context: tests/round4/dup-report.md Section 2 ("Recommended follow-up").
 `_canonical_for_hash()` in backend/scraper/_shared/dedup.py now folds scheme,
 `www.`, path case, a trailing slash, an ATS apply/thanks suffix, and
 query-param order before hashing. Stored `Job.external_id` values were never
@@ -26,7 +26,7 @@ two or more rows land on the same new id, one row (the "winner" — the row
 that already holds that id unchanged, if any, else the row with the smallest
 UUID for determinism) is updated (or left alone if it's already correct); the
 rest are SKIPPED — their existing `external_id` is left untouched — and
-recorded in v2-testing/round4/backfill-collisions.md. Nothing is ever merged
+recorded in tests/round4/backfill-collisions.md. Nothing is ever merged
 or deleted.
 """
 import argparse
@@ -41,7 +41,7 @@ from backend.scraper._shared.dedup import make_external_id
 
 BATCH_SIZE = 1000
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COLLISIONS_REPORT = REPO_ROOT / "v2-testing" / "round4" / "backfill-collisions.md"
+COLLISIONS_REPORT = REPO_ROOT / "tests" / "round4" / "backfill-collisions.md"
 
 
 def fetch_all_rows(db):

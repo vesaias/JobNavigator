@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
-import './theme.css'
-import { useToasts, ToastStack } from './Toast'
-import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSingleOpen, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
+import '../theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import ConfirmDialog from '../ConfirmDialog'
+import { useEscape, useSingleOpen, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from '../hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -12,7 +12,7 @@ import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BandRule,
 } from './ResumeSections'
-import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, Mono, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea, ToolbarTrigger } from './ui'
+import { Band, Button, Check, ChoiceCard, ChoiceModal, ChoiceRow, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Menu, MenuHead, MenuItem, ModalPanel, Mono, NavLink, Pill, Rule, ScoreRing, Spinner, Surface, Textarea, ToolbarTrigger } from '../ui'
 
 // contiguous prefix/suffix word diff → { before, removed, added, after }
 function wordDiff(a = '', b = '') {

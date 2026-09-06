@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ResponsiveContainer, Sankey, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import api from '../api'
-import { useToasts, ToastStack } from './Toast'
-import { useEscape, useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Card, GlyphBadge, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, Mono, PageTitle, Pill as UiPill, Spinner, TableHead, TableRow } from './ui'
-import './theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import { useEscape, useSettled, useWarm, NBSP, DASH } from '../hooks'
+import { Card, GlyphBadge, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Meter, Mono, PageTitle, Pill as UiPill, Spinner, TableHead, TableRow } from '../ui'
+import '../theme.css'
 
 // Stats reads the pipeline back: funnel, scorer, LLM costs, scheduler activity.
 // Score averages and run result summaries come from the newer endpoint fields.

@@ -1,10 +1,14 @@
-# v2 design system — handover
+# Design system
 
-The v2 shell (`frontend/src/v2/`) is the app at `/`. The old interface lives one level down, unbroken, at `/classic/*`, sharing one backend. `/v2` and `/v2/*` redirect to the same path without the prefix, query and hash intact.
+The shell (`Shell.jsx`) plus the primitive layer (`ui.jsx`), the token sheet (`theme.css` + `theme.js`) and `screens/` are the app at `/`. The old interface lives one level down, unbroken, at `/classic/*` (`frontend/src/classic/`), sharing one backend. `/v2` and `/v2/*` redirect to the same path without the prefix, query and hash intact.
+
+**Layout.** `frontend/src/` holds `App.jsx` (routes), `Shell.jsx` (rail, counts, health dot, theme), `ui.jsx`, `theme.css`, `theme.js`, `hooks.js`, `time.js`, `Toast.jsx`, `ConfirmDialog.jsx`, the three overlays (`LoginModal`, `WelcomeModal`, `NewUiModal`) and this file; one screen per file under `screens/`; Vitest specs under `__tests__/`; the v1 interface under `classic/`; the git-ignored lab pages under `design-base/`.
+
+**Historical prefix.** The CSS root class is still `.jn-v2` and the hover hooks are still `v2-bd`, `v2-row`, `v2-card`, … — the redesign's staging names. They are load-bearing selectors in `theme.css`, matched by `ui.jsx` and by the style tooling, and renaming them is a paint risk for no gain, so they stay. Read `v2-` as "the design system", not "a second UI".
 
 ## Primitive layer (`ui.jsx`)
 
-`ui.jsx` is the one file that draws a v2 control; screens compose these exports instead of styling inline.
+`ui.jsx` is the one file that draws a control; screens compose these exports instead of styling inline.
 
 - **Actions** — `Button` (`variant`: primary/ai/danger/secondary/ghost; `size`: md/sm/xs; `as="button"` for a real `<button>`, `href`/`target`/`rel` for a real `<a>`; `busy` shows a `Spinner`, `disabled` swaps the disabled look), `Pill` (`on`, `size`: md/sm/xs, `hover` override, `line` line-height opt-out), `IconButton` (`size`: 26/36/25), `ToolbarTrigger` (`label`/`value`/`caret`/`open`, `size`: sm/md), `DashedAdd` (`big` variant).
 - **Fields** — `Input`, `Textarea`, `SearchInput` (`variant`: boxed/underline), `Select` (trigger + listbox, `options` as `[[value, label]]`). All take `invalid` (`aria-invalid`, repaints border + error ring); `Input` also takes `adornment` (trailing in-box slot, e.g. a secret's show/hide `Link`) and `mono`.
@@ -26,7 +30,7 @@ Every primitive takes `style` (layout only) and `className` (appended after its 
 
 One block per **theme** then overrides palette and/or semantic names under `.jn-v2[data-theme="…"]` (plus its own dark pair where needed): `default` has no block (it is the base layer), then `alt`, `tone1-3`, `editorial` (hidden dev stops), `board`, `cobalt`, `saas`, `win98`. `win98` also carries a long run of theme-named structural rules (rail-as-Explorer-tree, bevelled scrollbar, group-box cards, the caption bar's `_ □ ×` controls, dialog button minimums) — inert everywhere else. Hover/focus rules sit outside the token blocks, keyed off classes the primitives already apply (`v2-bd`, `v2-bdc`, `v2-act`, `v2-row`, `v2-menuitem`, `v2-chip`, `v2-dashadd`, `v2-hover-accent`, …), and carry `!important` — an inline style otherwise always wins the cascade.
 
-**Adding a theme:** copy an existing block, register the id in `theme.js`'s `THEMES` (and `THEME_PICKER`/`THEME_LABEL` to make it user-selectable), add its boot-background rule in `frontend/index.html`'s no-flash `<style>` block. Then run `py v2-testing/tools/stylelint.py` (fails on any literal colour/font/radius/shadow outside `ui.jsx`/`theme.css`, and on light/dark token parity gaps) and prove it with `v2-testing/tools/stylecrawl.py` + `stylediff.py` against an existing theme — only colours, fonts and prose heights should differ.
+**Adding a theme:** copy an existing block, register the id in `theme.js`'s `THEMES` (and `THEME_PICKER`/`THEME_LABEL` to make it user-selectable), add its boot-background rule in `frontend/index.html`'s no-flash `<style>` block. Then run `py tests/tools/stylelint.py` (fails on any literal colour/font/radius/shadow outside `ui.jsx`/`theme.css`, and on light/dark token parity gaps) and prove it with `tests/tools/stylecrawl.py` + `stylediff.py` against an existing theme — only colours, fonts and prose heights should differ.
 
 `theme.js` owns two independent axes, stored in `localStorage` (never the DB): **appearance** (`light|dark|system`, key `jobnavigator_appearance`) and **theme** (the palette id, key `jobnavigator_theme`). `resolved` is the light/dark actually painted (`system` follows `prefers-color-scheme` live); `mode` is what the user picked. A legacy boolean (`jobnavigator_dark_mode`) and a legacy theme key (`jobnavigator_skin`) migrate once on first read. `useTheme()` — `{ mode, resolved, theme, setMode, setTheme, cycle }` — is the one look-and-feel read a component makes; `useThemeVar(name, fallback)` (declared in `ui.jsx`) reads one CSS custom property live off `.jn-v2` — the shape-switch mechanism above. `<html>` gets `data-appearance`/`data-theme`/`.dark` from `index.html`'s inline boot script before React mounts; `theme.js` re-stamps them on change, and each `.jn-v2` root mirrors both via `themeAttrs()`.
 
@@ -41,7 +45,7 @@ One block per **theme** then overrides palette and/or semantic names under `.jn-
 
 ## Conventions
 
-- **Never inline a colour, font, radius or shadow in a screen** — only `ui.jsx`/`theme.css` may. `py v2-testing/tools/stylelint.py` enforces it; a line with a genuine exception is marked `// ui: keep — reason`.
+- **Never inline a colour, font, radius or shadow in a screen** — only `ui.jsx`/`theme.css` may. `py tests/tools/stylelint.py` enforces it; a line with a genuine exception is marked `// ui: keep — reason`.
 - **Line-heights are whole pixels** so 1px borders never blur on fractional row heights; fixed-height flex controls carry `v2-ctl`.
 - **Disabled primary buttons are `--line` on `--muted`.** **Green fill (`--change-bg`) marks only text changed by tailoring** — a generic set-back surface is `--recessed`.
 - **Feedback goes through `useToasts`**: progress/success auto-dismiss at 4s, undo at 5s, error never auto-dismisses. **Destructive actions use `ConfirmDialog`**, never `window.confirm`.
@@ -50,7 +54,7 @@ One block per **theme** then overrides palette and/or semantic names under `.jn-
 
 ## Routes
 
-`/` is the v2 shell; `/classic/*` is the untouched v1 interface. `/v2` and `/v2/*` redirect to the same path with the prefix stripped. `/ui` (primitive gallery) and `/toasts` (toast taxonomy lab) live in the git-ignored `frontend/src/design-base/` (`UiGallery.jsx`, `ToastLab.jsx`); `App.jsx` registers both routes only when the folder exists, via `import.meta.glob('./design-base/*.jsx')` behind `React.lazy`/`Suspense` — a missing folder costs the two routes and nothing else.
+`/` is the app shell (`Shell.jsx` + `screens/`); `/classic/*` is the untouched v1 interface (`classic/`). `/v2` and `/v2/*` redirect to the same path with the prefix stripped. `/ui` (primitive gallery) and `/toasts` (toast taxonomy lab) live in the git-ignored `frontend/src/design-base/` (`UiGallery.jsx`, `ToastLab.jsx`); `App.jsx` registers both routes only when the folder exists, via `import.meta.glob('./design-base/*.jsx')` behind `React.lazy`/`Suspense` — a missing folder costs the two routes and nothing else.
 
 ## Testing
 
@@ -59,13 +63,13 @@ One block per **theme** then overrides palette and/or semantic names under `.jn-
 docker compose exec -T backend sh -c "cd /app && python -m pytest backend/tests -q -p no:cacheprovider"
 
 # frontend unit tests (Vitest, via a throwaway node:20-alpine container)
-bash v2-testing/tools/fe-test.sh              # whole suite
-bash v2-testing/tools/fe-test.sh time         # files matching "time"
+bash tests/tools/fe-test.sh              # whole suite
+bash tests/tools/fe-test.sh time         # files matching "time"
 
-# v2 end-to-end cases (Playwright, inside the backend container against http://caddy)
-bash v2-testing/e2e/run.sh                    # every case
-bash v2-testing/e2e/run.sh modals             # cases whose name contains "modals"
+# end-to-end cases (Playwright, inside the backend container against http://caddy)
+bash tests/e2e/run.sh                    # every case
+bash tests/e2e/run.sh modals             # cases whose name contains "modals"
 
 # pixel + style gate (pauses the scheduler, shoots + crawls, diffs a base stage)
-bash v2-testing/tools/gate.sh <stage> [<base-stage>] [--theme X]
+bash tests/tools/gate.sh <stage> [<base-stage>] [--theme X]
 ```

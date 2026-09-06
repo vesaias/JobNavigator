@@ -10,8 +10,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { scoreTone, kb as uiKb } from '../ui'
 import {
   DANGEROUS, EMPTY, SECTION_ORDER, sectionCounts, makeMutators, kb as sectionKb,
-} from '../ResumeSections'
-import { LENGTHS, STAGE_CLASS } from '../CoverLetters'
+} from '../screens/ResumeSections'
+import { LENGTHS, STAGE_CLASS } from '../screens/CoverLetters'
 
 // ── ui.jsx: scoreTone ───────────────────────────────────────────────────────
 describe('scoreTone', () => {

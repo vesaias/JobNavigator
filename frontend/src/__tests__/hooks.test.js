@@ -12,11 +12,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../api', () => ({
+vi.mock('../api', () => ({
   default: { get: vi.fn() },
 }))
 
-import api from '../../api'
+import api from '../api'
 import {
   useWarm, useEscape, useFlashToast, setFlashToast,
   fetchRunOutcome, runFailed, runFailureReason, NBSP, DASH,

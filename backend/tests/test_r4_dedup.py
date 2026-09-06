@@ -5,7 +5,7 @@ distinct postings must not collide; ``content_hash`` must merge the same
 company+title arriving from two different sources.
 
 Tests marked xfail(strict=True) pin the CORRECT behaviour for a defect found in
-this pass — see v2-testing/round4/T1.md for the finding they belong to.
+this pass — see tests/round4/T1.md for the finding they belong to.
 """
 import pytest
 

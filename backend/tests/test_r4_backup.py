@@ -1,7 +1,7 @@
 """R4-T1 · backup content checks (item 5 of the track).
 
 The restore half of the drill runs against a scratch database inside the db
-container (see v2-testing/round4/T1.md for the recorded run); what belongs in the
+container (see tests/round4/T1.md for the recorded run); what belongs in the
 suite is the part that can be re-checked cheaply and must not regress: a `pg_dump`
 snapshot is a secret-bearing artefact, and the dashboard must never hand one out
 in clear.

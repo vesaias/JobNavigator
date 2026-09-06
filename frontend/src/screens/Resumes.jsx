@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import './theme.css'
-import { useToasts, ToastStack } from './Toast'
-import { useFlashToast, useSettled, useWarm, NBSP, DASH } from './hooks'
+import '../theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import { useFlashToast, useSettled, useWarm, NBSP, DASH } from '../hooks'
 import { EMPTY } from './ResumeSections'
-import { ArchiveBand, Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from './ui'
+import { ArchiveBand, Band, Button, Card, Chip, Heading, HeaderRow, Helper, Input, Label, Link, ModalPanel, Mono, NavLink, PageTitle, Pill, SearchInput, ShowMore, Spinner } from '../ui'
 
 const timeAgo = (s) => {
   if (!s) return ''

@@ -7,7 +7,7 @@ Source path: fonts/converted/
 Creative Commons Attribution 4.0 International licence (CC BY 4.0);
 the project's font README additionally notes CC BY-SA 3.0 terms for the
 bitmap conversion. Attribution is retained here and in the @font-face
-comment in frontend/src/v2/theme.css.
+comment in frontend/src/theme.css.
 
 Used in this project for ONE role: the win98 theme's window caption bars
 (11px bold, native size), via the --titlebar-face token.

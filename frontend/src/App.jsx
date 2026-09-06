@@ -1,34 +1,34 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
-import { Briefcase, LayoutDashboard, Building2, Search, Settings, BarChart3, FileCode2, FileText, User, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
-import JobFeed from './components/JobFeed'
-import ApplicationBoard from './components/ApplicationBoard'
-import CompanyManager from './components/CompanyManager'
-import SearchManager from './components/SearchManager'
-import SettingsPage from './components/Settings'
-import Stats from './components/Stats'
-import ResumeBuilder from './components/ResumeBuilder'
-import CoverLetterBuilder from './components/CoverLetterBuilder'
-import Persona from './components/Persona'
-import LoginModal from './v2/LoginModal'
-import WelcomeModal from './v2/WelcomeModal'
-import NewUiModal from './v2/NewUiModal'
-import WhatsNewBanner from './components/WhatsNewBanner'
-import HealthBanner from './components/HealthBanner'
-import V2App from './v2/V2App'
-import V2JobFeed from './v2/JobFeed'
-import V2Resumes from './v2/Resumes'
-import V2ResumeEditor from './v2/ResumeEditor'
-import V2Companies from './v2/Companies'
-import V2Searches from './v2/Searches'
-import V2Applications from './v2/Applications'
-import V2CoverLetters from './v2/CoverLetters'
-import V2CoverLetterEditor from './v2/CoverLetterEditor'
-import V2Settings from './v2/Settings'
-import V2Persona from './v2/Persona'
-import V2Stats from './v2/Stats'
+import { Briefcase, LayoutDashboard, Building2, Search, Settings as SettingsIcon, BarChart3, FileCode2, FileText, User, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
+import ClassicJobFeed from './classic/JobFeed'
+import ApplicationBoard from './classic/ApplicationBoard'
+import CompanyManager from './classic/CompanyManager'
+import SearchManager from './classic/SearchManager'
+import ClassicSettings from './classic/Settings'
+import ClassicStats from './classic/Stats'
+import ResumeBuilder from './classic/ResumeBuilder'
+import CoverLetterBuilder from './classic/CoverLetterBuilder'
+import ClassicPersona from './classic/Persona'
+import WhatsNewBanner from './classic/WhatsNewBanner'
+import HealthBanner from './classic/HealthBanner'
+import LoginModal from './LoginModal'
+import WelcomeModal from './WelcomeModal'
+import NewUiModal from './NewUiModal'
+import Shell from './Shell'
+import JobFeed from './screens/JobFeed'
+import Resumes from './screens/Resumes'
+import ResumeEditor from './screens/ResumeEditor'
+import Companies from './screens/Companies'
+import Searches from './screens/Searches'
+import Applications from './screens/Applications'
+import CoverLetters from './screens/CoverLetters'
+import CoverLetterEditor from './screens/CoverLetterEditor'
+import Settings from './screens/Settings'
+import Persona from './screens/Persona'
+import Stats from './screens/Stats'
 import axios from 'axios'
-import { useTheme } from './v2/theme'
+import { useTheme } from './theme'
 import { TitleSync } from './useTitle'
 
 // design-base/ (lab pages) is git-ignored and may not exist on a clone.
@@ -55,7 +55,7 @@ const alreadyWelcomed = () => {
   } catch { return true }   // storage blocked: never strand someone behind a modal that can't record its own dismissal
 }
 
-// The upgrade overlay (v2/NewUiModal). Versioned rather than boolean, so the
+// The upgrade overlay (NewUiModal). Versioned rather than boolean, so the
 // next release can raise its own by bumping the value; anything else — an older
 // mark, no mark — means this release has not been announced to this profile yet.
 const NEWUI_KEY = 'jobnavigator_newui_seen'
@@ -86,7 +86,7 @@ const NAV_ITEMS = [
   { to: '/classic/resumes', icon: FileText, label: 'Resumes' },
   { to: '/classic/cover-letters', icon: Mail, label: 'Cover Letters' },
   { to: '/classic/persona', icon: User, label: 'Persona' },
-  { to: '/classic/settings', icon: Settings, label: 'Settings' },
+  { to: '/classic/settings', icon: SettingsIcon, label: 'Settings' },
   { to: '/classic/stats', icon: BarChart3, label: 'Stats' },
   { to: '/docs', icon: FileCode2, label: 'API Docs', external: true },
 ]
@@ -175,8 +175,8 @@ function ClassicShell({ darkMode, setDarkMode }) {
 }
 
 function App() {
-  // src/v2/theme.js owns light|dark|system and stamps html.dark itself, so
-  // flipping the theme from the v2 rail moves this shell too, with no reload.
+  // src/theme.js owns light|dark|system and stamps html.dark itself, so
+  // flipping the theme from the current rail moves this shell too, with no reload.
   const { resolved, setMode } = useTheme()
   const darkMode = resolved === 'dark'
   const setDarkMode = (v) => setMode(v ? 'dark' : 'light')
@@ -230,19 +230,19 @@ function App() {
       <TitleSync />
       <Routes>
         {/* the app */}
-        <Route path="/" element={<V2App />}>
+        <Route path="/" element={<Shell />}>
           <Route index element={<Navigate to="feed" replace />} />
-          <Route path="feed" element={<V2JobFeed />} />
-          <Route path="resumes" element={<V2Resumes />} />
-          <Route path="resumes/:id" element={<V2ResumeEditor />} />
-          <Route path="companies" element={<V2Companies />} />
-          <Route path="searches" element={<V2Searches />} />
-          <Route path="applications" element={<V2Applications />} />
-          <Route path="cover-letters" element={<V2CoverLetters />} />
-          <Route path="cover-letters/:id" element={<V2CoverLetterEditor />} />
-          <Route path="settings" element={<V2Settings />} />
-          <Route path="persona" element={<V2Persona />} />
-          <Route path="stats" element={<V2Stats />} />
+          <Route path="feed" element={<JobFeed />} />
+          <Route path="resumes" element={<Resumes />} />
+          <Route path="resumes/:id" element={<ResumeEditor />} />
+          <Route path="companies" element={<Companies />} />
+          <Route path="searches" element={<Searches />} />
+          <Route path="applications" element={<Applications />} />
+          <Route path="cover-letters" element={<CoverLetters />} />
+          <Route path="cover-letters/:id" element={<CoverLetterEditor />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="persona" element={<Persona />} />
+          <Route path="stats" element={<Stats />} />
         </Route>
         {/* labRoute returns null when design-base/ is absent; React skips a null child. */}
         {labRoute('ToastLab', '/toasts')}
@@ -250,15 +250,15 @@ function App() {
 
         {/* the previous interface, kept whole under /classic */}
         <Route path="/classic" element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>
-          <Route index element={<JobFeed />} />
+          <Route index element={<ClassicJobFeed />} />
           <Route path="applications" element={<ApplicationBoard />} />
           <Route path="companies" element={<CompanyManager />} />
           <Route path="searches" element={<SearchManager />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings" element={<ClassicSettings />} />
           <Route path="resumes" element={<ResumeBuilder />} />
           <Route path="cover-letters" element={<CoverLetterBuilder />} />
-          <Route path="persona" element={<Persona />} />
-          <Route path="stats" element={<Stats />} />
+          <Route path="persona" element={<ClassicPersona />} />
+          <Route path="stats" element={<ClassicStats />} />
         </Route>
 
         {/* /v2 was the staging prefix while the redesign was built beside v1;

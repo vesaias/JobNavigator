@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import { useToasts, ToastStack } from './Toast'
-import ConfirmDialog from './ConfirmDialog'
-import { useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from './ui'
-import './theme.css'
+import { useToasts, ToastStack } from '../Toast'
+import ConfirmDialog from '../ConfirmDialog'
+import { useSettled, useWarm, NBSP, DASH } from '../hooks'
+import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead } from '../ui'
+import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const ago = (iso) => {

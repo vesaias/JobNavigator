@@ -4,11 +4,11 @@ import {
   Newspaper, Search, Building2, Send, FileUser, Mail,
   Fingerprint, ChartLine, Settings as SettingsIcon,
 } from 'lucide-react'
-import api from '../api'
+import api from './api'
 import { useTheme, themeAttrs, appearanceTitle, MODE_ICON } from './theme'
 import './theme.css'
 
-// v2 shell: dark grouped rail, 206 <-> 50px.
+// App shell: dark grouped rail, 206 <-> 50px.
 //
 // Expanded rail is pure text; icons exist only collapsed and cross-fade as
 // labels fade, so both never show at once. Warnings survive collapse as an
@@ -59,7 +59,7 @@ const sameCounts = (a, b) => COUNT_KEYS.every((k) => a[k] === b[k])
 const sameWarn = (a, b) => (a.companies || 0) === (b.companies || 0) && (a.searches || 0) === (b.searches || 0)
 const sameHealth = (a, b) => (!a && !b) || !!(a && b && a.status === b.status && a.started_at === b.started_at && a.finished_at === b.finished_at)
 
-export default function V2App() {
+export default function Shell() {
   const loc = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('jobnavigator_v2_rail') !== 'collapsed' } catch { return true } })

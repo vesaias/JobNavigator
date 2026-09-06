@@ -1,7 +1,7 @@
-// Unit-test config for the v2 frontend. Deliberately separate from vite.config.js
+// Unit-test config for the frontend. Deliberately separate from vite.config.js
 // so the app build is untouched: `npm run build` never loads this file.
 //
-// Run it with `bash v2-testing/tools/fe-test.sh` (Node lives only in Docker here).
+// Run it with `bash tests/tools/fe-test.sh` (Node lives only in Docker here).
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 

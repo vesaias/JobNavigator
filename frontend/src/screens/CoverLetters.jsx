@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useToasts, ToastStack } from './Toast'
+import { useToasts, ToastStack } from '../Toast'
 import api from '../api'
-import { ArchiveBand, Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Mono, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from './ui'
-import './theme.css'
+import { ArchiveBand, Band, Button, Card, Heading, HeaderRow, Helper, Label, Link, Menu, MenuItem, Mono, PageTitle, Pill, SearchInput, Segmented, Spinner, Tag } from '../ui'
+import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-import { ago, agoShort } from './time'
-import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useWarm, NBSP, DASH } from './hooks'
+import { ago, agoShort } from '../time'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useWarm, NBSP, DASH } from '../hooks'
 
 export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['detailed', 'Detailed']]
 
