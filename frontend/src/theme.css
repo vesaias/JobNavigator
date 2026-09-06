@@ -1346,7 +1346,7 @@
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;
-  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px; --ring-count-shift:-14px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
+  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px; --ring-count-shift:-18px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* depth discs: blue-600 picked, gray-400 unpicked */
   /* Fields rest on --surface, not the base layer's --surface-2: on Tailwind greys
      a gray-100 ground next to a white card reads as a disabled control. The
@@ -1438,7 +1438,7 @@
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   --ring-variant:bar; --count-shift:1px; --kpi-shift:-1px; --ring-bar-shift-sm:0px; --ring-bar-shift-md:10px;
-  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px; --ring-count-shift:-14px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
+  --ring-bar-gap-sm:4px; --ring-bar-track-sm:3px; --ring-bar-gap-md:4px; --ring-bar-track-md:3px; --ring-count-shift:-18px;   /* Plex digits ride a pixel high beside the 14px rail label */ --ring-numeral-scale-sm:1.2; --ring-numeral-scale-md:1.5; --ctl-line:1.4;
   --seg-dot-on:var(--accent); --seg-dot-off:var(--line-strong);   /* depth discs: blue-600 picked, gray-400 unpicked */
   /* Fields rest on --surface, not the base layer's --surface-2: on Tailwind greys
      a gray-100 ground next to a white card reads as a disabled control. The
