@@ -1517,7 +1517,7 @@ function ScoreBar({ value, busy, ink, size }) {
       // neighbours it already lines up with, so its shift stays 0; md is the one
       // measured against the feed row. Both 0px in the base blocks.
       // the settled stack is numeral + gap + track, so its shift centres the numeral on the row; a lone spinner needs half of it
-      transform: busy ? `translateY(calc(var(--ring-bar-shift-${sm ? 'sm' : 'md'}) / 2 - 4px))` : `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
+      transform: busy ? `translateY(calc(var(--ring-bar-shift-${sm ? 'sm' : 'md'}) / 2 - 5px))` : `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
     }}>
       {busy ? <Spinner size={sm ? 15 : 22} weight="bold" /> : (
         <>
