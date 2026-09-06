@@ -342,6 +342,7 @@ export default function Settings() {
       ['appearance', 'General', 'Display', '', [
         { kind: 'appearance', label: 'Appearance', help: 'Light, dark, or follow your OS. Saved in this browser.' },
         { kind: 'theme', label: 'Theme', help: 'The app’s look: colours, fonts and, for Cobalt, SaaS and Win98, shapes too. Saved in this browser.' },
+        BT('Classic dashboard', 'Open the previous (v1) interface.', 'Open classic UI', null, { href: '/' }),
       ]],
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
@@ -704,7 +705,11 @@ function Row({ r, ctx }) {
                   <Helper mono style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>
                 </span>
               : <Helper size="xs" mono style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.preview}</Helper>)}
-            <ActionBtn label={r.btnLabel} state={trig[r.label] || ''} onClick={() => runAction(r.label, r.act)} ariaLabel={`${r.label} — ${r.btnLabel}`} />
+            {/* A row that just navigates (Classic dashboard) carries an `href` instead of an
+                `act` — a real <a> via Button, not the running/done ActionBtn pill. */}
+            {r.href
+              ? <Button variant="secondary" href={r.href} ariaLabel={`${r.label} — ${r.btnLabel}`}>{r.btnLabel}</Button>
+              : <ActionBtn label={r.btnLabel} state={trig[r.label] || ''} onClick={() => runAction(r.label, r.act)} ariaLabel={`${r.label} — ${r.btnLabel}`} />}
           </>
         )
       case 'apikey':

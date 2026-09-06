@@ -2433,15 +2433,16 @@
 /* the last child closes the trunk at its own elbow instead of running past it */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem:last-child::before { bottom:50%; }
 /* ── Round 8 #3 · the status band ────────────────────────────────────────────
-   Round 7 drew each of the three bottom rows as its own sunken `status-bar-field`
-   box, which stacked three heavy bands under a tree that had none. They go back
+   Round 7 drew each of the bottom rows as its own sunken `status-bar-field`
+   box, which stacked heavy bands under a tree that had none. They go back
    to being ONE chrome band — flat, the rail's ink — and the only separator in
    the whole rail that is more than a hairline is the one that closes the tree
    off from it: 98's thick etched divider, a --line shadow row with a --line-soft
    highlight row under it, drawn as two inset shadows so the rows keep their own
-   heights. `.v2-railscroll + .v2-railfoot` and not `:first-of-type`: the three
-   rows are an <a> and two <div>s, and `-of-type` counts per element name, so it
-   would match the anchor AND the last div rather than the first row. */
+   heights. The foot is two <div>s — the pipeline-health row and the collapse
+   control — so `.v2-railscroll + .v2-railfoot` (rather than `:first-of-type`,
+   which counts per element name and here would just mean "the only one") reaches
+   the first of them, the one that actually follows the scroller. */
 .jn-v2[data-theme="win98"] .v2-rail .v2-railfoot {
   background:var(--surface); color:var(--text);
   border-top:0 !important; margin:0 !important;
@@ -2450,12 +2451,12 @@
      black here, this is a shallow well, not a control edge. */
   box-shadow:inset -1px -1px 0 var(--bevel-highlight), inset 1px 1px 0 var(--bevel-shadow);
 }
-/* Round 9 #7 · the three foot rows are told apart by the app's own divider — one
+/* Round 9 #7 · the two foot rows are told apart by the app's own divider — one
    --line hairline, the same rule every card in the pane uses — and not by the
-   blank gaps they had. The thick etched band below still marks where the tree
+   blank gap they had. The thick etched band below still marks where the tree
    ends and the status rows begin; inside the band a hairline is the right weight.
    The selector is more specific than the `border-top:0 !important` above it, so
-   the first row (which follows the scroller, not another foot row) keeps none. */
+   the first row (which follows the scroller, not the other foot row) keeps none. */
 .jn-v2[data-theme="win98"] .v2-rail .v2-railfoot + .v2-railfoot {
   border-top:var(--bw-hair) solid var(--line) !important;
 }

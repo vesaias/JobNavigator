@@ -257,11 +257,6 @@ export default function V2App() {
           ))}
         </nav>
 
-        <a href="/" className="v2-navdark v2-railfoot" title={open ? undefined : 'Classic UI'} style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, fontSize: 12, color: 'var(--rail-dim)', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
-          <span style={{ flex: `0 0 ${open ? 0 : 24}px`, display: 'flex', justifyContent: 'center', overflow: 'hidden', opacity: open ? 0 : 1, transition: 'opacity .2s, flex-basis .32s ease' }}>←</span>
-          <span style={{ opacity: open ? 1 : 0, transition: 'opacity .2s' }}>← Classic UI</span>
-        </a>
-
         {/* pipeline pulse — the dot yields its slot to the theme toggle when collapsed */}
         {/* tooltip promises Run history, the last card on the page — deep-link to it */}
         <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark v2-railfoot" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
