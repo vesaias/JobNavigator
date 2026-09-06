@@ -12,6 +12,7 @@ import CoverLetterBuilder from './components/CoverLetterBuilder'
 import Persona from './components/Persona'
 import LoginModal from './v2/LoginModal'
 import WelcomeModal from './v2/WelcomeModal'
+import NewUiModal from './v2/NewUiModal'
 import WhatsNewBanner from './components/WhatsNewBanner'
 import HealthBanner from './components/HealthBanner'
 import V2App from './v2/V2App'
@@ -54,6 +55,28 @@ const alreadyWelcomed = () => {
   } catch { return true }   // storage blocked: never strand someone behind a modal that can't record its own dismissal
 }
 
+// The upgrade overlay (v2/NewUiModal). Versioned rather than boolean, so the
+// next release can raise its own by bumping the value; anything else — an older
+// mark, no mark — means this release has not been announced to this profile yet.
+const NEWUI_KEY = 'jobnavigator_newui_seen'
+const NEWUI_VERSION = '2.0.0'
+// Keys only an EXISTING install can have written. A profile carrying any of them
+// (or the welcome mark itself) used JobNavigator before the redesign, which is
+// exactly the audience for "here is what moved" — a genuinely fresh profile has
+// none of them and gets the first-run tour instead.
+const RETURNING_KEYS = ['jobnavigator_api_key', 'jobnavigator_dark_mode', 'jobnavigator_v2_rail']
+const isReturningUser = () => {
+  try {
+    if (alreadyWelcomed()) return true
+    return RETURNING_KEYS.some((k) => localStorage.getItem(k) !== null)
+  } catch { return false }
+}
+// Same guard as the tour: storage blocked → no overlay, since the dismissal
+// could not be recorded and it would come back on every load.
+const newUiPending = () => {
+  try { return isReturningUser() && localStorage.getItem(NEWUI_KEY) !== NEWUI_VERSION } catch { return false }
+}
+
 // The v1 screens now live under /classic; the root belongs to the redesign.
 const NAV_ITEMS = [
   { to: '/classic', icon: Briefcase, label: 'Jobs' },
@@ -74,6 +97,21 @@ function DropV2Prefix() {
   const { pathname, search, hash } = useLocation()
   const rest = pathname.replace(/^\/v2(?=\/|$)/, '')
   return <Navigate to={(rest || '/') + search + hash} replace />
+}
+
+// The upgrade overlay belongs to the shell it is ADVERTISING. Under /classic the
+// announcement is already on screen as WhatsNewBanner, and raising the modal
+// there would be the same release sold twice — worse, its dismissal would spend
+// the one showing this profile gets on the interface it is pointing away from.
+// So the classic shell renders nothing and marks nothing; the modal is still
+// owed, and appears the moment the user is actually in the new UI.
+//
+// It is a component rather than a check inside App() because `useLocation` needs
+// a Router above it and App is the component that renders the BrowserRouter —
+// the same reason WelcomeModal reads the location from inside itself.
+function NewUiGate({ onClose }) {
+  if (useLocation().pathname.startsWith('/classic')) return null
+  return <NewUiModal onClose={onClose} />
 }
 
 // Rendered as a layout route so its child routes fill the <Outlet/>.
@@ -151,6 +189,12 @@ function App() {
     try { if (sessionStorage.getItem('jn:welcome') === '1') return true } catch { /* ignore */ }
     return !alreadyWelcomed()
   })
+  // At most one of the two overlays ever shows. The first-run tour wins: a
+  // profile that is BOTH new and carrying a legacy key (the harness seeds an API
+  // key into an otherwise empty context) is being onboarded, not upgraded — so
+  // this stays mounted-but-unrendered and, crucially, unmarked, which is what
+  // makes it appear on the visit after the tour was dismissed.
+  const [showNewUi, setShowNewUi] = useState(newUiPending)
 
   // Handle ?cv= query param tracer links — redirect to /cv/{token} on backend
   useEffect(() => {
@@ -236,6 +280,12 @@ function App() {
           // durable, so the tour does not come back on the next visit
           try { localStorage.setItem(WELCOMED_KEY, '1') } catch {}
           setShowWelcome(false)
+        }} />
+      )}
+      {showNewUi && !showWelcome && !showLogin && (
+        <NewUiGate onClose={() => {
+          try { localStorage.setItem(NEWUI_KEY, NEWUI_VERSION) } catch {}
+          setShowNewUi(false)
         }} />
       )}
     </BrowserRouter>

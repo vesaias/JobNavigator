@@ -22,34 +22,34 @@ The new dashboard is the app at `http://localhost`; the previous one stays at `/
 - **Settings** — grouped sections, validated fields, autosave.
 - **Feel** — one-settle rendering (no popping counters), warm-started rail counts, pollers that survive navigation and reload, optimistic lists, plain-language copy throughout.
 
-### 2 · Themes and appearance
+### 2 · Extension AI-powered redesign
+- Structured ATS autofill, field by field, from the Persona and Q&A bank.
+- In-field AI drafts for free-text questions from the Navigator button.
+
+### 3 · Themes and appearance
 - **Appearance:** Light, Dark or System (follows the OS).
 - **Themes:** Paper (default), Green Paper, Stone, V1 Style, Windows 98 — colours, fonts and shapes, both appearances, switched live with no reload or flash.
 - **Windows 98** is a full recreation: bevels, title bars with window controls, Explorer-style rail, progress-bar loaders, 98 dropdowns and scrollbars. **Stone** is achromatic with Geist. **V1 Style** brings back the softer type of the old dashboard, with violet AI actions.
 
-### 3 · Persona import
-- Fill the Persona from a base résumé or a PDF in one step: contact details, résumé content and current company (overwrites previous values).
-
-### 4 · Cron helper
-- Schedule fields explain themselves as you type ("weekdays at 09:00 UTC · next Mon 07 Sep 09:00 (your time)") with presets: Hourly, Every 6 hours, Daily, Weekdays, Weekly, Monthly.
-- Presets use day names so cron and APScheduler agree; the default H-1B refresh now runs on Sunday as intended.
-
-### 5 · First run and shell
-- Welcome tour on the first visit; sign-in works before any key is set.
-- Rail health dot for "backend unreachable" and "last scrape run failed".
-- Only one menu or select open at a time, app-wide.
-
-### 6 · Extension redesign
-- Structured ATS autofill, field by field, from the Persona and Q&A bank.
-- In-field AI drafts for free-text questions from the Navigator button.
-
-### 7 · New aggregator: freehire.me
-- Seventh discovery tier over freehire.me's open API; salary from its structured enrichment; preview runs and per-job filter reasons like every other source.
-
-### 8 · OpenRouter and model management
+### 4 · OpenRouter and model management
 - OpenRouter as a provider (every vendor with one key).
 - Live model search for OpenAI, Anthropic and OpenRouter; a model catalog you can extend.
 - Scoring-only provider/model override with automatic fallback.
+
+### 5 · New aggregator: freehire.me
+- Seventh discovery tier over freehire.me's open API; salary from its structured enrichment; preview runs and per-job filter reasons like every other source.
+
+### 6 · Persona import
+- Fill the Persona from a base résumé or a PDF in one step: contact details, résumé content and current company (overwrites previous values).
+
+### 7 · Cron helper
+- Schedule fields explain themselves as you type ("weekdays at 09:00 UTC · next Mon 07 Sep 09:00 (your time)") with presets: Hourly, Every 6 hours, Daily, Weekdays, Weekly, Monthly.
+- Presets use day names so cron and APScheduler agree; the default H-1B refresh now runs on Sunday as intended.
+
+### 8 · First run and shell
+- Welcome tour on the first visit; sign-in works before any key is set.
+- Rail health dot for "backend unreachable" and "last scrape run failed".
+- Only one menu or select open at a time, app-wide.
 
 ### 9 · H-1B, health and pricing
 - One visa cache with an h1bdata.info fallback.
@@ -64,18 +64,12 @@ The new dashboard is the app at `http://localhost`; the previous one stays at `/
 - **Tracked links:** secure tokens; `tel:` / `mailto:` links no longer rewritten.
 - **Security:** résumé template names whitelisted; embedded pages sandboxed; auth endpoints rate-limited; `nosniff`, `frame-ancestors` and referrer headers; Telegram token kept out of logs; container log rotation. Backups still contain the settings table (API keys included): local, git-ignored, treat as secrets.
 - **PDF export:** print rules stop a last line spilling onto a blank second page.
-- **Fixes:** Ashby department filter; blank-key first-run sign-in (#5).
+- **Fixes:** Ashby department filter; blank-key first-run sign-in.
 
 ### 11 · Testing
 - Backend 2,175 tests (from ~770): contract, dedup property, concurrency, failure-injection and security suites; coverage 79 %.
 - Frontend Vitest in Docker (160 tests) and a repeatable Playwright e2e suite (16 cases).
 - Pixel and computed-style design gates; every theme step shipped with the default theme proven pixel-identical.
-
-### Removed
-- Rail "Classic UI" link (now Settings › Display); legacy `url` search mode; auto-ghost; dead theme tokens.
-
-### Deferred to 2.1
-Two-tab live sync; layouts under 1000 px; server-side infinite-scroll tiebreaker; search Test runs in the run monitor; Win98 open questions (desktop gutter, rail foot); P4 nits in `v2-testing/REPORT-round4.md`.
 
 ## [1.1.0] — 2026-08-16
 

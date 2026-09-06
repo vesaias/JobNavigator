@@ -154,7 +154,7 @@ The previous (v1) interface is still served, at `http://localhost/classic` — S
 
 ## Contributing
 
-PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Easy wins: new ATS scrapers, new resume templates, UI polish.
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Easy things to do: new ATS scrapers, new resume templates, new themes, UI polish.
 
 ## Backups
 
