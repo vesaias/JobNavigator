@@ -1046,7 +1046,7 @@ export default function V2JobFeed() {
                 // tint, which has no Row state of its own.
                 return (
                   <Row key={j.id} data-row={i} divider selected={i === sel} onClick={(e) => rowClick(e, i, j)}
-                    style={{ flex: '0 0 auto', height: 'auto', alignItems: 'stretch', gap: 0, padding: 0, backgroundColor: (on || i === sel) ? 'var(--row-selected)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px)' : 'none', overflow: 'hidden' }}>
+                    style={{ flex: '0 0 auto', height: 'auto', alignItems: 'stretch', gap: 0, padding: 0, backgroundColor: (on || i === sel) ? 'var(--row-selected)' : 'transparent', backgroundImage: (isIgnored && !on && i !== sel) ? 'repeating-linear-gradient(-45deg, transparent 0 8px, var(--row-stripe) 8px 10px)' : 'none', overflow: 'hidden' }}>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '10px 12px', opacity: isIgnored ? 0.55 : 1 }}>
                       {/* ring */}
                       <div style={{ position: 'relative', width: 44, height: 44, flex: '0 0 44px' }}>

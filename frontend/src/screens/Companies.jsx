@@ -456,7 +456,7 @@ export default function Companies() {
           <span style={{ flex: 1, minWidth: 118 }}>Company</span>
           <span style={{ flex: '0 0 62px' }}>Tier</span>
           <span style={{ flex: 1.9, minWidth: healthMin }}>Health</span>
-          {showResumes && <span style={{ flex: '0 0 132px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>}
+          {showResumes && <span style={{ flex: '0 0 198px' }} title="Which résumés new jobs from this company are scored against">Résumés</span>}
           {showAts && <span style={{ flex: '0 0 108px' }} title="ATS detected from the career URLs">ATS</span>}
           <span style={{ flex: '0 0 74px', textAlign: 'right', paddingRight: 10 }} title="Open roles in the Job Feed · postings found in the last 7 days — the +N counts everything the scraper discovered, including titles the filters rejected">Open · 7d</span>
           {showApps && <span style={{ flex: '0 0 46px', textAlign: 'right', paddingRight: 10 }} title="Applications recorded for this company">Apps</span>}
@@ -490,7 +490,7 @@ export default function Companies() {
                 <span title={c.last_error || downMap[c.id] || (c.active ? `Last successful run ${ago(c.last_scraped_at)}` : 'Inactive — jobs already found are kept')} style={{ flex: 1, minWidth: 0, fontSize: 12, color: h.fg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
               </span>
               {/* résumés */}
-              {showResumes && <Helper title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 132px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10, ...(rn ? { color: 'var(--text-2)' } : null) }}>{rn || 'Default'}</Helper>}
+              {showResumes && <Helper title={rn || 'Scored against your default résumé from Settings'} style={{ flex: '0 0 198px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 10, ...(rn ? { color: 'var(--text-2)' } : null) }}>{rn || 'Default'}</Helper>}
               {/* ats */}
               {showAts && <span style={{ flex: '0 0 108px', display: 'flex', alignItems: 'center', gap: 6, paddingRight: 10 }}>
                 {urls.length > 0 && <span className={atsSlug(firstAts)} title={[...urls.map((u) => `${detectAts(u)} · ${u}`), `MyVisaJobs company id · ${c.h1b_slug || 'auto-detected'}`].join('\n')} style={{ flex: '0 0 auto', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 'var(--radius-control)', whiteSpace: 'nowrap' }}>{firstAts}</span>}

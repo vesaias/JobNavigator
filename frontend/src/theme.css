@@ -150,7 +150,7 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  --row-hover:var(--surface-2); --row-stripe:var(--line); --row-selected:var(--surface-2);
   /* Check / Radio — the tick box and the radio disc */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
@@ -540,7 +540,7 @@
   --input-ink:var(--text); --input-placeholder:var(--muted); --input-underline:var(--line-strong);
   --search-bg:var(--surface); --search-glyph:var(--muted);
   /* rows */
-  --row-hover:var(--surface-2); --row-selected:var(--surface-2);
+  --row-hover:var(--surface-2); --row-stripe:var(--line); --row-selected:var(--surface-2);
   /* Check / Radio — the tick box and the radio disc */
   --check-bg:transparent; --check-border:var(--edge); --check-label-ink:var(--text-2);
   --check-on-bg:var(--accent); --check-on-ink:var(--accent-ink);
