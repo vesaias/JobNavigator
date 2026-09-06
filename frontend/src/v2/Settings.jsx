@@ -708,7 +708,7 @@ function Row({ r, ctx }) {
             {/* A row that just navigates (Classic dashboard) carries an `href` instead of an
                 `act` — a real <a> via Button, not the running/done ActionBtn pill. */}
             {r.href
-              ? <Button variant="secondary" href={r.href} ariaLabel={`${r.label} — ${r.btnLabel}`}>{r.btnLabel}</Button>
+              ? <Pill onClick={() => { window.location.assign(r.href) }} ariaLabel={`${r.label} — ${r.btnLabel}`}>{r.btnLabel}</Pill>
               : <ActionBtn label={r.btnLabel} state={trig[r.label] || ''} onClick={() => runAction(r.label, r.act)} ariaLabel={`${r.label} — ${r.btnLabel}`} />}
           </>
         )
