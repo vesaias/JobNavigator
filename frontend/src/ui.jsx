@@ -177,7 +177,7 @@ export function Spinner({ size = 9, weight, color, style }) {
       flex: '0 0 auto', display: 'inline-block', width: size, height: size,
       border: `${SPIN_WEIGHT[weight] || '1.5px'} solid ${color || 'var(--spinner-ink)'}`,
       borderTopColor: 'transparent',
-      borderRadius: 'var(--radius-control)', ...style,
+      borderRadius: 'var(--radius-round)', ...style,   // always a circle, whatever the theme's control radius
     }} />
   )
 }

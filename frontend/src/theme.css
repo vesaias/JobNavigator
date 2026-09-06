@@ -131,7 +131,7 @@
   /* radii, smallest first: -mark inline diff highlight, -inline mono chip/tick
      box, -mini checkbox/funnel-bar square, -cell pick cell/small panel. */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
-  --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
+  --radius-field:6px; --radius-round:99px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
   --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
   /* buttons */
   --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink);
@@ -521,7 +521,7 @@
   /* radii, smallest first: -mark inline diff highlight, -inline mono chip/tick
      box, -mini checkbox/funnel-bar square, -cell pick cell/small panel. */
   --radius-mark:3px; --radius-inline:4px; --radius-mini:5px;
-  --radius-field:6px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
+  --radius-field:6px; --radius-round:99px; --radius-row:7px; --radius-cell:8px; --radius-card:9px;
   --radius-menu:10px; --radius-modal:12px; --radius-control:99px;
   /* buttons */
   --btn-primary-bg:var(--accent); --btn-primary-ink:var(--accent-ink);
