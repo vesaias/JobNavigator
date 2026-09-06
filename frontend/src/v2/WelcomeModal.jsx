@@ -17,7 +17,7 @@ const STEPS = [
 export default function WelcomeModal({ onClose }) {
   const navigate = useNavigate()
   // land in whichever shell you're already in — this overlay is global
-  const base = useLocation().pathname.startsWith('/v2') ? '/v2/' : '/'
+  const base = useLocation().pathname.startsWith('/classic') ? '/classic/' : '/'
   // mounts outside the v2 shell like the sign-in overlay, so it brings the
   // theme with it from the shared store
   const look = useTheme()

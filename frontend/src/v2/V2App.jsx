@@ -15,19 +15,19 @@ import './theme.css'
 // amber dot beside the icon since the label/count are gone.
 const GROUPS = [
   { label: 'Find', items: [
-    { to: '/v2/feed', label: 'Jobs', ready: true, countKey: 'jobs', Icon: Newspaper },
-    { to: '/v2/searches', label: 'Searches', ready: true, countKey: 'searches', Icon: Search, warnKey: 'searches' },
-    { to: '/v2/companies', label: 'Companies', ready: true, countKey: 'companies', Icon: Building2, warnKey: 'companies' },
+    { to: '/feed', label: 'Jobs', ready: true, countKey: 'jobs', Icon: Newspaper },
+    { to: '/searches', label: 'Searches', ready: true, countKey: 'searches', Icon: Search, warnKey: 'searches' },
+    { to: '/companies', label: 'Companies', ready: true, countKey: 'companies', Icon: Building2, warnKey: 'companies' },
   ]},
   { label: 'Apply', items: [
-    { to: '/v2/applications', label: 'Applications', ready: true, countKey: 'apps', Icon: Send },
-    { to: '/v2/resumes', label: 'Résumés', ready: true, countKey: 'resumes', Icon: FileUser },
-    { to: '/v2/cover-letters', label: 'Cover Letters', ready: true, countKey: 'letters', Icon: Mail },
+    { to: '/applications', label: 'Applications', ready: true, countKey: 'apps', Icon: Send },
+    { to: '/resumes', label: 'Résumés', ready: true, countKey: 'resumes', Icon: FileUser },
+    { to: '/cover-letters', label: 'Cover Letters', ready: true, countKey: 'letters', Icon: Mail },
   ]},
   { label: 'You', items: [
-    { to: '/v2/persona', label: 'Persona', ready: true, Icon: Fingerprint },
-    { to: '/v2/stats', label: 'Stats', ready: true, Icon: ChartLine },
-    { to: '/v2/settings', label: 'Settings', ready: true, Icon: SettingsIcon },
+    { to: '/persona', label: 'Persona', ready: true, Icon: Fingerprint },
+    { to: '/stats', label: 'Stats', ready: true, Icon: ChartLine },
+    { to: '/settings', label: 'Settings', ready: true, Icon: SettingsIcon },
     // API docs link lives in the Settings footer instead
   ]},
 ]
@@ -259,7 +259,7 @@ export default function V2App() {
 
         {/* pipeline pulse — the dot yields its slot to the theme toggle when collapsed */}
         {/* tooltip promises Run history, the last card on the page — deep-link to it */}
-        <div onClick={() => navigate('/v2/stats#runs')} title={healthTip} className="v2-navdark v2-railfoot" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
+        <div onClick={() => navigate('/stats#runs')} title={healthTip} className="v2-navdark v2-railfoot" style={{ display: 'flex', alignItems: 'center', height: 30, padding: `0 ${padX}px`, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'padding .32s ease' }}>
           <span style={{ flex: '0 0 24px', display: 'flex', justifyContent: open ? 'flex-start' : 'center' }}>
             {open
               /* ui: keep — 7px scrape-health rail dot, not a control */

@@ -113,6 +113,8 @@ docker compose up --build -d
 
 Open `http://localhost`. On first run, click "Sign In" with a blank API key to proceed. Set a real key from Settings > General once you've accessed the dashboard.
 
+The previous (v1) interface is still served, at `http://localhost/classic` — Settings > General > Display has a button for it.
+
 **First steps:**
 1. Settings > AI tab — configure your LLM provider and API key
 2. Companies — activate a few seed companies or add your own

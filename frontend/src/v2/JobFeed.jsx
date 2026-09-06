@@ -539,7 +539,7 @@ export default function V2JobFeed() {
     setPicker(null)
     for (const job of list) {
       try {
-        if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) navigate(`/v2/resumes/${data.id}`) }
+        if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) navigate(`/resumes/${data.id}`) }
         else {
           pendingRef.current[job.id] = { title: job.title, company: job.company, op: 'tailor' }
           pushToast({ kind: 'progress', msg: `Tailoring for "${job.title}"…` })
@@ -552,8 +552,8 @@ export default function V2JobFeed() {
     setChecked(new Set())
   }, [pushToast])
   const openTailored = useCallback(async (job) => {
-    if (job.tailored_resume_id) { navigate(`/v2/resumes/${job.tailored_resume_id}`); return }
-    try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { navigate(`/v2/resumes/${copy.id}`); return } } catch {}
+    if (job.tailored_resume_id) { navigate(`/resumes/${job.tailored_resume_id}`); return }
+    try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { navigate(`/resumes/${copy.id}`); return } } catch {}
     setPicker({ mode: 'tailor', jobs: [job] })
   }, [navigate])
 
@@ -647,7 +647,7 @@ export default function V2JobFeed() {
         case 'e': case 'o': if (job?.url) window.open(job.url, '_blank', 'noopener,noreferrer'); break
         case 'r': if (job) openRescore(job); break
         case 't': if (job) setPicker({ mode: 'tailor', jobs: [job] }); break   // the ⋯ menus hint t
-        case 'c': if (job) navigate(`/v2/cover-letters?job=${job.id}`); break   // and c
+        case 'c': if (job) navigate(`/cover-letters?job=${job.id}`); break   // and c
         default: break
       }
     }
@@ -801,7 +801,7 @@ export default function V2JobFeed() {
               pushToast({
                 kind: ok ? 'success' : 'error',
                 msg: `${meta.op === 'tailor' ? (ok ? 'Tailored' : 'Tailoring failed for') : (ok ? 'Scored' : 'Scoring failed for')} "${meta.title}"${meta.company ? ` at ${meta.company}` : ''}`,
-                ...(rid ? { action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${rid}`) } : {}),
+                ...(rid ? { action: 'Open ↗', onAction: () => navigate(`/resumes/${rid}`) } : {}),
               })
               delete pendingRef.current[id]
             }
@@ -1030,7 +1030,7 @@ export default function V2JobFeed() {
                   (!filters.status.length && !filters.company.length && !filters.source.length && !filters.h1b_verdict.length && filters.min_score === '' && !filters.min_salary && !dSearch && !searchId)
                     ? <div style={{ padding: '48px 40px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>   {/* first-run / nothing open */}
                         <Heading style={{ display: 'block', marginBottom: 6 }}>No open roles yet</Heading>
-                        Jobs come from <a href="/v2/searches" onClick={(e) => { e.preventDefault(); navigate('/v2/searches') }}>Searches</a> and <a href="/v2/companies" onClick={(e) => { e.preventDefault(); navigate('/v2/companies') }}>Companies</a>. Activate one, or change the Status filter to include skipped and applied jobs.
+                        Jobs come from <a href="/searches" onClick={(e) => { e.preventDefault(); navigate('/searches') }}>Searches</a> and <a href="/companies" onClick={(e) => { e.preventDefault(); navigate('/companies') }}>Companies</a>. Activate one, or change the Status filter to include skipped and applied jobs.
                       </div>
                     : <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: '20px' }}>No jobs match.<br /><Link onClick={() => { setFilters(DEFAULTS); setSearch(''); setSearchId('') }}>Clear filters</Link></div>)
               : jobs.map((j, i) => {
@@ -1079,7 +1079,7 @@ export default function V2JobFeed() {
                           {/* `v2-rowink` lets a SELECTED row's --row-selected-ink reach the text (theme.css); it marks
                               reading content only — the status badge keeps its own ground/ink, and doesn't match in the default theme. */}
                           <Heading strong size={16} className="v2-rowink" title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
-                          {j.tailored_resume_id && <a href={`/v2/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/v2/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--ai)' }}>✦</a>}
+                          {j.tailored_resume_id && <a href={`/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--ai)' }}>✦</a>}
                           {/* ui: keep — status badge with background + border + r99: Tag role, not a Label */}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 'var(--radius-control)', border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
@@ -1201,7 +1201,7 @@ export default function V2JobFeed() {
                               ...(d.tailored_resume_id ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
-                              ['Cover letter ↗', 'c', () => navigate(`/v2/cover-letters?job=${d.id}`)],
+                              ['Cover letter ↗', 'c', () => navigate(`/cover-letters?job=${d.id}`)],
                               ['Copy résumé with tracked links', '', () => setPicker({ mode: 'copy', jobs: [d] })],
                             ].map(([label, key, act, bold]) => (
                               <MenuItem key={label} hint={key} hintMono onClick={() => { setHeadMenu(false); act() }}

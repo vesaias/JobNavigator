@@ -704,7 +704,7 @@ export default function Searches() {
                     {menuFor === s.id && (
                       <Menu ariaLabel={`${s.name} actions`} onDismiss={() => setMenuFor(null)} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                         {[['✎', 'Edit search', () => openEdit(s)],
-                          ['☰', 'View results in feed', () => navigate(`/v2/feed?search=${s.id}`)],
+                          ['☰', 'View results in feed', () => navigate(`/feed?search=${s.id}`)],
                           [<CopyGlyph key="dup" />, 'Duplicate', () => duplicate(s)]].map(([g, label, act]) => (
                           <MenuItem key={label} icon={g} onClick={act}>{label}</MenuItem>
                         ))}

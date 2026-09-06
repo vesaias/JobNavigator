@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, NavLink, Outlet, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
 import { Briefcase, LayoutDashboard, Building2, Search, Settings, BarChart3, FileCode2, FileText, User, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
 import JobFeed from './components/JobFeed'
 import ApplicationBoard from './components/ApplicationBoard'
@@ -54,18 +54,27 @@ const alreadyWelcomed = () => {
   } catch { return true }   // storage blocked: never strand someone behind a modal that can't record its own dismissal
 }
 
+// The v1 screens now live under /classic; the root belongs to the redesign.
 const NAV_ITEMS = [
-  { to: '/', icon: Briefcase, label: 'Jobs' },
-  { to: '/applications', icon: LayoutDashboard, label: 'Applications' },
-  { to: '/companies', icon: Building2, label: 'Companies' },
-  { to: '/searches', icon: Search, label: 'Searches' },
-  { to: '/resumes', icon: FileText, label: 'Resumes' },
-  { to: '/cover-letters', icon: Mail, label: 'Cover Letters' },
-  { to: '/persona', icon: User, label: 'Persona' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-  { to: '/stats', icon: BarChart3, label: 'Stats' },
+  { to: '/classic', icon: Briefcase, label: 'Jobs' },
+  { to: '/classic/applications', icon: LayoutDashboard, label: 'Applications' },
+  { to: '/classic/companies', icon: Building2, label: 'Companies' },
+  { to: '/classic/searches', icon: Search, label: 'Searches' },
+  { to: '/classic/resumes', icon: FileText, label: 'Resumes' },
+  { to: '/classic/cover-letters', icon: Mail, label: 'Cover Letters' },
+  { to: '/classic/persona', icon: User, label: 'Persona' },
+  { to: '/classic/settings', icon: Settings, label: 'Settings' },
+  { to: '/classic/stats', icon: BarChart3, label: 'Stats' },
   { to: '/docs', icon: FileCode2, label: 'API Docs', external: true },
 ]
+
+// `/v2/feed?job=7#x` → `/feed?job=7#x`; bare `/v2` → `/`. Search and hash ride
+// along because the query is what the old links actually carried.
+function DropV2Prefix() {
+  const { pathname, search, hash } = useLocation()
+  const rest = pathname.replace(/^\/v2(?=\/|$)/, '')
+  return <Navigate to={(rest || '/') + search + hash} replace />
+}
 
 // Rendered as a layout route so its child routes fill the <Outlet/>.
 function ClassicShell({ darkMode, setDarkMode }) {
@@ -91,7 +100,7 @@ function ClassicShell({ darkMode, setDarkMode }) {
                 {inner}
               </a>
             ) : (
-              <NavLink key={to} to={to} end={to === '/'}
+              <NavLink key={to} to={to} end={to === '/classic'}
                 className={({ isActive }) =>
                   `flex items-center h-10 whitespace-nowrap text-sm transition-colors ${
                     isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -102,10 +111,12 @@ function ClassicShell({ darkMode, setDarkMode }) {
             )
           })}
         </nav>
-        <NavLink to="/v2/feed" className="flex items-center h-10 whitespace-nowrap text-emerald-300 hover:bg-slate-800 hover:text-emerald-200 text-xs border-t border-slate-700">
+        {/* Plain anchor, not a NavLink: leaving the classic shell for the current
+            interface is a whole-app move, so let the browser do it. */}
+        <a href="/" className="flex items-center h-10 whitespace-nowrap text-emerald-300 hover:bg-slate-800 hover:text-emerald-200 text-xs border-t border-slate-700">
           <span className="w-16 flex-shrink-0 flex items-center justify-center text-base">&#129517;</span>
-          <span className={`transition-opacity duration-150 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>Try v2 (beta)</span>
-        </NavLink>
+          <span className={`transition-opacity duration-150 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>New UI &#8599;</span>
+        </a>
         <button onClick={() => setDarkMode(!darkMode)} className="flex items-center h-10 whitespace-nowrap text-slate-400 hover:text-white text-xs">
           <span className="w-16 flex-shrink-0 flex items-center justify-center text-base">{darkMode ? '☀️' : '🌙'}</span>
           <span className={`transition-opacity duration-150 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
@@ -174,8 +185,8 @@ function App() {
     <BrowserRouter>
       <TitleSync />
       <Routes>
-        {/* v2 redesign — separate shell, additive, swap to / when complete */}
-        <Route path="/v2" element={<V2App />}>
+        {/* the app */}
+        <Route path="/" element={<V2App />}>
           <Route index element={<Navigate to="feed" replace />} />
           <Route path="feed" element={<V2JobFeed />} />
           <Route path="resumes" element={<V2Resumes />} />
@@ -190,21 +201,32 @@ function App() {
           <Route path="stats" element={<V2Stats />} />
         </Route>
         {/* labRoute returns null when design-base/ is absent; React skips a null child. */}
-        {labRoute('ToastLab', '/v2/toasts')}
-        {labRoute('UiGallery', '/v2/ui')}
+        {labRoute('ToastLab', '/toasts')}
+        {labRoute('UiGallery', '/ui')}
 
-        {/* classic shell */}
-        <Route element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>
-          <Route path="/" element={<JobFeed />} />
-          <Route path="/applications" element={<ApplicationBoard />} />
-          <Route path="/companies" element={<CompanyManager />} />
-          <Route path="/searches" element={<SearchManager />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/resumes" element={<ResumeBuilder />} />
-          <Route path="/cover-letters" element={<CoverLetterBuilder />} />
-          <Route path="/persona" element={<Persona />} />
-          <Route path="/stats" element={<Stats />} />
+        {/* the previous interface, kept whole under /classic */}
+        <Route path="/classic" element={<ClassicShell darkMode={darkMode} setDarkMode={setDarkMode} />}>
+          <Route index element={<JobFeed />} />
+          <Route path="applications" element={<ApplicationBoard />} />
+          <Route path="companies" element={<CompanyManager />} />
+          <Route path="searches" element={<SearchManager />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="resumes" element={<ResumeBuilder />} />
+          <Route path="cover-letters" element={<CoverLetterBuilder />} />
+          <Route path="persona" element={<Persona />} />
+          <Route path="stats" element={<Stats />} />
         </Route>
+
+        {/* /v2 was the staging prefix while the redesign was built beside v1;
+            every screen it named now lives one level up, so old links (and
+            bookmarks, and the harness) land on their twin, query and hash intact. */}
+        <Route path="/v2" element={<DropV2Prefix />} />
+        <Route path="/v2/*" element={<DropV2Prefix />} />
+        {/* Every v1 root path (/applications, /resumes, …) is now the v2 screen of
+            the same name — same feature, new UI — and v1 had no path without a
+            twin, so nothing else needs a redirect. Anything left over is a typo
+            or a dead bookmark: send it to the feed, not a blank shell. */}
+        <Route path="*" element={<Navigate to="/feed" replace />} />
       </Routes>
 
       {showLogin && <LoginModal onSuccess={handleLoginSuccess} />}

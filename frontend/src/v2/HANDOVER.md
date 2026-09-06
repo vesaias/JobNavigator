@@ -13,21 +13,23 @@ All nine screens are built and live in the rail (`ready: true` on every nav item
 
 | Screen | Route | Design file |
 |---|---|---|
-| Jobs / Feed | `/v2/feed` | `JobNavigator Redesign.dc.html` |
-| Searches | `/v2/searches` | `Searches Ops.dc.html` |
-| Companies | `/v2/companies` | `Companies Ops.dc.html` |
-| Applications | `/v2/applications` | `Applications Ops.dc.html` |
-| Résumés | `/v2/resumes`, `/:id` | `Resumes Shelf.dc.html` (canonical per MAIN.md; the 2026-09-02 pass measured against Home D — re-check) |
-| Cover Letters | `/v2/cover-letters`, `/:id` | `Cover Letters Ops.dc.html` |
-| Persona | `/v2/persona` | `Persona Ops.dc.html` |
-| Stats | `/v2/stats` | `Stats Ops.dc.html` |
-| Settings | `/v2/settings` | `Settings Ops.dc.html` — **re-diff, see below** |
+| Jobs / Feed | `/feed` | `JobNavigator Redesign.dc.html` |
+| Searches | `/searches` | `Searches Ops.dc.html` |
+| Companies | `/companies` | `Companies Ops.dc.html` |
+| Applications | `/applications` | `Applications Ops.dc.html` |
+| Résumés | `/resumes`, `/:id` | `Resumes Shelf.dc.html` (canonical per MAIN.md; the 2026-09-02 pass measured against Home D — re-check) |
+| Cover Letters | `/cover-letters`, `/:id` | `Cover Letters Ops.dc.html` |
+| Persona | `/persona` | `Persona Ops.dc.html` |
+| Stats | `/stats` | `Stats Ops.dc.html` |
+| Settings | `/settings` | `Settings Ops.dc.html` — **re-diff, see below** |
 
 Plus overlays (`LoginModal`, `WelcomeModal` from `System Overlays.dc.html`), the
 toast system (`Toast.jsx`, from `Toasts.dc.html`), and the extension popup
 (`Extension Popup.dc.html`, tokenised with its own Light/Dark/System selector).
 
-v1 still exists at the unprefixed routes and shares one backend. Do not break it.
+The v2 shell is the app at `/`. v1 still exists, one level down at `/classic/*`, and
+shares one backend. Do not break it. `/v2` and `/v2/*` — the prefix the redesign was
+built under — redirect to the same path without it, query and hash intact.
 
 ---
 
@@ -66,7 +68,7 @@ So the pass should assume the *backend* is reasonably defended and the
    duplicate (expect 409); restart the backend mid-run (stale `running` rows are
    marked failed on startup).
 4. **Deep links and bad ids.** `?job=` on the feed, `?resume=&job=` on the cover
-   letter builder, and `/v2/resumes/:id` / `/v2/cover-letters/:id` for an id that
+   letter builder, and `/resumes/:id` / `/cover-letters/:id` for an id that
    does not exist or was just deleted.
 5. **Dark mode on all eleven routes.** Historically several bugs were
    dark-only. Do not test light and assume dark.
@@ -143,12 +145,12 @@ docker compose build frontend && docker compose up -d frontend   # frontend only
 docker compose restart backend                # required for EVERY backend edit: uvicorn runs without --reload (Dockerfile.backend CMD)
 ```
 
-Playwright runs inside the backend container: hit `http://caddy/v2/...`, API key
+Playwright runs inside the backend container: hit `http://caddy/...`, API key
 `pick-a-password`, screenshot to `/tmp`, then `docker cp` out.
 
 ---
 
-## Primitive layer (`ui.jsx`, `/v2/ui`)
+## Primitive layer (`ui.jsx`, `/ui`)
 
 `frontend/src/v2/ui.jsx` is the one place a v2 control is *drawn*. It exports a
 component per role — `Button`, `Pill`, `IconButton`, `Input`, `Textarea`,
@@ -185,8 +187,8 @@ line-heights are whole pixels, and fixed-height flex controls carry `v2-ctl`.
 
 ### The lab pages are local-only
 
-The two workbench pages — the primitive gallery at **`/v2/ui`** and the toast
-taxonomy lab at **`/v2/toasts`** — live in **`frontend/src/design-base/`**
+The two workbench pages — the primitive gallery at **`/ui`** and the toast
+taxonomy lab at **`/toasts`** — live in **`frontend/src/design-base/`**
 (`UiGallery.jsx`, `ToastLab.jsx`). That folder is **git-ignored**: it is a design
 workbench, not shipped source, and a fresh clone will not have it.
 
@@ -203,7 +205,7 @@ folder — no wiring changes.
 only, so the workbench is out of their reach by construction (`stylelint`'s `SKIP`
 is now just `ui.jsx`).
 
-`/v2/ui` renders every primitive in every variant and state in light and dark, with
+`/ui` renders every primitive in every variant and state in light and dark, with
 the role name and the semantic tokens printed under each block. It is rail-less on
 purpose: the style crawl measures that page against the spec, so nothing but
 `ui.jsx` should be on it. **Add a primitive → add it to the gallery in the same
@@ -272,7 +274,7 @@ the warm one.
 - **`Settings Ops.dc.html` grew 27.6 KB → 51.4 KB after Settings was built.**
   It has never been re-diffed against `Settings.jsx`. Do not assume the screen
   matches the design.
-- **`ToastLab.jsx` and the `/v2/toasts` route are temporary**, built to review
+- **`ToastLab.jsx` and the `/toasts` route are temporary**, built to review
   the toast taxonomy. Delete both once signed off.
 - **Theming groundwork.** `theme.css` holds 111 tokens: 98 have dark overrides
   and one is a back-compat alias (`--faint`). None are unused — F-003 deleted

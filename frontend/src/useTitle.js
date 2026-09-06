@@ -3,27 +3,29 @@ import { useLocation } from 'react-router-dom'
 
 const APP = 'JobNavigator'
 
-// Longest prefix wins, so /v2/resumes/:id falls back to "Résumé" until the
+// Longest prefix wins, so /resumes/:id falls back to "Résumé" until the
 // editor loads and names the actual document.
 const ROUTES = [
-  ['/v2/feed', 'Jobs'],
-  ['/v2/searches', 'Searches'],
-  ['/v2/companies', 'Companies'],
-  ['/v2/applications', 'Applications'],
-  ['/v2/resumes', 'Résumés'],
-  ['/v2/cover-letters', 'Cover Letters'],
-  ['/v2/persona', 'Persona'],
-  ['/v2/stats', 'Stats'],
-  ['/v2/settings', 'Settings'],
-  ['/v2/toasts', 'Toast lab'],
-  ['/applications', 'Applications'],
-  ['/companies', 'Companies'],
+  ['/feed', 'Jobs'],
   ['/searches', 'Searches'],
+  ['/companies', 'Companies'],
+  ['/applications', 'Applications'],
   ['/resumes', 'Résumés'],
   ['/cover-letters', 'Cover Letters'],
   ['/persona', 'Persona'],
-  ['/settings', 'Settings'],
   ['/stats', 'Stats'],
+  ['/settings', 'Settings'],
+  ['/toasts', 'Toast lab'],
+  // the previous interface, one level down
+  ['/classic', 'Jobs'],
+  ['/classic/applications', 'Applications'],
+  ['/classic/companies', 'Companies'],
+  ['/classic/searches', 'Searches'],
+  ['/classic/resumes', 'Résumés'],
+  ['/classic/cover-letters', 'Cover Letters'],
+  ['/classic/persona', 'Persona'],
+  ['/classic/settings', 'Settings'],
+  ['/classic/stats', 'Stats'],
   ['/', 'Jobs'],
 ]
 

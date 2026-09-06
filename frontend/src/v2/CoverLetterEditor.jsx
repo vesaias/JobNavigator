@@ -196,7 +196,7 @@ export default function CoverLetterEditor() {
       title: `Delete "${doc?.name}"?`, body: 'This cannot be undone.', label: 'Delete', danger: true,
       onConfirm: async () => {
         setConfirm(null)
-        try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/v2/cover-letters') }
+        try { await api.delete(`/cover-letters/${id}`); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate('/cover-letters') }
         catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not delete this letter.' }) }
       },
     })
@@ -309,7 +309,7 @@ export default function CoverLetterEditor() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
           <span>{err}</span>
           <span style={{ display: 'flex', gap: 14 }}>
-            <Link onClick={() => navigate('/v2/cover-letters')}>‹ Back to cover letters</Link>
+            <Link onClick={() => navigate('/cover-letters')}>‹ Back to cover letters</Link>
             {!/no longer exists/.test(err) && <Link onClick={() => window.location.reload()}>Try again</Link>}
           </span>
         </div>
@@ -346,7 +346,7 @@ export default function CoverLetterEditor() {
     <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* top bar */}
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
-        <NavLink onClick={() => navigate('/v2/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
+        <NavLink onClick={() => navigate('/cover-letters')} style={{ whiteSpace: 'nowrap' }}>‹ Cover Letters</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         {/* Draft/stage badge is ResumeEditor's Base/Tailored twin — same Tag role, same token read. */}
         <span className={stage ? (STAGE_CLASS[stage] || 'cc-generic') : 'cc-generic'}
@@ -363,7 +363,7 @@ export default function CoverLetterEditor() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: '18px', fontWeight: 500, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Written for <span style={{ color: 'var(--text)' }}>{doc.company ? `${doc.company} — ${doc.title}` : doc.name}</span>
-            {doc.source_name && <><BandRule />from <span onClick={() => doc.resume_id && navigate(`/v2/resumes/${doc.resume_id}`)}
+            {doc.source_name && <><BandRule />from <span onClick={() => doc.resume_id && navigate(`/resumes/${doc.resume_id}`)}
               title={doc.resume_id ? 'Open the source résumé' : 'Written from your Persona'}
               style={{ color: 'var(--accent)', cursor: doc.resume_id ? 'pointer' : 'default' }}>{doc.source_name}{doc.resume_id ? ' ↗' : ''}</span></>}
           </span>
@@ -381,10 +381,10 @@ export default function CoverLetterEditor() {
           {menuOpen && (
             <Menu ariaLabel="Letter actions" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 5, width: 224, zIndex: 50 }}>
               {doc.has_application && (
-                <MenuItem icon="▤" onClick={() => { setMenuOpen(false); navigate('/v2/applications') }}>View application</MenuItem>
+                <MenuItem icon="▤" onClick={() => { setMenuOpen(false); navigate('/applications') }}>View application</MenuItem>
               )}
               {doc.job_id && (
-                <MenuItem icon="☰" onClick={() => { setMenuOpen(false); navigate(`/v2/feed?job=${doc.job_id}`) }}>View job in feed</MenuItem>
+                <MenuItem icon="☰" onClick={() => { setMenuOpen(false); navigate(`/feed?job=${doc.job_id}`) }}>View job in feed</MenuItem>
               )}
               {doc.job_url && (
                 <MenuItem icon="↗" href={doc.job_url} target="_blank" onClick={() => setMenuOpen(false)}>Open job posting</MenuItem>

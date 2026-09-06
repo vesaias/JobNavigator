@@ -501,7 +501,7 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
             </span>
             {/* ui: keep — a 12.5/18px sentence, and the résumé link inside it inherits that run; Link's 11.5/500/17px would break the line */}
             <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--muted)' }}>
-              {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/v2/resumes/${d.tailored_resume_id}`)}
+              {meta} · applied with <span onClick={() => d.tailored_resume_id && navigate(`/resumes/${d.tailored_resume_id}`)}
                 title={d.tailored_resume_id ? 'Open the tailored résumé' : 'No tailored résumé for this job'}
                 style={{ color: d.tailored_resume_id ? 'var(--accent)' : 'var(--text-2)', fontWeight: d.tailored_resume_id ? 500 : 400, cursor: d.tailored_resume_id ? 'pointer' : 'default' }}>{cv}{d.tailored_resume_id ? ' ↗' : ''}</span>
             </span>
@@ -522,8 +522,8 @@ function Detail({ d, history, menuOpen, setMenuOpen, onStage, onNotes, onDelete,
               onClick={() => setMenuOpen((v) => !v)} style={{ width: 30, height: 30 }}>⋯</IconButton>
             {menuOpen && (
               <Menu ariaLabel="Application actions" onDismiss={() => setMenuOpen(false)} style={{ ...POPOVER, right: 0, marginTop: 4, width: 226, textAlign: 'left' }}>
-                {[['☰', 'View job in feed', () => navigate(`/v2/feed?job=${d.job_id}`)],
-                  ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => navigate(`/v2/cover-letters?job=${d.job_id}`)]] : [])].map(([g, label, act]) => (
+                {[['☰', 'View job in feed', () => navigate(`/feed?job=${d.job_id}`)],
+                  ...(d.has_cover_letter ? [['✎', 'Open cover letter', () => navigate(`/cover-letters?job=${d.job_id}`)]] : [])].map(([g, label, act]) => (
                   <MenuItem key={label} icon={g} onClick={() => { setMenuOpen(false); act() }}>{label}</MenuItem>
                 ))}
                 <MenuItem danger icon="✕" onClick={onDelete}>Delete application</MenuItem>

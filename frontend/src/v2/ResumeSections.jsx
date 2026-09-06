@@ -1,5 +1,5 @@
 // Shared résumé-content editors. A Resume's `json_data` and a Persona's `resume_content` are the
-// same shape, so /v2/resumes/:id and /v2/persona edit it with the *same* components.
+// same shape, so /resumes/:id and /persona edit it with the *same* components.
 //
 // Real data is looser than the EMPTY skeleton (unknown keys, missing sections). Every mutation
 // goes through mutate(), which deep-clones and writes one path, so unknown keys survive.

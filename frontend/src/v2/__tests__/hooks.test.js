@@ -325,7 +325,7 @@ describe('useEscape', () => {
   it('capture=true beats a screen handler that registered first', () => {
     // The screen behind a global overlay mounts first, so in the bubble phase its
     // listener runs first and preventDefault()s the key — which made the Welcome
-    // modal's own handler bail and left Escape doing nothing on /v2/feed.
+    // modal's own handler bail and left Escape doing nothing on /feed.
     const screen = vi.fn((e) => e.preventDefault())
     document.addEventListener('keydown', screen)
     const onClose = vi.fn()

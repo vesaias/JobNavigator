@@ -535,8 +535,8 @@ export default function Companies() {
                   <Menu ariaLabel={`${c.name} actions`} onDismiss={() => setMenuId(null)} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 40, marginTop: 4, width: 236, textAlign: 'left' }}>
                     <MenuItem icon="✎" onClick={() => { setMenuId(null); openDrawer(c) }}>Edit config</MenuItem>
                     {urls.length > 0 && <MenuItem icon="↗" onClick={() => { setMenuId(null); urls.forEach((u) => window.open(u, '_blank', 'noopener,noreferrer')) }}>{urls.length > 1 ? `Open ${urls.length} career pages` : 'Open career page'}</MenuItem>}
-                    <MenuItem icon="☰" href={`/v2/feed?company=${encodeURIComponent(c.name)}`}
-                      onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/v2/feed?company=${encodeURIComponent(c.name)}`) }}>View jobs in feed</MenuItem>
+                    <MenuItem icon="☰" href={`/feed?company=${encodeURIComponent(c.name)}`}
+                      onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setMenuId(null); navigate(`/feed?company=${encodeURIComponent(c.name)}`) }}>View jobs in feed</MenuItem>
                     <MenuItem danger icon="✕" onClick={() => { setMenuId(null); deleteCompany(c) }}>Delete company</MenuItem>
                   </Menu>
                 )}

@@ -23,7 +23,7 @@ export const MODES = ['light', 'dark', 'system']
 // THEMES is the validation set — every name theme.css carries a block for, so a
 // stored value keeps painting. THEME_PICKER is the shipped subset the Settings
 // row offers; the rest (tone1-3, editorial, alt) are development stops that stay
-// reachable from the /v2/ui gallery and by a stored key, but are not on offer.
+// reachable from the /ui gallery and by a stored key, but are not on offer.
 export const THEMES = ['default', 'board', 'tone1', 'tone2', 'tone3', 'editorial', 'alt', 'cobalt', 'saas', 'win98']
 export const THEME_PICKER = ['default', 'board', 'cobalt', 'saas', 'win98']
 
@@ -31,17 +31,19 @@ export const THEME_PICKER = ['default', 'board', 'cobalt', 'saas', 'win98']
 export const MODE_ICON = { light: '◐', dark: '◑', system: '◒' }
 export const MODE_LABEL = { light: 'Light', dark: 'Dark', system: 'System' }
 export const MODE_OPTIONS = MODES.map((m) => [m, MODE_LABEL[m]])
+// Picker labels name what you see, not the id behind it — the ids never move,
+// so a stored `cobalt` keeps painting while the row reads "Stone".
 export const THEME_LABEL = {
-  default: 'Default — warm paper',
-  board: 'Board — original design tones',
+  default: 'Paper',
+  board: 'Green Paper',
   tone1: 'Tone 1 — ¼ toward Editorial',
   tone2: 'Tone 2 — ½ toward Editorial',
   tone3: 'Tone 3 — ¾ toward Editorial',
   editorial: 'Editorial — original board tones',
   alt: 'Alt — cool slate',
-  cobalt: 'Cobalt — stone, mono captions',
-  saas: 'SaaS — system neutral',
-  win98: 'Win98 — desktop grey',
+  cobalt: 'Stone',
+  saas: 'V1 Style',
+  win98: 'Windows 98',
 }
 /** Options for the Settings picker: the shipped five, plus `current` when it is one of the hidden stops, so the box never reads blank on a machine that stored one. */
 export const themeOptions = (current) =>

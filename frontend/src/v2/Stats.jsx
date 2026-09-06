@@ -141,7 +141,7 @@ export default function Stats() {
   const runningRef = useRef(false)
   const qRef = useRef(null)
   const runsPaged = useRef(false)   // Load more was used, so the poll must not shrink the list back
-  const runsCardRef = useRef(null)  // the rail links here as /v2/stats#runs
+  const runsCardRef = useRef(null)  // the rail links here as /stats#runs
   const { hash } = useLocation()
   // Schedules columns are fixed-width with no scroller, so below ~1100px Run now spilled
   // past the border. Measure the card and drop columns right-to-left as it narrows.
@@ -291,7 +291,7 @@ export default function Stats() {
     } finally { setMoreBusy(false) }
   }
 
-  // The rail's health line links to /v2/stats#runs, the last card on a ~2400px page;
+  // The rail's health line links to /stats#runs, the last card on a ~2400px page;
   // scroll there once the cards exist (the ref is null before that).
   useEffect(() => {
     if (!ready || hash !== '#runs') return

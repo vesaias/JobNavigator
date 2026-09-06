@@ -341,8 +341,8 @@ export default function Settings() {
       // They sit first because they change what every screen below looks like.
       ['appearance', 'General', 'Display', '', [
         { kind: 'appearance', label: 'Appearance', help: 'Light, dark, or follow your OS. Saved in this browser.' },
-        { kind: 'theme', label: 'Theme', help: 'The app’s look: colours, fonts and, for Cobalt, SaaS and Win98, shapes too. Saved in this browser.' },
-        BT('Classic dashboard', 'Open the previous (v1) interface.', 'Open classic UI', null, { href: '/' }),
+        { kind: 'theme', label: 'Theme', help: 'The app’s look: colours, fonts and shapes. Saved in this browser.' },
+        BT('Classic dashboard', 'Open the previous (v1) interface.', 'Open classic UI', null, { href: '/classic' }),
       ]],
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',

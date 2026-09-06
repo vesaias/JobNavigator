@@ -308,7 +308,7 @@ export default function CoverLetters() {
       LENGTHS.find(([id]) => id === c.length)?.[1] || c.length].filter(Boolean)
     const sub = [...bits, `edited ${ago(c.updated_at)}`].join(' · ')
     return (
-      <Card key={c.id} onClick={() => navigate(`/v2/cover-letters/${c.id}`)}
+      <Card key={c.id} onClick={() => navigate(`/cover-letters/${c.id}`)}
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
           ...(arc ? { borderColor: 'var(--line-soft)', background: 'var(--recessed)' } : null) }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>

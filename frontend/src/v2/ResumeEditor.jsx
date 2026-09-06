@@ -6,7 +6,7 @@ import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useEscape, useSingleOpen, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
 import { useTitle } from '../useTitle'
-// The résumé-content editors are shared with /v2/persona (a Persona's
+// The résumé-content editors are shared with /persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
 import {
   EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
@@ -61,7 +61,7 @@ const timeAgo = (s) => {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// Shared field/section components live in ResumeSections.jsx so /v2/persona can reuse them.
+// Shared field/section components live in ResumeSections.jsx so /persona can reuse them.
 // Tracks tailoring-changes acknowledgement in localStorage (per-user UI state); promote to json_data if it must survive a browser change.
 const REVIEWED_KEY = 'jobnavigator_v2_resume_reviewed'
 const readReviewed = () => { try { const a = JSON.parse(localStorage.getItem(REVIEWED_KEY)); return Array.isArray(a) ? a : [] } catch { return [] } }
@@ -146,10 +146,10 @@ export default function ResumeEditor() {
           continue
         }
         const msg = p.company ? `Tailored copy for ${p.company} is ready.` : 'Tailored copy from your pasted description is ready.'
-        if (hit) pushToast({ kind: 'success', msg, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${hit.id}`) })
-        else if (run) pushToast({ kind: 'success', msg: 'Tailoring finished.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
+        if (hit) pushToast({ kind: 'success', msg, action: 'Open ↗', onAction: () => navigate(`/resumes/${hit.id}`) })
+        else if (run) pushToast({ kind: 'success', msg: 'Tailoring finished.', action: 'Résumés ↗', onAction: () => navigate('/resumes') })
         // run unknown and no copy found: say exactly that rather than claim either way
-        else pushToast({ kind: 'progress', spin: false, ttl: 6000, msg: 'Tailoring finished, but the copy could not be located.', action: 'Résumés ↗', onAction: () => navigate('/v2/resumes') })
+        else pushToast({ kind: 'progress', spin: false, ttl: 6000, msg: 'Tailoring finished, but the copy could not be located.', action: 'Résumés ↗', onAction: () => navigate('/resumes') })
       }
     }, 3000)
     return () => clearInterval(iv)
@@ -176,7 +176,7 @@ export default function ResumeEditor() {
     try {
       if (mode === 'copy') {
         const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: doc.job_id })
-        pushToast({ kind: 'success', msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/v2/resumes/${data.id}`) })
+        pushToast({ kind: 'success', msg: `Copy created for ${company}.`, action: 'Open ↗', onAction: () => navigate(`/resumes/${data.id}`) })
       } else {
         const { data: started } = await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: doc.job_id })
         pendingRef.current.push({ scope: `${baseId}:${doc.job_id}`, runId: started?.run_id || null, jobId: doc.job_id, company, since: Date.now() })
@@ -214,7 +214,7 @@ export default function ResumeEditor() {
       // A missing/deleted/malformed id lands on the shelf silently otherwise, indistinguishable from pressing "‹ Résumés".
       // This screen unmounts, so the message is handed to the shelf instead of pushed here.
       setFlashToast({ kind: 'error', msg: e.response?.status === 404 ? 'That résumé no longer exists.' : 'Couldn’t load that résumé.' })
-      navigate('/v2/resumes')
+      navigate('/resumes')
     })
     return () => { alive = false }
   }, [id, navigate])
@@ -362,12 +362,12 @@ export default function ResumeEditor() {
       label: 'Delete', danger: true,
       onConfirm: async () => {
         setConfirm(null)
-        try { await api.delete(`/resumes/${id}`); navigate('/v2/resumes') } catch { pushToast({ kind: 'error', msg: 'Delete failed.' }) }
+        try { await api.delete(`/resumes/${id}`); navigate('/resumes') } catch { pushToast({ kind: 'error', msg: 'Delete failed.' }) }
       },
     })
   }, [doc, id, navigate, pushToast])
 
-  const goCover = () => { setHeadMenu(false); navigate(`/v2/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
+  const goCover = () => { setHeadMenu(false); navigate(`/cover-letters?resume=${id}${doc.job_id ? `&job=${doc.job_id}` : ''}`) }
 
   // the "one next step" stage for a tailored copy: Score is offered only when there's
   // something to score against; a copy with neither a job nor a saved description skips straight to the cover letter.
@@ -484,7 +484,7 @@ export default function ResumeEditor() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* top bar */}
       <HeaderRow pad="10px 24px" bg="surface" soft align="center">
-        <NavLink onClick={() => navigate('/v2/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
+        <NavLink onClick={() => navigate('/resumes')} style={{ whiteSpace: 'nowrap' }}>‹ Résumés</NavLink>
         <span style={{ color: 'var(--line)' }}>|</span>
         {/* ui: keep — Tag-role uppercase badge (bg + r99, not a Label); case/tracking read --label-case/--label-tracking-scale so an alt skin can turn both off */}
         <span style={{ fontSize: 9.5, letterSpacing: 'calc(.08em * var(--label-tracking-scale))', textTransform: 'var(--label-case)', padding: '2px 7px', borderRadius: 'var(--radius-control)', background: isCopy ? 'var(--ai-soft)' : 'var(--surface-2)', color: isCopy ? 'var(--ai)' : 'var(--muted)' }}>{isCopy ? 'tailored' : 'base'}</span>
@@ -515,7 +515,7 @@ export default function ResumeEditor() {
                 return (
                   <>
                     <BandRule />
-                    <NavLink onClick={() => navigate(`/v2/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ position: 'relative', top: '1px' }}>
+                    <NavLink onClick={() => navigate(`/resumes/${doc.parent_id}`)} title={`Open the ${baseName} base résumé this was tailored from`} style={{ position: 'relative', top: '1px' }}>
                       {scores.delta != null && <span style={{ color: dfg, fontWeight: 600 }}>{scores.delta >= 0 ? '+' : ''}{scores.delta} </span>}
                       <span style={{ color: 'var(--accent)' }}>based on {baseName} ↗</span>
                     </NavLink>
@@ -562,7 +562,7 @@ export default function ResumeEditor() {
                       is not a one-liner: the editor is a page of text fields, so a
                       bare letter key needs a target/isContentEditable guard first. */}
                   <MenuItem icon="✉" onClick={goCover}>Cover letter</MenuItem>
-                  {doc.job_id && <MenuItem icon="↗" onClick={() => navigate(`/v2/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
+                  {doc.job_id && <MenuItem icon="↗" onClick={() => navigate(`/feed?job=${doc.job_id}`)}>Open in feed</MenuItem>}
                   {doc.job_id && <MenuItem icon="✓" onClick={markApplied}>Mark applied</MenuItem>}
                   <MenuItem danger icon="✕" onClick={deleteResume}>Delete copy</MenuItem>
                 </Menu>

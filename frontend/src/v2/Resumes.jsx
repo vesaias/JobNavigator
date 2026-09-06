@@ -112,7 +112,7 @@ export default function V2Resumes() {
     return () => clearInterval(iv)
   }, [load])
 
-  const openResume = (id) => navigate(`/v2/resumes/${id}`)
+  const openResume = (id) => navigate(`/resumes/${id}`)
   const searching = q.trim().length > 0
   useEffect(() => { setResLimit(PAGE) }, [q])
   useEffect(() => { setArchLimit(PAGE) }, [showArchived])
@@ -208,7 +208,7 @@ export default function V2Resumes() {
               {persona && (
                 <>
                   <Label style={{ padding: '4px 2px 0' }}>Profile</Label>
-                  <Card onClick={() => navigate('/v2/persona')} title="Open Persona — your full profile" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  <Card onClick={() => navigate('/persona')} title="Open Persona — your full profile" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, lineHeight: '28px' }}>
                       <Heading strong size={19}>Persona</Heading>
                       <Helper>{['your full profile', persona.copy_count > 0 ? `${persona.copy_count} recent cop${persona.copy_count === 1 ? 'y' : 'ies'}` : (persona.archived_count > 0 ? 'no recent copies' : 'no copies'), persona.updated_at ? `edited ${timeAgo(persona.updated_at)}` : null].filter(Boolean).join(' · ')}</Helper>
