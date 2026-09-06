@@ -84,7 +84,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 │                                   TRACK                                     │
 │                                                                             │
 │   Autofill ─── ATS forms + AI answers to free-text questions (Persona)      │
-│   Applications  Stages, interviews, notes, prep handover, funnel and Sankey │
+│   Apps ─────── Stages, interviews, notes, prep handover, funnel and Sankey  │
 │   Tracer ───── Unique links per resume/letter, tracks who opened them       │
 │   Gmail ────── Auto-detects responses, updates application status           │
 │   Telegram ─── Job alerts, daily digest, scrape health notifications        │
