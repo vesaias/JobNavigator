@@ -587,6 +587,10 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
           color: cur ? 'var(--input-ink)' : 'var(--input-placeholder)',
           fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)',
           fontSize: mono ? 'var(--t-11-5)' : 'var(--t-12-5)',
+          // --select-label-shift: 0 outside win98 — align-items:center centres the
+          // LINE BOX, not the ink, and win98's fallback faces reserve more room
+          // under the baseline than this label's ink uses (theme.css, round 12).
+          transform: 'translateY(var(--select-label-shift))',
         }}>{cur ? cur[1] : (placeholder || 'Select…')}</span>
         <span aria-hidden="true" style={{ flex: '0 0 auto', fontSize: 'var(--t-9)', color: 'var(--icon-btn-ink)' }}>▾</span>
       </div>
@@ -658,8 +662,11 @@ export function ToolbarTrigger({
         opacity: disabled ? 'var(--disabled-opacity)' : 1, cursor: disabled ? 'default' : 'pointer',
         ...(line ? { lineHeight: line } : null), ...style,
       }}>
-      {label != null && <span style={{ color: 'var(--label-ink)' }}>{label}</span>}
-      {value != null && <span style={{ color: 'var(--input-ink)' }}>{value}</span>}
+      {/* --select-label-shift: the same optical nudge Select's own label takes
+          (theme.css, round 12) — this trigger shares its box (`v2-select-trigger`
+          when `caret` is on), so its text sits high in win98 for the same reason. */}
+      {label != null && <span style={{ color: 'var(--label-ink)', transform: 'translateY(var(--select-label-shift))' }}>{label}</span>}
+      {value != null && <span style={{ color: 'var(--input-ink)', transform: 'translateY(var(--select-label-shift))' }}>{value}</span>}
       {children}
       {caret && <span aria-hidden="true" style={{ color: 'var(--label-ink)', fontSize: 'var(--t-9)' }}>▾</span>}
     </span>
@@ -1581,7 +1588,18 @@ export function ScoreRing({ value, size = 'md', weight, tone, label = 'No fit', 
   if (Alt) {
     return (
       <span className={className} title={title} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}
-        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}>
+        style={{
+          position: 'relative', display: 'inline-flex', alignItems: 'center',
+          // `busy` swaps the numeral+bar stack for a Spinner, which is much
+          // smaller than that stack on both axes — shrink-to-fit (what the
+          // settled mark relies on) then hugs the Spinner into the span's
+          // top-left corner instead of the score box it stands in for. Boxing
+          // it at the ring's own size (z.box: 44 md / 34 sm, the same figure
+          // the settled mark and its caller's wrapper already agree on) and
+          // centring both axes puts the bar where the numeral will land.
+          ...(busy ? { width: z.box, height: z.box, justifyContent: 'center' } : null),
+          ...style,
+        }}>
         {/* the alt drawings take the ring's own sm/md (ScoreBar sizes its numeral
             from it); a numeric `size` scales md, the same rule --ring-shift-* uses */}
         <Alt value={value} busy={busy} ink={t.ink} size={size === 'sm' ? 'sm' : 'md'} />

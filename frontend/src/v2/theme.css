@@ -1,4 +1,4 @@
-/* v2 redesign theme tokens, scoped to .jn-v2. Every root carries `data-appearance`
+﻿/* v2 redesign theme tokens, scoped to .jn-v2. Every root carries `data-appearance`
    (light|dark) and `data-theme` (default|board|cobalt|saas|win98 in the picker;
    tone1-3|editorial|alt still valid, hidden) from theme.js; <html> holds only a boot copy so the page ground never flashes. */
 
@@ -110,6 +110,16 @@
      which clears the tallest ink box. Only Select's trigger label reads it: it is
      the one run in the primitive layer that is both clipped and inside `line-height: 1`. */
   --ctl-line:1;
+  /* Round 12: the trigger label's own optical vertical centring, separate from
+     --ctl-line above (that one only clears descenders in the clipped line box,
+     it does not move where the glyphs sit inside it). `align-items:center`
+     centres the LINE BOX, not the ink -- a font whose descent metric is large
+     relative to its ascent (Microsoft Sans Serif's fallback chain, and Tahoma
+     itself) reserves more room under the baseline than a no-descender label
+     run actually uses, so the ink reads high in the box. 0px everywhere but
+     win98, where the label sits in a 32px field with no descenders to speak
+     of -- see the win98 block for the measured value. */
+  --select-label-shift:0px;
   /* The two weights primitives used to write as bare 500/600 literals. A pixel
      face carries 400 and 700 only, so win98 maps them down/up; every other theme
      keeps the literals, so nothing about the computed weight moves. */
@@ -499,6 +509,7 @@
      which clears the tallest ink box. Only Select's trigger label reads it: it is
      the one run in the primitive layer that is both clipped and inside `line-height: 1`. */
   --ctl-line:1;
+  --select-label-shift:0px;   /* trigger label optical shift; win98 only, see the win98 block (round 12) */
   /* The two weights primitives used to write as bare 500/600 literals. A pixel
      face carries 400 and 700 only, so win98 maps them down/up; every other theme
      keeps the literals, so nothing about the computed weight moves. */
@@ -1612,12 +1623,42 @@
      ~1.22em, so the line box has to clear that; the same family of fix as D-25's
      --ctl-line for the Plex themes, at this face's value. */
   --ctl-line:1.35;
+  /* Round 12: --ctl-line above only stops the box clipping descenders; it does
+     not centre the ink inside it. `align-items:center` centres the LINE BOX
+     (font-size 13px x line-height 1.35 = 17.55px) in the trigger's 32px field,
+     and that box is built from the font's ascent+descent, not from the label's
+     actual ink. Microsoft Sans Serif is named first in --sans but is not an
+     installed TrueType face on a stock Windows box (it ships as a bitmap; the
+     face this stack actually renders is Tahoma, its declared fallback, or —
+     absent that too, as in the container this repo tests in — Verdana/system-ui).
+     Every one of those has a materially bigger descent reservation below the
+     baseline than the metrics --ctl-line was tuned against (MS Sans Serif hhea:
+     ascent 1888, descent 432 / 2048 -- Tahoma hhea: ascent 2049, descent 423 /
+     2048, a similar ratio, and Verdana's is wider still), and the label text
+     itself (job titles, résumé names) rarely carries a descender to fill that
+     reserved space. The result is a line box whose empty lower half is bigger
+     than its empty upper half, so centring the BOX sits the ink about a pixel
+     above the field's true centre. 1px nudges the label span down to compensate;
+     0px everywhere else, where the installed sans faces carry the more balanced
+     metrics --ctl-line:1 (and the Plex themes' own 1.4) were already tuned on.
+     Confirm against a real Windows box per the note at round 7 #4 (`--titlebar-face`) —
+     the face is not installed in the test container. */
+  --select-label-shift:1px;
   --seg-dot-on:var(--dot-accent); --seg-dot-off:var(--dot-neutral);   /* the base pair, declared to keep the set a superset of cobalt's */
   /* Round 7 #11: 98 does not repaint a chip's ink on hover, and the base value
      is --good, i.e. a green word appearing under the pointer on a grey skin.
      The card hover is a paint step off the chrome (ButtonLight), never a size
-     change and never the accent hairline. */
-  --chip-ink-hover:var(--text); --card-bg-hover:var(--line-soft); --card-border-hover:var(--line);
+     change and never the accent hairline.
+     Round 12: that ButtonLight step was --line-soft, a different grey from
+     --row-hover's --hover-soft (#dfdfdf vs #ffffff here) — Searches' cards and
+     the choice-cards (.v2-card/.v2-act) painted a visibly different hover from
+     every .v2-row/.v2-crow/.v2-arow/TableRow line (Feed, Companies,
+     Applications, Résumés, Cover Letters), which all take --row-hover. Dark
+     hid the split by coincidence (both resolved to #4a5a5a there). --card-bg-hover
+     now points at the same --hover-soft name so every row and card hovers to
+     one wash in both appearances; --card-border-hover (the bevel it also gets
+     in win98, below) is untouched. */
+  --chip-ink-hover:var(--text); --card-bg-hover:var(--hover-soft); --card-border-hover:var(--line);
   /* the bevel IS the rest border here, so field-hover is a genuine no-op (D-06) */
   /* Round 9 #13 · a 98 control does not repaint on hover. The two names
      `.v2-bd:hover` / `.v2-bdc:hover` read were still the base --accent, so every
@@ -1755,8 +1796,9 @@
   --radius-bar:0;   /* round 7: a 5px cap was the last rounded corner left in the theme */
   --ring-variant:ascii; --ring-ascii-glyphs:5; --loader-style:blocks;
   --ctl-line:1.35;   /* round 7 #2, see the light block */
+  --select-label-shift:1px;   /* round 12, see the light block -- a font-metric shift, not a colour one, so dark takes the same value */
   --seg-dot-on:var(--dot-accent); --seg-dot-off:var(--dot-neutral);   /* the base pair, declared to keep the set a superset of cobalt's */
-  --chip-ink-hover:var(--text); --card-bg-hover:var(--line-soft); --card-border-hover:var(--line);   /* round 7 #11 */
+  --chip-ink-hover:var(--text); --card-bg-hover:var(--hover-soft); --card-border-hover:var(--line);   /* round 7 #11, re-pointed at --hover-soft in round 12 — see the light block */
   --pill-border-hover:var(--pill-border); --pill-ink-hover:var(--pill-ink);   /* round 9 #13, see the light block */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#9cc0ff; --link-ink-hover:var(--text);   /* #8ab4ff was 4.29:1 on the chrome (round 7 #17); round 11 names --text for the literal #ffffff this already was, so both win98 blocks say the same thing — dark does not move */
@@ -1781,6 +1823,28 @@
    rule above must not wipe it out when the pointer crosses the selected row. */
 .v2-row[aria-current="true"]:hover { background:var(--row-selected) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
+/* Round 12: in win98 each glyph cell is its own raised push-button (a 1px
+   four-tone bevel, the same --bevel-raised-shadow corner stack every other
+   raised control wears) instead of the borderless glyph + underline divider
+   the base design draws — the underline read as no border at all against
+   --surface in LIGHT, and the base design left the cell background
+   transparent, which showed the row's own wash through it. That transparent
+   ground is what broke the border in DARK: the row-hover/row-selected wash
+   (--hover-soft #4a5a5a) clears the shadow-edge tone but NOT the highlight
+   edge (#58696a vs #4a5a5a = 1.26:1), and the ⋯ cell's old open-state fill
+   (--surface-2 #1e2828) clears the highlight edge but NOT the shadow edge
+   (#26302f vs #1e2828 = 1.11:1) — every ground the transparent cell could
+   show landed one edge under 1.5:1. An opaque --surface face is the one
+   ground both edges clear (#58696a 1.56:1, #26302f 1.52:1 — the same pairing
+   every other raised control in this theme already uses), so REST repoints
+   there with !important, ahead of the two hover rules below so THEY still
+   win the tie on :hover (equal specificity, source order) — box-shadow is
+   untouched by hover, so the bevel itself never needs a state of its own.
+   !important also quietly retires the ⋯ cell's inline surface-2 open fill
+   (it fails contrast above); the ink already swaps on open, and the raised
+   -> inset flip below reads as "held down" the way a toggled 98 button does. */
+.jn-v2[data-theme="win98"] .v2-rail-cell { background:var(--surface) !important; border-bottom:0 !important; box-shadow:var(--bevel-raised-shadow) !important; }
+.jn-v2[data-theme="win98"] .v2-rail-cell:active { box-shadow:var(--bevel-inset-shadow) !important; }
 .v2-rail-copy:hover { background:var(--cell-more-hover-bg) !important; color:var(--cell-more-hover-ink) !important; }   /* the cells set inline colour */
 .v2-rail-save:hover { background:var(--cell-save-hover-bg) !important; color:var(--cell-save-hover-ink) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }
@@ -2446,10 +2510,18 @@
 .jn-v2[data-theme="win98"] .v2-rail .v2-railfoot {
   background:var(--surface); color:var(--text);
   border-top:0 !important; margin:0 !important;
-  /* the foot's own sunken frame: the same #dfdfdf/#808080 pair the field and
-     list wells use, just the two-tone single-pixel version — no window-frame
-     black here, this is a shallow well, not a control edge. */
-  box-shadow:inset -1px -1px 0 var(--bevel-highlight), inset 1px 1px 0 var(--bevel-shadow);
+  /* Round 12: the foot's own sunken frame — the same #dfdfdf/#808080 pair the
+     field and list wells use, the two-tone single-pixel version, no
+     window-frame black — was drawn whole on EACH row, so the health row (which
+     the rule right below fully overrides with the tree/foot etch, box-shadow
+     being one property with no per-selector merge) lost it outright and the
+     collapse row alone read as sunken: one frame around the bottom half of the
+     foot, not one frame around both rows. This base layer now carries only the
+     two edges every row in the foot shares — left (shadow) and right
+     (highlight) — so both rows keep them regardless of which more-specific
+     rule below wins their box-shadow; the top and bottom edges of the ONE
+     frame are added where the frame actually starts/ends, next. */
+  box-shadow:inset 1px 0 0 var(--bevel-shadow), inset -1px 0 0 var(--bevel-highlight);
 }
 /* Round 9 #7 · the two foot rows are told apart by the app's own divider — one
    --line hairline, the same rule every card in the pane uses — and not by the
@@ -2460,8 +2532,20 @@
 .jn-v2[data-theme="win98"] .v2-rail .v2-railfoot + .v2-railfoot {
   border-top:var(--bw-hair) solid var(--line) !important;
 }
+/* the TOP of the one frame: the etched tree/foot divider, unchanged, plus the
+   base rule's shared left/right edges (repeated — this selector's own
+   box-shadow replaces rather than adds to the base one). */
 .jn-v2[data-theme="win98"] .v2-rail .v2-railscroll + .v2-railfoot {
-  margin-top:2px !important; box-shadow:inset 0 1px 0 var(--line), inset 0 2px 0 var(--line-soft);
+  margin-top:2px !important;
+  box-shadow:inset 0 1px 0 var(--line), inset 0 2px 0 var(--line-soft), inset 1px 0 0 var(--bevel-shadow), inset -1px 0 0 var(--bevel-highlight);
+}
+/* the BOTTOM of the one frame: the sunken well's own highlight edge, on
+   whichever row is actually last (there are only ever two, but this reaches
+   the true bottom instead of assuming it), plus the shared left/right edges
+   again. No top term here — that would draw a second, false frame-top at the
+   hairline seam between the two rows. */
+.jn-v2[data-theme="win98"] .v2-rail .v2-railfoot:last-child {
+  box-shadow:inset -1px -1px 0 var(--bevel-highlight), inset 1px 0 0 var(--bevel-shadow);
 }
 
 /* ── Round 7 #8 · the tree's hover ───────────────────────────────────────────

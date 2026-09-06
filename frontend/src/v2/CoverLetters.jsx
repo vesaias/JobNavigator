@@ -58,7 +58,10 @@ export function Picker({ value, options, placeholder, onPick, width }) {
           that rule presses the button in while the list is open. */}
       <div onClick={() => setOpen((v) => !v)} className="v2-select-trigger v2-picker" aria-expanded={open}
         style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
-        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)' }}>
+        {/* --select-label-shift: the same optical nudge Select's own trigger label
+            takes (theme.css, round 12; ui.jsx Select) — this picker shares the
+            `v2-select-trigger` box, so its text sits high in win98 too. */}
+        <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)', transform: 'translateY(var(--select-label-shift))' }}>
           {cur ? cur.label : placeholder}
         </span>
         {/* ui: keep — 9px ▾ glyph, below the Helper scale (md 11.5 / xs 10.5) */}
