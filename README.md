@@ -1,6 +1,7 @@
 # JobNavigator
 
-Self-hosted job-hunt automation: scrape career pages and aggregators, score jobs against your résumés with an LLM, tailor résumés and cover letters, auto-fill applications from your persona, get Telegram alerts, track every application.
+Self-hosted job-hunt automation.
+Scrape career pages and aggregators, score jobs against your résumés with an LLM, tailor résumés and cover letters, auto-fill applications from your persona, get Telegram alerts, track every application.
 
 <p align="center">
   <img src="docs/jobnavigator2.gif" alt="JobNavigator 2.0 — the Jobs feed, a full report, résumé tailoring and the theme switch" width="100%">
@@ -12,7 +13,7 @@ Self-hosted job-hunt automation: scrape career pages and aggregators, score jobs
   <a href="docs/v1like.png"><img src="docs/v1like.png" alt="V1 Style theme" width="24%"></a>
   <a href="docs/win98.png"><img src="docs/win98.png" alt="Windows 98 theme" width="24%"></a>
   <br>
-  <sub>Five themes, each in light and dark: Paper (above), Green Paper, Stone, V1 Style, Windows 98 — Settings › Display.</sub>
+  <sub>Five themes, each in light and dark: Paper (above), Green Paper, Stone, V1 Style, Windows 98.</sub>
 </p>
 
 ## How It Works
@@ -60,7 +61,7 @@ Self-hosted job-hunt automation: scrape career pages and aggregators, score jobs
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI RESUME SCORING                              │
 │                                                                             │
-│   Providers ── Claude API, Claude CLI, OpenAI, Ollama                       │
+│   Providers ── Claude API, Claude CLI, OpenAI, OpenRouter, Ollama           │
 │   Depths ───── Light (scores only) or Full (report + keyword analysis)      │
 │   Multi ────── Score against multiple resumes, compare fit per role         │
 │                                                                             │
@@ -81,6 +82,8 @@ Self-hosted job-hunt automation: scrape career pages and aggregators, score jobs
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                   TRACK                                     │
 │                                                                             │
+│   Autofill ─── ATS forms + AI answers to free-text questions, from the Persona│
+│   Applications  Stages, interviews, notes, prep handover, funnel and Sankey │
 │   Tracer ───── Unique links per resume/letter, tracks who opened them       │
 │   Gmail ────── Auto-detects responses, updates application status           │
 │   Telegram ─── Job alerts, daily digest, scrape health notifications        │
