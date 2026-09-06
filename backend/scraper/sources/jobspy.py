@@ -364,6 +364,9 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                 except IntegrityError:
                     logger.debug(f"Duplicate external_id for '{title}' at {company}, skipping")
                     continue
+                except Exception as e:
+                    logger.warning(f"Insert failed for '{title}' at {company} ({url}): {e}")
+                    continue
 
             # Save filtered-out jobs as "ignored" for dedup purposes
             if rejected_df is not None and not rejected_df.empty:
@@ -407,6 +410,9 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                         entry = breakdown.setdefault(site or "unknown", {"seen": 0, "new": 0})
                         entry["filtered"] = entry.get("filtered", 0) + 1
                     except IntegrityError:
+                        continue
+                    except Exception as e:
+                        logger.warning(f"Insert failed for ignored job '{title}' at {company} ({url}): {e}")
                         continue
 
             db.commit()

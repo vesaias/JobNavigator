@@ -266,6 +266,9 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                 except IntegrityError:
                     logger.debug(f"Duplicate external_id for '{j['title']}' at {company.name}, skipping")
                     continue
+                except Exception as e:
+                    logger.warning(f"Insert failed for '{j['title']}' at {company.name} ({j['url']}): {e}")
+                    continue
 
             # Save filtered-out jobs as "ignored" for dedup purposes
             for j in filtered_out:
@@ -290,6 +293,9 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                         db.flush()
                     existing_ids.add(ext_id)
                 except IntegrityError:
+                    continue
+                except Exception as e:
+                    logger.warning(f"Insert failed for ignored job '{j['title']}' at {company.name} ({j['url']}): {e}")
                     continue
 
             comp = db.query(Company).filter(Company.id == company.id).first()

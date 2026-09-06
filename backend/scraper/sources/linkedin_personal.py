@@ -843,6 +843,9 @@ async def run(search: Search) -> dict:
                 except IntegrityError:
                     logger.debug(f"Duplicate external_id for '{j['title']}' at {j.get('company')}, skipping")
                     continue
+                except Exception as e:
+                    logger.warning(f"Insert failed for '{j['title']}' at {j.get('company')} ({job_url}): {e}")
+                    continue
 
             # Update last_run_at
             search_obj = db.query(Search).filter(Search.id == search.id).first()

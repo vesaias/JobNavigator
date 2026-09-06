@@ -1,4 +1,5 @@
 """All SQLAlchemy models for JobNavigator."""
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -186,9 +187,48 @@ class Job(Base):
 
 from sqlalchemy import event
 
+# Postgres rejects any text value containing a NUL (0x00) byte with
+# "A string literal cannot contain NUL (0x00) characters" and aborts the
+# whole transaction — one poisoned title/description from a scraper (seen
+# from Jobright's API, but any source's HTML/JSON can carry one) sinks the
+# entire batch. Every source builds rows via `Job(...)`/attribute assignment,
+# so sanitising here — once, on the model — covers all of them (scrapers,
+# the Chrome-extension save/import endpoints, everything) without each
+# source having to remember to do it.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def sanitize_text(value):
+    """Strip NUL and other C0 control chars (keeping \\n \\t \\r) from a
+    string value; non-strings pass through unchanged."""
+    if not isinstance(value, str) or not value:
+        return value
+    return _CONTROL_CHARS_RE.sub("", value)
+
+
 @event.listens_for(Job.url, "set", retval=True)
 def _clean_job_url(target, value, oldvalue, initiator):
-    return Job.clean_url(value)
+    return Job.clean_url(sanitize_text(value))
+
+
+def _make_job_field_sanitizer():
+    def _sanitize_job_field(target, value, oldvalue, initiator):
+        return sanitize_text(value)
+    return _sanitize_job_field
+
+
+# Attach the same sanitiser to every other String/Text column on Job (title,
+# company, source, description, location, salary_source, h1b_jd_snippet,
+# h1b_verdict, best_cv, cache_error, external_id, content_hash,
+# linkedin_job_id, status, ...) so it applies generically, including to
+# columns added later — `url` is skipped since it already has its own
+# listener above (which also sanitises).
+for _col in Job.__table__.columns:
+    if _col.name == "url":
+        continue
+    if isinstance(_col.type, String):
+        event.listen(getattr(Job, _col.name), "set", _make_job_field_sanitizer(), retval=True)
+del _col
 
 
 # ── Applications ─────────────────────────────────────────────────────────────
