@@ -15,7 +15,11 @@ export default function ConfirmDialog({ title, body, label, danger, onConfirm, o
           the `prompt` flag this panel used to pass: a small 98 window wears the
           same full caption as a large one — only its size differs. */}
       <Heading size={19} className="v2-dialogtitle">{title}</Heading>
-      {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
+      {/* round 10 · `v2-dialogtext` is a NAME, like `v2-dialogtitle` above it: it
+          computes nothing here, and win98 reads it to put the message on the
+          window-text ink at its own UI stop, because a 98 message box's body is
+          plain text on the grey face and not a muted helper line. */}
+      {body && <span className="v2-dialogtext" style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
         <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
         <Button variant={danger ? 'danger' : 'primary'} size="sm" onClick={onConfirm}>{label || 'Confirm'}</Button>
@@ -37,7 +41,7 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
           and the body heading it duplicates is hidden there. Round 8 #11: the
           caption is the full one — `_ □ ×`, the first two disabled. */}
       <Heading size={19} className="v2-dialogtitle">{title}</Heading>
-      {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
+      {body && <span className="v2-dialogtext" style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
       <Input value={v} readOnly={readOnly} placeholder={placeholder} autoFocus mono={mono}
         ariaLabel={title} onChange={setV}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onSubmit(v) } }}

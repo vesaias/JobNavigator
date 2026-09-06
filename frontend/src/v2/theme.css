@@ -1494,13 +1494,14 @@
      size (--t-12-5/--t-13), not the 11px floor the small caps stops collapse
      to. A caption at 11 beside body text at 13 read as a different, lesser
      role; 98 sets a label in the same face and size as everything else. */
-  /* Round 9 #4 · the two stops split again. `md` (--label-size) is what the
-     Stats KPI caption and 86 of the 88 call sites render, and it stays at the
-     theme's 13px UI stop, which is what round 8 #8 was asked for. `lg`
-     (--label-size-lg) is the Résumés shelf heading, the only `size="lg"` in the
-     app (2 sites), and drops to 12 — a heading over a list wants to sit UNDER
-     the row text beside it here, not level with it. */
-  --label-size:13px; --label-size-lg:12px;
+  /* Round 9 #4 asked which stop the brief's "Label md: 12px" meant, and shipped
+     the reading that kept round 8 #8 (md 13 / lg 12). Round 10 · Q11 ANSWERED:
+     the other way round. LARGE is 13 and MEDIUM is 12, so the two Résumés shelf
+     headings (`size="lg"`, `Resumes.jsx:173`/`:191`) sit a step ABOVE the 86
+     `md` captions rather than a step below them. This does reverse round 8 #8:
+     `md` is what the Stats KPI caption "Total jobs" reads, so that caption is
+     12px from here on. */
+  --label-size:12px; --label-size-lg:13px;
   /* Round 9 #3 · the ascii score's numeral. md is the Feed row's mark and takes
      the 15px stop (13 -> 15); sm is the report band's, where it already lines up
      with its neighbours, so it stays. The "+N résumé reports" counter drops 3px
@@ -1643,10 +1644,10 @@
   --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:11px; --t-9:11px; --t-9-5:11px; --t-10:11px; --t-10-5:11px; --t-11:11px; --t-11-5:12px; --t-12:12px; --t-12-5:13px; --t-13:13px; --t-13-5:14px; --t-14:14px; --t-15:15px; --t-15-5:16px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  /* round 8 #4 (98 buttons are normal weight) and #8 (the Label role is one
-     13px stop here) — see the light block */
+  /* round 8 #4 (98 buttons are normal weight) and round 10 Q11 (the Label
+     stops: md 12, lg 13) — see the light block */
   --btn-weight:400; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
-  --label-size:13px; --label-size-lg:12px;   /* round 9 #4, see the light block */
+  --label-size:12px; --label-size-lg:13px;   /* round 10 · Q11 answered, see the light block */
   --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-4px;   /* round 9 #3 */
   --weight-medium:400; --weight-semibold:700;
   --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
@@ -2195,8 +2196,38 @@
    --btn-weight is 400 now (98.css's `button` sets no weight at all). The DEFAULT
    button of a dialog is the exception the user named: it already carries the
    extra window-frame ring, and here it also carries the heavier label. Scoped to
-   a dialog so the primary buttons out on the pages stay normal weight. */
-.jn-v2[data-theme="win98"] [role="dialog"] .v2-btn-primary { font-weight:var(--weight-semibold); }
+   a dialog so the primary buttons out on the pages stay normal weight.
+   Round 10 · the rule was DEAD. `Button` writes `font-weight: var(--btn-weight)`
+   as an INLINE style, which beats any stylesheet declaration that is not
+   !important, so every dialog button measured 400 and no default button was
+   marked at all. !important, and `.v2-btn-danger` joins it: in a destructive
+   confirm the danger button IS the confirming one, and 98 bolds the default
+   whatever ink it carries. */
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-btn-primary,
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-btn-danger { font-weight:var(--weight-semibold) !important; }
+
+/* ── Round 10 · a 98 window's frame is 3px ───────────────────────────────────
+   98.css's `.window` is `padding: 3px`, and that gutter is what lets BOTH tones
+   of the raised bevel read round the caption bar. `ModalPanel` writes
+   `padding: var(--bevel-pad)` (1px here) inline, so once the caption bar became
+   flush it sat straight on the inner `#dfdfdf`/`#808080` pixels and the frame
+   collapsed to a single hairline along the top and sides. `.v2-raised` scopes
+   this to the window: `Drawer` is a [role="dialog"] too, carries no bevel, and
+   its content is flush against the pane by design. */
+.jn-v2[data-theme="win98"] .v2-raised[role="dialog"] { padding:3px !important; }
+
+/* ── Round 10 · a message box's body is plain text ───────────────────────────
+   `ConfirmDialog` and `PromptDialog` set their message at 12.5/18 on
+   --helper-ink, which is --muted — the same grey 98 uses for a DISABLED label,
+   so the one sentence the window exists to say read as switched off. It takes
+   the window-text ink at the theme's own UI stop instead. Gated on the caption
+   bar actually being mounted, the same idiom as `.v2-dialogtitle` above, so the
+   name computes nothing in any other theme. !important because both values are
+   written inline at the call site. */
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-titlebar ~ .v2-dialogtext,
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-titlebar ~ * .v2-dialogtext {
+  color:var(--text) !important; font-size:var(--t-13) !important; line-height:17px !important;
+}
 
 /* Round 6 "Loaders" · a busy region shows 98's hourglass. The blocks drawing in
    ui.jsx replaces the arc; this is the pointer half, and it is CSS only. */

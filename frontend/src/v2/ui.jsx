@@ -1750,6 +1750,25 @@ export function ModalPanel({
   useSnapTop(panel)
   const chrome = useTitleBar()
   const Panel = as === 'form' ? 'form' : 'div'
+  // Round 10 · WHY THE SMALL MODALS NEVER BECAME 98 WINDOWS. The big panels
+  // (ChoiceModal, Add company, the test-run sheets) build their own bands and
+  // leave the panel's own `padding` at --bevel-pad, so their caption bar sits
+  // flush in the frame. The SMALL ones — ConfirmDialog 400, PromptDialog 440,
+  // LoginModal, "New base résumé", the test-scrape error — pass a body padding
+  // on `style` (`22px 24px 18px`, `22`, `26px 26px 22px`), and `...style` is
+  // spread onto the PANEL, so that padding also inset the caption bar: the
+  // gradient strip floated in the middle of a grey card with 22-26px of face
+  // above and beside it. Every other round-7/8/9 change had landed on these
+  // panels; this one line of geometry is what still made them read as modern
+  // dialogs wearing a title bar rather than as windows.
+  //
+  // A window's frame and its client area are two boxes. Where a caption bar is
+  // mounted, the caller's `padding`/`gap` therefore describe the CLIENT AREA and
+  // move to a wrapper under the bar, and the frame keeps --bevel-pad. Nothing
+  // moves in a theme with no caption bar: `chrome` is false there, `style` is
+  // spread exactly as before and no wrapper is mounted.
+  const { padding: bodyPad, gap: bodyGap, ...frameStyle } = style || {}
+  const inset = chrome && (bodyPad !== undefined || bodyGap !== undefined)
   return (
     <div onClick={onClose} {...scrimProps} style={{
       position: 'fixed', inset: 0, background: 'var(--scrim-bg)',
@@ -1765,10 +1784,15 @@ export function ModalPanel({
           // 1px the bevel's `border: 0` gave up (--bevel-pad)
           width, background: 'var(--modal-bg)', border: 'var(--bw-panel) solid var(--modal-border)',
           borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)', padding: BPAD,
-          display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
+          display: 'flex', flexDirection: 'column', minHeight: 0, ...(inset ? frameStyle : style),
         }}>
         {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar ?? title}</HeaderRow>}
-        {children}
+        {inset ? (
+          <div className="v2-dialogclient" style={{
+            flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column',
+            padding: bodyPad, gap: bodyGap,
+          }}>{children}</div>
+        ) : children}
       </Panel>
     </div>
   )
