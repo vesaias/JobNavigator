@@ -20,8 +20,9 @@ const TITLE_ID = 'jn-newui-title'
 
 const POINTS = [
   'Everything you know, rebuilt: Jobs, Companies, Applications, Résumés, Cover Letters, Persona, Stats, Settings.',
+  'The extension, redesigned: AI-assisted answers to application questions and structured autofill of ATS forms from your Persona.',
   'Pick a look in Settings › Display: Paper, Green Paper, Stone, V1 Style or Windows 98, light or dark.',
-  'Persona import from a résumé or PDF, a cron helper for schedules, Feed shortcuts (press ? in Jobs).',
+  'OpenRouter and live model search, the freehire.me source, Persona import from a résumé or PDF, a cron helper for schedules.',
   'The classic dashboard is still at /classic (Settings › Display) for one more release.',
 ]
 
