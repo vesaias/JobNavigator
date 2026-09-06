@@ -4,7 +4,7 @@ import api from '../api'
 import './theme.css'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
+import { useEscape, useSingleOpen, setFlashToast, fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
 import { useTitle } from '../useTitle'
 // The résumé-content editors are shared with /v2/persona (a Persona's
 // resume_content is the same shape as a Resume's json_data).
@@ -198,6 +198,10 @@ export default function ResumeEditor() {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', onKey) }
   }, [tplOpen, fmtOpen])
+  // app-wide single-open: these two share one "close" already; broadcasting it
+  // through the same registry Select uses means opening a Select elsewhere (or
+  // this app's cron preset, or a Feed filter) closes these too, and vice versa.
+  useSingleOpen(tplOpen || fmtOpen, () => { setTplOpen(false); setFmtOpen(false) })
 
   useEffect(() => { setReviewed(readReviewed().includes(id)) }, [id])
 

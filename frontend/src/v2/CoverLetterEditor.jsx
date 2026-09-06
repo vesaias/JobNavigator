@@ -9,7 +9,7 @@ import { useUndoRemove, BandRule } from './ResumeSections'
 import { Button, Card as UiCard, DashedAdd, FooterRow, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, MoveArrows, NavLink, RemoveX, SectionHead, Spinner, Surface, ToolbarTrigger } from './ui'
 import './theme.css'
 import { useTitle } from '../useTitle'
-import { fetchRunOutcome, runFailed, runFailureReason, useSettled, NBSP } from './hooks'
+import { fetchRunOutcome, runFailed, runFailureReason, useSettled, useSingleOpen, NBSP } from './hooks'
 
 const EMPTY = {
   header: { name: '', contact_items: [] },
@@ -285,6 +285,9 @@ export default function CoverLetterEditor() {
     document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey) }
   }, [])
+  // app-wide single-open, same registry Select uses: opening a Select or another
+  // picker elsewhere closes whichever of these three is open, and vice versa.
+  useSingleOpen(menuOpen || tplOpen || fmtOpen, () => { setMenuOpen(false); setTplOpen(false); setFmtOpen(false) })
 
   const sourceOpts = useMemo(() => {
     const opts = [

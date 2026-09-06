@@ -29,6 +29,31 @@ export function useEscape(onClose, active = true, capture = false) {
   }, [active, capture])
 }
 
+// ── single-open popovers ─────────────────────────────────────────────────────
+// A Select or a Menu-based picker (ToolbarTrigger, the cron preset, the Feed's
+// filter Drops) manages its own `open` boolean and already closes itself on an
+// outside click/Escape — but nothing stopped a SECOND one from opening on top of
+// it (Settings' page of Selects let every listbox stack: R6 bug). One
+// `CustomEvent` on `window` is the registry: a picker broadcasts its own id the
+// moment it opens, and every other picker with this hook closes on hearing a
+// broadcast that isn't its own. The id is a stable per-instance ref (not tied to
+// `open`) so a picker never reacts to its own echo.
+let openSeq = 0
+const SELECT_OPEN_EVENT = 'jn:select-open'
+export function useSingleOpen(open, onClose) {
+  const id = useRef(null)
+  if (id.current === null) id.current = ++openSeq
+  const cb = useRef(onClose)
+  cb.current = onClose
+  useEffect(() => {
+    if (!open) return undefined
+    window.dispatchEvent(new CustomEvent(SELECT_OPEN_EVENT, { detail: id.current }))
+    const onOpen = (e) => { if (e.detail !== id.current) cb.current?.() }
+    window.addEventListener(SELECT_OPEN_EVENT, onOpen)
+    return () => window.removeEventListener(SELECT_OPEN_EVENT, onOpen)
+  }, [open])
+}
+
 // Nudges a flex-centred modal panel whose fractional top blurs 1px borders back
 // onto the pixel grid, via a paint-time translateY; re-runs after every render and on resize.
 export function useSnapTop(ref) {

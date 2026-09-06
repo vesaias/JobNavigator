@@ -3,8 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useToasts, ToastStack } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
-import { useEscape, useSettled, useWarm, NBSP, DASH } from './hooks'
-import { Button, Card, Check as UICheck, CopyGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
+import { useEscape, useSettled, useSingleOpen, useWarm, NBSP, DASH } from './hooks'
+import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from './ui'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -147,6 +147,11 @@ export default function V2JobFeed() {
   const [menu, setMenu] = useState(null)
   const [companyQuery, setCompanyQuery] = useState('')
   useEffect(() => { if (menu !== 'company') setCompanyQuery('') }, [menu])
+  // app-wide single-open, same registry Select uses: the filter bar already
+  // keeps its own Drops mutually exclusive via this one `menu` var, but opening
+  // any of them should also close a Select or picker open on another screen's
+  // leftover state (rare, but the registry makes it free), and vice versa.
+  useSingleOpen(menu !== null, () => setMenu(null))
 
   const [sel, setSel] = useState(0)
   const [detail, setDetail] = useState(null)
@@ -1241,7 +1246,7 @@ export default function V2JobFeed() {
                       {/* body */}
                       <div className="v2-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '14px 30px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {rpt?.summary && <span style={{ fontSize: 13.5, lineHeight: '22px', color: 'var(--text-2)' }}>{rpt.summary}</span>}
-                        {(d.fit_strengths || []).length > 0 && !rpt?.summary && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_strengths || []).map((s, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--good)' }}>✓</span><span>{s}</span></div>)}</div>}
+                        {(d.fit_strengths || []).length > 0 && !rpt?.summary && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_strengths || []).map((s, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ flex: '0 0 auto', color: 'var(--good)', display: 'flex', alignItems: 'center' }}><CheckGlyph /></span><span>{s}</span></div>)}</div>}
 
                         {rpt?.breakdown && Object.keys(rpt.breakdown).length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: breakdownOpen ? 11 : 0 }}>
@@ -1320,7 +1325,7 @@ export default function V2JobFeed() {
                               <TableRow key={k} height="auto" pad="8px 0" size="md" align="normal" style={{ gap: 14 }}>
                                 <span style={{ flex: 1.05, minWidth: 0 }}>{r.requirement}</span>
                                 <span style={{ flex: 1.1, minWidth: 0, color: 'var(--muted)' }}>{r.cv_evidence || r.cv_match || '—'}</span>
-                                <span style={{ flex: '0 0 34px', textAlign: 'center', color: r.matched ? 'var(--good)' : 'var(--bad)' }}>{r.matched ? '✓' : '✕'}</span>
+                                <span style={{ flex: '0 0 34px', display: 'flex', justifyContent: 'center', color: r.matched ? 'var(--good)' : 'var(--bad)' }}>{r.matched ? <CheckGlyph /> : <CrossGlyph />}</span>
                               </TableRow>
                             ))}
                             </div>
@@ -1341,7 +1346,7 @@ export default function V2JobFeed() {
                             <span style={{ flex: 1, fontSize: 12.5, lineHeight: '18px', color: 'var(--text-2)' }}>{rpt.ats_tip}</span>
                           </Card>
                         )}
-                        {(d.fit_gaps || []).length > 0 && !reqRows.length && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_gaps || []).map((g, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ color: 'var(--bad)' }}>✕</span><span>{g}</span></div>)}</div>}
+                        {(d.fit_gaps || []).length > 0 && !reqRows.length && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{(d.fit_gaps || []).map((g, k) => <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}><span style={{ flex: '0 0 auto', color: 'var(--bad)', display: 'flex', alignItems: 'center' }}><CrossGlyph /></span><span>{g}</span></div>)}</div>}
                         {!rpt && !(d.fit_gaps || []).length && !(d.fit_strengths || []).length && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>This report was scored at Light depth — rescore at Full depth for the keyword and requirement breakdown.</span>}
                       </div>
                     </div>

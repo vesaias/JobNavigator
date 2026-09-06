@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ConfirmDialog, { PromptDialog } from './ConfirmDialog'
-import { useEscape, useSettled, NBSP } from './hooks'
+import { useEscape, useSettled, useSingleOpen, NBSP } from './hooks'
 import { Button, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuHead, MenuItem, ModalPanel, Mono, PageTitle, Pill, Select, Spinner, Surface, Switch, Textarea, ToolbarTrigger } from './ui'
 import { useTheme, MODE_OPTIONS, themeOptions } from './theme'
 import { describeCron, whenShort, CRON_PRESETS } from './time'
@@ -108,6 +108,9 @@ function CronBox({ value, onSave, width, ariaLabel, onInvalid }) {
     document.addEventListener('click', close)
     return () => document.removeEventListener('click', close)
   }, [open])
+  // app-wide single-open, same registry Select uses: this page carries many
+  // Selects plus this preset picker, and any one of them opening must close the rest.
+  useSingleOpen(open, () => setOpen(false))
 
   const expr = (live || '').trim()
   // Same five-part gate TextBox refuses to save on, so this line agrees with what a blur will do.

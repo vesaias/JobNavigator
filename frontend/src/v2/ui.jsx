@@ -30,7 +30,7 @@
 // any line-height, so that is pixel-safe.
 import React, { useEffect, useRef, useState } from 'react'
 import './theme.css'
-import { useEscape, useSnapTop } from './hooks'
+import { useEscape, useSingleOpen, useSnapTop } from './hooks'
 import { useTheme } from './theme'
 
 // v2 draws its controls as span/div, so none of them would be focusable or
@@ -470,6 +470,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', varian
 // role="option" rows. `options` is [[value, label], …].
 export function Select({ value, options = [], onPick, width, mono, placeholder, invalid, ariaLabel, emptyText, disabled, style, className }) {
   const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
   // Escape closes only this listbox, not a modal it might sit inside. The key
   // listener runs in the *capture* phase since `useEscape` (hooks.js) listens on
   // document in the bubble phase and a parent modal's listener registers well
@@ -484,17 +485,27 @@ export function Select({ value, options = [], onPick, width, mono, placeholder, 
       e.stopPropagation()
       setOpen(false)
     }
+    // a scrolling ancestor (a modal body, a table's own .v2-scroll) moves the
+    // trigger under the panel without moving the panel's own scroll offset —
+    // close rather than let the listbox drift off its trigger.
+    const scroller = wrapRef.current?.closest('.v2-scroll')
     document.addEventListener('click', c)
     document.addEventListener('keydown', onKey, true)
+    scroller?.addEventListener('scroll', c, { passive: true })
     return () => {
       document.removeEventListener('click', c)
       document.removeEventListener('keydown', onKey, true)
+      scroller?.removeEventListener('scroll', c)
     }
   }, [open])
+  // app-wide single-open: opening this listbox closes any other open Select or
+  // Menu-based picker, and this one closes in turn when another opens (see
+  // useSingleOpen, hooks.js) — the Settings page's many Selects used to stack.
+  useSingleOpen(open, () => setOpen(false))
   const cur = options.find((o) => String(o[0]) === String(value ?? ''))
   const toggle = () => setOpen((v) => !v)
   return (
-    <span className={className} onClick={(e) => e.stopPropagation()}
+    <span ref={wrapRef} className={className} onClick={(e) => e.stopPropagation()}
       style={{ position: 'relative', display: 'flex', flex: `0 1 ${width || '220px'}`, minWidth: 0, ...style }}>
       {/* `v2-select-trigger`: the trigger is a div, so `input:hover` in
           theme.css never reaches it. `v2-inset` is the win98 bevel hook, inert elsewhere. */}
@@ -1049,6 +1060,29 @@ export function FlaskGlyph({ size = 12, title, style, className }) {
     </svg>
   )
 }
+// The report lists' pass/fail marks (requirement mapping, strengths, gaps) were the
+// bare text glyphs ✓/✕: thin at any weight the surrounding font gave them, and their
+// stroke rode whatever the OS's fallback symbol font drew (the CopyGlyph problem
+// again). Same 12-unit box and currentColor as CopyGlyph/FlaskGlyph, but a heavier
+// 2.75 stroke — a v1 parity ask (v1 drew these as lucide Check/X at stroke 2.5-3).
+export function CheckGlyph({ size = 12, title, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className}
+      role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'}
+      style={{ flex: '0 0 auto', display: 'block', ...style }}>
+      <path d="M2.25 6.4 4.9 9.05 9.75 3.3" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+export function CrossGlyph({ size = 12, title, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className}
+      role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'}
+      style={{ flex: '0 0 auto', display: 'block', ...style }}>
+      <path d="M2.6 2.6 9.4 9.4M9.4 2.6 2.6 9.4" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 // ── Check / Radio ───────────────────────────────────────────────────────────
 // The tick box and the radio disc (Feed row selector and its "select all shown"
@@ -1345,6 +1379,10 @@ function ScorePill({ value, busy, size }) {   // the tile paints from --sc-*, no
   // blocks, which is what it has always drawn) and the numeral multiplies the 14px
   // stop by the same --ring-numeral-scale-* the bar uses — a theme draws one variant,
   // so the pair is unambiguous. The FIT caption keeps its 9px step at both sizes.
+  // busy's Spinner scales the same way (9/12, the ring's own sm/md ratio):
+  // it used to be a flat 12px, which read as the same fixed square in a 29px
+  // cobalt sm tile as in the 44px md one — the width/height box around it
+  // already followed `size` (the tile height token), only the glyph didn't.
   return (
     <span style={{
       flex: '0 0 40px', width: 40, height: `var(--ring-pill-h-${sm ? 'sm' : 'md'})`, borderRadius: 'var(--radius-field)',
@@ -1354,7 +1392,7 @@ function ScorePill({ value, busy, size }) {   // the tile paints from --sc-*, no
       fontSize: `calc(var(--t-14) * var(--ring-numeral-scale-${sm ? 'sm' : 'md'}))`,
       lineHeight: 1, letterSpacing: '-.01em',
     }}>
-      {busy ? <Spinner size={12} /> : (
+      {busy ? <Spinner size={sm ? 9 : 12} /> : (
         <>
           {value == null ? '—' : value}
           <span style={{
@@ -1374,6 +1412,10 @@ function ScorePill({ value, busy, size }) {   // the tile paints from --sc-*, no
 // (~43px) still sits inside its own box instead of bleeding over the columns
 // beside it; the 32px track and the 4px gap are unchanged, and the tallest
 // stack (24 + 4 + 3 = 31) still fits the 44px box the `ring` variant occupies.
+// busy's Spinner takes the same 9/12 split as ScorePill's, for the same reason:
+// the container's own per-size gap/shift already applied outside this branch,
+// but a lone Spinner ignores `gap` (it needs a second flex child), so the glyph
+// itself has to carry the size difference.
 function ScoreBar({ value, busy, ink, size }) {
   const sm = size === 'sm'
   return (
@@ -1385,7 +1427,7 @@ function ScoreBar({ value, busy, ink, size }) {
       // measured against the feed row. Both 0px in the base blocks.
       transform: `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
     }}>
-      {busy ? <Spinner size={12} /> : (
+      {busy ? <Spinner size={sm ? 9 : 12} /> : (
         <>
           {/* --numeral-face, not --font-mono: this is a numeral, and saas puts
               numerals on its sans (round-5 handover §2). Base value is --mono. */}
