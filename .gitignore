@@ -164,6 +164,7 @@ resumes-example/
 # Extension source lib is NOT a build dir — keep it tracked
 !extension/lib/
 instance2/
+docker-compose.instance2.yml
 
 # testing pass: decoded design boards stay local
 tests/design/
