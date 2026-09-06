@@ -148,6 +148,108 @@ def _extract_answer(raw: str) -> str:
     return "" if text.startswith("{") else text
 
 
+_JSON_ESCAPES = {'"': '"', "\\": "\\", "/": "/", "n": "\n", "t": "\t",
+                 "r": "\r", "b": "\b", "f": "\f"}
+_ANSWER_PREFIX_RE = _re.compile(r'^\{\s*["\']answer["\']\s*:\s*"')
+
+
+def _decode_json_string_body(body: str) -> tuple:
+    """Decode a JSON string body that may be incomplete (more of it is still
+    streaming in). Returns (text, closed): closed is True once an unescaped
+    closing quote is reached, at which point `text` is the final answer and
+    everything after the quote (the rest of the envelope) is not part of it.
+    A trailing, not-yet-complete escape sequence (e.g. a lone "\\" or a
+    partial "\\uXX") is left off `text` until more characters arrive."""
+    out = []
+    i, n = 0, len(body)
+    while i < n:
+        c = body[i]
+        if c == "\\":
+            if i + 1 >= n:
+                break
+            nxt = body[i + 1]
+            if nxt == "u":
+                hex_part = body[i + 2:i + 6]
+                if len(hex_part) < 4:
+                    break
+                out.append(chr(int(hex_part, 16)))
+                i += 6
+                continue
+            out.append(_JSON_ESCAPES.get(nxt, nxt))
+            i += 2
+            continue
+        if c == '"':
+            return "".join(out), True
+        out.append(c)
+        i += 1
+    return "".join(out), False
+
+
+async def _clean_stream(chunks):
+    """Wrap the raw model stream so a delta can never carry a `{"answer": …}`
+    envelope, even for a moment. /answer/stream tells the model to output plain
+    prose, but a model that ignores that (or types the envelope a character at
+    a time) would otherwise flash raw JSON in the extension popover mid-stream
+    before the client's own safety net cleaned it up on completion — the R4 fix
+    ("robust extraction, never returns text starting with {") only covered the
+    non-stream /answer path. This buffers just long enough to tell plain prose
+    from an (optionally ```-fenced) JSON envelope, then for the envelope case
+    decodes the `"answer"` string body progressively — handling an escape
+    sequence split across two chunks — and drops everything once its closing
+    quote is seen, discarding the rest of the envelope. Plain prose is passed
+    through unchanged, incrementally, same as before this wrapper existed."""
+    raw = ""
+    mode = None          # None (undecided) | "prose" | "json"
+    fence_len = 0
+    body_start = -1
+    closed = False
+    emitted = 0          # chars of raw[fence_len:] already yielded, in prose mode
+    decoded_len = 0       # chars of the decoded answer already yielded, in json mode
+    async for chunk in chunks:
+        if closed or not chunk:
+            continue
+        raw += chunk
+        if mode is None:
+            stripped = raw.lstrip()
+            if not stripped:
+                continue  # only whitespace so far — hold
+            if stripped[0] == "`":
+                if len(stripped) < 3:
+                    continue  # could still become a ``` fence — hold
+                if not stripped.startswith("```"):
+                    mode = "prose"
+                    fence_len = len(raw) - len(stripped)
+                else:
+                    m = _FENCE_OPEN.match(stripped)
+                    fence_len = (len(raw) - len(stripped)) + len(m.group(0))
+                    rest = raw[fence_len:]
+                    if not rest:
+                        continue  # fence consumed everything received so far — hold
+                    mode = "json" if rest[0] == "{" else "prose"
+            else:
+                fence_len = len(raw) - len(stripped)
+                mode = "json" if stripped[0] == "{" else "prose"
+        body = raw[fence_len:]
+        if mode == "prose":
+            if len(body) > emitted:
+                new_text = body[emitted:]
+                emitted = len(body)
+                yield new_text
+            continue
+        # mode == "json"
+        if body_start < 0:
+            m = _ANSWER_PREFIX_RE.match(body)
+            if not m:
+                continue  # envelope shape not confirmed yet — hold
+            body_start = m.end()
+        text, done = _decode_json_string_body(body[body_start:])
+        if len(text) > decoded_len:
+            yield text[decoded_len:]
+            decoded_len = len(text)
+        if done:
+            closed = True
+
+
 def _qa_pair(entry) -> tuple:
     """Normalise one qa_bank entry to (question, answer); accepts both the canonical {"question","answer"} shape written by POST /persona/qa-bank and a legacy single-key {"<question>": "<answer>"} map."""
     if not isinstance(entry, dict):
@@ -348,8 +450,9 @@ async def autofill_answer_stream(body: dict):
 
     async def _events():
         try:
-            async for chunk in call_autofill_llm_stream(suffix, system, max_tokens=max_tokens,
-                                                        cached_prefix=cached_prefix):
+            raw_chunks = call_autofill_llm_stream(suffix, system, max_tokens=max_tokens,
+                                                  cached_prefix=cached_prefix)
+            async for chunk in _clean_stream(raw_chunks):
                 if chunk:
                     yield f"data: {_json.dumps({'delta': chunk})}\n\n"
             yield "data: [DONE]\n\n"

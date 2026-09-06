@@ -248,6 +248,53 @@ async def test_stream_emits_deltas_then_done(test_db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_stream_never_emits_a_json_envelope_char(test_db, monkeypatch):
+    """If the model ignores the plain-prose instruction and streams a
+    {"answer": "..."} envelope one character at a time (the worst case for a
+    naive relay — the extension popover would flash raw JSON for a moment),
+    /answer/stream must still only ever emit clean answer text. No delta may
+    start with, or contain, a `{`, and the concatenated deltas must equal the
+    extracted answer with nothing from the envelope's tail leaking through."""
+    _seed(test_db)
+    envelope = '{"answer": "Because payments.", "trimmed": false}'
+
+    async def fake_stream(prompt, system, max_tokens=400, cached_prefix=None):
+        for ch in envelope:  # one character per chunk — the worst case
+            yield ch
+
+    monkeypatch.setattr("backend.api.routes_autofill.call_autofill_llm_stream",
+                        fake_stream, raising=True)
+
+    events = await _collect(await autofill_answer_stream(BODY))
+    deltas = [json.loads(e[len("data: "):])["delta"]
+              for e in events if e.startswith('data: {"delta"')]
+    assert "".join(deltas) == "Because payments."
+    assert all("{" not in d for d in deltas)
+    assert events[-1] == "data: [DONE]\n\n"
+
+
+@pytest.mark.asyncio
+async def test_stream_unwraps_a_fenced_json_envelope_split_mid_escape(test_db, monkeypatch):
+    """A ```json fence plus an escaped quote split across two chunks (so the
+    escape's backslash and its following `"` arrive in separate deltas) must
+    still decode to plain text, never a partial `\\` or the envelope's tail."""
+    _seed(test_db)
+
+    async def fake_stream(prompt, system, max_tokens=400, cached_prefix=None):
+        for c in ('```json\n{"answer": "She said \\', '"go\\", and left.", "x": 1}\n```'):
+            yield c
+
+    monkeypatch.setattr("backend.api.routes_autofill.call_autofill_llm_stream",
+                        fake_stream, raising=True)
+
+    events = await _collect(await autofill_answer_stream(BODY))
+    deltas = [json.loads(e[len("data: "):])["delta"]
+              for e in events if e.startswith('data: {"delta"')]
+    assert "".join(deltas) == 'She said "go", and left.'
+    assert all("{" not in d and "```" not in d for d in deltas)
+
+
+@pytest.mark.asyncio
 async def test_stream_appends_refinements_in_order(test_db, monkeypatch):
     """Refinements become an ordered bullet list appended to the suffix only."""
     _seed(test_db)
