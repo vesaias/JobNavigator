@@ -9,10 +9,11 @@ export default function ConfirmDialog({ title, body, label, danger, onConfirm, o
   return (
     // ModalPanel carries the scrim, Escape and the pixel snap; it sits at
     // z-index 70, so a confirm raised from a drawer (z 30) or modal still lands on top.
-    <ModalPanel width={400} title={title} prompt onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}>
+    <ModalPanel width={400} title={title} onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}>
       {/* round 7 #4: the name moves into the caption bar where a theme draws one,
-          and `prompt` on the panel above keeps that caption to a single × — a 98
-          message box had no minimise or maximise to disable. */}
+          and the body heading it duplicates is hidden there. Round 8 #11 dropped
+          the `prompt` flag this panel used to pass: a small 98 window wears the
+          same full caption as a large one — only its size differs. */}
       <Heading size={19} className="v2-dialogtitle">{title}</Heading>
       {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
@@ -31,10 +32,10 @@ export function PromptDialog({ title, body, label, value, placeholder, readOnly,
   const [copied, setCopied] = useState(false)
   const copy = () => { try { navigator.clipboard.writeText(v); setCopied(true) } catch { /* silent: clipboard blocked — the value is selectable in the field */ } }
   return (
-    <ModalPanel width={440} title={title} prompt onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}>
+    <ModalPanel width={440} title={title} onClose={onCancel} style={{ padding: '22px 24px 18px', gap: 8 }}>
       {/* round 7 #4: the name moves into the caption bar where a theme draws one,
-          and `prompt` on the panel above keeps that caption to a single × — a 98
-          message box had no minimise or maximise to disable. */}
+          and the body heading it duplicates is hidden there. Round 8 #11: the
+          caption is the full one — `_ □ ×`, the first two disabled. */}
       <Heading size={19} className="v2-dialogtitle">{title}</Heading>
       {body && <span style={{ fontSize: 12.5, lineHeight: '18px', color: 'var(--helper-ink)' }}>{body}</span>}
       <Input value={v} readOnly={readOnly} placeholder={placeholder} autoFocus mono={mono}

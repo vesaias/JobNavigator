@@ -307,6 +307,16 @@
      literal every one of them carried, so this is a no-op outside a theme that
      moves it (win98: 10.5, its 11px floor being a legibility floor). */
   --tag-size:9.5px;
+  /* the two type stops the `Label` ROLE draws at (round 8 #8). Base values are
+     the --t-* stops Label already computed, so this is a no-op everywhere but a
+     theme that wants its caption run at one size of its own (win98: 13px in
+     both — its UI text size; the 11px the caps stop resolved to there read as a
+     smaller, different role beside every other caption in the app). */
+  --label-size:var(--t-10); --label-size-lg:var(--t-11);
+  /* the Cover Letters `Picker` trigger's ground. --surface is the literal it
+     carried, so this is a no-op outside win98, where a dropdown's field half is
+     a sunken WHITE well (98 has no grey combo box) and --input-bg is that. */
+  --picker-bg:var(--surface);
   --label-case:uppercase; --display-tracking:-.02em;
   /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
      var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
@@ -675,6 +685,16 @@
      literal every one of them carried, so this is a no-op outside a theme that
      moves it (win98: 10.5, its 11px floor being a legibility floor). */
   --tag-size:9.5px;
+  /* the two type stops the `Label` ROLE draws at (round 8 #8). Base values are
+     the --t-* stops Label already computed, so this is a no-op everywhere but a
+     theme that wants its caption run at one size of its own (win98: 13px in
+     both — its UI text size; the 11px the caps stop resolved to there read as a
+     smaller, different role beside every other caption in the app). */
+  --label-size:var(--t-10); --label-size-lg:var(--t-11);
+  /* the Cover Letters `Picker` trigger's ground. --surface is the literal it
+     carried, so this is a no-op outside win98, where a dropdown's field half is
+     a sunken WHITE well (98 has no grey combo box) and --input-bg is that. */
+  --picker-bg:var(--surface);
   --label-case:uppercase; --display-tracking:-.02em;
   /* Multiplier for caps labels a primitive does not draw, e.g. `calc(.16em *
      var(--label-tracking-scale))` — lets a theme zero out caps tracking in one switch. */
@@ -1448,7 +1468,21 @@
      is 98's own UI size and its legibility floor, so every stop at or under 11 lands on
      11 and the rest are whole pixels (no fractional stem on a UI face). */
   --t-7-5:11px; --t-9:11px; --t-9-5:11px; --t-10:11px; --t-10-5:11px; --t-11:11px; --t-11-5:12px; --t-12:12px; --t-12-5:13px; --t-13:13px; --t-13-5:14px; --t-14:14px; --t-15:15px; --t-15-5:16px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  /* Round 8 #4 · a 98 push button's label is NORMAL weight. 98.css draws
+     `button` at 11px with no font-weight at all (i.e. 400), no tracking and no
+     caps; the DEFAULT button is marked by the extra window-frame ring this
+     theme already appends to the bevel, never by bolding. --btn-weight was 700,
+     which is what made every button read as shouted. Bold survives in the two
+     places 98 really bolds: the title bar (--weight-semibold, on the caption
+     face) and the default button INSIDE A DIALOG, which is one theme-named rule
+     at the foot of this file rather than a token, because it is a position in
+     the DOM and not a variant of the control. */
+  --btn-weight:400; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  /* Round 8 #8 · the `Label` role is ONE size here, 13px — the theme's UI text
+     size (--t-12-5/--t-13), not the 11px floor the small caps stops collapse
+     to. A caption at 11 beside body text at 13 read as a different, lesser
+     role; 98 sets a label in the same face and size as everything else. */
+  --label-size:13px; --label-size-lg:13px;
   --weight-medium:400; --weight-semibold:700;   /* the pixel face has 400 and 700 only */
   /* the DEFAULT PUSH BUTTON: grey face, bold label, and the 1px window-frame
      ring the theme-named rule at the foot of this file appends to the bevel.
@@ -1522,6 +1556,22 @@
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#0000ff; --link-ink-hover:#800080;   /* 98's link-blue and its visited purple */
   --tag-size:10.5px;   /* round 7 #1: the hand-drawn caps badges, 9.5 in every other theme */
+  /* ── round 8 ────────────────────────────────────────────────────────────
+     #6 a hovered menu row takes the HILIGHT — navy fill, white text — which is
+        what 98 paints under the pointer in a menu, a listbox and a tree
+        (98.css's own `ul.tree-view a:focus` and `tr.highlighted` are
+        `background:navy; color:#fff`). The ink half is a theme-named rule
+        below, since `--menu-item-ink` is written inline per item (danger red,
+        picked accent) and only an !important rule can take it.
+     #7 the Cover Letters Picker's ground: a dropdown's field half is the sunken
+        WHITE well every other field here has, not the chrome grey it carried.
+     #9 the KPI numeral is lifted a pixel in its 30px line box. Microsoft Sans
+        Serif's win metrics (ascent 1888/2048, descent 432) put a 27px digit's
+        ink centre 0.3px BELOW the middle of that box, and the optical centre of
+        a row of lining figures wants to sit a touch above it — see
+        expected-W98r8.md §9, which also says what to check on a real Windows
+        machine, since the face is not installed in the test container. */
+  --menu-item-hover:var(--accent); --picker-bg:var(--input-bg); --kpi-shift:-1px;
   /* Still slim: no bevel is expressible through scrollbar-color. The webkit path
      gets the dithered trough + bevelled thumb in the rules at the foot of this file. */
   --scroll-thumb:#808080; --scroll-track:#dfdfdf;
@@ -1551,7 +1601,10 @@
   --shadow-modal:none; --shadow-menu:none; --shadow-pop:none; --shadow-toast:none; --shadow-drawer:none;
   --btn-shadow:none; --pill-shadow:none; --field-shadow:none; --card-shadow:none; --seg-on-shadow:none;
   --t-7-5:11px; --t-9:11px; --t-9-5:11px; --t-10:11px; --t-10-5:11px; --t-11:11px; --t-11-5:12px; --t-12:12px; --t-12-5:13px; --t-13:13px; --t-13-5:14px; --t-14:14px; --t-15:15px; --t-15-5:16px; --t-16:16px; --t-17:17px; --t-18:18px; --t-19:19px; --t-22:22px; --t-30:30px;
-  --btn-weight:700; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  /* round 8 #4 (98 buttons are normal weight) and #8 (the Label role is one
+     13px stop here) — see the light block */
+  --btn-weight:400; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
+  --label-size:13px; --label-size-lg:13px;
   --weight-medium:400; --weight-semibold:700;
   --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
@@ -1597,6 +1650,9 @@
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
   --link-ink:#9cc0ff; --link-ink-hover:#ffffff;   /* #8ab4ff was 4.29:1 on the chrome (round 7 #17) */
   --tag-size:10.5px;   /* round 7 #1 */
+  /* round 8: the Hilight menu hover (#6), the Picker's white field half (#7)
+     and the KPI numeral's 2px lift (#9) — see the light block */
+  --menu-item-hover:var(--accent); --picker-bg:var(--input-bg); --kpi-shift:-1px;
   --scroll-thumb:#5a8f8f; --scroll-track:#33403f;
   --title-bar:linear-gradient(90deg,#008080,#20a0a0); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);
@@ -1832,6 +1888,23 @@
 .jn-v2[data-theme="win98"] .v2-headerrow { box-shadow:0 1px 0 var(--line-soft); }
 .jn-v2[data-theme="win98"] .v2-footerrow { box-shadow:inset 0 1px 0 var(--line-soft); }
 
+/* ── Round 8 #10 · why none of the 98 scrollbar below was ever visible ───────
+   `.v2-scroll` sets `scrollbar-width: thin` and `scrollbar-color: …` (the base
+   rule, for Firefox). Chrome 121 shipped the standard properties, and its rule
+   is: if EITHER standard property is set to anything but `auto` on an element,
+   the whole `::-webkit-scrollbar*` set is IGNORED for that element. So every
+   rule below — the bevelled thumb, the dithered trough, the arrow buttons — was
+   being dropped, and the app got Chrome's own thin grey bar instead.
+   The fix is to hand the two standard properties back to `auto` in win98 only,
+   which is their initial value and re-enables the legacy pseudo-elements, and
+   to re-state them for engines that have no `::-webkit-scrollbar` at all
+   (Firefox), where they are the only bar we can style. Every other theme keeps
+   `thin` + the token pair exactly as before. */
+.jn-v2[data-theme="win98"] .v2-scroll { scrollbar-width:auto; scrollbar-color:auto; }
+@supports not selector(::-webkit-scrollbar) {
+  .jn-v2[data-theme="win98"] .v2-scroll { scrollbar-width:thin; scrollbar-color:var(--scroll-thumb) var(--scroll-track); }
+}
+
 /* Slim scrollbar, webkit path only: dithered trough + bevelled thumb. Engines on
    the standard `scrollbar-color` keep the flat two-grey bar from the tokens. */
 .jn-v2[data-theme="win98"] .v2-scroll::-webkit-scrollbar-track { background:repeating-conic-gradient(var(--surface) 0 25%, #ffffff 0 50%) 0 0 / 2px 2px; }
@@ -1953,14 +2026,75 @@
 .jn-v2[data-theme="win98"] .v2-select-trigger > span:last-child {
   align-self:stretch; flex:0 0 16px; width:16px; margin:2px 2px 2px 0;
   font-size:0 !important; background:var(--surface); box-shadow:var(--bevel-raised-shadow);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges'><path d='M0 0h7v1H6v1H5v1H2V2H1V1H0z' fill='%23000'/></svg>");
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges'><path d='M7 0H0v1h1v1h1v1h1v1h1V3h1V2h1V1h1V0z' fill='%23000'/></svg>");
   background-repeat:no-repeat; background-position:center;
 }
 .jn-v2[data-theme="win98"][data-appearance="dark"] .v2-select-trigger > span:last-child {
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges'><path d='M0 0h7v1H6v1H5v1H2V2H1V1H0z' fill='%23fff'/></svg>");
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges'><path d='M7 0H0v1h1v1h1v1h1v1h1V3h1V2h1V1h1V0z' fill='%23fff'/></svg>");
 }
 /* an OPEN dropdown presses its button in, the way 98's does */
 .jn-v2[data-theme="win98"] .v2-select-trigger[aria-expanded="true"] > span:last-child { box-shadow:var(--bevel-inset-shadow); }
+
+/* ── Round 8 #7 · the Cover Letters Picker is a FIELD ────────────────────────
+   The "From résumé" and target-job pickers carried the chrome grey and a flat
+   1px --edge stroke, so beside a real Select (sunken white well + raised ▾
+   button) they read as buttons that happen to have an arrow. The ground is the
+   new --picker-bg token (--surface everywhere else, so nothing moves); the box
+   is the sunken bevel, given here rather than by adding `v2-inset` to the
+   trigger, because that class's field-hover rule would move the border-color of
+   this control in EVERY other theme. `.v2-picker` matches nothing anywhere else. */
+.jn-v2[data-theme="win98"] .v2-picker {
+  border:var(--bevel-inset-border) !important; border-color:var(--bevel-inset-color) !important;
+  box-shadow:var(--bevel-inset-shadow) !important;
+}
+
+/* ── Round 8 #6 · a hovered menu row takes the Hilight ───────────────────────
+   Windows 98 fills the row under the pointer with the selection colour and
+   repaints its text in the selection ink — in menus, in list boxes and in the
+   Explorer tree alike (98.css ships the same pair for `ul.tree-view a:focus`
+   and `table tr.highlighted`: `background: navy; color: #fff`). The GROUND is
+   the --menu-item-hover token, re-pointed at --accent in both win98 blocks; the
+   INK has to be a rule, because MenuItem writes `color` inline per item (danger
+   maroon, picked accent, plain text) and nothing but !important can take it.
+   The danger row is included deliberately: 98 does not exempt a destructive
+   command from the Hilight — it is white on navy like the rest, and the row
+   keeps its own glyph and its separator line. `.v2-menu` scopes the danger half
+   to a menu, so RemoveX and the other `v2-hover-bad` sites out in the screens
+   keep their soft red wash. */
+.jn-v2[data-theme="win98"] .v2-menuitem:hover,
+.jn-v2[data-theme="win98"] .v2-menu .v2-hover-bad:hover { background:var(--accent) !important; }
+.jn-v2[data-theme="win98"] .v2-menuitem:hover,
+.jn-v2[data-theme="win98"] .v2-menuitem:hover *,
+.jn-v2[data-theme="win98"] .v2-menu .v2-hover-bad:hover,
+.jn-v2[data-theme="win98"] .v2-menu .v2-hover-bad:hover * { color:var(--accent-ink) !important; }
+
+/* ── Round 8 Q4 · Meter is 98's determinate progress bar ─────────────────────
+   98.css's `.progress-indicator.segmented` is a sunken trough holding a run of
+   blocks: `linear-gradient(90deg, var(--dialog-blue) 0 16px, transparent 0 2px)`
+   on an 18px repeat. The same drawing, at this app's meter sizes (a funnel bar
+   is 22px tall but a keyword-coverage bar is 4px and a criterion bar 1px, so a
+   16px block would show two blocks and a gap): 6px block, 2px gap, 8px repeat.
+   The blocks are cut out of the fill with a MASK rather than painted over it in
+   the trough's colour: the fill's `background` is a single colour written
+   inline (a different one per site — the funnel's stage tokens, the report's
+   score bands), and half the sites pass their own `track` as well, so the only
+   way for a gap to show the real trough is to make the fill transparent there.
+   The trough takes 98's 1px sunken pair (the status-bar-field recipe, not the
+   2px control bevel: a 4px meter cannot hold two tones a side). */
+.jn-v2[data-theme="win98"] [role="meter"] {
+  box-shadow:inset -1px -1px 0 var(--line-soft), inset 1px 1px 0 var(--line);
+}
+.jn-v2[data-theme="win98"] [role="meter"] > div {
+  -webkit-mask-image:repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+  mask-image:repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+
+/* ── Round 8 #4 · the one button 98 bolds ────────────────────────────────────
+   --btn-weight is 400 now (98.css's `button` sets no weight at all). The DEFAULT
+   button of a dialog is the exception the user named: it already carries the
+   extra window-frame ring, and here it also carries the heavier label. Scoped to
+   a dialog so the primary buttons out on the pages stay normal weight. */
+.jn-v2[data-theme="win98"] [role="dialog"] .v2-btn-primary { font-weight:var(--weight-semibold); }
 
 /* Round 6 "Loaders" · a busy region shows 98's hourglass. The blocks drawing in
    ui.jsx replaces the arc; this is the pointer half, and it is CSS only. */
@@ -1985,25 +2119,52 @@
    and an inline value beats a class rule. */
 .jn-v2[data-theme="win98"] .v2-rail { border:var(--bevel-inset-border); border-color:var(--bevel-inset-color); box-shadow:var(--bevel-inset-shadow); }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] { margin:4px 0 4px 4px; }
+/* ── Round 8 Q5 · the COLLAPSED rail is a toolbar, not an empty tree well ─────
+   At 206px this pane is Explorer's Folders tree and belongs in a sunken client
+   well. At 50px there is no tree in it — just a column of icons — and a sunken
+   white well with nothing in it is not an object Windows 98 had; a chrome-grey
+   strip closed by an etched edge is (every 98 toolbar and side strip is exactly
+   that). So the collapsed rail drops the well and the bevel and takes the
+   chrome plus the etched pair on its right edge — shadow pixel, then highlight
+   pixel, reading outwards, which is how 98 separates two panes of the same
+   surface. `background` needs !important: V2App writes `var(--rail)` inline. */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="false"] {
+  background:var(--surface) !important;
+  box-shadow:inset -1px 0 0 var(--line-soft), inset -2px 0 0 var(--line);
+}
 /* caption strip: the brand band stops being rail-coloured and becomes chrome,
    closed by the etched pair (shadow line under it, highlight line under that) */
-/* Round 7 #9 · the caption band is Explorer's "Folders" pane header, from the
-   user's own screenshot: a FLAT chrome strip (no bevel), the pane's name in
-   bold at the UI size, a small flat × pinned right, and a single etched line —
-   shadow then highlight — separating it from the white tree below. It was 48px
-   with a 15px brand; a real one is a row of text, so 20px at --t-11.
-   `position: relative` is on .v2-rail (rule above) so the × can be pinned here
-   without the brand div needing a hook of its own. */
+/* Round 7 #9 gave this band Explorer's "Folders" caption — 20px tall, the name
+   at --t-11, and the rail's collapse control lifted into it as a × — from the
+   user's screenshot. Round 8 #1 takes both back: the caption returns to the size
+   and weight it had before round 7 (48px band, --t-15 bold, the brand's own
+   inline letter-spacing kept), and the × goes with it, because the control it
+   was drawn from belongs at the foot of the rail where it started. What stays
+   from round 7 is the band's PAINT: chrome grey rather than rail-coloured,
+   closed by the etched pair (a --line shadow line with a --line-soft highlight
+   under it) that separates a caption from a client area in 98. */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand {
-  height:20px !important; padding:0 20px 0 6px !important; background:var(--surface); color:var(--text) !important;
+  height:48px !important; padding:0 14px !important; background:var(--surface); color:var(--text) !important;
   border-bottom:var(--bw-hair) solid var(--line); box-shadow:0 1px 0 var(--line-soft);
 }
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand > span:first-child { font-size:var(--t-11) !important; font-weight:var(--title-weight); font-family:var(--sans) !important; letter-spacing:0 !important; }
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railbrand > span:first-child { font-size:var(--t-15) !important; font-weight:var(--title-weight); }
 /* the tree itself */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll { gap:8px !important; padding:8px 4px !important; }
+/* Round 8 #3 · a group is separated from the one above it by a single ETCHED
+   LINE — 98's own divider, a --line shadow pixel with a --line-soft highlight
+   pixel directly under it — and not by a band. The only band left in the rail is
+   the one that closes the tree off from the status rows at the foot (below).
+   `.v2-railgroup + .v2-railgroup` rather than `:not(:first-child)`: the rail's
+   scroller holds nothing but groups today, but the sibling combinator stays
+   right if it ever holds anything else. */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgroup + .v2-railgroup {
+  border-top:var(--bw-hair) solid var(--line); box-shadow:inset 0 1px 0 var(--line-soft); padding-top:7px;
+}
 /* group = a tree node: sentence case at the row size, with the ⊟ twisty in front.
-   The twisty is decorative until the groups are made collapsible (handover). */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead { height:24px !important; padding:0 8px !important; margin-bottom:0 !important; gap:6px; }
+   The twisty is decorative until the groups are made collapsible (handover).
+   Round 8 #2 · the left padding is 3px, not 8: the twisty's centre pixel then
+   sits on the connector trunk below it (see the ::before/::after pair). */
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead { height:24px !important; padding:0 8px 0 3px !important; margin-bottom:0 !important; gap:6px; }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead > span:first-child { font-size:var(--t-12) !important; line-height:24px !important; color:var(--rail-text) !important; }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railgrouphead::before {
   content:"\2212"; order:-1; flex:0 0 auto; width:9px; height:9px;
@@ -2011,68 +2172,51 @@
   font-size:8px; line-height:7px; text-align:center;
 }
 /* child row: 28px, indented clear of the connector, 98's dotted focus rect when
-   it is the current one (the Hilight fill itself is --rail-active-bg already) */
+   it is the current one (the Hilight fill itself is --rail-active-bg already)
+   ── Round 8 #2 · WHERE THE ICON COLUMN IS ───────────────────────────────────
+   The 50px collapsed rail draws each item's lucide icon centred in the 24px
+   slot its row reserves: rail 0 + the item's 3px mark + 10px padding + 12 =
+   x 25. The expanded tree's rows began their content at x 37 (rail margin 4 +
+   scroller padding 4 + mark 3 + this padding, then 26), so collapsing the rail
+   slid every glyph 12px left. The tree is re-indented instead of the strip
+   being pushed right — a 15px glyph starting at 37 would leave 2px of air in a
+   50px column — and 16px puts the row's content column at exactly x 25, the
+   axis the collapsed icons already sit on (rail 4 + scroller 4 + this row's own
+   1px dotted border + 16). The connector moves with it: the trunk to 6 (x 15)
+   and the elbow to 7px wide, so it still stops 3px short of the label, and the
+   group twisty's centre pixel lands on the trunk (head padding 3 → the 9px box
+   spans x 11-20, whose middle pixel is the trunk's). */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem {
-  height:28px !important; margin:0 4px 0 0 !important; padding:0 8px 0 26px !important;
+  height:28px !important; margin:0 4px 0 0 !important; padding:0 8px 0 16px !important;
   font-size:var(--t-12) !important; border:1px dotted transparent !important;
 }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem[aria-current="page"] { border-color:var(--rail-tree-focus) !important; }
-/* the connector: a dotted trunk down the group and a 9px elbow into each row */
+/* the connector: a dotted trunk down the group and a 7px elbow into each row */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem::before {
-  content:""; position:absolute; left:12px; top:0; bottom:0; border-left:1px dotted var(--line);
+  content:""; position:absolute; left:6px; top:0; bottom:0; border-left:1px dotted var(--line);
 }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem::after {
-  content:""; position:absolute; left:12px; top:50%; width:9px; border-top:1px dotted var(--line);
+  content:""; position:absolute; left:6px; top:50%; width:7px; border-top:1px dotted var(--line);
 }
 /* the last child closes the trunk at its own elbow instead of running past it */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railitem:last-child::before { bottom:50%; }
-/* Round 7 #9 · status bar. The screenshot's bottom band is a SUNKEN field on the
-   chrome grey — 98's `.status-bar-field`, a 1px inset (shadow top-left,
-   highlight bottom-right), not the 2px control bevel. The rail's three bottom
-   rows become three such fields stacked, which is what a 98 status bar is: a row
-   of fields, transposed to a 206px column. The 2px margin is the gap 98 leaves
-   between them and the frame. */
+/* ── Round 8 #3 · the status band ────────────────────────────────────────────
+   Round 7 drew each of the three bottom rows as its own sunken `status-bar-field`
+   box, which stacked three heavy bands under a tree that had none. They go back
+   to being ONE chrome band — flat, the rail's ink — and the only separator in
+   the whole rail that is more than a hairline is the one that closes the tree
+   off from it: 98's thick etched divider, a --line shadow row with a --line-soft
+   highlight row under it, drawn as two inset shadows so the rows keep their own
+   heights. `.v2-railscroll + .v2-railfoot` and not `:first-of-type`: the three
+   rows are an <a> and two <div>s, and `-of-type` counts per element name, so it
+   would match the anchor AND the last div rather than the first row. */
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot {
   background:var(--surface); color:var(--text);
-  border-top:0 !important; margin:1px 2px !important;
-  box-shadow:inset -1px -1px 0 var(--line-soft), inset 1px 1px 0 var(--line);
+  border-top:0 !important; margin:0 !important; box-shadow:none;
 }
-/* the band as a whole is closed off from the white well, so the FIRST field
-   takes the extra gap. `.v2-railscroll + .v2-railfoot` and not `:first-of-type`:
-   the three rows are an <a> and two <div>s, and `-of-type` counts per element
-   name, so it would match the anchor AND the last div rather than the first row. */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll + .v2-railfoot { margin-top:3px !important; }
-
-/* ── Round 7 #9 · the caption bar's × ─────────────────────────────────────────
-   The pane header's close button. There is no × in the rail's markup and adding
-   one would put a second element in every other theme's DOM for nothing, so the
-   rail's EXISTING collapse control — the `‹` in the bottom band, which already
-   calls toggleRail — is lifted into the caption instead: absolutely positioned
-   against .v2-rail, its glyph swapped for a × by zeroing the font and drawing
-   the 98 close cross as a background image. One DOM, one handler, and the thing
-   the user pointed at now closes the pane.
-   `> span:first-child` is that control; the "Collapse" word beside it goes with
-   the band it left, since the caption now says the same thing.
-
-   `:last-child`, NOT `:last-of-type`. The three bottom rows are an <a> ("Classic
-   UI") and two <div>s, and `-of-type` counts per ELEMENT NAME — so it matched the
-   anchor as well as the last div, which absolutely-positioned the Classic-UI
-   arrow into the caption on top of the real × (clicking it navigated away
-   instead of collapsing) and blanked that row's label. Caught in the crop, not
-   in the markup. */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] { position:relative; }
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot:last-child > span:first-child {
-  position:absolute; top:5px; right:5px; z-index:2; width:11px; height:11px; flex:none !important;
-  font-size:0 !important; background:var(--surface); box-shadow:var(--bevel-raised-shadow);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path d='M0 0h1v1h1v1h2V1h1V0h1v1H5v1H4v1h1v1h1v1H5v1H4V5H3V4H2v1H1v1H0V5h1V4h1V3H1V2H0z' fill='%23000'/></svg>");
-  background-repeat:no-repeat; background-position:center;
+.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railscroll + .v2-railfoot {
+  margin-top:2px !important; box-shadow:inset 0 1px 0 var(--line), inset 0 2px 0 var(--line-soft);
 }
-.jn-v2[data-theme="win98"][data-appearance="dark"] .v2-rail[data-open="true"] .v2-railfoot:last-child > span:first-child {
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path d='M0 0h1v1h1v1h2V1h1V0h1v1H5v1H4v1h1v1h1v1H5v1H4V5H3V4H2v1H1v1H0V5h1V4h1V3H1V2H0z' fill='%23fff'/></svg>");
-}
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot:last-child > span:first-child:active { box-shadow:var(--bevel-inset-shadow); }
-/* the word "Collapse" left with the ‹ it belonged to */
-.jn-v2[data-theme="win98"] .v2-rail[data-open="true"] .v2-railfoot:last-child > span:nth-child(2) { display:none !important; }
 
 /* ── Round 7 #8 · the tree's hover ───────────────────────────────────────────
    `.v2-navdark:hover` repaints every rail control --rail-ink, which here is

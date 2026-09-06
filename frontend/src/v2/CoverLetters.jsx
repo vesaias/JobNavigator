@@ -15,9 +15,12 @@ export const LENGTHS = [['concise', 'Concise'], ['standard', 'Standard'], ['deta
 export const STAGE_CLASS = { applied: 'cc-smartrecruiters', interview: 'cc-workday', offer: 'cc-tier1', rejected: 'cc-generic' }
 
 const ARCH_KEY = 'v2_cl_archive_open'
+// --picker-bg is `var(--surface)` in the base blocks — the literal this line
+// carried — so nothing moves outside win98, where a dropdown's field half is the
+// same sunken white well every other field has instead of chrome grey (round 8 #7).
 const CTRL = {
   height: 33, padding: '0 10px', border: '1px solid var(--edge)', borderRadius: 'var(--radius-cell)',
-  background: 'var(--surface)', display: 'flex', alignItems: 'center', lineHeight: 1,
+  background: 'var(--picker-bg)', display: 'flex', alignItems: 'center', lineHeight: 1,
   justifyContent: 'space-between', fontSize: 12.5, cursor: 'pointer', color: 'var(--text)',
 }
 // where a popover sits; how it looks is `Menu`'s.
@@ -53,7 +56,7 @@ export function Picker({ value, options, placeholder, onPick, width }) {
           dropdown rule (98's sunken field + raised ▾ button) hangs on, and it
           matches nothing in any other theme. aria-expanded goes with it, since
           that rule presses the button in while the list is open. */}
-      <div onClick={() => setOpen((v) => !v)} className="v2-select-trigger" aria-expanded={open}
+      <div onClick={() => setOpen((v) => !v)} className="v2-select-trigger v2-picker" aria-expanded={open}
         style={{ ...CTRL, borderColor: open ? 'var(--accent)' : 'var(--edge)' }}>
         <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? 'var(--text)' : 'var(--muted)' }}>
           {cur ? cur.label : placeholder}

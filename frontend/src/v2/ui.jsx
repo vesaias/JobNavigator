@@ -1682,10 +1682,11 @@ export function MoveArrows({ onUp, onDown, upOff, downOff, style, className }) {
 // `title` (round 7 #4) is the window's NAME: the string a themed caption bar
 // shows. `titlebar` stays as the older, richer spelling for a caller that wants
 // nodes rather than a string; `title` is what every screen passes, because the
-// same string is also the body heading it replaces. `prompt` marks the small
-// message-box form, whose caption carries only ×.
+// same string is also the body heading it replaces. There is no small-window
+// variant: round 8 #11 dropped the `prompt` flag, so a confirm box and a full
+// modal wear the same caption and differ only in size.
 export function ModalPanel({
-  width = 480, as, onSubmit, onClose, escape = true, escapeCapture = false, labelledBy, zIndex = 70, titlebar, title, prompt,
+  width = 480, as, onSubmit, onClose, escape = true, escapeCapture = false, labelledBy, zIndex = 70, titlebar, title,
   children, style, className, scrimStyle, scrimProps,
 }) {
   useEscape(onClose, escape && !!onClose, escapeCapture)
@@ -1710,7 +1711,7 @@ export function ModalPanel({
           borderRadius: 'var(--radius-modal)', boxShadow: 'var(--modal-shadow)', padding: BPAD,
           display: 'flex', flexDirection: 'column', minHeight: 0, ...style,
         }}>
-        {chrome && <HeaderRow variant="titlebar" prompt={prompt} onClose={onClose}>{titlebar ?? title}</HeaderRow>}
+        {chrome && <HeaderRow variant="titlebar" onClose={onClose}>{titlebar ?? title}</HeaderRow>}
         {children}
       </Panel>
     </div>
@@ -1782,7 +1783,7 @@ const TITLE_GLYPH = {
 }
 export function HeaderRow({
   as, variant = 'modal', pad, bg, line, soft, strong, height, align = 'flex-start',
-  onClose, prompt, id, children, style, className, ...rest
+  onClose, id, children, style, className, ...rest
 }) {
   const tone = line || (strong ? 'strong' : soft ? 'soft' : 'line')
   const El = as === 'header' ? 'header' : 'div'
@@ -1795,9 +1796,13 @@ export function HeaderRow({
   // So `_` and `□` render at --disabled-ink with no handler, no tab stop and
   // aria-disabled, and only `×` acts.
   //
-  // `prompt` is the small-dialog form — ConfirmDialog and Settings' askText —
-  // which keeps the single ×. A 98 message box had exactly one control too, so
-  // this is the same rule applied at the other size rather than an exception.
+  // Round 8 #11 REVERTS round 7's `prompt` exception (a small dialog kept the
+  // single ×). Every window in this theme now wears the same caption — gradient,
+  // bold white name on the pixel face, `_ □ ×` with the first two disabled — and
+  // the ONLY difference between a confirm box and a full modal is its size. The
+  // user's reference screenshot of a classic 98 message box shows all three
+  // controls, and 98.css's `.title-bar-controls` block draws them for every
+  // window it documents rather than for a subset.
   //
   // The glyphs are 98.css's own pixel SVGs rather than text: `_ □ ×` in a UI
   // face are three different optical sizes sitting on three different baselines,
@@ -1821,18 +1826,14 @@ export function HeaderRow({
       }}>
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
-          {!prompt && (
-            <>
-              <span className="v2-raised" aria-label="Minimize" aria-disabled="true" title="Minimize"
-                style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundPosition: 'bottom 3px left 4px', cursor: 'default' }} />
-              <span className="v2-raised" aria-label="Maximize" aria-disabled="true" title="Maximize"
-                style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundPosition: 'top 2px left 3px', cursor: 'default' }} />
-            </>
-          )}
+          <span className="v2-raised" aria-label="Minimize" aria-disabled="true" title="Minimize"
+            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundPosition: 'bottom 3px left 4px', cursor: 'default' }} />
+          <span className="v2-raised" aria-label="Maximize" aria-disabled="true" title="Maximize"
+            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundPosition: 'top 2px left 3px', cursor: 'default' }} />
           <span className="v2-raised"
             {...(onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
             style={{
-              ...glyphBox, marginLeft: prompt ? 0 : 2,
+              ...glyphBox, marginLeft: 2,
               backgroundImage: TITLE_GLYPH.close, backgroundPosition: 'top 3px left 4px',
               cursor: onClose ? 'pointer' : 'default',
             }} />
@@ -1945,9 +1946,14 @@ export function Notice({ tone = 'warn', glyph = '▲', action, children, style, 
 
 // ── Label / Helper / Heading / PageTitle ────────────────────────────────────
 // Label canonical: muted · 10 · uppercase · .13em. `size="lg"` is the 11px form.
+// The two stops go through --label-size / --label-size-lg rather than --t-10 /
+// --t-11 directly (round 8 #8): the ROLE is what a theme wants to move, and
+// win98 sets both to its one UI text size, where the shared caps stops would
+// have put a Label 2px under everything around it. Base values are those same
+// --t-* stops, so no other theme moves.
 const LABEL_SIZE = {
-  md: { fontSize: 'var(--t-10)', lineHeight: '15px' },
-  lg: { fontSize: 'var(--t-11)', lineHeight: '16px' },
+  md: { fontSize: 'var(--label-size)', lineHeight: '15px' },
+  lg: { fontSize: 'var(--label-size-lg)', lineHeight: '16px' },
 }
 export function Label({ size = 'md', htmlFor, title, children, style, className }) {
   const st = {
