@@ -1483,7 +1483,7 @@ function ScorePill({ value, busy, size }) {   // the tile paints from --sc-*, no
       fontSize: `calc(var(--t-14) * var(--ring-numeral-scale-${sm ? 'sm' : 'md'}))`,
       lineHeight: 1, letterSpacing: '-.01em',
     }}>
-      {busy ? <Spinner size={sm ? 9 : 12} /> : (
+      {busy ? <Spinner size={sm ? 15 : 22} weight="bold" /> : (
         <>
           {value == null ? '—' : value}
           <span style={{
@@ -1518,7 +1518,7 @@ function ScoreBar({ value, busy, ink, size }) {
       // measured against the feed row. Both 0px in the base blocks.
       transform: `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
     }}>
-      {busy ? <Spinner size={sm ? 9 : 12} /> : (
+      {busy ? <Spinner size={sm ? 15 : 22} weight="bold" /> : (
         <>
           {/* --numeral-face, not --font-mono: this is a numeral, and saas puts
               numerals on its sans (round-5 handover §2). Base value is --mono. */}
