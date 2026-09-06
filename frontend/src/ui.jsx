@@ -1516,7 +1516,8 @@ function ScoreBar({ value, busy, ink, size }) {
       // Per SIZE, like --ring-shift-*: the sm bar sits in the report band, whose
       // neighbours it already lines up with, so its shift stays 0; md is the one
       // measured against the feed row. Both 0px in the base blocks.
-      transform: `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
+      // the settled stack is numeral + gap + track, so its shift centres the numeral on the row; a lone spinner needs half of it
+      transform: busy ? `translateY(calc(var(--ring-bar-shift-${sm ? 'sm' : 'md'}) / 2))` : `translateY(var(--ring-bar-shift-${sm ? 'sm' : 'md'}))`,
     }}>
       {busy ? <Spinner size={sm ? 15 : 22} weight="bold" /> : (
         <>
