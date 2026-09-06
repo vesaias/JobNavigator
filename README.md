@@ -82,7 +82,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                   TRACK                                     │
 │                                                                             │
-│   Autofill ─── ATS forms + AI answers to free-text questions, from the Persona│
+│   Autofill ─── ATS forms + AI answers to free-text questions from the Persona │
 │   Applications  Stages, interviews, notes, prep handover, funnel and Sankey │
 │   Tracer ───── Unique links per resume/letter, tracks who opened them       │
 │   Gmail ────── Auto-detects responses, updates application status           │
