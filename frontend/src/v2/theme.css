@@ -1823,28 +1823,37 @@
    rule above must not wipe it out when the pointer crosses the selected row. */
 .v2-row[aria-current="true"]:hover { background:var(--row-selected) !important; }
 .v2-rail-cell { display:flex; align-items:center; justify-content:center; cursor:pointer; }
-/* Round 12: in win98 each glyph cell is its own raised push-button (a 1px
-   four-tone bevel, the same --bevel-raised-shadow corner stack every other
-   raised control wears) instead of the borderless glyph + underline divider
-   the base design draws — the underline read as no border at all against
-   --surface in LIGHT, and the base design left the cell background
-   transparent, which showed the row's own wash through it. That transparent
-   ground is what broke the border in DARK: the row-hover/row-selected wash
-   (--hover-soft #4a5a5a) clears the shadow-edge tone but NOT the highlight
-   edge (#58696a vs #4a5a5a = 1.26:1), and the ⋯ cell's old open-state fill
-   (--surface-2 #1e2828) clears the highlight edge but NOT the shadow edge
-   (#26302f vs #1e2828 = 1.11:1) — every ground the transparent cell could
-   show landed one edge under 1.5:1. An opaque --surface face is the one
-   ground both edges clear (#58696a 1.56:1, #26302f 1.52:1 — the same pairing
-   every other raised control in this theme already uses), so REST repoints
-   there with !important, ahead of the two hover rules below so THEY still
-   win the tie on :hover (equal specificity, source order) — box-shadow is
-   untouched by hover, so the bevel itself never needs a state of its own.
-   !important also quietly retires the ⋯ cell's inline surface-2 open fill
-   (it fails contrast above); the ink already swaps on open, and the raised
-   -> inset flip below reads as "held down" the way a toggled 98 button does. */
-.jn-v2[data-theme="win98"] .v2-rail-cell { background:var(--surface) !important; border-bottom:0 !important; box-shadow:var(--bevel-raised-shadow) !important; }
-.jn-v2[data-theme="win98"] .v2-rail-cell:active { box-shadow:var(--bevel-inset-shadow) !important; }
+/* Round 13: reverts round 12's raised-push-button treatment (bevel + opaque
+   --surface fill on every glyph cell) — the cells are flat again, exactly as
+   before round 12, with the row's own wash showing through.
+   Round 12 read the underline/left-rule as "no border at all" and chased that
+   by boxing each cell in a bevel. The real defect was narrower: the JSX draws
+   these dividers off --line-soft (JobFeed.jsx's ♥/✕ borderBottom and the rail
+   column's borderLeft), and --line-soft is the wrong token in THIS theme only.
+   Win98 light repoints --line-soft to #dfdfdf — the win98 light block already
+   calls this out as the list-well grey ("the very grey the list well below is
+   painted, so every row divider vanished") — which sits at 1.37:1 on the
+   #c0c0c0 --surface rest state, under the 1.5:1 a hairline needs to read as a
+   line and not a smear. Win98 dark repoints --line-soft to #4a5a5a, which is
+   byte-for-byte --hover-soft/--row-hover/--row-selected — the divider and the
+   wash it sits on are the same colour, so the line disappears the instant a
+   row is hovered or picked (contrast 1:1).
+   --line is what the rest of this same card already draws dividers in: the
+   Row's own bottom divider is --row-line, which win98 points at --line (not
+   --line-soft, in the same two blocks), and the "|"/"·" separators in the
+   row's company/location/salary lines (JobFeed.jsx) are var(--line) too. Pointing
+   the rail's two separators at the card's own --line brings them into that
+   set instead of leaving them on the softer token, and clears both grounds:
+   light #808080 on #c0c0c0 = 2.17:1 (rest) / on #ffffff hover-soft = 3.95:1;
+   dark #6f8484 on #3e4c4c = 2.27:1 (rest) / on #4a5a5a hover-soft = 1.83:1 —
+   every ground at or above the 1.3:1 floor an adjacent-hue hairline is held
+   to here, where before the dark hover case was 1:1 (invisible, identical to
+   the wash) and the light rest case was 1.37:1 (barely there). !important:
+   JobFeed.jsx sets the colour inline; only the colour is touched, the width
+   and style stay as JobFeed.jsx drew them. */
+.jn-v2[data-theme="win98"] .v2-rail-save,
+.jn-v2[data-theme="win98"] .v2-rail-skip { border-bottom-color:var(--line) !important; }
+.jn-v2[data-theme="win98"] .v2-rail-col { border-left-color:var(--line) !important; }
 .v2-rail-copy:hover { background:var(--cell-more-hover-bg) !important; color:var(--cell-more-hover-ink) !important; }   /* the cells set inline colour */
 .v2-rail-save:hover { background:var(--cell-save-hover-bg) !important; color:var(--cell-save-hover-ink) !important; }
 .v2-rail-skip:hover { background:var(--warn-soft) !important; color:var(--warn) !important; }

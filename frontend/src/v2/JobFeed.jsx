@@ -1096,7 +1096,8 @@ export default function V2JobFeed() {
                       </div>
                     </div>
                     {/* action column */}
-                    <div style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
+                    {/* ui: keep — v2-rail-col names the left rule for theme.css's win98 override (round 13); no other theme reads the class */}
+                    <div className="v2-rail-col" style={{ position: 'relative', flex: '0 0 27px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--line-soft)' }} onClick={(e) => e.stopPropagation()}>
                       {/* ui: keep — v2-rail-cell glyph cells (♥ / ✕ / ⋯); rail text is out of scope for this step */}
                       {/* the heart carries the saved state itself, so the control the user clicked answers immediately */}
                       <div className="v2-rail-save v2-rail-cell" title={j.saved ? 'Unsave (s)' : 'Save (s)'} onClick={() => saveJob(j)} style={{ flex: 1, fontSize: 11, color: j.saved ? 'var(--accent)' : 'var(--text-2)', borderBottom: '1px solid var(--line-soft)' }}>♥</div>
