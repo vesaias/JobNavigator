@@ -1,6 +1,7 @@
 # JobNavigator
 
-Self-hosted job-hunt automation.
+**Self-hosted job-hunt automation.**
+
 Scrape career pages and aggregators, score jobs against your résumés with an LLM, tailor résumés and cover letters, auto-fill applications from your persona, get Telegram alerts, track every application.
 
 <p align="center">
