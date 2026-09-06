@@ -864,7 +864,10 @@ export function Menu({ role = 'menu', onDismiss, backdropZ, children, ariaLabel,
   const panel = (
     <div role={role} aria-label={ariaLabel} className={cx('v2-menu', 'v2-raised', className)} style={{
       background: 'var(--menu-bg)', border: 'var(--bw-panel) solid var(--menu-border)',
-      borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: bpad('5px'),
+      // --menu-pad is `5px` in the base blocks — the literal this line carried —
+      // so the default theme computes exactly what it did; win98 takes 2 (its
+      // raised frame is the gap, and 98 runs the Hilight row out to it).
+      borderRadius: 'var(--radius-menu)', boxShadow: 'var(--menu-shadow)', padding: bpad('var(--menu-pad)'),
       display: 'flex', flexDirection: 'column', gap: 1, ...style,
     }}>{children}</div>
   )
@@ -1915,13 +1918,21 @@ export function HeaderRow({
         <span style={{ marginLeft: 'auto', flex: '0 0 auto', display: 'flex', gap: 2 }}>
           <span className="v2-raised" aria-label="Minimize" aria-disabled="true" title="Minimize"
             style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.min, backgroundSize: '9px 3px', backgroundPosition: 'bottom 4px left 5px', cursor: 'default' }} />
+          {/* The □ and × sat a pixel down-and-right of the optical box the _ holds.
+              Glyph centres in the 20x18 button were: _ (9x3 at bottom 4 / left 5)
+              x9.5; □ (13x13 at top 3 / left 4) x10.5, y9.5; × (12x11 at top 4 /
+              left 5) x11, y9.5 — against a box centre of x10, y9. Both move 1px up
+              and 1px left, which puts □ at x9.5/y8.5 (the _ 's own horizontal bias)
+              and × at x10/y8.5. The glyph is the background of the button itself,
+              so the disabled pair moves with it — there is no second drawing for
+              the greyed state, only the #808080 fill baked into min/max. */}
           <span className="v2-raised" aria-label="Maximize" aria-disabled="true" title="Maximize"
-            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundSize: '13px 13px', backgroundPosition: 'top 3px left 4px', cursor: 'default' }} />
+            style={{ ...glyphBox, backgroundImage: TITLE_GLYPH.max, backgroundSize: '13px 13px', backgroundPosition: 'top 2px left 3px', cursor: 'default' }} />
           <span className="v2-raised"
             {...(onClose ? { ...act(onClose, false), title: 'Close', 'aria-label': 'Close' } : { 'aria-hidden': 'true' })}
             style={{
               ...glyphBox, marginLeft: 2,
-              backgroundImage: TITLE_GLYPH.close, backgroundSize: '12px 11px', backgroundPosition: 'top 4px left 5px',
+              backgroundImage: TITLE_GLYPH.close, backgroundSize: '12px 11px', backgroundPosition: 'top 3px left 4px',
               cursor: onClose ? 'pointer' : 'default',
             }} />
         </span>

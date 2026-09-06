@@ -183,6 +183,10 @@
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
   --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
   --menu-item-danger-ink:var(--bad); --menu-item-sep:var(--line-soft);
+  /* The menu panel's own inner padding, on top of --bevel-pad. `5px` is the
+     literal Menu carried, so no theme moves; win98 takes 2, because there the
+     raised frame IS the gap and 98 runs its Hilight row out to it. */
+  --menu-pad:5px;
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
   --scrim-bg:var(--scrim);
@@ -342,6 +346,7 @@
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-highlight:transparent; --bevel-shadow:transparent;
   /* A bevelled theme paints all four tones inside the box (box-shadow, border:0)
      so the two mixed corner pixels land in one tone instead of a mitre. The two
      border pixels it gives up come back as padding: every bevel carrier writes
@@ -567,6 +572,10 @@
   --menu-item-ink:var(--text-2); --menu-item-hover:var(--surface-2);
   --menu-item-on-bg:var(--accent-soft); --menu-item-on-ink:var(--accent);
   --menu-item-danger-ink:var(--bad); --menu-item-sep:var(--line-soft);
+  /* The menu panel's own inner padding, on top of --bevel-pad. `5px` is the
+     literal Menu carried, so no theme moves; win98 takes 2, because there the
+     raised frame IS the gap and 98 runs its Hilight row out to it. */
+  --menu-pad:5px;
   /* modal + drawer */
   --modal-bg:var(--surface); --modal-border:var(--line); --modal-shadow:var(--shadow-modal);
   --scrim-bg:var(--scrim);
@@ -726,6 +735,7 @@
   --focus-shadow:0 0 0 2px var(--focus-ring); --focus-outline:none;
   --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none;
   --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-highlight:transparent; --bevel-shadow:transparent;
   /* A bevelled theme paints all four tones inside the box (box-shadow, border:0)
      so the two mixed corner pixels land in one tone instead of a mitre. The two
      border pixels it gives up come back as padding: every bevel carrier writes
@@ -1116,7 +1126,7 @@
   /* the rail's own version of the row edge: an inset tile PLUS a 3px left bar */
   --rail-active-bg:#292524; --rail-active-ink:var(--rail-ink); --rail-active-mark:3px solid #fafaf9; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 8px;
   --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
-  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none; --bevel-highlight:transparent; --bevel-shadow:transparent;
   /* AI = the primary, no violet; the ✦ glyph its callers write is the marker.
      The whole --ai family IS the accent family, so an `ai` button paints exactly
      what a `primary` one does, hover and pressed included. */
@@ -1213,7 +1223,7 @@
   --row-selected:var(--surface-2); --row-selected-ink:inherit; --row-selected-edge:inset 3px 0 0 var(--text-2); --row-line-style:solid; --divider:1px solid var(--line);
   --rail-active-bg:#2e2926; --rail-active-ink:var(--rail-ink); --rail-active-mark:3px solid #d6d3d1; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0 8px;
   --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
-  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none; --bevel-highlight:transparent; --bevel-shadow:transparent;
   /* AI = the primary, no violet — see the light block */
   --ai:#f5f5f4; --ai-ink:#1c1917; --ai-soft:var(--accent-soft);
   --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
@@ -1319,7 +1329,7 @@
   --row-selected:var(--surface-2); --row-selected-ink:inherit; --row-selected-edge:none; --row-line-style:solid; --divider:1px solid var(--line);
   --rail-active-bg:var(--accent); --rail-active-ink:#ffffff; --rail-active-mark:3px solid transparent; --rail-count-active:color-mix(in srgb, var(--rail-active-ink) 80%, transparent); --rail-item-inset:0;
   --focus-shadow:0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); --focus-outline:none;
-  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none; --bevel-highlight:transparent; --bevel-shadow:transparent;
   --ai:#7c3aed; --ai-ink:#ffffff; --ai-soft:#ede9fe; --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:color-mix(in oklab, var(--ai) 88%, black); --btn-ai-pressed-bg:color-mix(in oklab, var(--ai) 78%, black);
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
@@ -1411,7 +1421,7 @@
      every focused field. --input-border-focus stays var(--accent) from the base
      layer; light saas keeps the soft halo, whose blue-50 is not a wash. */
   --focus-shadow:0 0 0 2px var(--accent); --focus-outline:none;
-  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none;
+  --bevel-raised-border:none; --bevel-raised-color:transparent; --bevel-raised-shadow:none; --bevel-inset-border:none; --bevel-inset-color:transparent; --bevel-inset-shadow:none; --bevel-highlight:transparent; --bevel-shadow:transparent;
   --ai:#a78bfa; --ai-ink:#1e1033; --ai-soft:#2e1f5e; --btn-ai-bg:var(--ai); --btn-ai-ink:var(--ai-ink);
   --btn-ai-hover-bg:color-mix(in oklab, var(--ai) 88%, black); --btn-ai-pressed-bg:color-mix(in oklab, var(--ai) 78%, black);
   --numeral-face:var(--sans); --numeral-variant:tabular-nums;
@@ -1468,8 +1478,19 @@
      --titlebar-face is the ONE place the pixel face survives: a caption bar is
      11px bold at its native size, which is exactly where a bitmap face is
      correct and nowhere else (round 7 #4). @font-face pair at the foot of this
-     file; Microsoft Sans Serif bold is the fallback if the woff2 fails. */
-  --serif:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --sans:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
+     file; Microsoft Sans Serif bold is the fallback if the woff2 fails.
+     Round 11 · the DISPLAY face (--serif, read through --font-display) is
+     TAHOMA, not Microsoft Sans Serif. --serif is what the Feed's job-card title,
+     the drawer/dialog titles, the rail logotype, Heading/PageTitle, the Stats
+     KPI and section heads and the two average-fit numerals all set themselves
+     in. Microsoft Sans Serif is the CONTROL face — it is MS Sans at UI sizes and
+     nothing else, and at 17-27px its bitmap-derived shapes get thin and loose.
+     Tahoma is the same era and the same machine (98 shipped it, and used it for
+     exactly this: headings and any run above the 11px UI size), so a display run
+     stays period-correct while gaining a face built to scale. MS Sans stays the
+     first fallback for the body/control stacks below and for --titlebar-face,
+     which is untouched: a caption bar is 11px bold pixel type. */
+  --serif:Tahoma,'Microsoft Sans Serif',Verdana,Geneva,sans-serif; --sans:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
   --font-ascii:'Lucida Console','Courier New',Consolas,monospace;
   --titlebar-face:'Pixelated MS Sans Serif','Microsoft Sans Serif',Tahoma,sans-serif;
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
@@ -1506,7 +1527,14 @@
      the 15px stop (13 -> 15); sm is the report band's, where it already lines up
      with its neighbours, so it stays. The "+N résumé reports" counter drops 3px
      with it, clear of the [█░] run the taller numeral pushes down. */
-  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-4px;
+  /* Round 11 · the counter drops 5px further (-4 -> -9). The md ascii mark is a
+     15px numeral over a 2px gap over an 11px [█░] run = a 28px column, and at
+     -4 the 16px badge's centre sat at y24 against the bar row's y17-28 — its top
+     half still overlapping the numeral above the bar. -9 puts the badge's centre
+     at y29, one pixel clear under the run, which is where the round-2 ring drew
+     it. The 44px ring cell is not clipped and the Feed row keeps 10px of pad
+     under it, so the badge stays inside the row. */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-9px;
   --weight-medium:400; --weight-semibold:700;   /* the pixel face has 400 and 700 only */
   /* the DEFAULT PUSH BUTTON: grey face, bold label, and the 1px window-frame
      ring the theme-named rule at the foot of this file appends to the bevel.
@@ -1540,6 +1568,10 @@
   --bevel-raised-shadow:inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #ffffff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
   --bevel-inset-border:0; --bevel-inset-color:transparent;
   --bevel-inset-shadow:inset -1px -1px 0 #ffffff, inset 1px 1px 0 #808080, inset -2px -2px 0 #dfdfdf, inset 2px 2px 0 #0a0a0a;
+  /* single-tone bevel pair (the #dfdfdf/#808080 pair --bevel-inset-shadow itself
+     mixes in, not its white/black outer pair) for the rail foot's sunken frame
+     and the rail's right-edge bar, so those rules carry no literal hex. */
+  --bevel-highlight:#dfdfdf; --bevel-shadow:#808080;
   --bevel-pad:1px;   /* the two border pixels the stack gives up, handed back as padding */
   --check-style:win98;   /* 13px sunken tick box / 12px round radio, drawn in ui.jsx */
   /* 98's toggle: the OFF track is the client white of a sunken field, not a filled
@@ -1559,8 +1591,13 @@
      something generated", which is the one distinction 98 draws in colour and
      the only thing left to separate an ai button from a plain one here. The
      glyph is a text child, so it takes the same ink for free.
-     Contrast: #0000ff on #c0c0c0 = 4.72:1, #9cc0ff on #3e4c4c = 4.86:1. */
-  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--ai);
+     Round 11: the button's ink is the HILIGHT NAVY (--accent, #000080), not the
+     link blue --ai keeps for the ✦ marks and the Tag. Navy is 98's own "this
+     control is the system's" colour and it is the one already on the rail's
+     active item and the caption bar, so an ai button reads as part of the theme
+     rather than as a hyperlink that grew a bevel. The ✦ is a text child and
+     takes the same ink for free. Contrast: #000080 on #c0c0c0 = 7.7:1. */
+  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--accent);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   /* Round 7 #6: the distribution's five bands were --line-strong / --sand /
@@ -1591,7 +1628,15 @@
      :active (the sunken stack, plus --pressed-shift) is the press. */
   --pill-border-hover:var(--pill-border); --pill-ink-hover:var(--pill-ink);
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
-  --link-ink:#0000ff; --link-ink-hover:#800080;   /* 98's link-blue and its visited purple */
+  /* Round 11 · --link-ink-hover was #800080, 98's VISITED purple, and that is a
+     state and not a hover: nothing in 98 turns purple under the pointer. It also
+     reaches further than links, because `.v2-hover-accent-text` is the class the
+     bare text triggers wear — the Feed's "Sort ▾" and Applications' sort — so
+     those two swung purple on hover while every other trigger in the theme held
+     its ink. --text is what `.jn-v2 a:hover` computes anyway and what the dark
+     block already had, so the hover is now a one-step darkening off --muted and
+     nothing changes hue. --link-ink keeps 98's link blue. */
+  --link-ink:#0000ff; --link-ink-hover:var(--text);
   /* Round 9 #11 · the dashed add line's ink. The base value is --accent, which
      in LIGHT is the Hilight navy on the #c0c0c0 chrome (7.7:1) and is kept; in
      DARK it is #008080 on the #3e4c4c teal chrome — teal on teal, 1.9:1 — so
@@ -1615,6 +1660,12 @@
         expected-W98r8.md §9, which also says what to check on a real Windows
         machine, since the face is not installed in the test container. */
   --menu-item-hover:var(--accent); --picker-bg:var(--input-bg); --kpi-shift:-1px;
+  /* Round 11 · a 98 menu's inner gap. The panel already carries the raised bevel
+     (2px of tone per side) plus --bevel-pad, and 5px of face on top of that left
+     a wide grey margin the navy Hilight row floated inside. 98 runs the row out
+     to the frame, so the face gap drops to 2 and the row reads as a full-width
+     band. Base keeps 5 — this is the only theme with a frame to run out to. */
+  --menu-pad:2px;
   /* Still slim: no bevel is expressible through scrollbar-color. The webkit path
      gets the dithered trough + bevelled thumb in the rules at the foot of this file. */
   --scroll-thumb:#808080; --scroll-track:#dfdfdf;
@@ -1636,7 +1687,9 @@
      a tone that reads on this ground / on the --accent-soft "picked" ground */
   --navlink-ink:var(--text-2); --navlink-hover-ink:var(--text); --spinner-ink:var(--rail-accent);
   --tag-accent-ink:var(--text); --menu-item-on-ink:var(--text); --seg-on-ink:var(--text); --choice-on-ink:var(--text); --glyph-on-ink:var(--text);
-  --serif:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --sans:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
+  /* round 11 · Tahoma is the DISPLAY face, MS Sans stays the control face — see
+     the light block; --titlebar-face is untouched */
+  --serif:Tahoma,'Microsoft Sans Serif',Verdana,Geneva,sans-serif; --sans:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif; --mono:'Microsoft Sans Serif',Tahoma,Verdana,Geneva,'Segoe UI',system-ui,sans-serif;
   --font-ascii:'Lucida Console','Courier New',Consolas,monospace;
   --titlebar-face:'Pixelated MS Sans Serif','Microsoft Sans Serif',Tahoma,sans-serif;
   --radius-mark:0; --radius-inline:0; --radius-mini:0; --radius-field:0; --radius-row:0; --radius-cell:0; --radius-card:0; --radius-menu:0; --radius-modal:0; --radius-control:0; --radius-rail-item:0;
@@ -1648,7 +1701,7 @@
      stops: md 12, lg 13) — see the light block */
   --btn-weight:400; --title-weight:700; --label-weight:700; --label-tracking:0; --label-tracking-strip:0; --tag-tracking:0; --label-case:none; --display-tracking:0; --label-tracking-scale:0;
   --label-size:12px; --label-size-lg:13px;   /* round 10 · Q11 answered, see the light block */
-  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-4px;   /* round 9 #3 */
+  --ring-ascii-num-sm:var(--t-13); --ring-ascii-num-md:var(--t-15); --ring-count-shift:-9px;   /* round 9 #3; round 11 drops the counter 5px further, see the light block */
   --weight-medium:400; --weight-semibold:700;
   --btn-primary-bg:var(--surface); --btn-primary-ink:var(--text); --btn-danger-bg:var(--surface); --btn-danger-ink:var(--bad);
   --btn-primary-hover-bg:var(--btn-primary-bg); --btn-primary-pressed-bg:var(--btn-primary-bg); --btn-danger-hover-bg:var(--btn-danger-bg); --btn-danger-pressed-bg:var(--btn-danger-bg); --pressed-shift:translate(1px,1px); --pressed-wash:var(--surface);
@@ -1670,6 +1723,8 @@
   --bevel-raised-shadow:inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #8fa3a3, inset -2px -2px 0 #26302f, inset 2px 2px 0 #58696a;
   --bevel-inset-border:0; --bevel-inset-color:transparent;
   --bevel-inset-shadow:inset -1px -1px 0 #8fa3a3, inset 1px 1px 0 #26302f, inset -2px -2px 0 #58696a, inset 2px 2px 0 #0a0a0a;
+  /* dark's own #dfdfdf/#808080 pair, at the same two positions in the stack above. */
+  --bevel-highlight:#58696a; --bevel-shadow:#26302f;
   --bevel-pad:1px;
   --check-style:win98;
   /* 98's toggle: the OFF track is the client white of a sunken field, not a filled
@@ -1685,8 +1740,14 @@
      something generated", which is the one distinction 98 draws in colour and
      the only thing left to separate an ai button from a plain one here. The
      glyph is a text child, so it takes the same ink for free.
-     Contrast: #0000ff on #c0c0c0 = 4.72:1, #9cc0ff on #3e4c4c = 4.86:1. */
-  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--ai);
+     Round 11 asks for the HILIGHT accent instead of the link blue (see the light
+     block, where it is #000080 at 7.7:1). Here the token is a POINTER, and the
+     literal `var(--accent)` is #008080 on the #3e4c4c teal chrome = 1.87:1 — the
+     exact failure round 7 #17 audited eight other names out of. So dark takes
+     --rail-accent, which IS --accent lifted to read on this ground and is what
+     --spinner-ink and --dist-4 already resolve to for the same reason.
+     Contrast: #000080 on #c0c0c0 = 7.7:1, #4fd1c5 on #3e4c4c = 4.80:1. */
+  --btn-ai-bg:var(--btn-primary-bg); --btn-ai-ink:var(--rail-accent);
   --btn-ai-hover-bg:var(--btn-ai-bg); --btn-ai-pressed-bg:var(--btn-ai-bg);
   --sc-hi-bg:var(--accent-soft); --sc-hi:var(--good); --sc-mid-bg:var(--warn-soft); --sc-mid:var(--warn); --sc-lo-bg:var(--bad-soft); --sc-lo:var(--bad); --sc-none-bg:var(--surface-2); --sc-none:var(--muted);
   /* round 7 #6: the five distribution bands, bad -> good (see the light block) */
@@ -1698,12 +1759,13 @@
   --chip-ink-hover:var(--text); --card-bg-hover:var(--line-soft); --card-border-hover:var(--line);   /* round 7 #11 */
   --pill-border-hover:var(--pill-border); --pill-ink-hover:var(--pill-ink);   /* round 9 #13, see the light block */
   --input-border-hover:var(--bevel-inset-color); --pill-on-bg:var(--accent); --pill-on-ink:var(--accent-ink); --pill-on-border:var(--accent); --pill-on-hover-bg:var(--accent); --chip-on-bg:var(--accent); --chip-on-ink:var(--accent-ink); --chip-on-border:var(--accent);
-  --link-ink:#9cc0ff; --link-ink-hover:#ffffff;   /* #8ab4ff was 4.29:1 on the chrome (round 7 #17) */
+  --link-ink:#9cc0ff; --link-ink-hover:var(--text);   /* #8ab4ff was 4.29:1 on the chrome (round 7 #17); round 11 names --text for the literal #ffffff this already was, so both win98 blocks say the same thing — dark does not move */
   --dashadd-ink:var(--text); --dashadd-ink-hover:var(--text);   /* round 9 #11: --accent was teal on teal chrome (1.9:1) */
   --tag-size:10.5px;   /* round 7 #1 */
   /* round 8: the Hilight menu hover (#6), the Picker's white field half (#7)
      and the KPI numeral's 2px lift (#9) — see the light block */
   --menu-item-hover:var(--accent); --picker-bg:var(--input-bg); --kpi-shift:-1px;
+  --menu-pad:2px;   /* round 11: the Hilight row runs out to the raised frame, see the light block */
   --scroll-thumb:#5a8f8f; --scroll-track:#33403f;
   --title-bar:linear-gradient(90deg,#008080,#20a0a0); --title-bar-ink:#ffffff;
   --head-bg-page:var(--surface); --chip-bg:var(--surface);
@@ -2269,8 +2331,11 @@
    shadow, the same pair it draws down the side of a toolbar. */
 .jn-v2[data-theme="win98"] .v2-rail { position:relative; }
 .jn-v2[data-theme="win98"] .v2-rail::after {
+  /* top:0/bottom:0, no margin or inset of its own, so this runs the rail's full
+     height edge to edge in both states — the ::after is positioned off the
+     rail's own box, unaffected by the [data-open="true"] rail's outer margin below. */
   content:""; position:absolute; top:0; right:0; bottom:0; width:2px; z-index:2; pointer-events:none;
-  background:linear-gradient(90deg, var(--edge) 0 1px, var(--line-soft) 1px 2px);
+  background:linear-gradient(90deg, var(--bevel-shadow) 0 1px, var(--line-soft) 1px 2px);
 }
 .jn-v2[data-theme="win98"] .v2-rail[data-open="true"] { margin:4px 0 4px 4px; }
 /* ── Round 8 Q5 · the COLLAPSED rail is a toolbar, not an empty tree well ─────
@@ -2379,7 +2444,11 @@
    would match the anchor AND the last div rather than the first row. */
 .jn-v2[data-theme="win98"] .v2-rail .v2-railfoot {
   background:var(--surface); color:var(--text);
-  border-top:0 !important; margin:0 !important; box-shadow:none;
+  border-top:0 !important; margin:0 !important;
+  /* the foot's own sunken frame: the same #dfdfdf/#808080 pair the field and
+     list wells use, just the two-tone single-pixel version — no window-frame
+     black here, this is a shallow well, not a control edge. */
+  box-shadow:inset -1px -1px 0 var(--bevel-highlight), inset 1px 1px 0 var(--bevel-shadow);
 }
 /* Round 9 #7 · the three foot rows are told apart by the app's own divider — one
    --line hairline, the same rule every card in the pane uses — and not by the
