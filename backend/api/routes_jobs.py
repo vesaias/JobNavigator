@@ -362,6 +362,111 @@ def list_job_verdicts(
     return [r[0] for r in rows]
 
 
+# The Score menu's preset thresholds; `score_bands` answers "how many would each
+# of these leave?" over everything the other filters already narrowed to.
+_SCORE_BANDS = (70, 80, 90)
+# The fixed order the feed's H-1B menu lists verdicts in.
+_VERDICT_ORDER = {"likely": 0, "possible": 1, "unlikely": 2, "unknown": 3}
+
+
+@router.get("/facets")
+def job_facets(
+    status: Optional[str] = None,
+    company: Optional[str] = None,
+    source: Optional[str] = None,
+    h1b_verdict: Optional[str] = None,
+    min_score: Optional[int] = None,
+    saved: Optional[bool] = None,
+    title_search: Optional[str] = None,
+    remote: Optional[bool] = None,
+    min_salary: Optional[int] = None,
+    max_salary: Optional[int] = None,
+    search_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Every filter menu's options and counts in one answer, so the feed's menus
+    narrow each other instead of each showing global totals.
+
+    Takes the same query params as GET /jobs and runs them through the same filter
+    builder (`_apply_common_filters`). Each dimension is counted over the jobs
+    matching all the OTHER active filters but NOT its own — with Company = Acme
+    selected, `companies` still lists every other company that survives the rest of
+    the filters, so you can switch selection without clearing first.
+
+    Counts are over the whole result set, not the loaded page. A value that is
+    currently selected but no longer matches is still listed, with count 0, so the
+    menu can show it as picked instead of dropping it silently.
+
+    Returns {companies, sources, h1b_verdicts, statuses, score_bands}, each a list
+    of {name, count}; `score_bands` names the threshold ("70") and counts the jobs
+    at or above it with the score filter itself lifted.
+    """
+    expanded = _expand_company_filter(db, company)
+    base = dict(status=status, company=expanded, source=source, h1b_verdict=h1b_verdict,
+                min_score=min_score, saved=saved, title_search=title_search, remote=remote,
+                min_salary=min_salary, max_salary=max_salary, search_id=search_id)
+
+    def _counts(col, drop):
+        """(value, count) rows for one column with that column's own filter lifted."""
+        kw = dict(base)
+        kw[drop] = None
+        q = db.query(col, func.count(Job.id)).filter(col.isnot(None), col != "")
+        return _apply_common_filters(q, **kw).group_by(col).all()
+
+    def _pad(rows, selected):
+        """Keep a selected-but-now-empty value in the menu, at 0."""
+        have = {name for name, _ in rows}
+        return rows + [(v, 0) for v in selected if v not in have]
+
+    def _picked(raw):
+        return [v.strip() for v in (raw or "").split(",") if v.strip()]
+
+    # companies — aliases collapse onto their parent, as in /jobs/companies/list
+    from backend.models.db import build_company_lookup
+    lookup = build_company_lookup(db)
+    agg: dict[str, int] = {}
+    for name, cnt in _counts(Job.company, "company"):
+        co = lookup.get((name or "").lower())
+        cname = co.name if co else name
+        agg[cname] = agg.get(cname, 0) + cnt
+    # the selection is checked against the names the UI shows (canonical), not the
+    # alias-expanded list the query ran with
+    for picked in _picked(company):
+        co = lookup.get(picked.lower())
+        cname = co.name if co else picked
+        agg.setdefault(cname, 0)
+    companies = [{"name": n, "count": c}
+                 for n, c in sorted(agg.items(), key=lambda x: (-x[1], x[0].lower()))]
+
+    sources = [{"name": n, "count": c}
+               for n, c in sorted(_pad(_counts(Job.source, "source"), _picked(source)),
+                                  key=lambda x: x[0])]
+    verdicts = [{"name": n, "count": c}
+                for n, c in sorted(_pad(_counts(Job.h1b_verdict, "h1b_verdict"), _picked(h1b_verdict)),
+                                   key=lambda x: (_VERDICT_ORDER.get(x[0], 99), x[0]))]
+    statuses = [{"name": n, "count": c}
+                for n, c in sorted(_pad(_counts(Job.status, "status"), _picked(status)),
+                                   key=lambda x: x[0])]
+
+    # score bands: the score filter is the one lifted, so each preset says how many
+    # jobs it would leave from where the other filters already stand
+    score_kw = dict(base)
+    score_kw["min_score"] = None
+    score_bands = []
+    for n in _SCORE_BANDS:
+        q = _apply_common_filters(db.query(func.count(Job.id)), **score_kw)
+        score_bands.append({"name": str(n),
+                            "count": int(q.filter(Job.best_cv_score >= float(n)).scalar() or 0)})
+
+    return {
+        "companies": companies,
+        "sources": sources,
+        "h1b_verdicts": verdicts,
+        "statuses": statuses,
+        "score_bands": score_bands,
+    }
+
+
 @router.post("/save-from-extension")
 async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     """Save a job from the Chrome Extension to the Job Feed (no application created), running the same enrichment as LinkedIn passive capture: Extension search title/company filters, salary extraction, H-1B/body-exclusion scan, and auto-score when configured."""

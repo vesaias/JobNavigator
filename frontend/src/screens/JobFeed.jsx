@@ -208,6 +208,8 @@ export default function V2JobFeed() {
   const [sourceList, setSourceList] = useState([])
   const [sourceCounts, setSourceCounts] = useState({}); const [verdictCounts, setVerdictCounts] = useState({})
   const [verdictList, setVerdictList] = useState([])
+  const [statusCounts, setStatusCounts] = useState({})   // {status: n} — counted with the Status filter itself lifted
+  const [scoreBands, setScoreBands] = useState({})       // {"70": n, …} — what each Score preset would leave
   const [resumes, setResumes] = useState([])
   const [stats, setStats] = useState({ arrived_today: 0, unscored: 0 })
   const [picker, setPicker] = useState(null)      // {mode, jobs:[...]} — opens the Create-copy modal
@@ -260,15 +262,61 @@ export default function V2JobFeed() {
   useEffect(() => { setNumDraft({ min_score: filters.min_score, min_salary: filters.min_salary, max_salary: filters.max_salary }) }, [filters.min_score, filters.min_salary, filters.max_salary])
   const numTimer = useRef(null)
   const setNum = (key, v) => { setNumDraft((p) => ({ ...p, [key]: v })); clearTimeout(numTimer.current); numTimer.current = setTimeout(() => setF({ [key]: v }), 400) }
-  // The five screen-level facets settle as one, so the header doesn't flash "0 open roles" before each answers.
+  // The one filter set the list and every filter menu share. The default view is the
+  // OPEN set (new + saved); skipped/applied/ignored need an explicit Status filter.
+  const facetParams = useMemo(() => {
+    const p = {}
+    p.status = filters.status.length ? filters.status.join(',') : 'new,saved'
+    if (filters.company.length) p.company = filters.company.join(',')
+    if (filters.source.length) p.source = filters.source.join(',')
+    if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
+    if (filters.min_score !== '') p.min_score = filters.min_score
+    if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
+    if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
+    if (dSearch) p.title_search = dSearch
+    if (searchId) p.search_id = searchId
+    return p
+  }, [filters, dSearch, searchId])
+  // Read through a ref so `loadFacets` keeps one identity: it is a useSettled loader
+  // and an effect dependency, and a new function each render would re-run both.
+  const facetParamsRef = useRef(facetParams); facetParamsRef.current = facetParams
+  // One request for every menu. The backend counts each dimension over the jobs that
+  // match all the OTHER active filters but not its own, so the menus narrow each other
+  // (Status = New leaves only the companies/sources New jobs actually have) while a
+  // selected company can still be swapped for another. A selected value that no longer
+  // matches comes back at 0 rather than vanishing.
+  const loadFacets = useCallback(() => api.get('/jobs/facets', { params: facetParamsRef.current }).then(({ data }) => {
+    const named = (rows) => (rows || []).filter((x) => x && x.name != null)
+    setCompanyList(named(data.companies))
+    setSourceList(named(data.sources).map((x) => x.name))
+    setSourceCounts(Object.fromEntries(named(data.sources).map((x) => [x.name, x.count])))
+    setVerdictList(named(data.h1b_verdicts).map((x) => x.name))
+    setVerdictCounts(Object.fromEntries(named(data.h1b_verdicts).map((x) => [x.name, x.count])))
+    setStatusCounts(Object.fromEntries(named(data.statuses).map((x) => [x.name, x.count])))
+    setScoreBands(Object.fromEntries(named(data.score_bands).map((x) => [x.name, x.count])))
+  }).catch(() => { /* silent: the filter menus; the list itself shows its own error state */ }), [])
+  // The screen-level facets settle as one, so the header doesn't flash "0 open roles" before each answers.
   const { ready: facetsReady } = useSettled([
-    () => api.get('/jobs/companies/list', { params: { counts: 1 } }).then(({ data }) => setCompanyList(data || [])).catch(() => { /* silent: a filter facet, the list itself shows its own error state */ }),
-    () => api.get('/jobs/sources/list', { params: { counts: 1 } }).then(({ data }) => { setSourceList((data || []).map((x) => x.name ?? x)); setSourceCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ }),
-    () => api.get('/jobs/verdicts/list', { params: { counts: 1 } }).then(({ data }) => { setVerdictList((data || []).map((x) => x.name ?? x)); setVerdictCounts(Object.fromEntries((data || []).filter((x) => x && x.name != null).map((x) => [x.name, x.count]))) }).catch(() => { /* silent: a filter facet */ }),
+    loadFacets,
     () => api.get('/resumes?is_base=true').then(({ data }) => setResumes(data || [])).catch(() => { /* silent: only names the résumés in the score modal; scoring reports its own failures */ }),
     () => api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; refreshStats re-runs them after every action */ }),
   ])
-  const refreshStats = useCallback(() => { api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [])
+  // One trailing timer shared by both callers (a filter change and a triage refresh),
+  // so a burst of j/s/x costs one recount rather than one per row.
+  const facetTimer = useRef(null)
+  const reloadFacets = useCallback(() => { clearTimeout(facetTimer.current); facetTimer.current = setTimeout(loadFacets, 200) }, [loadFacets])
+  useEffect(() => () => clearTimeout(facetTimer.current), [])
+  // Re-count the menus whenever the filters move, alongside the list request behind
+  // it (the title/score/salary boxes already commit on their own 400 ms timer).
+  // The mount load belongs to useSettled above, so the first run is skipped.
+  const facetKey = JSON.stringify(facetParams)
+  const facetsFirst = useRef(true)
+  useEffect(() => {
+    if (facetsFirst.current) { facetsFirst.current = false; return }
+    reloadFacets()
+  }, [facetKey, reloadFacets])
+  // Triage moves rows between statuses, so the menus are restated alongside the counters.
+  const refreshStats = useCallback(() => { reloadFacets(); api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [reloadFacets])
 
   // Warm start: header counters and facet lists paint from cache, then reconcile (rail's .15s fade)
   // once facets and the first page of jobs have both answered.
@@ -283,21 +331,12 @@ export default function V2JobFeed() {
   const facetVerdicts = (head && head.verdicts) || []
   const facetVerdictCounts = (head && head.verdictCounts) || {}
 
+  // the list asks for exactly what the facet menus were counted over, plus paging and sort
   const buildParams = useCallback((off) => {
-    const p = { limit: PAGE, offset: off }
-    // the default view is the OPEN set (new + saved); skipped/applied/ignored need an explicit Status filter
-    p.status = filters.status.length ? filters.status.join(',') : 'new,saved'
-    if (filters.company.length) p.company = filters.company.join(',')
-    if (filters.source.length) p.source = filters.source.join(',')
-    if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
-    if (filters.min_score !== '') p.min_score = filters.min_score
-    if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
-    if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
-    if (dSearch) p.title_search = dSearch
-    if (searchId) p.search_id = searchId
+    const p = { ...facetParams, limit: PAGE, offset: off }
     if (sortBy !== 'date') p.sort_by = sortBy
     return p
-  }, [filters, sortBy, dSearch, searchId])
+  }, [facetParams, sortBy])
 
   const fetchJobs = useCallback(async () => {
     setLoading(true)
@@ -744,10 +783,10 @@ export default function V2JobFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.id])
 
-  // drop selected filter values that fall out of the dynamic lists
-  useEffect(() => { if (sourceList.length && filters.source.length) { const v = filters.source.filter((s) => sourceList.includes(s)); if (v.length !== filters.source.length) setFilters((f) => ({ ...f, source: v })) } }, [sourceList]) // eslint-disable-line
-  useEffect(() => { if (companyList.length && filters.company.length) { const v = filters.company.filter((c) => companyList.some((x) => x.name === c)); if (v.length !== filters.company.length) setFilters((f) => ({ ...f, company: v })) } }, [companyList]) // eslint-disable-line
-  useEffect(() => { if (verdictList.length && filters.h1b_verdict.length) { const v = filters.h1b_verdict.filter((x) => verdictList.includes(x)); if (v.length !== filters.h1b_verdict.length) setFilters((f) => ({ ...f, h1b_verdict: v })) } }, [verdictList]) // eslint-disable-line
+  // Selected values used to be pruned when they fell out of the facet lists, which
+  // silently un-set a filter the moment another menu narrowed past it. /jobs/facets
+  // now returns a picked-but-empty value at count 0 instead, so the pick stays
+  // visible (and clearable) and nothing is dropped behind the user's back.
 
   // score-watch: save-triggered scoring runs untracked, so poll /jobs/{id} until it lands
   useEffect(() => {
@@ -912,7 +951,8 @@ export default function V2JobFeed() {
         </Drop>
         <Drop inset label={filters.min_score !== '' ? `Score ≥ ${filters.min_score}` : 'Score ≥'} active={filters.min_score !== ''} onClear={() => setF({ min_score: '' })} open={menu === 'score'} onToggle={() => setMenu(menu === 'score' ? null : 'score')} width={234}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            {[70, 80, 90].map((n) => <Pill key={n} size="sm" on={filters.min_score === String(n)} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1 }}>{n}</Pill>)}
+            {/* each preset carries what it would leave, counted over the other active filters */}
+            {[70, 80, 90].map((n) => <Pill key={n} size="sm" on={filters.min_score === String(n)} onClick={() => setF({ min_score: String(n) })} style={{ flex: 1 }} title={`${scoreBands[String(n)] ?? 0} job${(scoreBands[String(n)] ?? 0) === 1 ? '' : 's'} score ${n} or better`}>{n}<span style={{ fontSize: 10.5, opacity: 0.55 }}>{scoreBands[String(n)] ?? 0}</span></Pill>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <Helper>or at least</Helper>
@@ -947,7 +987,7 @@ export default function V2JobFeed() {
               </Pill>
             )
           }}>
-          {STATUS_OPTS.map(([v, label]) => <Check key={v} on={filters.status.includes(v)} label={label} onClick={() => togF('status', v)} />)}
+          {STATUS_OPTS.map(([v, label]) => <Check key={v} on={filters.status.includes(v)} label={label} count={statusCounts[v] ?? 0} onClick={() => togF('status', v)} />)}
         </Drop>
         <div style={{ marginLeft: 'auto', flex: '0 0 auto' }}>
           <Drop width={172} open={menu === 'sort'} onToggle={() => setMenu(menu === 'sort' ? null : 'sort')}
