@@ -370,6 +370,17 @@ class ActivityLog(Base):
 
 
 # ── Resumes ─────────────────────────────────────────────────────────────────
+
+def first_template(kind: str) -> str:
+    """First template folder shipped under backend/<kind>/ (alphabetical): the model default, so a fresh install never points at a template it does not have."""
+    from pathlib import Path
+    base = Path(__file__).resolve().parents[1] / kind
+    try:
+        names = sorted(p.name for p in base.iterdir() if (p / "template.html.j2").is_file())
+    except OSError:
+        names = []
+    return names[0] if names else "traditional"
+
 class Resume(Base):
     __tablename__ = "resumes"
 
@@ -378,7 +389,7 @@ class Resume(Base):
     is_base = Column(Boolean, default=True)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
-    template = Column(String, default="garamond")
+    template = Column(String, default=lambda: first_template("resume_templates"))
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), default=utcnow)
@@ -401,7 +412,7 @@ class CoverLetter(Base):
     parent_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="SET NULL"), nullable=True)
     # garamond_alt (not garamond) — the garamond template dir is gitignored
     # (licensed fonts), so it may be absent on a fresh clone.
-    template = Column(String, default="garamond_alt")
+    template = Column(String, default=lambda: first_template("cover_letter_templates"))
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
     # How this draft was written; lets the list/editor show it and Regenerate

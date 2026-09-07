@@ -46,7 +46,7 @@ def _discover_templates() -> list[dict]:
 
 def _default_template_id() -> str:
     templates = _discover_templates()
-    return templates[0]["id"] if templates else "garamond"
+    return templates[0]["id"] if templates else "garamond_alt"
 
 
 def _validate_template(name) -> str:

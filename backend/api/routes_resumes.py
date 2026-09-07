@@ -185,9 +185,9 @@ async def _get_browser():
     return _pw_browser
 
 def _default_template_id() -> str:
-    """Return the first available template ID, or 'garamond' as last resort."""
+    """Return the first available template ID, or 'garamond_alt' as last resort."""
     templates = _discover_templates()
-    return templates[0]["id"] if templates else "garamond"
+    return templates[0]["id"] if templates else "garamond_alt"
 
 
 # A template name is a folder name, never a path: `pathlib` joins an absolute or
@@ -254,6 +254,10 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     """Render a resume to HTML using its Jinja2 template."""
     from jinja2 import Environment, FileSystemLoader
 
+    # A stored name that no longer exists on this install (a personal template, an old
+    # default) renders with the first available template instead of failing the page.
+    if isinstance(template_name, str) and _TEMPLATE_NAME_RE.match(template_name) and not (TEMPLATES_DIR / template_name / "template.html.j2").is_file():
+        template_name = _default_template_id()
     template_dir = TEMPLATES_DIR / validate_template_name(template_name, TEMPLATES_DIR)
 
     import re as _re
