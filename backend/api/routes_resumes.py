@@ -192,44 +192,66 @@ def _default_template_id() -> str:
 
 # A template name is a folder name, never a path: `pathlib` joins an absolute or
 # `../`-prefixed value by escaping the base directory, and the reachable set was the
-# whole container filesystem (R4-T5-01). Everything that renders or stores a template
-# name goes through validate_template_name().
+# whole container filesystem (R4-T5-01). Nothing here ever *builds* a path out of the
+# request: template_paths() lists the folders that exist and the request name is only
+# ever a key looked up in that mapping, so the Path that gets opened always comes from
+# the directory listing.
 _TEMPLATE_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 
-def validate_template_name(name, templates_dir: Path) -> str:
-    """Return `name` when it is a real template folder directly under `templates_dir`; 422 otherwise (never 500, never a path escape)."""
-    if not isinstance(name, str) or not _TEMPLATE_NAME_RE.match(name):
-        raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
-    candidate = templates_dir / name
+def template_paths(templates_dir: Path) -> dict:
+    """{folder name: Path} for every real template directly under `templates_dir`.
+
+    Both keys and values come from `iterdir()`, never from user input; a symlink that
+    points outside the tree is dropped because its resolved parent is not the base dir.
+    """
+    found: dict[str, Path] = {}
     try:
-        resolved = candidate.resolve()
         base = templates_dir.resolve()
+        entries = sorted(templates_dir.iterdir())
     except OSError:
+        return found
+    for d in entries:
+        if not d.is_dir() or not (d / "template.html.j2").is_file():
+            continue
+        try:
+            if d.resolve().parent != base:
+                continue  # a symlink escaping the template tree
+        except OSError:
+            continue
+        found[d.name] = d
+    return found
+
+
+def resolve_template_dir(name, templates_dir: Path) -> Path:
+    """Return the on-disk folder for template `name`, or 422 (never 500, never a path escape)."""
+    if not isinstance(name, str):
         raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
-    # Belt-and-braces against a symlinked folder inside the template tree.
-    if resolved.parent != base or not (resolved / "template.html.j2").is_file():
+    path = template_paths(templates_dir).get(name)
+    if path is None:
         raise HTTPException(status_code=422, detail=f"Unknown template: {name!r}")
-    return name
+    return path
+
+
+def validate_template_name(name, templates_dir: Path) -> str:
+    """Return the folder name as it is spelled on disk when `name` names a real template; 422 otherwise."""
+    return resolve_template_dir(name, templates_dir).name
 
 
 def _discover_templates() -> list[dict]:
     """Scan resume_templates/ for folders containing template.html.j2; each folder can optionally include meta.json with 'name' and 'description'."""
     templates = []
-    if not TEMPLATES_DIR.exists():
-        return templates
-    for d in sorted(TEMPLATES_DIR.iterdir()):
-        if d.is_dir() and (d / "template.html.j2").exists():
-            meta = {"id": d.name, "name": d.name.replace("_", " ").title(), "description": ""}
-            meta_file = d / "meta.json"
-            if meta_file.exists():
-                try:
-                    with open(meta_file) as f:
-                        meta.update(json.load(f))
-                        meta["id"] = d.name  # folder name is always the ID
-                except Exception:
-                    pass
-            templates.append(meta)
+    for name, d in template_paths(TEMPLATES_DIR).items():
+        meta = {"id": name, "name": name.replace("_", " ").title(), "description": ""}
+        meta_file = d / "meta.json"
+        if meta_file.exists():
+            try:
+                with open(meta_file) as f:
+                    meta.update(json.load(f))
+                    meta["id"] = name  # folder name is always the ID
+            except Exception:
+                pass
+        templates.append(meta)
     return templates
 
 
@@ -254,11 +276,13 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     """Render a resume to HTML using its Jinja2 template."""
     from jinja2 import Environment, FileSystemLoader
 
+    allowed = template_paths(TEMPLATES_DIR)
     # A stored name that no longer exists on this install (a personal template, an old
     # default) renders with the first available template instead of failing the page.
-    if isinstance(template_name, str) and _TEMPLATE_NAME_RE.match(template_name) and not (TEMPLATES_DIR / template_name / "template.html.j2").is_file():
+    if (isinstance(template_name, str) and template_name not in allowed
+            and _TEMPLATE_NAME_RE.match(template_name)):
         template_name = _default_template_id()
-    template_dir = TEMPLATES_DIR / validate_template_name(template_name, TEMPLATES_DIR)
+    template_dir = resolve_template_dir(template_name, TEMPLATES_DIR)
 
     import re as _re
     env = Environment(loader=FileSystemLoader(str(template_dir)))

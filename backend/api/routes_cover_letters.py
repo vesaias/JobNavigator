@@ -26,21 +26,20 @@ TEMPLATES_DIR = Path(__file__).parent.parent / "cover_letter_templates"
 # ── Templates ─────────────────────────────────────────────────────────────────
 
 def _discover_templates() -> list[dict]:
+    from backend.api.routes_resumes import template_paths
+
     templates = []
-    if not TEMPLATES_DIR.exists():
-        return templates
-    for d in sorted(TEMPLATES_DIR.iterdir()):
-        if d.is_dir() and (d / "template.html.j2").exists():
-            meta = {"id": d.name, "name": d.name.replace("_", " ").title(), "description": ""}
-            meta_file = d / "meta.json"
-            if meta_file.exists():
-                try:
-                    with open(meta_file) as f:
-                        meta.update(json.load(f))
-                        meta["id"] = d.name
-                except Exception:
-                    pass
-            templates.append(meta)
+    for name, d in template_paths(TEMPLATES_DIR).items():
+        meta = {"id": name, "name": name.replace("_", " ").title(), "description": ""}
+        meta_file = d / "meta.json"
+        if meta_file.exists():
+            try:
+                with open(meta_file) as f:
+                    meta.update(json.load(f))
+                    meta["id"] = name
+            except Exception:
+                pass
+        templates.append(meta)
     return templates
 
 
@@ -61,10 +60,11 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     from jinja2 import Environment, FileSystemLoader
     from markupsafe import Markup
 
-    from backend.api.routes_resumes import _load_template_fonts, validate_template_name
+    from backend.api.routes_resumes import _load_template_fonts, resolve_template_dir
 
-    # Same folder-name whitelist the résumé renderer uses (R4-T5-01).
-    template_dir = TEMPLATES_DIR / validate_template_name(template_name, TEMPLATES_DIR)
+    # Same on-disk allowlist the résumé renderer uses — the folder comes from the
+    # directory listing, the request name is only a key (R4-T5-01).
+    template_dir = resolve_template_dir(template_name, TEMPLATES_DIR)
 
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     env.filters['bold'] = lambda text: Markup(

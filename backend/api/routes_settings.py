@@ -70,38 +70,36 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             updated.append(key)
     db.commit()
 
+    def _reconfigure(name: str, fn) -> None:
+        """Run one post-update reconfigure; a failure becomes a warning naming the step.
+
+        The exception text stays in the server log: it can carry file paths, connection
+        strings and stack detail, and the response is not the place for it.
+        """
+        try:
+            fn()
+        except Exception:
+            warnings.append(f"{name} failed — see server logs")
+            logger.exception("%s failed after settings update", name)
+
     timing_keys = {
         "scrape_interval_minutes", "email_check_interval_minutes",
         "backup_cron", "digest_cron", "h1b_cron", "cleanup_cron", "reject_cron",
     }
     if timing_keys & set(updated):
-        try:
-            configure_scheduler()
-        except Exception as _e:
-            warnings.append(f"configure_scheduler failed: {_e}")
-            logger.exception("configure_scheduler failed after settings update")
+        _reconfigure("configure_scheduler", configure_scheduler)
 
     if "scoring_max_concurrent" in updated:
-        try:
-            reset_scoring_semaphore()
-        except Exception as _e:
-            warnings.append(f"reset_scoring_semaphore failed: {_e}")
-            logger.exception("reset_scoring_semaphore failed after settings update")
+        _reconfigure("reset_scoring_semaphore", reset_scoring_semaphore)
 
     if "tailoring_max_concurrent" in updated:
-        try:
+        def _reset_tailoring():
             from backend.api.routes_resumes import reset_tailoring_semaphore
             reset_tailoring_semaphore()
-        except Exception as _e:
-            warnings.append(f"reset_tailoring_semaphore failed: {_e}")
-            logger.exception("reset_tailoring_semaphore failed after settings update")
+        _reconfigure("reset_tailoring_semaphore", _reset_tailoring)
 
     if "dedup_tracking_params" in updated:
-        try:
-            reload_tracking_params()
-        except Exception as _e:
-            warnings.append(f"reload_tracking_params failed: {_e}")
-            logger.exception("reload_tracking_params failed after settings update")
+        _reconfigure("reload_tracking_params", reload_tracking_params)
 
     return {"updated": updated, "warnings": warnings}
 
