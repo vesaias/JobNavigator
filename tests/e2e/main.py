@@ -19,6 +19,7 @@ import case_newui                                   # noqa: E402,F401
 import case_persona_import                          # noqa: E402,F401
 import case_feed_collapse                           # noqa: E402,F401
 import case_modals                                  # noqa: E402,F401
+import case_apps_select                             # noqa: E402,F401
 import case_flows                                   # noqa: E402,F401
 
 if __name__ == '__main__':

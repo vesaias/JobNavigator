@@ -87,17 +87,33 @@ export default function Applications() {
   const timers = useRef([])
   const notesTimer = useRef(null)
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(notesTimer.current) }, [])
+  // load() sequence guard: a slow full-list reload landing after a newer one must not
+  // stomp the newer response. patchSeq is the same idea per-row, for `patch()` below.
+  const loadSeq = useRef(0)
+  const patchSeq = useRef({})
   const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
   const [confirm, setConfirm] = useState(null)   // shared destructive-confirm dialog state
 
-  const load = useCallback(async (keep) => {
+  // `forceId` selects a specific row regardless of the current selection — used only where
+  // that is the deliberate outcome (opening a just-logged application). Every other caller
+  // passes nothing: the current selection is kept as long as it still exists in the fresh
+  // list, so a response landing after the user has clicked a different row never drags the
+  // pane back (a stage PATCH's reload used to do exactly that — clobbering a newer click).
+  const load = useCallback(async (forceId) => {
+    const seq = ++loadSeq.current
     try {
       const { data } = await api.get('/applications', { params: { limit: 2000 } })
+      if (seq !== loadSeq.current) return   // a newer load has already started or landed — this response is stale
       setTotal(typeof data?.total === 'number' ? data.total : null)   // header counts what the server has, not what fits in one page
       const list = data.applications || []
       setApps(list); setLoadErr(null)
-      setSel((cur) => (keep ?? cur) || (list[0]?.id ?? null))
+      setSel((cur) => {
+        if (forceId != null && list.some((a) => a.id === forceId)) return forceId
+        if (cur != null && list.some((a) => a.id === cur)) return cur
+        return list[0]?.id ?? null
+      })
     } catch (e) {
+      if (seq !== loadSeq.current) return
       console.error(e)
       setLoadErr(e?.response?.status ? `The server returned error ${e.response.status}. Try again.${errSuffix(e)}` : (e.message || 'Network error'))
       pushToast({ kind: 'error', msg: 'Could not load applications' + errSuffix(e) })
@@ -176,22 +192,34 @@ export default function Applications() {
   const d = apps.find((a) => a.id === sel) || null
 
   // ── actions ──
+  // Patches only the row it belongs to — never a full reload — and never touches `sel`, so a
+  // response landing after the user has already selected a different row can't move the pane.
+  // patchSeq guards against a slower earlier PATCH on the SAME row winning over a later one
+  // (e.g. two quick stage clicks on one application).
   const patch = async (id, body) => {
+    const seq = (patchSeq.current[id] = (patchSeq.current[id] || 0) + 1)
     setApps((p) => p.map((a) => (a.id === id ? { ...a, ...body } : a)))   // optimistic
-    try { await api.patch(`/applications/${id}`, body); load(id) }
-    catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save that change' + errSuffix(e) }); load(id) }
+    try {
+      const { data } = await api.patch(`/applications/${id}`, body)
+      if (patchSeq.current[id] !== seq) return   // a newer PATCH on this row is already in flight or has landed
+      setApps((p) => p.map((a) => (a.id === id ? { ...a, ...data } : a)))   // merge the server's canonical row (status_transitions, updated_at, …)
+    } catch (e) {
+      if (patchSeq.current[id] !== seq) return
+      console.error(e); pushToast({ kind: 'error', msg: 'Could not save that change' + errSuffix(e) }); load()
+    }
   }
   // autosave: debounce while typing, flush immediately on blur
   const saveNotes = useCallback((id, value, now) => {
     clearTimeout(notesTimer.current)
     const run = () => {
+      const seq = (patchSeq.current[id] = (patchSeq.current[id] || 0) + 1)
       setApps((p) => p.map((a) => (a.id === id ? { ...a, notes: value } : a)))
       api.patch(`/applications/${id}`, { notes: value })
-        .then(() => load(id))   // the row's age and the header follow the server's updated_at
+        .then(({ data }) => { if (patchSeq.current[id] === seq) setApps((p) => p.map((a) => (a.id === id ? { ...a, ...data } : a))) })   // the row's age follows the server's updated_at
         .catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not save notes' + errSuffix(e) }) })
     }
     if (now) run(); else notesTimer.current = setTimeout(run, 700)
-  }, [pushToast, load])
+  }, [pushToast])
 
   const remove = (a) => {
     setMenuOpen(false)
@@ -217,16 +245,17 @@ export default function Applications() {
         what: intWhat.trim() || 'Interview', when_at: intWhen ? new Date(intWhen).toISOString() : null,
         where_text: intWhere.trim() || null, status: 'scheduled', prep: intPrep.trim() || null,
       })
-      setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep(''); load(d.id)
+      setIntForm(false); setIntWhat(''); setIntWhen(''); setIntWhere(''); setIntPrep('')
+      load()   // refresh interviews without forcing selection — the interview endpoints don't return the parent application
     } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not add the interview' + errSuffix(e) }) }
     finally { setIntBusy(false) }
   }
   const delInterview = async (iv) => {
     try {
-      await api.delete(`/applications/interviews/${iv.id}`); load(d.id)
+      await api.delete(`/applications/interviews/${iv.id}`); load()
       // no confirm — an undo toast re-creates the interview from the row we still hold
       pushToast({ kind: 'undo', msg: `Removed “${iv.what || 'Interview'}”`, action: 'Undo', onAction: async () => {
-        try { await api.post(`/applications/${d.id}/interviews`, { what: iv.what, when_at: iv.when_at, where_text: iv.where_text, status: iv.status || 'scheduled', prep: iv.prep }); load(d.id) }
+        try { await api.post(`/applications/${d.id}/interviews`, { what: iv.what, when_at: iv.when_at, where_text: iv.where_text, status: iv.status || 'scheduled', prep: iv.prep }); load() }
         catch (e) { pushToast({ kind: 'error', msg: 'Could not restore the interview' + errSuffix(e) }) }
       } })
     }
@@ -256,12 +285,12 @@ export default function Applications() {
         where_text: ivDraft.where.trim() || null,
         prep: ivDraft.prep.trim() || null,
       })
-      setEditIv(null); load(d.id)
+      setEditIv(null); load()
     } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not save the interview' + errSuffix(e) }) }
     finally { setIntBusy(false) }
   }
   const toggleInterview = async (iv) => {
-    try { await api.patch(`/applications/interviews/${iv.id}`, { status: iv.status === 'done' ? 'scheduled' : 'done' }); load(d.id) }
+    try { await api.patch(`/applications/interviews/${iv.id}`, { status: iv.status === 'done' ? 'scheduled' : 'done' }); load() }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Could not update the interview' + errSuffix(e) }) }
   }
   const openPrep = async () => {
@@ -465,7 +494,10 @@ export default function Applications() {
       {prep && <PrepModal prep={prep} company={d ? companyOf(d) : ''} copied={copied} onCopy={copyPrep} onClose={() => setPrep(null)} />}
       {/* dropLog(), not a bare setLogOpen(false): a save unmounts the form, so the dirty flag
           must go with it or the next Escape offers to discard a form that no longer exists. */}
-      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(id), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
+      {/* the first load(id) forces open the just-logged application (nothing else could be
+          selected yet); the 5s follow-up (picking up a still-processing score) must NOT
+          force it again — the user may have moved on by then — so it's a plain load(). */}
+      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
