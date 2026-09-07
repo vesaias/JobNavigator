@@ -9,32 +9,23 @@ from backend.models.db import SessionLocal, Job, Setting
 
 logger = logging.getLogger("jobnavigator.cv_scorer")
 
-# ── Global scoring semaphore (limits concurrent LLM scoring jobs) ─────────
-_scoring_semaphore: asyncio.Semaphore | None = None
+# ── Global scoring gate (limits concurrent LLM scoring jobs) ──────────────
+# The gate itself lives in job_monitor so launch_background can take it before
+# the worker opens its first DB session; this is the same object, re-entrant
+# per task, so a worker already inside the gate is not blocked by its own
+# score_job_sync call.
 
 
-def _get_scoring_semaphore() -> asyncio.Semaphore:
-    """Lazy-init semaphore from DB setting. Created on first use (inside event loop)."""
-    global _scoring_semaphore
-    if _scoring_semaphore is None:
-        db = SessionLocal()
-        try:
-            row = db.query(Setting).filter(Setting.key == "scoring_max_concurrent").first()
-            try:
-                limit = max(1, int(row.value)) if row and row.value else 5
-            except (ValueError, TypeError):
-                limit = 5
-        finally:
-            db.close()
-        _scoring_semaphore = asyncio.Semaphore(limit)
-        logger.info(f"Scoring semaphore initialized: max {limit} concurrent jobs")
-    return _scoring_semaphore
+def _get_scoring_semaphore():
+    """The process-wide scoring gate (`scoring_max_concurrent`)."""
+    from backend.job_monitor import get_limiter
+    return get_limiter("scoring")
 
 
 def reset_scoring_semaphore():
-    """Reset semaphore so next call re-reads the limit from DB. Called on settings change."""
-    global _scoring_semaphore
-    _scoring_semaphore = None
+    """Drop the gate so the next call re-reads the limit. Called on settings change."""
+    from backend.job_monitor import reset_limiter
+    reset_limiter("scoring")
 
 
 def _flatten_resume(json_data: dict) -> str:
@@ -195,28 +186,70 @@ def _get_resume_texts_for_company(db, company) -> dict:
     return _get_resume_texts(db)
 
 
-async def _get_job_text(job: Job, db=None) -> str | None:
-    """Get job text from description, cached page, or a live fetch (with caching); returns None if no text is available."""
-    if job.description and len(job.description.strip()) > 50:
-        return job.description.strip()
+def _job_text_from_row(job) -> str | None:
+    """Job text already on the row (description, then cached page). No I/O, so
+    the caller's session is never held across a network call."""
+    description = getattr(job, "description", None)
+    if description and len(description.strip()) > 50:
+        return description.strip()
 
-    if job.cached_page_text and len(job.cached_page_text.strip()) > 50:
+    cached = getattr(job, "cached_page_text", None)
+    if cached and len(cached.strip()) > 50:
         logger.info(f"Job {job.id}: using cached_page_text (no description)")
-        return job.cached_page_text.strip()
-
-    url = job.url
-    if url and db:
-        logger.info(f"Job {job.id}: no text available, fetching live page")
-        try:
-            from backend.api.routes_applications import _cache_job_page
-            await _cache_job_page(str(job.id), url)
-            db.refresh(job)
-            if job.cached_page_text and len(job.cached_page_text.strip()) > 50:
-                return job.cached_page_text.strip()
-        except Exception as e:
-            logger.warning(f"Job {job.id}: live page fetch failed: {e}")
+        return cached.strip()
 
     return None
+
+
+async def _fetch_job_text(job_id, url: str) -> str | None:
+    """Cache the live page for a job that has no text, then read the result back.
+
+    Deliberately takes ids, not an ORM instance: it must be callable with no
+    session open, since `_cache_job_page` does an HTTP fetch and possibly a
+    Playwright render. Opens one short session at the end to read the result.
+    """
+    if not url:
+        return None
+    logger.info(f"Job {job_id}: no text available, fetching live page")
+    try:
+        from backend.api.routes_applications import _cache_job_page
+        await _cache_job_page(str(job_id), url)
+    except Exception as e:
+        logger.warning(f"Job {job_id}: live page fetch failed: {e}")
+        return None
+
+    db = SessionLocal()
+    try:
+        text = db.query(Job.cached_page_text).filter(Job.id == job_id).scalar()
+    except Exception as e:
+        logger.warning(f"Job {job_id}: could not read back cached page: {e}")
+        return None
+    finally:
+        db.close()
+    if text and len(text.strip()) > 50:
+        return text.strip()
+    return None
+
+
+async def _get_job_text(job: Job, db=None) -> str | None:
+    """Job text from description, cached page, or a live fetch; None if nothing is available.
+
+    Passing `db` still means "a live fetch is welcome" (unchanged), but the
+    session is NOT held across it: the live path goes through `_fetch_job_text`,
+    which owns its own short sessions.
+    """
+    text = _job_text_from_row(job)
+    if text:
+        return text
+    if db is None:
+        return None
+    text = await _fetch_job_text(job.id, getattr(job, "url", None))
+    if text and db is not None:
+        try:
+            db.refresh(job)
+        except Exception:
+            pass
+    return text
 
 
 async def score_job_sync(job: Job, cv_texts: dict, db=None, depth="light", preloaded_text: str = None) -> dict:
@@ -372,6 +405,25 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
     return return_value
 
 
+def _alert_snapshot(job: Job):
+    """Detached copy of the fields `telegram.send_job_alert` reads.
+
+    The alert is an HTTP round trip, so it is sent after the session closes; a
+    committed ORM instance would have its attributes expired by then.
+    """
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        id=job.id, company=job.company, title=job.title, url=job.url,
+        location=job.location, remote=job.remote,
+        salary_min=job.salary_min, salary_max=job.salary_max,
+        h1b_verdict=job.h1b_verdict,
+        h1b_company_lca_count=job.h1b_company_lca_count,
+        h1b_company_approval_rate=job.h1b_company_approval_rate,
+        h1b_jd_flag=job.h1b_jd_flag, h1b_jd_snippet=job.h1b_jd_snippet,
+        cv_scores=dict(job.cv_scores or {}),
+    )
+
+
 def _find_company_for_job(db, job: Job):
     """Find the Company record matching a job's company name or alias (case-insensitive)."""
     from backend.models.db import find_company_by_name
@@ -379,18 +431,32 @@ def _find_company_for_job(db, job: Job):
 
 
 async def analyze_unscored_jobs(status: str = "saved"):
-    """Score all unscored jobs against uploaded CVs in batches of 20; status='saved' scores saved jobs, status='new' scores new jobs from auto_scoring_depth != 'off' entities only."""
+    """Score all unscored jobs against uploaded CVs in batches of 20; status='saved' scores saved jobs, status='new' scores new jobs from auto_scoring_depth != 'off' entities only.
+
+    Every phase owns a short session and closes it before anything is awaited
+    over the network: read the batch -> (fetch missing pages) -> LLM -> write.
+    A batch used to hold one connection from the first query to the last commit,
+    LLM calls included, so a slow provider pinned a pooled connection for the
+    whole run.
+    """
+    from types import SimpleNamespace
+    from sqlalchemy import or_, text, func
+    from backend.models.db import Search, Company as CompanyModel
+
+    batch_size = 20
+    total_scored = 0
+    # Jobs this pass has already handled. A transient LLM failure leaves
+    # cv_scores NULL on purpose (so the next pass retries), which without this
+    # would make the `while True` loop re-select the same batch forever.
+    attempted: set = set()
+
+    # -- Phase 0: per-run constants (short session, no network) --------------
     db = SessionLocal()
     try:
         default_cv_texts = _get_default_resume(db) or _get_resume_texts(db)
         if not default_cv_texts:
             logger.warning("No CVs uploaded yet, skipping analysis pipeline")
             return
-
-        from sqlalchemy import or_, text, func
-        from backend.models.db import Search, Company as CompanyModel
-        total_scored = 0
-        batch_size = 20
 
         # For "new" jobs, only score those from entities with auto_scoring_depth != 'off'
         auto_score_filter = None
@@ -416,13 +482,22 @@ async def analyze_unscored_jobs(status: str = "saved"):
 
             auto_score_filter = or_(*conditions)
 
-        # Per-run constants — hoisted out of the per-job loop (were re-queried per job)
+        # Per-run constants -- hoisted out of the per-job loop (were re-queried per job)
         default_depth_row = db.query(Setting).filter(Setting.key == "scoring_default_depth").first()
         default_depth = default_depth_row.value if default_depth_row and default_depth_row.value else "light"
         threshold_row = db.query(Setting).filter(Setting.key == "fit_score_threshold").first()
         alert_threshold = int(threshold_row.value) if threshold_row else 60
+    finally:
+        db.close()
 
-        while True:
+    while True:
+        # -- Phase 1 (short session, no network): pick a batch, resolve the CV
+        # set, the depth and whatever text is already on the row. Jobs with no
+        # text and no URL get their _skipped sentinel here. ------------------
+        to_score = []     # (job_ref, cv_texts, depth, preloaded_text)
+        needs_fetch = []  # (job_ref, cv_texts, depth, url)
+        db = SessionLocal()
+        try:
             q = db.query(Job).filter(
                 (Job.cv_scores == None) | (Job.cv_scores == text("'{}'::jsonb")),
             )
@@ -432,18 +507,17 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 q = q.filter(Job.status == status)
                 if auto_score_filter is not None:
                     q = q.filter(auto_score_filter)
+            if attempted:
+                q = q.filter(Job.id.notin_(list(attempted)))
 
             unscored = q.limit(batch_size).all()
-
             if not unscored:
                 break
 
             logger.info(f"Analyzing batch of {len(unscored)} unscored jobs (total so far: {total_scored})")
 
-            # ── Phase 1 (sequential, shared session): resolve CV set, depth, and job
-            # text per job; persist _skipped sentinels for jobs with no text.
-            to_score = []  # (job, cv_texts, depth, preloaded_text)
             for job in unscored:
+                attempted.add(job.id)
                 company = _find_company_for_job(db, job)
                 cv_texts = _get_resume_texts_for_company(db, company) if company else default_cv_texts
 
@@ -452,7 +526,6 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 elif company and company.auto_scoring_depth in ("light", "full"):
                     depth = company.auto_scoring_depth
                 elif job.search_id:
-                    from backend.models.db import Search
                     search = db.query(Search).filter(Search.id == job.search_id).first()
                     if search and search.auto_scoring_depth in ("light", "full"):
                         depth = search.auto_scoring_depth
@@ -461,32 +534,75 @@ async def analyze_unscored_jobs(status: str = "saved"):
                 else:
                     depth = default_depth
 
+                # Detached snapshot: the scorer only needs the id (LLM cost rows)
+                # plus company/title for its log lines, and phases 2-3 run with
+                # this session closed.
+                job_ref = SimpleNamespace(id=job.id, company=job.company, title=job.title)
+
                 # Pre-check for job text so a permanent "no JD" condition gets a
                 # sentinel here, distinct from a transient LLM failure inside score_job_sync.
-                preloaded_text = await _get_job_text(job, db)
-                if not preloaded_text:
+                preloaded_text = _job_text_from_row(job)
+                if preloaded_text:
+                    to_score.append((job_ref, cv_texts, depth, preloaded_text))
+                elif job.url:
+                    needs_fetch.append((job_ref, cv_texts, depth, job.url))
+                else:
                     job.cv_scores = {"_skipped": "no_text_available"}
                     job.best_cv_score = None
                     total_scored += 1
-                    continue
-                to_score.append((job, cv_texts, depth, preloaded_text))
             db.commit()  # persist sentinels
+        finally:
+            db.close()
 
-            # ── Phase 2 (parallel): LLM calls. db=None so the inner scorer never
-            # touches the shared session, making gather session-safe; concurrency is capped by the scoring semaphore.
-            results = await asyncio.gather(
-                *[score_job_sync(j, c, db=None, depth=d, preloaded_text=t)
-                  for (j, c, d, t) in to_score],
-                return_exceptions=True,
-            )
+        # -- Phase 1b: live page fetches, with no connection held -------------
+        if needs_fetch:
+            no_text_ids = []
+            for (job_ref, cv_texts, depth, url) in needs_fetch:
+                fetched = await _fetch_job_text(job_ref.id, url)
+                if fetched:
+                    to_score.append((job_ref, cv_texts, depth, fetched))
+                else:
+                    no_text_ids.append(job_ref.id)
+                    total_scored += 1
+            if no_text_ids:
+                db = SessionLocal()
+                try:
+                    for j in db.query(Job).filter(Job.id.in_(no_text_ids)).all():
+                        j.cv_scores = {"_skipped": "no_text_available"}
+                        j.best_cv_score = None
+                    db.commit()
+                finally:
+                    db.close()
 
-            # ── Phase 3 (sequential, shared session): apply results + alerts.
-            for (job, cv_texts, depth, _t), result in zip(to_score, results):
+        # -- Phase 2 (parallel): LLM calls, no session anywhere. Concurrency is
+        # capped by the scoring gate. ----------------------------------------
+        results = await asyncio.gather(
+            *[score_job_sync(j, c, db=None, depth=d, preloaded_text=t)
+              for (j, c, d, t) in to_score],
+            return_exceptions=True,
+        )
+
+        # -- Phase 3 (short session): apply results. Alerts are collected here
+        # and sent after the session closes -- Telegram is an HTTP round trip.
+        alerts = []
+        db = SessionLocal()
+        try:
+            ids = [jr.id for (jr, _c, _d, _t) in to_score]
+            job_map = {}
+            if ids:
+                job_map = {j.id: j for j in db.query(Job).filter(Job.id.in_(ids)).all()}
+
+            for (job_ref, cv_texts, depth, _t), result in zip(to_score, results):
                 if isinstance(result, BaseException):
                     logger.warning(
-                        f"Job {job.id} ({job.company} - {job.title}): scoring raised "
-                        f"{type(result).__name__}: {result} — transient, will retry next pass"
+                        f"Job {job_ref.id} ({job_ref.company} - {job_ref.title}): scoring raised "
+                        f"{type(result).__name__}: {result} - transient, will retry next pass"
                     )
+                    total_scored += 1
+                    continue
+                job = job_map.get(job_ref.id)
+                if job is None:
+                    logger.warning(f"Job {job_ref.id} disappeared mid-run - result dropped")
                     total_scored += 1
                     continue
                 if result:
@@ -496,7 +612,7 @@ async def analyze_unscored_jobs(status: str = "saved"):
                     if not isinstance(scores, dict):
                         logger.warning(
                             f"Job {job.id} ({job.company} - {job.title}): result has "
-                            f"invalid scores ({type(scores).__name__}) — skipping, will retry"
+                            f"invalid scores ({type(scores).__name__}) - skipping, will retry"
                         )
                         total_scored += 1
                         continue
@@ -533,38 +649,49 @@ async def analyze_unscored_jobs(status: str = "saved"):
 
                     # Check if should trigger Telegram alert (threshold hoisted above loop)
                     if best_score >= alert_threshold:
-                        try:
-                            from backend.notifier.telegram import send_job_alert
-                            await send_job_alert({
-                                "job": job,
-                                "best_score": best_score,
-                            })
-                        except Exception as e:
-                            logger.error(f"Failed to send Telegram alert: {e}")
+                        alerts.append((_alert_snapshot(job), best_score))
                 else:
                     # Transient LLM failure: do NOT persist a _skipped sentinel, so
                     # the next scheduler pass retries this job.
                     logger.warning(
                         f"Job {job.id} ({job.company} - {job.title}): score_job_sync "
-                        "returned None after pre-check passed — transient failure, "
+                        "returned None after pre-check passed - transient failure, "
                         "will retry next pass"
                     )
 
                 total_scored += 1
             db.commit()  # one commit per batch
+        finally:
+            db.close()
 
-        logger.info(f"Analysis pipeline complete: {total_scored} jobs processed")
+        for snapshot, best_score in alerts:
+            try:
+                from backend.notifier.telegram import send_job_alert
+                await send_job_alert({"job": snapshot, "best_score": best_score})
+            except Exception as e:
+                logger.error(f"Failed to send Telegram alert: {e}")
 
+    logger.info(f"Analysis pipeline complete: {total_scored} jobs processed")
+
+    db = SessionLocal()
+    try:
         from backend.activity import log_activity
         log_activity("cv_score", f"Resume scoring complete: {total_scored} jobs processed", db=db)
         db.commit()
-
     finally:
         db.close()
 
 
 async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"):
-    """Re-run CV analysis for a job, optionally against specific CV IDs; DB sessions are opened/closed per phase to avoid holding connections during LLM calls. Returns a one-line summary stored as JobRun.result_summary."""
+    """Re-run CV analysis for a job, optionally against specific CV IDs.
+
+    Sessions are opened and closed per phase: read → (live fetch) → LLM → write.
+    No connection is held while the page fetch or the LLM call is awaited, so N
+    queued scoring tasks cost N coroutines rather than N pooled connections.
+    Returns a one-line summary stored as JobRun.result_summary.
+    """
+    from types import SimpleNamespace
+
     # ── Phase 1: Read job + CVs from DB, then release connection ──
     db = SessionLocal()
     try:
@@ -575,6 +702,7 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
 
         job_title = job.title
         job_company = job.company
+        job_url = job.url
 
         if cv_ids:
             # cv_ids may reference base Resumes, tailored Resumes, or the reserved
@@ -610,16 +738,21 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
             )
             return "No resumes to score against"
 
-        # Pre-fetch job text (may do live page fetch + cache, needs DB)
-        job_text = await _get_job_text(job, db)
-        if not job_text:
-            logger.warning(f"Job {job_id} has no text, skipping scoring")
-            return "No job text to score"
+        # Text already on the row; the live fetch (below) happens with no session.
+        job_text = _job_text_from_row(job)
+        job_ref = SimpleNamespace(id=job.id, company=job_company, title=job_title)
     finally:
         db.close()
 
+    # ── Phase 1b: live page fetch, with the connection already released ──
+    if not job_text:
+        job_text = await _fetch_job_text(job_id, job_url)
+    if not job_text:
+        logger.warning(f"Job {job_id} has no text, skipping scoring")
+        return "No job text to score"
+
     # ── Phase 2: LLM scoring (no DB connection held) ──
-    result = await score_job_sync(job, cv_texts, db=None, depth=depth, preloaded_text=job_text)
+    result = await score_job_sync(job_ref, cv_texts, db=None, depth=depth, preloaded_text=job_text)
     if not result:
         return "Scoring failed"
 

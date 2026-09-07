@@ -17,12 +17,25 @@ _USER_AGENT = (
 
 
 async def _get_browser():
-    """Get or create a Playwright browser instance with stealth settings."""
+    """Start Playwright and launch a browser with stealth settings.
+
+    `start()` spawns a node driver process; if the chromium launch then fails
+    (which is exactly what happens once the box is short on memory) that driver
+    used to be left running, because callers only stop what they were handed.
+    Each failed attempt leaked a process, so memory pressure fed on itself.
+    """
     pw = await async_playwright().start()
-    browser = await pw.chromium.launch(
-        headless=True,
-        args=_STEALTH_ARGS,
-    )
+    try:
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=_STEALTH_ARGS,
+        )
+    except BaseException:
+        try:
+            await pw.stop()
+        except Exception:
+            logger.warning("Playwright driver failed to stop after a failed launch")
+        raise
     return pw, browser
 
 

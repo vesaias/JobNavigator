@@ -390,6 +390,9 @@ async def _generate_impl(resume_id: str, job_id: str, voice: str | None, length:
 async def _generate_inner(resume_id, job_id, voice, length, template, page_format,
                           resolve_voice_instruction, generate_cover_letter_body, track_llm_call,
                           cover_letter_id=None):
+    """Read -> LLM -> write, each with its own short session, so no pooled
+    connection is held while the generation call is awaited."""
+    # -- Phase 1: read the evidence and the prompt, then release -------------
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -397,13 +400,16 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         if not job:
             raise RuntimeError("job missing at execution time")
 
+        job_company = job.company
+        job_title = job.title
+        job_description = job.description or ""
+
         # Resolve the evidence source: Persona.resume_content or a Resume row.
         persona_as_base = (resume_id == "persona")
         if persona_as_base:
             if not persona or not (persona.resume_content or {}):
                 raise RuntimeError("persona has no resume_content at execution time")
             resume_data = persona.resume_content or {}
-            base_name = "Persona"
             base_template = None
             base_page_format = None
             stored_resume_id = None
@@ -412,7 +418,6 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
             if not resume:
                 raise RuntimeError("resume missing at execution time")
             resume_data = resume.json_data or {}
-            base_name = resume.name
             base_template = resume.template
             base_page_format = resume.page_format
             stored_resume_id = resume_id
@@ -421,40 +426,47 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         voice_id, voice_instruction = resolve_voice_instruction(db, voice)
         preferences = (persona.preferences if persona else {}) or {}
 
-        # Log the pair call_cover_letter_llm will actually dispatch with — the same
+        # Log the pair call_cover_letter_llm will actually dispatch with -- the same
         # resolver, not a second fallback chain.
         from backend.analyzer.llm_client import resolve_llm_config
         _cfg = resolve_llm_config("cover_letter", db=db)
         _provider, _model = _cfg["provider"], _cfg["model"]
+    finally:
+        db.close()
 
-        async with track_llm_call("cover_letter", _provider, _model, job_id=job_id) as _tracker:
-            body = await generate_cover_letter_body(
-                resume_data, preferences, job.description or "",
-                voice_instruction, length, prompt_template,
-            )
-            _tracker.record(body.pop("_llm", None))
-            body.pop("_usage", None)  # superseded by _llm; keep the dict clean
+    # -- Phase 2: the LLM call, with no connection held ----------------------
+    async with track_llm_call("cover_letter", _provider, _model, job_id=job_id) as _tracker:
+        body = await generate_cover_letter_body(
+            resume_data, preferences, job_description,
+            voice_instruction, length, prompt_template,
+        )
+        _tracker.record(body.pop("_llm", None))
+        body.pop("_usage", None)  # superseded by _llm; keep the dict clean
 
-        # Assemble json_data: header from resume, recipient/date from job/company
-        header = resume_data.get("header", {})
-        today = date.today().strftime("%B %d, %Y")
-        json_data = {
-            "header": {"name": header.get("name", ""), "contact_items": header.get("contact_items", [])},
-            "recipient": {"company": job.company or "", "manager": "", "address": ""},
-            "date": today,
-            "greeting": body["greeting"],
-            "body_paragraphs": body["body_paragraphs"],
-            "closing": body["closing"],
-            "signature": body["signature"] or header.get("name", ""),
-        }
+    # Assemble json_data: header from resume, recipient/date from job/company
+    header = resume_data.get("header", {})
+    today = date.today().strftime("%B %d, %Y")
+    json_data = {
+        "header": {"name": header.get("name", ""), "contact_items": header.get("contact_items", [])},
+        "recipient": {"company": job_company or "", "manager": "", "address": ""},
+        "date": today,
+        "greeting": body["greeting"],
+        "body_paragraphs": body["body_paragraphs"],
+        "closing": body["closing"],
+        "signature": body["signature"] or header.get("name", ""),
+    }
 
-        job_label = f"{job.company} — {job.title}" if job.company else (job.title or "Job")
+    job_label = f"{job_company} \u2014 {job_title}" if job_company else (job_title or "Job")
+
+    # -- Phase 3: persist the letter -----------------------------------------
+    db = SessionLocal()
+    try:
         cl = None
         if cover_letter_id:
             cl = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
         if cl:
             # Regenerate: rewrite this draft in place. The template and paper the
-            # user picked in the editor are theirs — only the writing is replaced.
+            # user picked in the editor are theirs -- only the writing is replaced.
             cl.name = job_label
             cl.resume_id = stored_resume_id
             cl.from_persona = persona_as_base

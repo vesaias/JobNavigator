@@ -117,6 +117,21 @@ app.add_middleware(
 )
 
 
+# ── DB pool saturation → 503, fast ───────────────────────────────────────────
+# The engine's pool_timeout is short (5 s) so a drained pool fails instead of
+# hanging. Both surfaces of that failure answer the same way: a 503 with
+# Retry-After, never a 30 s stall or a stack trace.
+from sqlalchemy.exc import TimeoutError as _PoolTimeout
+
+
+def _pool_busy_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database is busy, retry shortly"},
+        headers={"Retry-After": "5"},
+    )
+
+
 # ── API Key auth middleware ──────────────────────────────────────────────────
 import hmac as _hmac_mw
 
@@ -144,9 +159,16 @@ async def api_key_auth(request: Request, call_next):
     # Accept either X-API-Key header (API clients, extension) OR jn_session cookie (browser)
     api_key = request.headers.get("X-API-Key", "") or request.cookies.get("jn_session", "")
 
+    # A middleware runs outside FastAPI's exception handlers, so a pool timeout
+    # here would surface as a bare connection error, not a status code. The
+    # connection is acquired lazily by the query, not by SessionLocal().
     db = SessionLocal()
     try:
-        setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+        try:
+            setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+        except _PoolTimeout:
+            logger.warning("DB pool exhausted while authenticating %s", request.url.path)
+            return _pool_busy_response()
         expected = setting.value if setting else INITIAL_API_KEY
         # First-run: no key configured → allow everything
         if not expected:
@@ -317,9 +339,21 @@ async def _bad_uuid_to_404(request: Request, exc: _SADataError):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
+@app.exception_handler(_PoolTimeout)
+async def _pool_timeout_to_503(request: Request, exc: _PoolTimeout):
+    """A handler that could not get a connection answers 503, not 500."""
+    logger.warning("DB pool exhausted on %s %s", request.method, request.url.path)
+    return _pool_busy_response()
+
+
 @app.get("/health", tags=["system"], summary="Health check")
 def health_check():
-    """Returns OK if the backend is running."""
+    """Returns OK if the backend is running.
+
+    Deliberately touches no database: it is the one endpoint that must answer
+    while the pool is drained, and it is in _PUBLIC_PREFIXES so the auth
+    middleware's settings read is skipped too.
+    """
     return {"status": "ok", "service": "JobNavigator"}
 
 

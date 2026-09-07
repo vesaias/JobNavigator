@@ -117,7 +117,10 @@ async def test_score_single_job_persona_id_uses_persona_text(test_db, monkeypatc
         return {"Persona": {"score": 80, "summary": "Good fit"}}
 
     monkeypatch.setattr("backend.analyzer.cv_scorer.score_job_sync", fake_score_job_sync)
-    monkeypatch.setattr("backend.analyzer.cv_scorer._get_job_text", AsyncMock(return_value="JD text"))
+    # score_single_job reads the text off the row (no session held for a fetch),
+    # so stub that seam rather than the old _get_job_text wrapper.
+    monkeypatch.setattr("backend.analyzer.cv_scorer._job_text_from_row",
+                        lambda job: "JD text")
 
     await cv_scorer.score_single_job(job_id, cv_ids=["persona"], depth="full")
 

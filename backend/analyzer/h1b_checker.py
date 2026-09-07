@@ -216,6 +216,18 @@ async def resolve_company_h1b(db, name, slug=None, allow_live=True,
         logger.warning("H-1B fetch error for %s: %s", name, e)
         return _row_to_dict(row)
 
+    row = _apply_h1b_data(db, row, key, name, slug, data)
+    # Flush (not commit) so a later job in the same batch sees this row and reuses
+    # it — SessionLocal has autoflush=False, and the caller owns the commit.
+    try:
+        db.flush()
+    except Exception:
+        db.rollback()
+    return _row_to_dict(row)
+
+
+def _apply_h1b_data(db, row, key, name, slug, data):
+    """Write a fetch result onto a VisaCache row (creating it when absent)."""
     has_data = (data["lca_count"] or 0) > 0 or (data["median_salary"] or 0) > 0
     if not row:
         row = VisaCache(name_key=key, country="US")
@@ -231,17 +243,71 @@ async def resolve_company_h1b(db, name, slug=None, allow_live=True,
         row.has_data = has_data
     row.fetched_at = datetime.now(timezone.utc)
     row.last_error = None
-    # Flush (not commit) so a later job in the same batch sees this row and reuses
-    # it — SessionLocal has autoflush=False, and the caller owns the commit.
+    return row
+
+
+async def resolve_company_h1b_detached(name, slug=None, respect_budget=False,
+                                       force=True, ttl_days=_TTL_DAYS):
+    """`resolve_company_h1b` for background callers, with no session held across the fetch.
+
+    Reads the cache in one short session, awaits MyVisaJobs with no connection
+    held, then writes and commits in a second one. The db-bound variant above is
+    for callers that are already mid-transaction (the scraper's per-job checks).
+    """
+    key = _name_key(name)
+    if not key:
+        return None
+
+    db = SessionLocal()
     try:
-        db.flush()
-    except Exception:
+        row = db.query(VisaCache).filter(VisaCache.name_key == key, VisaCache.country == "US").first()
+        ft = row.fetched_at if row else None
+        if ft is not None and ft.tzinfo is None:  # SQLite stores naive datetimes
+            ft = ft.replace(tzinfo=timezone.utc)
+        fresh = bool(ft and ft > datetime.now(timezone.utc) - timedelta(days=ttl_days))
+        cached = _row_to_dict(row) if row else None
+        if row and fresh and not force:
+            return cached
+    finally:
+        db.close()
+
+    if respect_budget and not _budget.allow():
+        return cached  # budget/breaker exhausted — cron will fill this in later
+    if respect_budget:
+        _budget.note_lookup()
+
+    try:
+        data = await fetch_company_h1b_data(name, h1b_slug=slug)
+    except H1bRateLimited as e:
+        if respect_budget:
+            _budget.note_rate_limit()
+        logger.warning("H-1B rate-limited for %s (%s)", name, e)
+        return cached
+    except Exception as e:
+        logger.warning("H-1B fetch error for %s: %s", name, e)
+        return cached
+
+    db = SessionLocal()
+    try:
+        row = db.query(VisaCache).filter(VisaCache.name_key == key, VisaCache.country == "US").first()
+        row = _apply_h1b_data(db, row, key, name, slug, data)
+        db.commit()
+        return _row_to_dict(row)
+    except Exception as e:
         db.rollback()
-    return _row_to_dict(row)
+        logger.warning("H-1B cache write failed for %s: %s", name, e)
+        return cached
+    finally:
+        db.close()
 
 
 async def refresh_all_h1b():
-    """Cron: refresh stale VisaCache rows + fetch job companies not yet cached, bypassing the budget breaker."""
+    """Cron: refresh stale VisaCache rows + fetch job companies not yet cached, bypassing the budget breaker.
+
+    The name list is read in one short session; the fetch loop (hundreds of
+    companies, 0.5 s apart) then runs with no connection held — it used to pin
+    one for the whole run, which can be many minutes.
+    """
     db = SessionLocal()
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(days=_TTL_DAYS)
@@ -257,17 +323,20 @@ async def refresh_all_h1b():
         for (n,) in db.query(Job.company).distinct().all():
             if n and _name_key(n) not in cached_keys:
                 names.add(n)
+    finally:
+        db.close()
 
-        logger.info("H-1B cron: %d companies to fetch", len(names))
-        updated = 0
-        for name in names:
-            data = await resolve_company_h1b(db, name, slug=slug_map.get(_name_key(name)),
-                                             allow_live=True, respect_budget=False, force=True)
-            if data:
-                updated += 1
-            await asyncio.sleep(0.5)  # be polite to MyVisaJobs
-        db.commit()
+    logger.info("H-1B cron: %d companies to fetch", len(names))
+    updated = 0
+    for name in names:
+        data = await resolve_company_h1b_detached(
+            name, slug=slug_map.get(_name_key(name)), respect_budget=False, force=True)
+        if data:
+            updated += 1
+        await asyncio.sleep(0.5)  # be polite to MyVisaJobs
 
+    db = SessionLocal()
+    try:
         from backend.activity import log_activity
         log_activity("h1b", f"H-1B refresh complete: {updated} companies fetched", db=db)
         db.commit()
@@ -282,14 +351,16 @@ async def fetch_h1b_for_company_id(company_id: str):
         company = db.query(Company).filter(Company.id == company_id).first()
         if not company:
             return
-        await resolve_company_h1b(db, company.name, slug=company.h1b_slug,
-                                  allow_live=True, respect_budget=False, force=True)
-        db.commit()
-        logger.info("H-1B auto-fetched for %s", company.name)
-    except Exception as e:
-        logger.error(f"H-1B auto-fetch failed for company {company_id}: {e}")
+        name, slug = company.name, company.h1b_slug
     finally:
         db.close()
+
+    try:
+        # The MyVisaJobs round trip runs with the connection already released.
+        await resolve_company_h1b_detached(name, slug=slug, respect_budget=False, force=True)
+        logger.info("H-1B auto-fetched for %s", name)
+    except Exception as e:
+        logger.error(f"H-1B auto-fetch failed for company {company_id}: {e}")
 
 
 def scan_jd_for_h1b_flags(description: str, exclusion_phrases: list) -> dict:

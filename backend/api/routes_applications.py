@@ -119,37 +119,66 @@ async def _fetch_with_playwright(url: str) -> str:
         finally:
             await _close_page(page)
     finally:
-        await browser.close()
+        # pw.stop() kills the node driver process; it must run even if closing
+        # the browser fails, or the driver outlives every failed fetch.
+        try:
+            await browser.close()
+        except Exception as e:
+            logger.warning(f"Playwright browser close failed: {e}")
         await pw.stop()
 
 
-async def _cache_job_page(job_id: str, url: str):
-    """Fetch and cache the job page as clean readable HTML."""
-    from datetime import datetime, timezone
-    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
-
+def _set_job_cache_error(job_id: str, msg: str) -> None:
+    """Record why caching gave up, in its own short session."""
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
-        if not job or not url:
+        if job:
+            job.cache_error = (msg or "")[:500]
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+async def _cache_job_page(job_id: str, url: str):
+    """Fetch and cache the job page as clean readable HTML.
+
+    No DB session is open while the page is fetched or parsed: the fetch is an
+    HTTP round trip and, for thin pages, a whole Chromium launch. Holding a
+    pooled connection across that is what drained the pool when a bulk action
+    kicked off dozens of these at once, and running dozens of Chromiums at once
+    is what took the container to 2.5 GB -- hence the `page_cache` gate.
+    """
+    from datetime import datetime, timezone
+    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
+    from backend.job_monitor import get_limiter
+
+    if not url:
+        return
+
+    db = SessionLocal()
+    try:
+        if not db.query(Job.id).filter(Job.id == job_id).first():
             return
+    finally:
+        db.close()
 
-        # SSRF gate: user-submitted job URLs from the extension land here; without
-        # it an attacker could cache http://169.254.169.254/ and read it via the UI.
-        try:
-            assert_public_http_url(url)
-        except UnsafeURLError as e:
-            logger.warning(f"Rejected unsafe job URL for {job_id}: {e}")
-            try:
-                job.cache_error = f"unsafe URL: {e}"[:500]
-                db.commit()
-            except Exception:
-                db.rollback()
-            return
+    # SSRF gate: user-submitted job URLs from the extension land here; without
+    # it an attacker could cache http://169.254.169.254/ and read it via the UI.
+    try:
+        assert_public_http_url(url)
+    except UnsafeURLError as e:
+        logger.warning(f"Rejected unsafe job URL for {job_id}: {e}")
+        _set_job_cache_error(job_id, f"unsafe URL: {e}")
+        return
 
-        # Track the last error so it can be surfaced to the UI via job.cache_error
-        last_error: str | None = None
+    # Track the last error so it can be surfaced to the UI via job.cache_error
+    last_error: str | None = None
+    clean_html, text = "", ""
 
+    async with get_limiter("page_cache"):
         try:
             # Try httpx first (fast, works for most sites)
             html = None
@@ -160,19 +189,19 @@ async def _cache_job_page(job_id: str, url: str):
                 resp.raise_for_status()
                 html = resp.text[:1_000_000]
             except UnsafeURLError as e:
-                # Caught mid-redirect — don't fall back to Playwright for unsafe URLs.
+                # Caught mid-redirect -- don't fall back to Playwright for unsafe URLs.
                 logger.warning(f"Unsafe redirect target for job {job_id}: {e}")
-                try:
-                    job.cache_error = f"unsafe redirect: {e}"[:500]
-                    db.commit()
-                except Exception:
-                    db.rollback()
+                _set_job_cache_error(job_id, f"unsafe redirect: {e}")
                 return
             except Exception as e:
                 logger.info(f"httpx failed for job {job_id}, will try Playwright: {e}")
                 last_error = f"httpx: {e}"
 
             clean_html, text = _extract_clean_content(html) if html else ("", "")
+            # Up to 1 MB of raw markup plus the soup built from it; drop the
+            # reference before the (slow) Playwright branch so it is not pinned
+            # for the length of a browser launch.
+            html = None
 
             # If too little content, fall back to Playwright (handles SPAs like Meta, Apple)
             if len(text) < 200:
@@ -182,36 +211,36 @@ async def _cache_job_page(job_id: str, url: str):
                     if pw_html:
                         clean_html, text = _extract_clean_content(pw_html)
                         logger.info(f"Playwright got {len(text)} text chars for job {job_id}")
+                    pw_html = None
                 except Exception as e:
                     logger.warning(f"Playwright fallback failed for job {job_id}: {e}")
                     last_error = f"playwright: {e}"
-
-            if len(text) > 50:
-                job.cached_page_html = clean_html
-                job.cached_page_text = text
-                job.page_cached_at = datetime.now(timezone.utc)
-                job.cache_error = None
-                db.commit()
-                logger.info(f"Cached page for job {job_id}: {len(clean_html)} clean HTML, {len(text)} text chars")
-            else:
-                msg = last_error or f"no usable content ({len(text)} chars)"
-                logger.warning(f"No usable content for job {job_id} ({url}): {msg}")
-                try:
-                    job.cache_error = msg[:500]
-                    db.commit()
-                except Exception:
-                    db.rollback()
-
         except Exception as e:
             logger.warning(f"Failed to cache page for job {job_id}: {e}")
-            try:
-                job.cache_error = str(e)[:500]
-                db.commit()
-            except Exception:
-                db.rollback()
+            _set_job_cache_error(job_id, str(e))
+            return
 
-    finally:
-        db.close()
+    if len(text) > 50:
+        db = SessionLocal()
+        try:
+            job = db.query(Job).filter(Job.id == job_id).first()
+            if not job:
+                return
+            job.cached_page_html = clean_html
+            job.cached_page_text = text
+            job.page_cached_at = datetime.now(timezone.utc)
+            job.cache_error = None
+            db.commit()
+            logger.info(f"Cached page for job {job_id}: {len(clean_html)} clean HTML, {len(text)} text chars")
+        except Exception as e:
+            db.rollback()
+            logger.warning(f"Failed to store cached page for job {job_id}: {e}")
+        finally:
+            db.close()
+    else:
+        msg = last_error or f"no usable content ({len(text)} chars)"
+        logger.warning(f"No usable content for job {job_id} ({url}): {msg}")
+        _set_job_cache_error(job_id, msg)
 
 
 @router.post("")
