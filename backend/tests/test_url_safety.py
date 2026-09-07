@@ -62,7 +62,9 @@ class TestIsPublicIP:
 
     def test_public_ipv6_still_accepted(self):
         assert _is_public_ip("2001:4860:4860::8888") is True
-        assert _is_public_ip("2002:0808:0808::") is True  # 6to4 wrapping 8.8.8.8
+        # 6to4 (2002::/16) is not globally routed any more; treating the whole prefix as
+        # non-public is the conservative call and Python 3.12 agrees (is_global False).
+        assert _is_public_ip("2002:0808:0808::") is False
 
 
 # ── assert_public_http_url ───────────────────────────────────────────────────
