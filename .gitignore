@@ -147,6 +147,7 @@ backend/cover_letter_templates/garamond/
 CLAUDE.md
 docs/*
 !docs/default.png
+!docs/demo.gif
 !docs/win98.png
 !docs/v1like.png
 !docs/slate.png
