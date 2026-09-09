@@ -1602,10 +1602,10 @@ export default function V2JobFeed() {
         return (
           // escape={false}: the Feed closes every overlay from one handler that
           // stands down while a ConfirmDialog is up.
-          <ModalPanel width={436} title={`Create résumé copy — ${single ? single.title : `${picker.jobs.length} selected roles`}`} onClose={() => setPicker(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+          <ModalPanel width={436} title={`${cvMode === 'tailor' ? 'Tailor résumé' : 'Copy résumé'} — ${single ? single.title : `${picker.jobs.length} selected roles`}`} onClose={() => setPicker(null)} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
               {/* header */}
               <HeaderRow align="stretch" pad="20px 24px 16px" style={{ flexDirection: 'column', gap: 5 }}>
-                <Label>Create résumé copy</Label>
+                <Label>{cvMode === 'tailor' ? 'Tailor résumé' : 'Copy résumé with tracked links'}</Label>
                 <Heading size={19} className="v2-dialogtitle">{single ? single.title : `${picker.jobs.length} selected roles`}</Heading>
                 {single?.company && <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{single.company}</span>}
               </HeaderRow>
@@ -1652,7 +1652,7 @@ export default function V2JobFeed() {
               </div>
               {/* footer */}
               <FooterRow variant="wide">
-                <Helper>{cvMode === 'tailor' ? 'Runs the LLM on the résumé' : 'Instant · no LLM cost · appears in Résumés'}</Helper>
+                <Helper>{cvMode === 'tailor' ? 'Runs the LLM on the résumé' : 'Instant · no LLM cost'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => setPicker(null)} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button variant={cvMode === 'tailor' ? 'ai' : 'primary'} size="sm" onClick={() => runResume(cvMode, picker.jobs, cvBase)} disabled={cvBase == null}>{cvMode === 'tailor' ? 'Tailor résumé' : 'Create copy'}</Button>
               </FooterRow>
