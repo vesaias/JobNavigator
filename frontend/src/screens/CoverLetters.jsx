@@ -341,7 +341,9 @@ export default function CoverLetters() {
         </div>
       </HeaderRow>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {/* both panes wait for the settle together, as the Résumés body does: the panel
+          painting a second before the voice row and the cards read as two loads */}
+      {ready && <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* generate panel */}
         <div className="v2-scroll" style={{ flex: '0 0 340px', borderRight: '1px solid var(--line)', background: 'var(--bg)', overflow: 'auto', padding: '16px 26px 20px 30px', display: 'flex', flexDirection: 'column', gap: 13, minHeight: 0 }}>
           <Heading strong={600} size={16}>Generate new</Heading>
@@ -426,7 +428,7 @@ export default function CoverLetters() {
             </>}
           </div>
         </div>
-      </div>
+      </div>}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
   )
