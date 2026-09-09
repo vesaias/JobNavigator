@@ -36,7 +36,7 @@ services:
       DATABASE_URL: postgresql://jobnavigator:${POSTGRES_PASSWORD:-password}@db:5432/jobnavigator
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"   # everything external goes through Caddy on :80; the raw API stays on loopback
     depends_on:
       db:
         condition: service_healthy

@@ -201,6 +201,7 @@ export default function ApplicationBoard() {
             <iframe
               src={`/api/jobs/${cachedPageJob.job_id}/cached-page`}
               className="flex-1 w-full border-0 rounded-b-xl"
+              sandbox="allow-popups"
               title="Cached job page"
             />
           </div>

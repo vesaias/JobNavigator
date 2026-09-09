@@ -1302,7 +1302,7 @@ export default function JobFeed() {
               key={`cached-${selectedJob.id}`}
               src={`/api/jobs/${selectedJob.id}/cached-page`}
               className="flex-1 w-full border-0"
-              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              sandbox="allow-popups"
               title="Cached job posting"
             />
           ) : selectedJob.url ? (

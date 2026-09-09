@@ -186,8 +186,10 @@ function render() {
   // toggles
   $('liToggle').dataset.on = String(state.li);
   $('afToggle').dataset.on = String(state.af);
+  $('pvToggle').dataset.on = String(state.pv);
   $('liInfoCard').classList.toggle('hide', !state.liInfo);
   $('afInfoCard').classList.toggle('hide', !state.afInfo);
+  $('pvInfoCard').classList.toggle('hide', !state.pvInfo);
 
   // chars
   $('lenChip').textContent = `${state.len} chars`;
@@ -267,9 +269,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('apiKey').value = state.apiKey;
 
   // storage-backed feature state
-  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'structuredAutofillTrigger', 'theme']);
+  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'structuredAutofillTrigger', 'theme', 'previewUnblock']);
   state.li = !!st.linkedinCapture;
   state.af = !!st.autofillEnabled;
+  state.pv = st.previewUnblock !== false;   // on until switched off
   state.len = Number(st.autofillDefaultLength) > 0 ? Number(st.autofillDefaultLength) : 250;
   state.atsMode = !st.structuredAutofillEnabled ? 'off' : (st.structuredAutofillTrigger === 'auto' ? 'auto' : 'click');
   state.theme = ['light', 'dark', 'system'].includes(st.theme) ? st.theme : 'system';
@@ -328,6 +331,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // footer: AI-drafted
   $('afToggle').onclick = () => { state.af = !state.af; chrome.storage.sync.set({ autofillEnabled: state.af }); render(); };
   $('afInfo').onclick = () => { state.afInfo = !state.afInfo; render(); };
+
+  // footer: posting preview (frame header rules live in background.js and follow this key)
+  $('pvToggle').onclick = () => { state.pv = !state.pv; chrome.storage.sync.set({ previewUnblock: state.pv }); render(); };
+  $('pvInfo').onclick = () => { state.pvInfo = !state.pvInfo; render(); };
   $('lenChip').onclick = () => { state.charsOpen = !state.charsOpen; render(); };
   document.querySelectorAll('.preset').forEach(p => p.onclick = () => {
     state.len = Number(p.dataset.len); $('lenCustom').value = String(state.len);

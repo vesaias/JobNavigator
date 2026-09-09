@@ -60,6 +60,15 @@
     return parts.join(' ').replace(/\s+/g, ' ').trim();
   }
 
+  // Rendered and on the page: display:none, visibility:hidden, zero-size and off-screen
+  // fields are all invisible to the user, so they are invisible to the filler too.
+  function isVisible(el) {
+    if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ visibilityProperty: true, opacityProperty: true })) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return false;
+    return r.right > 0 && r.bottom > 0 && r.left < (document.documentElement.scrollWidth + 1) && r.top < (document.documentElement.scrollHeight + 1);
+  }
+
   function discoverFields(root) {
     root = root || document;
     const out = [];
@@ -69,13 +78,16 @@
     // is N sibling checkboxes, not one boolean. A lone checkbox stays boolean.
     const cbGroups = new Map();
     root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      if (cb.disabled || cb.readOnly) return;
+      if (cb.disabled || cb.readOnly || !isVisible(cb)) return;
       const container = cb.closest('[data-field-path], fieldset') || cb;
       let g = cbGroups.get(container); if (!g) { g = []; cbGroups.set(container, g); } g.push(cb);
     });
     const emittedContainers = new Set();
     root.querySelectorAll('input, textarea, select').forEach(el => {
       if (el.disabled || el.readOnly) return;
+      // a field the user cannot see is not a field to fill: an off-screen or display:none
+      // form on a hostile page would otherwise collect the persona silently
+      if (!isVisible(el)) return;
       const type = (el.type || '').toLowerCase();
       if (el.tagName === 'TEXTAREA') { out.push({ el, kind: 'textarea', signature: labelText(el) }); return; }
       if (el.tagName === 'SELECT') {
