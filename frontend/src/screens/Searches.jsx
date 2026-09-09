@@ -97,6 +97,7 @@ const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Appl
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
 const noteFor = (mode) => {
+  if (mode === 'keyword') return ['Listings link to the board (LinkedIn, Indeed, ZipRecruiter, Google), not to the company’s own page. The same job found later by a company scrape or the extension is only recognised as a duplicate when company and title match exactly.', 'sm-keyword']
   if (mode === 'levels_fyi') return ['Set your filters on levels.fyi and paste the URL here. The URL contains location, job family, salary and date filters.', 'sm-levels']
   if (mode === 'jobright') return ['Recommendations from your Jobright.ai account. Enter a search term to search instead. Credentials are in Settings › Accounts.', 'sm-jobright']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
