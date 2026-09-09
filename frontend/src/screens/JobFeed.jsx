@@ -678,7 +678,17 @@ export default function V2JobFeed() {
     try { await api.post('/jobs/bulk-update', { job_ids: ids, updates }); refreshStats(); pushToast({ kind: 'undo', msg: `${status === 'saved' ? 'Saved' : 'Skipped'} ${ids.length} job${ids.length === 1 ? '' : 's'}.`, action: 'Undo', onAction: () => bulkUndo(prev) }) }
     catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Could not update ${ids.length} job${ids.length === 1 ? '' : 's'}${e?.response?.data?.detail ? ' — ' + e.response.data.detail : ''}` }); fetchJobs() }   // the optimistic write did not stick — take the server's list back
   }
-  const bulkScore = () => { jobs.filter((j) => checked.has(j.id) && scoredCount(j) === 0).forEach(scoreJob); setChecked(new Set()) }
+  // the bulk bar's Score opens the same résumé + depth picker as `r`; scored rows in the
+  // selection are rescored too, and the title says how many so nothing is re-run blind
+  const bulkScore = () => {
+    const list = jobs.filter((j) => checked.has(j.id))
+    if (!list.length) return
+    const scored = list.filter((j) => scoredCount(j) > 0).length
+    const n = list.length
+    setRescoreJob({ verb: scored === n ? 'Rescore' : 'Score', title: `${n} selected job${n === 1 ? '' : 's'}`, company: scored && scored < n ? `${scored} already scored` : '', jobs: list })
+    loadRescoreOpts()
+    setChecked(new Set())
+  }
 
   // Gated on `!confirm` so a dialog's own useEscape owns the key while one is open,
   // and on there actually being something to close: an always-on listener claims the
