@@ -373,9 +373,11 @@ def test_generate_cover_letter_unknown_job_is_404(client, test_db):
         "resume_id": str(res.id), "job_id": MISSING_UUID}), 404)
 
 
-def test_generate_cover_letter_job_without_description_is_400(client, test_db):
+def test_generate_cover_letter_job_without_any_jd_source_is_400(client, test_db):
+    """A job with no description, no URL and no cached page has nothing to write from.
+    A job with a URL alone (hand-logged) is accepted -- the worker resolves the text."""
     res = make_resume(test_db)
-    job = make_job(test_db)
+    job = make_job(test_db, url="")
     assert_clean(client.post("/api/cover-letters/generate", json={
         "resume_id": str(res.id), "job_id": str(job.id)}), 400)
 
