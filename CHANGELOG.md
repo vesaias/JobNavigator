@@ -14,6 +14,7 @@ The new dashboard is the app at `http://localhost`; the previous one stays at `/
 ### 1 · Dashboard redesign
 - **Built from primitives.** Every screen is composed from one layer of ~50 components painted from semantic tokens; a lint blocks any hand-written colour, font, radius or shadow.
 - **Jobs** — feed with detail pane and full report, collapsible analysis rail, keyboard shortcuts, bulk actions with undo.
+- **Activity states** — a report is never hidden by a run: rescoring and tailoring show in the report band ("Scoring 2 résumés · Tailoring from PM"), on the tabs, as ghost tabs for résumés without a report yet, and as a busy ✦ on the card; a tailored copy appears the moment the tailor ends, before its chained score.
 - **Companies** — tiers A/B/C, health with acknowledge, per-company résumés and scoring depth.
 - **Applications** — stage stepper, interviews, prep handover for an AI chat.
 - **Résumés** — shelf, editor, tailoring review with per-change decline.
