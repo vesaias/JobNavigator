@@ -133,7 +133,7 @@ Open `http://localhost`. On first run sign in with a blank key, then set one in 
 
 ## Chrome Extension ("The Navigator")
 
-- Unblocks the posting preview by stripping frame-blocking headers.
+- Unblocks the posting preview: frame-blocking headers are lifted only for frames the dashboard itself opens (scoped to your JobNavigator host); every other page keeps its own headers.
 - Captures job ids while you browse `linkedin.com/jobs/collections/*` and imports them with full details.
 - Fills ATS forms and drafts answers to free-text questions from your Persona and Q&A bank (toggle in the popup; model and prompt in Settings › AI).
 

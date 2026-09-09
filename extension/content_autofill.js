@@ -9,7 +9,7 @@
 // affordance, overlay, stream and length override; two can generate at once.
 (() => {
   // Presence marker so the dashboard can tell the extension is installed/enabled
-  // (its declarativeNetRequest rules strip X-Frame-Options/CSP so postings embed).
+  // (its declarativeNetRequest rules lift X-Frame-Options/CSP on frames the dashboard opens, so postings embed).
   // Set unconditionally, independent of the Autofill toggle.
   try { document.documentElement.setAttribute('data-jn-ext', chrome.runtime.getManifest().version || '1'); } catch (_) {}
 

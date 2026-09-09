@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "The Navigator",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Job navigation automation - application tracking & LinkedIn capture",
   "permissions": ["activeTab", "storage", "scripting", "declarativeNetRequest"],
   "host_permissions": ["http://*/*", "https://*/*", "<all_urls>"],
