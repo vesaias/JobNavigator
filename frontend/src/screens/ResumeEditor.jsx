@@ -745,7 +745,7 @@ function TailorModal({ doc, chain, onClose, onRun, pushToast }) {
   const [personaBase, setPersonaBase] = useState(false)
 
   useEffect(() => {
-    api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60 } })
+    api.get('/jobs', { params: { status: 'saved,applied,new', sort_by: 'date', limit: 60, brief: 1 } })
       // empty with no explanation would read as "you have no saved jobs", which may not be true
       .then(({ data }) => setJobs((data.jobs || data.items || data || []))).catch((e) => { console.error(e); pushToast?.({ kind: 'error', msg: 'Could not load your jobs — paste a description instead.' }) })
     api.get('/resumes', { params: { is_base: false } })

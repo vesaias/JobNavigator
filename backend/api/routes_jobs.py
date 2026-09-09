@@ -111,6 +111,9 @@ def list_jobs(
     # which is a DataError the id handler then reports as a 500 (R4-T1-07).
     limit: Annotated[int, Query(ge=0, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    # brief=1 drops the long text fields (description, scoring report, H-1B snippet) for
+    # pickers that only need title/company/scores; 200 full rows are several MB.
+    brief: bool = False,
     db: Session = Depends(get_db),
 ):
     search_id = uuid_filter(search_id, "search_id")
@@ -183,18 +186,24 @@ def list_jobs(
         in_flight_detail_map.setdefault(key, []).append(
             {"job_type": r.job_type, "meta": r.meta})
 
-    return {
-        "total": total,
-        "jobs": [
-            _job_to_dict(
-                j,
-                tailored_resume_id=tailored_map.get(j.id),
-                in_flight=in_flight_map.get(str(j.id), []),
-                in_flight_detail=in_flight_detail_map.get(str(j.id), []),
-            )
-            for j in jobs
-        ],
-    }
+    rows = [
+        _job_to_dict(
+            j,
+            tailored_resume_id=tailored_map.get(j.id),
+            in_flight=in_flight_map.get(str(j.id), []),
+            in_flight_detail=in_flight_detail_map.get(str(j.id), []),
+        )
+        for j in jobs
+    ]
+    if brief:
+        for r in rows:
+            for k in _BRIEF_DROPPED:
+                r.pop(k, None)
+    return {"total": total, "jobs": rows}
+
+
+# The long text fields a `brief=1` listing leaves out.
+_BRIEF_DROPPED = ("description", "scoring_report", "h1b_jd_snippet")
 
 
 def _expand_company_filter(db, company):

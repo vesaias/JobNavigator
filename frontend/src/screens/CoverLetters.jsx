@@ -164,7 +164,8 @@ export default function CoverLetters() {
     () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your Persona — it will not be offered as a source.' }) }),
     // saved AND applied — v1 fetched only saved, so a ?job= from an applied job
     // landed on an id with no matching option and the field rendered blank
-    () => api.get('/jobs', { params: { status: 'saved,applied', limit: 200 } })   // 200 is the endpoint's cap
+    // brief=1: the picker needs title/company/status only; 200 full rows ran to several MB
+    () => api.get('/jobs', { params: { status: 'saved,applied', limit: 200, brief: 1 } })   // 200 is the endpoint's cap
       .then(({ data }) => setJobs(mergeKeep(data.jobs || []))).catch((e) => { console.error(e); pushToast({ kind: 'error', msg: 'Could not load your saved jobs — the job picker is empty.' }) }),
     () => api.get('/settings').then(({ data }) => {
       let p = data.cover_letter_voice_presets
