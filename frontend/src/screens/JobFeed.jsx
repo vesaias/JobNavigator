@@ -5,7 +5,7 @@ import { useToasts, ToastStack } from '../Toast'
 import ConfirmDialog from '../ConfirmDialog'
 import { useEscape, useSettled, useSingleOpen, useWarm, NBSP, DASH } from '../hooks'
 import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from '../ui'
-import { ANALYZE, TAILOR, activityText, feedActivity, flightDetail, flightTypes, ghostTabs, tabBusy, tabBusyHint, tailorMarkTitle } from './feedActivity'
+import { ANALYZE, SCORE_RESUME, TAILOR, activityText, feedActivity, flightDetail, flightTypes, ghostTabs, tabBusy, tabBusyHint, tailorMarkTitle } from './feedActivity'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -236,7 +236,7 @@ export default function V2JobFeed() {
   const [rescoreDepth, setRescoreDepth] = useState('full')
   const scoreWatchRef = useRef([])
   const pendingRef = useRef({})   // {jobId:{title,company}} → completion toast
-  const seenActiveRef = useRef(new Set())   // jobs confirmed in-flight (avoids first-tick false completion)
+  const seenActiveRef = useRef(new Map())   // jobId → Set(op types) confirmed in-flight (avoids first-tick false completion)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   // ?search=<id> scopes the feed to one saved search (from Searches → View results in feed)
@@ -851,23 +851,32 @@ export default function V2JobFeed() {
         // ignores the flag still drives the plain spinner states.
         const { data } = await api.get('/monitor/in-flight', { params: { job_ids: ids.join(','), detail: 1 } })
         if (cancelled) return
-        const present = new Set(ids.filter((id) => (data[id] || []).length))
-        present.forEach((id) => seenActiveRef.current.add(id))
-        const finished = ids.filter((id) => seenActiveRef.current.has(id) && !present.has(id))
-        if (finished.length) {
+        // completion is per OPERATION, not per job: a tailor chains a scoring run
+        // behind it, and the copy (the ✦ mark, the toast's Open link) exists as
+        // soon as tailor_resume leaves the list, a minute before the score does
+        const done = []   // [id, Set(types that just finished)]
+        for (const id of ids) {
+          const now = new Set(flightTypes(data[id]))
+          const before = seenActiveRef.current.get(id) || new Set()
+          const gone = [...before].filter((t) => !now.has(t))
+          if (gone.length) done.push([id, new Set(gone)])
+          if (now.size) seenActiveRef.current.set(id, now); else seenActiveRef.current.delete(id)
+        }
+        if (done.length) {
           // resolve OK vs failed from the run's actual status, not just "it left in-flight"
-          let statusMap = {}
+          const status = {}   // `${id}:${job_type}` → status
           try {
-            const { data: fin } = await api.get('/monitor/finished', { params: { job_ids: finished.join(','), since: Math.floor(Date.now() - 20000) } })
-            ;(fin || []).forEach((r) => { if (!(r.target_job_id in statusMap)) statusMap[r.target_job_id] = r.status })
+            const { data: fin } = await api.get('/monitor/finished', { params: { job_ids: done.map(([id]) => id).join(','), since: Math.floor(Date.now() - 20000) } })
+            ;(fin || []).forEach((r) => { const k = `${r.target_job_id}:${r.job_type}`; if (!(k in status)) status[k] = r.status })
           } catch { /* status unknown — assume ok */ }
-          for (const id of finished) {
-            seenActiveRef.current.delete(id)
+          for (const [id, gone] of done) {
             let fresh = null
             try { const { data: jd } = await api.get(`/jobs/${id}`); fresh = jd; setJobs((prev) => prev.map((j) => j.id === id ? jd : j)); setDetail((d) => (d && d.id === id ? jd : d)) } catch {}
             const meta = pendingRef.current[id]
-            if (meta) {
-              const ok = statusMap[id] !== 'failed'
+            // the toast waits for ITS op: a pending tailor ignores the chained score finishing
+            const mine = meta && (meta.op === 'tailor' ? gone.has(TAILOR) : (gone.has(ANALYZE) || gone.has(SCORE_RESUME)))
+            if (mine) {
+              const ok = !([...gone].some((t) => status[`${id}:${t}`] === 'failed'))
               // a finished tailor has a résumé to show; a finished score doesn't
               const rid = ok && meta.op === 'tailor' ? fresh?.tailored_resume_id : null
               pushToast({
@@ -878,7 +887,8 @@ export default function V2JobFeed() {
               delete pendingRef.current[id]
             }
           }
-          setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
+          const idle = done.map(([id]) => id).filter((id) => !seenActiveRef.current.has(id))
+          if (idle.length) setWatchExtra((prev) => prev.filter((id) => !idle.includes(id)))
           refreshStats()
         }
         // both fields move together — the card reads in_flight, the band and the
