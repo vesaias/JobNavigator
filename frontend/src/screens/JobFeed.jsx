@@ -317,7 +317,8 @@ export default function V2JobFeed() {
     reloadFacets()
   }, [facetKey, reloadFacets])
   // Triage moves rows between statuses, so the menus are restated alongside the counters.
-  const refreshStats = useCallback(() => { reloadFacets(); api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [reloadFacets])
+  // every feed action ends here, so the rail's Jobs count follows saves, skips, applies and ignores too
+  const refreshStats = useCallback(() => { reloadFacets(); window.dispatchEvent(new CustomEvent('jn:counts-changed')); api.get('/jobs/feed-stats').then(({ data }) => setStats(data)).catch(() => { /* silent: the header counters; re-fetched after every action anyway */ }) }, [reloadFacets])
 
   // Warm start: header counters and facet lists paint from cache, then reconcile (rail's .15s fade)
   // once facets and the first page of jobs have both answered.
