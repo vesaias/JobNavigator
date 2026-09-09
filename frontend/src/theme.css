@@ -106,10 +106,10 @@
   /* The line box a `line-height: 1` control gives a text run it ALSO clips
      (`overflow: hidden` for the ellipsis). At 1 the box is exactly 1em while a
      face's ink is ~1.2-1.3em, so descenders are cut — IBM Plex's 1.30em descent
-     makes it obvious. Base stays 1 (nothing moves); the Plex themes take 1.4,
-     which clears the tallest ink box. Only Select's trigger label reads it: it is
+     makes it obvious. Base is 1.28 (a 16px box at 12.5, centred in the 32px
+     trigger); the Plex themes take 1.4. Only Select's trigger label reads it: it is
      the one run in the primitive layer that is both clipped and inside `line-height: 1`. */
-  --ctl-line:1;
+  --ctl-line:1.28;
   /* Round 12: the trigger label's own optical vertical centring, separate from
      --ctl-line above (that one only clears descenders in the clipped line box,
      it does not move where the glyphs sit inside it). `align-items:center`
@@ -505,10 +505,10 @@
   /* The line box a `line-height: 1` control gives a text run it ALSO clips
      (`overflow: hidden` for the ellipsis). At 1 the box is exactly 1em while a
      face's ink is ~1.2-1.3em, so descenders are cut — IBM Plex's 1.30em descent
-     makes it obvious. Base stays 1 (nothing moves); the Plex themes take 1.4,
-     which clears the tallest ink box. Only Select's trigger label reads it: it is
+     makes it obvious. Base is 1.28 (a 16px box at 12.5, centred in the 32px
+     trigger); the Plex themes take 1.4. Only Select's trigger label reads it: it is
      the one run in the primitive layer that is both clipped and inside `line-height: 1`. */
-  --ctl-line:1;
+  --ctl-line:1.28;
   --select-label-shift:0px;   /* trigger label optical shift; win98 only, see the win98 block (round 12) */
   /* The two weights primitives used to write as bare 500/600 literals. A pixel
      face carries 400 and 700 only, so win98 maps them down/up; every other theme
