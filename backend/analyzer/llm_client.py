@@ -169,7 +169,7 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
         return
     combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
     if provider in ("openai", "openrouter"):
-        base = "https://openrouter.ai/api/v1" if provider == "openrouter" else None
+        base = OPENROUTER_BASE_URL if provider == "openrouter" else None
         async for c in _stream_openai(combined, system, model, api_key, max_tokens, base):
             yield c
         return
@@ -200,9 +200,19 @@ async def _stream_claude(prompt, system, model, api_key, max_tokens, cached_pref
             yield text
 
 
-async def _stream_openai(prompt, system, model, api_key, max_tokens, base_url=None):
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# OpenRouter app attribution (lists the app on openrouter.ai/apps); ignored by other endpoints.
+OPENROUTER_HEADERS = {"HTTP-Referer": "https://github.com/vesaias/JobNavigator", "X-Title": "JobNavigator"}
+
+
+def _openai_client(api_key: str, base_url: str | None):
     from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    headers = OPENROUTER_HEADERS if base_url == OPENROUTER_BASE_URL else None
+    return AsyncOpenAI(api_key=api_key, base_url=base_url, default_headers=headers)
+
+
+async def _stream_openai(prompt, system, model, api_key, max_tokens, base_url=None):
+    client = _openai_client(api_key, base_url)
     stream = await client.chat.completions.create(
         model=model, max_tokens=max_tokens, stream=True,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": prompt}],
@@ -228,7 +238,7 @@ async def _dispatch(provider: str, model: str, api_key: str,
         # OpenRouter is OpenAI-API-compatible — same client, different base URL.
         # One key reaches every vendor's models (model slug is vendor-prefixed).
         return await _call_openai(combined, system, model, api_key, max_tokens,
-                                  base_url="https://openrouter.ai/api/v1")
+                                  base_url=OPENROUTER_BASE_URL)
     elif provider == "ollama":
         return await _call_ollama(combined, system, model, max_tokens)
     else:
@@ -312,8 +322,7 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
 async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_tokens: int,
                        base_url: str | None = None) -> dict:
     """Call the OpenAI API, or any OpenAI-compatible endpoint via base_url."""
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)  # base_url=None → OpenAI default
+    client = _openai_client(api_key, base_url)  # base_url=None → OpenAI default
     response = await client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
