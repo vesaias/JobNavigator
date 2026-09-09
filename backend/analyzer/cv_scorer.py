@@ -186,6 +186,50 @@ def _get_resume_texts_for_company(db, company) -> dict:
     return _get_resume_texts(db)
 
 
+def _cv_texts_for_ids(db, cv_ids: list) -> dict:
+    """Return {display label: flattened_text} for explicit cv ids.
+
+    cv_ids may reference base Resumes, tailored Resumes, or the reserved
+    'persona' id; no is_base filter — explicit IDs are the caller's responsibility.
+    """
+    from backend.models.db import Resume
+    cv_texts = {}
+    resume_ids = [c for c in cv_ids if c != _PERSONA_KEY]
+    if resume_ids:
+        resumes = db.query(Resume).filter(Resume.id.in_(resume_ids)).order_by(Resume.id).all()
+        # A single tailored resume is labeled "Tailored" so the frontend's tailored-link
+        # handler picks it up; multiple in one batch fall back to Resume.name to avoid a dict-key collision.
+        tailored_count = sum(1 for r in resumes if not r.is_base)
+        for r in resumes:
+            text = _flatten_resume(r.json_data or {})
+            if not text:
+                continue
+            if r.is_base:
+                label = r.name
+            elif tailored_count == 1:
+                label = "Tailored"
+            else:
+                label = r.name  # disambiguate; loses the short-chip nicety, but no data loss
+            cv_texts[label] = text
+    if _PERSONA_KEY in cv_ids:
+        cv_texts.update(_get_persona_text(db))
+    return cv_texts
+
+
+def resolve_score_resume_names(db, job=None, cv_ids: list | None = None) -> list[str]:
+    """The names a scoring run will write into job.cv_scores, in scoring order.
+
+    Mirrors score_single_job's résumé selection so a launcher can name the
+    résumés of an in-flight run before any score exists.
+    """
+    if cv_ids:
+        return list(_cv_texts_for_ids(db, cv_ids))
+    company = _find_company_for_job(db, job) if job is not None else None
+    texts = (_get_resume_texts_for_company(db, company) if company
+             else (_get_default_resume(db) or _get_resume_texts(db)))
+    return list(texts)
+
+
 def _job_text_from_row(job) -> str | None:
     """Job text already on the row (description, then cached page). No I/O, so
     the caller's session is never held across a network call."""
@@ -705,29 +749,7 @@ async def score_single_job(job_id: str, cv_ids: list = None, depth: str = "full"
         job_url = job.url
 
         if cv_ids:
-            # cv_ids may reference base Resumes, tailored Resumes, or the reserved
-            # 'persona' id; no is_base filter — explicit IDs are the caller's responsibility.
-            from backend.models.db import Resume
-            cv_texts = {}
-            resume_ids = [c for c in cv_ids if c != _PERSONA_KEY]
-            if resume_ids:
-                resumes = db.query(Resume).filter(Resume.id.in_(resume_ids)).order_by(Resume.id).all()
-                # A single tailored resume is labeled "Tailored" so the frontend's tailored-link
-                # handler picks it up; multiple in one batch fall back to Resume.name to avoid a dict-key collision.
-                tailored_count = sum(1 for r in resumes if not r.is_base)
-                for r in resumes:
-                    text = _flatten_resume(r.json_data or {})
-                    if not text:
-                        continue
-                    if r.is_base:
-                        label = r.name
-                    elif tailored_count == 1:
-                        label = "Tailored"
-                    else:
-                        label = r.name  # disambiguate; loses the short-chip nicety, but no data loss
-                    cv_texts[label] = text
-            if _PERSONA_KEY in cv_ids:
-                cv_texts.update(_get_persona_text(db))
+            cv_texts = _cv_texts_for_ids(db, cv_ids)
         else:
             company = _find_company_for_job(db, job)
             cv_texts = _get_resume_texts_for_company(db, company) if company else (_get_default_resume(db) or _get_resume_texts(db))

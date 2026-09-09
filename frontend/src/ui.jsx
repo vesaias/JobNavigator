@@ -143,11 +143,14 @@ const SPIN_WEIGHT = { bold: '2px' }
 // which is exactly what Spinner has always meant. The determinate form (a filled
 // block count) belongs to a progress primitive the app does not have yet.
 const BLOCK_W = 5, BLOCK_GAP = 1, BLOCKS = 2
-function BlockLoader({ size, color, style }) {
+// `width`/`height` override the derived trough for a caller that owns a fixed box
+// and cannot grow: GlyphBadge's `busy` draws the bar INSIDE the badge (22x10 at
+// size 22), where the 34px floor below would spill out of the round box.
+function BlockLoader({ size, color, width, height, style }) {
   // the trough grows with the requested diameter but never below the 34px that
   // reads as a bar rather than a smudge; the pad is the bevel's own 2px inset
-  const w = Math.max(34, Math.round(size * 2.6))
-  const h = Math.max(10, Math.min(14, size + 3))
+  const w = width || Math.max(34, Math.round(size * 2.6))
+  const h = height || Math.max(10, Math.min(14, size + 3))
   const run = w - 4   // the trough's inner width: how far the band has to travel
   return (
     <span className="v2-inset" aria-hidden="true" style={{
@@ -1031,9 +1034,13 @@ const TAG_TONE = {
   // --ai-soft at --accent-soft, so a theme with no violet reads as `accent`.
   ai: { background: 'var(--tag-ai-bg)', color: 'var(--tag-ai-ink)' },
 }
-export function Tag({ tone = 'neutral', title, children, style, className }) {
+// `busy`: the badge keeps its ground, its ink and its box, and the LABEL is
+// replaced by a spinner in that same ink — a run in flight is a state of the
+// thing the tag names, not a second element beside it. currentColor, so a tone
+// swap or a theme override needs no second token.
+export function Tag({ tone = 'neutral', busy, title, children, style, className }) {
   return (
-    <span title={title} className={className} style={{
+    <span title={title} className={className} aria-busy={busy ? 'true' : undefined} style={{
       flex: '0 0 auto', display: 'inline-flex', alignItems: 'center',
       borderRadius: 'var(--radius-control)', fontSize: 'var(--t-10)', lineHeight: '15px',
       fontFamily: 'var(--label-face)',   // caption face, see MenuHead
@@ -1042,7 +1049,7 @@ export function Tag({ tone = 'neutral', title, children, style, className }) {
       padding: '2px 8px', letterSpacing: 'var(--tag-tracking)', textTransform: 'var(--label-case)',
       fontWeight: 'var(--label-weight)',
       whiteSpace: 'nowrap', ...(TAG_TONE[tone] || TAG_TONE.neutral), ...style,
-    }}>{children}</span>
+    }}>{busy ? <Spinner size={11} color="currentColor" /> : children}</span>
   )
 }
 const DOT_TONE = {
@@ -1094,16 +1101,28 @@ const GLYPH_ON = {
 // the centre of its own line box, and half-leading rounds differently at
 // different line-heights, so forcing `line={1}` everywhere would shift some
 // badges by a device pixel. Only the sites that need it pass it.
+//
+// `busy` swaps the ONE glyph for a spinner in the badge's own ink; the ground,
+// the box and the size never move, so a badge that starts working does not
+// change shape under the pointer. Where a theme has no arc (win98's
+// `--loader-style: blocks`) the badge draws the segmented bar sized to itself —
+// Spinner's own bar has a 34px floor that would spill out of a 22px round box.
 export function GlyphBadge({
-  size = 16, tone = 'accent', on, mono, hover, line, onClick, disabled, title, ariaLabel,
+  size = 16, tone = 'accent', on, mono, hover, line, busy, onClick, disabled, title, ariaLabel,
   ariaExpanded, children, style, className,
 }) {
   const live = !!onClick
+  const blocks = useThemeVar('--loader-style', 'arc') === 'blocks'
+  const mark = busy
+    ? (blocks
+        ? <BlockLoader size={11} color="currentColor" width={size} height={Math.min(10, size)} />
+        : <Spinner size={11} color="currentColor" />)
+    : children
   return (
     <span
       {...act(onClick, disabled, 'button')} title={title}
       aria-label={live ? (ariaLabel || title) : ariaLabel}
-      aria-expanded={ariaExpanded} aria-disabled={disabled || undefined}
+      aria-expanded={ariaExpanded} aria-disabled={disabled || undefined} aria-busy={busy ? 'true' : undefined}
       aria-hidden={!live && !title && !ariaLabel ? 'true' : undefined}
       className={cx(live && !disabled && hover, className)}
       style={{
@@ -1114,7 +1133,7 @@ export function GlyphBadge({
         ...(mono ? { fontFamily: 'var(--font-mono)' } : null),
         ...(on ? GLYPH_ON : (GLYPH_TONE[tone] || GLYPH_TONE.accent)),
         ...(live ? { cursor: disabled ? 'default' : 'pointer' } : null), ...style,
-      }}>{children}</span>
+      }}>{mark}</span>
   )
 }
 

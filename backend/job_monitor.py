@@ -145,6 +145,9 @@ class RunningJob:
     # "What this run did", shown in Stats > Run history; set via `run.summary = ...` in
     # tracked_run, or by a launch_background coroutine returning a string.
     summary: Optional[str] = None
+    # Same dict stored on the JobRun row: what this run is about (which résumés a
+    # scoring run covers, which base a tailor copies from). Read by /monitor/in-flight?detail=1.
+    meta: Optional[dict] = None
 
 
 # Keyed by dedup key (e.g. "scrape_all" or "company_scrape:<uuid>")
@@ -321,6 +324,7 @@ async def tracked_run(
         scope_key=scope_key,
         target_job_id=target_job_id,
         company_id=company_id,
+        meta=meta,
     )
     _running[key] = running_job
 
@@ -397,6 +401,7 @@ def launch_background(
         scope_key=scope_key,
         target_job_id=target_job_id,
         company_id=company_id,
+        meta=meta,
     )
 
     return str(run_id)

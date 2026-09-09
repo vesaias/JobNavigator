@@ -736,10 +736,12 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
         persona = db.query(Persona).filter(Persona.id == 1).first()
         if not persona or not (persona.resume_content or {}):
             raise HTTPException(400, "Persona has no resume_content — fill it in /persona first")
+        base_name = "Persona"
     else:
         base = db.query(Resume).filter(Resume.id == base_resume_id).first()
         if not base:
             raise HTTPException(404, "Base resume not found")
+        base_name = base.name
 
     # Fast-fail: job must exist and have some JD source; the worker resolves the actual
     # text (description → live fetch → cached page) later, so this just confirms something exists without the slow fetch.
@@ -758,6 +760,11 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     target_uuid = _uuid.UUID(job_id) if job_id else None
     scope = f"{base_resume_id}:{job_id or 'freeform'}"
 
+    # A tailored copy for this job already exists, so the run supersedes it.
+    replaces = bool(job_id) and db.query(Resume.id).filter(
+        Resume.job_id == target_uuid, Resume.is_base == False
+    ).first() is not None
+
     try:
         run_id = launch_background(
             "tailor_resume",
@@ -765,6 +772,7 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
             trigger="manual",
             scope_key=scope,
             target_job_id=target_uuid,
+            meta={"base_name": base_name, "replaces": replaces},
             func_kwargs={
                 "base_resume_id": base_resume_id,
                 "job_id": job_id,
@@ -996,6 +1004,8 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     trigger="manual",
                     scope_key=f"{job_id}:tailored:{tailored_id}",
                     target_job_id=_uuid.UUID(job_id) if isinstance(job_id, str) else job_id,
+                    # A lone tailored copy scores under the label "Tailored".
+                    meta={"resume_names": ["Tailored"], "depth": chain_depth},
                     func_kwargs={
                         "job_id": job_id,
                         "cv_ids": [tailored_id],
@@ -1463,6 +1473,9 @@ async def score_check(resume_id: str, request_body: dict = None, db: Session = D
         depth = "light"
 
     scope = f"{resume.job_id}:resume:{resume_id}" if resume.job_id else f"resume:{resume_id}"
+    # A job-linked copy lands in job.cv_scores under "Tailored"; a freeform copy
+    # keeps its score on itself, so name the résumé instead.
+    score_label = "Tailored" if resume.job_id else resume.name
     try:
         run_id = launch_background(
             "score_resume",
@@ -1470,6 +1483,7 @@ async def score_check(resume_id: str, request_body: dict = None, db: Session = D
             trigger="manual",
             scope_key=scope,
             target_job_id=_uuid.UUID(str(resume.job_id)) if resume.job_id else None,
+            meta={"resume_names": [score_label], "depth": depth},
             func_kwargs={"resume_id": resume_id, "depth": depth},
         )
         return {"run_id": run_id, "status": "running", "depth": depth, "resume_id": resume_id}

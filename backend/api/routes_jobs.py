@@ -21,6 +21,16 @@ logger = logging.getLogger("jobnavigator.jobs")
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+def _score_resume_names(db, job) -> list[str]:
+    """Résumé names an auto-score launch will cover; never fatal to the save itself."""
+    try:
+        from backend.analyzer.cv_scorer import resolve_score_resume_names
+        return resolve_score_resume_names(db, job=job)
+    except Exception as e:
+        logger.warning(f"Could not resolve resume names for job {getattr(job, 'id', '?')}: {e}")
+        return []
+
+
 @router.post("/linkedin-import")
 async def linkedin_import(request: Request, db: Session = Depends(get_db)):
     """Accept LinkedIn job IDs from the Chrome Extension, scrape via Voyager API in background."""
@@ -164,10 +174,14 @@ def list_jobs(
     # Batch per-job in-flight op lookup (O(N running jobs) once, O(1) per row)
     import backend.job_monitor as _mon
     in_flight_map: dict[str, list[str]] = {}
+    in_flight_detail_map: dict[str, list[dict]] = {}
     for r in _mon._running.values():
         if r.target_job_id is None:
             continue
-        in_flight_map.setdefault(str(r.target_job_id), []).append(r.job_type)
+        key = str(r.target_job_id)
+        in_flight_map.setdefault(key, []).append(r.job_type)
+        in_flight_detail_map.setdefault(key, []).append(
+            {"job_type": r.job_type, "meta": r.meta})
 
     return {
         "total": total,
@@ -176,6 +190,7 @@ def list_jobs(
                 j,
                 tailored_resume_id=tailored_map.get(j.id),
                 in_flight=in_flight_map.get(str(j.id), []),
+                in_flight_detail=in_flight_detail_map.get(str(j.id), []),
             )
             for j in jobs
         ],
@@ -594,6 +609,10 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
                 trigger="manual",
                 scope_key=f"{job.id}:extension",
                 target_job_id=_uuid.UUID(str(job.id)),
+                meta={
+                    "resume_names": _score_resume_names(db, job),
+                    "depth": ext_search.auto_scoring_depth,
+                },
                 func_kwargs={"job_id": str(job.id), "depth": ext_search.auto_scoring_depth},
             )
         except JobAlreadyRunningError:
@@ -686,8 +705,13 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
         Resume.job_id == job.id, Resume.is_base == False
     ).order_by(Resume.updated_at.desc()).first()
     import backend.job_monitor as _mon
-    in_flight = [r.job_type for r in _mon._running.values() if r.target_job_id == job.id]
-    return _job_to_dict(job, tailored_resume_id=tailored[0] if tailored else None, in_flight=in_flight)
+    running = [r for r in _mon._running.values() if r.target_job_id == job.id]
+    return _job_to_dict(
+        job,
+        tailored_resume_id=tailored[0] if tailored else None,
+        in_flight=[r.job_type for r in running],
+        in_flight_detail=[{"job_type": r.job_type, "meta": r.meta} for r in running],
+    )
 
 
 @router.patch("/{job_id}")
@@ -720,6 +744,7 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
                     trigger="manual",
                     scope_key=f"{job.id}:on-save",
                     target_job_id=job.id,
+                    meta={"resume_names": _score_resume_names(db, job), "depth": on_save},
                     func_kwargs={"job_id": str(job.id), "depth": on_save},
                 )
             except JobAlreadyRunningError:
@@ -924,7 +949,8 @@ def _normalize_report(report, best_cv):
     return report
 
 
-def _job_to_dict(j: Job, tailored_resume_id=None, in_flight: list[str] | None = None) -> dict:
+def _job_to_dict(j: Job, tailored_resume_id=None, in_flight: list[str] | None = None,
+                 in_flight_detail: list[dict] | None = None) -> dict:
     scores = j.cv_scores or {}
     numeric_scores = [v for v in scores.values() if isinstance(v, (int, float))]
     best_score = max(numeric_scores) if numeric_scores else 0
@@ -960,4 +986,7 @@ def _job_to_dict(j: Job, tailored_resume_id=None, in_flight: list[str] | None = 
         "has_tailored_resume": tailored_resume_id is not None,
         "tailored_resume_id": str(tailored_resume_id) if tailored_resume_id else None,
         "in_flight": in_flight or [],
+        # Same ops as in_flight, with the run's meta (which résumés a score covers,
+        # which base a tailor copies from).
+        "in_flight_detail": in_flight_detail or [],
     }

@@ -556,14 +556,20 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
     # full INSERT traceback in the log (R4-T5-09). Look it up first, like
     # /api/scrape/company/{id} does.
     from backend.models.db import Job as _Job
+    cv_ids = (body or {}).get("cv_ids")
     db = SessionLocal()
     try:
-        if not db.query(_Job.id).filter(_Job.id == target_job_uuid).first():
+        job_row = db.query(_Job).filter(_Job.id == target_job_uuid).first()
+        if not job_row:
             raise HTTPException(status_code=404, detail="Job not found")
+        # Names the run will write into cv_scores, resolved while the session is open.
+        try:
+            from backend.analyzer.cv_scorer import resolve_score_resume_names
+            resume_names = resolve_score_resume_names(db, job=job_row, cv_ids=cv_ids)
+        except Exception:
+            resume_names = []
     finally:
         db.close()
-
-    cv_ids = (body or {}).get("cv_ids")
 
     async def _do():
         from backend.analyzer.cv_scorer import score_single_job
@@ -576,6 +582,7 @@ async def trigger_analysis(job_id: str, depth: str = "full", body: dict = None):
         run_id = launch_background(
             "analyze_job", _do, trigger="manual", scope_key=scope,
             target_job_id=target_job_uuid,
+            meta={"resume_names": resume_names, "depth": depth},
         )
         return {"run_id": run_id, "status": "running", "job_id": job_id}
     except JobAlreadyRunningError as e:
@@ -1032,22 +1039,23 @@ def get_active_jobs():
 
 
 @app.get("/api/monitor/in-flight", tags=["monitor"], summary="Per-job active operations")
-def get_in_flight(job_ids: str = None):
-    """Return {job_id: [job_types]} for running ops tagged with target_job_id (scheduler-level ops like scrape_all have none, so are omitted); optional job_ids filters by comma-separated UUIDs."""
+def get_in_flight(job_ids: str = None, detail: bool = False):
+    """Return {job_id: [job_types]} for running ops tagged with target_job_id (scheduler-level ops like scrape_all have none, so are omitted); optional job_ids filters by comma-separated UUIDs, and detail=1 returns [{job_type, meta}] entries instead of bare job types."""
     import backend.job_monitor as mon
 
     wanted: set[str] | None = None
     if job_ids:
         wanted = {s.strip() for s in job_ids.split(",") if s.strip()}
 
-    result: dict[str, list[str]] = {}
+    result: dict[str, list] = {}
     for r in mon._running.values():
         if r.target_job_id is None:
             continue
         key = str(r.target_job_id)
         if wanted is not None and key not in wanted:
             continue
-        result.setdefault(key, []).append(r.job_type)
+        entry = {"job_type": r.job_type, "meta": r.meta} if detail else r.job_type
+        result.setdefault(key, []).append(entry)
 
     return result
 

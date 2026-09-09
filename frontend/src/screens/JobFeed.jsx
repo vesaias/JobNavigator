@@ -5,6 +5,7 @@ import { useToasts, ToastStack } from '../Toast'
 import ConfirmDialog from '../ConfirmDialog'
 import { useEscape, useSettled, useSingleOpen, useWarm, NBSP, DASH } from '../hooks'
 import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow } from '../ui'
+import { ANALYZE, TAILOR, activityText, feedActivity, flightDetail, flightTypes, ghostTabs, tabBusy, tabBusyHint, tailorMarkTitle } from './feedActivity'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -530,14 +531,29 @@ export default function V2JobFeed() {
       pushToast({ kind: 'success', msg: `Ignoring "${name}" — ${n} job${n === 1 ? '' : 's'} hidden` })
     } catch (e) { console.error(e); pushToast({ kind: 'error', msg: `Couldn't ignore "${name}"` }); fetchJobs() }
   }, [fetchJobs, pushToast])
+  // One optimistic write for "this job now has a run in flight": both the plain
+  // in_flight list the card reads and the in_flight_detail the band and tabs
+  // read, on the row AND on the open detail, plus the watch that polls it.
+  // `meta` is what the picker just sent — the poll replaces it with the
+  // backend's own on the next tick.
+  const markFlight = useCallback((jobId, jobType, meta) => {
+    const add = (o) => ({
+      ...o,
+      in_flight: [...new Set([...(o.in_flight || []), jobType])],
+      in_flight_detail: [...(o.in_flight_detail || []).filter((x) => x && x.job_type !== jobType), { job_type: jobType, meta: meta || null }],
+    })
+    setJobs((prev) => prev.map((x) => (x.id === jobId ? add(x) : x)))
+    setDetail((cur) => (cur && cur.id === jobId ? add(cur) : cur))
+    setWatchExtra((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]))
+  }, [])
   const scoreJob = useCallback((job) => {
     pendingRef.current[job.id] = { title: job.title, company: job.company }
     pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` })
+    // the one-click path sends no cv_ids, so the run covers every base résumé
     api.post(`/analyze/${job.id}?depth=${defaultDepth}`, {}).then(() => {
-      setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'analyze_job'])] } : cur))
-      setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+      markFlight(job.id, ANALYZE, { resume_names: resumes.map((r) => r.name).filter(Boolean), depth: defaultDepth })
     }).catch((e) => { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `Scoring failed for "${job.title}"` }); console.error(e) })
-  }, [pushToast, defaultDepth])
+  }, [pushToast, defaultDepth, resumes, markFlight])
 
   // rescoreJob holds { label, jobs:[...] } — one job or a bulk set
   // `preferDepth` is for the one caller that is asking for a specific depth (the
@@ -564,18 +580,23 @@ export default function V2JobFeed() {
     const list = target.jobs || []
     setRescoreJob(null)
     if (list.length > 1) pushToast({ kind: 'progress', msg: `Scoring ${list.length} jobs…` })
+    // the names the picker just ticked — the future cv_scores keys, so the band
+    // can say "Scoring 2 résumés" and the tabs can ghost the ones with no report
+    const names = rescoreOpts.filter((o) => rescoreSel.includes(o.id)).map((o) => o.name).filter(Boolean)
     for (const job of list) {
       if (list.length === 1) { pendingRef.current[job.id] = { title: job.title, company: job.company }; pushToast({ kind: 'progress', msg: `Scoring "${job.title}"…` }) }
       try {
         await api.post(`/analyze/${job.id}?depth=${rescoreDepth}`, { cv_ids: rescoreSel })
-        setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'analyze_job'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'analyze_job'])] } : cur))
-        setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+        markFlight(job.id, ANALYZE, { resume_names: names, depth: rescoreDepth })
       } catch (e) { delete pendingRef.current[job.id]; console.error(e) }
     }
-  }, [rescoreJob, rescoreSel, rescoreDepth, pushToast])
+  }, [rescoreJob, rescoreSel, rescoreOpts, rescoreDepth, pushToast, markFlight])
 
   const runResume = useCallback(async (mode, list, baseId) => {
     setPicker(null)
+    // the picker's own base list, read off `resumes` (cvBases is the same list
+    // plus the Persona entry, and is declared below this callback)
+    const baseName = baseId === 'persona' ? 'Persona' : ((resumes.find((r) => r.id === baseId) || {}).name || '')
     for (const job of list) {
       try {
         if (mode === 'copy') { const { data } = await api.post('/resumes/copy', { base_resume_id: baseId, job_id: job.id }); if (list.length === 1) navigate(`/resumes/${data.id}`) }
@@ -583,13 +604,12 @@ export default function V2JobFeed() {
           pendingRef.current[job.id] = { title: job.title, company: job.company, op: 'tailor' }
           pushToast({ kind: 'progress', msg: `Tailoring for "${job.title}"…` })
           await api.post('/resumes/tailor', { base_resume_id: baseId, job_id: job.id })
-          setJobs((prev) => prev.map((x) => x.id === job.id ? { ...x, in_flight: [...new Set([...(x.in_flight || []), 'tailor_resume'])] } : x)); setDetail((cur) => (cur && cur.id === job.id ? { ...cur, in_flight: [...new Set([...(cur.in_flight || []), 'tailor_resume'])] } : cur))
-          setWatchExtra((prev) => prev.includes(job.id) ? prev : [...prev, job.id])
+          markFlight(job.id, TAILOR, { base_name: baseName, replaces: !!job.tailored_resume_id })
         }
       } catch (e) { delete pendingRef.current[job.id]; pushToast({ kind: 'error', msg: `${mode === 'copy' ? 'Copy' : 'Tailor'} failed for "${job.title}"` }); console.error(`${mode} failed`, e.response?.data?.detail || e.message) }
     }
     setChecked(new Set())
-  }, [pushToast])
+  }, [pushToast, resumes, markFlight, navigate])
   const openTailored = useCallback(async (job) => {
     if (job.tailored_resume_id) { navigate(`/resumes/${job.tailored_resume_id}`); return }
     try { const { data } = await api.get('/resumes'); const copy = (data || []).find((r) => !r.is_base && r.job_id === job.id); if (copy) { navigate(`/resumes/${copy.id}`); return } } catch {}
@@ -816,7 +836,10 @@ export default function V2JobFeed() {
     let cancelled = false
     const tick = async () => {
       try {
-        const { data } = await api.get('/monitor/in-flight', { params: { job_ids: ids.join(',') } })
+        // detail=1 answers [{job_type, meta}] instead of ["job_type"]; the two
+        // shapes normalise in flightTypes/flightDetail, so an older backend that
+        // ignores the flag still drives the plain spinner states.
+        const { data } = await api.get('/monitor/in-flight', { params: { job_ids: ids.join(','), detail: 1 } })
         if (cancelled) return
         const present = new Set(ids.filter((id) => (data[id] || []).length))
         present.forEach((id) => seenActiveRef.current.add(id))
@@ -848,8 +871,11 @@ export default function V2JobFeed() {
           setWatchExtra((prev) => prev.filter((id) => !finished.includes(id)))
           refreshStats()
         }
-        setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: data[j.id] } : j)))
-        setDetail((cur) => (cur && data[cur.id] ? { ...cur, in_flight: data[cur.id] } : cur))
+        // both fields move together — the card reads in_flight, the band and the
+        // report tabs read in_flight_detail, and a half-written job would show a
+        // spinner with nothing to say
+        setJobs((prev) => prev.map((j) => (data[j.id] ? { ...j, in_flight: flightTypes(data[j.id]), in_flight_detail: flightDetail(data[j.id]) } : j)))
+        setDetail((cur) => (cur && data[cur.id] ? { ...cur, in_flight: flightTypes(data[cur.id]), in_flight_detail: flightDetail(data[cur.id]) } : cur))
       } catch { /* retry next tick */ }
     }
     const h = setInterval(tick, 3000); tick()
@@ -882,8 +908,17 @@ export default function V2JobFeed() {
   const bandReq = best?.rpt?.requirement_mapping || []
   const bandMet = bandReq.filter((r) => r.matched).length
   const bandCov = best?.rpt?.keyword_coverage_pct
-  const running = d && (d.in_flight || []).some((o) => o === 'analyze_job')
-  const dScored = reports.length > 0 && !running   // the running band replaces the report while a rescore runs
+  // What is in flight for the open job, and what it is working on (feedActivity.js).
+  // The rule: a report that EXISTS is never hidden by a run — a scored job keeps
+  // its band, its tabs and its ring while it is scored again, and the run shows
+  // as a trailing item on the band instead of a takeover.
+  const dAct = feedActivity(d)
+  const running = dAct.running
+  const dActText = activityText(dAct)
+  const dActInk = dAct.tone === 'ai' ? 'var(--ai)' : 'var(--accent)'
+  const dScored = reports.length > 0
+  // résumés in the run that have no tab yet — dashed placeholders in the tab strip
+  const dGhosts = dScored ? ghostTabs(dAct, reports, d.company) : []
   // a Light score has a number but no report; `reportOpen` is a persisted preference, so the panel
   // can only be open where there is a report to read (never an empty report over the posting).
   const hasReport = reports.some((r) => !!r.rpt)
@@ -1076,7 +1111,11 @@ export default function V2JobFeed() {
               : jobs.map((j, i) => {
                 const score = bestScore(j), nsc = scoredCount(j)
                 const badge = BADGE[j.status]
-                const run = (j.in_flight || []).length > 0
+                // the ring slot is the SCORE slot: only a scoring run spins there, and
+                // only while there is no score to show. Tailoring speaks through the ✦
+                // mark beside the title instead — the card's one activity state.
+                const fa = feedActivity(j)
+                const run = fa.running
                 const isIgnored = j.status === 'ignored'
                 const on = checked.has(j.id)
                 const visa = H1B[j.h1b_verdict]
@@ -1119,7 +1158,13 @@ export default function V2JobFeed() {
                           {/* `v2-rowink` lets a SELECTED row's --row-selected-ink reach the text (theme.css); it marks
                               reading content only — the status badge keeps its own ground/ink, and doesn't match in the default theme. */}
                           <Heading strong size={16} className="v2-rowink" title={j.title} style={{ flex: 1, minWidth: 0, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isIgnored ? 'line-through' : 'none', textDecorationColor: 'var(--muted)' }}>{j.title}</Heading>
-                          {j.tailored_resume_id && <a href={`/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--ai)' }}>✦</a>}
+                          {/* the ✦ mark: the same 18px box either way, so a tailor starting
+                              swaps the glyph for a spinner without moving the title. Busy is
+                              inert — there is nothing to open yet on a first copy, and the
+                              copy a re-tailor replaces is about to change under the click. */}
+                          {fa.tailoring
+                            ? <span title={tailorMarkTitle(fa)} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', color: 'var(--ai)' }}><Spinner size={11} color="currentColor" /></span>
+                            : !j.tailored_resume_id ? null : <a href={`/resumes/${j.tailored_resume_id}`} className="v2-rowink" onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/resumes/${j.tailored_resume_id}`) }} title="Open tailored résumé" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, margin: '-2px -2px -2px 0', fontSize: 14, lineHeight: 1, color: 'var(--ai)' }}>✦</a>}
                           {/* ui: keep — status badge with background + border + r99: Tag role, not a Label */}
                           {badge && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 7px', lineHeight: '14px', borderRadius: 'var(--radius-control)', border: `1px solid ${badge.bd}`, background: badge.bg, color: badge.fg }}>{badge.label}</span>}
                         </div>
@@ -1223,8 +1268,12 @@ export default function V2JobFeed() {
                     {d.url && <Button variant="secondary" size="sm" href={d.url} target="_blank" style={{ height: headOpen ? 36 : 30 }}>Open ↗</Button>}
                     {/* Routed through Button (not hand-drawn) so it reads --btn-shadow/--btn-weight/--btn-primary-bg/-ink
                         and the hover/pressed rules; the style override only restores height/padding/line-height, which track the collapsing header. */}
-                    <Button variant="ai" size="sm" onClick={() => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
-                      style={{ height: headOpen ? 36 : 30, padding: '0 19px', lineHeight: 'inherit' }}>{d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</Button>
+                    {/* while a tailor runs the button says so and does nothing: `disabled`
+                        would repaint it --line on --muted, which reads as "unavailable"
+                        rather than "working", so it dims in place at .55 instead. */}
+                    <Button variant="ai" size="sm" title={dAct.tailoring ? tailorMarkTitle(dAct) : undefined}
+                      onClick={dAct.tailoring ? () => {} : () => d.tailored_resume_id ? openTailored(d) : setPicker({ mode: 'tailor', jobs: [d] })}
+                      style={{ height: headOpen ? 36 : 30, padding: '0 19px', lineHeight: 'inherit', opacity: dAct.tailoring ? 0.55 : 1, cursor: dAct.tailoring ? 'default' : undefined }}>{dAct.tailoring ? '✦ Tailoring…' : d.tailored_resume_id ? '✦ Open tailored ↗' : 'Tailor résumé'}</Button>
                     <div style={{ position: 'relative', flex: '0 0 auto' }}>
                       {/* Round 9: IconButton's bordered 36, with a width/height
                           override so the square still tracks the collapsing header
@@ -1238,7 +1287,9 @@ export default function V2JobFeed() {
                           <div onClick={() => setHeadMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 44 }} />
                           <Menu ariaLabel="Job actions" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 45, marginTop: 5, width: 236 }}>
                             {[
-                              ...(d.tailored_resume_id ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
+                              // hidden while a tailor is already running: it would queue a second
+                              // run against the copy this one is about to write
+                              ...(d.tailored_resume_id && !dAct.tailoring ? [['✦ Re-tailor résumé', 't', () => setPicker({ mode: 'tailor', jobs: [d] }), true]] : []),
                               ['Mark applied', 'a', () => applyJob(d)],
                               ['Rescore', 'r', () => openRescore(d)],
                               ['Cover letter ↗', 'c', () => navigate(`/cover-letters?job=${d.id}`)],
@@ -1278,6 +1329,16 @@ export default function V2JobFeed() {
                           <span style={{ flex: '0 0 auto', fontSize: 12.5, color: 'var(--muted)' }}>Score at full depth to see the report</span>
                           <Button variant="ai" size="xs" onClick={(e) => { e.stopPropagation(); openRescore(d, 'full') }} style={{ flex: '0 0 auto' }}>Full report</Button>
                         </>}
+                    {/* activity: the run rides at the END of the band the report already owns,
+                        behind its own hairline. Accent while scoring (or both), --ai when only
+                        a tailor is out. */}
+                    {dAct.active && <Rule vertical tone="line" />}
+                    {dAct.active && (
+                      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 7, color: dActInk }}>
+                        <Spinner size={12} color="currentColor" />
+                        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{dActText}</span>
+                      </div>
+                    )}
                   </div>
                   {reportShown && (
                     <div style={{ borderTop: '2px solid var(--accent)', background: 'var(--surface)', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1285,14 +1346,26 @@ export default function V2JobFeed() {
                       <HeaderRow pad="0 30px" align="center" style={{ gap: 0 }}>
                         {reports.map((r, k) => {
                           const onTab = k === Math.min(reportTab, reports.length - 1)
+                          // this tab's résumé is itself in the run: it KEEPS its score and gains a spinner
+                          const bz = tabBusy(dAct, r)
                           return (
-                            <div key={r.name} className="v2-tab" onClick={() => { setReportTab(k); setReqFilter('all') }} title={r.name} style={{ padding: '7px 0', marginRight: 22, maxWidth: 230, fontSize: 12.5, color: onTab ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${onTab ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            <div key={r.name} className="v2-tab" onClick={() => { setReportTab(k); setReqFilter('all') }} title={`${r.name}${tabBusyHint(bz)}`} style={{ padding: '7px 0', marginRight: 22, maxWidth: 230, fontSize: 12.5, color: onTab ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${onTab ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6 }}>
                               {r.tailored && <span style={{ fontSize: 10, color: 'var(--ai)' }}>✦</span>}
                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                               <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, opacity: 0.7 }}>({r.score})</span>
+                              {bz && <Spinner size={10} color={bz === 'ai' ? 'var(--ai)' : 'var(--accent)'} />}
                             </div>
                           )
                         })}
+                        {/* ghosts: a résumé in the run with no report yet. Dashed and muted so the
+                            strip already shows what is coming; the real tab replaces it on landing. */}
+                        {dGhosts.map((g) => (
+                          <div key={g.key} title={g.tailored ? `Tailoring · ${g.label}` : `${g.label} · scoring`} style={{ padding: '7px 0', marginRight: 22, maxWidth: 230, fontSize: 12.5, color: 'var(--muted)', borderBottom: '2px dashed var(--line)', marginBottom: -1, cursor: 'default', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            {g.tailored && <span style={{ fontSize: 10, color: 'var(--ai)' }}>✦</span>}
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.label}</span>
+                            <Spinner size={10} color={g.tailored ? 'var(--ai)' : 'var(--accent)'} />
+                          </div>
+                        ))}
                         <NavLink pad="7px 0" onClick={() => openRescore(d)} style={{ marginLeft: 'auto', color: 'var(--muted)' }}>+ Rescore</NavLink>
                       </HeaderRow>
                       {/* body */}
@@ -1418,10 +1491,23 @@ export default function V2JobFeed() {
                     <span style={{ color: 'var(--muted)' }}>{' '}Score against your résumés for the </span>
                     <span style={{ color: 'var(--accent)' }}>fit breakdown, requirements and keywords</span>
                   </div>
+                  {/* nothing scored yet, but a tailor is out: the same trailing item the
+                      report band gets, so activity is never invisible */}
+                  {dAct.tailoring && (
+                    <>
+                      <Rule vertical tone="line" />
+                      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 7, color: dActInk }}>
+                        <Spinner size={12} color="currentColor" />
+                        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{dActText}</span>
+                      </div>
+                    </>
+                  )}
                   <Button variant="ai" size="xs" onClick={() => openRescore(d)}>Score this role</Button>
                 </div>
               )}
-              {running && !anaCollapsed && (
+              {/* the takeover, and ONLY here: no score at all and a scoring run in flight.
+                  A job that already has a report keeps it — the run rides on the band. */}
+              {!dScored && running && !anaCollapsed && (
                 <div style={{ flex: '0 0 auto', borderBottom: '1px solid var(--line)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 30px 8px 4px' }}>
                   <span style={{ flex: '0 0 auto', width: 19 }} />
                   {/* the band's busy ring is the same primitive as the row's, so the two loading states can't drift apart */}

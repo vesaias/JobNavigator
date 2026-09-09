@@ -15,12 +15,14 @@ The shell (`Shell.jsx`) plus the primitive layer (`ui.jsx`), the token sheet (`t
 - **Containers** — `Row` (`selected`, `flush`), `TableRow` (flat-table body row, `size`, `align`), `Card` (`interactive`), `Band` (dashed sibling), `ArchiveBand` (the "Archived · N" shelf), `Surface` (recessed block, `radius`: none/field/row/card/menu).
 - **Overlays** — `Menu`/`MenuHead`/`MenuItem` (`MenuItem`: `icon`, `hint`, `selected`, `danger`, `divider`, `href`; `Menu`'s `onDismiss` mounts a click-swallowing backdrop), `ModalPanel` (`title`/`titlebar` name a themed caption bar when one exists, `as="form"`+`onSubmit`, `escape`/`escapeCapture`), `Drawer` (same caption contract, pane- not viewport-relative), `ChoiceCard`/`ChoiceRow`/`ChoiceModal` (the "pick one thing, then commit" shell behind Tailor/Re-tailor/Persona-import).
 - **Structure** — `HeaderRow` (`variant`: modal/screen/compact, `line`: none/soft/strong, `bg`, plus `variant="titlebar"`), `FooterRow` (`variant`: modal/compact/wide), `TableHead`, `Rule` (bare hairline, `vertical`), `SectionHead` (`caret`: start/end/pin/false, `boxed`/`card`).
-- **Status & text** — `Tag` (`tone`: none/neutral/accent/good/warn/bad/**ai**), `Dot` (tones incl. `seg-on`/`seg-off`), `Chip`, `GlyphBadge` (`tone`: accent/bad/neutral/ai/outline/none, `on`, `mono`), `Notice` (`tone`: warn/bad/quiet, `action`), `Check`/`Radio`/`Switch`/`Segmented` (options carry `dots`/`dotColor`/`tone`; `variant="inset"` is the framed two-cell toggle), `Meter` (0-1 fill), `ScoreRing` (`size` sm/34px or md/44px; `value`/`label`/`busy`; ring by default, or per-theme `pill`/`bar`/`ascii` — see "shape switches" below), `Spinner` (`weight="bold"`; a segmented block-loader instead of an arc when `--loader-style` is `blocks`).
+- **Status & text** — `Tag` (`tone`: none/neutral/accent/good/warn/bad/**ai**, `busy`), `Dot` (tones incl. `seg-on`/`seg-off`), `Chip`, `GlyphBadge` (`tone`: accent/bad/neutral/ai/outline/none, `on`, `mono`, `busy`), `Notice` (`tone`: warn/bad/quiet, `action`), `Check`/`Radio`/`Switch`/`Segmented` (options carry `dots`/`dotColor`/`tone`; `variant="inset"` is the framed two-cell toggle), `Meter` (0-1 fill), `ScoreRing` (`size` sm/34px or md/44px; `value`/`label`/`busy`; ring by default, or per-theme `pill`/`bar`/`ascii` — see "shape switches" below), `Spinner` (`weight="bold"`; a segmented block-loader instead of an arc when `--loader-style` is `blocks`).
 - **Type** — `Label`, `Helper` (`size="xs"`, `onClick`), `Mono` (`code` for a fixed-advance run like a cron string or id; without it, a numeral run on `--numeral-face`), `Heading` (`strong` for the medium/semibold title face), `PageTitle`, `Link`/`NavLink`.
 - **Glyphs** — `CopyGlyph`, `FlaskGlyph`, `CheckGlyph`, `CrossGlyph`: hand-drawn SVGs in `currentColor`, replacing Unicode symbols that fell back to missing-glyph boxes or an uncontrolled symbol font on Linux/Chromium.
 - **Misc** — `ShowMore` (pager), `RemoveLink`/`RemoveX`/`MoveArrows` (list-row affordances), `ToastCard` (`kind`: progress/success/error/undo — the box only; `Toast.jsx` owns the taxonomy and stack).
 
 Every primitive takes `style` (layout only) and `className` (appended after its own hover class). Interactive ones are keyboard-operable through the internal `kb()` helper (tab stop, role, Enter/Space) with the right `aria-*`.
+
+**`busy`.** `Tag` and `GlyphBadge` take `busy`: the box, the ground and the ink stay exactly as they are and the *content* becomes an 11px `Spinner` in `currentColor` (`aria-busy="true"`). A badge that starts working must not change size or tone — it sits inline in a run of text, and a resize would move everything after it. Under `--loader-style: blocks` (win98) a `GlyphBadge` draws the segmented bar sized to itself (22×10 at size 22) rather than `Spinner`'s own bar, which has a 34px floor that would spill out of the round box.
 
 **Shape switches.** Some primitives read a CSS custom property at runtime via `useThemeVar` to change what they *draw*, not just how they're painted: `ScoreRing` (`--ring-variant`: ring/pill/bar/ascii), `Spinner` (`--loader-style`: arc/blocks), `Check`/`Radio` (`--check-style`: default/win98 sunken-tick), `HeaderRow`/`ModalPanel`/`Drawer` (`--title-bar`, via `useTitleBar()`). Reads are cached per `(theme, appearance, name)`.
 
@@ -51,6 +53,21 @@ One block per **theme** then overrides palette and/or semantic names under `.jn-
 - **Feedback goes through `useToasts`**: progress/success auto-dismiss at 4s, undo at 5s, error never auto-dismisses. **Destructive actions use `ConfirmDialog`**, never `window.confirm`.
 - **After creating or deleting rows**, dispatch `window.dispatchEvent(new CustomEvent('jn:counts-changed'))` to refresh the rail's badge counts.
 - **Long-running actions poll `/api/monitor/active`** by scope key so a spinner survives navigating away and back.
+
+## Activity states (Feed)
+
+**A report that exists is never hidden by a run.** Scoring a job that already has a score must not take its band, its tabs or its ring away — the run is *added* to what is there. `screens/feedActivity.js` is the whole derivation, pure and unit-tested; `JobFeed.jsx` calls `feedActivity(job)` once per row and once for the open detail.
+
+The data is two parallel fields on the job: `in_flight: ["analyze_job" | "tailor_resume"]` (as before) and `in_flight_detail: [{ job_type, meta }]`. `meta` is `{ resume_names, depth }` for a score and `{ base_name, replaces }` for a tailor, and may be **null** for a run started before the backend carried it — every state then degrades to its wordless form ("Scoring…", "Tailoring…", no ghost tabs). The Feed's poll asks `/api/monitor/in-flight?detail=1` and writes both fields together; `flightTypes`/`flightDetail` normalise the plain and the detailed answer, so an older backend still drives the plain states.
+
+Where each one draws:
+
+- **Card** — the ring slot is the *score* slot: it spins only while a job with **no** score is being scored. The card's one other activity state is the ✦ mark beside the title, which swaps its glyph for an 11px `--ai` spinner in the same 18px box and goes inert (a first copy has nothing to open; a re-tailor is about to rewrite what a click would open). Nothing on the card marks a rescore.
+- **Report band** — the takeover bar ("Scoring in progress") appears **only** when the job has no score at all. Otherwise the band keeps its ring, its résumé name and its counts, and gains a trailing item: a vertical `Rule`, a 12px `Spinner` and 12.5px/500 text — `--accent` while scoring (or while both run), `--ai` when only a tailor is out. Text is `Scoring {n} résumé(s)` and `Tailoring from {base}` / `Re-tailoring from {base}`, joined with ` · `.
+- **Report tabs** — a tab whose résumé is in the run keeps its score and gains a 10px spinner after the parenthesis, with `· scoring again` / `· re-tailoring` in its title. A résumé in the run with no tab yet draws a **ghost**: muted 12.5px label on a `2px dashed var(--line)` underline, not clickable, replaced by the real tab when the run lands. The tailored ghost is `✦ {base} → {company}`.
+- **Header** — the primary AI button reads `✦ Tailoring…` at `opacity .55` and does nothing while a tailor runs (`disabled` would repaint it as *unavailable* rather than *working*); the ⋯ menu's `✦ Re-tailor résumé` is hidden for the same span.
+
+Light and Full depth are **not** distinguished visually anywhere.
 
 ## Routes
 

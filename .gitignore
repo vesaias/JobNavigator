@@ -174,3 +174,6 @@ tests/artifacts/
 # Design workbench: the lab pages (/ui gallery, /toasts lab) are local-only.
 # App.jsx registers them through import.meta.glob, so the app builds without them.
 frontend/src/design-base/
+
+# internal decision log (removed from the public tree in the 2.0 cleanup)
+DECISIONS.md
