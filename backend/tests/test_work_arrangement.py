@@ -21,12 +21,20 @@ from backend.analyzer.work_arrangement import (
 class FakeJob:
     """Only the attributes the extractor touches."""
 
-    def __init__(self, location=None, title=None, description=None, remote=None):
+    def __init__(self, location=None, title=None, description=None,
+                 arr_remote=None, arr_hybrid=None, arr_onsite=None):
         self.id = "job-1"
         self.location = location
         self.title = title
         self.description = description
-        self.remote = remote
+        self.arr_remote = arr_remote
+        self.arr_hybrid = arr_hybrid
+        self.arr_onsite = arr_onsite
+        self.remote = None
+
+    @property
+    def flags(self):
+        return (self.arr_remote, self.arr_hybrid, self.arr_onsite)
 
 
 # ── tier 1: the source's own field ───────────────────────────────────────────
@@ -186,39 +194,57 @@ def test_title_beats_the_description():
 
 # ── apply_arrangement_to_job ─────────────────────────────────────────────────
 
-def test_apply_sets_remote_true():
+def test_apply_sets_the_remote_flag():
     job = FakeJob(description="This role is 100% remote in Canada.")
     apply_arrangement_to_job(job)
+    assert job.flags == (True, False, False)
     assert job.remote is True
 
 
-def test_apply_sets_remote_false_for_hybrid():
-    """Hybrid resolves to `False`, not `None` — the job is known, and it is not remote."""
+def test_apply_sets_the_hybrid_flag():
     job = FakeJob(description="This role operates in a hybrid capacity.")
     apply_arrangement_to_job(job)
+    assert job.flags == (False, True, False)
     assert job.remote is False
 
 
-def test_apply_leaves_unknown_as_none():
+def test_unknown_is_its_own_state_not_a_false():
+    """All three NULL is the fourth state. It must never read as "not remote"."""
     job = FakeJob(description="We are looking for a senior engineer.")
     apply_arrangement_to_job(job)
+    assert job.flags == (None, None, None)
     assert job.remote is None
 
 
-def test_apply_does_not_overwrite_an_existing_value():
-    """A value the scraper already set wins over anything the cascade finds."""
-    job = FakeJob(description="This role is 100% remote.", remote=False)
+def test_a_posting_can_carry_two_arrangements():
+    """"Remote or Hybrid" answers either filter."""
+    job = FakeJob(location="Remote or Hybrid")
     apply_arrangement_to_job(job)
-    assert job.remote is False
+    assert job.flags == (True, True, False)
+
+
+def test_a_structured_collection_sets_both_flags():
+    """A board exposing independent flags hands the handler a collection."""
+    job = FakeJob()
+    apply_arrangement_to_job(job, structured=["Remote", "Hybrid"])
+    assert job.flags == (True, True, False)
+
+
+def test_apply_does_not_overwrite_existing_flags():
+    """A value the scraper already set wins over anything the cascade finds."""
+    job = FakeJob(description="This role is 100% remote.",
+                  arr_remote=False, arr_hybrid=True, arr_onsite=False)
+    apply_arrangement_to_job(job)
+    assert job.flags == (False, True, False)
 
 
 def test_apply_uses_the_structured_argument():
     job = FakeJob(location="Vancouver, British Columbia, Canada")
     apply_arrangement_to_job(job, structured="Remote")
-    assert job.remote is True
+    assert job.flags == (True, False, False)
 
 
 def test_apply_tolerates_empty_fields():
     job = FakeJob()
     apply_arrangement_to_job(job)
-    assert job.remote is None
+    assert job.flags == (None, None, None)

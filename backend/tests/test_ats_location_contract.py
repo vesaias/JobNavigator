@@ -42,6 +42,7 @@ async def test_ashby_carries_location_and_workplace_type():
         "location": "New York, NY (HQ)",
         "isRemote": True,
         "workplaceType": "Hybrid",
+        "secondaryLocations": [{"location": "Remote (Canada)"}, {"location": "Miami, FL"}],
     }]}
     with patch("httpx.AsyncClient", return_value=_client(payload)):
         from backend.scraper.ats.ashby import scrape
@@ -51,6 +52,8 @@ async def test_ashby_carries_location_and_workplace_type():
     assert jobs[0]["location"] == "New York, NY (HQ)"
     # `isRemote` is true on this posting and must not win over workplaceType.
     assert jobs[0]["arrangement"] == "Hybrid"
+    # every place, primary first — the posting has to answer all of them
+    assert jobs[0]["locations"] == ["New York, NY (HQ)", "Remote (Canada)", "Miami, FL"]
 
 
 # ── Greenhouse ───────────────────────────────────────────────────────────────
@@ -80,7 +83,8 @@ async def test_lever_carries_location_and_workplace_type():
     payload = [{
         "text": "Staff Engineer",
         "hostedUrl": "https://jobs.lever.co/acme/1",
-        "categories": {"location": "Seoul, South Korea", "team": "Platform"},
+        "categories": {"location": "Seoul, South Korea", "team": "Platform",
+                       "allLocations": ["Seoul, South Korea", "Tokyo, Japan"]},
         "workplaceType": "hybrid",
     }]
     with patch("httpx.AsyncClient", return_value=_client(payload)):
@@ -90,6 +94,7 @@ async def test_lever_carries_location_and_workplace_type():
     assert jobs
     assert jobs[0]["location"] == "Seoul, South Korea"
     assert jobs[0]["arrangement"] == "hybrid"
+    assert jobs[0]["locations"] == ["Seoul, South Korea", "Tokyo, Japan"]
 
 
 # ── SmartRecruiters ──────────────────────────────────────────────────────────
@@ -202,7 +207,8 @@ def test_company_pages_reads_the_optional_fields():
         title = "Staff Engineer"
         description = None
         remote = None
+        arr_remote = arr_hybrid = arr_onsite = None
 
     job = FakeJob()
     apply_arrangement_to_job(job, structured={}.get("arrangement"))
-    assert job.remote is None
+    assert (job.arr_remote, job.arr_hybrid, job.arr_onsite) == (None, None, None)
