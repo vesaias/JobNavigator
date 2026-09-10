@@ -127,20 +127,28 @@ ARRANGEMENT_WORDS = {"remote": "remote", "hybrid": "hybrid",
                      "on-site": "onsite", "onsite": "onsite",
                      "in office": "onsite", "in-office": "onsite",
                      "work from home": "remote", "wfh": "remote",
+                     "telecommute": "remote", "distributed": "remote",
+                     "fully distributed": "remote", "remote first": "remote",
+                     "remote-first": "remote", "remote (global)": "remote",
+                     "remote - global": "remote",
                      # A whole-token phrase, never a place: "Fully Remote" and
                      # "Remote - Anywhere" have to leave the city empty, or the
                      # feed grows a city called "Anywhere".
                      "fully remote": "remote", "100% remote": "remote",
                      "anywhere": "remote", "remote anywhere": "remote",
-                     "anywhere in the world": "remote", "worldwide": "remote"}
+                     "anywhere in the world": "remote", "worldwide": "remote",
+                     # "Global" on its own is where the work is done from, not a
+                     # place it is done in. Inside a longer name ("Global
+                     # Technology Center") the token is that name, not this one.
+                     "global": "remote"}
 
 JUNK = {"", "-", "--", "n/a", "na", "none", "unknown", "tbd", "various",
         "multiple", "locations", "multiple locations", "various locations",
         # office labels boards append in brackets: "New York, NY (HQ)"
         "hq", "headquarters", "head office", "office", "corporate", "main office",
         # a region of the world, not a place: "Americas-United States-Boston"
-        "americas", "emea", "apac", "latam", "north america", "global",
-        "nationwide"}
+        # ("global" is not here: it is an arrangement word, see above)
+        "americas", "emea", "apac", "latam", "north america", "nationwide"}
 
 # "6 Locations" is a count, not a place.
 COUNT_ONLY = re.compile(r"^\d+\s+locations?$", re.I)
@@ -186,6 +194,11 @@ METROS = {
     "tri state": (None, None, "US"),
     "greater boston": ("Boston", "MA", "US"),
     "greater chicago": ("Chicago", "IL", "US"),
+    "greater los angeles": ("Los Angeles", "CA", "US"),
+    "greater austin": ("Austin", "TX", "US"),
+    "greater denver": ("Denver", "CO", "US"),
+    "greater atlanta": ("Atlanta", "GA", "US"),
+    "washington dc metro": ("Washington", "DC", "US"),
     "chicago metro": ("Chicago", "IL", "US"),
     "la metro": ("Los Angeles", "CA", "US"),
     "los angeles metro": ("Los Angeles", "CA", "US"),
@@ -202,9 +215,13 @@ METROS = {
 GEORGIAN_CITIES = {"tbilisi", "batumi", "kutaisi", "rustavi", "zugdidi",
                    "gori", "poti", "telavi"}
 
-# The longest city name the indexed columns hold. `loc_city` is indexed, and a
-# board occasionally writes a whole address into the field.
+# The longest city or region name the indexed columns hold. `loc_city` is
+# indexed and Postgres refuses an oversized btree entry, and a board
+# occasionally writes a whole address into the field. An over-long name is cut,
+# not refused: the country and the region it sits in are still worth having.
+# `MAX_CITY` is the same limit under the name the handler tests import.
 MAX_PART = 120
+MAX_CITY = MAX_PART
 
 COUNTRY_LABELS = {code: name.title() for name, code in COUNTRY_NAMES.items()}
 COUNTRY_LABELS.update({"CA": "Canada", "US": "United States",
@@ -375,6 +392,13 @@ def bare_city(text: str):
     if not isinstance(text, str):
         return None
     return BARE_CITIES.get(_base_city(_core(text)))
+
+
+def _known_city(name: str) -> bool:
+    """True when some gazetteer knows this name as a city."""
+    folded = _base_city(name)
+    return bool(folded and (folded in BARE_CITIES or folded in CALIFORNIA_CITIES
+                            or folded in CANADA_CITIES or folded in METROS))
 
 
 def _metro_of(token: str):
@@ -699,15 +723,29 @@ def _parse_one(cleaned: str, text_joiner: str = ", ", country_hint: str = None) 
         elif value:
             result["country"] = result["country"] or value
 
-    # "Bengaluru, Karnataka, India": a country written last, and two names left
-    # over, is city then region. The rule is held to countries whose regions the
-    # gazetteer does not know - a US or Canadian region would have been read as
-    # one already, and "Whippany Campus, Jefferson Park, US" is not a region.
-    if (result["country"] and result["country"] not in REGION_NAMES
-            and not result["region"] and len(text_parts) == 2
-            and text_slots and country_slot > max(text_slots)):
+    # Where the country sits says what the leftover names are.
+    #
+    # Country last - "Bengaluru, Karnataka, India" - is city then region. The
+    # rule is held to countries whose regions the gazetteer does not know: a US
+    # or Canadian region would have been read as one already, and "Whippany
+    # Campus, Jefferson Park, US" is not a region.
+    #
+    # Country first - "IRL, Dublin, Dockline" - is city then site label. Workday
+    # tenants write the building after the city, and gluing it on invents a city
+    # no map has. A trailing name the gazetteers do know is a place, not a
+    # label, and is left alone.
+    if (result["country"] and text_slots and len(text_parts) >= 2
+            and not result["region"]
+            and result["country"] not in REGION_NAMES
+            and country_slot > max(text_slots)):
         result["region"] = text_parts[1][:MAX_PART]
         text_parts = text_parts[:1]
+    elif (result["country"] and text_slots and len(text_parts) >= 2
+            and 0 <= country_slot < min(text_slots)
+            # A space joiner means the caller split one name into pieces
+            # ("US, CA, Santa, Clara"), so none of them is a label.
+            and text_joiner.strip()):
+        text_parts = [text_parts[0]] + [t for t in text_parts[1:] if _known_city(t)]
 
     if text_parts:
         city = _METRO_TAIL.sub("", text_joiner.join(text_parts)).strip()

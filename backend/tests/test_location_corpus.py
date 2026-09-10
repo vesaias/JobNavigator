@@ -126,8 +126,11 @@ TRAPS = [
     ("Georgia", "US", "GA", None),
     ("Tbilisi, Georgia", "GE", None, "Tbilisi"),
     ("Batumi, Georgia", "GE", None, "Batumi"),
-    # three parts, foreign: city, region, country
+    # where the country sits says what the other names are: written last, the
+    # middle name is the region; written first, a trailing unknown name is the
+    # building and is dropped rather than glued onto the city
     ("Bengaluru, Karnataka, India", "IN", "Karnataka", "Bengaluru"),
+    ("IRL, Dublin, Dockline", "IE", None, "Dublin"),
     ("Frankfurt, Hesse, Germany", "DE", "Hesse", "Frankfurt"),
     ("Munich, Bavaria, Germany", "DE", "Bavaria", "Munich"),
     # a region written the long way
@@ -159,6 +162,8 @@ TRAPS = [
     ("Anywhere", None, None, None),
     ("Work from home", None, None, None),
     ("WFH", None, None, None),
+    ("Global", None, None, None),
+    ("Telecommute", None, None, None),
     ("Remote, US", "US", None, None),
     # a list of places resolves to the first of them
     ("New York; London; Tokyo", "US", "NY", "New York"),
@@ -179,6 +184,9 @@ def test_the_traps(text, country, region, city):
     ("Anywhere", "remote"),
     ("Work from home", "remote"),
     ("WFH", "remote"),
+    ("Global", "remote"),
+    ("Telecommute", "remote"),
+    ("Remote First", "remote"),
     ("100% Remote", "remote"),
     ("New York, NY (Hybrid)", "hybrid"),
     ("Toronto, ON | Hybrid", "hybrid"),
