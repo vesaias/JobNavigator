@@ -318,7 +318,12 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                     search_id=search.id,
                     description=_clean(row.get("description")),
                     location=_clean(row.get("location")),
-                    remote=None,  # JobSpy doesn't always return this reliably
+                    # JobSpy's own `is_remote` is a substring test over the whole
+                    # description, so "remote state" (Terraform) and "remote dev
+                    # environments" mark a job remote. It is deliberately unused;
+                    # `work_from_home_type` below is Indeed's structured field and
+                    # is trustworthy. Everything else falls to the JD cascade.
+                    remote=None,
                     status="new",
                     seen=False,
                     saved=False,
@@ -344,8 +349,14 @@ def _run_sync(search, proxy_url: str = None) -> dict:
                 _apply_h1b_inline(job, db, company_lookup=company_lookup, phrases=phrases, loop=h1b_loop)
                 try:
                     from backend.analyzer.salary_extractor import apply_salary_to_job
+                    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+                    from backend.analyzer.location import apply_location_to_job
                     company_obj = company_lookup.get(company.strip().lower())
                     apply_salary_to_job(job, getattr(job, "_h1b_median", None))
+                    wfh = row.get("work_from_home_type")
+                    apply_arrangement_to_job(
+                        job, structured=wfh if wfh and str(wfh) != "nan" else None)
+                    apply_location_to_job(job)
                 except Exception as analysis_err:
                     logger.warning(f"Inline salary analysis failed for {title}: {analysis_err}")
 

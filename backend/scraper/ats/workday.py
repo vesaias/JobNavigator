@@ -8,6 +8,7 @@ import httpx
 
 from backend.scraper._shared.urls import host_matches
 from backend.scraper._shared.filters import _validate_job
+from backend.analyzer.location import COUNT_ONLY, canonical, group_pieces
 
 logger = logging.getLogger("jobnavigator.scraper.ats.workday")
 
@@ -46,6 +47,35 @@ def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
         applied_facets[key] = values
 
     return origin, company_slug, site, applied_facets
+
+
+_PATH_PLACE = re.compile(r"^/job/([^/]+)/")
+
+
+def _location_of(posting: dict) -> str | None:
+    """Read a Workday posting's location, in the order every other source uses.
+
+    `locationsText` is per-tenant, so this one field carries "US, CA, Santa
+    Clara", "Ireland - Dublin", "California - San Francisco" and
+    "USA.VA.Reston". `canonical` classifies the parts instead of trusting their
+    order, and hands back the board's own text when it cannot.
+
+    A multi-site posting reports a count ("2 Locations") rather than a place. In
+    that case the primary site comes from `externalPath`, shaped
+    "/job/US-CA-Santa-Clara/Title_JR123".
+    """
+    text = (posting.get("locationsText") or "").strip()
+    if text and not COUNT_ONLY.match(text):
+        return canonical(text)
+
+    match = _PATH_PLACE.match(posting.get("externalPath") or "")
+    if not match:
+        return None
+    # The segment separates its parts with dashes and also uses a dash inside a
+    # city name, so every piece is classified and the leftovers rejoin with a
+    # space: "US-CA-Santa-Clara" -> "Santa Clara, CA, United States".
+    pieces = [p for p in match.group(1).split("-") if p.strip()]
+    return canonical(", ".join(group_pieces(pieces)), text_joiner=" ")
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -106,7 +136,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
                 reason = _validate_job(title, job_url)
                 if reason is None:
-                    jobs.append({"title": title, "url": job_url})
+                    jobs.append({"title": title, "url": job_url,
+                                 "location": _location_of(p)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "workday_api", "reason": reason})
 

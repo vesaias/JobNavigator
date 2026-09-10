@@ -155,7 +155,12 @@ class Job(Base):
     # delete handlers null this column themselves on existing databases.
     search_id = Column(UUID(as_uuid=True), ForeignKey("searches.id", ondelete="SET NULL"), nullable=True)
     description = Column(Text, nullable=True)
-    location = Column(String, nullable=True)
+    location = Column(String, nullable=True)   # as the board wrote it; never rewritten
+    # Parsed out of `location` for territorial search. `loc_city` holds the folded
+    # ascii form ("quebec"), so a filter matches regardless of accent or case.
+    loc_country = Column(String(2), nullable=True, index=True)
+    loc_region = Column(String(3), nullable=True, index=True)
+    loc_city = Column(String, nullable=True, index=True)
     remote = Column(Boolean, nullable=True)
     salary_min = Column(Integer, nullable=True)
     salary_max = Column(Integer, nullable=True)

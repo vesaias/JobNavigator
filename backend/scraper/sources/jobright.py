@@ -447,10 +447,15 @@ async def run(search: Search) -> dict:
                 try:
                     from backend.analyzer.h1b_checker import check_job_h1b
                     from backend.analyzer.salary_extractor import apply_salary_to_job
+                    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+                    from backend.analyzer.location import apply_location_to_job
                     await check_job_h1b(job, db)
                     from backend.models.db import find_company_by_name
                     company_obj = find_company_by_name(db, j["company"])
                     apply_salary_to_job(job, getattr(job, "_h1b_median", None))
+                    # workModel is Jobright's own field, parsed in _parse_job.
+                    apply_arrangement_to_job(job, structured=j.get("work_model"))
+                    apply_location_to_job(job)
                 except Exception as e:
                     logger.warning(f"Inline analysis failed for {j['title']}: {e}")
 

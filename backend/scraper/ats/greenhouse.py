@@ -145,7 +145,10 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
             reason = _validate_job(title, job_url)
             if reason is None:
-                jobs.append({"title": title, "url": job_url})
+                # Greenhouse carries no arrangement field; "Remote - US" arrives
+                # inside location.name and the cascade reads it from there.
+                jobs.append({"title": title, "url": job_url,
+                             "location": (posting.get("location") or {}).get("name") or None})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "greenhouse_api", "reason": reason})
 

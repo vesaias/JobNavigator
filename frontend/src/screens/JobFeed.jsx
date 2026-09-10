@@ -73,7 +73,7 @@ const SOURCE_LABELS = {
 const srcLabel = (s) => SOURCE_LABELS[s] || s || ''
 const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'], ['skip', 'Skip'], ['ignored', 'Ignored']]
 const SORT_OPTS = [['score', 'Top score'], ['date', 'Newest first'], ['salary', 'Salary, high to low'], ['company', 'Company A–Z']]
-const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], min_score: '', min_salary: '', max_salary: '' }
+const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], location: [], min_score: '', min_salary: '', max_salary: '' }
 
 // small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
 // when the panel would overflow the viewport's right edge.
@@ -148,6 +148,8 @@ export default function V2JobFeed() {
   const [menu, setMenu] = useState(null)
   const [companyQuery, setCompanyQuery] = useState('')
   useEffect(() => { if (menu !== 'company') setCompanyQuery('') }, [menu])
+  const [locationQuery, setLocationQuery] = useState('')
+  useEffect(() => { if (menu !== 'location') setLocationQuery('') }, [menu])
   // app-wide single-open, same registry Select uses: the filter bar already
   // keeps its own Drops mutually exclusive via this one `menu` var, but opening
   // any of them should also close a Select or picker open on another screen's
@@ -206,6 +208,7 @@ export default function V2JobFeed() {
   }, [extActive])
 
   const [companyList, setCompanyList] = useState([])
+  const [locationList, setLocationList] = useState([])   // [{key, name, count, level}] — coarse to fine
   const [sourceList, setSourceList] = useState([])
   const [sourceCounts, setSourceCounts] = useState({}); const [verdictCounts, setVerdictCounts] = useState({})
   const [verdictList, setVerdictList] = useState([])
@@ -271,6 +274,7 @@ export default function V2JobFeed() {
     if (filters.company.length) p.company = filters.company.join(',')
     if (filters.source.length) p.source = filters.source.join(',')
     if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
+    if (filters.location.length) p.location = filters.location.join(',')
     if (filters.min_score !== '') p.min_score = filters.min_score
     if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
     if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
@@ -289,6 +293,7 @@ export default function V2JobFeed() {
   const loadFacets = useCallback(() => api.get('/jobs/facets', { params: facetParamsRef.current }).then(({ data }) => {
     const named = (rows) => (rows || []).filter((x) => x && x.name != null)
     setCompanyList(named(data.companies))
+    setLocationList((data.locations || []).filter((x) => x && x.key))
     setSourceList(named(data.sources).map((x) => x.name))
     setSourceCounts(Object.fromEntries(named(data.sources).map((x) => [x.name, x.count])))
     setVerdictList(named(data.h1b_verdicts).map((x) => x.name))
@@ -980,6 +985,35 @@ export default function V2JobFeed() {
           {/* warm-started: the option list is the cached one until the facets settle,
               so an early click on Source is not an empty menu */}
           {facetSources.length ? facetSources.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={facetSourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
+        </Drop>
+        <Drop label={`Location${filters.location.length ? ` · ${filters.location.length}` : ''}`} active={filters.location.length > 0} onClear={() => setF({ location: [] })} open={menu === 'location'} onToggle={() => setMenu(menu === 'location' ? null : 'location')} width={262}>
+          <Input autoFocus value={locationQuery} onChange={setLocationQuery} ariaLabel="Search places"
+            placeholder={`Type to search ${locationList.length} places…`} style={{ margin: '0 6px 6px', width: 'calc(100% - 12px)', paddingLeft: 12 }} />
+          {(() => {
+            const q = locationQuery.trim().toLowerCase()
+            // A search keeps the parents of a matching child, so a city never
+            // appears with its country missing above it.
+            const hit = (x) => !q || x.name.toLowerCase().includes(q)
+            const keep = new Set()
+            locationList.forEach((x) => {
+              if (!hit(x) && !filters.location.includes(x.key)) return
+              const [c, r] = x.key.split(':')
+              keep.add(x.key); keep.add(c); if (r) keep.add(`${c}:${r}`)
+            })
+            const list = locationList.filter((x) => keep.has(x.key))
+            return list.length ? (
+              <>
+                {list.map((x) => (
+                  <MenuItem key={x.key} ellipsis onClick={() => togF('location', x.key)} hint={x.count} hintMono
+                    style={{ paddingLeft: 11 + x.level * 14 }}
+                    icon={<UICheck checked={filters.location.includes(x.key)} size="md" />}>
+                    {x.level === 0 ? x.name : x.name.split(',')[0]}
+                  </MenuItem>
+                ))}
+                <Helper size="xs" style={{ padding: '6px 8px 2px' }}>Picking a country or province keeps everything under it</Helper>
+              </>
+            ) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No places</div>
+          })()}
         </Drop>
         <Drop label={`Company${filters.company.length ? ` · ${filters.company.length}` : ''}`} active={filters.company.length > 0} onClear={() => setF({ company: [] })} open={menu === 'company'} onToggle={() => setMenu(menu === 'company' ? null : 'company')} width={248}>
           <Input autoFocus value={companyQuery} onChange={setCompanyQuery} ariaLabel="Search companies"

@@ -96,12 +96,13 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
             pass
 
         location = ""
+        work_arrangement = None
         salary_min = salary_max = None
         try:
             loc_el = await link.query_selector('[class*="__companyJobLocation"]')
             if loc_el:
                 loc_text = (await loc_el.inner_text()).strip()
-                location, _, salary_min, salary_max = _parse_levelsfyi_salary(loc_text)
+                location, work_arrangement, salary_min, salary_max = _parse_levelsfyi_salary(loc_text)
         except Exception:
             pass
 
@@ -125,6 +126,7 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
             "url": job_url,
             "company": company_name,
             "location": location,
+            "work_arrangement": work_arrangement,
             "salary_min": salary_min,
             "salary_max": salary_max,
             "date_posted": date_posted,
@@ -540,10 +542,15 @@ async def run(search: Search) -> dict:
                 try:
                     from backend.analyzer.h1b_checker import check_job_h1b
                     from backend.analyzer.salary_extractor import apply_salary_to_job
+                    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+                    from backend.analyzer.location import apply_location_to_job
                     await check_job_h1b(job, db)
                     from backend.models.db import find_company_by_name
                     company_obj = find_company_by_name(db, j["company"])
                     apply_salary_to_job(job, getattr(job, "_h1b_median", None))
+                    # The card carries "· Remote" / "· Hybrid" next to the salary.
+                    apply_arrangement_to_job(job, structured=j.get("work_arrangement"))
+                    apply_location_to_job(job)
                 except Exception as e:
                     logger.warning(f"Inline analysis failed for {j['title']}: {e}")
 

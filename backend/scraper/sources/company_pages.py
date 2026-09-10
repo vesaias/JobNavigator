@@ -240,14 +240,20 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                     seen=False,
                     saved=False,
                     description=desc,
+                    # Optional: an ATS handler supplies it only when its board does.
+                    location=j.get("location") or None,
                 )
 
                 # Always run even without a description — the company-level LCA check doesn't need it.
                 try:
                     from backend.analyzer.h1b_checker import check_job_h1b
                     from backend.analyzer.salary_extractor import apply_salary_to_job
+                    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+                    from backend.analyzer.location import apply_location_to_job
                     await check_job_h1b(job, db, company_lookup=_company_lookup, phrases=_phrases)
                     apply_salary_to_job(job, getattr(job, "_h1b_median", None))
+                    apply_arrangement_to_job(job, structured=j.get("arrangement"))
+                    apply_location_to_job(job)
                 except Exception as analysis_err:
                     logger.warning(f"Inline analysis failed for {j['title']}: {analysis_err}")
 
@@ -286,6 +292,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                     status="ignored",
                     seen=False,
                     saved=False,
+                    location=j.get("location") or None,
                 )
                 try:
                     with db.begin_nested():
