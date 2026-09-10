@@ -560,7 +560,10 @@ def run_migrations(db):
         "CREATE TABLE IF NOT EXISTS tracer_click_events (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tracer_link_id UUID NOT NULL REFERENCES tracer_links(id) ON DELETE CASCADE, clicked_at TIMESTAMPTZ DEFAULT NOW() NOT NULL, device_type VARCHAR DEFAULT 'unknown', ua_family VARCHAR DEFAULT 'unknown', os_family VARCHAR DEFAULT 'unknown', referrer_host VARCHAR, ip_hash VARCHAR, is_likely_bot BOOLEAN DEFAULT FALSE)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loc_country VARCHAR(2)",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loc_region VARCHAR(3)",
-        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loc_city VARCHAR",
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loc_city VARCHAR(120)",
+        # Bounded after the fact: the column is indexed, and Postgres refuses a
+        # btree entry over roughly 2704 bytes.
+        "ALTER TABLE jobs ALTER COLUMN loc_city TYPE VARCHAR(120)",
         "CREATE INDEX IF NOT EXISTS ix_jobs_loc_country ON jobs(loc_country)",
         "CREATE INDEX IF NOT EXISTS ix_jobs_loc_region ON jobs(loc_region)",
         "CREATE INDEX IF NOT EXISTS ix_jobs_loc_city ON jobs(loc_city)",
@@ -575,10 +578,11 @@ def run_migrations(db):
             job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
             country VARCHAR(2),
             region VARCHAR(3),
-            city VARCHAR,
+            city VARCHAR(120),
             is_primary BOOLEAN NOT NULL DEFAULT FALSE,
             CONSTRAINT uq_job_location UNIQUE (job_id, country, region, city)
         )""",
+        "ALTER TABLE job_locations ALTER COLUMN city TYPE VARCHAR(120)",
         "CREATE INDEX IF NOT EXISTS ix_job_locations_job_id ON job_locations(job_id)",
         "CREATE INDEX IF NOT EXISTS ix_job_locations_country ON job_locations(country)",
         "CREATE INDEX IF NOT EXISTS ix_job_locations_region ON job_locations(region)",

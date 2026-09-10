@@ -160,7 +160,9 @@ class Job(Base):
     # ascii form ("quebec"), so a filter matches regardless of accent or case.
     loc_country = Column(String(2), nullable=True, index=True)
     loc_region = Column(String(3), nullable=True, index=True)
-    loc_city = Column(String, nullable=True, index=True)
+    # Bounded because it is indexed: Postgres refuses a btree entry over roughly
+    # 2704 bytes, so an unbounded column fails on insert, not on read.
+    loc_city = Column(String(120), nullable=True, index=True)
     # Work arrangement is a set, not one value: a posting may be offered both
     # remote and hybrid, and it must answer either filter. All three NULL means
     # no source resolved it - the fourth state, "unknown".
@@ -227,7 +229,7 @@ class JobLocation(Base):
                     nullable=False, index=True)
     country = Column(String(2), nullable=True, index=True)
     region = Column(String(3), nullable=True, index=True)
-    city = Column(String, nullable=True, index=True)   # folded ascii, as on Job
+    city = Column(String(120), nullable=True, index=True)  # folded ascii, as on Job
     is_primary = Column(Boolean, default=False, nullable=False)
 
     # The ORM deletes these rows itself. `passive_deletes` would hand that to the

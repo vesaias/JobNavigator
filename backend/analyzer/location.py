@@ -75,8 +75,16 @@ COUNTRY_NAMES = {
     "jordan": "JO", "uruguay": "UY", "ecuador": "EC", "panama": "PA",
     "guatemala": "GT", "dominican republic": "DO", "puerto rico": "PR",
     "russia": "RU", "belarus": "BY", "kazakhstan": "KZ", "armenia": "AM",
-    "georgia (country)": "GE", "cyprus": "CY", "malta": "MT",
+    "cyprus": "CY", "malta": "MT", "georgia": "GE",
 }
+
+# Written-out names that are both a country and a US state. Only Georgia
+# collides, and both readings are ordinary on a job board: "Atlanta, Georgia"
+# is the state, "Tbilisi, Georgia" is the country. Nothing in the string tells
+# them apart without a city gazetteer, so the name is read only when another
+# token settles the country, exactly as the two-letter codes are.
+# (region code, the country that owns it, the country the name also denotes)
+AMBIGUOUS_NAMES = {"georgia": ("GA", "US", "GE")}
 # Two-letter codes that are also a region code, so they may not be read as a
 # country until the rest of the string settles it.
 AMBIGUOUS_CODES = {
@@ -117,12 +125,24 @@ ISO3 = {
 ARRANGEMENT_WORDS = {"remote": "remote", "hybrid": "hybrid",
                      "on-site": "onsite", "onsite": "onsite",
                      "in office": "onsite", "in-office": "onsite",
-                     "work from home": "remote", "wfh": "remote"}
+                     "work from home": "remote", "wfh": "remote",
+                     # written-out forms boards use in the location field, which
+                     # would otherwise become a city named "Fully Remote"
+                     "fully remote": "remote", "100% remote": "remote",
+                     "remote - global": "remote", "remote (global)": "remote",
+                     "fully distributed": "remote", "distributed": "remote",
+                     "anywhere": "remote", "worldwide": "remote",
+                     "global": "remote", "remote first": "remote",
+                     "remote-first": "remote", "telecommute": "remote"}
 
 JUNK = {"", "-", "--", "n/a", "na", "none", "unknown", "tbd", "various",
         "multiple", "locations", "multiple locations", "various locations",
         # office labels boards append in brackets: "New York, NY (HQ)"
         "hq", "headquarters", "head office", "office", "corporate", "main office"}
+
+# Postgres refuses a btree entry over roughly 2704 bytes, so an absurd string
+# would fail on insert, not on read. Nothing this long is a place name.
+MAX_CITY = 120
 
 # "6 Locations" is a count, not a place.
 COUNT_ONLY = re.compile(r"^\d+\s+locations?$", re.I)
@@ -130,7 +150,11 @@ _ALT = re.compile(r"\s*\+\s*(\d+)\s+more\s*$", re.I)
 # A separator is a comma, a spaced dash, a middle dot, a pipe, a semicolon, or
 # a dot between two word characters ("USA.VA.Reston"). A bare dash is not: it
 # lives inside "Saint-Jean" and "Wilkes-Barre".
-_SPLIT = re.compile(r"\s*[,;·|()]\s*|\s+[-–—]\s+|(?<=\w)\.(?=\w)")
+_SPLIT = re.compile(r"\s*[,·|()]\s*|\s+[-–—]\s+|(?<=\w)\.(?=\w)")
+# Boards list several places in one field with a semicolon or a spaced slash:
+# Greenhouse writes "San Francisco, CA; New York, NY". Splitting on it inside
+# `_SPLIT` merged three cities into one.
+_PLACE_SPLIT = re.compile(r"\s*;\s*|\s+/\s+")
 _METRO_TAIL = re.compile(r"\s+(metropolitan\s+area|metro(politan)?\s+area|area)$", re.I)
 
 METROS = {
@@ -141,6 +165,14 @@ METROS = {
     "greater calgary": ("Calgary", "AB", "CA"),
     "greater seattle": ("Seattle", "WA", "US"),
     "san francisco bay": ("San Francisco", "CA", "US"),
+    "sf bay": ("San Francisco", "CA", "US"),
+    "bay": ("San Francisco", "CA", "US"),
+    "greater los angeles": ("Los Angeles", "CA", "US"),
+    "greater chicago": ("Chicago", "IL", "US"),
+    "greater austin": ("Austin", "TX", "US"),
+    "greater denver": ("Denver", "CO", "US"),
+    "greater atlanta": ("Atlanta", "GA", "US"),
+    "washington dc metro": ("Washington", "DC", "US"),
     "greater new york": ("New York", "NY", "US"),
     "new york city": ("New York", "NY", "US"),
     "greater boston": ("Boston", "MA", "US"),
@@ -178,6 +210,8 @@ def _classify(token: str) -> tuple[str, object]:
 
     if folded in ARRANGEMENT_WORDS:
         return "arrangement", ARRANGEMENT_WORDS[folded]
+    if folded in AMBIGUOUS_NAMES:
+        return "ambiguous_name", folded
     if folded in COUNTRY_NAMES:
         return "country", COUNTRY_NAMES[folded]
     if upper in ISO3:
@@ -238,7 +272,9 @@ def parse(text: str, text_joiner: str = ", ", country_hint: str = None) -> dict:
     result = {"city": None, "region": None, "country": None,
               "arrangement": None, "alt": 0, "ambiguous": False,
               "assumed": None, "note": None}
-    if not text or not text.strip():
+    # A parser that raises on its input is a trap for every caller. Anything
+    # that is not a string carries no place, the same as an empty one.
+    if not isinstance(text, str) or not text.strip():
         return result
 
     cleaned = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text)).strip()
@@ -261,13 +297,14 @@ def parse(text: str, text_joiner: str = ", ", country_hint: str = None) -> dict:
     # "City, Region": "New York, NY" and "Washington, DC" both put the city
     # first. Every region token but the last becomes the city.
     region_slots = [i for i, (_, (k, _v)) in enumerate(classified)
-                    if k in ("region", "ambiguous")]
+                    if k in ("region", "ambiguous", "ambiguous_name")]
     demote = set(region_slots[:-1]) if len(region_slots) > 1 else set()
     # An ambiguous code is never a city name, so it is never demoted.
     demote = {i for i in demote if classified[i][1][0] == "region"}
 
     # Pass one: everything that needs no context.
     pending = []
+    pending_names = []
     text_parts = []
     # A hint is another place named by the same posting. "San Francisco, CA"
     # beside "Miami, FL" is California, because one posting sits in one country.
@@ -295,10 +332,24 @@ def parse(text: str, text_joiner: str = ", ", country_hint: str = None) -> dict:
                 country_strong = True
         elif kind == "ambiguous":
             pending.append(value)
+        elif kind == "ambiguous_name":
+            pending_names.append(value)
         else:
             text_parts.append(token)
 
     # Pass two: settle the codes that needed the rest of the string.
+    # A name that is both a country and a US state: read it only when the
+    # country is already settled, and refuse otherwise.
+    for name in pending_names:
+        region_code, region_country, country_code = AMBIGUOUS_NAMES[name]
+        if result["country"] == region_country:
+            result["region"] = result["region"] or region_code
+        elif result["country"] is None:
+            result["country"] = None
+            result["ambiguous"] = True
+            result["note"] = ("%s is both a country and a US state"
+                              % name.capitalize())
+
     for code in pending:
         if code in COUNTRY_FIRST_CODES and not country_strong:
             # Nothing in the string pins the country, so CA stays unread.
@@ -323,6 +374,15 @@ def parse(text: str, text_joiner: str = ", ", country_hint: str = None) -> dict:
             result["country"] = result["country"] or value
 
     if text_parts:
+        # "Bengaluru, Karnataka, India": the country is known but Karnataka is in
+        # no gazetteer here, so the leftover tokens are city-then-region. Joining
+        # them made a city called "Bengaluru, Karnataka". The first token is the
+        # city and the rest are dropped as an unknown region. This applies only
+        # to comma tokens - with a space joiner the parts are word fragments of
+        # one name ("Santa" + "Clara"), and all of them belong to the city.
+        if len(text_parts) > 1 and result["country"] and text_joiner == ", ":
+            result["assumed"] = result["assumed"] or "region not in the gazetteer"
+            text_parts = text_parts[:1]
         city = _METRO_TAIL.sub("", text_joiner.join(text_parts)).strip()
         folded = fold(city)
         metro = METROS.get(folded) or METROS.get(re.sub(r"^greater\s+", "", folded))
@@ -399,6 +459,8 @@ def _place_of(text: str, country_hint: str = None):
     if parsed["ambiguous"]:
         return None
     city = fold(parsed["city"]) if parsed["city"] else None
+    if city and len(city) > MAX_CITY:
+        city = None
     if not (parsed["country"] or parsed["region"] or city):
         return None
     return parsed["country"], parsed["region"], city
@@ -407,12 +469,19 @@ def _place_of(text: str, country_hint: str = None):
 def _places_of(texts) -> list:
     """Every place one posting names, resolving each with the others' help.
 
+    Each input is first split on the separators a board uses to list several
+    places in one field, so "San Francisco, CA; New York, NY" is two places.
+
     A first pass takes what needs no context. Whatever it settles on one country
     then settles the held-out codes in the rest: "San Francisco, CA" listed
     beside "Miami, FL" is California.
     """
-    resolved, leftover = [], []
+    expanded = []
     for text in texts:
+        expanded.extend(part for part in _PLACE_SPLIT.split(text or "") if part.strip())
+
+    resolved, leftover = [], []
+    for text in expanded:
         place = _place_of(text)
         (resolved if place else leftover).append(place or text)
 
@@ -428,10 +497,12 @@ def _places_of(texts) -> list:
                 if place and place[1] in REGION_CODES.get(country, set())]
         if len(fits) == 1:
             resolved.append(fits[0][1])
-        elif not fits and len(countries) == 1:
-            place = _place_of(text, country_hint=countries[0])
-            if place:
-                resolved.append(place)
+        # No fallback when nothing fits. Applying the hint anyway once filed
+        # "San Francisco, CA" under Canada because the only sibling was
+        # Vancouver: the code resolved as the country Canada, and no region
+        # check caught it. "Toronto, CA" beside a Canadian sibling is lost the
+        # same way, and that is the right trade - the two are indistinguishable
+        # without a city gazetteer, so neither is guessed.
 
     out = []
     for place in resolved:

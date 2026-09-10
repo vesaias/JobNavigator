@@ -206,15 +206,18 @@ def test_group_pieces(pieces, expected):
 
 @pytest.mark.parametrize("path,expected", [
     # "New-York-New-York" would otherwise read as one city, "New York New York".
-    ("/job/New-York-New-York/E_JR1", "New York, NY, United States"),
-    ("/job/United-Kingdom-London/E_JR2", "London, United Kingdom"),
-    ("/job/Costa-Rica/E_JR3", "Costa Rica"),
-    ("/job/British-Columbia-Vancouver/E_JR7", "Vancouver, BC, Canada"),
+    ("/job/New-York-New-York/E_JR1", ("US", "NY", "new york")),
+    ("/job/United-Kingdom-London/E_JR2", ("GB", None, "london")),
+    ("/job/Costa-Rica/E_JR3", ("CR", None, None)),
+    ("/job/British-Columbia-Vancouver/E_JR7", ("CA", "BC", "vancouver")),
 ])
 def test_workday_path_fallback_rejoins_names(path, expected):
-    from backend.scraper.ats.workday import _location_of
-    assert _location_of({"locationsText": "2 Locations",
-                         "externalPath": path}) == expected
+    """A count carries no place, so the primary site comes from the URL."""
+    from backend.analyzer.location import _places_of
+    from backend.scraper.ats.workday import _location_fields
+    fields = _location_fields({"locationsText": "2 Locations", "externalPath": path})
+    assert fields["location"] is None
+    assert _places_of(fields["locations"]) == [expected]
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -223,7 +226,9 @@ def test_workday_path_fallback_rejoins_names(path, expected):
     # some tenants write the three-letter form
     ("VNM, Da Nang", "Da Nang, Vietnam"),
     ("POL", "Poland"),
-    ("IRL, Dublin, Dockline", "Dublin, Dockline, Ireland"),
+    # "Dockline" is the building, not part of the city; an unknown trailing
+    # token is dropped rather than glued onto the city name.
+    ("IRL, Dublin, Dockline", "Dublin, Ireland"),
 ])
 def test_countries_seen_on_live_boards(text, expected):
     assert canonical(text) == expected
@@ -239,16 +244,116 @@ def test_a_run_together_value_is_returned_as_written(text):
 
 # ── the Workday handler uses all of it ───────────────────────────────────────
 
-@pytest.mark.parametrize("posting,expected", [
+@pytest.mark.parametrize("posting,stored,place", [
+    # The board's own text is stored, whatever order the tenant writes it in.
     ({"locationsText": "US, CA, Santa Clara", "externalPath": "/job/x/y"},
-     "Santa Clara, CA, United States"),
-    # a count falls back to the primary site in the URL, dashes and all
+     "US, CA, Santa Clara", ("US", "CA", "santa clara")),
+    ({"locationsText": "California - San Francisco", "externalPath": "/job/x/y"},
+     "California - San Francisco", ("US", "CA", "san francisco")),
+    ({"locationsText": "USA.VA.Reston", "externalPath": "/job/x/y"},
+     "USA.VA.Reston", ("US", "VA", "reston")),
+    # a count is not a place, so nothing is stored and the URL supplies it
     ({"locationsText": "2 Locations", "externalPath": "/job/Germany-Munich/E_JR3"},
-     "Munich, Germany"),
-    ({"locationsText": "6 Locations", "externalPath": "/job/US-CA-Santa-Clara/E_JR4"},
-     "Santa Clara, CA, United States"),
-    ({"locationsText": None, "externalPath": None}, None),
+     None, ("DE", None, "munich")),
+    ({"locationsText": None, "externalPath": None}, None, None),
 ])
-def test_workday_location_of(posting, expected):
-    from backend.scraper.ats.workday import _location_of
-    assert _location_of(posting) == expected
+def test_workday_keeps_the_board_text(posting, stored, place):
+    """Workday must not rewrite `location`; the canonical form lives in the
+    parsed columns alone, as it does for every other handler."""
+    from backend.analyzer.location import _places_of
+    from backend.scraper.ats.workday import _location_fields
+    fields = _location_fields(posting)
+    assert fields["location"] == stored
+    texts = [t for t in ([fields.get("location")] + (fields.get("locations") or [])) if t]
+    assert _places_of(texts) == ([place] if place else [])
+
+
+# ── review findings on PR #10 ────────────────────────────────────────────────
+
+def test_a_sibling_never_files_a_place_in_the_wrong_country():
+    """The hint may only settle a code the hinted country actually owns.
+
+    Applying it without that check once filed San Francisco under Canada,
+    because Vancouver was the only sibling and "CA" then read as the country.
+    """
+    from backend.analyzer.location import _places_of
+    assert _places_of(["Vancouver, BC", "San Francisco, CA"]) == [("CA", "BC", "vancouver")]
+    # the US sibling still settles it, because CA is a US region code
+    assert _places_of(["Miami, FL", "San Francisco, CA"]) == [
+        ("US", "FL", "miami"), ("US", "CA", "san francisco")]
+
+
+@pytest.mark.parametrize("text,ambiguous", [
+    ("Tbilisi, Georgia", True),        # the country
+    ("Atlanta, Georgia", True),        # the US state — indistinguishable
+    ("Atlanta, Georgia, United States", False),
+    ("Georgia, US", False),
+    ("Atlanta, GA", False),            # the code form is unaffected
+])
+def test_georgia_is_read_only_when_the_country_is_settled(text, ambiguous):
+    """Georgia is both a country and a US state, and both readings are ordinary
+    on a job board. It follows the same rule as the two-letter codes."""
+    result = parse(text)
+    assert result["ambiguous"] is ambiguous
+    if ambiguous:
+        assert canonical(text) == text     # the board's text survives a refusal
+
+
+def test_a_us_sibling_settles_georgia():
+    from backend.analyzer.location import _places_of
+    assert _places_of(["Miami, FL", "Atlanta, Georgia"]) == [
+        ("US", "FL", "miami"), ("US", "GA", "atlanta")]
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("San Francisco, CA; New York, NY", [("US", "CA", "san francisco"),
+                                         ("US", "NY", "new york")]),
+    ("Vancouver, BC; Toronto, ON", [("CA", "BC", "vancouver"), ("CA", "ON", "toronto")]),
+])
+def test_a_semicolon_separates_places_not_the_parts_of_one(text, expected):
+    """Greenhouse writes several places into one field. Treating the semicolon
+    as an inner separator merged three cities into one."""
+    from backend.analyzer.location import _places_of
+    assert sorted(_places_of([text])) == sorted(expected)
+
+
+@pytest.mark.parametrize("text", [123, 1.5, ["Vancouver"], {"city": "x"}, object()])
+def test_a_non_string_carries_no_place_and_does_not_raise(text):
+    """A parser that raises on its input is a trap for every caller."""
+    result = parse(text)
+    assert result["city"] is None and result["country"] is None
+
+
+@pytest.mark.parametrize("text,arrangement", [
+    ("Fully Remote", "remote"),
+    ("Anywhere", "remote"),
+    ("Global", "remote"),
+    ("Remote First", "remote"),
+])
+def test_a_written_out_arrangement_is_not_a_city(text, arrangement):
+    """These reached the facet menu as cities named "Fully Remote"."""
+    result = parse(text)
+    assert result["city"] is None
+    assert result["arrangement"] == arrangement
+
+
+def test_a_metro_alias_is_not_a_city():
+    assert parse("SF Bay Area")["city"] == "San Francisco"
+
+
+@pytest.mark.parametrize("text,city,country", [
+    ("Bengaluru, Karnataka, India", "Bengaluru", "IN"),
+    ("Sao Paulo, Sao Paulo, Brazil", "Sao Paulo", "BR"),
+])
+def test_a_region_outside_the_gazetteer_is_dropped_not_glued_to_the_city(
+        text, city, country):
+    """The city was becoming "Bengaluru, Karnataka"."""
+    result = parse(text)
+    assert (result["city"], result["country"]) == (city, country)
+
+
+def test_a_city_too_long_for_the_index_is_refused():
+    """The column is indexed, and Postgres refuses an oversized btree entry, so
+    an absurd value would fail on insert rather than on read."""
+    from backend.analyzer.location import MAX_CITY, _place_of
+    assert _place_of("%s, Ontario, Canada" % ("x" * (MAX_CITY + 1))) == ("CA", "ON", None)

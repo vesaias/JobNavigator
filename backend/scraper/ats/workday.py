@@ -8,7 +8,7 @@ import httpx
 
 from backend.scraper._shared.urls import host_matches
 from backend.scraper._shared.filters import _validate_job
-from backend.analyzer.location import COUNT_ONLY, canonical, group_pieces
+from backend.analyzer.location import COUNT_ONLY, group_pieces
 
 logger = logging.getLogger("jobnavigator.scraper.ats.workday")
 
@@ -52,30 +52,33 @@ def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
 _PATH_PLACE = re.compile(r"^/job/([^/]+)/")
 
 
-def _location_of(posting: dict) -> str | None:
-    """Read a Workday posting's location, in the order every other source uses.
+def _location_fields(posting: dict) -> dict:
+    """Read a Workday posting's location.
 
-    `locationsText` is per-tenant, so this one field carries "US, CA, Santa
-    Clara", "Ireland - Dublin", "California - San Francisco" and
-    "USA.VA.Reston". `canonical` classifies the parts instead of trusting their
-    order, and hands back the board's own text when it cannot.
+    `location` is what the board wrote, untouched, the same as every other
+    handler. `locationsText` is per-tenant and carries "US, CA, Santa Clara",
+    "Ireland - Dublin", "California - San Francisco" and "USA.VA.Reston"; the
+    parser does not depend on the order, so none of that needs rewriting here.
+    The canonical form lives in the parsed columns alone.
 
-    A multi-site posting reports a count ("2 Locations") rather than a place. In
-    that case the primary site comes from `externalPath`, shaped
-    "/job/US-CA-Santa-Clara/Title_JR123".
+    A multi-site posting reports a count ("2 Locations") rather than a place.
+    That is not a location, so `location` stays empty and the primary site comes
+    from `externalPath`, shaped "/job/US-CA-Santa-Clara/Title_JR123" — the only
+    place this handler has to build a string, because the board gave it none.
     """
     text = (posting.get("locationsText") or "").strip()
     if text and not COUNT_ONLY.match(text):
-        return canonical(text)
+        return {"location": text, "locations": [text]}
 
     match = _PATH_PLACE.match(posting.get("externalPath") or "")
     if not match:
-        return None
+        return {"location": None}
     # The segment separates its parts with dashes and also uses a dash inside a
-    # city name, so every piece is classified and the leftovers rejoin with a
-    # space: "US-CA-Santa-Clara" -> "Santa Clara, CA, United States".
+    # city name, so adjacent pieces that together name one place are rejoined
+    # first: "US-CA-Santa-Clara" -> "US, CA, Santa Clara".
     pieces = [p for p in match.group(1).split("-") if p.strip()]
-    return canonical(", ".join(group_pieces(pieces)), text_joiner=" ")
+    from_path = ", ".join(group_pieces(pieces))
+    return {"location": None, "locations": [from_path] if from_path else []}
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -137,7 +140,7 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 reason = _validate_job(title, job_url)
                 if reason is None:
                     jobs.append({"title": title, "url": job_url,
-                                 "location": _location_of(p)})
+                                 **_location_fields(p)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "workday_api", "reason": reason})
 
