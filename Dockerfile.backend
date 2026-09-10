@@ -20,10 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright Chromium browser only (skip install-deps since we handled it above)
 RUN playwright install chromium
 
-# Install Node.js + Claude Code CLI (for claude -p subscription-based scoring)
+# Install subscription-backed CLIs for Claude Code and Codex providers.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g @anthropic-ai/claude-code \
+    && npm install -g @anthropic-ai/claude-code @openai/codex@0.154.0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/ ./backend/

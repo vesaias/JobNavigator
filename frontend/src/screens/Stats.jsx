@@ -565,7 +565,7 @@ export default function Stats() {
           <Card style={{ height: 300, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'baseline', gap: 9, lineHeight: '24px' }}>
               <Heading strong size={17}>LLM costs</Heading>
-              <Helper title="OpenAI and Claude pricing info comes from a fixed table, OpenRouter from its catalog (updated every 12 h), Claude Code and Ollama counted as $0. Each call is priced when it is logged."
+              <Helper title="OpenAI and Claude pricing info comes from a fixed table, OpenRouter from its catalog (updated every 12 h), Claude Code, Codex CLI, and Ollama counted as $0. Each call is priced when it is logged."
                 style={{ cursor: 'help', borderBottom: '1px dotted var(--line-strong)' }}>how priced?</Helper>
               <span style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', gap: 3 }}>
                 {PERIODS.map(([id, label]) => {

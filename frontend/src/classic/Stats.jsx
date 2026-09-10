@@ -128,7 +128,7 @@ function LlmCostPanel() {
         <div className="flex items-center gap-1.5">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">LLM Costs — {days > 0 ? `last ${days} days` : 'all time'}</h2>
           <InfoTip title="How costs are priced">
-            <b>OpenAI</b> and <b>Claude</b> prices are a static table, current as of <b>August 2026</b> (no pricing API exists for them). <b>OpenRouter</b> uses <b>live pricing</b> from its catalog: refreshed when the backend starts, then automatically at most every <b>12 hours</b> (on the next OpenRouter call). <b>Claude Code</b> (subscription) and <b>Ollama</b> (local) count as $0. Cost is computed per call at log time, so past rows keep the price in effect then.
+            <b>OpenAI</b> and <b>Claude</b> prices are a static table, current as of <b>August 2026</b> (no pricing API exists for them). <b>OpenRouter</b> uses <b>live pricing</b> from its catalog: refreshed when the backend starts, then automatically at most every <b>12 hours</b> (on the next OpenRouter call). <b>Claude Code</b>, <b>Codex CLI</b> (subscriptions), and <b>Ollama</b> (local) count as $0. Cost is computed per call at log time, so past rows keep the price in effect then.
           </InfoTip>
         </div>
         <select

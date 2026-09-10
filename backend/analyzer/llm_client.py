@@ -232,6 +232,8 @@ async def _dispatch(provider: str, model: str, api_key: str,
     combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
     if provider == "claude_code":
         return await _call_claude_code(combined, system, model, max_tokens)
+    elif provider == "codex_cli":
+        return await _call_codex_cli(combined, system, model, max_tokens)
     elif provider == "openai":
         return await _call_openai(combined, system, model, api_key, max_tokens)
     elif provider == "openrouter":
@@ -317,6 +319,60 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
         "text": text.strip(),
         "usage": {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0},
     }
+
+
+async def _call_codex_cli(prompt: str, system: str, model: str, max_tokens: int) -> dict:
+    """Call Codex CLI using its existing ChatGPT login; run in an empty read-only workspace."""
+    import json as _json
+    import tempfile
+
+    full_prompt = f"{system}\n\n{prompt}"
+    with tempfile.TemporaryDirectory(prefix="jobnavigator-codex-") as workdir:
+        cmd = [
+            "codex", "exec", "--ephemeral", "--ignore-user-config", "--ignore-rules",
+            "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
+            "--json", "-C", workdir,
+        ]
+        if model:
+            cmd.extend(["--model", model])
+        cmd.append("-")
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate(input=full_prompt.encode())
+
+    if process.returncode != 0:
+        error = stderr.decode(errors="replace").strip()
+        raise RuntimeError(f"codex subprocess failed (rc={process.returncode}): {error}")
+
+    raw = stdout.decode(errors="replace").strip()
+    text = ""
+    usage = {"input_tokens": 0, "output_tokens": 0,
+             "cache_read_tokens": 0, "cache_write_tokens": 0}
+    for line in raw.splitlines():
+        try:
+            event = _json.loads(line)
+        except _json.JSONDecodeError:
+            continue
+        if event.get("type") == "item.completed":
+            item = event.get("item") or {}
+            if item.get("type") == "agent_message" and item.get("text"):
+                text = item["text"]
+        elif event.get("type") == "turn.completed":
+            token_usage = event.get("usage") or {}
+            usage.update({
+                "input_tokens": token_usage.get("input_tokens", 0) or 0,
+                "output_tokens": token_usage.get("output_tokens", 0) or 0,
+                "cache_read_tokens": token_usage.get("cached_input_tokens", 0) or 0,
+            })
+
+    if not text:
+        raise RuntimeError("codex subprocess completed without an agent response")
+    return {"text": text.strip(), "usage": usage}
 
 
 async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_tokens: int,

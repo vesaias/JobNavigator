@@ -44,6 +44,7 @@ services:
       - ./backend:/app/backend
       - ./backups:/app/backups
       - ./backend/.linkedin_api:/root/.linkedin_api
+      - codex_auth:/root/.codex
 
   frontend:
     build:
@@ -83,3 +84,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  codex_auth:

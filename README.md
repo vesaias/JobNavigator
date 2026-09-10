@@ -62,7 +62,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI RESUME SCORING                              │
 │                                                                             │
-│   Providers ── Claude API, Claude CLI, OpenAI, OpenRouter, Ollama           │
+│   Providers ── Claude API/CLI, Codex CLI, OpenAI, OpenRouter, Ollama        │
 │   Depths ───── Light (scores only) or Full (report + keyword analysis)      │
 │   Multi ────── Score against multiple resumes, compare fit per role         │
 │                                                                             │
@@ -97,7 +97,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 | Feature | Description |
 |---------|-------------|
 | **Discovery** | Career pages (Playwright + 11 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, the Chrome extension |
-| **Scoring** | Claude, OpenAI, OpenRouter, Ollama or Claude Code; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
+| **Scoring** | Claude, OpenAI, OpenRouter, Ollama, Claude Code or Codex CLI; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
 | **Résumés** | Structured base résumés, tailoring per job with a review step, 8 PDF templates (drop in your own), tracked links that record opens |
 | **Cover letters** | Generated from the paired résumé and persona; voice and length presets, 8 templates, PDF |
 | **Dedup** | URL identity hash (tracking params stripped) plus company + title hash across sources |
@@ -124,6 +124,15 @@ docker compose up --build -d
 ```
 
 Open `http://localhost`. On first run sign in with a blank key, then set one in Settings › Advanced. The previous interface is at `/classic`.
+
+To use a ChatGPT subscription through Codex CLI, authenticate once after the containers start:
+
+```bash
+docker compose exec backend codex login --device-auth
+docker compose exec backend codex login status
+```
+
+The login is stored in the private `codex_auth` Docker volume and persists across container rebuilds. Select **Codex CLI (ChatGPT Subscription)** in Settings › AI; no OpenAI API key is needed for this provider.
 
 **First steps:**
 1. Settings › AI — provider and key
@@ -153,7 +162,7 @@ Install: `chrome://extensions` › Developer mode › Load unpacked › `extensi
 | Frontend | React 18, Vite, Recharts, a token-based design system ([DESIGN-SYSTEM.md](frontend/src/DESIGN-SYSTEM.md)) |
 | Database | PostgreSQL 16 |
 | Infrastructure | Docker Compose, Caddy, nginx |
-| AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI |
+| AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI, Codex CLI |
 | Extension | Chrome Manifest V3 |
 
 ## Contributing

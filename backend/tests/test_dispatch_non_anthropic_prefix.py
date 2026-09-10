@@ -33,6 +33,27 @@ async def test_dispatch_concatenates_prefix_for_claude_code(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_dispatch_concatenates_prefix_for_codex_cli(monkeypatch):
+    """codex_cli receives cached_prefix + prompt combined."""
+    captured = {}
+
+    async def fake_codex_cli(prompt, system, model, max_tokens):
+        captured["prompt"] = prompt
+        return {"text": "ok", "usage": {"input_tokens": 1, "output_tokens": 1,
+                                            "cache_read_tokens": 0, "cache_write_tokens": 0}}
+
+    monkeypatch.setattr("backend.analyzer.llm_client._call_codex_cli", fake_codex_cli)
+    from backend.analyzer.llm_client import _dispatch
+    await _dispatch(
+        provider="codex_cli", model="gpt-5.6-sol", api_key="",
+        prompt="JOB DESCRIPTION", system="rubric scorer", max_tokens=600,
+        cached_prefix="RUBRIC + CVs",
+    )
+
+    assert captured["prompt"] == "RUBRIC + CVs\n\nJOB DESCRIPTION"
+
+
+@pytest.mark.asyncio
 async def test_dispatch_concatenates_prefix_for_openai(monkeypatch):
     """openai provider receives cached_prefix + prompt combined."""
     captured = {}

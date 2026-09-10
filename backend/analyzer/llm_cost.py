@@ -1,5 +1,5 @@
 """LLM pricing and cost calculation, in USD per million tokens, keyed by (provider, model) since the same model can be billed differently across providers (e.g. Anthropic API vs. Claude Code subscription).
-claude_api/openai use static tables (update when models change); openrouter is fetched live (refresh_openrouter_prices); claude_code/ollama are always $0."""
+claude_api/openai use static tables (update when models change); openrouter is fetched live (refresh_openrouter_prices); claude_code/codex_cli/ollama are always $0."""
 import time as _time
 import logging
 from typing import Optional
@@ -58,7 +58,7 @@ PRICING: dict[str, dict[str, dict]] = {
 }
 
 # Providers whose calls are covered by flat subscription / local compute — always $0.
-FREE_PROVIDERS: set[str] = {"claude_code", "ollama"}
+FREE_PROVIDERS: set[str] = {"claude_code", "codex_cli", "ollama"}
 
 # ── OpenRouter live pricing ──────────────────────────────────────────────────
 _OR_PRICES: dict[str, dict] = {}   # slug -> per-Mtok pricing dict
@@ -115,7 +115,7 @@ def calc_cost(provider: str, model: str,
               output_tokens: int = 0,
               cache_read_tokens: int = 0,
               cache_write_tokens: int = 0) -> float:
-    """Calculate USD cost for a single LLM call; returns 0.0 for FREE_PROVIDERS (claude_code, ollama) or an unpriced (provider, model) combo."""
+    """Calculate USD cost for a single LLM call; returns 0.0 for subscription/local providers or an unpriced (provider, model) combo."""
     if provider in FREE_PROVIDERS:
         return 0.0
     p = get_pricing(provider, model)

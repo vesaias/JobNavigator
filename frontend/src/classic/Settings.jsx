@@ -249,7 +249,7 @@ export default function SettingsPage() {
             <Info size={15} className="text-gray-400 dark:text-gray-500 cursor-help" />
             <div className="hidden group-hover:block absolute left-6 top-0 z-50 w-80 p-3 text-xs bg-gray-900 text-gray-100 rounded-lg shadow-lg leading-relaxed">
               <p className="font-semibold mb-1.5">Provider &amp; model config (used by every AI feature)</p>
-              <p className="mb-1.5"><b>Primary LLM</b> — the default provider + model every AI feature uses. Claude API uses the settings key (or ANTHROPIC_API_KEY). Claude Code uses your subscription via OAuth (same models as Claude API). OpenAI/Ollama use their keys. <b>OpenRouter</b> reaches every vendor with one key — vendor-prefixed slugs (e.g. <code>anthropic/claude-sonnet-5</code>), no prompt-cache discount.</p>
+              <p className="mb-1.5"><b>Primary LLM</b> — the default provider + model every AI feature uses. Claude API uses the settings key (or ANTHROPIC_API_KEY). Claude Code and Codex CLI use subscription logins. OpenAI/Ollama use their keys. <b>OpenRouter</b> reaches every vendor with one key — vendor-prefixed slugs (e.g. <code>anthropic/claude-sonnet-5</code>), no prompt-cache discount.</p>
               <p><b>Add Custom Model</b> — type to search a provider's live catalog (OpenRouter / OpenAI / Claude) or enter any slug, then Add. Models appear in the dropdowns; the × on a chip deletes one (removals persist).</p>
             </div>
           </div>
@@ -272,6 +272,7 @@ export default function SettingsPage() {
                     className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
                     <option value="claude_api">Claude API (Anthropic)</option>
                     <option value="claude_code">Claude Code (Subscription)</option>
+                    <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -287,7 +288,7 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
-              {!['claude_code', 'ollama'].includes(provider) && (
+              {!['claude_code', 'codex_cli', 'ollama'].includes(provider) && (
                 <div className="mt-2">
                   <label className="block text-[10px] text-gray-500 dark:text-gray-500 mb-0.5">API Key</label>
                   <div className="relative">
@@ -307,7 +308,7 @@ export default function SettingsPage() {
         {/* Custom Models — shared across primary & fallback */}
         {(() => {
           const models = Array.isArray(settings.llm_models_list) ? settings.llm_models_list : []
-          const providerLabels = { claude_api: 'Claude API', claude_code: 'Claude Code', openai: 'OpenAI', ollama: 'Ollama', openrouter: 'OpenRouter' }
+          const providerLabels = { claude_api: 'Claude API', claude_code: 'Claude Code', codex_cli: 'Codex CLI', openai: 'OpenAI', ollama: 'Ollama', openrouter: 'OpenRouter' }
           const canSearch = SEARCHABLE_PROVIDERS.includes(customProvider)
           const liveModels = providerModels[customProvider] || []
           const loadingModels = modelsLoading[customProvider]
@@ -330,6 +331,7 @@ export default function SettingsPage() {
                   className="border rounded px-2 py-1 text-xs dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
                   <option value="claude_api">Claude API</option>
                   <option value="claude_code">Claude Code</option>
+                  <option value="codex_cli">Codex CLI</option>
                   <option value="openai">OpenAI</option>
                   <option value="ollama">Ollama</option>
                   <option value="openrouter">OpenRouter</option>
@@ -422,6 +424,7 @@ export default function SettingsPage() {
                     <option value="">Use Primary</option>
                     <option value="claude_api">Claude API (Anthropic)</option>
                     <option value="claude_code">Claude Code (Subscription)</option>
+                    <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -438,7 +441,7 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
-              {scProvider && !['claude_code', 'ollama'].includes(scProvider) && (
+              {scProvider && !['claude_code', 'codex_cli', 'ollama'].includes(scProvider) && (
                 <div className="mt-2">
                   <label className="block text-[10px] text-gray-500 dark:text-gray-500 mb-0.5">API Key</label>
                   <div className="relative">
@@ -474,6 +477,7 @@ export default function SettingsPage() {
                     <option value="">None (disabled)</option>
                     <option value="claude_api">Claude API (Anthropic)</option>
                     <option value="claude_code">Claude Code (Subscription)</option>
+                    <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -491,7 +495,7 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
-              {provider && !['claude_code', 'ollama'].includes(provider) && (
+              {provider && !['claude_code', 'codex_cli', 'ollama'].includes(provider) && (
                 <div className="mt-2">
                   <label className="block text-[10px] text-gray-500 dark:text-gray-500 mb-0.5">API Key</label>
                   <div className="relative">
@@ -528,7 +532,7 @@ export default function SettingsPage() {
             />
             Prompt Caching (Anthropic)
           </label>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Send the rubric + Resumes + schema as a cached block so subsequent scoring calls reuse it at ~10× cheaper input tokens. Only active when provider is <code>claude_api</code>; no effect with <code>claude_code</code> or local providers. Disable as a rollback lever.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Send the rubric + Resumes + schema as a cached block so subsequent scoring calls reuse it at ~10× cheaper input tokens. Only active when provider is <code>claude_api</code>; no effect with subscription CLI or local providers. Disable as a rollback lever.</p>
         </div>
         <div className="mt-4">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Default Scoring Depth</label>
@@ -610,6 +614,7 @@ export default function SettingsPage() {
               <option value="">Use Primary</option>
               <option value="claude_api">Claude API (Anthropic)</option>
               <option value="claude_code">Claude Code (Subscription)</option>
+              <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -636,7 +641,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {settings.cv_tailor_llm_provider && !['claude_code', 'ollama', ''].includes(settings.cv_tailor_llm_provider) && (
+        {settings.cv_tailor_llm_provider && !['claude_code', 'codex_cli', 'ollama', ''].includes(settings.cv_tailor_llm_provider) && (
           <div className="mb-4">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">API Key</label>
             <div className="relative">
@@ -723,6 +728,7 @@ export default function SettingsPage() {
               <option value="">Use Primary</option>
               <option value="claude_api">Claude API (Anthropic)</option>
               <option value="claude_code">Claude Code (Subscription)</option>
+              <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -749,7 +755,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {settings.cover_letter_llm_provider && !['claude_code', 'ollama', ''].includes(settings.cover_letter_llm_provider) && (
+        {settings.cover_letter_llm_provider && !['claude_code', 'codex_cli', 'ollama', ''].includes(settings.cover_letter_llm_provider) && (
           <div className="mb-4">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">API Key</label>
             <div className="relative">
@@ -824,6 +830,7 @@ export default function SettingsPage() {
               <option value="">Use Primary</option>
               <option value="claude_api">Claude API (Anthropic)</option>
               <option value="claude_code">Claude Code (Subscription)</option>
+              <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -965,6 +972,7 @@ export default function SettingsPage() {
               <option value="">Use Primary</option>
               <option value="claude_api">Claude API (Anthropic)</option>
               <option value="claude_code">Claude Code (Subscription)</option>
+              <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
                     <option value="openrouter">OpenRouter</option>
@@ -991,7 +999,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {settings.email_llm_provider && !['claude_code', 'ollama', ''].includes(settings.email_llm_provider) && (
+        {settings.email_llm_provider && !['claude_code', 'codex_cli', 'ollama', ''].includes(settings.email_llm_provider) && (
           <div className="mb-4">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">API Key</label>
             <div className="relative">
