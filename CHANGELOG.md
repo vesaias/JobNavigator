@@ -11,7 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Codex CLI provider** (by @funstuie-bit, #8): use a ChatGPT subscription for scoring, tailoring, letters, autofill and email through `codex exec`. One-time `docker compose exec backend codex login --device-auth`; token usage is logged, cost counts as $0.
 - Follow-up hardening: a login pre-check that names the fix instead of a 15-second 401 storm, `turn.failed` surfaced as the error (a usage-limit hit fails over to the fallback provider without retrying), a 5-minute timeout on both subscription CLIs, and at most two concurrent Codex processes on the shared login file.
 
+- **Add a job to the feed from the Log modal** (by @volkotyk, #9): the Applications › Log modal's Status now offers New and Saved beside the stages; those write a feed job only (`POST /jobs/manual`, deduplicated against existing rows), and a ✦ Tailor trigger beside each base résumé saves the row and starts a tailored copy.
+
 ### Fixed
+- **Auto-scoring and the daily digest on fresh installs** (by @volkotyk, #11): `cv_scores` is created as `json` on a new database, and comparing it with a `jsonb` literal aborted every auto-score pass after a scrape and every digest; both compare as text now. Run errors no longer store or return the failed SQL statement and its parameters.
 - **Cover letters for hand-logged jobs** (by @volkotyk, #7): a job logged from Applications has no stored description, and generation refused it. The letter worker now resolves the text the way tailoring does (description, then a live fetch saved to the job, then the cached page); logging an application queues that fetch; the description backfill covers applied jobs.
 
 ## [2.0.0] — 2026-09-06
