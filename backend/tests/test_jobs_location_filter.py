@@ -252,3 +252,47 @@ def test_every_arrangement_facet_count_equals_its_filter_count(arranged, api_cli
         listed = api_client.get(
             "/api/jobs?status=new&limit=1&brief=1&arrangement=%s" % entry["name"])
         assert listed.json()["total"] == entry["count"], entry["name"]
+
+
+# ── a hand-added job is searchable too ───────────────────────────────────────
+
+def test_a_manual_job_answers_the_work_filter(test_db, api_client):
+    """POST /jobs/manual runs the same analyzers every scraper path runs."""
+    resp = api_client.post("/api/jobs/manual", json={
+        "title": "Staff Engineer (Remote)",
+        "company": "Acme",
+        "url": "https://example.com/manual/1",
+        "status": "new",
+    })
+    assert resp.status_code == 200, resp.text
+    job = test_db.query(Job).filter(Job.id == resp.json()["id"]).one()
+    assert (job.arr_remote, job.arr_hybrid, job.arr_onsite) == (True, False, False)
+
+
+def test_a_manual_job_answers_the_location_filter(test_db, api_client):
+    """A typed-in location has to reach the territorial filter."""
+    resp = api_client.post("/api/jobs/manual", json={
+        "title": "Staff Engineer",
+        "company": "Acme",
+        "url": "https://example.com/manual/2",
+        "location": "Toronto, Ontario, Canada",
+        "status": "new",
+    })
+    assert resp.status_code == 200, resp.text
+    job = test_db.query(Job).filter(Job.id == resp.json()["id"]).one()
+    assert (job.loc_country, job.loc_region, job.loc_city) == ("CA", "ON", "toronto")
+    assert [(r.country, r.region, r.city) for r in job.locations] == [("CA", "ON", "toronto")]
+    assert _count(test_db, "CA:ON:toronto") == 1
+
+
+def test_a_manual_job_without_a_location_stays_unplaced(test_db, api_client):
+    """Nothing to parse means nothing written, not a wrong guess."""
+    resp = api_client.post("/api/jobs/manual", json={
+        "title": "Staff Engineer",
+        "company": "Acme",
+        "url": "https://example.com/manual/3",
+        "status": "new",
+    })
+    job = test_db.query(Job).filter(Job.id == resp.json()["id"]).one()
+    assert job.loc_country is None
+    assert list(job.locations) == []

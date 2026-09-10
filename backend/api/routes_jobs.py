@@ -856,10 +856,16 @@ def create_manual_job(body: dict, background_tasks: BackgroundTasks, db: Session
         url=url,
         source="manual",   # same marker the hand-logged application path uses
         status=status,
+        location=str_field(body, "location") or None,
         # `saved` and status='saved' move together everywhere else in the feed.
         saved=(status == "saved"),
         seen=True,         # the user typed this row in; it is not an unseen find
     )
+    # A hand-added job has to answer the feed's Location and Work filters like any
+    # other. There is no description yet, so only the title and a typed-in
+    # location can say anything; the background fetch below covers the rest.
+    apply_arrangement_to_job(job)
+    apply_location_to_job(job)
     db.add(job)
     db.commit()
     db.refresh(job)

@@ -254,6 +254,22 @@ async def _fetch_and_store_description(job_id: str, url: str) -> None:
         )
     except Exception as e:
         logger.warning(f"Could not fetch a description for job {job_id}: {e}")
+        return
+
+    # The description is the only arrangement signal a hand-added job has, and it
+    # arrives here rather than at insert time.
+    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+    from backend.models.db import Job, SessionLocal
+    db = SessionLocal()
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if job:
+            apply_arrangement_to_job(job)
+            db.commit()
+    except Exception as e:
+        logger.warning(f"Could not read the arrangement for job {job_id}: {e}")
+    finally:
+        db.close()
 
 
 @router.post("")
