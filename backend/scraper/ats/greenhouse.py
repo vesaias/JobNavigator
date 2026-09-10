@@ -29,18 +29,30 @@ def _parse_greenhouse_url(url: str) -> tuple[str, set[int], set[int]]:
     qs = parse_qs(parsed.query)
     dept_ids = set()
     office_ids = set()
-    for key in ("departments[]", "departments%5B%5D"):
-        for v in qs.get(key, []):
-            try:
-                dept_ids.add(int(v))
-            except ValueError:
-                pass
-    for key in ("offices[]", "offices%5B%5D"):
-        for v in qs.get(key, []):
-            try:
-                office_ids.add(int(v))
-            except ValueError:
-                pass
+    discarded: list[str] = []
+
+    def _collect(keys: tuple[str, ...], into: set[int]) -> None:
+        for key in keys:
+            for v in qs.get(key, []):
+                # A stored URL sometimes carries a stray space inside the id
+                # ("4030 094003"); the id itself is still readable, so read it
+                # rather than dropping the whole filter.
+                squeezed = re.sub(r"\s+", "", v)
+                try:
+                    into.add(int(squeezed))
+                except ValueError:
+                    discarded.append(v)
+
+    _collect(("departments[]", "departments%5B%5D"), dept_ids)
+    _collect(("offices[]", "offices%5B%5D"), office_ids)
+
+    # One line per URL, not one per value: a board URL with a broken filter has
+    # every id broken the same way.
+    if discarded:
+        logger.warning(
+            f"Greenhouse: ignored {len(discarded)} unreadable filter id(s) "
+            f"{discarded} in URL {url}"
+        )
 
     return company_slug, dept_ids, office_ids
 

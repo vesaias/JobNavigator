@@ -3,7 +3,7 @@ slash guards against attacker-controlled paths) with department/team/location/co
 forwarded from the original query string."""
 import json
 import logging
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import httpx
 
@@ -32,7 +32,9 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     qs = parse_qs(parsed.query)
     for param in ("department", "team", "location", "commitment"):
         if param in qs:
-            api_url += f"&{param}={qs[param][0]}"
+            # parse_qs already decoded the value, so a filter with a space
+            # ("San Francisco") has to be re-encoded before it is appended.
+            api_url += f"&{param}={quote(qs[param][0], safe='')}"
 
     jobs = []
     rejected = []
