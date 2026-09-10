@@ -127,6 +127,9 @@ ARRANGEMENT_WORDS = {"remote": "remote", "hybrid": "hybrid",
                      "on-site": "onsite", "onsite": "onsite",
                      "in office": "onsite", "in-office": "onsite",
                      "work from home": "remote", "wfh": "remote",
+                     # Amazon writes "IN, KA, Bangalore - Virtual" for a job
+                     # attached to an office but worked from home.
+                     "virtual": "remote",
                      "telecommute": "remote", "distributed": "remote",
                      "fully distributed": "remote", "remote first": "remote",
                      "remote-first": "remote", "remote (global)": "remote",
@@ -394,6 +397,63 @@ def bare_city(text: str):
     return BARE_CITIES.get(_base_city(_core(text)))
 
 
+def _leading_country(tokens: list):
+    """(country, region, remaining tokens) for "IN, KA, Bengaluru", else None.
+
+    Amazon and several Workday tenants write the country first and in codes,
+    which is the one shape where a held-out code is not a region: "IN, KA,
+    Bengaluru" is India, Karnataka, Bengaluru, and reading "IN" as Indiana put
+    365 live rows in the wrong country with "ka, bengaluru" for a city.
+
+    The shape has to be unmistakable before it is used:
+
+    * the first token is a two-letter code that is also a country's code,
+    * that country is not the US or Canada - those two keep the existing path,
+      where the code is far more often one of their regions ("Atlanta, GA"),
+    * and the second token is a bare region code of two or three letters that
+      is not itself a country's, or the rest of the string is a city the
+      gazetteer already places in that same country ("IN, Bengaluru").
+
+    The region is kept as the board wrote it, upper-cased. We have no gazetteer
+    of Indian states or German Länder, and inventing one to normalise "KA" would
+    be a bigger promise than the filter needs: the facet groups by the string.
+    """
+    if len(tokens) < 2:
+        return None
+    first = tokens[0].strip().upper()
+    if first in AMBIGUOUS_CODES:
+        country = AMBIGUOUS_CODES[first]
+        if country in REGION_NAMES:
+            # US and CA: "CA, BC, Vancouver" already reads correctly, and
+            # "GA, US" must not turn Georgia into Gabon.
+            return None
+    else:
+        country = SAFE_COUNTRY_CODES.get(first) or ISO3.get(first)
+    if not country:
+        return None
+
+    # "IN, Bengaluru": no region, but a city the gazetteer puts in that country.
+    rest = tokens[1:]
+    if len(rest) == 1:
+        bare = bare_city(rest[0])
+        if bare and bare[0] == country:
+            return country, None, rest
+
+    second = tokens[1].strip().upper()
+    if not (2 <= len(second) <= 3 and second.isalpha()):
+        return None
+    # A country code in the second slot means a different shape entirely
+    # ("GA, US, Atlanta"), and this rule must keep its hands off it.
+    if (second in SAFE_COUNTRY_CODES or second in ISO3
+            or fold(second) in COUNTRY_NAMES):
+        return None
+    # A region code of the country itself is one the parser already knows how to
+    # normalise, so "US, NY, New York" and "CA, ON, Toronto" keep their path.
+    if second in REGION_CODES.get(country, set()):
+        return None
+    return country, second, tokens[2:]
+
+
 def _known_city(name: str) -> bool:
     """True when some gazetteer knows this name as a city."""
     folded = _base_city(name)
@@ -621,17 +681,38 @@ def _parse_one(cleaned: str, text_joiner: str = ", ", country_hint: str = None) 
     if not tokens:
         return result
 
+    # "IN, KA, Bengaluru" - Amazon and several Workday tenants write the country
+    # first, in codes, with a region no gazetteer of ours knows.
+    lead = _leading_country(tokens)
+    forced_country = forced_region = None
+    if lead:
+        forced_country, forced_region, tokens = lead
+        if not tokens:
+            result["country"], result["region"] = forced_country, forced_region
+            result["assumed"] = "country code written first, region as the board wrote it"
+            return result
+
     classified = [(t, _classify(t)) for t in tokens
                   if fold(t) not in JUNK and not _CODE_ONLY.fullmatch(t.strip())]
     if not classified:
+        if forced_country:
+            result["country"], result["region"] = forced_country, forced_region
         return result
 
     # A place sits in one region, so a string naming two of them is really
     # "City, Region": "New York, NY" and "Washington, DC" both put the city
     # first. Every region token but the last becomes the city.
+    #
+    # Unless the country came first. "US, NY, New York" is country, region,
+    # city, so there the FIRST region token is the region and the rest is the
+    # city - reading it the other way named the city "NY".
     region_slots = [i for i, (_, (k, _v)) in enumerate(classified)
                     if k in ("region", "ambiguous")]
-    demote = set(region_slots[:-1]) if len(region_slots) > 1 else set()
+    country_slots = [i for i, (_, (k, _v)) in enumerate(classified) if k == "country"]
+    if country_slots and region_slots and min(country_slots) < min(region_slots):
+        demote = set(region_slots[1:])
+    else:
+        demote = set(region_slots[:-1]) if len(region_slots) > 1 else set()
     # An ambiguous code is never a city name, so it is never demoted.
     demote = {i for i in demote if classified[i][1][0] == "region"}
 
@@ -722,6 +803,15 @@ def _parse_one(cleaned: str, text_joiner: str = ", ", country_hint: str = None) 
             result["country"] = result["country"] or country
         elif value:
             result["country"] = result["country"] or value
+
+    # A country code written first is the country, whatever the rest looked
+    # like: it was read before the loop and nothing after it may override it.
+    if forced_country:
+        result["country"] = forced_country
+        result["region"] = forced_region or result["region"]
+        result["ambiguous"] = False
+        result["note"] = None
+        result["assumed"] = "country code written first, region as the board wrote it"
 
     # Where the country sits says what the leftover names are.
     #

@@ -131,6 +131,25 @@ TRAPS = [
     # building and is dropped rather than glued onto the city
     ("Bengaluru, Karnataka, India", "IN", "Karnataka", "Bengaluru"),
     ("IRL, Dublin, Dockline", "IE", None, "Dublin"),
+    # the country written first and in codes, which is how Amazon and several
+    # Workday tenants write every one of their postings. Reading the first code
+    # as a US state put 365 live rows in the wrong country.
+    ("IN, KA, Bengaluru", "IN", "KA", "Bengaluru"),
+    ("IN, TS, Hyderabad", "IN", "TS", "Hyderabad"),
+    ("IN, TN, Chennai", "IN", "TN", "Chennai"),     # Tamil Nadu, not Tennessee
+    ("DE, NI, Cloppenburg", "DE", "NI", "Cloppenburg"),
+    ("GB, ENG, London", "GB", "ENG", "London"),
+    ("AU, NSW, Sydney", "AU", "NSW", "Sydney"),
+    ("IN, Bengaluru", "IN", None, "Bengaluru"),
+    ("IN, KA, Bangalore - Virtual", "IN", "KA", "Bangalore"),
+    # the same shape in a country whose regions the parser does know: the code
+    # is normalised as before, and the city is the last name, not the first
+    ("US, NY, New York", "US", "NY", "New York"),
+    ("US, WA, Seattle", "US", "WA", "Seattle"),
+    ("CA, ON, Toronto", "CA", "ON", "Toronto"),
+    ("US, CA, Santa Clara", "US", "CA", "Santa Clara"),
+    # a country code in the second slot is a different shape and is left alone
+    ("GA, US, Atlanta", "US", "GA", "Atlanta"),
     ("Frankfurt, Hesse, Germany", "DE", "Hesse", "Frankfurt"),
     ("Munich, Bavaria, Germany", "DE", "Bavaria", "Munich"),
     # a region written the long way
@@ -187,6 +206,8 @@ def test_the_traps(text, country, region, city):
     ("Global", "remote"),
     ("Telecommute", "remote"),
     ("Remote First", "remote"),
+    # Amazon's own word for a job attached to an office but worked from home
+    ("IN, KA, Bangalore - Virtual", "remote"),
     ("100% Remote", "remote"),
     ("New York, NY (Hybrid)", "hybrid"),
     ("Toronto, ON | Hybrid", "hybrid"),

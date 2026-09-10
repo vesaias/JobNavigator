@@ -63,10 +63,24 @@ def _arrangement_of(posting: dict) -> str | None:
     return None
 
 
+def _feed_params(query: str) -> dict:
+    """The search page's query, translated for the JSON feed.
+
+    The page filters by `country[]=USA`; the feed ignores that key and reads
+    `normalized_country_code[]` instead (probed: 2,410 hits worldwide vs 1,474
+    US-only). Blank keys the page appends (`country=`, `city=`) are dropped.
+    """
+    params = {k: v for k, v in parse_qs(query, keep_blank_values=False).items()}
+    countries = params.pop("country[]", None) or params.pop("country", None)
+    if countries:
+        params["normalized_country_code[]"] = countries
+    return params
+
+
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch one amazon.jobs search as JSON, paging on the feed's own offset."""
     parsed = urlparse(url)
-    params = {k: v for k, v in parse_qs(parsed.query, keep_blank_values=True).items()}
+    params = _feed_params(parsed.query)
     api_base = f"{parsed.scheme}://{parsed.netloc}/en/search.json"
 
     jobs = []

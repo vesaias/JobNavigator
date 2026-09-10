@@ -620,12 +620,32 @@ def job_facets(
             return 2 if region else 1
         return 1 if region else 0
 
+    # A city that is also its region's name ("Sao Paulo, Sao Paulo, Brazil") is
+    # one place, not two levels: keep the region entry, drop the city one when
+    # it counts the same jobs.
+    def _same_place(entry):
+        country, region, city = entry
+        return bool(region and city and region.strip().lower() == city.strip().lower()
+                    and roll.get((country, region, None)) == roll.get(entry))
+    roll = {k: v for k, v in roll.items() if not _same_place(k)}
+
+    # Busiest first at every level, tree order kept: a country row, then its
+    # regions by count, each followed by its cities by count; region-less
+    # cities sort with the regions.
+    def _order(kv):
+        (country, region, city), count = kv
+        cc = roll.get((country, None, None), 0)
+        if not region and not city:
+            return (-cc, country or "", 0, 0, "", 0, 0, "")
+        rc = roll.get((country, region, None), count) if region else count
+        if region and not city:
+            return (-cc, country or "", 1, -rc, region, 0, 0, "")
+        return (-cc, country or "", 1, -rc, region or "", 1, -count, city or "")
+
     locations = [
         {"key": key_for(*entry), "name": label_for(*entry),
          "count": count, "level": _depth(entry)}
-        for entry, count in sorted(
-            roll.items(),
-            key=lambda kv: (kv[0][0] or "", kv[0][1] or "", kv[0][2] or ""))
+        for entry, count in sorted(roll.items(), key=_order)
     ]
 
     # arrangements — counted with the arrangement filter itself lifted. A posting
