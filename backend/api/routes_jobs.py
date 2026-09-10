@@ -645,6 +645,61 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
     return out
 
 
+# Statuses a hand-added feed job may start at. `applied` is not one of them:
+# POST /applications owns that path and writes the Application row with it.
+MANUAL_JOB_STATUSES = {"new", "saved"}
+
+
+@router.post("/manual")
+def create_manual_job(body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Add one job to the feed by hand (Log-application modal, statuses new/saved), with no application attached; an already-known posting keeps the status it has and is returned with created=false."""
+    title = str_field(body, "title")
+    company = str_field(body, "company")
+    url = str_field(body, "url")
+    status = str_field(body, "status") or "new"
+    if not title or not company or not url:
+        raise HTTPException(status_code=400, detail="title, company, and url are required")
+    if status not in MANUAL_JOB_STATUSES:
+        raise HTTPException(status_code=400,
+                            detail=f"status must be one of {sorted(MANUAL_JOB_STATUSES)}")
+
+    # Same two-layer dedup as save-from-extension: external_id (URL), then
+    # content_hash (company+title) for the same posting reached by another URL.
+    external_id = make_external_id(company, title, url)
+    content_hash = make_content_hash(company, title)
+    existing = db.query(Job).filter(
+        (Job.external_id == external_id) | (Job.content_hash == content_hash)
+    ).first()
+    if existing:
+        # Report the row, change nothing: an `applied` or `ignored` posting must
+        # not fall back to `new` because the user pasted its URL a second time.
+        return {"id": str(existing.id), "created": False, "status": existing.status}
+
+    job = Job(
+        external_id=external_id,
+        content_hash=content_hash,
+        company=company,
+        title=title,
+        url=url,
+        source="manual",   # same marker the hand-logged application path uses
+        status=status,
+        # `saved` and status='saved' move together everywhere else in the feed.
+        saved=(status == "saved"),
+        seen=True,         # the user typed this row in; it is not an unseen find
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    # The enrichment the hand-logged application path runs: without it the first
+    # score, tailor or cover letter pays for the fetch.
+    from backend.api.routes_applications import _cache_job_page, _fetch_and_store_description
+    background_tasks.add_task(_cache_job_page, str(job.id), url)
+    background_tasks.add_task(_fetch_and_store_description, str(job.id), url)
+
+    return {"id": str(job.id), "created": True, "status": job.status}
+
+
 # Column types for the three fields both job writers accept. Without this a
 # `{"saved": "banana"}` reaches the driver and 500s (R4-T1-11); `status` stays a
 # free string on purpose (the feed invents statuses like "ignored").

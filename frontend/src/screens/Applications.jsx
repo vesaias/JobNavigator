@@ -48,6 +48,15 @@ const STAGES = [
 const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]))
 // legacy rows (ghosted / withdrawn) have no stage of their own — closed, so they list under Rejected
 const groupOf = (status) => (STAGE[status] ? status : 'rejected')
+// The Log modal writes one of two rows. `new`/`saved` are Job.status values and go to
+// POST /jobs/manual as a feed job with no application; the rest are Application.status
+// stages and go to POST /applications, which writes the job too.
+const LOG_JOB_STATUSES = ['new', 'saved']
+const LOG_STATUSES = [
+  { id: 'new', label: 'New', hint: 'Feed only — decide later' },
+  { id: 'saved', label: 'Saved', hint: 'Feed only — shortlisted' },
+  ...STAGES.filter((s) => s.id !== 'rejected'),
+]
 const SORTS = [['recent', 'Recent activity'], ['oldest', 'Waiting longest'], ['company', 'Company name']]
 const isStale = (a) => daysSince(a.updated_at) > 7 && ['applied', 'interview'].includes(a.status)
 
@@ -132,7 +141,7 @@ export default function Applications() {
   const dropLog = () => { logDirty.current = false; setLogOpen(false) }
   const closeLog = () => {
     if (!logDirty.current) { dropLog(); return }
-    setConfirm({ title: 'Discard this application?', body: 'Everything typed will be lost.', label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); dropLog() } })
+    setConfirm({ title: 'Discard this draft?', body: 'Everything typed will be lost.', label: 'Discard', danger: true, onConfirm: () => { setConfirm(null); dropLog() } })
   }
   useEffect(() => {
     const onDoc = () => closeAll()
@@ -497,7 +506,10 @@ export default function Applications() {
       {/* the first load(id) forces open the just-logged application (nothing else could be
           selected yet); the 5s follow-up (picking up a still-processing score) must NOT
           force it again — the user may have moved on by then — so it's a plain load(). */}
-      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }} pushToast={pushToast} />}
+      {logOpen && <LogModal onClose={closeLog} onDirty={(v) => { logDirty.current = v }} onSaved={(id) => { dropLog(); load(id); setTimeout(() => load(), 5000); window.dispatchEvent(new CustomEvent('jn:counts-changed')) }}
+        // a feed job has no row on this screen — hand it to the Feed, where its status lives
+        onJobSaved={(jobId, existing) => { dropLog(); pushToast({ kind: 'progress', msg: existing ? 'Already in the Job Feed — opened it.' : 'Added to the Job Feed.' }); window.dispatchEvent(new CustomEvent('jn:counts-changed')); navigate(`/feed?job=${jobId}`) }}
+        pushToast={pushToast} />}
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
       <ToastStack toasts={toasts} onClose={dismissToast} />
     </div>
@@ -728,18 +740,20 @@ function PrepModal({ prep, company, copied, onCopy, onClose }) {
 }
 
 // ── log-application modal ────────────────────────────────────────────────────
-function LogModal({ onClose, onSaved, pushToast, onDirty }) {
+function LogModal({ onClose, onSaved, onJobSaved, pushToast, onDirty }) {
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
   const [company, setCompany] = useState('')
   const [resumes, setResumes] = useState([])
-  const [cv, setCv] = useState('')
-  const [stage, setStage] = useState('applied')
+  const [cv, setCv] = useState('')                  // a résumé id: the API takes the name, the tailor call the id
+  const [status, setStatus] = useState('applied')
   const [when, setWhen] = useState(() => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` })   // local date, not UTC
   const [notes, setNotes] = useState('')
   useEffect(() => { onDirty?.(!!(url.trim() || title.trim() || company.trim() || notes.trim())) }, [url, title, company, notes])
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
+  const isApp = !LOG_JOB_STATUSES.includes(status)
+  const cvName = resumes.find((r) => r.id === cv)?.name || ''
 
   // The chips are the modal's only way to attach a résumé; an empty list must not read as
   // "you have no résumés" when the user is just here to log an application.
@@ -770,7 +784,25 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
     }
   }
 
-  const save = async () => {
+  // Writes the row and reports {jobId, done}: `done` is what the screen does with it —
+  // select the new application, or open the feed at the new job.
+  const persist = async (attached) => {
+    const body = { url: url.trim(), title: title.trim(), company: company.trim() }
+    if (!isApp) {
+      const { data } = await api.post('/jobs/manual', { ...body, status })
+      return { jobId: data.id, done: () => onJobSaved(data.id, !data.created) }
+    }
+    const { data } = await api.post('/applications', {
+      ...body,
+      cv_version_used: attached || null, notes: notes.trim() || null,
+      status, applied_at: when ? new Date(when + 'T12:00:00').toISOString() : null,   // local noon, never the previous UTC day
+    })
+    return { jobId: data.job_id, done: () => onSaved(data.id) }
+  }
+
+  // `tailorFrom` is a base résumé row {id, name}, or null for a plain save. The row is
+  // saved first either way, because tailoring needs the job id.
+  const submit = async (tailorFrom) => {
     if (!title.trim() || !company.trim() || !url.trim()) {
       pushToast({ kind: 'error', msg: !url.trim() ? 'The posting URL is required — it identifies the job' : 'Title and company are required' })
       const first = [url, title, company].findIndex((v) => !v.trim()); document.querySelectorAll('input[placeholder]')[first]?.focus()
@@ -778,25 +810,30 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
     }
     setBusy(true)
     try {
-      const { data } = await api.post('/applications', {
-        url: url.trim(), title: title.trim(), company: company.trim(),
-        cv_version_used: cv || null, notes: notes.trim() || null,
-        status: stage, applied_at: when ? new Date(when + 'T12:00:00').toISOString() : null,   // local noon, never the previous UTC day
-      })
-      onSaved(data.id)
+      const { jobId, done } = await persist(tailorFrom?.name || cvName)
+      if (tailorFrom && jobId) {
+        // A failed tailor must not lose the row that is already saved — report it and go on.
+        try {
+          await api.post('/resumes/tailor', { base_resume_id: tailorFrom.id, job_id: jobId })
+          pushToast({ kind: 'progress', msg: `Tailoring ${tailorFrom.name} for "${title.trim()}"…` })
+        } catch (e) { console.error(e); pushToast({ kind: 'error', msg: 'Saved, but tailoring could not start' + errSuffix(e) }) }
+      }
+      done()
     } catch (e) {
       const existing = e.response?.status === 409 ? e.response?.data?.detail?.application_id : null
       if (existing) { pushToast({ kind: 'progress', msg: 'Already logged — opened the existing application.' }); onSaved(existing); return }
-      pushToast({ kind: 'error', msg: 'Could not save this application' + errSuffix(e) }); setBusy(false)
+      pushToast({ kind: 'error', msg: `Could not save this ${isApp ? 'application' : 'job'}` + errSuffix(e) }); setBusy(false)
     }
   }
 
   return (
     // escape={false}: as PrepModal — the screen owns Escape for its overlays.
-    <ModalPanel width={520} title="Log application" onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
+    <ModalPanel width={520} title={isApp ? 'Log application' : 'Add job to feed'} onClose={onClose} escape={false} zIndex={60} style={{ overflow: 'hidden' }}>
         <HeaderRow align="stretch" style={{ flexDirection: 'column', gap: 3 }}>
-          <Heading className="v2-dialogtitle">Log application</Heading>
-          <Helper style={{ textWrap: 'pretty' }}>For applications made outside the app. Jobs marked Applied in the Feed are logged automatically.</Helper>
+          <Heading className="v2-dialogtitle">{isApp ? 'Log application' : 'Add job to feed'}</Heading>
+          <Helper style={{ textWrap: 'pretty' }}>{isApp
+            ? 'For applications made outside the app. Jobs marked Applied in the Feed are logged automatically.'
+            : 'Adds the posting to the Job Feed at this status. No application, date or notes are stored.'}</Helper>
         </HeaderRow>
         <div className="v2-scroll" style={{ padding: '15px 22px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 470, overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -815,35 +852,48 @@ function LogModal({ onClose, onSaved, pushToast, onDirty }) {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Label>Applied with</Label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            <Label>{isApp ? 'Applied with' : 'Tailor from'}</Label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5 }}>
               {resumes.map((r) => {
-                const on = cv === r.name
-                return <Pill key={r.id} size="sm" on={on} onClick={() => setCv(on ? '' : r.name)}>{r.name}</Pill>
+                const on = cv === r.id
+                return (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Pill size="sm" on={on} onClick={() => setCv(on ? '' : r.id)}>{r.name}</Pill>
+                    {/* the trigger sits opposite its résumé and saves first, since tailoring needs the job id */}
+                    <Pill size="sm" disabled={busy} onClick={() => { setCv(r.id); submit(r) }}
+                      title={`Save, then tailor a copy of ${r.name} for this job`}>
+                      <span style={{ color: 'var(--ai)' }}>✦</span>Tailor
+                    </Pill>
+                  </div>
+                )
               })}
             </div>
+            <Helper>✦ saves the row first, then tailors a copy of that résumé in the background.</Helper>
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <Label>Status</Label>
+            <Segmented value={status} onChange={setStatus} ariaLabel="Status"
+              options={LOG_STATUSES.map((s) => ({ value: s.id, label: s.label, hint: s.hint }))} />
+          </div>
+          {/* a feed job holds neither of these — the Job row has no date and no notes column */}
+          {isApp && (<>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-            <Label>Stage</Label>
-            <Segmented value={stage} onChange={setStage} ariaLabel="Stage"
-              options={['applied', 'interview', 'offer'].map((id) => ({ value: id, label: STAGE[id].label }))} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-            <Label>Applied on</Label>
-            <Input type="date" value={when} onChange={setWhen} ariaLabel="Applied on" />
-          </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+              <Label>Applied on</Label>
+              <Input type="date" value={when} onChange={setWhen} ariaLabel="Applied on" />
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Label>Notes</Label>
             <Textarea value={notes} onChange={setNotes} placeholder="Optional — referral, recruiter contact…"
               ariaLabel="Notes" rows={2} style={{ minHeight: 52 }} />
           </div>
+          </>)}
         </div>
         <FooterRow bg="page">
-          <Helper>A copy of the posting is saved with the application</Helper>
+          <Helper>A copy of the posting is saved with the {isApp ? 'application' : 'job'}</Helper>
           <Button variant="secondary" size="sm" onClick={onClose} style={{ marginLeft: 'auto' }}>Cancel</Button>
-          <Button size="sm" onClick={save} busy={busy}>{busy ? 'Saving…' : 'Save application'}</Button>
+          <Button size="sm" onClick={() => submit(null)} busy={busy}>{busy ? 'Saving…' : (isApp ? 'Save application' : 'Save job')}</Button>
         </FooterRow>
     </ModalPanel>
   )
