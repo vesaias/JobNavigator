@@ -29,6 +29,27 @@ def _parse_phenom_url(raw: str) -> tuple[str, dict]:
     return endpoint, payload
 
 
+# Phenom boards vary in which of these keys they populate, and the widget API
+# needs a per-board URL, so this was not confirmed against a live board. Reading
+# several keys keeps the handler at today's behaviour (no location) when a board
+# carries none of them.
+# "city" is absent on purpose: the composite branch below joins it with state
+# and country, which reads better than the bare city name.
+_LOCATION_KEYS = ("cityState", "cityStateCountry", "location")
+
+
+def _location_of(job: dict) -> str | None:
+    for key in _LOCATION_KEYS:
+        value = job.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    city = job.get("city")
+    state = job.get("state")
+    country = job.get("country")
+    parts = [p for p in (city, state, country) if isinstance(p, str) and p.strip()]
+    return ", ".join(parts) or None
+
+
 async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch jobs from a Phenom People /widgets POST API."""
     endpoint, base_payload = _parse_phenom_url(raw_url)
@@ -78,7 +99,8 @@ async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
                     job_url = job_url[:-6]
                 reason = _validate_job(title, job_url)
                 if reason is None:
-                    jobs.append({"title": title, "url": job_url})
+                    jobs.append({"title": title, "url": job_url,
+                                 "location": _location_of(j)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "phenom_api", "reason": reason})
 

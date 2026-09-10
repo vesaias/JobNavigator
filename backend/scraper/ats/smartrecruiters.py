@@ -42,6 +42,26 @@ def _extract_company_slug(url: str) -> str | None:
     return parts[0]
 
 
+def _location_fields(loc) -> dict:
+    """Read SmartRecruiters' location object.
+
+    The API returns {city, region, country, fullLocation, remote, hybrid}. The two
+    booleans are the arrangement; `hybrid` is checked first because a hybrid
+    posting also reports remote true.
+    """
+    if not isinstance(loc, dict):
+        return {}
+    place = loc.get("fullLocation") or ", ".join(
+        part for part in (loc.get("city"), loc.get("region"), loc.get("country"))
+        if part)
+    arrangement = None
+    if loc.get("hybrid"):
+        arrangement = "hybrid"
+    elif loc.get("remote"):
+        arrangement = "remote"
+    return {"location": place or None, "arrangement": arrangement}
+
+
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch jobs from SmartRecruiters' public JSON API, paginating until exhausted."""
     company_slug = _extract_company_slug(url)
@@ -115,7 +135,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 job_url = f"https://jobs.smartrecruiters.com/{company_slug}/{job_id}"
                 reason = _validate_job(title, job_url)
                 if reason is None:
-                    jobs.append({"title": title, "url": job_url})
+                    jobs.append({"title": title, "url": job_url,
+                                 **_location_fields(posting.get("location"))})
                 elif debug:
                     rejected.append({"title": title, "url": job_url,
                                      "selector": "smartrecruiters_api",

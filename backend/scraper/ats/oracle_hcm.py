@@ -134,7 +134,9 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 job_url = f"{ui_origin}{job_path_prefix}/en/sites/{site}/job/{req_id}"
                 reason = _validate_job(title, job_url)
                 if reason is None:
-                    jobs.append({"title": title, "url": job_url})
+                    jobs.append({"title": title, "url": job_url,
+                                 "location": (req.get("PrimaryLocation") or "").strip() or None,
+                                 "arrangement": (req.get("WorkplaceType") or "").strip() or None})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "oracle_hcm_api", "reason": reason})
 
