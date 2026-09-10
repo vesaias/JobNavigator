@@ -13,6 +13,15 @@ logger = logging.getLogger("jobnavigator.telegram")
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 
+# Highest numeric value in jobs.cv_scores, compared against :threshold.
+# cv_scores is Column(JSON) -> native `json` in Postgres, and the jsonb_*
+# functions have no `json` overload, so every reference carries an explicit
+# cast. seed.py casts the same column for the same reason.
+STRONG_MATCH_SQL = (
+    "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text(CASE WHEN jsonb_typeof(cv_scores::jsonb) = 'object' THEN cv_scores::jsonb ELSE '{}'::jsonb END) AS t(k, v) WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') >= :threshold"
+)
+
+
 def _get_chat_id() -> str:
     """Read chat_id from settings table."""
     db = SessionLocal()
@@ -256,9 +265,7 @@ async def send_digest():
         from sqlalchemy import text as sa_text
         strong = db.query(Job).filter(
             Job.discovered_at >= yesterday_start,
-        ).filter(sa_text(
-            "(SELECT COALESCE(MAX(v::numeric), 0) FROM jsonb_each_text(CASE WHEN jsonb_typeof(COALESCE(cv_scores, '{}'::jsonb)) = 'object' THEN cv_scores ELSE '{}'::jsonb END) AS t(k, v) WHERE v ~ '^[0-9]+(\\.[0-9]+)?$') >= :threshold"
-        ).bindparams(threshold=threshold)).count()
+        ).filter(sa_text(STRONG_MATCH_SQL).bindparams(threshold=threshold)).count()
 
         active_statuses = ["applied", "interview"]
         active_apps = db.query(Application).filter(Application.status.in_(active_statuses)).count()

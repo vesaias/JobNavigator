@@ -2,6 +2,7 @@
 import asyncio
 import contextvars
 import logging
+import re
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -175,10 +176,31 @@ _run_failure: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
 )
 
 
+# A DBAPI error string carries the failed statement, its bound parameters and
+# the driver module path. JobRun.error stored all three, and
+# /api/monitor/history returned them to the browser. Reduce the text to the
+# message before it is stored, and again before it is returned, because rows
+# written before this fix still hold the raw string.
+MAX_RUN_ERROR_CHARS = 1000
+_SQL_BLOCK = "[SQL:"
+_DRIVER_PREFIX_RE = re.compile(r"^\((?:\w+\.)+(\w+)\)\s*")
+
+
+def sanitize_run_error(error: Optional[str]) -> Optional[str]:
+    """Return the message of a run error without the SQL, the parameters or the driver module path."""
+    if error is None:
+        return None
+    text = str(error).split(_SQL_BLOCK, 1)[0].strip()
+    text = _DRIVER_PREFIX_RE.sub(r"\1: ", text)
+    if len(text) > MAX_RUN_ERROR_CHARS:
+        text = text[:MAX_RUN_ERROR_CHARS].rstrip() + "..."
+    return text or None
+
+
 def mark_run_failed(reason: str) -> None:
     """Flag the currently tracked run as failed while still returning a summary."""
     if reason:
-        _run_failure.set(str(reason)[:1000])
+        _run_failure.set(str(reason)[:MAX_RUN_ERROR_CHARS])
 
 
 def _take_run_failure() -> Optional[str]:
@@ -267,7 +289,7 @@ def _finish_job_run(run_id: uuid.UUID, status: str, result_summary: Optional[str
             started = run.started_at if run.started_at.tzinfo else run.started_at.replace(tzinfo=timezone.utc)
             run.duration_seconds = round((now - started).total_seconds(), 1)
             run.result_summary = result_summary
-            run.error = error
+            run.error = sanitize_run_error(error)
             db.commit()
     finally:
         db.close()

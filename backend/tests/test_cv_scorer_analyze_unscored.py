@@ -50,18 +50,6 @@ def scorer_ready_db(test_db, monkeypatch):
     monkeypatch.setattr(scorer, "_get_scoring_semaphore",
                         lambda: asyncio.Semaphore(5))
 
-    # analyze_unscored_jobs builds a query using text("'{}'::jsonb") — Postgres-only syntax that
-    # fails under SQLite; rewritten below to a no-op predicate that matches no rows.
-    from sqlalchemy import text as _sa_text, sql as _sa_sql
-    def _safe_text(expr):
-        if expr == "'{}'::jsonb":
-            # Empty-string literal — matches no real cv_scores rows under SQLite
-            return _sa_text("''")
-        return _sa_text(expr)
-    # The function imports text from sqlalchemy inside its body, so patch the module attribute.
-    import sqlalchemy as _sa
-    monkeypatch.setattr(_sa, "text", _safe_text)
-
     return {"db": test_db, "Session": TestSession, "resume": resume}
 
 
@@ -83,7 +71,7 @@ async def test_analyze_unscored_jobs_only_scores_entities_with_auto_scoring(scor
     desc_on = "SCORE_ME_ON: Senior product manager position. " + ("Detail. " * 10)
     desc_off = "SCORE_ME_OFF: Senior product manager position. " + ("Detail. " * 10)
 
-    # cv_scores=sa_null() so the IS NULL branch of the unscored filter matches (the PG jsonb branch is a no-op here).
+    # cv_scores=sa_null() so the IS NULL branch of unscored_filter() matches.
     job_on = Job(external_id="j1", content_hash="h1", company="ScoreOnCo",
                  title="Senior PM", url="https://x.com/1", status="new",
                  description=desc_on, cv_scores=sa_null())
