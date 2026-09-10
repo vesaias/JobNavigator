@@ -1,6 +1,7 @@
 """Provider-agnostic LLM client for scoring and analysis with automatic fallback."""
 import asyncio
 import logging
+import re
 from backend.models.db import SessionLocal, Setting
 
 logger = logging.getLogger("jobnavigator.llm")
@@ -75,6 +76,9 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
             return {**res, "provider": provider, "model": model}
         except Exception as e:
             last_primary_err = e
+            if isinstance(e, NonRetryableLLMError):
+                logger.warning(f"LLM primary failed, not retrying: {e}")
+                break
             if attempt < MAX_ATTEMPTS:
                 wait = BACKOFF_BASE ** attempt  # 2, 4, 8
                 logger.warning(f"LLM primary attempt {attempt}/{MAX_ATTEMPTS} failed: {e}, retrying in {wait}s")
@@ -95,6 +99,9 @@ async def call_llm(prompt: str, system: str, max_tokens: int = 1200,
                 return {**res, "provider": fallback_provider, "model": fallback_model}
             except Exception as e:
                 last_fallback_err = e
+                if isinstance(e, NonRetryableLLMError):
+                    logger.error(f"LLM fallback failed, not retrying: {e}")
+                    break
                 if attempt < MAX_ATTEMPTS:
                     wait = BACKOFF_BASE ** attempt
                     logger.warning(f"LLM fallback attempt {attempt}/{MAX_ATTEMPTS} failed: {e}, retrying in {wait}s")
@@ -295,18 +302,11 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
     # so it uses subscription billing, not API credits
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
 
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env=env,
-    )
-    stdout, stderr = await process.communicate(input=full_prompt.encode())
+    rc, stdout, stderr = await _run_cli(cmd, full_prompt.encode(), env=env)
 
-    if process.returncode != 0:
-        error = stderr.decode().strip()
-        raise RuntimeError(f"claude-code subprocess failed (rc={process.returncode}): {error}")
+    if rc != 0:
+        error = stderr.decode(errors="replace").strip()
+        raise RuntimeError(f"claude-code subprocess failed (rc={rc}): {error}")
 
     raw = stdout.decode().strip()
     try:
@@ -321,36 +321,66 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
     }
 
 
+class NonRetryableLLMError(RuntimeError):
+    """A failure a retry cannot fix (not logged in, usage limit); call_llm goes straight to the fallback."""
+
+
+CLI_TIMEOUT = 300   # seconds one subscription-CLI completion may take before it is killed
+# codex exec processes share one auth.json and rewrite it on token refresh; OpenAI's docs say not
+# to run many against the same file, so at most two at a time whatever the scoring limiter allows.
+_codex_gate = asyncio.Semaphore(2)
+_CODEX_LOGIN_HINT = "run `docker compose exec backend codex login --device-auth`"
+_QUOTA_RE = re.compile(r"usage limit|rate limit|quota|too many requests|\b429\b", re.I)
+
+
+async def _run_cli(cmd: list[str], stdin: bytes, env: dict | None = None, timeout: float = CLI_TIMEOUT):
+    """Run a CLI to completion with a hard timeout; returns (rc, stdout, stderr)."""
+    process = await asyncio.create_subprocess_exec(
+        *cmd, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE, env=env,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(input=stdin), timeout)
+    except asyncio.TimeoutError:
+        process.kill()
+        await process.wait()
+        raise RuntimeError(f"{cmd[0]} timed out after {int(timeout)}s")
+    return process.returncode, stdout, stderr
+
+
 async def _call_codex_cli(prompt: str, system: str, model: str, max_tokens: int) -> dict:
     """Call Codex CLI using its existing ChatGPT login; run in an empty read-only workspace."""
     import json as _json
+    import os
     import tempfile
 
-    full_prompt = f"{system}\n\n{prompt}"
-    with tempfile.TemporaryDirectory(prefix="jobnavigator-codex-") as workdir:
-        cmd = [
-            "codex", "exec", "--ephemeral", "--ignore-user-config", "--ignore-rules",
-            "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
-            "--json", "-C", workdir,
-        ]
-        if model:
-            cmd.extend(["--model", model])
-        cmd.append("-")
+    # like ANTHROPIC_API_KEY for claude_code: the plan pays, never an API key that happens to be set
+    env = {k: v for k, v in os.environ.items() if k not in ("OPENAI_API_KEY", "CODEX_API_KEY")}
+    async with _codex_gate:
+        # `codex exec` without a login retries for ~15 s and then prints a 401 storm; the status
+        # check answers in milliseconds and names the fix
+        rc, _, _ = await _run_cli(["codex", "login", "status"], b"", env=env, timeout=30)
+        if rc != 0:
+            raise NonRetryableLLMError(f"Codex CLI is not logged in — {_CODEX_LOGIN_HINT}")
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate(input=full_prompt.encode())
-
-    if process.returncode != 0:
-        error = stderr.decode(errors="replace").strip()
-        raise RuntimeError(f"codex subprocess failed (rc={process.returncode}): {error}")
+        full_prompt = f"{system}\n\n{prompt}"
+        with tempfile.TemporaryDirectory(prefix="jobnavigator-codex-") as workdir:
+            cmd = [
+                "codex", "exec", "--ephemeral", "--ignore-user-config", "--ignore-rules",
+                "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
+                "-c", "web_search=disabled", "-c", "history.persistence=none",
+                "-c", "check_for_update_on_startup=false",
+                "--json", "-C", workdir,
+            ]
+            if model:
+                cmd.extend(["--model", model])
+            cmd.append("-")
+            rc, stdout, stderr = await _run_cli(cmd, full_prompt.encode(), env=env)
 
     raw = stdout.decode(errors="replace").strip()
     text = ""
+    failed = ""      # turn.failed carries the one readable reason (401, usage limit, model unknown)
+    last_error = ""  # transport-level `error` events, the fallback reason when the turn never fails
     usage = {"input_tokens": 0, "output_tokens": 0,
              "cache_read_tokens": 0, "cache_write_tokens": 0}
     for line in raw.splitlines():
@@ -358,20 +388,33 @@ async def _call_codex_cli(prompt: str, system: str, model: str, max_tokens: int)
             event = _json.loads(line)
         except _json.JSONDecodeError:
             continue
-        if event.get("type") == "item.completed":
+        kind = event.get("type")
+        if kind == "item.completed":
             item = event.get("item") or {}
             if item.get("type") == "agent_message" and item.get("text"):
                 text = item["text"]
-        elif event.get("type") == "turn.completed":
+        elif kind == "turn.completed":
             token_usage = event.get("usage") or {}
             usage.update({
                 "input_tokens": token_usage.get("input_tokens", 0) or 0,
                 "output_tokens": token_usage.get("output_tokens", 0) or 0,
                 "cache_read_tokens": token_usage.get("cached_input_tokens", 0) or 0,
             })
+        elif kind == "turn.failed":
+            failed = str((event.get("error") or {}).get("message") or "")
+        elif kind == "error":
+            last_error = str(event.get("message") or "")
 
+    if failed or rc != 0:
+        err_lines = stderr.decode(errors="replace").strip().splitlines()
+        reason = failed or last_error or (err_lines[-1] if err_lines else "no output")
+        if "401" in reason or "Unauthorized" in reason:
+            raise NonRetryableLLMError(f"Codex CLI is not logged in — {_CODEX_LOGIN_HINT} ({reason})")
+        if _QUOTA_RE.search(reason):
+            raise NonRetryableLLMError(f"Codex usage limit reached: {reason}")
+        raise RuntimeError(f"codex exec failed (rc={rc}): {reason}")
     if not text:
-        raise RuntimeError("codex subprocess completed without an agent response")
+        raise RuntimeError("codex exec completed without an agent response")
     return {"text": text.strip(), "usage": usage}
 
 

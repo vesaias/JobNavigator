@@ -132,7 +132,7 @@ docker compose exec backend codex login --device-auth
 docker compose exec backend codex login status
 ```
 
-The login is stored in the private `codex_auth` Docker volume and persists across container rebuilds. Select **Codex CLI (ChatGPT Subscription)** in Settings › AI; no OpenAI API key is needed for this provider.
+The login is stored in the `codex_auth` Docker volume and persists across container rebuilds (Codex also keeps its own state there, about 100 MB after the first run). Select **Codex CLI (ChatGPT Subscription)** in Settings › AI; no OpenAI API key is needed for this provider. Plan limits apply (a rolling 5-hour window plus a weekly cap); when one is hit the call fails without retrying and the fallback provider takes over. Subscription CLIs (Claude Code, Codex) are meant for attended use; running scheduled scoring through them is your call.
 
 **First steps:**
 1. Settings › AI — provider and key
