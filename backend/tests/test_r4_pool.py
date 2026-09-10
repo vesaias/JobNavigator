@@ -75,8 +75,7 @@ def _make_jobs(test_db, n):
 
     ids = []
     for i in range(n):
-        # cv_scores=NULL so the "unscored" filter's IS NULL branch matches: the
-        # column defaults to {} and the other branch is Postgres-only jsonb.
+        # cv_scores=NULL so the IS NULL branch of unscored_filter() matches.
         job = Job(id=uuid.uuid4(), external_id=f"pool-{i}", content_hash=f"pool-h-{i}",
                   company="Acme", title=f"Role {i}", url=f"https://x.test/{i}",
                   description="A job description long enough to be scoreable. " * 5,
@@ -95,23 +94,6 @@ def _seed_resume(test_db):
                        json_data={"summary": "Ten years of product work.",
                                   "skills": {"core": ["Python"]}}))
     test_db.commit()
-
-
-@pytest.fixture
-def _sqlite_jsonb():
-    """`analyze_unscored_jobs` filters on text("'{}'::jsonb"), which is Postgres
-    syntax; under SQLite swap it for a literal that matches no row."""
-    import sqlalchemy as _sa
-    real_text = _sa.text
-
-    def _safe_text(expr):
-        return real_text("''") if expr == "'{}'::jsonb" else real_text(expr)
-
-    _sa.text = _safe_text
-    try:
-        yield
-    finally:
-        _sa.text = real_text
 
 
 @pytest.fixture
@@ -257,7 +239,7 @@ async def test_no_session_is_open_while_the_llm_call_is_awaited(
 
 @pytest.mark.asyncio
 async def test_batch_pipeline_holds_no_session_across_the_llm_call(
-        test_db, monkeypatch, counter, _fresh_limiters, _sqlite_jsonb):
+        test_db, monkeypatch, counter, _fresh_limiters):
     """analyze_unscored_jobs used to keep one session open for a whole batch,
     LLM calls included."""
     import backend.analyzer.cv_scorer as scorer
@@ -292,7 +274,7 @@ async def test_batch_pipeline_holds_no_session_across_the_llm_call(
 
 @pytest.mark.asyncio
 async def test_a_failing_provider_does_not_loop_the_batch_pipeline(
-        test_db, monkeypatch, counter, _fresh_limiters, _sqlite_jsonb):
+        test_db, monkeypatch, counter, _fresh_limiters):
     """A transient failure leaves cv_scores NULL on purpose (retry next pass);
     the batch loop must still terminate rather than re-select the same rows."""
     import backend.analyzer.cv_scorer as scorer
