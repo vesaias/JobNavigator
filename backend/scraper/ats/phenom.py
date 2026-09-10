@@ -50,6 +50,46 @@ def _location_of(job: dict) -> str | None:
     return ", ".join(parts) or None
 
 
+def _locations_of(job: dict) -> list[str]:
+    """Every place a Phenom posting names, primary first.
+
+    `multi_location` is a list of strings and `multi_location_array` a list of
+    {location} objects; a board populates one, the other, or neither, so both
+    are read. A posting open in twenty-two cities carries all of them here -
+    `location` alone would answer one filter out of twenty-two.
+    """
+    out: list[str] = []
+    primary = _location_of(job)
+    if primary:
+        out.append(primary)
+    values = list(job.get("multi_location") or [])
+    for entry in job.get("multi_location_array") or []:
+        if isinstance(entry, dict):
+            values.append(entry.get("location"))
+        elif isinstance(entry, str):
+            values.append(entry)
+    for value in values:
+        text = value.strip() if isinstance(value, str) else ""
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
+# Cisco's board asks for "RemoteType" by name; others write "remote". Neither is
+# on every board, so both are read and an unknown value resolves to nothing.
+_ARRANGEMENT_KEYS = ("RemoteType", "remoteType", "remote")
+
+
+def _arrangement_of(job: dict) -> str | None:
+    for key in _ARRANGEMENT_KEYS:
+        value = job.get(key)
+        if isinstance(value, bool):
+            return "remote" if value else None
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
 async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch jobs from a Phenom People /widgets POST API."""
     endpoint, base_payload = _parse_phenom_url(raw_url)
@@ -100,7 +140,9 @@ async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
                 reason = _validate_job(title, job_url)
                 if reason is None:
                     jobs.append({"title": title, "url": job_url,
-                                 "location": _location_of(j)})
+                                 "location": _location_of(j),
+                                 "locations": _locations_of(j),
+                                 "arrangement": _arrangement_of(j)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "phenom_api", "reason": reason})
 

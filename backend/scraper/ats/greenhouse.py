@@ -3,6 +3,7 @@ API ignores department[]/offices[] query params, so filtering (including parent-
 to children) happens client-side, with office dedup keyed on location.name."""
 import json
 import logging
+import re
 from urllib.parse import urlparse, parse_qs
 
 import httpx
@@ -42,6 +43,36 @@ def _parse_greenhouse_url(url: str) -> tuple[str, set[int], set[int]]:
                 pass
 
     return company_slug, dept_ids, office_ids
+
+
+# `location.name` carries several places on the boards that use them:
+# "New York City, NY; San Francisco, CA | New York City, NY" is one posting open
+# in three places, not a city with a long name.
+_PLACE_LIST = re.compile(r"[;|]")
+
+
+def _locations_of(posting: dict) -> list[str]:
+    """Every place one Greenhouse posting names, primary first.
+
+    Two fields carry them. `location.name` is the board's own line and may list
+    several places; `offices[].location` is the office address Greenhouse keeps
+    beside it ("New York, New York, United States"). A posting has to answer the
+    filter for each of them, so both are returned, de-duplicated, in the order
+    the board wrote them.
+    """
+    out: list[str] = []
+    name = (posting.get("location") or {}).get("name") or ""
+    for part in _PLACE_LIST.split(name):
+        part = part.strip()
+        if part and part not in out:
+            out.append(part)
+    for office in posting.get("offices") or []:
+        if not isinstance(office, dict):
+            continue
+        loc = (office.get("location") or "").strip()
+        if loc and loc not in out:
+            out.append(loc)
+    return out
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -148,7 +179,8 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 # Greenhouse carries no arrangement field; "Remote - US" arrives
                 # inside location.name and the cascade reads it from there.
                 jobs.append({"title": title, "url": job_url,
-                             "location": (posting.get("location") or {}).get("name") or None})
+                             "location": (posting.get("location") or {}).get("name") or None,
+                             "locations": _locations_of(posting)})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "greenhouse_api", "reason": reason})
 

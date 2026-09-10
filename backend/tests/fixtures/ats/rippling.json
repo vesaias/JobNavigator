@@ -1,0 +1,41 @@
+[
+ {
+  "uuid": "94486f41-6474-446a-b67a-c164e11354ea",
+  "name": "Account Executive, Broker Channel (Pittsburgh or Cleveland)",
+  "department": {
+   "id": "Sales",
+   "label": "Sales"
+  },
+  "url": "https://ats.rippling.com/rippling/jobs/94486f41-6474-446a-b67a-c164e11354ea",
+  "workLocation": {
+   "label": "Pittsburgh, PA",
+   "id": "Pittsburgh, PA"
+  }
+ },
+ {
+  "uuid": "94486f41-6474-446a-b67a-c164e11354ea",
+  "name": "Account Executive, Broker Channel (Pittsburgh or Cleveland)",
+  "department": {
+   "id": "Sales",
+   "label": "Sales"
+  },
+  "url": "https://ats.rippling.com/rippling/jobs/94486f41-6474-446a-b67a-c164e11354ea",
+  "workLocation": {
+   "label": "Cleveland, OH",
+   "id": "Cleveland, OH"
+  }
+ },
+ {
+  "uuid": "75ad50c6-778f-42ee-9c63-70d1cd687202",
+  "name": "Account Executive, Broker Channel (Austin & San Antonio)",
+  "department": {
+   "id": "Sales",
+   "label": "Sales"
+  },
+  "url": "https://ats.rippling.com/rippling/jobs/75ad50c6-778f-42ee-9c63-70d1cd687202",
+  "workLocation": {
+   "label": "Austin, TX",
+   "id": "Austin, TX"
+  }
+ }
+]

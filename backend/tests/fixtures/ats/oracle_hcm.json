@@ -1,0 +1,34 @@
+{
+ "items": [
+  {
+   "requisitionList": [
+    {
+     "Id": "335752",
+     "Title": "Lead Principal Software Engineer, Core Infrastructure",
+     "PrimaryLocation": "Seattle, WA, United States",
+     "PrimaryLocationCountry": "US",
+     "WorkplaceType": "",
+     "secondaryLocations": [
+      {
+       "Name": "Santa Clara, CA, United States",
+       "CountryCode": "US"
+      },
+      {
+       "Name": "United States",
+       "CountryCode": "US"
+      }
+     ]
+    },
+    {
+     "Id": "341851",
+     "Title": "Senior Site Reliability Engineer",
+     "PrimaryLocation": "BENGALURU, KARNATAKA, India",
+     "PrimaryLocationCountry": "IN",
+     "WorkplaceType": "",
+     "secondaryLocations": []
+    }
+   ],
+   "TotalJobsCount": 2
+  }
+ ]
+}

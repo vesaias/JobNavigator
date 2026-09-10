@@ -78,6 +78,55 @@ def _location_of(posting: dict) -> str | None:
     return canonical(", ".join(group_pieces(pieces)), text_joiner=" ")
 
 
+def _board_location_of(posting: dict) -> str | None:
+    """The board's own words, which is what `location` holds everywhere else.
+
+    `locationsText` is kept exactly as printed - the parser's canonical form
+    belongs in the loc_* columns, not in the field the feed displays. A count
+    ("5 Locations") names no place at all, so that one case falls back to the
+    primary site in `externalPath`, which only exists in canonical form.
+    """
+    text = (posting.get("locationsText") or "").strip()
+    if text and not COUNT_ONLY.match(text):
+        return text
+    return _location_of(posting)
+
+
+# Workday's own vocabulary for the listing's `remoteType`. "Flex" is a Workday
+# tenant's label for a schedule split between an office and home, which is what
+# every other board calls hybrid; the other three values map themselves.
+_REMOTE_TYPES = {"flex": "hybrid"}
+
+
+def _arrangement_of(posting: dict) -> str | None:
+    """The listing's `remoteType`: Flex, Remote, Onsite or Hybrid."""
+    value = (posting.get("remoteType") or "").strip()
+    if not value:
+        return None
+    return _REMOTE_TYPES.get(value.lower(), value)
+
+
+def detail_locations(detail: dict) -> list[str]:
+    """Every place named by one posting's detail JSON, primary first.
+
+    The detail document is already fetched once per new job for its description
+    (see ats/_descriptions.py), and it is the only Workday response that lists
+    the other sites: a multi-site listing entry says "5 Locations" and nothing
+    more. `location` and `additionalLocations` are the board's own strings, in
+    the same per-tenant shape as `locationsText`.
+    """
+    info = detail.get("jobPostingInfo") or {}
+    out: list[str] = []
+    primary = (info.get("location") or "").strip()
+    if primary:
+        out.append(primary)
+    for extra in info.get("additionalLocations") or []:
+        text = extra.strip() if isinstance(extra, str) else ""
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch jobs from Workday's internal JSON API."""
     origin, company_slug, site, applied_facets = _parse_workday_url(url)
@@ -136,8 +185,11 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
                 reason = _validate_job(title, job_url)
                 if reason is None:
+                    # `locations` is filled in later, from the detail JSON the
+                    # description fetch already downloads for each new job.
                     jobs.append({"title": title, "url": job_url,
-                                 "location": _location_of(p)})
+                                 "location": _board_location_of(p),
+                                 "arrangement": _arrangement_of(p)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "workday_api", "reason": reason})
 

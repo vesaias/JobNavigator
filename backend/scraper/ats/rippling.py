@@ -120,9 +120,16 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
             reason = _validate_job(title, job_url)
             if reason is None:
-                # loc_label is the entry this loop already picked as the best match.
+                # loc_label is the entry this loop already picked as the best match;
+                # all_locs is every entry the same UUID appeared under, and the
+                # posting has to answer the filter for each of them.
+                places = [loc_label] if loc_label else []
+                for other in all_locs:
+                    if other and other not in places:
+                        places.append(other)
                 jobs.append({"title": title, "url": job_url,
-                             "location": loc_label or None})
+                             "location": loc_label or None,
+                             "locations": places})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "rippling_api", "reason": reason})
 

@@ -32,6 +32,7 @@ def detect_scrape_type(url: str) -> str:
     from backend.scraper.ats.ashby import is_ashby as _is_ashby
     from backend.scraper.ats.greenhouse import is_greenhouse as _is_greenhouse
     from backend.scraper.ats.rippling import is_rippling as _is_rippling
+    from backend.scraper.ats.amazon import is_amazon as _is_amazon
     from backend.scraper.ats.smartrecruiters import is_smartrecruiters as _is_smartrecruiters
     from backend.scraper.ats.meta import is_meta as _is_meta_careers
     from backend.scraper.ats.google import is_google as _is_google_careers
@@ -51,6 +52,8 @@ def detect_scrape_type(url: str) -> str:
         return "Greenhouse API"
     if _is_rippling(url):
         return "Rippling API"
+    if _is_amazon(url):
+        return "Amazon API"
     if _is_smartrecruiters(url):
         return "SmartRecruiters API"
     if _is_meta_careers(url):

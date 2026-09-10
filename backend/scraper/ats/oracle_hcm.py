@@ -134,8 +134,18 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 job_url = f"{ui_origin}{job_path_prefix}/en/sites/{site}/job/{req_id}"
                 reason = _validate_job(title, job_url)
                 if reason is None:
+                    # secondaryLocations is already in the response — the finder
+                    # above expands it — so every site of a multi-site posting
+                    # costs nothing extra.
+                    primary = (req.get("PrimaryLocation") or "").strip()
+                    places = [primary] if primary else []
+                    for extra in req.get("secondaryLocations") or []:
+                        name = (extra.get("Name") or "").strip() if isinstance(extra, dict) else ""
+                        if name and name not in places:
+                            places.append(name)
                     jobs.append({"title": title, "url": job_url,
-                                 "location": (req.get("PrimaryLocation") or "").strip() or None,
+                                 "location": primary or None,
+                                 "locations": places,
                                  "arrangement": (req.get("WorkplaceType") or "").strip() or None})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "oracle_hcm_api", "reason": reason})

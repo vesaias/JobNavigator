@@ -14,7 +14,7 @@ from backend.scraper._shared.filters import _apply_company_filters
 from backend.scraper._shared.dedup import make_external_id, make_content_hash, _normalize_url
 from backend.scraper.ats import (
     workday, greenhouse, lever, ashby, oracle_hcm,
-    phenom, talentbrew, rippling, smartrecruiters, meta, google, generic,
+    phenom, talentbrew, rippling, smartrecruiters, meta, google, amazon, generic,
 )
 from backend.scraper.ats._descriptions import _fetch_descriptions_parallel
 
@@ -43,6 +43,8 @@ async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None, max_
         return await rippling.scrape(url, debug=debug)
     if smartrecruiters.is_smartrecruiters(url):
         return await smartrecruiters.scrape(url, debug=debug)
+    if amazon.is_amazon(url):
+        return await amazon.scrape(url, debug=debug)
     if meta.is_meta(url):
         return await meta.scrape(url, browser=shared_browser, max_pages=max_pages, debug=debug)
     if google.is_google(url):
@@ -101,7 +103,7 @@ def _needs_browser(urls):
         if (phenom.is_phenom(u) or talentbrew.is_talentbrew(u) or oracle_hcm.is_oracle_hcm(u)
                 or lever.is_lever(u) or workday.is_workday(u) or ashby.is_ashby(u)
                 or greenhouse.is_greenhouse(u) or rippling.is_rippling(u)
-                or smartrecruiters.is_smartrecruiters(u)):
+                or smartrecruiters.is_smartrecruiters(u) or amazon.is_amazon(u)):
             continue
         # Meta, Google, levels.fyi, or generic Playwright — needs browser
         return True
@@ -145,6 +147,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                         or workday.is_workday(target_url) or ashby.is_ashby(target_url)
                         or greenhouse.is_greenhouse(target_url) or rippling.is_rippling(target_url)
                         or smartrecruiters.is_smartrecruiters(target_url)
+                        or amazon.is_amazon(target_url)
                         or meta.is_meta(target_url) or google.is_google(target_url)):
                     page_jobs = await _dispatch_ats(target_url, debug=False, shared_browser=browser, max_pages=max_pages)
                 else:

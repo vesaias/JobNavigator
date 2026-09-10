@@ -1,0 +1,33 @@
+{
+ "total": 3,
+ "jobPostings": [
+  {
+   "title": "Senior Director, NA VAS, Loyalty, Digital Enablement, and Network Products Solutions Lead",
+   "externalPath": "/job/US---San-Francisco-CA/Senior-Director--NA-VAS--Loyalty--Digital-Enablement--and-Network-Products-Solutions-Lead_REF084662W-1",
+   "locationsText": "US - San Francisco, CA",
+   "postedOn": "Posted Today",
+   "bulletFields": [
+    "REF084662W"
+   ]
+  },
+  {
+   "title": "Product Manager",
+   "externalPath": "/job/US---Foster-City-CA/Product-Manager_REF088361W",
+   "locationsText": "US - Foster City, CA",
+   "postedOn": "Posted Today",
+   "remoteType": "Hybrid",
+   "bulletFields": [
+    "REF088361W"
+   ]
+  },
+  {
+   "title": "Director of Product - Agentic Commerce",
+   "externalPath": "/job/US---Foster-City-CA/Director-of-Product---Agentic-Commerce_REF085033W",
+   "locationsText": "2 Locations",
+   "postedOn": "Posted 2 Days Ago",
+   "bulletFields": [
+    "REF085033W"
+   ]
+  }
+ ]
+}

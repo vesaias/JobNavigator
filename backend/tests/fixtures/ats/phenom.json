@@ -1,0 +1,493 @@
+{
+ "refineSearch": {
+  "totalHits": 2,
+  "data": {
+   "jobs": [
+    {
+     "type": "Full time",
+     "state": "California",
+     "siteType": "external",
+     "multi_category": [
+      "Product"
+     ],
+     "reqId": "JR100477",
+     "city": "San Francisco",
+     "latitude": "37.77493",
+     "multi_location": [
+      "San Francisco, California, United States of America",
+      "Atlanta, Georgia, United States of America",
+      "Austin, Texas, United States of America",
+      "Boise, Idaho, United States of America",
+      "Boston, Massachusetts, United States of America",
+      "Charlotte, North Carolina, United States of America",
+      "Chicago, Illinois, United States of America",
+      "Columbus, Ohio, United States of America",
+      "Dallas, Texas, United States of America",
+      "Houston, Texas, United States of America",
+      "Kansas City, Missouri, United States of America",
+      "Los Angeles, California, United States of America",
+      "Miami, Florida, United States of America",
+      "Minneapolis, Minnesota, United States of America",
+      "Nashville, Tennessee, United States of America",
+      "New York, New York, United States of America",
+      "Philadelphia, Pennsylvania, United States of America",
+      "Phoenix, Arizona, United States of America",
+      "Portland, Oregon, United States of America",
+      "Raleigh, North Carolina, United States of America",
+      "Salt Lake City, Utah, United States of America",
+      "San Diego, California, United States of America",
+      "Seattle, Washington, United States of America",
+      "Tampa, Florida, United States of America",
+      "Washington, District of Columbia, United States of America"
+     ],
+     "address": "123 Anywhere Street, San Francisco, CA 94016, United States of America",
+     "applyUrl": "https://circle.wd1.myworkdayjobs.com/Circle/job/San-Francisco---remote-first-in-US/Senior-Principal-Product-Manager_JR100477/apply",
+     "externalApply": false,
+     "cityState": "San Francisco, California",
+     "country": "United States of America",
+     "visibilityType": "External",
+     "longitude": "-122.41942",
+     "jobId": "JR100477",
+     "locale": "en_US",
+     "title": "Lead Product Manager, Token",
+     "jobSeqNo": "CIICIRUSJR100477EXTERNALENUS",
+     "postedDate": "2026-04-06T00:00:00.000+0000",
+     "dateCreated": "2025-11-05T14:29:06.293+0000",
+     "cityStateCountry": "San Francisco, California, United States of America",
+     "jobVisibility": [
+      "external"
+     ],
+     "location": "San Francisco, California, United States of America",
+     "category": "Product",
+     "isMultiLocation": false,
+     "multi_location_array": [
+      {
+       "latlong": {
+        "lon": -122.41942,
+        "lat": 37.77493
+       },
+       "location": "San Francisco, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -84.38798,
+        "lat": 33.749
+       },
+       "location": "Atlanta, Georgia, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -97.74306,
+        "lat": 30.26715
+       },
+       "location": "Austin, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -116.20345,
+        "lat": 43.6135
+       },
+       "location": "Boise, Idaho, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -71.05977,
+        "lat": 42.35843
+       },
+       "location": "Boston, Massachusetts, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -80.84313,
+        "lat": 35.22709
+       },
+       "location": "Charlotte, North Carolina, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -87.65005,
+        "lat": 41.85003
+       },
+       "location": "Chicago, Illinois, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -82.99879,
+        "lat": 39.96118
+       },
+       "location": "Columbus, Ohio, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -96.80667,
+        "lat": 32.78306
+       },
+       "location": "Dallas, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -95.36327,
+        "lat": 29.76328
+       },
+       "location": "Houston, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -94.57857,
+        "lat": 39.09973
+       },
+       "location": "Kansas City, Missouri, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -118.24813,
+        "lat": 33.97446
+       },
+       "location": "Los Angeles, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -80.19366,
+        "lat": 25.77427
+       },
+       "location": "Miami, Florida, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -93.26384,
+        "lat": 44.97997
+       },
+       "location": "Minneapolis, Minnesota, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -86.78444,
+        "lat": 36.16589
+       },
+       "location": "Nashville, Tennessee, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -74.00597,
+        "lat": 40.71427
+       },
+       "location": "New York, New York, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -75.16362,
+        "lat": 39.95238
+       },
+       "location": "Philadelphia, Pennsylvania, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -112.07404,
+        "lat": 33.44838
+       },
+       "location": "Phoenix, Arizona, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -122.67621,
+        "lat": 45.52345
+       },
+       "location": "Portland, Oregon, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -78.63861,
+        "lat": 35.7721
+       },
+       "location": "Raleigh, North Carolina, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -112.08133,
+        "lat": 40.70189
+       },
+       "location": "Salt Lake City, Utah, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -117.16472,
+        "lat": 32.71571
+       },
+       "location": "San Diego, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -122.33207,
+        "lat": 47.60621
+       },
+       "location": "Seattle, Washington, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -82.45843,
+        "lat": 27.94752
+       },
+       "location": "Tampa, Florida, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -77.03637,
+        "lat": 38.89511
+       },
+       "location": "Washington, District of Columbia, United States of America"
+      }
+     ],
+     "isMultiCategory": false,
+     "multi_category_array": [
+      {
+       "category": "Product"
+      }
+     ],
+     "badge": ""
+    },
+    {
+     "type": "Full time",
+     "state": "California",
+     "siteType": "external",
+     "multi_category": [
+      "Product"
+     ],
+     "reqId": "JR100869",
+     "city": "San Francisco",
+     "latitude": "37.77493",
+     "multi_location": [
+      "San Francisco, California, United States of America",
+      "Atlanta, Georgia, United States of America",
+      "Austin, Texas, United States of America",
+      "Boise, Idaho, United States of America",
+      "Boston, Massachusetts, United States of America",
+      "Charlotte, North Carolina, United States of America",
+      "Chicago, Illinois, United States of America",
+      "Columbus, Ohio, United States of America",
+      "Dallas, Texas, United States of America",
+      "Houston, Texas, United States of America",
+      "Kansas City, Missouri, United States of America",
+      "Los Angeles, California, United States of America",
+      "Miami, Florida, United States of America",
+      "Minneapolis, Minnesota, United States of America",
+      "Nashville, Tennessee, United States of America",
+      "New York, New York, United States of America",
+      "Philadelphia, Pennsylvania, United States of America",
+      "Phoenix, Arizona, United States of America",
+      "Portland, Oregon, United States of America",
+      "Raleigh, North Carolina, United States of America",
+      "Salt Lake City, Utah, United States of America",
+      "San Diego, California, United States of America",
+      "Seattle, Washington, United States of America",
+      "Tampa, Florida, United States of America",
+      "Washington, District of Columbia, United States of America"
+     ],
+     "address": "123 Anywhere Street, San Francisco, CA 94016, United States of America",
+     "applyUrl": "https://circle.wd1.myworkdayjobs.com/Circle/job/San-Francisco---remote-first-in-US/Principal-Product-Operations-and-Risk-Analyst_JR100869/apply",
+     "externalApply": false,
+     "cityState": "San Francisco, California",
+     "country": "United States of America",
+     "visibilityType": "External",
+     "longitude": "-122.41942",
+     "jobId": "JR100869",
+     "locale": "en_US",
+     "title": "Principal Product Operations and Risk Analyst",
+     "jobSeqNo": "CIICIRUSJR100869EXTERNALENUS",
+     "postedDate": "2026-04-06T00:00:00.000+0000",
+     "dateCreated": "2026-02-17T15:54:51.019+0000",
+     "cityStateCountry": "San Francisco, California, United States of America",
+     "jobVisibility": [
+      "external"
+     ],
+     "location": "San Francisco, California, United States of America",
+     "category": "Product",
+     "isMultiLocation": false,
+     "multi_location_array": [
+      {
+       "latlong": {
+        "lon": -122.41942,
+        "lat": 37.77493
+       },
+       "location": "San Francisco, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -84.38798,
+        "lat": 33.749
+       },
+       "location": "Atlanta, Georgia, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -97.74306,
+        "lat": 30.26715
+       },
+       "location": "Austin, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -116.20345,
+        "lat": 43.6135
+       },
+       "location": "Boise, Idaho, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -71.05977,
+        "lat": 42.35843
+       },
+       "location": "Boston, Massachusetts, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -80.84313,
+        "lat": 35.22709
+       },
+       "location": "Charlotte, North Carolina, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -87.65005,
+        "lat": 41.85003
+       },
+       "location": "Chicago, Illinois, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -82.99879,
+        "lat": 39.96118
+       },
+       "location": "Columbus, Ohio, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -96.80667,
+        "lat": 32.78306
+       },
+       "location": "Dallas, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -95.36327,
+        "lat": 29.76328
+       },
+       "location": "Houston, Texas, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -94.57857,
+        "lat": 39.09973
+       },
+       "location": "Kansas City, Missouri, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -118.24813,
+        "lat": 33.97446
+       },
+       "location": "Los Angeles, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -80.19366,
+        "lat": 25.77427
+       },
+       "location": "Miami, Florida, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -93.26384,
+        "lat": 44.97997
+       },
+       "location": "Minneapolis, Minnesota, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -86.78444,
+        "lat": 36.16589
+       },
+       "location": "Nashville, Tennessee, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -74.00597,
+        "lat": 40.71427
+       },
+       "location": "New York, New York, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -75.16362,
+        "lat": 39.95238
+       },
+       "location": "Philadelphia, Pennsylvania, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -112.07404,
+        "lat": 33.44838
+       },
+       "location": "Phoenix, Arizona, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -122.67621,
+        "lat": 45.52345
+       },
+       "location": "Portland, Oregon, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -78.63861,
+        "lat": 35.7721
+       },
+       "location": "Raleigh, North Carolina, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -112.08133,
+        "lat": 40.70189
+       },
+       "location": "Salt Lake City, Utah, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -117.16472,
+        "lat": 32.71571
+       },
+       "location": "San Diego, California, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -122.33207,
+        "lat": 47.60621
+       },
+       "location": "Seattle, Washington, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -82.45843,
+        "lat": 27.94752
+       },
+       "location": "Tampa, Florida, United States of America"
+      },
+      {
+       "latlong": {
+        "lon": -77.03637,
+        "lat": 38.89511
+       },
+       "location": "Washington, District of Columbia, United States of America"
+      }
+     ],
+     "isMultiCategory": false,
+     "multi_category_array": [
+      {
+       "category": "Product"
+      }
+     ],
+     "badge": ""
+    }
+   ]
+  }
+ }
+}
