@@ -11,6 +11,7 @@ import '../theme.css'
 const PROVIDERS = [
   ['claude_api', 'Claude API (Anthropic)'],
   ['claude_code', 'Claude Code (Subscription)'],
+  ['codex_cli', 'Codex CLI (ChatGPT Subscription)'],
   ['openai', 'OpenAI'],
   ['ollama', 'Ollama (Local)'],
   ['openrouter', 'OpenRouter'],
@@ -19,7 +20,7 @@ const PROVIDER_LABEL = Object.fromEntries(PROVIDERS)
 // providers whose catalog /api/llm/models can search live
 const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code']
 // providers that need no key
-const KEYLESS = ['claude_code', 'ollama', '']
+const KEYLESS = ['claude_code', 'codex_cli', 'ollama', '']
 
 // The value rows' fields are `Input` now (adornment slot and all), so the box
 // lives in ui.jsx with every other field. What is left here is the type these
@@ -347,7 +348,7 @@ export default function Settings() {
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model',
-          info: "Providers: Claude API, Claude Code, OpenAI, Ollama (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount." },
+          info: "Providers: Claude API, Claude Code, Codex CLI (your ChatGPT subscription), OpenAI, Ollama (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount." },
         B('API key', 'API key for the primary provider.', 'llm_api_key', { secret: true, mono: true, w: '340px', hide: () => KEYLESS.includes(val('llm_provider', 'claude_api')) }),
         LLM('Scoring', 'Model that scores new jobs against your résumés.', 'scoring_llm'),
         LLM('Scoring fallback', 'Retries scoring once on error or rate limit — scoring only.', 'llm_fallback',

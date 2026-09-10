@@ -67,6 +67,14 @@ def test_claude_code_is_free():
     assert cost == 0.0
 
 
+def test_codex_cli_is_free():
+    """codex_cli uses a ChatGPT subscription — always $0 in API-cost stats."""
+    cost = calc_cost("codex_cli", "gpt-5.6-sol",
+                     input_tokens=10000, output_tokens=5000,
+                     cache_read_tokens=2000, cache_write_tokens=0)
+    assert cost == 0.0
+
+
 def test_ollama_is_free():
     """ollama is local — always $0."""
     cost = calc_cost("ollama", "llama3",
@@ -109,4 +117,5 @@ def test_get_pricing_unknown_provider():
 
 def test_free_providers_set():
     assert "claude_code" in FREE_PROVIDERS
+    assert "codex_cli" in FREE_PROVIDERS
     assert "ollama" in FREE_PROVIDERS
