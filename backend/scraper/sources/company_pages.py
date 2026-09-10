@@ -52,6 +52,40 @@ async def _dispatch_ats(url: str, debug: bool = False, shared_browser=None, max_
     return await generic.scrape(url, browser=shared_browser, debug=debug)
 
 
+def _refresh_known_jobs(db, known: dict) -> int:
+    """Fill location/arrangement on rows the feed already holds, from what this pass
+    scraped. Only empty fields are written: both apply_* helpers leave set values
+    alone, and `location` is filled only when the row has none. This is how a
+    normal company pass back-fills postings scraped before the handlers emitted
+    these fields, without re-fetching anything."""
+    from backend.analyzer.work_arrangement import apply_arrangement_to_job
+    from backend.analyzer.location import apply_location_to_job
+    ids = list(known)
+    rows = db.query(Job).filter(
+        Job.external_id.in_(ids),
+        ((Job.loc_country == None) & (Job.loc_region == None) & (Job.loc_city == None))
+        | ((Job.arr_remote == None) & (Job.arr_hybrid == None) & (Job.arr_onsite == None)),
+    ).all()
+    touched = 0
+    for job in rows:
+        j = known.get(job.external_id) or {}
+        before = (job.location, job.loc_country, job.loc_region, job.loc_city,
+                  job.arr_remote, job.arr_hybrid, job.arr_onsite)
+        try:
+            if not (job.location or "").strip() and j.get("location"):
+                job.location = j["location"]
+            apply_arrangement_to_job(job, structured=j.get("arrangement"))
+            apply_location_to_job(job, extra=j.get("locations"))
+        except Exception as e:
+            logger.warning(f"Refresh failed for '{job.title}': {e}")
+            continue
+        after = (job.location, job.loc_country, job.loc_region, job.loc_city,
+                 job.arr_remote, job.arr_hybrid, job.arr_onsite)
+        if after != before:
+            touched += 1
+    return touched
+
+
 def _ats_labels_for(urls) -> str:
     """Return a comma-separated list of distinct ATS labels for these URLs, for activity-log messages (e.g. "Acme (Greenhouse): 3 new"); strips the API/AJAX/(Playwright) suffix from detect_scrape_type's labels for compactness."""
     from backend.api.routes_companies import detect_scrape_type
@@ -207,10 +241,12 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
             _company_lookup = {company.name.strip().lower(): company}
 
             jobs_needing_desc = []
+            known_here = {}   # ext_id -> scraped dict, for rows the feed already holds
             for j in unique_jobs:
                 ext_id = make_external_id(company.name, j["title"], j["url"])
                 content_hash = make_content_hash(company.name, j["title"])
                 if ext_id in existing_ids:
+                    known_here[ext_id] = j
                     continue
                 j["_ext_id"] = ext_id
                 j["_content_hash"] = content_hash
@@ -308,11 +344,15 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                     logger.warning(f"Insert failed for ignored job '{j['title']}' at {company.name} ({j['url']}): {e}")
                     continue
 
+            refreshed = _refresh_known_jobs(db, known_here) if known_here else 0
+
             comp = db.query(Company).filter(Company.id == company.id).first()
             if comp:
                 comp.last_scraped_at = datetime.now(timezone.utc)
 
             db.commit()
+            if refreshed:
+                logger.info(f"{company.name}: location/arrangement filled on {refreshed} existing job(s)")
         finally:
             db.close()
 
