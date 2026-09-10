@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.models.db import create_tables, SessionLocal, Setting, JobRun
 from backend.seed import run_seeds
 from backend.config import INITIAL_API_KEY, TELEGRAM_BOT_TOKEN
-from backend.job_monitor import launch_background, JobAlreadyRunningError, get_all_running, is_running, _get_running_by_job_type, cleanup_stale_runs
+from backend.job_monitor import launch_background, JobAlreadyRunningError, get_all_running, is_running, _get_running_by_job_type, cleanup_stale_runs, sanitize_run_error
 
 from backend.api.routes_settings import router as settings_router
 from backend.api.routes_jobs import router as jobs_router
@@ -1144,7 +1144,7 @@ def get_run_history(limit: Annotated[int, Query(ge=0, le=1000)] = 30, offset: in
                 "finished_at": r.finished_at.isoformat() if r.finished_at else None,
                 "duration_seconds": r.duration_seconds,
                 "result_summary": r.result_summary,
-                "error": r.error,
+                "error": sanitize_run_error(r.error),
                 "meta": r.meta,
             }
             for r in runs
@@ -1170,7 +1170,7 @@ def get_run_detail(run_id: str):
             "finished_at": r.finished_at.isoformat() if r.finished_at else None,
             "duration_seconds": r.duration_seconds,
             "result_summary": r.result_summary,
-            "error": r.error,
+            "error": sanitize_run_error(r.error),
             "meta": r.meta,
         }
     finally:

@@ -610,6 +610,8 @@ def run_migrations(db):
         "ALTER TABLE job_runs ADD CONSTRAINT job_runs_target_job_id_fkey FOREIGN KEY (target_job_id) REFERENCES jobs(id) ON DELETE SET NULL",
         "CREATE INDEX IF NOT EXISTS ix_job_runs_target_job_id ON job_runs(target_job_id)",
         """ALTER TABLE companies ADD COLUMN IF NOT EXISTS selected_resume_ids JSONB DEFAULT '[]'::jsonb""",
+        # ADD COLUMN is a no-op where create_all() already built the column from
+        # Column(JSON), so it can be native `json` here too. Cast every reference.
         # Translate selected_cv_ids → selected_resume_ids by matching CV.version to Resume.name.
         # Idempotent: only runs while selected_cv_ids still exists and selected_resume_ids is empty.
         """DO $$
@@ -623,13 +625,13 @@ BEGIN
         SELECT co.id AS cid,
                jsonb_agg(r.id::text) AS ids
           FROM companies co
-          CROSS JOIN LATERAL jsonb_array_elements_text(co.selected_cv_ids) AS cid_str(val)
+          CROSS JOIN LATERAL jsonb_array_elements_text(co.selected_cv_ids::jsonb) AS cid_str(val)
           JOIN cvs cv ON cv.id::text = cid_str.val
           JOIN resumes r ON r.name = cv.version AND r.is_base = TRUE
          GROUP BY co.id
       ) AS translated
      WHERE c.id = translated.cid
-       AND (c.selected_resume_ids IS NULL OR c.selected_resume_ids = '[]'::jsonb);
+       AND (c.selected_resume_ids IS NULL OR c.selected_resume_ids::jsonb = '[]'::jsonb);
   END IF;
 END $$;""",
         """ALTER TABLE companies DROP COLUMN IF EXISTS selected_cv_ids""",
