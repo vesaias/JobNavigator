@@ -1,0 +1,127 @@
+{
+ "_note": "Job-card payloads recorded live on 2026-09-10 by running ats/generic.py's own _CARD_JS against each board. `text` is the card's innerText, `hint` the text of the element the card classes as its location. Two entries are marked source \"audit\": their card text comes from the field audit, on boards no active company scrapes today.",
+ "cards": [
+  {
+   "board": "cursor.com/careers",
+   "title": "Account Executive - Commercial",
+   "text": "Account Executive - Commercial\n\nSales\n·\nFull-time\n·\nSingapore\nApply →",
+   "hint": null,
+   "expected": "Singapore"
+  },
+  {
+   "board": "cursor.com/careers",
+   "title": "Account Executive, Commercial",
+   "text": "Account Executive, Commercial\n\nSales\n·\nFull-time\n·\nLondon\nApply →",
+   "hint": null,
+   "expected": "London"
+  },
+  {
+   "board": "coinbase.com/careers/positions",
+   "title": "Group Product Manager, Compliance Agent Experience",
+   "text": "Group Product Manager, Compliance Agent Experience\n\nRemote - USA",
+   "hint": null,
+   "expected": "Remote - USA"
+  },
+  {
+   "board": "brex.com/careers",
+   "title": "Director of Product, Growth/AI",
+   "text": "Director of Product, Growth/AI\n\nNEW YORK\n\nApply",
+   "hint": null,
+   "expected": "NEW YORK"
+  },
+  {
+   "board": "careers.servicenow.com/jobs",
+   "title": "Senior Staff Inbound Product Manager - Search",
+   "text": "Senior Staff Inbound Product Manager - Search\nSave\nAddison",
+   "hint": null,
+   "expected": "Addison"
+  },
+  {
+   "board": "bloomberg.avature.net",
+   "title": "Product Manager - Company Financials Applications & AI Workflows",
+   "text": "Product Manager - Company Financials Applications & AI Workflows\nNew York, New York, United States of America\nAPPLY\nSAVE",
+   "hint": "New York, New York, United States of America",
+   "expected": "New York, New York, United States of America"
+  },
+  {
+   "board": "jobs.apple.com",
+   "title": "Senior Engineering Project Manager (Web Portal Platforms), G&A Solutions Engineering (GSE)",
+   "text": "Senior Engineering Project Manager (Web Portal Platforms), G&A Solutions Engineering (GSE)\nSoftware and Services\nJul 08, 2026\nLocation\nAustin\nActions",
+   "hint": "Location\nAustin",
+   "expected": "Austin"
+  },
+  {
+   "board": "apply.careers.microsoft.com",
+   "title": "Senior Technical Program Manager",
+   "text": "Senior Technical Program Manager\nUnited States, Washington, Redmond + 1 more\nPosted an hour ago",
+   "hint": null,
+   "expected": "United States, Washington, Redmond + 1 more"
+  },
+  {
+   "board": "paypal.eightfold.ai",
+   "title": "Director, Product Management",
+   "text": "Director, Product Management\nAustin, Texas, United States of America + 1 more\nProduct Management\nPosted 7 days ago",
+   "hint": null,
+   "expected": "Austin, Texas, United States of America + 1 more"
+  },
+  {
+   "board": "stripe.com/jobs/search",
+   "title": "AEO and GEO Marketing Manager",
+   "text": "AEO and GEO Marketing Manager\n\nMarketing\n\nRemote in United States",
+   "hint": "Remote in United States",
+   "expected": "Remote in United States"
+  },
+  {
+   "board": "stripe.com/jobs/search",
+   "title": "AI Engineer",
+   "text": "AI Engineer\n\nSolutions Architect\n\nToronto",
+   "hint": "Toronto",
+   "expected": "Toronto"
+  },
+  {
+   "board": "databricks.com/company/careers",
+   "source": "audit",
+   "title": "Staff Software Engineer",
+   "text": "Staff Software Engineer | Mountain View, California; San Francisco, California",
+   "hint": null,
+   "expected": "Mountain View, California; San Francisco, California"
+  },
+  {
+   "board": "ibm.com/careers/search",
+   "source": "audit",
+   "title": "Intern Security Consultant",
+   "text": "Consulting | Intern Security Consultant | Internship | Dallas, US",
+   "hint": null,
+   "expected": "Dallas, US"
+  },
+  {
+   "board": "jobs.apple.com",
+   "title": "Work at Apple",
+   "text": "Work at Apple\nLife at Apple\nProfile\nSign In",
+   "hint": null,
+   "expected": null
+  },
+  {
+   "board": "stripe.com/jobs/search",
+   "title": "Assess your fit",
+   "text": "Help implement the conditions for prosperity.Work on problems that matter at scale.\nAssess your fit",
+   "hint": null,
+   "expected": null
+  },
+  {
+   "board": "uber.com/careers/list",
+   "title": "Saved jobs",
+   "text": "Home\nSearch jobs\nSaved jobs\nExplore",
+   "hint": null,
+   "expected": null
+  },
+  {
+   "board": "ibm.com/careers/search",
+   "source": "audit",
+   "title": "Data Engineer",
+   "text": "Consulting | Data Engineer | Professional | Multiple Cities",
+   "hint": null,
+   "expected": null
+  }
+ ]
+}

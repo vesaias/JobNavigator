@@ -8,7 +8,7 @@ import httpx
 
 from backend.scraper._shared.urls import host_matches
 from backend.scraper._shared.filters import _validate_job
-from backend.analyzer.location import COUNT_ONLY, group_pieces
+from backend.analyzer.location import COUNT_ONLY, canonical, group_pieces
 
 logger = logging.getLogger("jobnavigator.scraper.ats.workday")
 
@@ -52,33 +52,79 @@ def _parse_workday_url(url: str) -> tuple[str, str, str, dict]:
 _PATH_PLACE = re.compile(r"^/job/([^/]+)/")
 
 
-def _location_fields(posting: dict) -> dict:
-    """Read a Workday posting's location.
+def _location_of(posting: dict) -> str | None:
+    """Read a Workday posting's location, in the order every other source uses.
 
-    `location` is what the board wrote, untouched, the same as every other
-    handler. `locationsText` is per-tenant and carries "US, CA, Santa Clara",
-    "Ireland - Dublin", "California - San Francisco" and "USA.VA.Reston"; the
-    parser does not depend on the order, so none of that needs rewriting here.
-    The canonical form lives in the parsed columns alone.
+    `locationsText` is per-tenant, so this one field carries "US, CA, Santa
+    Clara", "Ireland - Dublin", "California - San Francisco" and
+    "USA.VA.Reston". `canonical` classifies the parts instead of trusting their
+    order, and hands back the board's own text when it cannot.
 
-    A multi-site posting reports a count ("2 Locations") rather than a place.
-    That is not a location, so `location` stays empty and the primary site comes
-    from `externalPath`, shaped "/job/US-CA-Santa-Clara/Title_JR123" — the only
-    place this handler has to build a string, because the board gave it none.
+    A multi-site posting reports a count ("2 Locations") rather than a place. In
+    that case the primary site comes from `externalPath`, shaped
+    "/job/US-CA-Santa-Clara/Title_JR123".
     """
     text = (posting.get("locationsText") or "").strip()
     if text and not COUNT_ONLY.match(text):
-        return {"location": text, "locations": [text]}
+        return canonical(text)
 
     match = _PATH_PLACE.match(posting.get("externalPath") or "")
     if not match:
-        return {"location": None}
+        return None
     # The segment separates its parts with dashes and also uses a dash inside a
-    # city name, so adjacent pieces that together name one place are rejoined
-    # first: "US-CA-Santa-Clara" -> "US, CA, Santa Clara".
+    # city name, so every piece is classified and the leftovers rejoin with a
+    # space: "US-CA-Santa-Clara" -> "Santa Clara, CA, United States".
     pieces = [p for p in match.group(1).split("-") if p.strip()]
-    from_path = ", ".join(group_pieces(pieces))
-    return {"location": None, "locations": [from_path] if from_path else []}
+    return canonical(", ".join(group_pieces(pieces)), text_joiner=" ")
+
+
+def _board_location_of(posting: dict) -> str | None:
+    """The board's own words, which is what `location` holds everywhere else.
+
+    `locationsText` is kept exactly as printed - the parser's canonical form
+    belongs in the loc_* columns, not in the field the feed displays. A count
+    ("5 Locations") names no place at all, so that one case falls back to the
+    primary site in `externalPath`, which only exists in canonical form.
+    """
+    text = (posting.get("locationsText") or "").strip()
+    if text and not COUNT_ONLY.match(text):
+        return text
+    return _location_of(posting)
+
+
+# Workday's own vocabulary for the listing's `remoteType`. "Flex" is a Workday
+# tenant's label for a schedule split between an office and home, which is what
+# every other board calls hybrid; the other three values map themselves.
+_REMOTE_TYPES = {"flex": "hybrid"}
+
+
+def _arrangement_of(posting: dict) -> str | None:
+    """The listing's `remoteType`: Flex, Remote, Onsite or Hybrid."""
+    value = (posting.get("remoteType") or "").strip()
+    if not value:
+        return None
+    return _REMOTE_TYPES.get(value.lower(), value)
+
+
+def detail_locations(detail: dict) -> list[str]:
+    """Every place named by one posting's detail JSON, primary first.
+
+    The detail document is already fetched once per new job for its description
+    (see ats/_descriptions.py), and it is the only Workday response that lists
+    the other sites: a multi-site listing entry says "5 Locations" and nothing
+    more. `location` and `additionalLocations` are the board's own strings, in
+    the same per-tenant shape as `locationsText`.
+    """
+    info = detail.get("jobPostingInfo") or {}
+    out: list[str] = []
+    primary = (info.get("location") or "").strip()
+    if primary:
+        out.append(primary)
+    for extra in info.get("additionalLocations") or []:
+        text = extra.strip() if isinstance(extra, str) else ""
+        if text and text not in out:
+            out.append(text)
+    return out
 
 
 async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
@@ -139,8 +185,11 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
                 reason = _validate_job(title, job_url)
                 if reason is None:
+                    # `locations` is filled in later, from the detail JSON the
+                    # description fetch already downloads for each new job.
                     jobs.append({"title": title, "url": job_url,
-                                 **_location_fields(p)})
+                                 "location": _board_location_of(p),
+                                 "arrangement": _arrangement_of(p)})
                 elif debug:
                     rejected.append({"title": title, "url": job_url, "selector": "workday_api", "reason": reason})
 

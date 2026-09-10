@@ -1,0 +1,63 @@
+{
+ "jobs": [
+  {
+   "id": 4461450008,
+   "title": "Account Executive, AI Native",
+   "absolute_url": "https://job-boards.greenhouse.io/anthropic/jobs/4461450008",
+   "location": {
+    "name": "New York City, NY; San Francisco, CA | New York City, NY"
+   },
+   "offices": [
+    {
+     "id": 4001219008,
+     "name": "New York City, NY",
+     "location": "New York, New York, United States",
+     "child_ids": [],
+     "parent_id": null
+    },
+    {
+     "id": 4001218008,
+     "name": "San Francisco, CA",
+     "location": "San Francisco, California, United States",
+     "child_ids": [],
+     "parent_id": null
+    }
+   ],
+   "departments": [
+    {
+     "id": 4002062008,
+     "name": "Sales",
+     "child_ids": [],
+     "parent_id": null
+    }
+   ],
+   "updated_at": "2026-08-21T21:32:54-04:00"
+  },
+  {
+   "id": 5618829004,
+   "title": "AI Strategy Consultant ",
+   "absolute_url": "https://job-boards.greenhouse.io/hightouch/jobs/5618829004",
+   "location": {
+    "name": "Remote (North America)"
+   },
+   "offices": [
+    {
+     "id": 4029777004,
+     "name": "New York Office",
+     "location": "New York, New York, United States",
+     "child_ids": [],
+     "parent_id": null
+    }
+   ],
+   "departments": [
+    {
+     "id": 4100742004,
+     "name": "AI",
+     "child_ids": [],
+     "parent_id": null
+    }
+   ],
+   "updated_at": "2026-06-16T17:07:05-04:00"
+  }
+ ]
+}

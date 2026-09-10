@@ -93,13 +93,16 @@ _JD_ONSITE = [
     r"required\s+to\s+work\s+(?:from|in)\s+(?:the\s+)?office",
 ]
 
-# "remote" as a technical term, not a work arrangement.
+# "remote" as a technical term or part of a product name, not a work
+# arrangement. The last group is what a job title does with the word: "Remote
+# Site Services Data Center Manager" is an onsite job about remote sites.
 _NOISE = re.compile(
     r"remote\s+(?:state|access|desktop|server|servers|host|hosts|machine|machines|"
     r"repositor(?:y|ies)|branch|branches|dev\s+environment|development\s+environment|"
     r"execution|procedure|call|calls|sensing|lifecycle|monitoring|management|"
     r"support|control|attacker|code\s+execution|backend|backends|endpoint|endpoints|"
-    r"telemetry|device|devices|config|configuration|url|origin)"
+    r"telemetry|device|devices|config|configuration|url|origin|"
+    r"site|sites|assistance|build|builds|special\s+project|patient|patients)"
     r"|(?:git|ssh|rdp|vpn|tailscale|terraform|tofu)\s+remote"
     r"|remote[- ]first\s+(?:culture|team|teams|company)", re.I)
 
@@ -107,8 +110,14 @@ _NOISE = re.compile(
 _HYBRID_NOISE = re.compile(
     r"hybrid[- ](?:cloud|deployment|deployments|infrastructure|architecture|"
     r"network|networks|storage|search|encryption|app|apps|application|"
-    r"applications|mesh|environment|environments|setup\s+of\s+servers)"
+    r"applications|mesh|environment|environments|setup\s+of\s+servers|"
+    r"table|tables|index|indexes|query|queries|vector|vectors)"
     r"|(?:cloud|on[- ]?prem(?:ise)?s?|multi[- ]cloud)\s+(?:and\s+)?hybrid", re.I)
+
+# "onsite" naming the work, not the workplace: "Onsite Construction Manager".
+_ONSITE_NOISE = re.compile(
+    r"on[- ]?site\s+(?:construction|installation|equipment|repair|repairs|"
+    r"service\s+delivery|inspection|inspections|drilling)", re.I)
 
 # The sentence says the job is not remote.
 _NEGATED = re.compile(
@@ -206,6 +215,27 @@ def _tokens_in(text: str) -> set:
     return found
 
 
+def _denoise(values: set, text: str) -> set:
+    """Drop a token the surrounding words disown.
+
+    The description tier has always run these guards; a title needs them just as
+    much. "AI Platforms and Hybrid Cloud - REMOTE" is a remote job about hybrid
+    cloud, and "Remote Site Services Manager" is not a remote job at all. A
+    token dropped here falls through to the next tier, which is the right
+    outcome: the cascade never guesses.
+    """
+    if not values or not text:
+        return values
+    out = set(values)
+    if REMOTE in out and _NOISE.search(text):
+        out.discard(REMOTE)
+    if HYBRID in out and _HYBRID_NOISE.search(text):
+        out.discard(HYBRID)
+    if ONSITE in out and _ONSITE_NOISE.search(text):
+        out.discard(ONSITE)
+    return out
+
+
 def extract_arrangement(location: str = None, title: str = None,
                         description: str = None, structured=None) -> dict:
     """Run the cascade. The first tier that resolves wins.
@@ -224,11 +254,11 @@ def extract_arrangement(location: str = None, title: str = None,
     if values:
         return _result(values, "structured", None)
 
-    values = _tokens_in(location)
+    values = _denoise(_tokens_in(location), location)
     if values:
         return _result(values, "location", location)
 
-    values = _tokens_in(title)
+    values = _denoise(_tokens_in(title), title)
     if values:
         return _result(values, "title", title)
 

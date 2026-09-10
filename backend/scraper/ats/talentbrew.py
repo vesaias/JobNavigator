@@ -1,4 +1,5 @@
 """TalentBrew ATS handler — AJAX endpoint for legacy TalentBrew-hosted career pages."""
+import html as _html
 import logging
 import re
 from urllib.parse import urlparse
@@ -8,6 +9,23 @@ import httpx
 from backend.scraper._shared.filters import _validate_job
 
 logger = logging.getLogger("jobnavigator.scraper.ats.talentbrew")
+
+# The place sits inside the same anchor as the title:
+# <a href="/job/..."><h2>Title</h2><span class="job-location">Mountain View, California</span></a>
+_LOCATION_SPAN = re.compile(
+    r'<span[^>]*class="[^"]*job-location[^"]*"[^>]*>(.*?)</span>',
+    re.DOTALL | re.I)
+
+
+def _locations_in(block: str) -> list[str]:
+    """Every `job-location` span inside one job's markup, in board order."""
+    out: list[str] = []
+    for match in _LOCATION_SPAN.finditer(block):
+        text = _html.unescape(re.sub(r"<[^>]+>", " ", match.group(1)))
+        text = re.sub(r"\s+", " ", text).strip()
+        if text and text not in out:
+            out.append(text)
+    return out
 
 
 def is_talentbrew(url: str) -> bool:
@@ -36,7 +54,10 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
         full_url = f"{origin}{href}"
         reason = _validate_job(title, full_url)
         if reason is None:
-            jobs.append({"title": title, "url": full_url})
+            places = _locations_in(raw_title)
+            jobs.append({"title": title, "url": full_url,
+                         "location": places[0] if places else None,
+                         "locations": places})
         elif debug:
             rejected.append({"title": title, "url": full_url, "selector": "talentbrew_ajax", "reason": reason})
 

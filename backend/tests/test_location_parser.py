@@ -63,7 +63,10 @@ def test_ca_is_canada_when_a_province_code_pins_it():
 
 @pytest.mark.parametrize("text", [
     "CA",
-    "Toronto, CA",
+    # Richmond is a city in California and a city in British Columbia, so the
+    # gazetteer refuses it the way it refuses a name it has never seen.
+    "Richmond, CA",
+    "Petropolis, CA",
     # Ontario is a Canadian province AND a city in California, so the province
     # name alone must not settle the country.
     "Ontario, CA",
@@ -74,10 +77,19 @@ def test_ca_stays_unread_without_a_strong_signal(text):
     assert "CA" in (result["note"] or "")
 
 
+def test_a_city_in_only_one_of_the_two_settles_ca():
+    """The held-out code yields to a city the gazetteer places: three quarters
+    of the "<city>, CA" strings in the database are Californian."""
+    assert (parse("San Francisco, CA")["country"], parse("San Francisco, CA")["region"]) \
+        == ("US", "CA")
+    assert (parse("Burnaby, CA")["country"], parse("Burnaby, CA")["region"]) \
+        == ("CA", "BC")
+
+
 def test_an_ambiguous_parse_keeps_the_board_text():
     """A guess must never replace what the board wrote."""
     assert canonical("Ontario, CA") == "Ontario, CA"
-    assert canonical("Toronto, CA") == "Toronto, CA"
+    assert canonical("Richmond, CA") == "Richmond, CA"
 
 
 def test_a_written_out_country_settles_ca():
@@ -107,10 +119,12 @@ def test_city_plus_code_reads_as_the_us_state(text, region, country):
 
 
 def test_the_us_state_assumption_is_not_applied_to_ca():
-    """CA is held out of the assumption on purpose."""
+    """CA is held out of the assumption on purpose. A city the gazetteer places
+    settles it; a city it cannot place leaves it unread, where the "City, XX"
+    convention would have made it California."""
     from backend.analyzer.location import COUNTRY_FIRST_CODES
     assert COUNTRY_FIRST_CODES == {"CA"}
-    assert parse("Fresno, CA")["ambiguous"] is True
+    assert parse("Richmond, CA")["ambiguous"] is True
 
 
 def test_a_written_out_country_beats_the_assumption():
@@ -204,20 +218,27 @@ def test_group_pieces(pieces, expected):
     assert group_pieces(pieces) == expected
 
 
-@pytest.mark.parametrize("path,expected", [
+@pytest.mark.parametrize("path,stored,place", [
     # "New-York-New-York" would otherwise read as one city, "New York New York".
-    ("/job/New-York-New-York/E_JR1", ("US", "NY", "new york")),
-    ("/job/United-Kingdom-London/E_JR2", ("GB", None, "london")),
-    ("/job/Costa-Rica/E_JR3", ("CR", None, None)),
-    ("/job/British-Columbia-Vancouver/E_JR7", ("CA", "BC", "vancouver")),
+    ("/job/New-York-New-York/E_JR1", "New York, NY, United States",
+     ("US", "NY", "new york")),
+    ("/job/United-Kingdom-London/E_JR2", "London, United Kingdom",
+     ("GB", None, "london")),
+    ("/job/Costa-Rica/E_JR3", "Costa Rica", ("CR", None, None)),
+    ("/job/British-Columbia-Vancouver/E_JR7", "Vancouver, BC, Canada",
+     ("CA", "BC", "vancouver")),
 ])
-def test_workday_path_fallback_rejoins_names(path, expected):
-    """A count carries no place, so the primary site comes from the URL."""
+def test_workday_path_fallback_rejoins_names(path, stored, place):
+    """A count carries no place, so the primary site comes from the URL.
+
+    That segment is the one case where `location` is not the board's own words:
+    the URL holds the place in pieces and nowhere else does the board write it.
+    """
     from backend.analyzer.location import _places_of
-    from backend.scraper.ats.workday import _location_fields
-    fields = _location_fields({"locationsText": "2 Locations", "externalPath": path})
-    assert fields["location"] is None
-    assert _places_of(fields["locations"]) == [expected]
+    from backend.scraper.ats.workday import _board_location_of
+    text = _board_location_of({"locationsText": "2 Locations", "externalPath": path})
+    assert text == stored
+    assert _places_of([text]) == [place]
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -252,20 +273,21 @@ def test_a_run_together_value_is_returned_as_written(text):
      "California - San Francisco", ("US", "CA", "san francisco")),
     ({"locationsText": "USA.VA.Reston", "externalPath": "/job/x/y"},
      "USA.VA.Reston", ("US", "VA", "reston")),
-    # a count is not a place, so nothing is stored and the URL supplies it
+    # a count is not a place, so the URL supplies the primary site
     ({"locationsText": "2 Locations", "externalPath": "/job/Germany-Munich/E_JR3"},
-     None, ("DE", None, "munich")),
+     "Munich, Germany", ("DE", None, "munich")),
     ({"locationsText": None, "externalPath": None}, None, None),
 ])
 def test_workday_keeps_the_board_text(posting, stored, place):
     """Workday must not rewrite `location`; the canonical form lives in the
-    parsed columns alone, as it does for every other handler."""
+    parsed columns alone, as it does for every other handler. The end-to-end
+    shape of this is in `test_ats_location_fields.py`, over a recorded response.
+    """
     from backend.analyzer.location import _places_of
-    from backend.scraper.ats.workday import _location_fields
-    fields = _location_fields(posting)
-    assert fields["location"] == stored
-    texts = [t for t in ([fields.get("location")] + (fields.get("locations") or [])) if t]
-    assert _places_of(texts) == ([place] if place else [])
+    from backend.scraper.ats.workday import _board_location_of
+    text = _board_location_of(posting)
+    assert text == stored
+    assert _places_of([t for t in [text] if t]) == ([place] if place else [])
 
 
 # ── review findings on PR #10 ────────────────────────────────────────────────
@@ -275,28 +297,35 @@ def test_a_sibling_never_files_a_place_in_the_wrong_country():
 
     Applying it without that check once filed San Francisco under Canada,
     because Vancouver was the only sibling and "CA" then read as the country.
+    The gazetteer settles it the other way now - San Francisco is a city in
+    California and in no province - so both places resolve, each in its own
+    country.
     """
     from backend.analyzer.location import _places_of
-    assert _places_of(["Vancouver, BC", "San Francisco, CA"]) == [("CA", "BC", "vancouver")]
+    assert _places_of(["Vancouver, BC", "San Francisco, CA"]) == [
+        ("CA", "BC", "vancouver"), ("US", "CA", "san francisco")]
     # the US sibling still settles it, because CA is a US region code
     assert _places_of(["Miami, FL", "San Francisco, CA"]) == [
         ("US", "FL", "miami"), ("US", "CA", "san francisco")]
 
 
-@pytest.mark.parametrize("text,ambiguous", [
-    ("Tbilisi, Georgia", True),        # the country
-    ("Atlanta, Georgia", True),        # the US state — indistinguishable
-    ("Atlanta, Georgia, United States", False),
-    ("Georgia, US", False),
-    ("Atlanta, GA", False),            # the code form is unaffected
+@pytest.mark.parametrize("text,country,region", [
+    ("Tbilisi, Georgia", "GE", None),   # the country, from the city beside it
+    ("Batumi, Georgia", "GE", None),
+    ("Atlanta, Georgia", "US", "GA"),   # the state, which is what boards mean
+    ("Atlanta, Georgia, United States", "US", "GA"),
+    ("Georgia, US", "US", "GA"),
+    ("Georgia", "US", "GA"),            # bare, and still the state
+    ("Atlanta, GA", "US", "GA"),        # the code form is unaffected
 ])
-def test_georgia_is_read_only_when_the_country_is_settled(text, ambiguous):
+def test_georgia_is_read_from_the_city_beside_it(text, country, region):
     """Georgia is both a country and a US state, and both readings are ordinary
-    on a job board. It follows the same rule as the two-letter codes."""
+    on a job board. The state is what these boards mean nearly every time, so it
+    is the default; a city only Georgia the country has - Tbilisi, Batumi,
+    Kutaisi - is what moves the reading, the same way a city settles "CA"."""
     result = parse(text)
-    assert result["ambiguous"] is ambiguous
-    if ambiguous:
-        assert canonical(text) == text     # the board's text survives a refusal
+    assert (result["country"], result["region"]) == (country, region)
+    assert result["ambiguous"] is False
 
 
 def test_a_us_sibling_settles_georgia():
@@ -352,8 +381,13 @@ def test_a_region_outside_the_gazetteer_is_dropped_not_glued_to_the_city(
     assert (result["city"], result["country"]) == (city, country)
 
 
-def test_a_city_too_long_for_the_index_is_refused():
+def test_a_city_too_long_for_the_index_is_cut_not_dropped():
     """The column is indexed, and Postgres refuses an oversized btree entry, so
-    an absurd value would fail on insert rather than on read."""
-    from backend.analyzer.location import MAX_CITY, _place_of
-    assert _place_of("%s, Ontario, Canada" % ("x" * (MAX_CITY + 1))) == ("CA", "ON", None)
+    an absurd value would fail on insert rather than on read. It is cut to the
+    limit rather than refused: the country and region it names are still worth
+    filtering on, and a job with a truncated city still answers its country."""
+    from backend.analyzer.location import MAX_CITY, MAX_PART, _place_of
+    assert MAX_CITY == MAX_PART == 120
+    country, region, city = _place_of("%s, Ontario, Canada" % ("x" * (MAX_CITY + 50)))
+    assert (country, region) == ("CA", "ON")
+    assert len(city) == MAX_CITY

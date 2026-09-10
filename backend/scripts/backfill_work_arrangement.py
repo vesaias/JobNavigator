@@ -1,7 +1,7 @@
-"""Backfill `jobs.remote` from the work-arrangement cascade.
+"""Backfill the arrangement flags (and `jobs.remote` from them) via the cascade.
 
-Only rows where `remote IS NULL` are touched, so a value a scraper already wrote
-is never overwritten. Run the dry pass first and read the counts.
+Only rows where all three `arr_*` flags are NULL are touched, so a value a
+scraper already wrote is never overwritten. Run the dry pass first and read the counts.
 
     python -m backend.scripts.backfill_work_arrangement            # dry run
     python -m backend.scripts.backfill_work_arrangement --commit   # write
@@ -25,42 +25,43 @@ def run(commit: bool = False, limit: int = None) -> dict:
     tally = collections.Counter()
     by_tier = collections.Counter()
     try:
-        query = db.query(Job).filter(
+        query = db.query(Job.id).filter(
             Job.arr_remote.is_(None), Job.arr_hybrid.is_(None), Job.arr_onsite.is_(None)
         ).order_by(Job.discovered_at)
         if limit:
             query = query.limit(limit)
 
-        pending = 0
-        for job in query.yield_per(BATCH):
-            tally["scanned"] += 1
-            result = extract_arrangement(
-                location=job.location,
-                title=job.title,
-                description=job.description,
-            )
-            found = result["arrangements"]
-            if not found:
-                tally["unresolved"] += 1
-                continue
+        # ids first, rows per batch: a commit inside a server-side cursor loop
+        # invalidates the cursor on Postgres ("named cursor isn't valid anymore")
+        ids = [row[0] for row in query.all()]
+        for start in range(0, len(ids), BATCH):
+            chunk = ids[start:start + BATCH]
+            for job in db.query(Job).filter(Job.id.in_(chunk)).all():
+                tally["scanned"] += 1
+                result = extract_arrangement(
+                    location=job.location,
+                    title=job.title,
+                    description=job.description,
+                )
+                found = result["arrangements"]
+                if not found:
+                    tally["unresolved"] += 1
+                    continue
 
-            for value in found:
-                tally[value] += 1
-            if len(found) > 1:
-                tally["several"] += 1
-            by_tier[result["arrangement_source"]] += 1
+                for value in found:
+                    tally[value] += 1
+                if len(found) > 1:
+                    tally["several"] += 1
+                by_tier[result["arrangement_source"]] += 1
+                if commit:
+                    job.arr_remote = REMOTE in found
+                    job.arr_hybrid = HYBRID in found
+                    job.arr_onsite = ONSITE in found
+                    job.remote = job.arr_remote
             if commit:
-                job.arr_remote = REMOTE in found
-                job.arr_hybrid = HYBRID in found
-                job.arr_onsite = ONSITE in found
-                job.remote = job.arr_remote
-                pending += 1
-                if pending >= BATCH:
-                    db.commit()
-                    pending = 0
-
-        if commit:
-            db.commit()
+                db.commit()
+            else:
+                db.expunge_all()
     finally:
         db.close()
 

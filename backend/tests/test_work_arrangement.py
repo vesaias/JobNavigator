@@ -84,6 +84,57 @@ def test_token_ignores_a_word_inside_another_word():
     assert from_token("Remotesensing Engineer") is None
 
 
+@pytest.mark.parametrize("title", [
+    # Every one of these is a real title from the feed, and each one names a
+    # product or a duty rather than a workplace.
+    "Remote Site Services Data Center Manager, Infrastructure Services",
+    "Lead Product Manager Remote Assistance",
+    "Manager, Remote Special Project – Studio Design & Development (PH)",
+    "Senior Product Manager, Remote Build",
+    "Staff Product Manager, Unistore (Hybrid Tables)",
+    "Technical Program Manager, Onsite Construction, Network Infrastructure",
+])
+def test_a_title_that_only_names_a_product_resolves_nothing(title):
+    """The description tier has always run these guards; the title tier now
+    runs them too, and an unresolved title stays unresolved."""
+    assert extract_arrangement(title=title)["arrangement"] is None
+
+
+def test_a_noisy_word_does_not_take_the_real_one_with_it():
+    """"Hybrid Cloud" is not an arrangement; the "REMOTE" beside it is."""
+    result = extract_arrangement(
+        title="Product Manager - AI Platforms and Hybrid Cloud - REMOTE")
+    assert result["arrangements"] == {REMOTE}
+
+
+@pytest.mark.parametrize("title", [
+    "Senior Product Manager (Remote)", "Product Manager - Remote",
+    "Senior Product Manager, Growth (Remote US)", "Program Manager (Hybrid)",
+    "Sales Development Representative - New York, NY (On-Site)",
+])
+def test_the_guards_leave_a_plain_title_alone(title):
+    assert extract_arrangement(title=title)["arrangement"] is not None
+
+
+def test_the_title_corpus_still_resolves():
+    """`fixtures/arrangement_corpus.csv` is every distinct title in the live
+    database that names an arrangement, plus 100 description openings that
+    mention "remote". The guards above cost recall, so this is the floor: 65 of
+    the 72 titles resolve, and dropping below 63 means a guard has grown teeth
+    it should not have."""
+    import csv
+    import pathlib
+
+    path = pathlib.Path(__file__).parent / "fixtures" / "arrangement_corpus.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        titles = [row["raw"] for row in csv.DictReader(handle)
+                  if row["kind"] == "title"]
+
+    assert len(titles) > 50, "the corpus is the title column, not a sample"
+    resolved = [t for t in titles if extract_arrangement(title=t)["arrangement"]]
+    assert len(resolved) >= 63
+
+
 # ── tier 4: explicit phrases in the description ──────────────────────────────
 
 @pytest.mark.parametrize("description,expected", [

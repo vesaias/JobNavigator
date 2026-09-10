@@ -31,6 +31,23 @@ def _make(db, index, places):
     return job
 
 
+@pytest.fixture(autouse=True)
+def _first_run(test_db, request):
+    """Put the app in first-run mode, so the auth middleware lets the facet
+    requests through instead of answering 401 (which reads here as a facet with
+    no places). The app has to be up first: its lifespan writes the environment
+    key into an empty `dashboard_api_key`, so seeding before startup is undone."""
+    if "api_client" in request.fixturenames:
+        request.getfixturevalue("api_client")
+    from backend.models.db import Setting
+    row = test_db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+    if row is None:
+        test_db.add(Setting(key="dashboard_api_key", value=""))
+    else:
+        row.value = ""
+    test_db.commit()
+
+
 @pytest.fixture
 def placed(test_db):
     """One row per shape the parser can produce, including the unresolved ones."""

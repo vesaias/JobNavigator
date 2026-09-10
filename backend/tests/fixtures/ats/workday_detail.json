@@ -1,0 +1,24 @@
+{
+ "jobPostingInfo": {
+  "id": "e144fa4987561000bd062f885d900000",
+  "title": "Director of Product - Agentic Commerce",
+  "location": "US - Foster City, CA",
+  "additionalLocations": [
+   "US - San Francisco, CA"
+  ],
+  "country": {
+   "descriptor": "United States of America",
+   "id": "bc33aa3152ec42d4995f4791a106ed09"
+  },
+  "jobRequisitionLocation": {
+   "descriptor": "Foster City, CA",
+   "country": {
+    "descriptor": "United States of America",
+    "id": "bc33aa3152ec42d4995f4791a106ed09",
+    "alpha2Code": "US"
+   }
+  },
+  "jobDescription": "<p><span style=\"color:#005cb9\"><b>About Us</b></span><br />Visa is a world leader in payments technology, facilitating transactions between consumers, merchants, financial institutions and government entities across more than 200 countries and territories, dedicated to uplifting everyone, everywhere by being the best way to pay and be paid.</p><p></p><p>At Visa, you&#39;ll have the opportunity to ",
+  "externalUrl": "https://visa.wd5.myworkdayjobs.com/Visa/job/US---Foster-City-CA/Director-of-Product---Agentic-Commerce_REF085033W"
+ }
+}

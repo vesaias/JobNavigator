@@ -167,6 +167,7 @@ def test_log_schedules_a_description_fetch(api_client, test_db, monkeypatch):
     async def _spy(job_id, url):
         seen.append((job_id, url))
 
+    _seed_first_run(test_db)
     monkeypatch.setattr(ra, "_fetch_and_store_description", _spy, raising=False)
     resp = api_client.post("/api/applications", json={
         "url": "https://acme.com/jobs/7", "title": "Senior PM", "company": "Acme"})
@@ -193,6 +194,7 @@ def test_log_skips_the_fetch_when_the_job_already_has_a_description(api_client, 
     async def _spy(job_id, url):
         seen.append(job_id)
 
+    _seed_first_run(test_db)
     monkeypatch.setattr(ra, "_fetch_and_store_description", _spy, raising=False)
     resp = api_client.post("/api/applications", json={
         "url": url, "title": "Senior PM", "company": "Acme"})
