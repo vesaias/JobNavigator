@@ -63,7 +63,10 @@ def test_ca_is_canada_when_a_province_code_pins_it():
 
 @pytest.mark.parametrize("text", [
     "CA",
-    "Toronto, CA",
+    # Richmond is a city in California and a city in British Columbia, so the
+    # gazetteer refuses it the way it refuses a name it has never seen.
+    "Richmond, CA",
+    "Petropolis, CA",
     # Ontario is a Canadian province AND a city in California, so the province
     # name alone must not settle the country.
     "Ontario, CA",
@@ -74,10 +77,19 @@ def test_ca_stays_unread_without_a_strong_signal(text):
     assert "CA" in (result["note"] or "")
 
 
+def test_a_city_in_only_one_of_the_two_settles_ca():
+    """The held-out code yields to a city the gazetteer places: three quarters
+    of the "<city>, CA" strings in the database are Californian."""
+    assert (parse("San Francisco, CA")["country"], parse("San Francisco, CA")["region"]) \
+        == ("US", "CA")
+    assert (parse("Burnaby, CA")["country"], parse("Burnaby, CA")["region"]) \
+        == ("CA", "BC")
+
+
 def test_an_ambiguous_parse_keeps_the_board_text():
     """A guess must never replace what the board wrote."""
     assert canonical("Ontario, CA") == "Ontario, CA"
-    assert canonical("Toronto, CA") == "Toronto, CA"
+    assert canonical("Richmond, CA") == "Richmond, CA"
 
 
 def test_a_written_out_country_settles_ca():
@@ -107,10 +119,12 @@ def test_city_plus_code_reads_as_the_us_state(text, region, country):
 
 
 def test_the_us_state_assumption_is_not_applied_to_ca():
-    """CA is held out of the assumption on purpose."""
+    """CA is held out of the assumption on purpose. A city the gazetteer places
+    settles it; a city it cannot place leaves it unread, where the "City, XX"
+    convention would have made it California."""
     from backend.analyzer.location import COUNTRY_FIRST_CODES
     assert COUNTRY_FIRST_CODES == {"CA"}
-    assert parse("Fresno, CA")["ambiguous"] is True
+    assert parse("Richmond, CA")["ambiguous"] is True
 
 
 def test_a_written_out_country_beats_the_assumption():

@@ -67,14 +67,15 @@ def test_the_corpus_never_produces_an_over_long_part():
 
 
 def test_the_corpus_resolves_at_least_as_much_as_the_pull_request_did():
-    """Coverage is a floor, not a target: these are the counts the reviewed
-    version reached (country 517, region 449, arrangement 10) and no change may
-    fall below them."""
+    """Coverage is a floor, not a target. The reviewed version reached country
+    517, region 449, arrangement 10 and left 62 strings unread; the gazetteers
+    took the unread ones down to 2 ("Canada, NC" and "New York, New York, CA",
+    both genuinely unreadable). No change may fall back below these."""
     resolved = {field: sum(1 for row in GOLDEN if row[field]) for field in FIELDS}
-    assert resolved["country"] >= 517
-    assert resolved["region"] >= 449
+    assert resolved["country"] >= 617
+    assert resolved["region"] >= 579
     assert resolved["arrangement"] >= 10
-    assert sum(1 for row in GOLDEN if row["ambiguous"]) <= 62
+    assert sum(1 for row in GOLDEN if row["ambiguous"]) <= 2
 
 
 # ── the traps: the readings that have to be right ────────────────────────────
@@ -85,7 +86,29 @@ TRAPS = [
     ("US, CA, Santa Clara", "US", "CA", "Santa Clara"),
     ("CA, BC, Vancouver", "CA", "BC", "Vancouver"),
     ("California - San Francisco", "US", "CA", "San Francisco"),
-    ("Toronto, CA", None, None, "Toronto"),          # unread, on purpose
+    # the gazetteers: a city in only one of California and Canada settles "CA"
+    ("San Francisco, CA", "US", "CA", "San Francisco"),
+    ("Los Angeles, CA", "US", "CA", "Los Angeles"),
+    ("Palo Alto, CA", "US", "CA", "Palo Alto"),
+    ("Marina del Rey, CA", "US", "CA", "Marina del Rey"),
+    ("San Francisco County, CA", "US", "CA", "San Francisco"),
+    ("Los Angeles County, CA", "US", "CA", "Los Angeles"),
+    ("Toronto, CA", "CA", "ON", "Toronto"),
+    ("Burnaby, CA", "CA", "BC", "Burnaby"),
+    ("Vancouver, CA", "CA", "BC", "Vancouver"),
+    # in both countries, or in neither: still refused
+    ("Richmond, CA", None, None, "Richmond"),
+    ("Windsor, CA", None, None, "Windsor"),
+    ("Ontario, CA", None, None, "Ontario"),
+    ("CA", None, None, None),
+    # the bare-city table, for a string that is nothing but a city
+    ("San Francisco", "US", "CA", "San Francisco"),
+    ("Seattle", "US", "WA", "Seattle"),
+    ("Washington DC", "US", "DC", "Washington"),
+    ("Frankfurt Rhine-Main Metropolitan Area", "DE", None, "Frankfurt"),
+    ("Bangalore", "IN", None, "Bengaluru"),
+    ("London", "GB", None, "London"),
+    ("Tokyo", "JP", None, "Tokyo"),
     ("Atlanta, GA", "US", "GA", "Atlanta"),          # not Gabon
     ("Wilmington, DE", "US", "DE", "Wilmington"),    # not Germany
     ("Indianapolis, IN", "US", "IN", "Indianapolis"),  # not India
@@ -137,10 +160,9 @@ TRAPS = [
     ("Work from home", None, None, None),
     ("WFH", None, None, None),
     ("Remote, US", "US", None, None),
-    # a list of places resolves to the first of them ("New York" on its own is
-    # the state: the parser knows regions and countries, not a city gazetteer)
-    ("New York; London; Tokyo", "US", "NY", None),
-    ("Boston; London; Tokyo", None, None, "Boston"),
+    # a list of places resolves to the first of them
+    ("New York; London; Tokyo", "US", "NY", "New York"),
+    ("Boston; London; Tokyo", "US", "MA", "Boston"),
     ("Bellevue, WA / San Francisco, CA", "US", "WA", "Bellevue"),
 ]
 
@@ -171,9 +193,9 @@ def test_the_arrangement_survives_the_place(text, arrangement):
 def test_a_semicolon_list_is_several_places_not_one_city():
     assert split_places("New York; London; Tokyo") == ["New York", "London", "Tokyo"]
     places = _places_of(["New York; London; Tokyo"])
-    assert ("US", "NY", None) in places      # the state; there is no city gazetteer
-    assert (None, None, "london") in places
-    assert (None, None, "tokyo") in places
+    assert ("US", "NY", "new york") in places
+    assert ("GB", None, "london") in places
+    assert ("JP", None, "tokyo") in places
 
 
 @pytest.mark.parametrize("text", [
