@@ -114,13 +114,31 @@ def test_generate_404_on_missing_resume(api_client, test_db):
     assert resp.status_code == 404
 
 
-def test_generate_400_on_job_without_description(api_client, test_db):
+def test_generate_400_when_no_jd_source(api_client, test_db):
+    """400 only when all three JD sources are empty: description, URL, cached page."""
     _seed_first_run(test_db)
     resume = _make_resume(test_db)
     job = _make_job(test_db, description="")
+    job.url = ""
+    test_db.commit()
     resp = api_client.post("/api/cover-letters/generate",
                            json={"resume_id": str(resume.id), "job_id": str(job.id)})
     assert resp.status_code == 400
+
+
+def test_generate_202_on_url_only_job(api_client, test_db, monkeypatch):
+    """A hand-logged job (Log application) carries a URL and no description; the
+    worker resolves the text later, so the endpoint must not refuse it."""
+    _seed_first_run(test_db)
+    resume = _make_resume(test_db)
+    job = _make_job(test_db, description="")
+
+    import backend.api.routes_cover_letters as rcl
+    monkeypatch.setattr(rcl, "launch_background", lambda *a, **kw: "run-124")
+
+    resp = api_client.post("/api/cover-letters/generate",
+                           json={"resume_id": str(resume.id), "job_id": str(job.id)})
+    assert resp.status_code == 202
 
 
 def test_generate_happy_path_returns_202(api_client, test_db, monkeypatch):
@@ -260,3 +278,41 @@ def test_base_resume_without_stub_stays_random(test_db):
     assert link is not None
     assert len(link.token) >= 8
     assert link.token != "0li"        # not the deterministic 0{stub} shape
+
+
+def test_generate_inner_resolves_jd_from_url(test_db, monkeypatch):
+    """The worker writes from a live fetch when the job has only a URL, and keeps
+    the fetched text on the job — the same order tailoring uses."""
+    import asyncio
+    from contextlib import asynccontextmanager
+    from unittest.mock import MagicMock
+    import backend.api.routes_cover_letters as rcl
+
+    _seed_first_run(test_db)
+    resume = _make_resume(test_db)
+    job = _make_job(test_db, description="")
+
+    async def fake_fetch(url):
+        return "Fetched JD: fintech PM, roadmapping."
+
+    monkeypatch.setattr("backend.scraper.ats._descriptions._fetch_job_description", fake_fetch)
+
+    seen = {}
+
+    async def fake_body(resume_data, preferences, jd, voice_instruction, length, prompt_template):
+        seen["jd"] = jd
+        return {"greeting": "Dear Acme,", "body_paragraphs": ["p"], "closing": "Regards,",
+                "signature": "Viktor"}
+
+    @asynccontextmanager
+    async def fake_track(*a, **kw):
+        yield MagicMock()
+
+    asyncio.run(rcl._generate_inner(
+        str(resume.id), str(job.id), None, "concise", None, None,
+        lambda db, voice: (None, ""), fake_body, fake_track,
+    ))
+
+    assert seen["jd"] == "Fetched JD: fintech PM, roadmapping."
+    test_db.expire_all()
+    assert test_db.query(Job).filter(Job.id == job.id).first().description == seen["jd"]

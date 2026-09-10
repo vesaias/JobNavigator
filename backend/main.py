@@ -671,7 +671,7 @@ async def trigger_auto_reject():
 
 @app.post("/api/jobs/backfill-descriptions", tags=["triggers"], summary="Fetch descriptions for jobs missing them", status_code=202)
 async def trigger_backfill_descriptions():
-    """Fetch job descriptions for saved/new jobs that have a URL but no description."""
+    """Fetch job descriptions for new/saved/applied jobs that have a URL but no description."""
     async def _do():
         from backend.models.db import Job
         from backend.scraper.ats._descriptions import _fetch_job_description
@@ -679,7 +679,9 @@ async def trigger_backfill_descriptions():
         db = SessionLocal()
         try:
             jobs = db.query(Job).filter(
-                Job.status.in_(["new", "saved"]),
+                # "applied" is in the set because a hand-logged job (Log application)
+                # lands there directly and needs the same repair.
+                Job.status.in_(["new", "saved", "applied"]),
                 Job.url != None,
                 (Job.description == None) | (Job.description == ""),
             ).order_by(Job.discovered_at.desc()).limit(50).all()

@@ -243,6 +243,19 @@ async def _cache_job_page(job_id: str, url: str):
         _set_job_cache_error(job_id, msg)
 
 
+async def _fetch_and_store_description(job_id: str, url: str) -> None:
+    """Write the ATS-quality JD onto a job that has none. `_resolve_tailoring_jd`
+    owns the fetch, the SSRF gate and the write, so this adds no second cascade."""
+    from types import SimpleNamespace
+    from backend.api.routes_resumes import _resolve_tailoring_jd
+    try:
+        await _resolve_tailoring_jd(
+            SimpleNamespace(id=job_id, description="", url=url, cached_page_text="")
+        )
+    except Exception as e:
+        logger.warning(f"Could not fetch a description for job {job_id}: {e}")
+
+
 @router.post("")
 def create_application(
     data: ApplicationCreate,
@@ -327,6 +340,12 @@ def create_application(
 
     if data.url and not job.has_cached_page:
         background_tasks.add_task(_cache_job_page, str(job.id), data.url)
+
+    # A hand-logged job arrives with no description, which every LLM step needs.
+    # Fetch it once here instead of on first use, so the first score, tailor or
+    # cover letter does not pay for it.
+    if data.url and not (job.description or "").strip():
+        background_tasks.add_task(_fetch_and_store_description, str(job.id), data.url)
 
     return {
         "id": str(app.id),
