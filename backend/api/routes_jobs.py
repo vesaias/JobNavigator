@@ -104,6 +104,7 @@ def list_jobs(
     h1b_verdict: Optional[str] = None,
     remote: Optional[bool] = None,
     location: Optional[str] = None,
+    arrangement: Optional[str] = None,
     source: Optional[str] = None,
     saved: Optional[bool] = None,
     title_search: Optional[str] = None,
@@ -152,6 +153,9 @@ def list_jobs(
     if max_salary is not None:
         q = q.filter(Job.salary_min <= max_salary)
     clause = _location_clause(location)
+    if clause is not None:
+        q = q.filter(clause)
+    clause = _arrangement_clause(arrangement)
     if clause is not None:
         q = q.filter(clause)
 
@@ -244,26 +248,58 @@ def _location_clause(raw):
     from backend.analyzer.location import split_key
     from sqlalchemy import and_, or_
 
+    from backend.models.db import JobLocation
+
     clauses = []
     for key in [k.strip() for k in (raw or "").split(",") if k.strip()]:
         country, region, city = split_key(key)
-        parts = []
+        parts = [JobLocation.job_id == Job.id]
         if country:
-            parts.append(Job.loc_country == country)
+            parts.append(JobLocation.country == country)
         if region:
-            parts.append(or_(Job.loc_region == region, Job.loc_region.is_(None))
-                         if city else Job.loc_region == region)
+            parts.append(or_(JobLocation.region == region, JobLocation.region.is_(None))
+                         if city else JobLocation.region == region)
         if city:
-            parts.append(Job.loc_city == city)
-        if parts:
+            parts.append(JobLocation.city == city)
+        if len(parts) > 1:
             clauses.append(and_(*parts))
+    if not clauses:
+        return None
+    # EXISTS, not a join: a posting open in twenty-two cities must answer all
+    # twenty-two filters without being returned twenty-two times.
+    from sqlalchemy import exists
+    return or_(*[exists().where(clause) for clause in clauses])
+
+
+ARRANGEMENTS = ("remote", "hybrid", "onsite", "unknown")
+
+
+def _arrangement_clause(raw):
+    """OR of the picked work arrangements.
+
+    A posting carries a set, so one offered both remote and hybrid answers
+    either filter. "unknown" is its own value - all three flags NULL - and is
+    never folded into "not remote".
+    """
+    from sqlalchemy import and_, or_
+
+    picked = [v.strip().lower() for v in (raw or "").split(",") if v.strip()]
+    columns = {"remote": Job.arr_remote, "hybrid": Job.arr_hybrid,
+               "onsite": Job.arr_onsite}
+    clauses = []
+    for value in picked:
+        if value in columns:
+            clauses.append(columns[value].is_(True))
+        elif value == "unknown":
+            clauses.append(and_(Job.arr_remote.is_(None), Job.arr_hybrid.is_(None),
+                                Job.arr_onsite.is_(None)))
     return or_(*clauses) if clauses else None
 
 
 def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict=None,
                           min_score=None, saved=None, title_search=None, remote=None,
                           min_salary=None, max_salary=None, search_id=None,
-                          location=None):
+                          location=None, arrangement=None):
     """Apply shared filter logic for job list and filter-list endpoints."""
     if status:
         vals = [s.strip() for s in status.split(",") if s.strip()]
@@ -293,6 +329,9 @@ def _apply_common_filters(q, status=None, company=None, source=None, h1b_verdict
     if search_id:
         q = q.filter(Job.search_id == uuid_filter(search_id, "search_id"))
     clause = _location_clause(location)
+    if clause is not None:
+        q = q.filter(clause)
+    clause = _arrangement_clause(arrangement)
     if clause is not None:
         q = q.filter(clause)
     return q
@@ -334,6 +373,7 @@ def list_job_companies(
     title_search: Optional[str] = None,
     remote: Optional[bool] = None,
     location: Optional[str] = None,
+    arrangement: Optional[str] = None,
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     search_id: Optional[str] = None,
@@ -347,7 +387,7 @@ def list_job_companies(
         cq = db.query(Job.company, func.count(Job.id)).filter(Job.company.isnot(None), Job.company != "")
         cq = _apply_common_filters(cq, status=status, source=source, h1b_verdict=h1b_verdict,
                                    min_score=min_score, saved=saved, title_search=title_search,
-                                   remote=remote, location=location, min_salary=min_salary, max_salary=max_salary,
+                                   remote=remote, location=location, arrangement=arrangement, min_salary=min_salary, max_salary=max_salary,
                                    search_id=search_id).group_by(Job.company)
         lookup = build_company_lookup(db)
         agg = {}
@@ -359,7 +399,7 @@ def list_job_companies(
     q = db.query(Job.company).distinct().filter(Job.company.isnot(None), Job.company != "")
     q = _apply_common_filters(q, status=status, source=source, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
-                              remote=remote, location=location, min_salary=min_salary, max_salary=max_salary,
+                              remote=remote, location=location, arrangement=arrangement, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
     raw_names = [r[0] for r in q.all()]
     lookup = build_company_lookup(db)
@@ -381,6 +421,7 @@ def list_job_sources(
     title_search: Optional[str] = None,
     remote: Optional[bool] = None,
     location: Optional[str] = None,
+    arrangement: Optional[str] = None,
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     search_id: Optional[str] = None,
@@ -392,7 +433,7 @@ def list_job_sources(
     q = (db.query(Job.source, func.count(Job.id)) if counts else db.query(Job.source).distinct()).filter(Job.source.isnot(None), Job.source != "")
     q = _apply_common_filters(q, status=status, company=company, h1b_verdict=h1b_verdict,
                               min_score=min_score, saved=saved, title_search=title_search,
-                              remote=remote, location=location, min_salary=min_salary, max_salary=max_salary,
+                              remote=remote, location=location, arrangement=arrangement, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
     if counts:
         return [{"name": r[0], "count": r[1]} for r in q.group_by(Job.source).order_by(Job.source).all()]
@@ -411,6 +452,7 @@ def list_job_verdicts(
     title_search: Optional[str] = None,
     remote: Optional[bool] = None,
     location: Optional[str] = None,
+    arrangement: Optional[str] = None,
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     search_id: Optional[str] = None,
@@ -422,7 +464,7 @@ def list_job_verdicts(
     q = (db.query(Job.h1b_verdict, func.count(Job.id)) if counts else db.query(Job.h1b_verdict).distinct()).filter(Job.h1b_verdict.isnot(None), Job.h1b_verdict != "")
     q = _apply_common_filters(q, status=status, company=company, source=source,
                               min_score=min_score, saved=saved, title_search=title_search,
-                              remote=remote, location=location, min_salary=min_salary, max_salary=max_salary,
+                              remote=remote, location=location, arrangement=arrangement, min_salary=min_salary, max_salary=max_salary,
                               search_id=search_id)
     if counts:
         return [{"name": r[0], "count": r[1]} for r in q.group_by(Job.h1b_verdict).order_by(Job.h1b_verdict).all()]
@@ -448,6 +490,7 @@ def job_facets(
     title_search: Optional[str] = None,
     remote: Optional[bool] = None,
     location: Optional[str] = None,
+    arrangement: Optional[str] = None,
     min_salary: Optional[int] = None,
     max_salary: Optional[int] = None,
     search_id: Optional[str] = None,
@@ -475,7 +518,7 @@ def job_facets(
     """
     expanded = _expand_company_filter(db, company)
     base = dict(status=status, company=expanded, source=source, h1b_verdict=h1b_verdict,
-                min_score=min_score, saved=saved, title_search=title_search, remote=remote, location=location,
+                min_score=min_score, saved=saved, title_search=title_search, remote=remote, location=location, arrangement=arrangement,
                 min_salary=min_salary, max_salary=max_salary, search_id=search_id)
 
     def _counts(col, drop):
@@ -526,11 +569,14 @@ def job_facets(
     from backend.analyzer.location import label_for, key_for
     loc_kw = dict(base)
     loc_kw["location"] = None
+    from backend.models.db import JobLocation
     loc_rows = _apply_common_filters(
-        db.query(Job.loc_country, Job.loc_region, Job.loc_city, func.count(Job.id)),
+        db.query(JobLocation.country, JobLocation.region, JobLocation.city,
+                 func.count(func.distinct(Job.id))),
         **loc_kw
-    ).filter(Job.loc_country.isnot(None)).group_by(
-        Job.loc_country, Job.loc_region, Job.loc_city).all()
+    ).join(JobLocation, JobLocation.job_id == Job.id).filter(
+        JobLocation.country.isnot(None)).group_by(
+        JobLocation.country, JobLocation.region, JobLocation.city).all()
 
     from backend.analyzer.location import split_key
 
@@ -582,6 +628,17 @@ def job_facets(
             key=lambda kv: (kv[0][0] or "", kv[0][1] or "", kv[0][2] or ""))
     ]
 
+    # arrangements — counted with the arrangement filter itself lifted. A posting
+    # offered two ways is counted under both, so these do not sum to the total.
+    arr_kw = dict(base)
+    arr_kw["arrangement"] = None
+    arrangements = []
+    for value in ARRANGEMENTS:
+        clause = _arrangement_clause(value)
+        q = _apply_common_filters(db.query(func.count(func.distinct(Job.id))), **arr_kw)
+        arrangements.append({"name": value,
+                             "count": int(q.filter(clause).scalar() or 0)})
+
     # score bands: the score filter is the one lifted, so each preset says how many
     # jobs it would leave from where the other filters already stand
     score_kw = dict(base)
@@ -598,6 +655,7 @@ def job_facets(
         "h1b_verdicts": verdicts,
         "statuses": statuses,
         "locations": locations,
+        "arrangements": arrangements,
         "score_bands": score_bands,
     }
 
@@ -1089,6 +1147,10 @@ def _job_to_dict(j: Job, tailored_resume_id=None, in_flight: list[str] | None = 
         "description": j.description,
         "location": j.location,
         "remote": j.remote,
+        # The set, so the feed can show every arrangement a posting offers.
+        "arr_remote": j.arr_remote,
+        "arr_hybrid": j.arr_hybrid,
+        "arr_onsite": j.arr_onsite,
         "salary_min": j.salary_min,
         "salary_max": j.salary_max,
         "salary_source": j.salary_source,

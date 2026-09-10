@@ -120,7 +120,9 @@ ARRANGEMENT_WORDS = {"remote": "remote", "hybrid": "hybrid",
                      "work from home": "remote", "wfh": "remote"}
 
 JUNK = {"", "-", "--", "n/a", "na", "none", "unknown", "tbd", "various",
-        "multiple", "locations", "multiple locations", "various locations"}
+        "multiple", "locations", "multiple locations", "various locations",
+        # office labels boards append in brackets: "New York, NY (HQ)"
+        "hq", "headquarters", "head office", "office", "corporate", "main office"}
 
 # "6 Locations" is a count, not a place.
 COUNT_ONLY = re.compile(r"^\d+\s+locations?$", re.I)
@@ -128,7 +130,7 @@ _ALT = re.compile(r"\s*\+\s*(\d+)\s+more\s*$", re.I)
 # A separator is a comma, a spaced dash, a middle dot, a pipe, a semicolon, or
 # a dot between two word characters ("USA.VA.Reston"). A bare dash is not: it
 # lives inside "Saint-Jean" and "Wilkes-Barre".
-_SPLIT = re.compile(r"\s*[,;·|]\s*|\s+[-–—]\s+|(?<=\w)\.(?=\w)")
+_SPLIT = re.compile(r"\s*[,;·|()]\s*|\s+[-–—]\s+|(?<=\w)\.(?=\w)")
 _METRO_TAIL = re.compile(r"\s+(metropolitan\s+area|metro(politan)?\s+area|area)$", re.I)
 
 METROS = {
@@ -219,7 +221,7 @@ def _resolve(code: str, country: str | None, region: str | None) -> tuple[str, o
     return None
 
 
-def parse(text: str, text_joiner: str = ", ") -> dict:
+def parse(text: str, text_joiner: str = ", ", country_hint: str = None) -> dict:
     """Read a board's location string into its parts.
 
     `ambiguous` is True when a two-letter code could not be settled. The caller
@@ -228,6 +230,10 @@ def parse(text: str, text_joiner: str = ", ") -> dict:
     `text_joiner` joins the leftover tokens that form the city. Pass " " when
     the tokens came from splitting one word-per-token string, such as a
     Workday URL segment ("US-CA-Santa-Clara" -> "Santa Clara").
+
+    `country_hint` is a country another place on the same posting resolved to.
+    It settles a held-out code: "San Francisco, CA" listed beside "Miami, FL"
+    is California, since one posting does not span two countries by accident.
     """
     result = {"city": None, "region": None, "country": None,
               "arrangement": None, "alt": 0, "ambiguous": False,
@@ -263,7 +269,12 @@ def parse(text: str, text_joiner: str = ", ") -> dict:
     # Pass one: everything that needs no context.
     pending = []
     text_parts = []
-    country_strong = False
+    # A hint is another place named by the same posting. "San Francisco, CA"
+    # beside "Miami, FL" is California, because one posting sits in one country.
+    country_strong = bool(country_hint)
+    if country_hint:
+        result["country"] = country_hint
+        result["assumed"] = "country taken from another place on the same posting"
     for index, (token, (kind, value)) in enumerate(classified):
         if index in demote:
             text_parts.append(token)
@@ -382,22 +393,81 @@ def canonical(text: str, text_joiner: str = ", ") -> str | None:
     return ", ".join(parts)
 
 
-def apply_location_to_job(job) -> None:
-    """Fill the parsed location columns from `job.location`.
+def _place_of(text: str, country_hint: str = None):
+    """(country, region, folded city) for one string, or None when unusable."""
+    parsed = parse(text or "", country_hint=country_hint)
+    if parsed["ambiguous"]:
+        return None
+    city = fold(parsed["city"]) if parsed["city"] else None
+    if not (parsed["country"] or parsed["region"] or city):
+        return None
+    return parsed["country"], parsed["region"], city
+
+
+def _places_of(texts) -> list:
+    """Every place one posting names, resolving each with the others' help.
+
+    A first pass takes what needs no context. Whatever it settles on one country
+    then settles the held-out codes in the rest: "San Francisco, CA" listed
+    beside "Miami, FL" is California.
+    """
+    resolved, leftover = [], []
+    for text in texts:
+        place = _place_of(text)
+        (resolved if place else leftover).append(place or text)
+
+    # Try each country this posting already resolved to. A held-out code belongs
+    # to at most one of them - "CA" is a US state and no Canadian province - so
+    # a posting spanning both countries still settles "San Francisco, CA".
+    # Two candidates that both fit means the code stays unread.
+    countries = sorted({place[0] for place in resolved if place[0]})
+    for text in leftover:
+        fits = [(country, _place_of(text, country_hint=country))
+                for country in countries]
+        fits = [(country, place) for country, place in fits
+                if place and place[1] in REGION_CODES.get(country, set())]
+        if len(fits) == 1:
+            resolved.append(fits[0][1])
+        elif not fits and len(countries) == 1:
+            place = _place_of(text, country_hint=countries[0])
+            if place:
+                resolved.append(place)
+
+    out = []
+    for place in resolved:
+        if place not in out:
+            out.append(place)
+    return out
+
+
+def apply_location_to_job(job, extra=None) -> None:
+    """Fill the parsed location columns, and one `JobLocation` row per place.
 
     `job.location` itself is never rewritten - it is what the board wrote, and
     the UI shows it. An ambiguous parse writes nothing, so a job never lands in
     the wrong country: it simply does not answer a territorial filter.
+
+    `extra` is every other place the board named. A posting open in twenty-two
+    cities has to answer all twenty-two filters, so each becomes its own row.
+    The primary place is denormalised onto `Job` as well, which keeps the feed's
+    display and sort free of a join.
     """
+    from backend.models.db import JobLocation
+
     if job.loc_country or job.loc_region or job.loc_city:
         return
 
-    parsed = parse(job.location or "")
-    if parsed["ambiguous"]:
-        return
-    job.loc_country = parsed["country"]
-    job.loc_region = parsed["region"]
-    job.loc_city = fold(parsed["city"]) or None if parsed["city"] else None
+    texts = [job.location] + [t for t in (extra or []) if t]
+    places = _places_of([t for t in texts if t])
+    if places:
+        job.loc_country, job.loc_region, job.loc_city = places[0]
+
+    known = {(row.country, row.region, row.city) for row in (job.locations or [])}
+    for index, (country, region, city) in enumerate(places):
+        if (country, region, city) in known:
+            continue
+        job.locations.append(JobLocation(country=country, region=region, city=city,
+                                         is_primary=index == 0))
 
 
 # Quebec place names keep these lower-case: "Saint-Jean-sur-Richelieu".

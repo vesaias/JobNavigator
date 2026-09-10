@@ -10,14 +10,24 @@ from backend.api.routes_jobs import _location_clause
 from backend.models.db import Job
 
 
-def _make(db, index, **kw):
-    """`make_external_id` hashes the URL alone, so each row needs its own."""
+def _make(db, index, places):
+    """`make_external_id` hashes the URL alone, so each row needs its own.
+
+    `places` is every place the posting names; the first is the primary one and
+    is also denormalised onto the row.
+    """
     from backend.scraper._shared.dedup import make_external_id
+    from backend.models.db import JobLocation
+
     url = "https://example.com/job/%d" % index
     job = Job(external_id=make_external_id("Acme", "Engineer %d" % index, url),
-              company="Acme", title="Engineer %d" % index, url=url,
-              status="new", **kw)
+              company="Acme", title="Engineer %d" % index, url=url, status="new")
+    if places:
+        job.loc_country, job.loc_region, job.loc_city = places[0]
     db.add(job)
+    for order, (country, region, city) in enumerate(places):
+        job.locations.append(JobLocation(country=country, region=region, city=city,
+                                         is_primary=order == 0))
     return job
 
 
@@ -25,19 +35,29 @@ def _make(db, index, **kw):
 def placed(test_db):
     """One row per shape the parser can produce, including the unresolved ones."""
     rows = [
-        dict(loc_country="CA", loc_region="BC", loc_city="vancouver"),
-        dict(loc_country="CA", loc_region="BC", loc_city="vancouver"),
-        dict(loc_country="CA", loc_region="BC", loc_city="burnaby"),
-        dict(loc_country="CA", loc_region="ON", loc_city="toronto"),
-        dict(loc_country="CA", loc_region="AB", loc_city="calgary"),
-        dict(loc_country="CA", loc_region="BC", loc_city=None),   # region only
-        dict(loc_country="CA", loc_region=None, loc_city="vancouver"),  # no region
-        dict(loc_country="CA", loc_region=None, loc_city=None),   # country only
-        dict(loc_country="US", loc_region="CA", loc_city="san francisco"),
-        dict(loc_country=None, loc_region=None, loc_city=None),   # never resolved
+        [("CA", "BC", "vancouver")],
+        [("CA", "BC", "vancouver")],
+        [("CA", "BC", "burnaby")],
+        [("CA", "ON", "toronto")],
+        [("CA", "AB", "calgary")],
+        [("CA", "BC", None)],            # region only
+        [("CA", None, "vancouver")],     # no region
+        [("CA", None, None)],            # country only
+        [("US", "CA", "san francisco")],
+        [],                              # never resolved
     ]
-    for index, row in enumerate(rows):
-        _make(test_db, index, **row)
+    for index, places in enumerate(rows):
+        _make(test_db, index, places)
+    test_db.commit()
+    return test_db
+
+
+@pytest.fixture
+def multi(test_db):
+    """One posting open in three places, the way Lever and Ashby report them."""
+    _make(test_db, 100, [("US", "NY", "new york"),
+                         ("US", "CA", "los angeles"),
+                         ("CA", "BC", "vancouver")])
     test_db.commit()
     return test_db
 
@@ -135,3 +155,100 @@ def test_the_facet_labels_a_place_coarsest_last(placed, api_client):
     assert entries["CA:BC:vancouver"] == "Vancouver, BC, Canada"
     assert entries["CA:BC"] == "BC, Canada"
     assert entries["CA"] == "Canada"
+
+
+# ── one posting, several places ──────────────────────────────────────────────
+
+@pytest.mark.parametrize("key", [
+    "US:NY:new york", "US:CA:los angeles", "CA:BC:vancouver", "US", "CA",
+])
+def test_a_posting_answers_every_place_it_names(multi, key):
+    """A job open in three cities has to be findable under all three."""
+    assert _count(multi, key) == 1
+
+
+def test_a_posting_is_returned_once_however_many_places_match(multi):
+    """The filter is an EXISTS, not a join: three matching places, one row."""
+    assert _count(multi, "US:NY:new york,US:CA:los angeles,CA:BC:vancouver") == 1
+
+
+def test_the_primary_place_is_denormalised_onto_the_row(multi):
+    job = multi.query(Job).filter(Job.title == "Engineer 100").one()
+    assert (job.loc_country, job.loc_region, job.loc_city) == ("US", "NY", "new york")
+    assert len(job.locations) == 3
+    assert sum(1 for row in job.locations if row.is_primary) == 1
+
+
+def test_deleting_the_job_removes_its_places(multi):
+    job = multi.query(Job).filter(Job.title == "Engineer 100").one()
+    from backend.models.db import JobLocation
+    multi.delete(job)
+    multi.commit()
+    assert multi.query(JobLocation).count() == 0
+
+
+# ── the work-arrangement filter ──────────────────────────────────────────────
+
+@pytest.fixture
+def arranged(test_db):
+    """Every combination the flags can take, including the two-way posting."""
+    from backend.scraper._shared.dedup import make_external_id
+    rows = [
+        ("remote-only", True, False, False),
+        ("hybrid-only", False, True, False),
+        ("onsite-only", False, False, True),
+        ("remote-and-hybrid", True, True, False),
+        ("unknown", None, None, None),
+    ]
+    for index, (name, remote, hybrid, onsite) in enumerate(rows):
+        url = "https://example.com/arr/%d" % index
+        test_db.add(Job(external_id=make_external_id("Acme", name, url),
+                        company="Acme", title=name, url=url, status="new",
+                        arr_remote=remote, arr_hybrid=hybrid, arr_onsite=onsite))
+    test_db.commit()
+    return test_db
+
+
+def _arr_count(db, value):
+    from backend.api.routes_jobs import _arrangement_clause
+    clause = _arrangement_clause(value)
+    q = db.query(Job)
+    return q.filter(clause).count() if clause is not None else q.count()
+
+
+@pytest.mark.parametrize("value,expected", [
+    ("remote", 2),    # remote-only and the two-way posting
+    ("hybrid", 2),    # hybrid-only and the two-way posting
+    ("onsite", 1),
+    ("unknown", 1),
+])
+def test_a_posting_answers_every_arrangement_it_offers(arranged, value, expected):
+    assert _arr_count(arranged, value) == expected
+
+
+def test_unknown_is_not_swept_in_with_the_others(arranged):
+    """Three flags picked still leave the unresolved posting out."""
+    assert _arr_count(arranged, "remote,hybrid,onsite") == 4
+    assert _arr_count(arranged, "unknown") == 1
+
+
+def test_several_arrangements_are_an_or_without_double_counting(arranged):
+    """The two-way posting matches both terms and is returned once."""
+    assert _arr_count(arranged, "remote,hybrid") == 3
+
+
+def test_an_empty_arrangement_filter_builds_no_clause():
+    from backend.api.routes_jobs import _arrangement_clause
+    assert _arrangement_clause("") is None
+    assert _arrangement_clause(None) is None
+    assert _arrangement_clause("nonsense") is None
+
+
+def test_every_arrangement_facet_count_equals_its_filter_count(arranged, api_client):
+    resp = api_client.get("/api/jobs/facets?status=new")
+    entries = resp.json()["arrangements"]
+    assert {e["name"] for e in entries} == {"remote", "hybrid", "onsite", "unknown"}
+    for entry in entries:
+        listed = api_client.get(
+            "/api/jobs?status=new&limit=1&brief=1&arrangement=%s" % entry["name"])
+        assert listed.json()["total"] == entry["count"], entry["name"]

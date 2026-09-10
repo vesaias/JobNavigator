@@ -161,6 +161,14 @@ class Job(Base):
     loc_country = Column(String(2), nullable=True, index=True)
     loc_region = Column(String(3), nullable=True, index=True)
     loc_city = Column(String, nullable=True, index=True)
+    # Work arrangement is a set, not one value: a posting may be offered both
+    # remote and hybrid, and it must answer either filter. All three NULL means
+    # no source resolved it - the fourth state, "unknown".
+    arr_remote = Column(Boolean, nullable=True, index=True)
+    arr_hybrid = Column(Boolean, nullable=True, index=True)
+    arr_onsite = Column(Boolean, nullable=True, index=True)
+    # Derived from arr_remote and written with it. Kept because the API exposes
+    # `remote` as a filter; never set it on its own.
     remote = Column(Boolean, nullable=True)
     salary_min = Column(Integer, nullable=True)
     salary_max = Column(Integer, nullable=True)
@@ -202,6 +210,37 @@ class Job(Base):
                 base, *qs = url.split("?", 1)
                 url = base[:-len(suffix)] + ("?" + qs[0] if qs else "")
         return url
+
+class JobLocation(Base):
+    """Every place one posting names.
+
+    A job stored only under its primary place answers one filter when the board
+    listed twenty-two: levels.fyi writes "Vancouver ... + 21 More", and Lever
+    and Ashby carry the full list. The primary place also stays on `Job` itself,
+    denormalised, so the feed can show and sort it without a join.
+    """
+
+    __tablename__ = "job_locations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"),
+                    nullable=False, index=True)
+    country = Column(String(2), nullable=True, index=True)
+    region = Column(String(3), nullable=True, index=True)
+    city = Column(String, nullable=True, index=True)   # folded ascii, as on Job
+    is_primary = Column(Boolean, default=False, nullable=False)
+
+    # The ORM deletes these rows itself. `passive_deletes` would hand that to the
+    # database, and SQLite does not enforce foreign keys unless asked, so the
+    # rows would outlive their job there. The FK still carries ON DELETE CASCADE
+    # as a backstop for a bulk delete that never loads the ORM objects.
+    job = relationship("Job", backref=backref("locations", cascade="all, delete-orphan"))
+
+    __table_args__ = (
+        UniqueConstraint("job_id", "country", "region", "city",
+                         name="uq_job_location"),
+    )
+
 
 from sqlalchemy import event
 

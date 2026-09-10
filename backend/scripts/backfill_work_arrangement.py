@@ -11,7 +11,7 @@ import collections
 import logging
 import sys
 
-from backend.analyzer.work_arrangement import REMOTE, extract_arrangement
+from backend.analyzer.work_arrangement import HYBRID, ONSITE, REMOTE, extract_arrangement
 from backend.models.db import Job, SessionLocal
 
 logger = logging.getLogger("jobnavigator.backfill.arrangement")
@@ -25,7 +25,9 @@ def run(commit: bool = False, limit: int = None) -> dict:
     tally = collections.Counter()
     by_tier = collections.Counter()
     try:
-        query = db.query(Job).filter(Job.remote.is_(None)).order_by(Job.discovered_at)
+        query = db.query(Job).filter(
+            Job.arr_remote.is_(None), Job.arr_hybrid.is_(None), Job.arr_onsite.is_(None)
+        ).order_by(Job.discovered_at)
         if limit:
             query = query.limit(limit)
 
@@ -37,15 +39,21 @@ def run(commit: bool = False, limit: int = None) -> dict:
                 title=job.title,
                 description=job.description,
             )
-            arrangement = result["arrangement"]
-            if arrangement is None:
+            found = result["arrangements"]
+            if not found:
                 tally["unresolved"] += 1
                 continue
 
-            tally[arrangement] += 1
+            for value in found:
+                tally[value] += 1
+            if len(found) > 1:
+                tally["several"] += 1
             by_tier[result["arrangement_source"]] += 1
             if commit:
-                job.remote = arrangement == REMOTE
+                job.arr_remote = REMOTE in found
+                job.arr_hybrid = HYBRID in found
+                job.arr_onsite = ONSITE in found
+                job.remote = job.arr_remote
                 pending += 1
                 if pending >= BATCH:
                     db.commit()
@@ -77,8 +85,9 @@ def main(argv=None):
     logger.info("scanned    %d", tally.get("scanned", 0))
     logger.info("resolved   %d", tally.get("resolved", 0))
     logger.info("  remote   %d", tally.get("remote", 0))
-    logger.info("  hybrid   %d  -> remote=False", tally.get("hybrid", 0))
-    logger.info("  onsite   %d  -> remote=False", tally.get("onsite", 0))
+    logger.info("  hybrid   %d", tally.get("hybrid", 0))
+    logger.info("  onsite   %d", tally.get("onsite", 0))
+    logger.info("  offered several ways %d", tally.get("several", 0))
     logger.info("unresolved %d  -> left NULL", tally.get("unresolved", 0))
     logger.info("decided by: %s", by_tier or "-")
     return 0

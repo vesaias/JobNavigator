@@ -253,7 +253,7 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
                     await check_job_h1b(job, db, company_lookup=_company_lookup, phrases=_phrases)
                     apply_salary_to_job(job, getattr(job, "_h1b_median", None))
                     apply_arrangement_to_job(job, structured=j.get("arrangement"))
-                    apply_location_to_job(job)
+                    apply_location_to_job(job, extra=j.get("locations"))
                 except Exception as analysis_err:
                     logger.warning(f"Inline analysis failed for {j['title']}: {analysis_err}")
 

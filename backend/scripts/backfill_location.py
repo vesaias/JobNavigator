@@ -12,7 +12,7 @@ import collections
 import logging
 import sys
 
-from backend.analyzer.location import fold, parse
+from backend.analyzer.location import apply_location_to_job, parse
 from backend.models.db import Job, SessionLocal
 
 logger = logging.getLogger("jobnavigator.backfill.location")
@@ -49,9 +49,10 @@ def run(commit: bool = False) -> dict:
             if parsed["city"]:
                 tally["city"] += 1
             if commit:
-                job.loc_country = parsed["country"]
-                job.loc_region = parsed["region"]
-                job.loc_city = fold(parsed["city"]) if parsed["city"] else None
+                # One JobLocation row per place, primary first. The extra places
+                # a board named are only on the scraped rows, so a backfill sees
+                # the primary one alone.
+                apply_location_to_job(job)
                 pending += 1
                 if pending >= BATCH:
                     db.commit()

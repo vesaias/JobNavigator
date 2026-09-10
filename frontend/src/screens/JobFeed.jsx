@@ -52,6 +52,16 @@ const H1B = {
   unlikely: { label: 'H-1B Unlikely', c: 'var(--warn)' },
   unknown: { label: 'H-1B Unknown', c: 'var(--muted)' },
 }
+// A posting carries a set, so it may show more than one. Nothing is drawn when
+// no source resolved it — an absent badge means "unknown", never "on-site".
+const ARRANGEMENT = [
+  ['remote', 'Remote', 'var(--good)'],
+  ['hybrid', 'Hybrid', 'var(--accent)'],
+  ['onsite', 'On-site', 'var(--muted)'],
+]
+const arrangementsOf = (j) => ARRANGEMENT.filter(([key]) => j[`arr_${key}`])
+const ARRANGEMENT_LABEL = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site', unknown: 'Not stated' }
+
 const BADGE = {
   applied: { label: 'Applied', bd: 'var(--accent)', bg: 'var(--accent-soft)', fg: 'var(--accent)' },
   saved: { label: 'Saved', bd: 'var(--warn)', bg: 'var(--warn-soft)', fg: 'var(--warn)' },
@@ -73,7 +83,7 @@ const SOURCE_LABELS = {
 const srcLabel = (s) => SOURCE_LABELS[s] || s || ''
 const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'], ['skip', 'Skip'], ['ignored', 'Ignored']]
 const SORT_OPTS = [['score', 'Top score'], ['date', 'Newest first'], ['salary', 'Salary, high to low'], ['company', 'Company A–Z']]
-const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], location: [], min_score: '', min_salary: '', max_salary: '' }
+const DEFAULTS = { status: [], company: [], source: [], h1b_verdict: [], location: [], arrangement: [], min_score: '', min_salary: '', max_salary: '' }
 
 // small dropdown shell (trigger pill + panel + backdrop). Flips to right-align
 // when the panel would overflow the viewport's right edge.
@@ -209,6 +219,7 @@ export default function V2JobFeed() {
 
   const [companyList, setCompanyList] = useState([])
   const [locationList, setLocationList] = useState([])   // [{key, name, count, level}] — coarse to fine
+  const [arrangementCounts, setArrangementCounts] = useState({})
   const [sourceList, setSourceList] = useState([])
   const [sourceCounts, setSourceCounts] = useState({}); const [verdictCounts, setVerdictCounts] = useState({})
   const [verdictList, setVerdictList] = useState([])
@@ -275,6 +286,7 @@ export default function V2JobFeed() {
     if (filters.source.length) p.source = filters.source.join(',')
     if (filters.h1b_verdict.length) p.h1b_verdict = filters.h1b_verdict.join(',')
     if (filters.location.length) p.location = filters.location.join(',')
+    if (filters.arrangement.length) p.arrangement = filters.arrangement.join(',')
     if (filters.min_score !== '') p.min_score = filters.min_score
     if (filters.min_salary) p.min_salary = Number(filters.min_salary) * 1000
     if (filters.max_salary) p.max_salary = Number(filters.max_salary) * 1000
@@ -294,6 +306,7 @@ export default function V2JobFeed() {
     const named = (rows) => (rows || []).filter((x) => x && x.name != null)
     setCompanyList(named(data.companies))
     setLocationList((data.locations || []).filter((x) => x && x.key))
+    setArrangementCounts(Object.fromEntries((data.arrangements || []).map((x) => [x.name, x.count])))
     setSourceList(named(data.sources).map((x) => x.name))
     setSourceCounts(Object.fromEntries(named(data.sources).map((x) => [x.name, x.count])))
     setVerdictList(named(data.h1b_verdicts).map((x) => x.name))
@@ -986,6 +999,13 @@ export default function V2JobFeed() {
               so an early click on Source is not an empty menu */}
           {facetSources.length ? facetSources.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={facetSourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
+        <Drop label={`Work${filters.arrangement.length ? ` · ${filters.arrangement.length}` : ''}`} active={filters.arrangement.length > 0} onClear={() => setF({ arrangement: [] })} open={menu === 'arrangement'} onToggle={() => setMenu(menu === 'arrangement' ? null : 'arrangement')} width={214}>
+          {['remote', 'hybrid', 'onsite', 'unknown'].map((key) => (
+            <Check key={key} on={filters.arrangement.includes(key)} label={ARRANGEMENT_LABEL[key]}
+              count={arrangementCounts[key]} onClick={() => togF('arrangement', key)} />
+          ))}
+          <Helper size="xs" style={{ padding: '6px 8px 2px' }}>A posting offered two ways is counted under both</Helper>
+        </Drop>
         <Drop label={`Location${filters.location.length ? ` · ${filters.location.length}` : ''}`} active={filters.location.length > 0} onClear={() => setF({ location: [] })} open={menu === 'location'} onToggle={() => setMenu(menu === 'location' ? null : 'location')} width={262}>
           <Input autoFocus value={locationQuery} onChange={setLocationQuery} ariaLabel="Search places"
             placeholder={`Type to search ${locationList.length} places…`} style={{ margin: '0 6px 6px', width: 'calc(100% - 12px)', paddingLeft: 12 }} />
@@ -1230,6 +1250,12 @@ export default function V2JobFeed() {
                         </div>
                         <div className="v2-rowink" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11, lineHeight: '13px', fontWeight: 450, minWidth: 0, marginTop: 2 }}>
                           {fmtSalary(j.salary_min, j.salary_max) && <><span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 170, fontFamily: 'var(--numeral-face)', color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtSalary(j.salary_min, j.salary_max)}</span><span style={{ color: 'var(--line)' }}>·</span></>}
+                          {arrangementsOf(j).map(([key, label, colour]) => (
+                            <React.Fragment key={key}>
+                              <span style={{ letterSpacing: '.04em', color: colour }}>{label}</span>
+                              <span style={{ color: 'var(--line)' }}>·</span>
+                            </React.Fragment>
+                          ))}
                           {visa && j.h1b_verdict !== 'unknown' && <><span style={{ letterSpacing: '.04em', color: visa.c }}>{visa.label}</span><span style={{ color: 'var(--line)' }}>·</span></>}
                           <span style={{ color: 'var(--muted)' }}>{timeAgo(j.discovered_at)}</span>
                         </div>

@@ -38,6 +38,12 @@ _STRUCTURED = {
 }
 
 # A token on its own, not a word inside a sentence.
+# Word forms scanned inside a string, for "Remote or Hybrid" where one regex
+# pass over separators would report only the first.
+ARRANGEMENT_WORDS = {
+    "remote": REMOTE, "hybrid": HYBRID, "on-site": ONSITE, "onsite": ONSITE,
+}
+
 _TOKEN = re.compile(
     r"(?:^|[\s,;·|(\[\-–—])(remote|hybrid|on-?site|work from home|wfh)"
     r"(?:[\s,;·|)\]\-–—]|$)", re.I)
@@ -183,38 +189,81 @@ def from_description(description: str) -> tuple[str | None, str | None]:
     return None, None
 
 
+def _tokens_in(text: str) -> set:
+    """Every arrangement named in one string: "Remote or Hybrid" gives both."""
+    if not text:
+        return set()
+    found = set()
+    for match in _TOKEN.finditer(text):
+        value = _STRUCTURED.get(match.group(1).lower().replace("on site", "onsite"))
+        if value:
+            found.add(value)
+    # finditer skips an overlapping second match ("Remote / Hybrid" shares the
+    # separator), so a plain word scan catches what it misses.
+    for word, value in ARRANGEMENT_WORDS.items():
+        if re.search(r"(?<![\w-])%s(?![\w-])" % re.escape(word), text, re.I):
+            found.add(value)
+    return found
+
+
 def extract_arrangement(location: str = None, title: str = None,
                         description: str = None, structured=None) -> dict:
-    """Run the cascade. The first tier that resolves wins."""
-    value = from_structured(structured)
-    if value:
-        return {"arrangement": value, "arrangement_source": "structured", "snippet": None}
+    """Run the cascade. The first tier that resolves wins.
 
-    value = from_token(location)
-    if value:
-        return {"arrangement": value, "arrangement_source": "location", "snippet": location}
+    `arrangements` is a set: one posting may be offered several ways, and it has
+    to answer each of those filters. `arrangement` names the primary one for a
+    caller that wants a single label.
+    """
+    def _result(values, source, snippet):
+        ordered = [v for v in (REMOTE, HYBRID, ONSITE) if v in values]
+        return {"arrangements": set(values),
+                "arrangement": ordered[0] if ordered else None,
+                "arrangement_source": source, "snippet": snippet}
 
-    value = from_token(title)
-    if value:
-        return {"arrangement": value, "arrangement_source": "title", "snippet": title}
+    values = from_structured_set(structured)
+    if values:
+        return _result(values, "structured", None)
+
+    values = _tokens_in(location)
+    if values:
+        return _result(values, "location", location)
+
+    values = _tokens_in(title)
+    if values:
+        return _result(values, "title", title)
 
     value, snippet = from_description(description)
     if value:
-        return {"arrangement": value, "arrangement_source": "description", "snippet": snippet}
+        return _result({value}, "description", snippet)
 
-    return {"arrangement": None, "arrangement_source": None, "snippet": None}
+    return {"arrangements": set(), "arrangement": None,
+            "arrangement_source": None, "snippet": None}
+
+
+def from_structured_set(value) -> set:
+    """Read a source field that may name more than one arrangement.
+
+    A handler passes either one value ("Hybrid"), or a collection when its board
+    exposes independent flags.
+    """
+    if value is None:
+        return set()
+    if isinstance(value, (set, list, tuple)):
+        return {v for v in (from_structured(item) for item in value) if v}
+    single = from_structured(value)
+    return {single} if single else set()
 
 
 def apply_arrangement_to_job(job, structured=None) -> None:
-    """Set `job.remote` from the cascade; leave it alone when already set.
+    """Set the arrangement flags from the cascade; leave them alone when set.
 
-    `Job.remote` is a three-state boolean. `True` means the posting is remote,
-    `False` means it is hybrid or onsite, and `None` means no source resolved it.
-    A filter for remote work therefore reads `remote IS TRUE`, and a filter for
-    on-location work reads `remote IS FALSE` - neither one sweeps in the
-    unresolved jobs.
+    The flags are a set, so a posting offered both ways answers both filters.
+    All three NULL is the fourth state, "unknown" - it is not the same as
+    "known, and not remote", and no filter may quietly mix the two.
+
+    `job.remote` is written from `arr_remote` for the API's existing parameter.
     """
-    if job.remote is not None:
+    if job.arr_remote is not None or job.arr_hybrid is not None             or job.arr_onsite is not None:
         return
 
     result = extract_arrangement(
@@ -223,7 +272,10 @@ def apply_arrangement_to_job(job, structured=None) -> None:
         description=job.description,
         structured=structured,
     )
-    arrangement = result["arrangement"]
-    if arrangement is None:
+    found = result["arrangements"]
+    if not found:
         return
-    job.remote = arrangement == REMOTE
+    job.arr_remote = REMOTE in found
+    job.arr_hybrid = HYBRID in found
+    job.arr_onsite = ONSITE in found
+    job.remote = job.arr_remote

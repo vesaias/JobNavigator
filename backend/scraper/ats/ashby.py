@@ -122,8 +122,11 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
                 # `workplaceType` is the arrangement. `isRemote` is not: a posting
                 # with workplaceType "Hybrid" still reports isRemote true, so it
                 # means "has a remote option", not "is a remote job".
+                secondary = [(entry or {}).get("location")
+                             for entry in (posting.get("secondaryLocations") or [])]
                 jobs.append({"title": title, "url": job_url,
                              "location": job_loc or None,
+                             "locations": [x for x in ([job_loc] + secondary) if x],
                              "arrangement": posting.get("workplaceType") or None})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "ashby_api", "reason": reason})
