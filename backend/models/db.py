@@ -159,7 +159,7 @@ class Job(Base):
     # Parsed out of `location` for territorial search. `loc_city` holds the folded
     # ascii form ("quebec"), so a filter matches regardless of accent or case.
     loc_country = Column(String(2), nullable=True, index=True)
-    loc_region = Column(String(3), nullable=True, index=True)
+    loc_region = Column(String(64), nullable=True, index=True)   # US/CA code, or a region name elsewhere ("Hesse")
     loc_city = Column(String, nullable=True, index=True)
     # Work arrangement is a set, not one value: a posting may be offered both
     # remote and hybrid, and it must answer either filter. All three NULL means
@@ -226,7 +226,7 @@ class JobLocation(Base):
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"),
                     nullable=False, index=True)
     country = Column(String(2), nullable=True, index=True)
-    region = Column(String(3), nullable=True, index=True)
+    region = Column(String(64), nullable=True, index=True)
     city = Column(String, nullable=True, index=True)   # folded ascii, as on Job
     is_primary = Column(Boolean, default=False, nullable=False)
 

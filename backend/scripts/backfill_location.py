@@ -25,40 +25,42 @@ def run(commit: bool = False) -> dict:
     tally = collections.Counter()
     unresolved = collections.Counter()
     try:
-        query = (db.query(Job)
+        query = (db.query(Job.id)
                  .filter(Job.location.isnot(None), Job.location != "")
                  .filter(Job.loc_country.is_(None), Job.loc_region.is_(None),
                          Job.loc_city.is_(None))
                  .order_by(Job.discovered_at))
-        pending = 0
-        for job in query.yield_per(BATCH):
-            tally["scanned"] += 1
-            parsed = parse(job.location or "")
-            if parsed["ambiguous"]:
-                tally["ambiguous"] += 1
-                unresolved[job.location] += 1
-                continue
-            if not (parsed["country"] or parsed["region"] or parsed["city"]):
-                tally["unresolved"] += 1
-                unresolved[job.location] += 1
-                continue
+        # ids first, rows per batch: a commit inside a server-side cursor loop
+        # invalidates the cursor on Postgres ("named cursor isn't valid anymore")
+        ids = [row[0] for row in query.all()]
+        for start in range(0, len(ids), BATCH):
+            chunk = ids[start:start + BATCH]
+            for job in db.query(Job).filter(Job.id.in_(chunk)).all():
+                tally["scanned"] += 1
+                parsed = parse(job.location or "")
+                if parsed["ambiguous"]:
+                    tally["ambiguous"] += 1
+                    unresolved[job.location] += 1
+                    continue
+                if not (parsed["country"] or parsed["region"] or parsed["city"]):
+                    tally["unresolved"] += 1
+                    unresolved[job.location] += 1
+                    continue
 
-            tally["resolved"] += 1
-            if parsed["country"]:
-                tally["country"] += 1
-            if parsed["city"]:
-                tally["city"] += 1
+                tally["resolved"] += 1
+                if parsed["country"]:
+                    tally["country"] += 1
+                if parsed["city"]:
+                    tally["city"] += 1
+                if commit:
+                    # One JobLocation row per place, primary first. The extra places
+                    # a board named are only on the scraped rows, so a backfill sees
+                    # the primary one alone.
+                    apply_location_to_job(job)
             if commit:
-                # One JobLocation row per place, primary first. The extra places
-                # a board named are only on the scraped rows, so a backfill sees
-                # the primary one alone.
-                apply_location_to_job(job)
-                pending += 1
-                if pending >= BATCH:
-                    db.commit()
-                    pending = 0
-        if commit:
-            db.commit()
+                db.commit()
+            else:
+                db.expunge_all()
     finally:
         db.close()
     return {"tally": dict(tally), "unresolved": unresolved.most_common(15)}
