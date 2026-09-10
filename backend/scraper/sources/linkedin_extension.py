@@ -11,6 +11,8 @@ from backend.models.db import (
 )
 from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.analyzer.salary_extractor import apply_salary_to_job
+from backend.analyzer.work_arrangement import apply_arrangement_to_job
+from backend.analyzer.location import apply_location_to_job
 from backend.analyzer.h1b_checker import check_job_h1b, determine_h1b_verdict
 
 logger = logging.getLogger("jobnavigator.jobs")
@@ -44,11 +46,32 @@ _VOYAGER_JOB_JS = """async (jid) => {
     for (const v of Object.values(d.applyMethod || {})) {
         if (v && v.companyApplyUrl) { apply = v.companyApplyUrl; break; }
     }
+    // workplaceTypes is a URN list ("urn:li:fs_workplaceType:2"); workRemoteAllowed
+    // is a plain bool. Both are read defensively: this decoration is not
+    // documented, so a build that omits them just yields nulls.
+    let wpt = '';
+    if (Array.isArray(d.workplaceTypes) && d.workplaceTypes.length) {
+        wpt = String(d.workplaceTypes[0]).split(':').pop();
+    }
     return {status: 200, title: d.title || '', company: company || '',
             location: d.formattedLocation || '',
             description: (d.description && d.description.text) || '',
-            apply_url: apply || ''};
+            apply_url: apply || '',
+            workplace_type: wpt,
+            work_remote_allowed: (typeof d.workRemoteAllowed === 'boolean')
+                ? d.workRemoteAllowed : null};
 }"""
+
+
+# LinkedIn's workplaceType URN tails. `workRemoteAllowed` is deliberately not
+# mapped: like Ashby's `isRemote` it flags "a remote option exists", which a
+# hybrid posting also sets.
+_WORKPLACE_TYPES = {"1": "onsite", "2": "remote", "3": "hybrid"}
+
+
+def _voyager_arrangement(job_data: dict) -> str | None:
+    """Map the Voyager workplace type onto an arrangement the cascade accepts."""
+    return _WORKPLACE_TYPES.get(str(job_data.get("workplace_type") or "").strip())
 
 
 def _load_session_cookies():
@@ -237,6 +260,9 @@ async def enrich(linkedin_ids: list[str], db=None):
                             job.h1b_company_lca_count, job.h1b_jd_flag
                         )
                         apply_salary_to_job(job, getattr(job, "_h1b_median", None))
+                        apply_arrangement_to_job(
+                            job, structured=_voyager_arrangement(job_data))
+                        apply_location_to_job(job)
                     except Exception as e:
                         logger.warning(f"LinkedIn {lid}: analysis error: {e}")
                         _linkedin_import_progress["errors"] = (

@@ -51,7 +51,14 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
             job_url = p.get("hostedUrl") or ""
             reason = _validate_job(title, job_url)
             if reason is None:
-                jobs.append({"title": title, "url": job_url})
+                categories = p.get("categories") or {}
+                # `allLocations` is the full list; 9 of 75 postings on one live
+                # board name more than one place.
+                every = [x for x in (categories.get("allLocations") or []) if x]
+                jobs.append({"title": title, "url": job_url,
+                             "location": categories.get("location") or None,
+                             "locations": every,
+                             "arrangement": p.get("workplaceType") or None})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "lever_api", "reason": reason})
 

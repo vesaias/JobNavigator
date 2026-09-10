@@ -120,7 +120,9 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
 
             reason = _validate_job(title, job_url)
             if reason is None:
-                jobs.append({"title": title, "url": job_url})
+                # loc_label is the entry this loop already picked as the best match.
+                jobs.append({"title": title, "url": job_url,
+                             "location": loc_label or None})
             elif debug:
                 rejected.append({"title": title, "url": job_url, "selector": "rippling_api", "reason": reason})
 

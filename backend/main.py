@@ -695,6 +695,8 @@ async def trigger_backfill_descriptions():
                     if desc and len(desc) > 50:
                         job.description = desc
                         apply_salary_to_job(job)
+                        from backend.analyzer.work_arrangement import apply_arrangement_to_job
+                        apply_arrangement_to_job(job)
                         count += 1
                         db.commit()
                         logger.info(f"Backfilled description for '{job.title}' ({len(desc)} chars)")

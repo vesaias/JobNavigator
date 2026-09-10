@@ -177,3 +177,6 @@ frontend/src/design-base/
 
 # internal decision log (removed from the public tree in the 2.0 cleanup)
 DECISIONS.md
+
+# Local-only compose port override (see the file header)
+docker-compose.override.yml
