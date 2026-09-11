@@ -290,11 +290,22 @@ async def _call_claude_api(prompt: str, system: str, model: str, api_key: str,
 
 
 async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: int) -> dict:
-    """Call Claude via claude CLI subprocess. Returns {text, usage}. Caching not supported."""
+    """Call Claude via claude CLI subprocess. Returns {text, usage}. Caching not supported.
+
+    Prompts embed untrusted job descriptions, so the CLI is confined to a pure text
+    engine: no tools, no customizations (skills/plugins/hooks/MCP/CLAUDE.md), no
+    session persistence, and an empty working directory.
+    """
     import os
     import json as _json
+    import tempfile
     full_prompt = f"{system}\n\n{prompt}"
-    cmd = ["claude", "-p", "--output-format", "json"]
+    cmd = [
+        "claude", "-p", "--output-format", "json",
+        "--tools", "",               # no Bash/Edit/Read — text-only
+        "--safe-mode",               # no skills/plugins/hooks/MCP/CLAUDE.md
+        "--no-session-persistence",  # nothing written to disk
+    ]
     if model:
         cmd.extend(["--model", model])
 
@@ -302,7 +313,9 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
     # so it uses subscription billing, not API credits
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
 
-    rc, stdout, stderr = await _run_cli(cmd, full_prompt.encode(), env=env)
+    # Run in an empty temp dir so no project CLAUDE.md/context can be auto-loaded.
+    with tempfile.TemporaryDirectory(prefix="jobnavigator-claude-") as workdir:
+        rc, stdout, stderr = await _run_cli(cmd, full_prompt.encode(), env=env, cwd=workdir)
 
     if rc != 0:
         error = stderr.decode(errors="replace").strip()
@@ -333,11 +346,11 @@ _CODEX_LOGIN_HINT = "run `docker compose exec backend codex login --device-auth`
 _QUOTA_RE = re.compile(r"usage limit|rate limit|quota|too many requests|\b429\b", re.I)
 
 
-async def _run_cli(cmd: list[str], stdin: bytes, env: dict | None = None, timeout: float = CLI_TIMEOUT):
+async def _run_cli(cmd: list[str], stdin: bytes, env: dict | None = None, timeout: float = CLI_TIMEOUT, cwd: str | None = None):
     """Run a CLI to completion with a hard timeout; returns (rc, stdout, stderr)."""
     process = await asyncio.create_subprocess_exec(
         *cmd, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE, env=env,
+        stderr=asyncio.subprocess.PIPE, env=env, cwd=cwd,
     )
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(input=stdin), timeout)

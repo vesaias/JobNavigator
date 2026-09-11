@@ -12,6 +12,7 @@ from backend.models.db import (
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
 from backend.scraper._shared.filters import _apply_company_filters
 from backend.scraper._shared.dedup import make_external_id, make_content_hash, _normalize_url
+from backend.scraper._shared.url_safety import assert_public_http_url, UnsafeURLError
 from backend.scraper.ats import (
     workday, greenhouse, lever, ashby, oracle_hcm,
     phenom, talentbrew, rippling, smartrecruiters, meta, google, amazon, generic,
@@ -174,6 +175,15 @@ async def scrape_single_career_page(company: Company, shared_browser=None,
 
         for target_url in target_urls:
             try:
+                # SSRF gate: only navigate/fetch public http(s) destinations. Phenom's
+                # `POST|…|…` format validates its endpoint inside phenom.scrape.
+                if not phenom.is_phenom(target_url):
+                    try:
+                        assert_public_http_url(target_url)
+                    except UnsafeURLError as e:
+                        logger.warning("Rejected unsafe scrape URL for %s: %s", company.name, e)
+                        url_errors.append(f"{target_url}: unsafe URL: {e}")
+                        continue
                 # Handled explicitly here (not via _dispatch_ats's generic branch) because generic
                 # needs company.wait_for_selector + max_pages, not _dispatch_ats's defaults.
                 if (phenom.is_phenom(target_url) or talentbrew.is_talentbrew(target_url)

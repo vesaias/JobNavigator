@@ -10,6 +10,45 @@ function dashboardHost(serverUrl) {
   try { return new URL(serverUrl || 'http://localhost').hostname.toLowerCase() } catch { return 'localhost' }
 }
 
+function isSafeServerUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'https:') return true;
+    return u.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(u.hostname.toLowerCase());
+  } catch { return false; }
+}
+
+// The API key is sensitive — keep it out of chrome.storage.sync (which mirrors to
+// the user's Chrome account). serverUrl and the UI toggles stay in sync.
+// One-time migration: any legacy apiKey left in sync is copied to local (only if
+// local has none) and always removed from sync so the secret stops being cloud-
+// mirrored. Upgraded users keep their key; new users are unaffected.
+function migrateLegacyKey(cb) {
+  chrome.storage.sync.get(['apiKey'], (syncSettings) => {
+    const legacyKey = syncSettings.apiKey;
+    if (!legacyKey) { cb(); return; }
+    chrome.storage.local.get(['apiKey'], (localSettings) => {
+      const finish = () => chrome.storage.sync.remove('apiKey', () => cb());
+      if (localSettings.apiKey) { finish(); return; }
+      chrome.storage.local.set({ apiKey: legacyKey }, finish);
+    });
+  });
+}
+
+function getServerConfig(cb) {
+  migrateLegacyKey(() => {
+    chrome.storage.sync.get(['serverUrl'], (syncSettings) => {
+      chrome.storage.local.get(['apiKey'], (localSettings) => {
+        const candidate = syncSettings.serverUrl || 'http://localhost';
+        cb({
+          serverUrl: isSafeServerUrl(candidate) ? candidate : 'http://localhost',
+          apiKey: localSettings.apiKey || '',
+        });
+      });
+    });
+  });
+}
+
 function setupFrameRules() {
   chrome.storage.sync.get(['serverUrl', 'previewUnblock'], (settings) => {
     const host = dashboardHost(settings.serverUrl);
@@ -130,7 +169,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return;
     }
 
-    chrome.storage.sync.get(['serverUrl', 'apiKey'], async (settings) => {
+    getServerConfig(async (settings) => {
       const serverUrl = settings.serverUrl || 'http://localhost';
       const apiKey = settings.apiKey || '';
 
@@ -175,7 +214,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Content script requests a generated answer for a focused application field
   if (msg.type === 'autofill_generate') {
-    chrome.storage.sync.get(['serverUrl', 'apiKey'], async (settings) => {
+    getServerConfig(async (settings) => {
       const serverUrl = settings.serverUrl || 'http://localhost';
       const apiKey = settings.apiKey || '';
 
@@ -211,7 +250,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Content script saves an edited/approved answer to the persona Q&A bank
   if (msg.type === 'autofill_save') {
-    chrome.storage.sync.get(['serverUrl', 'apiKey'], async (settings) => {
+    getServerConfig(async (settings) => {
       const serverUrl = settings.serverUrl || 'http://localhost';
       const apiKey = settings.apiKey || '';
 
@@ -245,7 +284,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Content script requests the structured-autofill config (answers + dictionaries)
   if (msg.type === 'autofill_config') {
-    chrome.storage.sync.get(['serverUrl', 'apiKey'], async (settings) => {
+    getServerConfig(async (settings) => {
       const serverUrl = settings.serverUrl || 'http://localhost';
       const apiKey = settings.apiKey || '';
       try {
@@ -277,7 +316,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
   port.onMessage.addListener((req) => {
     if (!req || req.type !== 'start') return;
-    chrome.storage.sync.get(['serverUrl', 'apiKey'], async (settings) => {
+    getServerConfig(async (settings) => {
       const serverUrl = settings.serverUrl || 'http://localhost';
       const apiKey = settings.apiKey || '';
       aborter = new AbortController();

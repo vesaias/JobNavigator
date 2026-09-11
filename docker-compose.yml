@@ -57,7 +57,7 @@ services:
         max-size: "20m"
         max-file: "5"
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"   # dev-only direct access; bound to loopback — everything external goes through Caddy
     depends_on:
       - backend
 
@@ -70,8 +70,8 @@ services:
         max-size: "20m"
         max-file: "5"
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:80:80"     # loopback only by default — for LAN/Internet exposure, edit explicitly and set HTTPS
+      - "127.0.0.1:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data

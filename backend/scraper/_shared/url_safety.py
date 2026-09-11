@@ -246,6 +246,50 @@ async def _resolve_public_http_url_async(url: str) -> ResolvedURL:
     return await asyncio.to_thread(resolve_public_http_url, url)
 
 
+async def safe_request_once(
+    url: str,
+    *,
+    method: str = "GET",
+    timeout: float = 15.0,
+    headers: dict | None = None,
+    content: bytes | None = None,
+    json: object = None,
+) -> httpx.Response:
+    """Perform one DNS-pinned HTTP request without following redirects.
+
+    The caller must re-submit any redirect target through this function. This is
+    useful for browser routing, where Chromium must observe the redirect while
+    every hop is still independently pinned and validated.
+    """
+    target = await _resolve_public_http_url_async(url)
+    request_headers = dict(headers or {})
+    # These are recomputed by httpx and can become invalid when Playwright's body
+    # or httpx's decompressed response is relayed.
+    for name in ("host", "content-length", "transfer-encoding", "connection", "accept-encoding"):
+        request_headers.pop(name, None)
+        request_headers.pop(name.title(), None)
+    request_headers["Host"] = target.host_header
+    request_headers["Accept-Encoding"] = "identity"
+    prefix = "https://" if target.tls else "http://"
+    connect_error = None
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
+        for ip in target.ips:
+            try:
+                response = await client.request(
+                    method,
+                    prefix + target.authority(ip) + target.path_and_query,
+                    headers=request_headers,
+                    content=content,
+                    json=json,
+                    extensions={"sni_hostname": target.sni_hostname},
+                )
+                _relabel(response, url)
+                return response
+            except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                connect_error = exc
+    raise connect_error
+
+
 async def safe_get(
     url: str,
     *,
@@ -292,6 +336,116 @@ async def safe_get(
             _relabel(resp, logical)
             return resp
         raise UnsafeURLError(f"Too many redirects (>{MAX_REDIRECTS}) starting at {url!r}")
+
+
+async def safe_post(
+    url: str,
+    *,
+    json: object = None,
+    timeout: float = 30.0,
+    headers: dict | None = None,
+) -> httpx.Response:
+    """JSON POST with SSRF protection and per-hop redirect revalidation.
+
+    Same pinning as ``safe_get`` (resolve once, connect to the validated IP), but
+    every redirect hop re-issues the POST with the same body after revalidating
+    the target, so a public entry URL cannot redirect into a private/metadata
+    address.
+    """
+    logical = url
+    for _ in range(MAX_REDIRECTS + 1):
+        response = await safe_request_once(
+            logical, method="POST", json=json, timeout=timeout, headers=headers
+        )
+        if response.is_redirect:
+            loc = response.headers.get("location")
+            if not loc:
+                return response
+            logical = urljoin(logical, loc)
+            continue
+        return response
+    raise UnsafeURLError(f"Too many redirects (>{MAX_REDIRECTS}) starting at {url!r}")
+
+
+# ── Playwright SSRF guard ─────────────────────────────────────────────────────
+# `page.goto()` is not covered by `safe_get`: it resolves and follows redirects
+# inside Chromium, so a public entry URL can still land on a private address. This
+# route block aborts any request whose destination fails the public-IP check,
+# covering navigation, redirects and subresources alike. DNS is intentionally
+# re-checked for every request so a previously public host cannot rely on a stale
+# positive cache after rebinding.
+async def is_public_http_url(url: str) -> bool:
+    """True iff ``url`` currently resolves only to public http(s) addresses.
+
+    Deliberately do not cache positive DNS answers: re-check every request so a
+    hostname cannot pass once and later rebind to a private address.
+    """
+    try:
+        await _resolve_public_http_url_async(url)
+        return True
+    except (UnsafeURLError, ValueError):
+        return False
+
+
+async def setup_ssrf_route_block(page) -> None:
+    """Proxy every Playwright HTTP request through the DNS-pinned client.
+
+    Merely validating DNS and then calling ``route.continue_()`` is unsafe because
+    Chromium resolves the host again, leaving a classic DNS-rebinding TOCTOU. The
+    response is therefore fetched from the validated IP and fulfilled into the
+    page. Redirect responses are not followed here: Chromium emits the next hop,
+    which comes through this same handler and is pinned independently.
+    """
+    async def _handler(route):
+        request = route.request
+        url = request.url
+        scheme = urlsplit(url).scheme.lower()
+        if scheme in ("data", "blob", "about"):
+            await route.continue_()
+            return
+        if scheme not in ("http", "https"):
+            logger.warning("SSRF block: aborted non-web request to %s", url)
+            await route.abort()
+            return
+        try:
+            body = request.post_data_buffer
+            if body is not None and len(body) > 2_000_000:
+                raise UnsafeURLError("Browser request body exceeds 2 MB")
+            response = await safe_request_once(
+                url,
+                method=request.method,
+                headers=await request.all_headers(),
+                content=body,
+                timeout=30.0,
+            )
+            content = response.content
+            if len(content) > 20_000_000:
+                raise UnsafeURLError("Browser response exceeds 20 MB")
+            response_headers = dict(response.headers)
+            for name in ("content-encoding", "content-length", "transfer-encoding", "connection"):
+                response_headers.pop(name, None)
+            await route.fulfill(
+                status=response.status_code,
+                headers=response_headers,
+                body=content,
+            )
+        except (UnsafeURLError, httpx.HTTPError, ValueError) as exc:
+            logger.warning("SSRF block: aborted request to %s (%s)", url, exc)
+            await route.abort()
+
+    # Prevent script-created sockets from bypassing HTTP request routing.
+    await page.add_init_script(
+        """
+        (() => {
+          const blocked = function () { throw new DOMException('Network socket blocked'); };
+          Object.defineProperty(window, 'WebSocket', { value: blocked, configurable: false });
+          if ('WebTransport' in window) {
+            Object.defineProperty(window, 'WebTransport', { value: blocked, configurable: false });
+          }
+        })();
+        """
+    )
+    await page.route("**/*", _handler)
 
 
 def _relabel(resp, logical: str) -> None:

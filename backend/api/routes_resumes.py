@@ -172,6 +172,23 @@ async def _get_browser():
     logger.info("Warm Playwright browser started for PDF generation")
     return _pw_browser
 
+
+async def _new_pdf_page(browser):
+    """New page for PDF export: JS disabled and all network blocked.
+
+    The rendered résumé/letter HTML is untrusted; with JS off and every request
+    aborted, a malicious snippet can neither execute nor fetch external resources
+    (or probe internal hosts) from inside the container during `page.pdf()`.
+    """
+    ctx = await browser.new_context(
+        java_script_enabled=False,
+        viewport={"width": 1280, "height": 900},
+    )
+    await ctx.route("**/*", lambda route: route.abort())
+    page = await ctx.new_page()
+    page._pdf_ctx = ctx
+    return page
+
 def _default_template_id() -> str:
     """Return the first available template ID, or 'garamond_alt' as last resort."""
     templates = _discover_templates()
@@ -260,6 +277,46 @@ def _load_template_fonts(fonts_dir_str: str) -> dict:
     return fonts
 
 
+def _contact_links(items, sep: str):
+    """Render contact items as safe HTML: text escaped, href restricted to http/mailto.
+
+    Returns a Markup so Jinja autoescape leaves the anchors intact while any
+    user-controlled text stays escaped. `sep` is the template's own literal HTML
+    (e.g. ``<span class="sep">·</span>``) and is trusted as such.
+    """
+    from markupsafe import escape, Markup
+
+    parts = []
+    for item in (items or []):
+        text = escape(str(item.get("text") or ""))
+        url = item.get("url")
+        if url:
+            url = str(url)
+            if not (url.startswith("http") or url.startswith("mailto")):
+                url = "https://" + url
+            href = escape(url)
+            parts.append(Markup('<a href="') + href + Markup('">') + text + Markup('</a>'))
+        else:
+            parts.append(text)
+    return Markup(sep).join(parts)
+
+
+def _safe_href(url):
+    """Return a URL safe to place in href= — blocks javascript:/data:/vbscript: etc.
+
+    Safe schemes (http, https, mailto, tel) pass through escaped; anything with a
+    dangerous or unknown scheme collapses to ``#``. Bare (scheme-less) values are
+    escaped and kept. Returns Markup so autoescape leaves it intact.
+    """
+    from markupsafe import escape, Markup
+
+    u = str(url or "").strip()
+    m = _SCHEME_RE.match(u)
+    if m and m.group(1).lower() not in ("http", "https", "mailto", "tel"):
+        return Markup("#")
+    return escape(u)
+
+
 def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     """Render a resume to HTML using its Jinja2 template."""
     from jinja2 import Environment, FileSystemLoader
@@ -273,9 +330,14 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     template_dir = resolve_template_dir(template_name, TEMPLATES_DIR)
 
     import re as _re
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    # autoescape=True: résumé fields (name, summary, descriptions, …) are user- or
+    # LLM-controlled and must never inject markup. The `bold` and `contact_links`
+    # filters return Markup, which autoescape leaves untouched.
+    env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
     from markupsafe import Markup
     env.filters['bold'] = lambda text: Markup(_re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', _re.sub(r'[<>&]', lambda m: {'<':'&lt;','>':'&gt;','&':'&amp;'}[m.group()], text or '')))
+    env.filters['contact_links'] = _contact_links
+    env.filters['safe_href'] = _safe_href
     template = env.get_template("template.html.j2")
 
     # Embed fonts as base64 data URIs (file:// blocked by Chromium in set_content)
@@ -1144,7 +1206,19 @@ def preview_resume(resume_id: str, db: Session = Depends(get_db)):
 
     json_data = _rewrite_urls_with_tracers(resume.json_data or {}, str(resume.id), db)
     html = _render_html(json_data, resume.template, resume.page_format)
-    return HTMLResponse(content=html)
+    # Defense-in-depth CSP: the preview is rendered content; no scripts, no external
+    # resources, only inline styles and data: fonts/images. Combined with Jinja
+    # autoescape this makes stored-XSS in the preview non-executable.
+    return HTMLResponse(
+        content=html,
+        headers={
+            "Content-Security-Policy": (
+                "default-src 'none'; style-src 'unsafe-inline'; "
+                "img-src data:; font-src data:; base-uri 'none'; "
+                "form-action 'none'; frame-ancestors 'self'"
+            ),
+        },
+    )
 
 
 @router.get("/{resume_id}/pdf")
@@ -1164,7 +1238,15 @@ async def export_pdf(resume_id: str, template: Optional[str] = None, format: Opt
 
     try:
         browser = await _get_browser()
-        page = await browser.new_page()
+    except Exception as e:
+        logger.error(f"PDF browser launch failed: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+    page = None
+    pdf_ctx = None
+    try:
+        page = await _new_pdf_page(browser)
+        pdf_ctx = getattr(page, "_pdf_ctx", None)
         await page.set_content(html, wait_until="networkidle")
         pdf_bytes = await page.pdf(
             format=paper_format,
@@ -1175,10 +1257,22 @@ async def export_pdf(resume_id: str, template: Optional[str] = None, format: Opt
         page_count = pdf_bytes.count(b"/Type /Page") - pdf_bytes.count(b"/Type /Pages")
         if page_count < 1:
             page_count = 1
-        await page.close()
     except Exception as e:
         logger.error(f"PDF generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+    finally:
+        # Close page and context even when set_content/pdf fail, so repeated
+        # failing exports cannot leak browser contexts and exhaust resources.
+        if page is not None:
+            try:
+                await page.close()
+            except Exception:
+                pass
+        if pdf_ctx is not None:
+            try:
+                await pdf_ctx.close()
+            except Exception:
+                pass
 
     # Filename: {Name}_{Type}_Resume_{number}.pdf \u2014 Name is the candidate header name,
     # Type is the base resume name, number is the linked job's short_id (omitted for base resumes with none).

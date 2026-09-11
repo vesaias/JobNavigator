@@ -5,8 +5,6 @@ import logging
 import re
 from urllib.parse import urlparse
 
-import httpx
-
 from backend.scraper._shared.filters import _validate_job
 
 logger = logging.getLogger("jobnavigator.scraper.ats.phenom")
@@ -93,6 +91,13 @@ def _arrangement_of(job: dict) -> str | None:
 async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
     """Fetch jobs from a Phenom People /widgets POST API."""
     endpoint, base_payload = _parse_phenom_url(raw_url)
+    # SSRF gate: the endpoint is operator-supplied; only public http(s) targets.
+    from backend.scraper._shared.url_safety import assert_public_http_url, safe_post, UnsafeURLError
+    try:
+        assert_public_http_url(endpoint)
+    except UnsafeURLError as e:
+        logger.warning("Rejected unsafe Phenom endpoint %r: %s", endpoint, e)
+        return ([], []) if debug else []
     parsed = urlparse(endpoint)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -114,41 +119,42 @@ async def scrape(raw_url: str, debug: bool = False) -> list[dict] | tuple:
         "Referer": f"{origin}/",
     }
 
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-        while True:
-            base_payload["from"] = offset
-            resp = await client.post(endpoint, json=base_payload, headers=headers)
-            data = json.loads(resp.text)
+    while True:
+        base_payload["from"] = offset
+        # `safe_post` pins DNS and revalidates every redirect hop so the operator
+        # URL cannot reach a private/metadata address via rebinding or redirects.
+        resp = await safe_post(endpoint, json=base_payload, headers=headers)
+        data = json.loads(resp.text)
 
-            rs = data.get(ddo_key, {})
-            total = rs.get("totalHits", 0)
-            job_list = rs.get("data", {}).get("jobs", [])
+        rs = data.get(ddo_key, {})
+        total = rs.get("totalHits", 0)
+        job_list = rs.get("data", {}).get("jobs", [])
 
-            if offset == 0:
-                logger.info(f"Phenom API: totalHits={total}")
+        if offset == 0:
+            logger.info(f"Phenom API: totalHits={total}")
 
-            if not job_list:
-                break
+        if not job_list:
+            break
 
-            for j in job_list:
-                title = j.get("title", "").strip()
-                job_id = j.get("jobId", "")
-                job_url = j.get("applyUrl") or f"{origin}/global/en/job/{job_id}"
-                # Strip trailing /apply to get the job detail page
-                if job_url.endswith("/apply"):
-                    job_url = job_url[:-6]
-                reason = _validate_job(title, job_url)
-                if reason is None:
-                    jobs.append({"title": title, "url": job_url,
-                                 "location": _location_of(j),
-                                 "locations": _locations_of(j),
-                                 "arrangement": _arrangement_of(j)})
-                elif debug:
-                    rejected.append({"title": title, "url": job_url, "selector": "phenom_api", "reason": reason})
+        for j in job_list:
+            title = j.get("title", "").strip()
+            job_id = j.get("jobId", "")
+            job_url = j.get("applyUrl") or f"{origin}/global/en/job/{job_id}"
+            # Strip trailing /apply to get the job detail page
+            if job_url.endswith("/apply"):
+                job_url = job_url[:-6]
+            reason = _validate_job(title, job_url)
+            if reason is None:
+                jobs.append({"title": title, "url": job_url,
+                             "location": _location_of(j),
+                             "locations": _locations_of(j),
+                             "arrangement": _arrangement_of(j)})
+            elif debug:
+                rejected.append({"title": title, "url": job_url, "selector": "phenom_api", "reason": reason})
 
-            offset += len(job_list)
-            if offset >= total:
-                break
+        offset += len(job_list)
+        if offset >= total:
+            break
 
     logger.info(f"Phenom API: fetched {len(jobs)} jobs from {endpoint}")
     if debug:

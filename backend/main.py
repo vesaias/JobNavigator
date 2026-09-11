@@ -34,6 +34,32 @@ for _noisy in ("httpx", "httpcore"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 
+def _ensure_dashboard_key(db) -> None:
+    """Fail closed unless an existing or operator-provided key is available.
+
+    Fresh installations must set ``INITIAL_API_KEY`` explicitly. We deliberately
+    do not generate and log a credential: logs are commonly persisted or shipped
+    off-host and are not a safe secret-delivery channel.
+    """
+    setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
+    if setting and setting.value:
+        return
+    if not INITIAL_API_KEY:
+        raise RuntimeError(
+            "No dashboard API key configured. Set INITIAL_API_KEY to a strong "
+            "secret before starting JobNavigator."
+        )
+    if setting is None:
+        db.add(Setting(
+            key="dashboard_api_key",
+            value=INITIAL_API_KEY,
+            description="Dashboard API key",
+        ))
+    else:
+        setting.value = INITIAL_API_KEY
+    db.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create tables, seed data, start scheduler."""
@@ -41,13 +67,10 @@ async def lifespan(app: FastAPI):
     create_tables()
     run_seeds()
 
-    # Set initial API key if dashboard_api_key is empty
+    # Fail-closed: guarantee a dashboard API key exists before serving anything.
     db = SessionLocal()
     try:
-        setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
-        if setting and not setting.value:
-            setting.value = INITIAL_API_KEY
-            db.commit()
+        _ensure_dashboard_key(db)
     finally:
         db.close()
 
@@ -169,16 +192,17 @@ async def api_key_auth(request: Request, call_next):
         except _PoolTimeout:
             logger.warning("DB pool exhausted while authenticating %s", request.url.path)
             return _pool_busy_response()
-        expected = setting.value if setting else INITIAL_API_KEY
-        # First-run: no key configured → allow everything
+        expected = (setting.value if setting else None) or INITIAL_API_KEY
+        # Fail-closed: an empty key must NEVER grant access. Startup guarantees a
+        # key via _ensure_dashboard_key, so reaching here empty means a botched
+        # restore or a misconfigured deployment — reject instead of opening up.
         if not expected:
-            # WARNING-level so operators see this in logs when they shouldn't (e.g.,
-            # dashboard_api_key setting cleared by a botched DB restore).
-            logger.warning(
-                "api key BYPASS (first-run mode): path=%s — dashboard_api_key setting is empty",
+            logger.error(
+                "api key BLOCKED (no dashboard_api_key configured): path=%s — "
+                "refusing to serve without authentication",
                 request.url.path,
             )
-            return await call_next(request)
+            return JSONResponse(status_code=401, content={"detail": "No API key configured"})
         # Key configured → require match (timing-safe compare)
         if not api_key:
             return JSONResponse(status_code=401, content={"detail": "API key required"})
@@ -261,9 +285,10 @@ async def verify_api_key(body: dict, request: Request):
     db = SessionLocal()
     try:
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
-        expected = setting.value if setting else INITIAL_API_KEY
+        expected = (setting.value if setting else None) or INITIAL_API_KEY
         if not expected:
-            return {"ok": True, "first_run": True}
+            # Fail-closed: no key configured. Shouldn't happen (startup persists one).
+            return {"ok": False, "first_run": False, "detail": "No API key configured"}
         if not api_key or not _hmac.compare_digest(api_key, expected):
             _auth_record_failure(request)
             raise HTTPException(status_code=401, detail="Invalid API key")
@@ -286,20 +311,28 @@ async def set_session(body: dict, response: _Response, request: Request):
     db = SessionLocal()
     try:
         setting = db.query(Setting).filter(Setting.key == "dashboard_api_key").first()
-        expected = setting.value if setting else INITIAL_API_KEY
-        if expected and (not api_key or not _hmac.compare_digest(api_key, expected)):
+        expected = (setting.value if setting else None) or INITIAL_API_KEY
+        if not expected:
+            # Fail-closed: no key configured. Shouldn't happen (startup persists one).
+            raise HTTPException(status_code=503, detail="No API key configured")
+        if not api_key or not _hmac.compare_digest(api_key, expected):
             _auth_record_failure(request)
             raise HTTPException(status_code=401, detail="Invalid API key")
         _auth_clear_failures(request)
-        # First-run (no key configured) is OK - set cookie to empty, middleware will allow
-        cookie_value = api_key or ""
+        cookie_value = api_key
+        # Mark the cookie Secure whenever the client reached us over HTTPS, so a
+        # deployment exposed via a TLS-terminating proxy doesn't leak the session
+        # cookie in cleartext. Localhost HTTP keeps Secure off for compatibility.
+        secure = request.url.scheme == "https" or request.headers.get(
+            "x-forwarded-proto", ""
+        ).lower() == "https"
         response.set_cookie(
             key="jn_session",
             value=cookie_value,
             httponly=True,
             samesite="strict",
             max_age=60 * 60 * 24 * 30,  # 30 days
-            secure=False,  # set True when deployed over HTTPS
+            secure=secure,
         )
         return {"ok": True}
     finally:

@@ -41,16 +41,7 @@ html, body {
   <div class="header">
     <h1>{{ header.name }}</h1>
     <div class="contact">
-      {% set parts = [] %}
-      {% for item in (header.contact_items or []) %}
-        {% if item.url %}
-          {% set href = item.url if (item.url.startswith('http') or item.url.startswith('mailto')) else 'https://' ~ item.url %}
-          {% set _ = parts.append('<a href="' ~ href ~ '">' ~ item.text ~ '</a>') %}
-        {% else %}
-          {% set _ = parts.append(item.text) %}
-        {% endif %}
-      {% endfor %}
-      {{ parts | join('<span class="sep">|</span>') }}
+      {{ header.contact_items | contact_links('<span class="sep">|</span>') }}
     </div>
   </div>
   {% endif %}

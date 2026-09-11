@@ -18,9 +18,12 @@ def _template_names():
 def _render(name, header):
     from jinja2 import Environment, FileSystemLoader
     from markupsafe import Markup
-    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR / name)))
-    # the real renderer's only custom filter (routes_resumes._render_html)
+    from backend.api.routes_resumes import _contact_links, _safe_href
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR / name)), autoescape=True)
+    # the real renderer's custom filters (routes_resumes._render_html)
     env.filters["bold"] = lambda text: Markup(re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text or ""))
+    env.filters["contact_links"] = _contact_links
+    env.filters["safe_href"] = _safe_href
     return env.get_template("template.html.j2").render(
         header=header, summary="A summary.", experience=[], skills={},
         education=[], projects=[], publications=[],

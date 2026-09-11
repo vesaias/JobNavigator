@@ -197,16 +197,7 @@ ul.bullets li {
     <h1>{{ header.name }}</h1>
     {% if header.title %}<div class="title-line">{{ header.title }}</div>{% endif %}
     <div class="contact">
-      {% set contact_parts = [] %}
-      {% for item in (header.contact_items or []) %}
-        {% if item.url %}
-          {% set href = item.url if (item.url.startswith('http') or item.url.startswith('mailto')) else 'https://' ~ item.url %}
-          {% set _ = contact_parts.append('<a href="' ~ href ~ '">' ~ item.text ~ '</a>') %}
-        {% else %}
-          {% set _ = contact_parts.append(item.text) %}
-        {% endif %}
-      {% endfor %}
-      {{ contact_parts | join('<span class="sep">&middot;</span>') }}
+      {{ header.contact_items | contact_links('<span class="sep">&middot;</span>') }}
     </div>
   </div>
   {% endif %}
@@ -284,7 +275,7 @@ ul.bullets li {
     {% for project in projects %}
     <div class="entry">
       <div class="entry-primary">{{ project.name or project.title }}</div>
-      {% if project.url %}<div class="entry-url"><a href="{{ project.url }}">{{ project.url }}</a></div>{% endif %}
+      {% if project.url %}<div class="entry-url"><a href="{{ project.url | safe_href }}">{{ project.url }}</a></div>{% endif %}
       {% if project.description %}<div class="entry-description">{{ project.description }}</div>{% endif %}
       {% if project.bullets %}
       <ul class="bullets">

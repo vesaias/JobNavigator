@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from backend.models.db import get_db, Company, Job, Application, Setting, ScrapeLog, is_acknowledged
+from backend.scraper._shared.url_safety import assert_public_http_url, UnsafeURLError
 
 logger = logging.getLogger("jobnavigator.companies")
 
@@ -470,6 +471,15 @@ async def test_scrape_company(company_id: str, db: Session = Depends(get_db)):
                 continue
             page = None
             try:
+                # SSRF gate: refuse to navigate/fetch a non-public destination.
+                # Phenom's `POST|…|…` format validates its endpoint inside scrape().
+                from backend.scraper.ats.phenom import is_phenom as _is_phenom
+                if not _is_phenom(target_url):
+                    try:
+                        assert_public_http_url(target_url)
+                    except UnsafeURLError as e:
+                        urls_scraped.append(f"{target_url[:80]}... (unsafe URL: {e})")
+                        continue
                 # HTTP-based scrapers (no Playwright needed)
                 if _is_phenom_post(target_url):
                     jobs, rejected = await _scrape_phenom(target_url, debug=True)

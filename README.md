@@ -123,7 +123,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Open `http://localhost`. On first run sign in with a blank key, then set one in Settings › Advanced. The previous interface is at `/classic`.
+Before the first start, generate a strong dashboard key (`openssl rand -hex 32`) and put it after `INITIAL_API_KEY=` in `.env` without spaces or quotes. JobNavigator now fails closed when neither an existing key nor `INITIAL_API_KEY` is available. Then open `http://localhost`, sign in with that key, and optionally rotate it in Settings › Advanced. The previous interface is at `/classic`.
 
 To use a ChatGPT subscription through Codex CLI, authenticate once after the containers start:
 

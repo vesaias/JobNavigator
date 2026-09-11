@@ -14,7 +14,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from backend.models.db import get_db, CoverLetter, Resume, Job, Setting, Persona, TracerLink, TracerClickEvent, SessionLocal
 from backend.api._input import str_field, uuid_filter
 from backend.job_monitor import launch_background, JobAlreadyRunningError
-from backend.api.routes_resumes import _get_browser, _rewrite_urls_with_tracers, _resolve_tailoring_jd  # shared with resumes
+from backend.api.routes_resumes import _get_browser, _new_pdf_page, _rewrite_urls_with_tracers, _resolve_tailoring_jd  # shared with resumes
 
 logger = logging.getLogger("jobnavigator.cover_letters")
 
@@ -66,11 +66,15 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     # directory listing, the request name is only a key (R4-T5-01).
     template_dir = resolve_template_dir(template_name, TEMPLATES_DIR)
 
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    # autoescape=True: cover-letter fields (name, paragraphs, recipient, …) are
+    # user- or LLM-controlled; `bold`/`contact_links` return Markup and stay intact.
+    env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
     env.filters['bold'] = lambda text: Markup(
         _re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>',
                 _re.sub(r'[<>&]', lambda m: {'<': '&lt;', '>': '&gt;', '&': '&amp;'}[m.group()], text or ''))
     )
+    from backend.api.routes_resumes import _contact_links
+    env.filters['contact_links'] = _contact_links
     template = env.get_template("template.html.j2")
 
     fonts = _load_template_fonts(str(template_dir / "fonts"))
@@ -269,16 +273,34 @@ async def export_pdf(cl_id: str, db: Session = Depends(get_db)):
 
     try:
         browser = await _get_browser()
-        page = await browser.new_page()
+    except Exception as e:
+        logger.error(f"Cover-letter PDF browser launch failed: {e}")
+        raise HTTPException(500, f"PDF generation failed: {str(e)}")
+
+    page = None
+    pdf_ctx = None
+    try:
+        page = await _new_pdf_page(browser)
+        pdf_ctx = getattr(page, "_pdf_ctx", None)
         await page.set_content(html, wait_until="networkidle")
         pdf_bytes = await page.pdf(
             format=paper_format, print_background=True,
             margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
         )
-        await page.close()
     except Exception as e:
         logger.error(f"Cover-letter PDF generation failed: {e}")
         raise HTTPException(500, f"PDF generation failed: {str(e)}")
+    finally:
+        if page is not None:
+            try:
+                await page.close()
+            except Exception:
+                pass
+        if pdf_ctx is not None:
+            try:
+                await pdf_ctx.close()
+            except Exception:
+                pass
 
     # Filename: {Name}_{Type}_CoverLetter_{number}.pdf
     header_name = (cl.json_data or {}).get("header", {}).get("name", "CoverLetter").replace(" ", "")

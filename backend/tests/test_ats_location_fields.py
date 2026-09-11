@@ -144,7 +144,12 @@ async def test_workday_description_fetch_fills_in_the_other_sites():
 async def test_phenom_reads_multi_location():
     payload = load("phenom.json")
     raw = 'POST|https://careers.circle.com/widgets|{"ddoKey":"refineSearch"}'
-    with patch("httpx.AsyncClient", return_value=_client(payload)):
+    resp = _response(payload)
+    # `scrape` now pins the endpoint through safe_post (SSRF-hardened): the
+    # preflight DNS gate is stubbed and the pinned POST returns the canned body.
+    # Both names are imported inside scrape(), so patch the source module.
+    with patch("backend.scraper._shared.url_safety.assert_public_http_url"), \
+         patch("backend.scraper._shared.url_safety.safe_post", new=AsyncMock(return_value=resp)):
         from backend.scraper.ats.phenom import scrape
         jobs = await scrape(raw)
 

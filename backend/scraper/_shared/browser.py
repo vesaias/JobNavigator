@@ -48,6 +48,10 @@ async def _new_page(browser, viewport=None):
         timezone_id="America/New_York",
     )
     page = await ctx.new_page()
+    # Install the SSRF guard on every scraper page, including fixed-source pages:
+    # job links and redirects extracted from public pages are still untrusted.
+    from backend.scraper._shared.url_safety import setup_ssrf_route_block
+    await setup_ssrf_route_block(page)
     # Hide webdriver flag
     await page.add_init_script("""
         Object.defineProperty(navigator, 'webdriver', {get: () => undefined});

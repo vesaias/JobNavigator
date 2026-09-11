@@ -354,9 +354,7 @@
 
   // --- structured autofill runner + floating button ---
   const STRUCTURED_TOGGLE_KEY = 'structuredAutofillEnabled';
-  const STRUCTURED_TRIGGER_KEY = 'structuredAutofillTrigger';
   let _host = null;
-  let _trigger = 'click';   // set from extension storage in initStructured
   let _els = null, _undoSnapshot = null, _started = false;
 
   function looksLikeApplication() {
@@ -475,7 +473,7 @@
     if (!_host) {
       _host = document.createElement('div');
       _host.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:2147483647;';
-      const shadow = _host.attachShadow({ mode: 'open' });
+      const shadow = _host.attachShadow({ mode: 'closed' });
       const style = document.createElement('style'); style.textContent = PILL_CSS;
       const row = document.createElement('div'); row.className = 'row';
       row.innerHTML =
@@ -508,17 +506,19 @@
     }
   }
 
-  async function onFillClick() {
+  async function onFillClick(event) {
+    // Only a trusted, human-initiated click may fill the form. A synthetic
+    // `element.click()` from a hostile page carries isTrusted=false and would
+    // otherwise let it harvest the persona with no user gesture.
+    if (!event || event.isTrusted !== true) return;
     if (_els && _els.pill.disabled) return;
     _setState('filling', { done: 0, total: _fieldCount() });
     const r = await runFill((done, total) => _setState('filling', { done, total }));
     _setState('done', { filled: r.filled.length, total: r.total });
   }
-  function onUndoClick() { undo(_undoSnapshot); _setState('idle'); }
-
-  async function autoFill() {
-    const r = await runFill();
-    mountButton({ filled: r.filled.length, total: r.total });
+  function onUndoClick(event) {
+    if (!event || event.isTrusted !== true) return;
+    undo(_undoSnapshot); _setState('idle');
   }
 
   let _cfgCache; let _cfgDone = false;
@@ -537,16 +537,16 @@
     const hasFillable = buildPlan(discoverFields(), config).some(p => p.action === 'fill' || p.action === 'combobox');
     if (!hasFillable) return false;
     _started = true;
-    // 'auto' fills on load then shows the button in its done/Undo state; 'click'
-    // shows the idle button and fills on click. ('off' never reaches here.)
-    if (_trigger === 'auto') autoFill(); else mountButton();
+    // Autofill ALWAYS requires an explicit user click. The old 'auto' mode filled
+    // on page load, which let a hostile page with plausible field labels harvest
+    // the persona (email, phone, demographics) with no user interaction. Removed.
+    mountButton();
     return true;
   }
 
   function initStructured() {
-    chrome.storage.sync.get([STRUCTURED_TOGGLE_KEY, STRUCTURED_TRIGGER_KEY], (cfg) => {
+    chrome.storage.sync.get([STRUCTURED_TOGGLE_KEY], (cfg) => {
       if (!cfg[STRUCTURED_TOGGLE_KEY]) return;     // feature off
-      _trigger = cfg[STRUCTURED_TRIGGER_KEY] === 'auto' ? 'auto' : 'click';
       tryMount();
       if (_host) return;
       // SPA application forms (Oracle/Workday/Ashby) render after page load, so a
@@ -569,13 +569,12 @@
   if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', initStructured);
   else initStructured();
 
-  // React to the popup toggling the mode (Off / On click / Auto) without needing
-  // a page reload: mount the button when enabled, remove it when turned Off.
+  // React to the popup toggling Off / On click without needing a page reload:
+  // mount the button when enabled, remove it when switched Off.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;
-    if (!changes[STRUCTURED_TOGGLE_KEY] && !changes[STRUCTURED_TRIGGER_KEY]) return;
-    chrome.storage.sync.get([STRUCTURED_TOGGLE_KEY, STRUCTURED_TRIGGER_KEY], (cfg) => {
-      _trigger = cfg[STRUCTURED_TRIGGER_KEY] === 'auto' ? 'auto' : 'click';
+    if (!changes[STRUCTURED_TOGGLE_KEY]) return;
+    chrome.storage.sync.get([STRUCTURED_TOGGLE_KEY], (cfg) => {
       if (!cfg[STRUCTURED_TOGGLE_KEY]) { if (_host) { _host.remove(); _host = null; } _els = null; _started = false; return; }
       tryMount();
     });

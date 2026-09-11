@@ -75,6 +75,16 @@ def test_preview_is_untouched_when_tracing_is_off(test_db):
     assert test_db.query(TracerLink).count() == 0
 
 
+def test_preview_has_restrictive_csp(test_db):
+    _setup(test_db, enabled="false")
+    response = preview_resume(RESUME_ID, db=test_db)
+    csp = response.headers["content-security-policy"]
+    assert "default-src 'none'" in csp
+    assert "base-uri 'none'" in csp
+    assert "form-action 'none'" in csp
+    assert "script-src" not in csp  # inherits default-src 'none'
+
+
 def test_preview_still_404s_for_a_missing_resume(test_db):
     from fastapi import HTTPException
     _setup(test_db)

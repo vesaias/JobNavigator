@@ -126,10 +126,33 @@ const state = {
 };
 let _sendT, _saveT;
 
+// The API key is sent as a header; a cleartext HTTP server on a remote host would
+// leak it. HTTPS is always fine; plain HTTP is only allowed on loopback.
+function isSafeServerUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'https:') return true;
+    if (u.protocol === 'http:') {
+      return u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '::1';
+    }
+    return false;
+  } catch { return false; }
+}
+
 async function cfg() {
-  const s = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
-  state.serverUrl = s.serverUrl || 'http://localhost';
-  state.apiKey = s.apiKey || '';
+  // Migrate any legacy synced apiKey into local storage once, then drop the
+  // synced copy so the secret stops mirroring to the Chrome account.
+  const legacy = await chrome.storage.sync.get(['apiKey']);
+  if (legacy.apiKey) {
+    const existing = await chrome.storage.local.get(['apiKey']);
+    if (!existing.apiKey) await chrome.storage.local.set({ apiKey: legacy.apiKey });
+    await chrome.storage.sync.remove('apiKey');
+  }
+  const sync = await chrome.storage.sync.get(['serverUrl']);
+  const local = await chrome.storage.local.get(['apiKey']);
+  const candidate = sync.serverUrl || 'http://localhost';
+  state.serverUrl = isSafeServerUrl(candidate) ? candidate : 'http://localhost';
+  state.apiKey = local.apiKey || '';
   return { serverUrl: state.serverUrl, apiKey: state.apiKey };
 }
 
@@ -253,8 +276,14 @@ async function doApplied() {
 
 async function checkConnection() {
   $('connDot').classList.remove('bad'); $('connTx').textContent = 'Checking…';
+  const candidate = $('serverUrl').value.trim() || state.serverUrl;
+  if (!isSafeServerUrl(candidate)) {
+    $('connDot').classList.add('bad');
+    $('connTx').textContent = 'HTTPS required for remote servers';
+    return;
+  }
   try {
-    const resp = await fetch(`${$('serverUrl').value.trim() || state.serverUrl}/api/autofill/config`,
+    const resp = await fetch(`${candidate}/api/autofill/config`,
       { headers: { 'X-API-Key': $('apiKey').value.trim() || state.apiKey } });
     if (resp.status === 401) { $('connDot').classList.add('bad'); $('connTx').textContent = 'API key rejected'; }
     else if (resp.ok) { $('connDot').classList.remove('bad'); $('connTx').textContent = `Connected · v${VERSION}`; }
@@ -269,12 +298,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('apiKey').value = state.apiKey;
 
   // storage-backed feature state
-  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'structuredAutofillTrigger', 'theme', 'previewUnblock']);
+  const st = await chrome.storage.sync.get(['linkedinCapture', 'autofillEnabled', 'autofillDefaultLength', 'structuredAutofillEnabled', 'theme', 'previewUnblock']);
   state.li = !!st.linkedinCapture;
   state.af = !!st.autofillEnabled;
   state.pv = st.previewUnblock !== false;   // on until switched off
   state.len = Number(st.autofillDefaultLength) > 0 ? Number(st.autofillDefaultLength) : 250;
-  state.atsMode = !st.structuredAutofillEnabled ? 'off' : (st.structuredAutofillTrigger === 'auto' ? 'auto' : 'click');
+  state.atsMode = st.structuredAutofillEnabled ? 'click' : 'off';
   state.theme = ['light', 'dark', 'system'].includes(st.theme) ? st.theme : 'system';
   applyTheme(state.theme);
   $('lenCustom').value = String(state.len);
@@ -355,7 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.seg-opt[data-mode]').forEach(o => o.onclick = () => {
     state.atsMode = o.dataset.mode;
     if (state.atsMode === 'off') chrome.storage.sync.set({ structuredAutofillEnabled: false });
-    else chrome.storage.sync.set({ structuredAutofillEnabled: true, structuredAutofillTrigger: state.atsMode });
+    else chrome.storage.sync.set({ structuredAutofillEnabled: true });
     render();
   });
 
@@ -368,7 +397,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('serverUrl').onchange = checkConnection;
   $('saveSettings').onclick = async () => {
     state.serverUrl = $('serverUrl').value.trim(); state.apiKey = $('apiKey').value.trim();
-    await chrome.storage.sync.set({ serverUrl: state.serverUrl, apiKey: state.apiKey });
+    if (!isSafeServerUrl(state.serverUrl)) {
+      state.lastError = 'Use https:// for a remote server, or http://localhost / http://127.0.0.1.';
+      render(); return;
+    }
+    await chrome.storage.sync.set({ serverUrl: state.serverUrl });
+    await chrome.storage.local.set({ apiKey: state.apiKey });
     await checkConnection();
     state.screen = 'capture'; render();
   };

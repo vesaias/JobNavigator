@@ -7,6 +7,12 @@ from unittest.mock import AsyncMock, MagicMock
 # Force SQLite for tests before any imports that touch the engine
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
+# The dashboard API key the test client authenticates with by default. This lets
+# legacy tests keep an empty DB setting while exercising the explicit
+# INITIAL_API_KEY bootstrap path rather than the removed blank-key bypass.
+TEST_API_KEY = "test-api-key"
+os.environ.setdefault("INITIAL_API_KEY", TEST_API_KEY)
+
 
 def pytest_configure(config):
     """Register markers here too — the container runs pytest from /app, where the
@@ -138,9 +144,13 @@ def test_db():
         test_engine.dispose()
 
 
-@pytest.fixture
-def api_client(test_db, monkeypatch):
-    """FastAPI TestClient for endpoint tests; test_db already rebound SessionLocal, so this only stubs lifespan deps and the scheduler."""
+def _build_test_client(test_db, monkeypatch, default_headers):
+    """Construct a TestClient with lifespan/scheduler stubbed and get_db overridden.
+
+    ``default_headers`` is applied to every request (or None for an unauthenticated
+    client). Shared by ``api_client`` and ``anon_client`` so the negative auth path
+    is exercised against the same setup as the happy path.
+    """
     from fastapi.testclient import TestClient
 
     # Pre-import backend.main + heavy modules so lazy imports capture bindings before monkeypatches.
@@ -152,6 +162,10 @@ def api_client(test_db, monkeypatch):
     monkeypatch.setattr(main_mod, "create_tables", lambda: None)
     monkeypatch.setattr(main_mod, "run_seeds", lambda: None)
     monkeypatch.setattr(main_mod, "cleanup_stale_runs", lambda: None)
+    # Fail-closed auth: don't let startup auto-generate a key against the test DB.
+    # (The fail-closed bootstrap itself is unit-tested directly in
+    # test_security_hardening.py against a real DB session.)
+    monkeypatch.setattr(main_mod, "_ensure_dashboard_key", lambda db: None)
     # Prevent the real scheduler from booting.
     import backend.scheduler as sched_mod
     monkeypatch.setattr(sched_mod, "configure_scheduler", lambda: None)
@@ -173,10 +187,31 @@ def api_client(test_db, monkeypatch):
     from backend.main import app
     from backend.models.db import get_db
     app.dependency_overrides[get_db] = override_get_db
+    return TestClient(app, headers=default_headers)
 
+
+@pytest.fixture
+def api_client(test_db, monkeypatch):
+    """Authenticated FastAPI TestClient — every request carries the default X-API-Key."""
+    from backend.main import app
+    from backend.models.db import get_db
+    client = _build_test_client(test_db, monkeypatch, {"X-API-Key": TEST_API_KEY})
     try:
-        with TestClient(app) as client:
-            yield client
+        with client as c:
+            yield c
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def anon_client(test_db, monkeypatch):
+    """Unauthenticated FastAPI TestClient — no default header, for negative auth tests."""
+    from backend.main import app
+    from backend.models.db import get_db
+    client = _build_test_client(test_db, monkeypatch, None)
+    try:
+        with client as c:
+            yield c
     finally:
         app.dependency_overrides.pop(get_db, None)
 

@@ -268,7 +268,10 @@ async def _card_location(el, title: str):
 # ── Route blocking ───────────────────────────────────────────────────────────
 
 async def _setup_route_blocks(page):
-    """Block unwanted endpoints (e.g. eightfold similar_positions widget)."""
+    """Block unwanted endpoints such as the Eightfold similar-positions widget.
+
+    The global SSRF route guard is already installed by ``_new_page``.
+    """
     async def _block_handler(route):
         logger.info(f"Blocked request: {route.request.url}")
         await route.abort()
