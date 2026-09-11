@@ -180,3 +180,6 @@ DECISIONS.md
 
 # Local-only compose port override (see the file header)
 docker-compose.override.yml
+
+# local backlog
+BACKLOG.md
