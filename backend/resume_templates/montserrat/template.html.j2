@@ -11,7 +11,17 @@
 
 @page {
   size: {{ 'letter' if page_format == 'letter' else 'A4' }};
-  margin: 0;
+  /* .page is one continuous flowing block for the whole resume, not one div per
+     physical page, so its own top/bottom padding only ever wraps the very start and
+     end of that flow -- page 2+ got none of it and sat flush against the physical
+     edge. @page margin is the only thing Chromium re-applies on every page it
+     paginates into, so the vertical breathing room lives here instead; .page keeps
+     its side padding (that repeats per page on its own, since the box is centered at
+     a fixed width) and drops its print-mode top/bottom padding to match (below).
+     Bottom is 0 unless a job-linked tailored PDF footer needs its own reserved band
+     (see _render_html's footer_reserved_in) -- content must stop above that band, not
+     just the footer's paint step, or a wrapped bullet/entry lands on top of it. */
+  margin: 0.5in 0 {{ footer_reserved_in | default(0) }}in 0;
 }
 
 html, body {
@@ -36,9 +46,13 @@ html, body {
    break, pushing it onto a near-blank second page. None of it paints, so drop it
    when paginating; the HTML preview keeps its bottom gutter. */
 @media print {
-  .page { padding-bottom: 0; }
+  .page { padding-top: 0; padding-bottom: 0; }
   .entry:last-child, .edu-entry:last-child, .skill-line:last-child { margin-bottom: 0; }
   .section-title { break-after: avoid; }
+  /* A wrapped bullet/entry that doesn't fit before a page break was letting Chromium
+     split it mid-line instead of moving it whole to the next page, so its tail
+     fragment painted into the footer's reserved margin band. */
+  ul.bullets li, .entry, .edu-entry { break-inside: avoid; }
 }
 
 /* --- Header --- */

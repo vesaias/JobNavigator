@@ -6,7 +6,7 @@ import { Band, Button, Card, ChoiceCard, ChoiceModal, ChoiceRow, Heading, Header
 import { ago } from '../time'
 import '../theme.css'
 import {
-  EMPTY, SECTION_ORDER, sectionCounts, makeMutators,
+  EMPTY, PERSONA_SECTIONS, sectionCounts, makeMutators,
   SectionShell, SectionEditor, BulletText, DashedAdd, RemoveX, kb,
 } from './ResumeSections'
 
@@ -344,7 +344,7 @@ export default function Persona() {
           <ColumnHead title="Résumé content"
             help="Your full work history, summary, skills and achievements. Used for tailored résumés, cover letters and job scoring." />
           <div className="v2-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 26px 24px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
-            {SECTION_ORDER.map((name) => (
+            {PERSONA_SECTIONS.map((name) => (
               <SectionShell key={name} name={name} count={counts[name]} open={sections.has(name)} onToggle={() => toggleSection(name)}>
                 <SectionEditor name={name} data={resume} setField={setField} mutate={mutate}
                   onError={(msg) => pushToast({ kind: 'error', msg })}

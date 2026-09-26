@@ -9,7 +9,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { scoreTone, kb as uiKb } from '../ui'
 import {
-  DANGEROUS, EMPTY, SECTION_ORDER, sectionCounts, makeMutators, kb as sectionKb,
+  DANGEROUS, EMPTY, SECTION_ORDER, PERSONA_SECTIONS, sectionCounts, makeMutators, kb as sectionKb,
 } from '../screens/ResumeSections'
 import { LENGTHS, STAGE_CLASS } from '../screens/CoverLetters'
 
@@ -84,11 +84,12 @@ describe('DANGEROUS', () => {
 })
 
 describe('EMPTY / SECTION_ORDER', () => {
-  it('SECTION_ORDER lists the seven sections, Header first', () => {
-    expect(SECTION_ORDER).toEqual(['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications'])
+  it('SECTION_ORDER lists content followed by résumé-only Settings', () => {
+    expect(PERSONA_SECTIONS).toEqual(['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications'])
+    expect(SECTION_ORDER).toEqual([...PERSONA_SECTIONS, 'Settings'])
   })
   it('EMPTY carries a slot for every section the order names', () => {
-    for (const name of SECTION_ORDER) expect(EMPTY, name).toHaveProperty(name.toLowerCase())
+    for (const name of PERSONA_SECTIONS) expect(EMPTY, name).toHaveProperty(name.toLowerCase())
   })
   it('EMPTY is the zero state sectionCounts reads as all zeroes', () => {
     expect(sectionCounts(EMPTY)).toEqual({ Experience: 0, Skills: 0, Education: 0, Projects: 0, Publications: 0 })

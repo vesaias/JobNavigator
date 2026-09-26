@@ -4,7 +4,7 @@
 // Real data is looser than the EMPTY skeleton (unknown keys, missing sections). Every mutation
 // goes through mutate(), which deep-clones and writes one path, so unknown keys survive.
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Band, Card, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from '../ui'
+import { Band, Card, Check, DashedAdd, Helper, Input, Label, MoveArrows, RemoveLink, RemoveX, SectionHead, Textarea } from '../ui'
 
 // The résumé sections' add-line IS ui.jsx's DashedAdd (accent ink · 1px dashed
 // --dashadd-border · r6 · 11.5 · h28, `big` = 32/12/500) — re-exported under the
@@ -20,7 +20,8 @@ export const kb = (fn, role = 'button') => ({
   onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) } },
 })
 export const EMPTY = { header: { name: '', contact_items: [] }, summary: '', experience: [], skills: {}, education: [], projects: [], publications: [] }
-export const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications']
+export const SECTION_ORDER = ['Header', 'Summary', 'Experience', 'Skills', 'Education', 'Projects', 'Publications', 'Settings']
+export const PERSONA_SECTIONS = SECTION_ORDER.filter((name) => name !== 'Settings')
 
 // Section counts for the collapsed header, from whichever sections exist.
 export const sectionCounts = (data) => ({
@@ -152,8 +153,16 @@ export function SectionEditor({ name, data, setField, mutate, baseData, emptyNot
     case 'Education': return <EducationEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
     case 'Projects': return <ProjectsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
     case 'Publications': return <PublicationsEditor emptyNote={emptyNote} data={data} setField={setField} mutate={mutate} onRemoved={onRemoved} />
+    case 'Settings': return <SettingsEditor data={data} setField={setField} />
     default: return null
   }
+}
+
+export function SettingsEditor({ data, setField }) {
+  return <div style={{ paddingTop: 10 }}>
+    <Check checked={data.footer_enabled !== false} onChange={(value) => setField('footer_enabled', value)}
+      label="Show footer" title="Show name, job title and company at the bottom of each tailored PDF page." />
+  </div>
 }
 
 export function HeaderEditor({ data, setField, mutate, onRemoved }) {

@@ -261,8 +261,17 @@ def _load_template_fonts(fonts_dir_str: str) -> dict:
     return fonts
 
 
-def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
-    """Render a resume to HTML using its Jinja2 template."""
+def _render_html(json_data: dict, template_name: str, page_format: str, footer_reserved_in: float = 0) -> str:
+    """Render a resume to HTML using its Jinja2 template.
+
+    `footer_reserved_in` sets the template's own `@page` bottom margin (inches), so
+    Chromium's pagination actually leaves that band empty on every physical page
+    instead of only reserving it for Playwright's footerTemplate paint step — a
+    content-box margin of 0 (the default `@page` rule) lets a wrapped bullet/entry
+    lay out flush to the physical page edge, landing on top of a footer drawn there
+    by page.pdf()'s own `margin` option, which does not itself shrink the CSS layout
+    area. 0 (preview, base/freeform PDFs, no footer) keeps the exact current layout.
+    """
     from jinja2 import Environment, FileSystemLoader
 
     allowed = template_paths(TEMPLATES_DIR)
@@ -290,6 +299,7 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
         page_format=page_format,
         fonts_base="",
         fonts=fonts,
+        footer_reserved_in=footer_reserved_in,
     )
     return html
 
@@ -692,6 +702,8 @@ def copy_resume_for_job(body: dict, db: Session = Depends(get_db)):
         raise HTTPException(404, "Job not found")
 
     job_name = f"{job.company} \u2014 {job.title}" if job.company else job.title or ""
+    copy_data = _json.loads(_json.dumps(base.json_data or {}))
+    copy_data.pop("footer_enabled", None)
     copy = Resume(
         name=f"{base.name} \u2192 {job_name}",
         is_base=False,
@@ -699,7 +711,7 @@ def copy_resume_for_job(body: dict, db: Session = Depends(get_db)):
         job_id=job_id,
         template=base.template,
         page_format=base.page_format,
-        json_data=_json.loads(_json.dumps(base.json_data or {})),
+        json_data=copy_data,
     )
     db.add(copy)
     db.commit()
@@ -967,6 +979,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     raise ModelReplyError(UNPARSEABLE_MESSAGE)
 
         tailored_data = _json.loads(_json.dumps(base_data))
+        tailored_data.pop("footer_enabled", None)
         if "summary" in llm_result:
             tailored_data["summary"] = llm_result["summary"]
         if "experience" in llm_result:
@@ -1149,6 +1162,42 @@ def _clear_orphan_tailored_score(db: Session, job_id) -> bool:
     return changed
 
 
+def _tailored_resume_footer_text(resume: "Resume", job: Optional["Job"]) -> str:
+    """"{Candidate Name} - {Job Title} - {Company}" for a PDF footer, or "" when it doesn't apply.
+
+    Only shown for a resume actually tailored against a real Job row (`is_base=False`
+    and `job_id` set) — a base resume or a freeform tailor (no linked Job) has no
+    company/title to print, so no footer. Also "" if any of the three pieces is
+    missing, since a partial footer ("Dana -  - ") would be worse than none. Uses a
+    plain ASCII hyphen so the text can't silently pick up an en/em dash from a
+    copy-pasted title/company.
+    """
+    if not resume or resume.is_base or not resume.job_id or not job:
+        return ""
+    candidate_name = str((resume.json_data or {}).get("header", {}).get("name") or "").strip()
+    job_title = str(job.title or "").strip()
+    company = str(job.company or "").strip()
+    if not (candidate_name and job_title and company):
+        return ""
+    return f"{candidate_name} - {job_title} - {company}"
+
+
+def _footer_html_template(footer_text: str) -> str:
+    """Playwright `footerTemplate` markup: centered, small, light-gray, and confined to
+    the margin box Chromium reserves per physical page — never part of the content
+    flow, so it can't overlap resume text/bullets. Empty text renders no markup at all
+    (an empty footer box would still reserve blank space at the bottom of every page).
+    """
+    if not footer_text:
+        return "<span></span>"
+    from markupsafe import escape
+    safe_text = str(escape(footer_text))
+    return (
+        '<div style="width:100%; font-size:8px; color:#999999; text-align:center; '
+        'font-family:Helvetica,Arial,sans-serif;">' + safe_text + '</div>'
+    )
+
+
 # ── Preview & PDF ───────────────────────────────────────────────────────────
 
 @router.get("/{resume_id}/preview")
@@ -1174,9 +1223,21 @@ async def export_pdf(resume_id: str, template: Optional[str] = None, format: Opt
     fmt = (format or resume.page_format or "letter")
     json_data = resume.json_data or {}
     pdf_data = _rewrite_urls_with_tracers(json_data, str(resume.id), db)
-    html = _render_html(pdf_data, tpl, fmt)
 
     paper_format = "A4" if fmt.lower() == "a4" else "Letter"
+
+    job_for_footer = db.query(Job).filter(Job.id == resume.job_id).first() if resume.job_id else None
+    footer_text = _tailored_resume_footer_text(resume, job_for_footer) if json_data.get("footer_enabled", True) is not False else ""
+    # A nonzero bottom margin gives the footer its own reserved space on every page,
+    # independent of resume content — a page.pdf() footer with a "0" bottom margin
+    # would be clipped/overlapping instead of shown. Left at "0" (no footer) so
+    # base/freeform PDFs keep their exact current layout. The same value is threaded
+    # into the template's own @page margin (below) so Chromium's pagination actually
+    # leaves that band empty, instead of only reserving it for the footer's paint step.
+    bottom_margin_in = 0.4 if footer_text else 0
+    bottom_margin = f"{bottom_margin_in}in" if footer_text else "0"
+
+    html = _render_html(pdf_data, tpl, fmt, footer_reserved_in=bottom_margin_in)
 
     try:
         browser = await _get_browser()
@@ -1185,7 +1246,10 @@ async def export_pdf(resume_id: str, template: Optional[str] = None, format: Opt
         pdf_bytes = await page.pdf(
             format=paper_format,
             print_background=True,
-            margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+            margin={"top": "0", "right": "0", "bottom": bottom_margin, "left": "0"},
+            display_header_footer=bool(footer_text),
+            header_template="<span></span>",
+            footer_template=_footer_html_template(footer_text),
         )
         # Count pages (rough estimate from PDF byte boundaries)
         page_count = pdf_bytes.count(b"/Type /Page") - pdf_bytes.count(b"/Type /Pages")
