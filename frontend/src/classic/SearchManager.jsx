@@ -17,6 +17,12 @@ const SOURCES = [
 // `extension` covers the manual "Save to Job Feed" button (any website).
 const EXTENSION_MODES = ['linkedin_extension', 'extension']
 const isExtensionMode = (mode) => EXTENSION_MODES.includes(mode)
+// Keyword sources have no account-based "recommended" feed: Run/Test are blocked until a term
+// or a URL is set, rather than launching a run that quietly finds nothing.
+const NEEDS_QUERY = ['freehire', 'caribbeanjobs']
+const configError = (s) => (NEEDS_QUERY.includes(s.search_mode)
+  && !(`${s.search_term || ''}`.trim() || `${s.direct_url || ''}`.trim())
+  ? 'needs a search term or a URL' : null)
 
 // Matches backend/countries.py DEFAULT_COUNTRY — jobspy's own alias for the US.
 const DEFAULT_COUNTRY = 'usa'
@@ -30,6 +36,7 @@ const SOURCE_COLORS = {
   linkedin_personal: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
   jobright: 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300',
   freehire: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  caribbeanjobs: 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300',
 }
 
 const DEFAULT_FORM = {
@@ -235,6 +242,7 @@ export default function SearchManager() {
               <option value="linkedin_personal">LinkedIn Personal</option>
               <option value="jobright">Jobright.ai</option>
               <option value="freehire">freehire.me</option>
+              <option value="caribbeanjobs">CaribbeanJobs.com</option>
             </select>
           )}
         </div>
@@ -303,16 +311,36 @@ export default function SearchManager() {
         ) : ed.search_mode === 'freehire' ? (
           <>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Search Term <span className="text-gray-400">(optional — ANDed with the URL as q)</span></label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Search Term <span className="text-gray-400">(required if no URL — ANDed with the URL as q)</span></label>
               <input type="text" value={ed.search_term} onChange={e => setEd({ search_term: e.target.value })}
                 placeholder="e.g. golang backend" className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
               <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Leave blank if your URL already has your filters. A term narrows further, and must appear in the posting text.</p>
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">freehire.me URL <span className="text-gray-400">(optional — its filters are forwarded)</span></label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">freehire.me URL <span className="text-gray-400">(required if no term — its filters are forwarded)</span></label>
               <input type="text" value={ed.direct_url} onChange={e => setEd({ direct_url: e.target.value })}
                 placeholder="https://freehire.me/?role=backend&seniority=senior&countries=us" className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
               <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Paste a search from freehire.me; its filters (role, seniority, countries, collections, posted_within_days…) pass straight through.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Results Wanted</label>
+              <input type="number" value={ed.results_wanted} onChange={e => setEd({ results_wanted: parseInt(e.target.value) || 100 })}
+                min={1} className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+            </div>
+          </>
+        ) : ed.search_mode === 'caribbeanjobs' ? (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Search Term <span className="text-gray-400">(required if no URL — comma-separate alternatives to OR them)</span></label>
+              <input type="text" value={ed.search_term} onChange={e => setEd({ search_term: e.target.value })}
+                placeholder="e.g. software engineer, developer" className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Leave blank if your URL already has your filters. Each comma-separated alternative is searched separately and the results merged, since the board ANDs bare words.</p>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">caribbeanjobs.com URL <span className="text-gray-400">(required if no term — its filters are forwarded)</span></label>
+              <input type="text" value={ed.direct_url} onChange={e => setEd({ direct_url: e.target.value })}
+                placeholder="https://www.caribbeanjobs.com/ShowResults.aspx?Keywords=engineer&Location=123" className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Paste a search from caribbeanjobs.com; its filters (Keywords, Location, Category, job type) pass straight through. Each result's description is read from its own page.</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Results Wanted</label>
@@ -339,7 +367,7 @@ export default function SearchManager() {
               min={1} max={100} className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
           </div>
         )}
-        {ed.search_mode !== 'levels_fyi' && ed.search_mode !== 'linkedin_personal' && ed.search_mode !== 'jobright' && ed.search_mode !== 'freehire' && !isExtensionMode(ed.search_mode) && (
+        {ed.search_mode !== 'levels_fyi' && ed.search_mode !== 'linkedin_personal' && ed.search_mode !== 'jobright' && ed.search_mode !== 'freehire' && ed.search_mode !== 'caribbeanjobs' && !isExtensionMode(ed.search_mode) && (
           <>
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
@@ -493,7 +521,7 @@ export default function SearchManager() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Search Manager</h1>
           <InfoTip title="Search Manager">
             Saved job searches that run on a schedule. Each has a <b>mode</b>: keyword boards (JobSpy),
-            Levels.fyi, LinkedIn Personal, Jobright.ai, freehire.me, plus the two passive Chrome-extension
+            Levels.fyi, LinkedIn Personal, Jobright.ai, freehire.me, CaribbeanJobs.com, plus the two passive Chrome-extension
             captures. Use the <b>flask</b> icon to dry-run (preview + per-job filter diagnostics without
             saving) and <b>Play</b> to run now. Per-search interval, title/company filters, and auto-score
             are configurable.
@@ -738,8 +766,9 @@ export default function SearchManager() {
                     s.search_mode === 'extension' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300' :
                     s.search_mode === 'jobright' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300' :
                     s.search_mode === 'freehire' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' :
+                    s.search_mode === 'caribbeanjobs' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300' :
                     s.search_mode === 'url' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                  }`}>{s.search_mode === 'levels_fyi' ? 'Levels.fyi' : s.search_mode === 'linkedin_personal' ? 'LinkedIn Personal' : s.search_mode === 'linkedin_extension' ? 'Extension LI' : s.search_mode === 'extension' ? 'Extension' : s.search_mode === 'jobright' ? 'Jobright.ai' : s.search_mode === 'freehire' ? 'freehire.me' : s.search_mode === 'keyword' ? 'JobSpy' : s.search_mode}</span>
+                  }`}>{s.search_mode === 'levels_fyi' ? 'Levels.fyi' : s.search_mode === 'linkedin_personal' ? 'LinkedIn Personal' : s.search_mode === 'linkedin_extension' ? 'Extension LI' : s.search_mode === 'extension' ? 'Extension' : s.search_mode === 'jobright' ? 'Jobright.ai' : s.search_mode === 'freehire' ? 'freehire.me' : s.search_mode === 'caribbeanjobs' ? 'CaribbeanJobs.com' : s.search_mode === 'keyword' ? 'JobSpy' : s.search_mode}</span>
                 </div>
                 {editing !== s.id && (
                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -779,15 +808,18 @@ export default function SearchManager() {
                         {s.auto_scoring_depth === 'full' ? 'Full' : 'Light'}
                       </span>
                     )}
+                    {!isExtensionMode(s.search_mode) && configError(s) && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400" title={configError(s)}>{configError(s)}</span>
+                    )}
                     {!isExtensionMode(s.search_mode) && (
-                      <button onClick={() => testSearch(s.id)} disabled={testing === s.id || !['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire'].includes(s.search_mode)}
-                        className="p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 disabled:opacity-40" title="Test Search (dry run)">
+                      <button onClick={() => testSearch(s.id)} disabled={testing === s.id || !!configError(s) || !['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire', 'caribbeanjobs'].includes(s.search_mode)}
+                        className="p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 disabled:opacity-40" title={configError(s) || 'Test Search (dry run)'}>
                         {testing === s.id ? <Loader2 size={16} className="animate-spin" /> : <FlaskConical size={16} />}
                       </button>
                     )}
                     {!isExtensionMode(s.search_mode) && (
-                      <button onClick={() => runSearch(s.id)} disabled={running === s.id}
-                        className="p-1.5 rounded hover:bg-green-50 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400" title="Run Now">
+                      <button onClick={() => runSearch(s.id)} disabled={running === s.id || !!configError(s)}
+                        className="p-1.5 rounded hover:bg-green-50 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 disabled:opacity-40" title={configError(s) || 'Run Now'}>
                         {running === s.id ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
                       </button>
                     )}

@@ -985,7 +985,7 @@ export default function JobFeed() {
                 <div className="flex items-center gap-1 flex-wrap">
                   <span className="text-[10px] text-gray-400 dark:text-gray-500">Source</span>
                   {(sourceList || []).map(src => {
-                    const labels = { direct: 'Direct', extension: 'Extension', jobspy_linkedin: 'LinkedIn', jobspy_indeed: 'Indeed', jobspy_zip_recruiter: 'Zip', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LI Personal', linkedin_extension: 'LI Extension', jobright: 'Jobright', freehire: 'FreeHire', playwright_url: 'Playwright', playwright_direct: 'Career' }
+                    const labels = { direct: 'Direct', extension: 'Extension', jobspy_linkedin: 'LinkedIn', jobspy_indeed: 'Indeed', jobspy_zip_recruiter: 'Zip', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LI Personal', linkedin_extension: 'LI Extension', jobright: 'Jobright', freehire: 'FreeHire', caribbeanjobs: 'CaribbeanJobs', playwright_url: 'Playwright', playwright_direct: 'Career' }
                     return (
                     <button key={src} onClick={() => toggleFilter('source', src)}
                       className={`px-1.5 py-0.5 text-[11px] rounded border ${

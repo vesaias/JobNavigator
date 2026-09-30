@@ -97,7 +97,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 
 | Feature | Description |
 |---------|-------------|
-| **Discovery** | Career pages (Playwright + 11 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, the Chrome extension |
+| **Discovery** | Career pages (Playwright + 11 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, CaribbeanJobs.com, the Chrome extension |
 | **Scoring** | Claude, OpenAI, OpenRouter, Ollama, Claude Code, Codex CLI or Antigravity CLI; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
 | **Résumés** | Structured base résumés, tailoring per job with a review step, 8 PDF templates (drop in your own), tracked links that record opens |
 | **Cover letters** | Generated from the paired résumé and persona; voice and length presets, 8 templates, PDF |

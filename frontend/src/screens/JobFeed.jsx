@@ -90,7 +90,7 @@ const RAIL_BTN = {
 const SOURCE_LABELS = {
   direct: 'Direct', extension: 'Extension', jobspy_linkedin: 'LinkedIn', jobspy_indeed: 'Indeed',
   jobspy_zip_recruiter: 'ZipRecruiter', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LinkedIn Personal',
-  linkedin_extension: 'LinkedIn Extension', jobright: 'Jobright', freehire: 'FreeHire', playwright_url: 'Company careers', playwright_direct: 'Career page',
+  linkedin_extension: 'LinkedIn Extension', jobright: 'Jobright', freehire: 'FreeHire', caribbeanjobs: 'CaribbeanJobs', playwright_url: 'Company careers', playwright_direct: 'Career page',
 }
 const srcLabel = (s) => SOURCE_LABELS[s] || s || ''
 const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'], ['skip', 'Skip'], ['ignored', 'Ignored']]
