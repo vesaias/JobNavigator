@@ -35,6 +35,7 @@ Everything that scores, tailors or writes needs a language model. Choose one pri
 | Ollama | Ollama running on the host with a pulled model, no key | free |
 | Claude Code | a Claude Pro/Max subscription, see below | subscription |
 | Codex CLI | a ChatGPT subscription, see below | subscription |
+| OpenCode Go | a Go subscription key; OpenAI-compatible endpoint, no login | subscription |
 
 Pick the model from the list (or search the provider's catalog under Model catalog). Save.
 
@@ -42,6 +43,7 @@ Pick the model from the list (or search the provider's catalog under Model catal
 
 - Codex CLI: `docker compose exec backend codex login --device-auth`, follow the URL, then `docker compose exec backend codex login status` to confirm. The login persists in the `codex_auth` Docker volume.
 - Claude Code: `docker compose exec backend claude setup-token`, follow the URL and paste the code; it prints a long-lived token. Put it in `.env` as `CLAUDE_CODE_OAUTH_TOKEN=...` and run `docker compose up -d backend` so the container picks it up.
+- OpenCode Go: no container login. It is an OpenAI-compatible endpoint, so just paste the Go API key under **Settings › AI** and pick **OpenCode Go**.
 
 When a plan limit is hit, the call fails over to the fallback provider instead of retrying.
 

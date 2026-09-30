@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import re
+import uuid
 from backend.models.db import SessionLocal, Setting
 
 logger = logging.getLogger("jobnavigator.llm")
@@ -193,7 +194,7 @@ async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
 
 async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 400,
                                    cached_prefix: str | None = None):
-    """Streaming version of call_autofill_llm; claude_api and openai/openrouter stream natively, other providers fall back to a single full-answer chunk."""
+    """Streaming version of call_autofill_llm; claude_api, openai, openrouter and opencode_go stream natively, other providers fall back to a single full-answer chunk."""
     cfg = resolve_llm_config("autofill")
     provider, model, api_key = cfg["provider"], cfg["model"], cfg["api_key"]
     effort = _supported_effort(provider, cfg["effort"])
@@ -204,8 +205,8 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
             yield c
         return
     combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
-    if provider in ("openai", "openrouter"):
-        base = OPENROUTER_BASE_URL if provider == "openrouter" else None
+    if provider in ("openai", "openrouter", "opencode_go"):
+        base = {"openrouter": OPENROUTER_BASE_URL, "opencode_go": OPENCODE_GO_BASE_URL}.get(provider)
         async for c in _stream_openai(combined, system, model, api_key, cap, base, effort):
             yield c
         return
@@ -242,10 +243,25 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # OpenRouter app attribution (lists the app on openrouter.ai/apps); ignored by other endpoints.
 OPENROUTER_HEADERS = {"HTTP-Referer": "https://github.com/vesaias/JobNavigator", "X-Title": "JobNavigator"}
 
+# OpenCode Go is a subscription whose models are served over an HTTP API
+# (https://opencode.ai/zen/go/v1) with a Go API key. Go asks each client to identify itself with
+# its own user agent and to send a stable session id per conversation (`x-opencode-session`) for
+# routing and prompt caching; a missing session id is a 400 MissingSessionID, and a generic SDK
+# user agent is what the docs warn against.
+OPENCODE_GO_BASE_URL = "https://opencode.ai/zen/go/v1"
+OPENCODE_USER_AGENT = "JobNavigator/1.0 (+https://github.com/vesaias/JobNavigator)"
+_OPENCODE_SESSION = str(uuid.uuid4())   # stable for this backend process
+
 
 def _openai_client(api_key: str, base_url: str | None):
     from openai import AsyncOpenAI
-    headers = OPENROUTER_HEADERS if base_url == OPENROUTER_BASE_URL else None
+    if base_url == OPENROUTER_BASE_URL:
+        headers = OPENROUTER_HEADERS
+    elif base_url == OPENCODE_GO_BASE_URL:
+        # Identify as JobNavigator, not the SDK, and send the session id Go routes on.
+        headers = {"User-Agent": OPENCODE_USER_AGENT, "x-opencode-session": _OPENCODE_SESSION}
+    else:
+        headers = None
     return AsyncOpenAI(api_key=api_key, base_url=base_url, default_headers=headers)
 
 
@@ -278,8 +294,14 @@ def _output_cap(provider: str, max_tokens: int, effort: str) -> int:
     """The cap to send. Claude API models reason by default, so they always get
     REASONING_HEADROOM. OpenAI and OpenRouter get it only when an effort is set: with the
     empty default a non-reasoning model such as gpt-4o (16,384 output ceiling) would be
-    sent max_completion_tokens=16,600 and refuse every call. "none" never reasons."""
-    if provider not in _CAPPED_PROVIDERS or effort == "none":
+    sent max_completion_tokens=16,600 and refuse every call. "none" never reasons.
+    opencode_go also reasons by default and its picker has no effort to lower, so it always
+    gets the room too."""
+    if effort == "none":
+        return max_tokens
+    if provider == "opencode_go":
+        return max_tokens + REASONING_HEADROOM
+    if provider not in _CAPPED_PROVIDERS:
         return max_tokens
     if provider != "claude_api" and not effort:
         return max_tokens
@@ -322,6 +344,10 @@ async def _dispatch(provider: str, model: str, api_key: str,
         # One key reaches every vendor's models (model slug is vendor-prefixed).
         return await _call_openai(combined, system, model, api_key, max_tokens,
                                   base_url=OPENROUTER_BASE_URL, effort=effort)
+    elif provider == "opencode_go":
+        # OpenCode Go (subscription) over its OpenAI-compatible endpoint; the model id is bare
+        # (the CLI's `opencode-go/` prefix is a CLI alias, not part of the HTTP API).
+        return await _call_opencode_go(combined, system, model, api_key, max_tokens, effort=effort)
     elif provider == "lmstudio":
         # LM Studio serves an OpenAI-compatible API on :1234; no key (client wants a non-empty string).
         # Override with LMSTUDIO_BASE_URL when the backend is containerized (e.g. http://host.docker.internal:1234/v1).
@@ -745,6 +771,30 @@ async def _call_openai(prompt: str, system: str, model: str, api_key: str, max_t
             "cache_write_tokens": 0,
         },
     }
+
+
+async def _call_opencode_go(prompt: str, system: str, model: str, api_key: str, max_tokens: int,
+                            effort: str = "") -> dict:
+    """OpenCode Go over its OpenAI-compatible HTTP API. A Go API key is required, so a missing
+    key is a config error, not a retry."""
+    try:
+        return await _call_openai(prompt, system, model, api_key, max_tokens,
+                                  base_url=OPENCODE_GO_BASE_URL, effort=effort)
+    except NonRetryableLLMError:
+        raise
+    except Exception as e:
+        status = getattr(e, "status_code", None)
+        body = str(e)
+        if status == 401 or "Missing API key" in body:
+            raise NonRetryableLLMError(
+                "OpenCode Go needs an API key — paste it under Settings › AI") from e
+        if status in (400, 404) and "model" in body.lower():
+            # Go serves only some models on /chat/completions; GPT and Grok use /responses, and
+            # MiniMax and Qwen use the Anthropic /messages API.
+            raise NonRetryableLLMError(
+                f"OpenCode Go does not serve '{model}' on the chat/completions endpoint — pick a "
+                f"model whose endpoint is /chat/completions (GPT, Grok, MiniMax and Qwen use others)") from e
+        raise
 
 
 async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) -> dict:

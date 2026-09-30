@@ -62,7 +62,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI RESUME SCORING                              │
 │                                                                             │
-│   Providers ── Claude API/CLI, Codex CLI, Antigravity CLI, OpenAI,          │
+│   Providers ── Claude API/CLI, Codex CLI, Antigravity CLI, OpenCode Go,     │
 │                OpenRouter, Ollama                                           │
 │   Depths ───── Light (scores only) or Full (report + keyword analysis)      │
 │   Multi ────── Score against multiple resumes, compare fit per role         │
@@ -98,7 +98,7 @@ Scrape career pages and aggregators, score jobs against your résumés with an L
 | Feature | Description |
 |---------|-------------|
 | **Discovery** | Career pages (Playwright + 11 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, the Chrome extension |
-| **Scoring** | Claude, OpenAI, OpenRouter, Ollama, Claude Code, Codex CLI or Antigravity CLI; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
+| **Scoring** | Claude, OpenAI, OpenRouter, Ollama, Claude Code, Codex CLI, Antigravity CLI or OpenCode Go; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
 | **Résumés** | Structured base résumés, tailoring per job with a review step, 8 PDF templates (drop in your own), tracked links that record opens |
 | **Cover letters** | Generated from the paired résumé and persona; voice and length presets, 8 templates, PDF |
 | **Dedup** | URL identity hash (tracking params stripped) plus company + title hash across sources |
@@ -130,6 +130,8 @@ Open `http://localhost`. To build from source instead (or on ARM), use `docker c
 **2. Connect a model**
 
 Any API key goes straight into Settings › AI. A subscription needs one login inside the container first:
+
+OpenCode Go is also a subscription, but it needs no login: it is an OpenAI-compatible endpoint, so paste the Go API key under Settings › AI and pick **OpenCode Go** — no extra image weight.
 
 | Subscription | Once after the containers start | Then pick |
 |---|---|---|
@@ -170,7 +172,7 @@ Install: `chrome://extensions` › Developer mode › Load unpacked › `extensi
 | Frontend | React 18, Vite, Recharts, a token-based design system ([DESIGN-SYSTEM.md](frontend/src/DESIGN-SYSTEM.md)) |
 | Database | PostgreSQL 16 |
 | Infrastructure | Docker Compose, Caddy, nginx |
-| AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI, Codex CLI, Antigravity CLI |
+| AI | Anthropic SDK, OpenAI SDK, Ollama, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode Go endpoint |
 | Extension | Chrome Manifest V3 |
 
 ## Contributing
