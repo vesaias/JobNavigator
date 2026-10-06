@@ -67,6 +67,20 @@ def normalize_country(value) -> Optional[str]:
     return _aliases(member)[0]
 
 
+def indeed_host(value) -> Optional[str]:
+    """The Indeed host of a country ("usa" -> "www.indeed.com", "uk" -> "uk.indeed.com"), or None.
+
+    jobspy's own Indeed scraper builds its base URL from the same property, so a
+    search URL built here reaches the domain a keyword search reaches.
+    """
+    from jobspy.model import Country
+
+    name = normalize_country(value)
+    if name is None:
+        return None
+    return f"{Country.from_string(name).indeed_domain_value[0]}.indeed.com"
+
+
 def country_from_location(location) -> str:
     """Read a country out of free location text, or fall back to DEFAULT_COUNTRY.
 

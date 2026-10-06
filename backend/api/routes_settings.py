@@ -104,6 +104,19 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
     return {"updated": updated, "warnings": warnings}
 
 
+@router.post("/apify/check")
+async def check_apify_key():
+    """Confirm the stored Apify key works, without running a paid actor."""
+    import httpx
+    from backend.scraper.sources.apify import ApifyError, account_name
+    try:
+        return {"ok": True, "username": await account_name()}
+    except ApifyError as e:
+        raise HTTPException(status_code=400, detail=f"Apify: {e}") from e
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Apify is unreachable ({type(e).__name__})") from e
+
+
 @router.get("/defaults")
 def get_defaults():
     """Seeded defaults, so an editor can offer "Reset to default" without hardcoding a second copy of every prompt in the frontend."""

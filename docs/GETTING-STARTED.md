@@ -83,6 +83,7 @@ Turn the company on and press its run button once. The result shows on the row (
 - **Keyword (JobSpy)**: LinkedIn, Indeed, ZipRecruiter and Google in one go. Search term, location, hours old, results wanted, remote, job type. Results are not deduplicated across boards as tightly as the ATS scrapers, so start with a modest results count.
 - **Levels.fyi**, **Jobright.ai**, **freehire.me**: paste a URL from the site with your filters applied.
 - **LinkedIn Personal**: your own LinkedIn session through Playwright. Read the notice in Settings › Integrations › LinkedIn first.
+- **Apify**: paid scrapers from the Apify Store for Indeed, LinkedIn, Glassdoor, and keyword search across every company on Greenhouse, Lever, Ashby and Workday. Put your Apify API token in Settings › Apify and press **Check key**. Apify bills your account for each result, so keep Results wanted low and the run interval long. **The Apify Creator plan does not work:** it cannot run Store actors, and every board fails with `403 public-actor-disabled`. Use the Free plan or a paid plan.
 
 Each search has its own auto-scoring depth, title include/exclude, company include/exclude, minimum score, and a run interval. "Skip active companies" leaves out companies you already scrape directly. Run it once by hand; afterwards the scheduler runs it on its interval.
 

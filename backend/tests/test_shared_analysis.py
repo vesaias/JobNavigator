@@ -96,3 +96,23 @@ async def test_analyze_inline_forwards_db_and_h1b_median(monkeypatch):
     await analyze_inline(FakeJob(), db=fake_db, h1b_median=120000)
     assert captured["h1b_db"] is fake_db
     assert captured["salary_median"] == 120000
+
+
+@pytest.mark.asyncio
+async def test_analyze_inline_extracts_salary_with_the_real_extractor(monkeypatch):
+    """No fake salary function here: a fake with the wrong keyword is how a TypeError hid in this call."""
+    async def no_h1b(job, db=None):
+        job._h1b_median = None
+    monkeypatch.setattr("backend.scraper._shared.analysis.check_job_h1b", no_h1b)
+
+    from backend.scraper._shared.analysis import analyze_inline
+    from backend.models.db import Job
+
+    job = Job(title="Site Reliability Engineer", company="Acme", location="Vancouver, BC",
+              description="Pay: $120,000 - $150,000 a year. Hybrid.")
+    await analyze_inline(job, h1b_median=None)
+    assert (job.salary_min, job.salary_max, job.salary_source) == (120000, 150000, "posting")
+
+    lca = Job(title="Engineer", company="Acme", description="No pay listed.")
+    await analyze_inline(lca, h1b_median=99000)
+    assert (lca.salary_min, lca.salary_source) == (99000, "lca_estimate")

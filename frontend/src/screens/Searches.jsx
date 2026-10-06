@@ -6,6 +6,7 @@ import ConfirmDialog from '../ConfirmDialog'
 import { useSettled, useWarm, NBSP, DASH } from '../hooks'
 import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead, Tag } from '../ui'
 import { BLOCKED_BADGE, SOURCE_BLOCKS } from '../sourceBlocks'
+import { useApifyBoards, boardLabel } from '../apifyBoards'
 import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ const MODES = {
   linkedin_personal: ['LINKEDIN PERSONAL', 'sm-lipersonal'],
   jobright: ['JOBRIGHT.AI', 'sm-jobright'],
   freehire: ['FREEHIRE.ME', 'sm-freehire'],
+  apify: ['APIFY', 'sm-apify'],
   linkedin_extension: ['EXTENSION', 'sm-extension'],
   extension: ['EXTENSION', 'sm-extension'],
 }
@@ -58,13 +60,14 @@ const MODE_OPTIONS = [
   ['linkedin_personal', 'LinkedIn Personal'],
   ['jobright', 'Jobright.ai'],
   ['freehire', 'freehire.me'],
+  ['apify', 'Apify'],
 ]
 // /monitor/active carries every background job; only POST /searches/{id}/run
 // tags its run with job_type 'search_run' (routes_searches.py) — filter on that.
 const isSearchRun = (r) => r?.job_type === 'search_run'
 const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
-const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
+const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire', 'apify']
 
 // A Test run is invisible to the run monitor: `POST /searches/{id}/test` runs the
 // keyword modes inline and the slow ones through a bare asyncio task into a
@@ -101,13 +104,14 @@ const noteFor = (mode) => {
   if (mode === 'keyword') return ['Listings link to the board (LinkedIn, Indeed, ZipRecruiter, Google), not to the company’s own page. The same job found later by a company scrape or the extension is only recognised as a duplicate when company and title match exactly.', 'sm-keyword']
   if (mode === 'levels_fyi') return ['Set your filters on levels.fyi and paste the URL here. The URL contains location, job family, salary and date filters.', 'sm-levels']
   if (mode === 'jobright') return ['Recommendations from your Jobright.ai account. Enter a search term to search instead. Credentials are in Settings › Accounts.', 'sm-jobright']
+  if (mode === 'apify') return ['Runs Apify actors with the API key from Settings › Apify. Apify bills your account for each result: Results wanted caps every board on every run, and Test fetches 20 jobs per board at most.', 'sm-apify']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
 }
 
-// one-line summary of what this search does
-const summaryOf = (s) => {
+// one-line summary of what this search does; `boards` names the Apify boards
+const summaryOf = (s, boards = []) => {
   const last = s.last_run_at ? ` · last run ${ago(s.last_run_at)}` : ''
   const m = s.search_mode
   if (m === 'linkedin_extension') return 'Passive capture on linkedin.com/jobs/collections/* · title filters apply on import'
@@ -131,6 +135,12 @@ const summaryOf = (s) => {
     if (s.search_term) bits.push(`“${s.search_term}”`)
     if (s.direct_url) bits.push(short(s.direct_url))
     return (bits.join(' · ') || 'freehire.me') + last
+  }
+  if (m === 'apify') {
+    const bits = [`“${s.search_term || ''}”`]
+    if (s.location) bits.push(s.location)
+    bits.push((s.sources || []).map((k) => boardLabel(boards, k)).join(', ') || 'no board')
+    return bits.join(' · ') + last
   }
   return `${short(s.direct_url) || 'no URL'}${last}`
 }
@@ -193,9 +203,9 @@ const toPayload = (d) => {
     auto_scoring_depth: d.auto_scoring_depth,
     run_interval_minutes: clamp(d.run_interval_minutes, 'run_interval_minutes') ?? 0,
   }
-  // location and country are keyword-search fields only — sending them for
-  // levels_fyi / jobright / freehire / extension searches means nothing.
-  if (d.search_mode === 'keyword') {
+  // location and country are keyword- and Apify-search fields only — sending them
+  // for levels_fyi / jobright / freehire / extension searches means nothing.
+  if (d.search_mode === 'keyword' || d.search_mode === 'apify') {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
@@ -251,6 +261,13 @@ function ConfigForm({ d, set }) {
   const m = d.search_mode
   const ext = isExt(m)
   const countries = useCountries()
+  const apifyBoards = useApifyBoards()
+  // The board list can land after the user picks the Apify mode: a board-less Apify draft gets the default then.
+  // Keyed on the list only, so a board the user unticks later stays unticked.
+  useEffect(() => {
+    if (m === 'apify' && apifyBoards.length && !d.sources.length) set({ sources: [apifyBoards[0].value] })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apifyBoards])
   const toggleSrc = (id) => set({ sources: d.sources.includes(id) ? d.sources.filter((x) => x !== id) : [...d.sources, id] })
   const note = noteFor(m)
 
@@ -265,6 +282,7 @@ function ConfigForm({ d, set }) {
       if (v === 'linkedin_personal') patch.sources = ['recommended', 'top-applicant']
       else if (v === 'jobright') patch.sources = ['recommended']
       else if (v === 'keyword') patch.sources = ['linkedin', 'indeed', 'zip_recruiter', 'google']
+      else if (v === 'apify') patch.sources = apifyBoards.slice(0, 1).map((b) => b.value)
       set(patch)
     }} />)
   }
@@ -301,6 +319,17 @@ function ConfigForm({ d, set }) {
         sub="Role, seniority, countries and posting age are taken from the URL as is" />,
       <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
+  } else if (m === 'apify') {
+    fields.push(
+      <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. technical program manager" />,
+      <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Austin"
+        sub="A city or a region. Empty = the whole country." />,
+      <Cell key="ctry" label="Country" value={d.country} options={countries} onChange={(v) => set({ country: v })} />,
+      <Cell key="rem" label="Remote" value={d.is_remote} options={[['', 'Any'], ['true', 'Remote only']]} onChange={(v) => set({ is_remote: v })} />,
+      <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })}
+        sub="Rounded up to the steps of each board (see Boards)" />,
+      <Cell key="rw" label="Results wanted · 1–500 per board" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+    )
   }
 
   return (
@@ -317,6 +346,14 @@ function ConfigForm({ d, set }) {
           {SOURCES.map(([id, label]) => <Chip key={id} on={d.sources.includes(id)} label={label} badge={SOURCE_BLOCKS[id] && BLOCKED_BADGE} onClick={() => toggleSrc(id)} />)}
           {/* Visible text, not a hover title, so keyboard and screen-reader users get the reason too. */}
           <Helper style={{ flexBasis: '100%' }}>{BLOCKED_BADGE}: {Object.values(SOURCE_BLOCKS).join(' ')}</Helper>
+        </div>
+      )}
+      {m === 'apify' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+          <Label style={{ marginRight: 3 }}>Boards</Label>
+          {apifyBoards.map((b) => <Chip key={b.value} on={d.sources.includes(b.value)} label={b.label} onClick={() => toggleSrc(b.value)} />)}
+          <Helper>Each board is a separate Apify run</Helper>
+          {apifyBoards.filter((b) => d.sources.includes(b.value)).map((b) => <Helper key={b.value} size="xs" style={{ flexBasis: '100%' }}>{b.label}: {b.hint}</Helper>)}
         </div>
       )}
       {m === 'linkedin_personal' && (
@@ -367,6 +404,7 @@ function ConfigForm({ d, set }) {
 // ── main screen ──────────────────────────────────────────────────────────────
 export default function Searches() {
   const navigate = useNavigate()
+  const apifyBoards = useApifyBoards()
   const [searches, setSearches] = useState([])
   const [downMap, setDownMap] = useState({})
   const [running, setRunning] = useState({})
@@ -661,7 +699,7 @@ export default function Searches() {
           const isOpen = editing === s.id
           const testBlocked = !!testingId && testingId !== s.id
           const mutedWarn = mutedWarnOf(s)
-          const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (warn || mutedWarn || summaryOf(s))
+          const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (warn || mutedWarn || summaryOf(s, apifyBoards))
           const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
           return (
             /* Same card hover as Résumés/Cover Letters, suppressed while open; a warned
@@ -791,6 +829,7 @@ export default function Searches() {
 
 // ── test-run modal ───────────────────────────────────────────────────────────
 function TestModal({ test, tab, setTab, onClose }) {
+  const apifyBoards = useApifyBoards()
   const d = test.data || {}
   const jobs = d.jobs || []
   const kept = jobs.filter((j) => j.kept)
@@ -834,6 +873,8 @@ function TestModal({ test, tab, setTab, onClose }) {
     params.push(`Collections: ${(cfg.collections || cfg.sources || []).join(', ')}`)
   } else if (cfg.mode === 'levels_fyi') {
     params.push(short(cfg.url || cfg.direct_url, 70))
+  } else if (cfg.mode === 'apify') {
+    params.push(`Boards: ${(cfg.sources || []).map((k) => boardLabel(apifyBoards, k)).join(', ')}`, `${cfg.results_wanted} per board max`)
   } else if (cfg.mode === 'freehire') {
     if (cfg.search_term) params.push(`“${cfg.search_term}”`)
     if (cfg.direct_url) params.push(short(cfg.direct_url, 60))

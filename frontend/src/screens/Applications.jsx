@@ -6,6 +6,7 @@ import ConfirmDialog from '../ConfirmDialog'
 import { useEscape, useSettled, NBSP, DASH } from '../hooks'
 import { Button, Card, Check, CopyGlyph, DashedAdd, Dot, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, Mono, PageTitle, Pill, Row, SectionHead, Segmented, Spinner, Textarea } from '../ui'
 import { PICK_KEY, clickMods, clickSelection, pruneSelection } from './rowSelect'
+import { useApifyBoards, apifySourceLabel } from '../apifyBoards'
 import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -32,7 +33,8 @@ const fmtSalary = (lo, hi) => {
   return lo || hi ? k(lo || hi) : ''
 }
 
-const srcLabel = (v) => ({
+// `boards` (useApifyBoards) names the `apify_<board>` sources.
+const srcLabel = (v, boards = []) => apifySourceLabel(boards, v, ' via Apify') || ({
   direct: 'a company scrape', manual: 'the Log application form', jobright: 'Jobright.ai', levels_fyi: 'Levels.fyi',
   linkedin_personal: 'LinkedIn Personal', linkedin_extension: 'the LinkedIn extension',
   extension: 'the extension', freehire: 'freehire.me',
@@ -81,6 +83,7 @@ const errSuffix = (e) => (typeof e?.response?.data?.detail === 'string' ? ' — 
 // ── main ─────────────────────────────────────────────────────────────────────
 export default function Applications() {
   const navigate = useNavigate()
+  const apifyBoards = useApifyBoards()
   const [apps, setApps] = useState([])
   // null (not 0) until the first fetch lands, so the empty state doesn't flash before data arrives;
   // a failed fetch must not read as "you have no applications" either.
@@ -424,7 +427,7 @@ export default function Applications() {
     }))
     if (d.last_email_received) h.push({ what: 'Reply detected in Gmail', at: d.last_email_received, dot: 'var(--line-strong)' })
     if (d.applied_at) h.push({ what: `Applied with ${d.tailored_resume_name || d.cv_version_used || d.best_cv || 'unknown résumé'}`, at: d.applied_at, dot: 'var(--line-strong)' })
-    if (d.discovered_at) h.push({ what: `Discovered via ${srcLabel(d.source)}`, at: d.discovered_at, dot: 'var(--line-strong)' })
+    if (d.discovered_at) h.push({ what: `Discovered via ${srcLabel(d.source, apifyBoards)}`, at: d.discovered_at, dot: 'var(--line-strong)' })
     return h.sort((a, b) => new Date(b.at) - new Date(a.at))
   }, [d])
 
