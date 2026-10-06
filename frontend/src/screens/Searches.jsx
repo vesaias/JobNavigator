@@ -49,6 +49,7 @@ const MODES = {
   linkedin_personal: ['LINKEDIN PERSONAL', 'sm-lipersonal'],
   jobright: ['JOBRIGHT.AI', 'sm-jobright'],
   freehire: ['FREEHIRE.ME', 'sm-freehire'],
+  caribbeanjobs: ['CARIBBEANJOBS.COM', 'sm-caribbeanjobs'],
   linkedin_extension: ['EXTENSION', 'sm-extension'],
   extension: ['EXTENSION', 'sm-extension'],
 }
@@ -58,13 +59,21 @@ const MODE_OPTIONS = [
   ['linkedin_personal', 'LinkedIn Personal'],
   ['jobright', 'Jobright.ai'],
   ['freehire', 'freehire.me'],
+  ['caribbeanjobs', 'CaribbeanJobs.com'],
 ]
 // /monitor/active carries every background job; only POST /searches/{id}/run
 // tags its run with job_type 'search_run' (routes_searches.py) — filter on that.
 const isSearchRun = (r) => r?.job_type === 'search_run'
 const EXT_MODES = ['linkedin_extension', 'extension']
 const isExt = (m) => EXT_MODES.includes(m)
-const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire']
+const TESTABLE = ['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire', 'caribbeanjobs']
+// Keyword sources have no account-based "recommended" feed, so a term or a pre-filtered URL is
+// what there is to search for. Run/Test are blocked until one is set, rather than launching a
+// run that quietly finds nothing.
+const NEEDS_QUERY = ['freehire', 'caribbeanjobs']
+const configError = (s) => (NEEDS_QUERY.includes(s.search_mode)
+  && !(`${s.search_term || ''}`.trim() || `${s.direct_url || ''}`.trim())
+  ? 'Add a search term or a URL before running' : null)
 
 // A Test run is invisible to the run monitor: `POST /searches/{id}/test` runs the
 // keyword modes inline and the slow ones through a bare asyncio task into a
@@ -101,6 +110,7 @@ const noteFor = (mode) => {
   if (mode === 'keyword') return ['Listings link to the board (LinkedIn, Indeed, ZipRecruiter, Google), not to the company’s own page. The same job found later by a company scrape or the extension is only recognised as a duplicate when company and title match exactly.', 'sm-keyword']
   if (mode === 'levels_fyi') return ['Set your filters on levels.fyi and paste the URL here. The URL contains location, job family, salary and date filters.', 'sm-levels']
   if (mode === 'jobright') return ['Recommendations from your Jobright.ai account. Enter a search term to search instead. Credentials are in Settings › Accounts.', 'sm-jobright']
+  if (mode === 'caribbeanjobs') return ['Set the filters on caribbeanjobs.com and paste the search URL, or enter a term. The description of each result is read from its own page.', 'sm-caribbeanjobs']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
@@ -131,6 +141,12 @@ const summaryOf = (s) => {
     if (s.search_term) bits.push(`“${s.search_term}”`)
     if (s.direct_url) bits.push(short(s.direct_url))
     return (bits.join(' · ') || 'freehire.me') + last
+  }
+  if (m === 'caribbeanjobs') {
+    const bits = []
+    if (s.search_term) bits.push(`“${s.search_term}”`)
+    if (s.direct_url) bits.push(short(s.direct_url))
+    return (bits.join(' · ') || 'caribbeanjobs.com') + last
   }
   return `${short(s.direct_url) || 'no URL'}${last}`
 }
@@ -294,11 +310,20 @@ function ConfigForm({ d, set }) {
     )
   } else if (m === 'freehire') {
     fields.push(
-      <Cell key="term" label="Search term · optional" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. golang backend"
+      <Cell key="term" label="Search term · required without a URL" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. golang backend"
         sub="Added to the URL filters. Must appear in the posting text." />,
-      <Cell key="url" label="freehire.me URL · filters forwarded" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
+      <Cell key="url" label="freehire.me URL · required without a term" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
         placeholder="https://freehire.me/?role=backend&seniority=senior&countries=us"
         sub="Role, seniority, countries and posting age are taken from the URL as is" />,
+      <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+    )
+  } else if (m === 'caribbeanjobs') {
+    fields.push(
+      <Cell key="term" label="Search term · required without a URL" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. software engineer, developer"
+        sub="Comma-separated alternatives are searched separately and merged. The board ANDs bare words, so keep each term short." />,
+      <Cell key="url" label="caribbeanjobs.com URL · required without a term" mono span={2} value={d.direct_url} onChange={(v) => set({ direct_url: v })}
+        placeholder="https://www.caribbeanjobs.com/ShowResults.aspx?Keywords=engineer&Location=123"
+        sub="Keywords, Location, Category and job type are taken from the URL as is" />,
       <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
   }
@@ -540,7 +565,7 @@ export default function Searches() {
     } catch (e) { fail(e, `Could not acknowledge “${s.name}”`) }
   }
   const runNow = async (s) => {
-    if (running[s.id]) return
+    if (running[s.id] || configError(s)) return
     setRunning((m) => ({ ...m, [s.id]: true }))
     try { await api.post(`/searches/${s.id}/run`) } catch (e) {
       // 409 means the run is genuinely in flight — keep the spinner, the
@@ -598,7 +623,7 @@ export default function Searches() {
   }, [pollTest])
 
   const runTest = async (s) => {
-    if (testingId) return                       // one Test at a time
+    if (testingId || configError(s)) return               // one Test at a time
     setMenuFor(null); setTestingId(s.id); setTestTab('all')
     writeTestRec({ id: s.id, name: s.name })    // in flight, no run id yet (the inline modes never get one)
     try {
@@ -661,8 +686,9 @@ export default function Searches() {
           const isOpen = editing === s.id
           const testBlocked = !!testingId && testingId !== s.id
           const mutedWarn = mutedWarnOf(s)
-          const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (warn || mutedWarn || summaryOf(s))
-          const summaryFg = spin ? 'var(--accent)' : warn ? 'var(--warn)' : 'var(--muted)'
+          const cfgErr = configError(s)
+          const summary = spin ? 'running now. Results appear in the Job Feed as they are found.' : (cfgErr || warn || mutedWarn || summaryOf(s))
+          const summaryFg = spin ? 'var(--accent)' : (cfgErr || warn) ? 'var(--warn)' : 'var(--muted)'
           return (
             /* Same card hover as Résumés/Cover Letters, suppressed while open; a warned
                card keeps its amber edge — .v2-bd-warn comes later in theme.css so it wins over .v2-card. */
@@ -716,16 +742,16 @@ export default function Searches() {
                 ) : (
                   <span style={{ flex: '0 0 169px', marginLeft: -11, display: 'flex', justifyContent: 'flex-end', gap: 3, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     {/* ui: keep — running-state box: these 25px pills are padded 0 9, and the running "Running" pill was measured at that width; canonical 0 10 would widen it 2px. */}
-                    <Pill size="xs" line="inherit" onClick={() => runNow(s)}
-                      title={spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`}
+                    <Pill size="xs" line="inherit" disabled={!!cfgErr} onClick={() => runNow(s)}
+                      title={cfgErr || (spin ? 'Run in progress — the summary line updates when it finishes' : `Run ${s.name} now, outside the schedule`)}
                       style={{ padding: '0 9px', ...(spin ? { color: 'var(--pill-busy-ink)' } : null) }}>
                       {spin ? <Spinner /> : <span style={{ fontSize: 11 }}>↻</span>}
                       {spin ? 'Running' : 'Run'}
                     </Pill>
                     {/* ui: keep — running-state box: 0 9 like its twin above, so the spinner branch keeps the width it was measured at. */}
                     {TESTABLE.includes(s.search_mode) && (
-                      <Pill size="xs" line="inherit" disabled={testBlocked} onClick={() => runTest(s)}
-                        title={testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.'}
+                      <Pill size="xs" line="inherit" disabled={testBlocked || !!cfgErr} onClick={() => runTest(s)}
+                        title={cfgErr || (testBlocked ? 'A test is already running' : 'Preview run. Shows results and why each job was kept or filtered. Saves nothing.')}
                         style={{ padding: '0 9px' }}>
                         {testingId === s.id ? <Spinner /> : <FlaskGlyph size={11} />}Test
                       </Pill>
@@ -838,6 +864,10 @@ function TestModal({ test, tab, setTab, onClose }) {
     if (cfg.search_term) params.push(`“${cfg.search_term}”`)
     if (cfg.direct_url) params.push(short(cfg.direct_url, 60))
     if (cfg.results_wanted) params.push(`${cfg.results_wanted} wanted`)
+  } else if (cfg.mode === 'caribbeanjobs') {
+    if (cfg.search_term) params.push(`“${cfg.search_term}”`)
+    if (cfg.direct_url) params.push(short(cfg.direct_url, 60))
+    if (cfg.results_wanted) params.push(`${cfg.results_wanted} wanted`)
   } else {
     if (cfg.location) params.push(cfg.location)
     if (cfg.is_remote === true) params.push('remote only')
@@ -860,7 +890,7 @@ function TestModal({ test, tab, setTab, onClose }) {
         ) : (
           <>
             <HeaderRow pad="9px 22px" soft bg="page" align="center" style={{ flexWrap: 'wrap', fontSize: 11, color: 'var(--text-2)' }}>
-              {cfg.search_term && cfg.mode !== 'jobright' && cfg.mode !== 'freehire' && (
+              {cfg.search_term && cfg.mode !== 'jobright' && cfg.mode !== 'freehire' && cfg.mode !== 'caribbeanjobs' && (
                 <span>Term <span style={{ fontFamily: 'var(--mono)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 'var(--radius-inline)' }}>“{cfg.search_term}”</span></span>
               )}
               <span>{params.join(' · ')}</span>

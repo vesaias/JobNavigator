@@ -35,7 +35,7 @@ const fmtSalary = (lo, hi) => {
 const srcLabel = (v) => ({
   direct: 'a company scrape', manual: 'the Log application form', jobright: 'Jobright.ai', levels_fyi: 'Levels.fyi',
   linkedin_personal: 'LinkedIn Personal', linkedin_extension: 'the LinkedIn extension',
-  extension: 'the extension', freehire: 'freehire.me',
+  extension: 'the extension', freehire: 'freehire.me', caribbeanjobs: 'caribbeanjobs.com',
 }[v] || (v ? v.replace(/^jobspy_/, '').replace(/_/g, ' ') : 'the Job Feed'))
 
 // Dots read the shared --stage-* tokens (theme.css), not generic --warn/--good/--bad,

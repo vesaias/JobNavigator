@@ -37,6 +37,9 @@ async def run_search(search: Search, proxy_url: Optional[str] = None) -> dict:
     if mode == "freehire":
         from backend.scraper.sources.freehire import run
         return await run(search)
+    if mode == "caribbeanjobs":
+        from backend.scraper.sources.caribbeanjobs import run
+        return await run(search)
     if mode == "linkedin_extension":
         # No scraper — jobs come via POST /api/jobs/linkedin-import (Chrome extension push)
         return {
@@ -205,6 +208,7 @@ def _source_for_search(search: Search) -> str:
         "linkedin_personal": "linkedin_personal",
         "jobright": "jobright",
         "freehire": "freehire",
+        "caribbeanjobs": "caribbeanjobs",
     }
     return source_map.get(search.search_mode, search.search_mode)
 
@@ -220,7 +224,24 @@ def _search_mode_is_valid(search: Search) -> bool:
         return True
     if mode == "freehire":
         return bool(search.direct_url or search.search_term)
+    if mode == "caribbeanjobs":
+        return bool(search.direct_url or search.search_term)
     return False
+
+
+# Sources that scrape a keyword board have no account-based "recommended" feed, so without a
+# term or a pre-filtered URL there is nothing to ask them for.
+_NEEDS_QUERY_MODES = ("freehire", "caribbeanjobs")
+
+
+def search_config_error(search) -> Optional[str]:
+    """A human reason this search cannot run as configured, or None. The scheduler skips an
+    invalid config silently; the manual trigger reads this so the run history says why instead
+    of leaving it at "nothing ran"."""
+    if search.search_mode in _NEEDS_QUERY_MODES and not (search.direct_url or search.search_term):
+        label = "CaribbeanJobs.com" if search.search_mode == "caribbeanjobs" else "freehire.me"
+        return f"{label} needs a search term or a URL before it can run"
+    return None
 
 
 # ── Fan-out: all active searches + companies ────────────────────────────────
@@ -347,6 +368,12 @@ async def _run_search_by_id(search_id: str, auto_score: Optional[bool] = None) -
         proxy_url = _get_setting_value(db, "proxy_url", "") or None
 
         if not _search_mode_is_valid(search):
+            # Name the reason in the log; the API does the same for a manual trigger.
+            reason = search_config_error(search)
+            logger.warning(
+                f"Search '{search.name}' has invalid config, skipping"
+                + (f": {reason}" if reason else "")
+            )
             return
 
         try:

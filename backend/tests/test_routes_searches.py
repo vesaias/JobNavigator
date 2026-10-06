@@ -46,6 +46,32 @@ def test_patch_still_allowed_on_extension_search(api_client, test_db, mode):
     assert resp.json()["title_exclude_keywords"] == ["intern"]
 
 
+@pytest.mark.parametrize("mode", ["freehire", "caribbeanjobs"])
+def test_run_rejects_a_keyword_source_with_no_query(api_client, test_db, mode):
+    """A keyword board with no term or URL would run, find nothing, and leave the run history at
+    "nothing ran"; the endpoint names the missing piece up front instead."""
+    _seed_first_run(test_db)
+    sid = _mk_search(test_db, mode)
+    resp = api_client.post(f"/api/searches/{sid}/run")
+    assert resp.status_code == 409, f"Unexpected {resp.status_code}: {resp.text}"
+    assert "search term or a URL" in resp.json()["detail"]
+
+
+@pytest.mark.parametrize("mode", ["freehire", "caribbeanjobs"])
+def test_run_allows_a_keyword_source_with_a_term(api_client, test_db, monkeypatch, mode):
+    _seed_first_run(test_db)
+    from backend.models.db import Search
+    s = Search(name=f"Query {mode}", search_mode=mode, search_term="engineer", active=True)
+    test_db.add(s)
+    test_db.commit()
+
+    import backend.job_monitor as mon
+    monkeypatch.setattr(mon, "launch_background", lambda *a, **kw: "run-1")
+
+    resp = api_client.post(f"/api/searches/{s.id}/run")
+    assert resp.status_code == 202, f"Unexpected {resp.status_code}: {resp.text}"
+
+
 def test_run_still_allowed_on_keyword_search(api_client, test_db, monkeypatch):
     """A normal search still launches (202) — the guard is mode-scoped."""
     _seed_first_run(test_db)

@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- **CaribbeanJobs.com source:** a new search mode scrapes caribbeanjobs.com's ShowResults pages. Paste a search URL and its filters (Keywords, Location, Category, job type) are forwarded, or set a search term to override the keywords — comma-separated alternatives are searched separately and merged, since the board ANDs bare words. Each listing is followed to its own page for the full description, posting date and structured salary, read from the schema.org JobPosting block the board embeds. Title, company, body-exclusion and expiry filters apply before a job is saved, and the usual inline H-1B and salary analysis runs on the way in.
+
+### Fixed
+- **A keyword search with no query says so instead of logging "nothing ran":** freehire.me and CaribbeanJobs.com need a search term or a URL, so their editor fields say so, Run and Test are blocked with that reason, and the run API answers 409 with it rather than launching an empty run.
 
 ## [2.2.0] — 2026-10-04
 

@@ -81,7 +81,7 @@ Turn the company on and press its run button once. The result shows on the row (
 **Searches** discovers jobs outside your dedicated company list. **New search**, choose a mode:
 
 - **Keyword (JobSpy)**: LinkedIn, Indeed, ZipRecruiter and Google in one go. Search term, location, hours old, results wanted, remote, job type. Results are not deduplicated across boards as tightly as the ATS scrapers, so start with a modest results count.
-- **Levels.fyi**, **Jobright.ai**, **freehire.me**: paste a URL from the site with your filters applied.
+- **Levels.fyi**, **Jobright.ai**, **freehire.me**, **CaribbeanJobs.com**: paste a URL from the site with your filters applied.
 - **LinkedIn Personal**: your own LinkedIn session through Playwright. Read the notice in Settings › Integrations › LinkedIn first.
 
 Each search has its own auto-scoring depth, title include/exclude, company include/exclude, minimum score, and a run interval. "Skip active companies" leaves out companies you already scrape directly. Run it once by hand; afterwards the scheduler runs it on its interval.
