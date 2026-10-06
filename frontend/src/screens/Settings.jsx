@@ -13,6 +13,7 @@ const PROVIDERS = [
   ['claude_code', 'Claude Code (Subscription)'],
   ['codex_cli', 'Codex CLI (ChatGPT Subscription)'],
   ['antigravity_cli', 'Antigravity CLI (Google Subscription)'],
+  ['opencode_go', 'OpenCode Go (Subscription)'],
   ['openai', 'OpenAI'],
   ['ollama', 'Ollama (Local)'],
   ['lmstudio', 'LM Studio (Local)'],
@@ -20,7 +21,7 @@ const PROVIDERS = [
 ]
 const PROVIDER_LABEL = Object.fromEntries(PROVIDERS)
 // providers whose catalog /api/llm/models can search live
-const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code']
+const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code', 'opencode_go']
 // providers that need no key
 const KEYLESS = ['claude_code', 'codex_cli', 'antigravity_cli', 'ollama', 'lmstudio', '']
 
@@ -365,7 +366,7 @@ export default function Settings() {
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model', eKey: 'llm_effort',
-          info: "Providers: Claude API, Claude Code, Codex CLI (your ChatGPT subscription), OpenAI, Ollama (local), LM Studio (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount. The two subscription CLIs are meant for attended use and have plan limits; a limit hit fails over to the fallback without retrying. Reasoning effort sets how much the model thinks before it answers: higher is slower and costs more. 'default effort' keeps the model's own default. Not every model takes every level; Claude Code steps down to the nearest level, the APIs return an error. Antigravity CLI sets effort in the model name, and Ollama and LM Studio have no effort setting." },
+          info: "Providers: Claude API, Claude Code, Codex CLI (your ChatGPT subscription), Antigravity CLI (Google subscription), OpenCode Go (subscription), OpenAI, Ollama (local), LM Studio (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount. The subscription CLIs are meant for attended use and have plan limits; a limit hit fails over to the fallback without retrying. Reasoning effort sets how much the model thinks before it answers: higher is slower and costs more. 'default effort' keeps the model's own default. Not every model takes every level; Claude Code steps down to the nearest level, the APIs return an error. Antigravity CLI sets effort in the model name, and Ollama and LM Studio have no effort setting." },
         B('API key', 'API key for the primary provider.', 'llm_api_key', { secret: true, mono: true, w: '340px', hide: () => KEYLESS.includes(val('llm_provider', 'claude_api')) }),
         LLM('Scoring', 'Model that scores new jobs against your résumés.', 'scoring_llm'),
         LLM('Scoring fallback', 'Retries scoring once on error or rate limit — scoring only.', 'llm_fallback',
@@ -375,7 +376,7 @@ export default function Settings() {
         LLM('Autofill', 'Model that answers application-form questions in the extension.', 'autofill_llm'),
         LLM('Email classification', 'Model that sorts Gmail replies into application events.', 'email_llm'),
         { kind: 'models', label: 'Model catalog', help: 'Add new or unlisted models and remove your additions.',
-          info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI and Claude. For Ollama/LM Studio, type the local model name. Removed models stay removed.' },
+          info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI, Claude and OpenCode Go. For Ollama/LM Studio, type the local model name. Removed models stay removed.' },
       ]],
       ['scoring', '', 'Scoring behavior', '', [
         SEL('Default résumé', 'Used when a company has no résumés of its own selected.', 'default_resume_id', resumeOpts, { w: '260px' }),

@@ -44,9 +44,9 @@ DEFAULT_SETTINGS = {
     "scoring_rubric": ("Score each resume using these criteria (each 0-20, sum to 0-100):\n1. SKILLS MATCH (weight: 20): How many required technical skills/tools does the candidate have?\n2. EXPERIENCE LEVEL (weight: 20): Does seniority/years match? (entry-level resume for senior role = low)\n3. DOMAIN FIT (weight: 20): Has the candidate worked in the same industry/domain?\n4. ROLE ALIGNMENT (weight: 20): Does the candidate's career trajectory match this role type?\n5. REQUIREMENTS MET (weight: 20): Does the candidate meet stated requirements (education, certs, clearance)?\n\nUse the FULL 0-100 range. 90+ = perfect match. 50-70 = decent with gaps. Below 30 = poor match.\nAvoid clustering scores — differentiate meaningfully between resumes and jobs.", "Editable resume scoring rubric"),
     "scoring_output_light": ('Return ONLY this JSON:\n{\n  "scores": {CV_NAMES_HERE: 0-100},\n  "best_cv": "CV_NAME"\n}', "Light scoring output schema"),
     "scoring_output_full": ('Return ONLY this JSON:\n{\n  "scores": {CV_NAMES_HERE: 0-100},\n  "best_cv": "CV_NAME",\n  "breakdown": {"skills": 0-20, "experience": 0-20, "domain": 0-20, "role": 0-20, "requirements": 0-20},\n  "summary": "2-3 sentence assessment of candidate-job fit",\n  "requirement_mapping": [\n    {"requirement": "JD requirement text", "cv_match": "matching CV line or null", "matched": true/false, "severity": "required or preferred"}\n  ],\n  "keyword_coverage_pct": 0-100,\n  "matched_keywords": ["keyword1", "keyword2"],\n  "missing_keywords": ["keyword3", "keyword4"],\n  "hard_blockers": ["blocker if any"],\n  "ats_tip": "one actionable ATS optimization suggestion"\n}', "Full scoring output schema with keyword analysis"),
-    "llm_provider": ("claude_api", "LLM provider: claude_api, claude_code, codex_cli, antigravity_cli, openai, ollama, lmstudio, openrouter"),
+    "llm_provider": ("claude_api", "LLM provider: claude_api, claude_code, codex_cli, antigravity_cli, opencode_go, openai, ollama, lmstudio, openrouter"),
     "llm_model": ("claude-sonnet-5", "LLM model name"),
-    "llm_api_key": ("", "API key for API-backed providers (not needed for subscription CLIs or Ollama)"),
+    "llm_api_key": ("", "API key for API-backed providers (for OpenCode Go paste its API key; not needed for subscription CLIs or Ollama)"),
     "llm_effort": ("", "Reasoning effort for the Primary model (empty = the model's default; values depend on the provider)"),
     "llm_fallback_provider": ("", "Fallback LLM provider (empty = no fallback)"),
     "llm_fallback_model": ("", "Fallback model name"),
@@ -118,6 +118,25 @@ DEFAULT_SETTINGS = {
         {"provider": "ollama", "model": "mistral:7b"},
         {"provider": "ollama", "model": "gemma2:9b"},
         {"provider": "ollama", "model": "phi3:14b"},
+        # OpenCode Go (subscription) — chat/completions models only; the model id is bare, not the
+        # CLI's `opencode-go/` alias. A Go API key is required. Left out: GPT and Grok (they use
+        # the Responses API) and MiniMax/Qwen (the Anthropic /messages API), which this OpenAI
+        # chat/completions provider does not call.
+        {"provider": "opencode_go", "model": "glm-5.3"},
+        {"provider": "opencode_go", "model": "glm-5.3-flash"},
+        {"provider": "opencode_go", "model": "glm-5.2"},
+        {"provider": "opencode_go", "model": "kimi-k3"},
+        {"provider": "opencode_go", "model": "kimi-k2.7-code"},
+        {"provider": "opencode_go", "model": "kimi-k2.6"},
+        {"provider": "opencode_go", "model": "deepseek-v4.1-flash"},
+        {"provider": "opencode_go", "model": "deepseek-v4-pro"},
+        {"provider": "opencode_go", "model": "deepseek-v4-flash"},
+        {"provider": "opencode_go", "model": "mimo-v2.6-pro"},
+        {"provider": "opencode_go", "model": "mimo-v2.6-flash"},
+        {"provider": "opencode_go", "model": "mimo-v2.5"},
+        {"provider": "opencode_go", "model": "mimo-v2.5-pro"},
+        {"provider": "opencode_go", "model": "longcat-2.0"},
+        {"provider": "opencode_go", "model": "hy3"},
         # OpenRouter — one key reaches every vendor; slugs are vendor-prefixed.
         # A popular starter set; the full ~420 are fetchable in Settings via the API.
         {"provider": "openrouter", "model": "anthropic/claude-fable-5.1"},
@@ -397,7 +416,7 @@ INT_SETTING_KEYS = _int_setting_keys()
 
 # Providers the LLM dispatcher knows how to call. "" means "inherit the primary
 # llm_provider", which every per-feature prefix does.
-_LLM_PROVIDERS = {"", "claude_api", "claude_code", "codex_cli", "antigravity_cli", "openai", "ollama", "lmstudio", "openrouter"}
+_LLM_PROVIDERS = {"", "claude_api", "claude_code", "codex_cli", "antigravity_cli", "opencode_go", "openai", "ollama", "lmstudio", "openrouter"}
 
 # Depth words. `tailor_auto_quick_score` also honours legacy boolean spellings
 # (see routes_resumes._resolve_chain_score_depth).

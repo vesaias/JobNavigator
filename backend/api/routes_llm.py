@@ -22,7 +22,8 @@ _KEY_SLOTS = [
     ("autofill_llm_provider", "autofill_llm_api_key"),
     ("email_llm_provider", "email_llm_api_key"),
 ]
-_ENV_KEY = {"openai": "OPENAI_API_KEY", "claude_api": "ANTHROPIC_API_KEY"}
+_ENV_KEY = {"openai": "OPENAI_API_KEY", "claude_api": "ANTHROPIC_API_KEY",
+            "opencode_go": "OPENCODE_API_KEY"}
 
 
 def _get(db, key: str) -> str:
@@ -83,6 +84,18 @@ async def _fetch_anthropic(key: str) -> list:
     return [{"id": m.get("id"), "name": m.get("display_name") or m.get("id")} for m in data]
 
 
+async def _fetch_opencode_go(key: str) -> list:
+    """OpenCode Go models from its OpenAI-compatible endpoint; the catalog is public, so a
+    missing key still lists what exists."""
+    from backend.analyzer.llm_client import OPENCODE_GO_BASE_URL
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(f"{OPENCODE_GO_BASE_URL}/models", headers=headers)
+        resp.raise_for_status()
+        data = resp.json().get("data", [])
+    return [{"id": m.get("id"), "name": m.get("id")} for m in data if m.get("id")]
+
+
 @router.get("/efforts")
 async def list_efforts():
     """Reasoning-effort values per provider for the Settings pickers; a provider not listed takes none."""
@@ -102,6 +115,8 @@ async def list_models(provider: str = "openrouter"):
     try:
         if provider == "openrouter":
             fetch = _fetch_openrouter()
+        elif provider == "opencode_go":
+            fetch = _fetch_opencode_go(_resolve_key(db, "opencode_go"))
         elif provider in ("openai", "claude_api", "claude_code"):
             # Claude Code (subscription) serves the same models as Claude API, so it
             # shares the Anthropic catalog — resolved via any configured Anthropic key.

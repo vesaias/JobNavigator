@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- **OpenCode Go provider:** use an OpenCode Go subscription for scoring, tailoring, letters, autofill and email. OpenCode Go is an HTTP endpoint (`https://opencode.ai/zen/go/v1`) with an API key — no CLI, no binary, no extra image weight. Paste the Go key under Settings › AI and pick **OpenCode Go**; the model picker searches the live `/models` catalog. Go asks clients to identify themselves (the provider sends a `JobNavigator/…` user agent) and to send a stable `x-opencode-session` id per conversation, which it does. The starter list holds only the models Go serves on `/chat/completions`; GPT and Grok (Responses API) and MiniMax/Qwen (Anthropic API) are omitted, and picking one is refused with that reason. Cost counts as $0 (subscription).
 
 ## [2.2.0] — 2026-10-04
 

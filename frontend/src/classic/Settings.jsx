@@ -42,7 +42,7 @@ export default function SettingsPage() {
   const togglePw = (key) => setShowPw(p => ({...p, [key]: !p[key]}))
 
   // Live model catalogs for the "Add Custom Model" typeahead (per provider).
-  const SEARCHABLE_PROVIDERS = ['openrouter', 'openai', 'claude_api', 'claude_code']
+  const SEARCHABLE_PROVIDERS = ['openrouter', 'openai', 'claude_api', 'claude_code', 'opencode_go']
   const [customProvider, setCustomProvider] = useState('claude_api')
   const [customModelName, setCustomModelName] = useState('')
   const [providerModels, setProviderModels] = useState({})   // provider -> [{id,name}]
@@ -300,6 +300,7 @@ export default function SettingsPage() {
                     <option value="claude_code">Claude Code (Subscription)</option>
                     <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="lmstudio">LM Studio (Local)</option>
@@ -338,7 +339,7 @@ export default function SettingsPage() {
         {/* Custom Models — shared across primary & fallback */}
         {(() => {
           const models = Array.isArray(settings.llm_models_list) ? settings.llm_models_list : []
-          const providerLabels = { claude_api: 'Claude API', claude_code: 'Claude Code', codex_cli: 'Codex CLI', antigravity_cli: 'Antigravity CLI', openai: 'OpenAI', ollama: 'Ollama', lmstudio: 'LM Studio', openrouter: 'OpenRouter' }
+          const providerLabels = { claude_api: 'Claude API', claude_code: 'Claude Code', codex_cli: 'Codex CLI', antigravity_cli: 'Antigravity CLI', opencode_go: 'OpenCode Go', openai: 'OpenAI', ollama: 'Ollama', lmstudio: 'LM Studio', openrouter: 'OpenRouter' }
           const canSearch = SEARCHABLE_PROVIDERS.includes(customProvider)
           const liveModels = providerModels[customProvider] || []
           const loadingModels = modelsLoading[customProvider]
@@ -363,6 +364,7 @@ export default function SettingsPage() {
                   <option value="claude_code">Claude Code</option>
                   <option value="codex_cli">Codex CLI</option>
                   <option value="antigravity_cli">Antigravity CLI</option>
+                  <option value="opencode_go">OpenCode Go (Subscription)</option>
                   <option value="openai">OpenAI</option>
                   <option value="ollama">Ollama</option>
                   <option value="lmstudio">LM Studio</option>
@@ -458,6 +460,7 @@ export default function SettingsPage() {
                     <option value="claude_code">Claude Code (Subscription)</option>
                     <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="lmstudio">LM Studio (Local)</option>
@@ -515,6 +518,7 @@ export default function SettingsPage() {
                     <option value="claude_code">Claude Code (Subscription)</option>
                     <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
                     <option value="openai">OpenAI</option>
                     <option value="ollama">Ollama (Local)</option>
                     <option value="lmstudio">LM Studio (Local)</option>
@@ -656,6 +660,7 @@ export default function SettingsPage() {
               <option value="claude_code">Claude Code (Subscription)</option>
               <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
               <option value="lmstudio">LM Studio (Local)</option>
@@ -775,6 +780,7 @@ export default function SettingsPage() {
               <option value="claude_code">Claude Code (Subscription)</option>
               <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
               <option value="lmstudio">LM Studio (Local)</option>
@@ -882,6 +888,7 @@ export default function SettingsPage() {
               <option value="claude_code">Claude Code (Subscription)</option>
               <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
               <option value="lmstudio">LM Studio (Local)</option>
@@ -1029,6 +1036,7 @@ export default function SettingsPage() {
               <option value="claude_code">Claude Code (Subscription)</option>
               <option value="codex_cli">Codex CLI (ChatGPT Subscription)</option>
                     <option value="antigravity_cli">Antigravity CLI (Google Subscription)</option>
+                    <option value="opencode_go">OpenCode Go (Subscription)</option>
               <option value="openai">OpenAI</option>
               <option value="ollama">Ollama (Local)</option>
               <option value="lmstudio">LM Studio (Local)</option>

@@ -143,7 +143,7 @@ def test_patch_settings_rejects_an_unknown_provider(client, key):
     assert "must be one of" in r.json()["detail"]
 
 
-@pytest.mark.parametrize("provider", ["claude_api", "claude_code", "codex_cli", "antigravity_cli", "openai",
+@pytest.mark.parametrize("provider", ["claude_api", "claude_code", "codex_cli", "antigravity_cli", "opencode_go", "openai",
                                       "ollama", "lmstudio", "openrouter", ""])
 def test_patch_settings_accepts_every_known_provider(client, provider):
     assert_clean(client.patch("/api/settings", json={"llm_provider": provider}), 200)
@@ -279,6 +279,25 @@ def test_llm_models_serves_a_stale_cache_when_the_provider_is_down(client, monke
     monkeypatch.setattr(rl, "_fetch_openrouter", _boom)
     r = assert_clean(client.get("/api/llm/models?provider=openrouter"), 200)
     assert r.json()["stale"] is True
+    rl._cache.clear()
+
+
+def test_llm_models_opencode_go_passes_the_resolved_key(client, test_db, monkeypatch):
+    """opencode_go's catalog comes from its endpoint; a key set for the provider is passed through."""
+    import backend.api.routes_llm as rl
+    rl._cache.clear()
+    set_setting(test_db, "llm_provider", "opencode_go")
+    set_setting(test_db, "llm_api_key", "sk-go")
+    seen = {}
+
+    async def _models(key):
+        seen["key"] = key
+        return [{"id": "deepseek-v4.1-flash", "name": "deepseek-v4.1-flash"}]
+    monkeypatch.setattr(rl, "_fetch_opencode_go", _models)
+
+    r = assert_clean(client.get("/api/llm/models?provider=opencode_go"), 200)
+    assert r.json()["models"] == [{"id": "deepseek-v4.1-flash", "name": "deepseek-v4.1-flash"}]
+    assert seen["key"] == "sk-go"
     rl._cache.clear()
 
 
