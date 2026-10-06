@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [triggerStatus, setTriggerStatus] = useState({})
   const [showPw, setShowPw] = useState({})
+  const [apifyCheck, setApifyCheck] = useState(null)  // null | {ok, text}
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('settings_tab') || 'general')
   const switchTab = (tab) => { setActiveTab(tab); localStorage.setItem('settings_tab', tab) }
   const togglePw = (key) => setShowPw(p => ({...p, [key]: !p[key]}))
@@ -1378,6 +1379,43 @@ export default function SettingsPage() {
                 {showPw.jobright_password ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Apify */}
+      <section className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 mb-6">
+        <h2 className="font-semibold text-lg dark:text-gray-100 mb-3">Apify</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          API token for Apify searches. Apify bills this account for each result. Copy it from console.apify.com › Settings › API &amp; Integrations. <b>The Apify Creator plan does not work</b>: it cannot run Store actors. Use the Free plan or a paid plan.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">API Key</label>
+            <div className="relative">
+              <input type={showPw.apify_api_key ? 'text' : 'password'} autoComplete="off" value={settings.apify_api_key || ''}
+                onChange={e => setSettings({...settings, apify_api_key: e.target.value})}
+                onBlur={e => saveSetting('apify_api_key', e.target.value)}
+                placeholder="apify_api_..."
+                className="border rounded px-2 py-1.5 text-sm w-full pr-8 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+              <button type="button" onClick={() => togglePw('apify_api_key')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                {showPw.apify_api_key ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-end gap-3">
+            <button onClick={async () => {
+              setApifyCheck(null)
+              try {
+                const { data } = await api.post('/settings/apify/check')
+                setApifyCheck({ ok: true, text: `Key works — Apify account ${data.username}` })
+              } catch (e) {
+                setApifyCheck({ ok: false, text: e?.response?.data?.detail || 'Check failed' })
+              }
+            }} className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">Check key</button>
+            {apifyCheck && (
+              <span className={`text-xs ${apifyCheck.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{apifyCheck.text}</span>
+            )}
           </div>
         </div>
       </section>

@@ -7,6 +7,7 @@ import { useEscape, useSettled, useSingleOpen, useWarm, NBSP, DASH } from '../ho
 import { Button, Card, Check as UICheck, CheckGlyph, CopyGlyph, CrossGlyph, FooterRow, GlyphBadge, Heading, HeaderRow, Helper, IconButton, Input, kb, Label, Link, Menu, MenuItem, Meter, ModalPanel, NavLink, PageTitle, Pill, Row, Rule, ScoreRing, SearchInput, SectionHead, Segmented, Spinner, TableHead, TableRow, ZOOM_MAX, ZOOM_MIN, ZoomFloater } from '../ui'
 import { ANALYZE, SCORE_RESUME, TAILOR, activityText, feedActivity, flightDetail, flightTypes, ghostTabs, tabBusy, tabBusyHint, tailorMarkTitle } from './feedActivity'
 import { PICK_KEY, clickMods, clickSelection } from './rowSelect'
+import { useApifyBoards, apifySourceLabel } from '../apifyBoards'
 
 const FILTERS_KEY = 'v2_feed_filters'
 const SORT_KEY = 'v2_feed_sort'
@@ -92,7 +93,8 @@ const SOURCE_LABELS = {
   jobspy_zip_recruiter: 'ZipRecruiter', jobspy_google: 'Google', levels_fyi: 'Levels', linkedin_personal: 'LinkedIn Personal',
   linkedin_extension: 'LinkedIn Extension', jobright: 'Jobright', freehire: 'FreeHire', playwright_url: 'Company careers', playwright_direct: 'Career page',
 }
-const srcLabel = (s) => SOURCE_LABELS[s] || s || ''
+// `boards` (useApifyBoards) names the `apify_<board>` sources.
+const srcLabel = (s, boards = []) => SOURCE_LABELS[s] || apifySourceLabel(boards, s) || s || ''
 const STATUS_OPTS = [['new', 'New'], ['saved', 'Saved'], ['applied', 'Applied'], ['skip', 'Skip'], ['ignored', 'Ignored']]
 const SORT_OPTS = [['score', 'Top score'], ['date', 'Newest first'], ['salary', 'Salary, high to low'], ['company', 'Company A–Z']]
 const DEFAULTS = { status: ['new'], company: [], source: [], h1b_verdict: [], location: [], arrangement: [], min_score: '', min_salary: '', max_salary: '' }
@@ -149,6 +151,7 @@ const SHORTCUTS = [['j / f / ↓', 'Next job'], ['k / g / ↑', 'Previous job'],
 
 // ── component ────────────────────────────────────────────────────────────
 export default function V2JobFeed() {
+  const apifyBoards = useApifyBoards()
   const [jobs, setJobs] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -1045,7 +1048,7 @@ export default function V2JobFeed() {
         <Drop label={`Source${filters.source.length ? ` · ${filters.source.length}` : ''}`} active={filters.source.length > 0} onClear={() => setF({ source: [] })} open={menu === 'source'} onToggle={() => setMenu(menu === 'source' ? null : 'source')}>
           {/* warm-started: the option list is the cached one until the facets settle,
               so an early click on Source is not an empty menu */}
-          {facetSources.length ? facetSources.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s)} count={facetSourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
+          {facetSources.length ? facetSources.map((s) => <Check key={s} on={filters.source.includes(s)} label={srcLabel(s, apifyBoards)} count={facetSourceCounts[s]} onClick={() => togF('source', s)} />) : <div style={{ padding: 8, fontSize: 12, color: 'var(--muted)' }}>No sources</div>}
         </Drop>
         <Drop label={`Work${filters.arrangement.length ? ` · ${filters.arrangement.length}` : ''}`} active={filters.arrangement.length > 0} onClear={() => setF({ arrangement: [] })} open={menu === 'arrangement'} onToggle={() => setMenu(menu === 'arrangement' ? null : 'arrangement')} width={214}>
           {['remote', 'hybrid', 'onsite', 'unknown'].map((key) => (
@@ -1380,7 +1383,7 @@ export default function V2JobFeed() {
                   <div onClick={() => setHeadOpen((v) => !v)} className="v2-hover-accent" style={{ flex: '0 0 auto', width: 19, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>{headOpen ? '⌄' : '›'}</div>
                   <div onClick={() => setHeadOpen((v) => !v)} style={{ flex: 1, minWidth: 190, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                     {headOpen && <Label style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
+                      {d.company && <><span style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.company}</span><span>·</span></>}<span>{srcLabel(d.source, apifyBoards)}</span><span>·</span><span>{timeAgo(d.discovered_at)}</span>
                     </Label>}
                     {/* ui: keep — the collapsing detail title: serif 26/17, -.025em, line-clamped — outside the 18/19 heading scale */}
                     <h2 title={d.title} style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: headOpen ? 26 : 17, fontWeight: 400, letterSpacing: '-.025em', lineHeight: headOpen ? '30px' : '20px', display: '-webkit-box', WebkitLineClamp: headOpen ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{d.title}</h2>
@@ -1391,7 +1394,7 @@ export default function V2JobFeed() {
                           visaText && <span key="visa" title={visaTitle} style={{ color: visaCol }}>{visaText}</span>,
                         ].filter(Boolean).flatMap((el, i) => i ? [<span key={`sep${i}`} style={{ color: 'var(--line)' }}>|</span>, el] : [el])}
                       </div>
-                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max), d.location, visaText, srcLabel(d.source), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
+                    ) : <Helper style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[d.company, fmtSalary(d.salary_min, d.salary_max), d.location, visaText, srcLabel(d.source, apifyBoards), timeAgo(d.discovered_at)].filter(Boolean).join(' · ')}</Helper>}
                   </div>
                   {/* actions */}
                   <div style={{ flex: '0 0 auto', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>

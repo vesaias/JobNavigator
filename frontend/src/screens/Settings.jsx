@@ -476,6 +476,15 @@ export default function Settings() {
           [['path', 'Path + random (/cv/a7x2kp)'], ['param', 'Param + random (?cv=a7x2kp)'],
             ['path_jobid', 'Path + job ID (/cv/142li)'], ['param_jobid', 'Param + job ID (?cv=142li)']], { w: '260px', dflt: 'path' }),
       ]],
+      ['apify', '', 'Apify', '', [
+        B('Apify API key', 'Used by Apify searches. Apify bills this account for each result.', 'apify_api_key',
+          { secret: true, mono: true, w: '340px', placeholder: 'apify_api_…',
+            info: 'Copy the token from console.apify.com › Settings › API & Integrations. It is stored in your database and is never sent back to the browser. The Apify Creator plan cannot run Store actors, so every board fails on it: use the Free plan or a paid plan.' }),
+        BT('Key check', 'Confirms the key and that its Apify plan can run Store actors. Runs no search.', 'Check key', async () => {
+          const { data } = await api.post('/settings/apify/check')
+          flash(`Key works — Apify account ${data.username}`)
+        }),
+      ]],
       ['jobright', '', 'Jobright.ai', '', [
         B('Email', 'Your Jobright account.', 'jobright_email', { w: '260px' }),
         B('Password', 'Stored locally.', 'jobright_password', { secret: true, w: '260px' }),

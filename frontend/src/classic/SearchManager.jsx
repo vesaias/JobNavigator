@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import api from '../api'
 import InfoTip from './InfoTip'
 import { BLOCKED_BADGE, SOURCE_BLOCKS } from '../sourceBlocks'
+import { useApifyBoards } from '../apifyBoards'
 import { Plus, Play, Trash2, Edit2, Check, X, FlaskConical, ExternalLink, Loader2, AlertTriangle } from 'lucide-react'
 
 const SOURCES = [
@@ -30,6 +31,7 @@ const SOURCE_COLORS = {
   linkedin_personal: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
   jobright: 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300',
   freehire: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  apify: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
 }
 
 const DEFAULT_FORM = {
@@ -44,6 +46,7 @@ const DEFAULT_FORM = {
 }
 
 export default function SearchManager() {
+  const apifyBoards = useApifyBoards()
   const [searches, setSearches] = useState([])
   const [downMap, setDownMap] = useState({})  // search id -> failing-scrape reason
   useEffect(() => {
@@ -59,6 +62,13 @@ export default function SearchManager() {
   }, [])
   const [editing, setEditing] = useState(null) // null | 'new' | search_id
   const [editData, setEditData] = useState({})
+  // The board list can land after the user picks the Apify mode: a board-less Apify draft gets the default then.
+  // Keyed on the list only, so a board the user unticks later stays unticked.
+  useEffect(() => {
+    if (!apifyBoards.length) return
+    setEditData(prev => prev.search_mode === 'apify' && !(prev.sources || []).length
+      ? { ...prev, sources: [apifyBoards[0].value] } : prev)
+  }, [apifyBoards])
   const [running, setRunning] = useState(null)
   const [testing, setTesting] = useState(null)
   const [testResult, setTestResult] = useState(null)
@@ -226,6 +236,7 @@ export default function SearchManager() {
                 if (mode === 'linkedin_personal') patch.sources = ['recommended', 'top-applicant']
                 else if (mode === 'jobright') patch.sources = ['recommended']
                 else if (mode === 'keyword') patch.sources = ['linkedin', 'indeed', 'zip_recruiter', 'google']
+                else if (mode === 'apify') patch.sources = apifyBoards.slice(0, 1).map(b => b.value)
                 setEd(patch)
               }}
               className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
@@ -235,6 +246,7 @@ export default function SearchManager() {
               <option value="linkedin_personal">LinkedIn Personal</option>
               <option value="jobright">Jobright.ai</option>
               <option value="freehire">freehire.me</option>
+              <option value="apify">Apify</option>
             </select>
           )}
         </div>
@@ -294,9 +306,9 @@ export default function SearchManager() {
               </label>
             </div>
           </>
-        ) : ed.search_mode === 'keyword' ? (
+        ) : ed.search_mode === 'keyword' || ed.search_mode === 'apify' ? (
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Search Term</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Search Term{ed.search_mode === 'apify' && ' (required)'}</label>
             <input type="text" value={ed.search_term} onChange={e => setEd({ search_term: e.target.value })}
               placeholder="e.g. technical program manager" className="border rounded px-2 py-1.5 text-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
           </div>
@@ -411,6 +423,28 @@ export default function SearchManager() {
         </div>
       )}
 
+      {ed.search_mode === 'apify' && (
+        <div className="mt-3">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Boards</label>
+          <div className="flex flex-wrap gap-3">
+            {apifyBoards.map(s => (
+              <label key={s.value} className="flex items-center gap-1 text-xs">
+                <input type="checkbox" checked={(ed.sources || []).includes(s.value)}
+                  onChange={e => {
+                    const rest = (ed.sources || []).filter(x => x !== s.value)
+                    setEd({ sources: e.target.checked ? [...rest, s.value] : rest })
+                  }} />
+                {s.label}
+              </label>
+            ))}
+          </div>
+          <div className="mt-2 p-2 bg-violet-50 dark:bg-violet-900/30 rounded text-xs text-violet-700 dark:text-violet-300">
+            Runs Apify actors with the API key from Settings. Apify bills your account for each result: Results Wanted caps every board on every run, and the dry run fetches 20 jobs per board at most. Job Type is ignored.
+            {apifyBoards.filter(b => (ed.sources || []).includes(b.value)).map(b => <div key={b.value} className="mt-1"><b>{b.label}</b>: {b.hint}</div>)}
+          </div>
+        </div>
+      )}
+
       {ed.search_mode === 'levels_fyi' && (
         <div className="mt-3">
           <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded text-xs text-emerald-700 dark:text-emerald-300">
@@ -493,7 +527,7 @@ export default function SearchManager() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Search Manager</h1>
           <InfoTip title="Search Manager">
             Saved job searches that run on a schedule. Each has a <b>mode</b>: keyword boards (JobSpy),
-            Levels.fyi, LinkedIn Personal, Jobright.ai, freehire.me, plus the two passive Chrome-extension
+            Levels.fyi, LinkedIn Personal, Jobright.ai, freehire.me, Apify, plus the two passive Chrome-extension
             captures. Use the <b>flask</b> icon to dry-run (preview + per-job filter diagnostics without
             saving) and <b>Play</b> to run now. Per-search interval, title/company filters, and auto-score
             are configurable.
@@ -738,8 +772,9 @@ export default function SearchManager() {
                     s.search_mode === 'extension' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300' :
                     s.search_mode === 'jobright' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300' :
                     s.search_mode === 'freehire' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' :
+                    s.search_mode === 'apify' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300' :
                     s.search_mode === 'url' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                  }`}>{s.search_mode === 'levels_fyi' ? 'Levels.fyi' : s.search_mode === 'linkedin_personal' ? 'LinkedIn Personal' : s.search_mode === 'linkedin_extension' ? 'Extension LI' : s.search_mode === 'extension' ? 'Extension' : s.search_mode === 'jobright' ? 'Jobright.ai' : s.search_mode === 'freehire' ? 'freehire.me' : s.search_mode === 'keyword' ? 'JobSpy' : s.search_mode}</span>
+                  }`}>{s.search_mode === 'levels_fyi' ? 'Levels.fyi' : s.search_mode === 'linkedin_personal' ? 'LinkedIn Personal' : s.search_mode === 'linkedin_extension' ? 'Extension LI' : s.search_mode === 'extension' ? 'Extension' : s.search_mode === 'jobright' ? 'Jobright.ai' : s.search_mode === 'freehire' ? 'freehire.me' : s.search_mode === 'apify' ? 'Apify' : s.search_mode === 'keyword' ? 'JobSpy' : s.search_mode}</span>
                 </div>
                 {editing !== s.id && (
                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -780,7 +815,7 @@ export default function SearchManager() {
                       </span>
                     )}
                     {!isExtensionMode(s.search_mode) && (
-                      <button onClick={() => testSearch(s.id)} disabled={testing === s.id || !['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire'].includes(s.search_mode)}
+                      <button onClick={() => testSearch(s.id)} disabled={testing === s.id || !['keyword', 'levels_fyi', 'linkedin_personal', 'jobright', 'freehire', 'apify'].includes(s.search_mode)}
                         className="p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 disabled:opacity-40" title="Test Search (dry run)">
                         {testing === s.id ? <Loader2 size={16} className="animate-spin" /> : <FlaskConical size={16} />}
                       </button>

@@ -159,6 +159,28 @@ def match_title_expr(expr: str, title: str) -> bool:
     return _eval_expr(tree, title.lower())
 
 
+# ── Search title filters ──────────────────────────────────────────────────────
+
+def search_title_filters(search, db) -> tuple[list, list]:
+    """(include, exclude) title keywords of one search; exclude merges the global list."""
+    from backend.models.db import get_global_title_exclude
+    include_kw = search.title_include_keywords or []
+    exclude_kw = list(set((search.title_exclude_keywords or []) + get_global_title_exclude(db)))
+    return include_kw, exclude_kw
+
+
+def title_kept(title: str, include_kw: list, exclude_kw: list) -> tuple[bool, str | None]:
+    """(kept, reason): include is a substring match on any keyword, exclude a whole-word match."""
+    tl = title.lower()
+    if include_kw and not any(kw.lower() in tl for kw in include_kw):
+        return False, f"No match for: {', '.join(include_kw)}"
+    if exclude_kw:
+        matched = [kw for kw in exclude_kw if re.search(r'\b' + re.escape(kw) + r'\b', tl)]
+        if matched:
+            return False, f"Excluded by: {', '.join(matched)}"
+    return True, None
+
+
 # ── Job validation ────────────────────────────────────────────────────────────
 
 def _validate_job(title: str, url: str) -> str | None:

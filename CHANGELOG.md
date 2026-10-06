@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- **Apify search mode** (by @volkotyk): a new search type that runs Apify Store actors as job boards: Indeed, LinkedIn, Glassdoor, and keyword search across every company on Greenhouse, Lever, Ashby and Workday. A search picks its boards like a keyword search picks JobSpy boards; each board reports its own row in the run summary and the health panel. The board list comes from the backend (`GET /api/searches/apify-boards`), so a new board is one entry in `backend/scraper/sources/apify.py`. Settings › Apify takes the API token; **Check key** proves the token and the plan without running a search. Apify bills the account per result: Results wanted caps every board on every run, and Test fetches 20 jobs per board at most.
+  - **The Apify Creator plan does not work.** It runs only Apify's own universal Actors, so Apify refuses every board with `403 public-actor-disabled`. Use the Free plan or a paid plan. Check key and the run summary name the cause when the key is on the Creator plan.
+  - The run summary counts the jobs the title and company filters rejected ("N filtered out").
+
+### Fixed
+- **Salary from the job description for freehire.me jobs:** the shared inline analysis called the salary extractor with a keyword it does not take, so every job raised a logged and swallowed `TypeError` and no salary came from the description text. Structured salaries were not affected.
 
 ## [2.2.0] — 2026-10-04
 

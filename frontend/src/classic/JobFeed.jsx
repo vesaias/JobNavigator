@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useApifyBoards, apifySourceLabel } from '../apifyBoards'
 import api from '../api'
 import { ExternalLink, Bookmark, X, CheckCircle, ChevronDown, ChevronUp, Filter, Ban, Info, FileText, Loader2, ScrollText, RotateCw, Mail } from 'lucide-react'
 
@@ -98,6 +99,7 @@ const timeAgo = (dateStr) => {
 
 export default function JobFeed() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const apifyBoards = useApifyBoards()
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
   // Jobs we just saved — watch their /jobs/{id} until the (background, untracked)
@@ -990,7 +992,7 @@ export default function JobFeed() {
                     <button key={src} onClick={() => toggleFilter('source', src)}
                       className={`px-1.5 py-0.5 text-[11px] rounded border ${
                         filters.source.includes(src) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
-                      }`}>{labels[src] || src}</button>
+                      }`}>{labels[src] || apifySourceLabel(apifyBoards, src) || src}</button>
                     )
                   })}
                 </div>
