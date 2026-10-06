@@ -102,7 +102,8 @@ async def _get_linkedin_browser():
 
 # The feed is server-driven: LinkedIn renames its nav and avatar markup often, so
 # a DOM probe reports "logged out" for a live session. Ask the API instead —
-# voyager /me answers 200 only for a signed-in member.
+# voyager /me answers 200 only for a signed-in member (it can also 401 a live
+# session outright, which is why _is_logged_in below does not depend on it alone).
 _VOYAGER_ME_JS = """
 async () => {
   const csrf = (document.cookie.match(/JSESSIONID="?([^;"]+)/) || [])[1] || '';
@@ -125,14 +126,40 @@ async def _voyager_me_status(page) -> int:
         return 0
 
 
-async def _is_logged_in(page) -> bool:
-    """Check if the current page holds a live LinkedIn session."""
+# A URL that only a signed-out visitor lands on. An anonymous /feed redirects here, so the URL
+# check alone catches the common case; `li_at` (below) covers the public surfaces it does not.
+_SIGNED_OUT_URLS = ("/login", "/checkpoint", "/authwall", "/signup")
+# Surfaces LinkedIn also serves to anonymous visitors, so the cookie is what separates them.
+_SIGNED_IN_SURFACES = ("/feed", "/mynetwork", "/jobs")
+
+
+async def _has_auth_cookie(context) -> bool:
+    """`li_at` is LinkedIn's authentication cookie; without it the session is anonymous."""
     try:
-        if "/login" in page.url or "/checkpoint" in page.url:
-            return False
+        return any(c.get("name") == "li_at" and c.get("value") for c in await context.cookies())
     except Exception:
         return False
-    return await _voyager_me_status(page) == 200
+
+
+async def _is_logged_in(page, context=None) -> bool:
+    """Check if the current page holds a live LinkedIn session.
+
+    /me is definitive when it answers 200, but it can 401/403 on a live session (a cold page,
+    app-level blocks), and a false negative used to send every run into a credential login that
+    an already-authenticated browser redirects straight back to the feed — the fill then times
+    out on a username field that never renders. So when /me refuses, a signed-in surface
+    (/feed, /mynetwork, /jobs) reached with the `li_at` cookie still counts as logged in."""
+    try:
+        url = page.url or ""
+    except Exception:
+        return False
+    if any(part in url for part in _SIGNED_OUT_URLS):
+        return False
+    if await _voyager_me_status(page) == 200:
+        return True
+    if context is not None and await _has_auth_cookie(context):
+        return any(surface in url for surface in _SIGNED_IN_SURFACES)
+    return False
 
 
 # The login page renders no <form>, gives each input a generated id ("«r0»"),
@@ -142,14 +169,21 @@ _LOGIN_EMAIL = 'input[autocomplete="username"]:visible'
 _LOGIN_PASSWORD = 'input[autocomplete="current-password"]:visible'
 
 
-async def _fill_login_form(page, email: str, password: str):
-    """Fill the credentials on an open LinkedIn login page and submit them."""
-    await page.locator(_LOGIN_EMAIL).first.fill(email)
+async def _fill_login_form(page, email: str, password: str, timeout: int = 10000):
+    """Fill the credentials on an open LinkedIn login page and submit them. The short wait keeps
+    a page that is redirecting to the feed from stalling for the full default timeout."""
+    await page.locator(_LOGIN_EMAIL).first.fill(email, timeout=timeout)
     await asyncio.sleep(random.uniform(0.5, 1.0))
     pwd = page.locator(_LOGIN_PASSWORD).first
-    await pwd.fill(password)
+    await pwd.fill(password, timeout=timeout)
     await asyncio.sleep(random.uniform(0.5, 1.0))
     await pwd.press("Enter")
+
+
+async def _save_session(context, message: str) -> None:
+    """A live session found without filling the form: log why, then persist the cookies."""
+    logger.info(message)
+    await _save_cookies(context)
 
 
 async def _login(page, context, email: str, password: str):
@@ -158,7 +192,22 @@ async def _login(page, context, email: str, password: str):
     await page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded", timeout=30000)
     await asyncio.sleep(random.uniform(1.5, 3.0))
 
-    await _fill_login_form(page, email, password)
+    # An authenticated session redirects /login to the feed, so the username field never
+    # renders; filling it would time out. Treat that redirect as the login.
+    if await _is_logged_in(page, context):
+        await _save_session(context, "LinkedIn already signed in — /login redirected to the feed")
+        return
+
+    try:
+        await _fill_login_form(page, email, password)
+    except Exception:
+        # Waiting for the username field can time out because the browser is being redirected to
+        # the feed (already signed in), so the form never renders. Landing on a signed-in page is
+        # a login, not a failure.
+        if await _is_logged_in(page, context):
+            await _save_session(context, "LinkedIn already signed in — the login page redirected to the feed")
+            return
+        raise
 
     try:
         await page.wait_for_url(
@@ -178,7 +227,7 @@ async def _login(page, context, email: str, password: str):
                 "LinkedIn login failed — still on login page. Check credentials."
             )
         # Might have landed on an unexpected page but still logged in
-        if not await _is_logged_in(page):
+        if not await _is_logged_in(page, context):
             raise RuntimeError(f"LinkedIn login failed — landed on unexpected page: {current_url}")
 
     await _save_cookies(context)
@@ -201,7 +250,7 @@ async def _ensure_logged_in(page, context, email: str, password: str):
     await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=30000)
     await asyncio.sleep(random.uniform(2.0, 3.5))
 
-    if await _is_logged_in(page):
+    if await _is_logged_in(page, context):
         logger.info("LinkedIn session active via cookies")
         return
 
