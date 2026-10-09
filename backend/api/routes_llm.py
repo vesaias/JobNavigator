@@ -40,6 +40,15 @@ def _resolve_key(db, provider: str) -> str:
     return os.getenv(_ENV_KEY.get(provider, ""), "")
 
 
+def _builtin_models(provider: str) -> list:
+    """The seeded default catalog entries for `provider`, shaped like a live catalog."""
+    import json
+    from backend.seed import DEFAULT_SETTINGS
+    entries = json.loads(DEFAULT_SETTINGS["llm_models_list"][0])
+    ids = sorted({e["model"] for e in entries if e.get("provider") == provider})
+    return [{"id": m, "name": m} for m in ids]
+
+
 async def _fetch_openrouter() -> list:
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get("https://openrouter.ai/api/v1/models")
@@ -92,7 +101,7 @@ async def list_efforts():
 
 @router.get("/models")
 async def list_models(provider: str = "openrouter"):
-    """Live model catalog for a provider, cached ~1h; openrouter needs no key, openai/claude_api use a configured key or env fallback (400 if none, 502 if the provider rejects it)."""
+    """Live model catalog for a provider, cached ~1h; openrouter needs no key, openai/claude_api use a configured key or env fallback (400 if none, 502 if the provider rejects it); claude_code borrows the Anthropic key and falls back to the built-in list without one."""
     now = time.time()
     hit = _cache.get(provider)
     if hit and (now - hit["at"]) < _CACHE_TTL:
@@ -107,6 +116,9 @@ async def list_models(provider: str = "openrouter"):
             # shares the Anthropic catalog — resolved via any configured Anthropic key.
             key_provider = "claude_api" if provider == "claude_code" else provider
             key = _resolve_key(db, key_provider)
+            if not key and provider == "claude_code":
+                # Subscription users usually have no API key: serve the built-in Claude list rather than a 400.
+                return {"models": _builtin_models("claude_code"), "cached": False, "builtin": True}
             if not key:
                 label = "OpenAI" if provider == "openai" else "Anthropic"
                 raise HTTPException(400, f"No {label} API key configured — set one in Settings first.")

@@ -235,12 +235,21 @@ def test_llm_models_unsupported_provider_is_400(client, provider):
     assert_clean(client.get(f"/api/llm/models?provider={provider}"), 400)
 
 
-@pytest.mark.parametrize("provider", ["openai", "claude_api", "claude_code"])
+@pytest.mark.parametrize("provider", ["openai", "claude_api"])
 def test_llm_models_without_a_key_is_400(client, provider, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     r = assert_clean(client.get(f"/api/llm/models?provider={provider}"), 400)
     assert "API key" in r.json()["detail"]
+
+
+def test_llm_models_claude_code_without_a_key_serves_builtin_list(client, monkeypatch):
+    import backend.api.routes_llm as rl
+    rl._cache.clear()
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    r = assert_clean(client.get("/api/llm/models?provider=claude_code"), 200)
+    ids = [m["id"] for m in r.json()["models"]]
+    assert ids and all(i.startswith("claude-") for i in ids)
 
 
 def test_llm_models_provider_rejection_is_502_not_500(client, test_db, monkeypatch):
