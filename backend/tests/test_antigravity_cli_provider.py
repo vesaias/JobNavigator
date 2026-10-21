@@ -94,6 +94,17 @@ async def test_antigravity_not_logged_in_is_not_retryable(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_antigravity_expired_login_is_not_retryable(monkeypatch):
+    """agy 1.3.3+ words an expired or revoked token this way; a retry cannot fix it."""
+    _install(monkeypatch, FakeProcess(
+        stdout=_events(_result(status="ERROR", response="",
+                               error="Authentication expired. Please log back in.")),
+        returncode=1))
+    with pytest.raises(NonRetryableLLMError, match="not logged in.*docker compose exec"):
+        await llm_client._call_antigravity_cli("prompt", "system", "", 10)
+
+
+@pytest.mark.asyncio
 async def test_antigravity_usage_limit_is_not_retryable(monkeypatch):
     _install(monkeypatch, FakeProcess(
         stdout=_events(_result(status="ERROR", error="You have hit your usage limit.")),

@@ -31,7 +31,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 # binary updates itself, so switch the auto-updater off for reproducible builds.
 # The installer always takes the newest release; AGY_VERSION records the one the
 # last build got and is the cache key, so bumping it reinstalls.
-ARG AGY_VERSION=1.2.13
+ARG AGY_VERSION=1.4.3
 RUN curl -fsSL https://antigravity.google/cli/install.sh | bash \
     && echo "agy $("$HOME/.local/bin/agy" --version) installed, AGY_VERSION=${AGY_VERSION}"
 ENV PATH="/root/.local/bin:${PATH}"

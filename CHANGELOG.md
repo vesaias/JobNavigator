@@ -10,6 +10,11 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ### Fixed
 - **Subscription CLI timeouts are not retried** (by @volkotyk): when Codex CLI, Claude Code or Antigravity CLI passed its time limit, `call_llm` ran the same prompt on the same model three more times. One stuck scoring or PDF import then took 4 × 300 s and held a CLI slot (two per CLI) the whole time. A timeout now goes straight to the fallback model, or fails at once when there is no fallback. The time limits stay as they are; other errors still get four attempts.
+- **Antigravity CLI expired login** (by @volkotyk): `agy` 1.3.3 and later reports an expired or revoked token as "Authentication expired. Please log back in." The adapter now treats it as "not logged in": the call goes straight to the fallback provider and the error names the login command. Before, it was a plain failure that the backend retried.
+
+### Changed
+- **Prebuilt images for ARM** (by @volkotyk): the backend and frontend images are published for `linux/arm64` as well as `linux/amd64`, so an ARM host (Apple Silicon, Raspberry Pi, RK35xx boards) runs `docker compose pull` instead of building Chromium from source. The arm64 build runs under QEMU in the same job, so the backend image takes about 12 minutes on a cold cache.
+- **Antigravity CLI 1.4.3 in the backend image** (by @volkotyk): `AGY_VERSION` is now 1.4.3, so the next `docker compose build backend` reinstalls the CLI instead of keeping a cached 1.2.13 layer. Flags, the deny list and the result event were checked against 1.4.3.
 
 ## [3.0] — 2026-10-17
 

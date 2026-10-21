@@ -623,7 +623,8 @@ _QUOTA_RE = re.compile(r"usage limit|rate limit|quota|too many requests|\b429\b"
 # gets; process-wide on purpose, see R5-12 above.
 _agy_gate = asyncio.Semaphore(2)
 _AGY_LOGIN_HINT = "run `docker compose exec -it backend agy` and sign in"
-_AGY_AUTH_RE = re.compile(r"authentication (required|failed)|not logged in|sign in", re.I)
+# 1.3.3+ reports an expired or revoked token as "Authentication expired. Please log back in."
+_AGY_AUTH_RE = re.compile(r"authentication (required|failed|expired)|not logged in|sign in|log back in", re.I)
 _AGY_STATE = "~/.gemini/antigravity-cli"
 # The deny list the image ships. It lives outside the state directory because agy rewrites
 # settings.json on every start, and a read-only copy there only makes that write fail.
