@@ -593,17 +593,20 @@ async def _call_claude_code(prompt: str, system: str, model: str, max_tokens: in
     }
 
 
-class CLITimeoutError(RuntimeError):
-    """A CLI that outran its wall clock, carrying whatever it printed before the kill."""
+class NonRetryableLLMError(RuntimeError):
+    """A failure a retry cannot fix (not logged in, usage limit); call_llm goes straight to the fallback."""
+
+
+class CLITimeoutError(NonRetryableLLMError):
+    """A CLI that outran its wall clock, carrying whatever it printed before the kill.
+
+    Non-retryable: the same prompt on the same model very likely times out again, and each
+    retry holds the CLI gate and the caller's slot for one more full timeout (300-450 s)."""
 
     def __init__(self, message: str, stdout: bytes = b"", stderr: bytes = b""):
         super().__init__(message)
         self.stdout = stdout
         self.stderr = stderr
-
-
-class NonRetryableLLMError(RuntimeError):
-    """A failure a retry cannot fix (not logged in, usage limit); call_llm goes straight to the fallback."""
 
 
 CLI_TIMEOUT = 300   # seconds one subscription-CLI completion may take before it is killed

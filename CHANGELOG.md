@@ -8,7 +8,8 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- **Subscription CLI timeouts are not retried** (by @volkotyk): when Codex CLI, Claude Code or Antigravity CLI passed its time limit, `call_llm` ran the same prompt on the same model three more times. One stuck scoring or PDF import then took 4 × 300 s and held a CLI slot (two per CLI) the whole time. A timeout now goes straight to the fallback model, or fails at once when there is no fallback. The time limits stay as they are; other errors still get four attempts.
 
 ## [3.0] — 2026-10-17
 
