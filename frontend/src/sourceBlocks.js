@@ -20,4 +20,5 @@ export const MODE_BLOCKS = {
 // Terms notices for modes that scrape a site which discourages automated access.
 export const MODE_TERMS = {
   caribbeanjobs: 'Terms: caribbeanjobs.com challenges automated visitors, so scraping it may break its terms of use. Use at your own risk; see LEGAL_DISCLAIMER.md.',
+  creative: 'Terms: Behance, Hollylist and Wana Create publish these APIs for their own sites, not for other clients, and Behance challenges automated visitors. Reading them may break their terms of use. Use at your own risk; see LEGAL_DISCLAIMER.md.',
 }
