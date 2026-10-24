@@ -139,7 +139,55 @@ def test_glassdoor_input_always_has_a_location_and_whole_days():
     assert "daysOld" not in apify._glassdoor_input(_search(hours_old=None), 30)
 
 
+def test_behance_input_maps_city_and_remote():
+    body = apify._behance_input(_search(search_term=" illustrator ", location="Los Angeles, CA", is_remote=True), 30)
+    assert body == {"search": "illustrator", "maxItems": 30, "jobTypes": ["CONTRACT", "FULLTIME"],
+                    "city": "Los Angeles", "isWorldwide": True}
+    assert set(apify._behance_input(_search(), 5)) == {"search", "maxItems", "jobTypes"}
+
+
+def test_hollylist_input_skips_members_only_offers():
+    body = apify._hollylist_input(_search(search_term="animator", location="London", is_remote=True), 30)
+    assert body == {"searchQueries": ["animator"], "maxResults": 30, "extractFullDetails": True,
+                    "includePremiumOffers": False, "locations": ["London"], "workType": ["remote"]}
+    assert set(apify._hollylist_input(_search(), 5)) == {"searchQueries", "maxResults", "extractFullDetails",
+                                                         "includePremiumOffers"}
+
+
 # ── item parsing ────────────────────────────────────────────────────────────
+
+def test_parse_behance_maps_the_documented_row():
+    j = apify._parse_behance({
+        "title": "Senior Experience Designer", "companyName": "HP Inc.",
+        "url": "https://www.behance.net/joblist/fulltime/366779/Senior-Experience-Designer",
+        "description": "<p>We are seeking a <strong>UX/UI Designer</strong></p>",
+        "locationDisplay": "Palo Alto, CA, USA", "remoteStatus": "HYBRID", "postedOn": 1791463395})
+    assert (j["company"], j["location"], j["arrangement"]) == ("HP Inc.", "Palo Alto, CA, USA", "hybrid")
+    assert j["description"] == "We are seeking a UX/UI Designer"
+    assert j["posted"] == "2026-10-08"
+    empty = apify._parse_behance({})
+    assert (empty["title"], empty["arrangement"], empty["posted"]) == ("", None, None)
+
+
+def test_parse_hollylist_keeps_yearly_pay_and_the_first_place():
+    j = apify._parse_hollylist({
+        "title": "Director of Social\n    ", "url": "https://www.hollylist.com/job/director-of-social-x",
+        "company": {"name": "Paramount"},
+        "locations": [{"city": "London", "region": None, "countryCode": "GB"}],
+        "workType": [{"type": "hybrid"}], "description": {"text": "Lead social."},
+        "salaries": [{"period": "month", "min": 5000, "max": 6000, "isOriginal": False, "currency": "USD"},
+                     {"period": "year", "min": 60000, "max": 72000, "isOriginal": True, "currency": "USD"}],
+        "dates": {"posted": "2026-10-23"}})
+    assert (j["title"], j["company"], j["location"]) == ("Director of Social", "Paramount", "London, GB")
+    assert (j["salary_min"], j["salary_max"], j["arrangement"]) == (60000, 72000, "hybrid")
+    assert (j["description"], j["posted"]) == ("Lead social.", "2026-10-23")
+    hourly = apify._parse_hollylist({"salaries": [{"period": "hour", "min": 30, "isOriginal": True, "currency": "USD"}]})
+    assert (hourly["salary_min"], hourly["salary_max"]) == (None, None)
+    pounds = apify._parse_hollylist({"salaries": [{"period": "year", "min": 40000, "isOriginal": True, "currency": "GBP"}]})
+    assert (pounds["salary_min"], pounds["salary_max"]) == (None, None)
+    empty = apify._parse_hollylist({"company": {}, "description": {}, "dates": {}})
+    assert (empty["company"], empty["location"], empty["description"]) == ("", "", "")
+
 
 def test_parse_indeed_keeps_annual_salary_only():
     j = apify._parse_indeed({"positionName": "PM", "company": "Acme", "location": "Austin, TX",

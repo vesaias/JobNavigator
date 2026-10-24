@@ -18,6 +18,13 @@ from typing import Optional
 JOBSPY_BOARDS = ("linkedin", "indeed", "zip_recruiter", "google", "glassdoor", "bayt", "naukri", "bdjobs", "direct")
 JOBSPY_DEFAULT_BOARDS = ["linkedin", "indeed", "zip_recruiter", "google"]
 LINKEDIN_COLLECTIONS = ("recommended", "top-applicant")
+CREATIVE_BOARDS = ("behance", "hollylist", "wanacreate")    # sources/creative.py BOARDS
+# `sources` kind -> (allowed values, what they are called in an error)
+_BOARD_LISTS = {
+    "jobspy": (JOBSPY_BOARDS, "JobSpy boards"),
+    "collections": (LINKEDIN_COLLECTIONS, "LinkedIn collections"),
+    "creative": (CREATIVE_BOARDS, "creative boards"),
+}
 
 
 @dataclass(frozen=True)
@@ -31,7 +38,7 @@ class SearchMode:
     takes_proxy: bool = False         # run(search, proxy_url=...)
     background_test: bool = False     # Test runs as a task and returns a run_id to poll
     uses_country: bool = False        # location + country go to the board and must agree
-    boards: Optional[str] = None      # what `sources` holds: "jobspy" | "apify" | "collections" | None
+    boards: Optional[str] = None      # what `sources` holds: "jobspy" | "apify" | "collections" | "creative" | None
     needs_url: bool = False           # cannot run without direct_url
     needs_query: bool = False         # cannot run without a search term or direct_url
     paid: bool = False                # bills per run: new, switched and copied searches start paused
@@ -69,6 +76,8 @@ SEARCH_MODES: dict[str, SearchMode] = {m.key: m for m in (
     # The roster is fetched whole; results_wanted applies per subscriber after dedup.
     SearchMode("trulyremote", "TrulyRemoteWork.com", "trulyremote", shareable=True,
                background_test=True),
+    # Not shared yet: a proof of concept; its key would be boards + term + location + remote.
+    SearchMode("creative", "Creative boards", "creative", background_test=True, boards="creative"),
     SearchMode("linkedin_extension", "LinkedIn Extension", extension=True),
     SearchMode("extension", "Extension", extension=True),
 )}
@@ -94,8 +103,8 @@ def default_sources(key) -> list:
         return []
     if mode.boards == "jobspy":
         return list(JOBSPY_DEFAULT_BOARDS)
-    if mode.boards == "collections":
-        return list(LINKEDIN_COLLECTIONS)
+    if mode.boards in ("collections", "creative"):
+        return list(_BOARD_LISTS[mode.boards][0])
     return []   # apify has no default board here: the client picks one (GET /searches/apify-boards)
 
 
@@ -107,10 +116,9 @@ def bad_sources(key, sources) -> Optional[str]:
         return None
     if not isinstance(sources, list):
         return "sources must be a list"
-    allowed = JOBSPY_BOARDS if mode.boards == "jobspy" else LINKEDIN_COLLECTIONS
+    allowed, what = _BOARD_LISTS[mode.boards]
     unknown = [s for s in sources if s not in allowed]
     if unknown:
-        what = "JobSpy boards" if mode.boards == "jobspy" else "LinkedIn collections"
         return (f"{mode.label} takes {what} ({', '.join(allowed)}); "
                 f"not one: {', '.join(map(str, unknown))}")
     return None
@@ -133,4 +141,9 @@ def config_error(search) -> Optional[str]:
             return "Apify needs a search term before it can run"
         if not configured_presets(search):
             return "Apify needs at least one board before it can run"
+    if mode.boards == "creative":
+        if not (search.search_term or "").strip():
+            return f"{mode.label} needs a search term before it can run"
+        if not any(s in CREATIVE_BOARDS for s in (search.sources or [])):
+            return f"{mode.label} needs at least one board before it can run"
     return None
