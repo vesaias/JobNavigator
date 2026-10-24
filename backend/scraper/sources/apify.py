@@ -195,14 +195,14 @@ def _first_place(search: Search) -> str:
 
 
 def _behance_input(search: Search, limit: int) -> dict:
-    """The actor takes no posting age. Remote maps to its "worldwide only" switch."""
+    """The actor takes no posting age and no remote filter: its `isWorldwide` switch is not
+    one (on 2026-10-24 a Remote run with it returned 15 on-site rows in Asia and Africa, and
+    0 remote ones). `_not_remote` drops the on-site rows instead."""
     body = {"search": (search.search_term or "").strip(), "maxItems": limit,
             "jobTypes": ["CONTRACT", "FULLTIME"]}
     city = _first_place(search)
     if city:
         body["city"] = city
-    if search.is_remote:
-        body["isWorldwide"] = True
     return body
 
 
@@ -436,12 +436,14 @@ PRESETS = {
     "apify_behance": Preset(
         "piotrv1001/behance-jobs-scraper", "Behance",
         "Behance full-time and contract jobs; freelance briefs are not included. Hours old is not "
-        "applied. Location matches the first city name; Remote keeps worldwide jobs only.",
+        "applied. Location matches the first city name. The actor has no remote filter, so Remote "
+        "only drops the rows that Behance marks hybrid or on-site; Apify still bills them.",
         _behance_input, _parse_behance, 1.0),
     "apify_hollylist": Preset(
         "datawatcher/hollylist-scraper", "Hollylist",
         "Hollylist entertainment jobs, with full text. Members-only offers are skipped. Hours old "
-        "is not applied. Location matches the first city name.",
+        "is not applied. Location matches the first city name. Remote also returns on-site rows, "
+        "so Remote drops the rows that the posting calls hybrid or on-site.",
         _hollylist_input, _parse_hollylist, 1.90),
     "apify_greenhouse": _career_site("greenhouse", "Greenhouse"),
     "apify_lever": _career_site("lever.co", "Lever"),
@@ -616,8 +618,9 @@ async def _collect(search: Search, limit: int) -> tuple[list, dict]:
     return jobs, breakdown
 
 
-# Boards that return on-site rows to a Remote-only search (see _linkedin_input).
-_REMOTE_IGNORED = {"apify_linkedin"}
+# Boards that return on-site rows to a Remote-only search (see _linkedin_input,
+# _behance_input; the Hollylist actor's workType filter let an on-site Boston row through).
+_REMOTE_IGNORED = {"apify_linkedin", "apify_behance", "apify_hollylist"}
 
 
 def _not_remote(j: dict) -> str | None:

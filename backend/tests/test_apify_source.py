@@ -141,8 +141,9 @@ def test_glassdoor_input_always_has_a_location_and_whole_days():
 
 def test_behance_input_maps_city_and_remote():
     body = apify._behance_input(_search(search_term=" illustrator ", location="Los Angeles, CA", is_remote=True), 30)
+    # no isWorldwide: it is not a remote filter (2026-10-24), _not_remote filters instead
     assert body == {"search": "illustrator", "maxItems": 30, "jobTypes": ["CONTRACT", "FULLTIME"],
-                    "city": "Los Angeles", "isWorldwide": True}
+                    "city": "Los Angeles"}
     assert set(apify._behance_input(_search(), 5)) == {"search", "maxItems", "jobTypes"}
 
 
@@ -155,6 +156,16 @@ def test_hollylist_input_skips_members_only_offers():
 
 
 # ── item parsing ────────────────────────────────────────────────────────────
+
+def test_remote_only_drops_behance_rows_that_behance_marks_onsite():
+    """The structured remoteStatus is enough; the text need not say so."""
+    j = apify._parse_behance({"title": "Art Director", "companyName": "Fynd", "remoteStatus": "ONSITE",
+                              "url": "https://www.behance.net/joblist/fulltime/1/x", "description": "Great role"})
+    j["source"] = "apify_behance"
+    assert apify._rejection(j, [], [], set(), set(), None, True) == "Not remote: onsite"
+    j["arrangement"] = "remote"
+    assert apify._rejection(j, [], [], set(), set(), None, True) is None
+
 
 def test_parse_behance_maps_the_documented_row():
     j = apify._parse_behance({
@@ -503,6 +514,8 @@ _REMOTE_JD = "This is a fully remote role across the US."
     ("apify_linkedin", "Great role", True, None),        # unknown stays: the cascade never guesses
     ("apify_linkedin", _HYBRID_JD, False, None),         # Any: nothing to enforce
     ("apify_indeed", _HYBRID_JD, True, None),            # Indeed applies Remote itself
+    ("apify_behance", "Great role", True, None),
+    ("apify_hollylist", _ONSITE_JD, True, "Not remote: onsite"),
 ])
 def test_remote_only_drops_linkedin_rows_the_posting_calls_hybrid_or_onsite(source, desc, remote_only, expected):
     j = _job("SRE", "Acme", "https://www.linkedin.com/jobs/view/1", source=source, desc=desc)
