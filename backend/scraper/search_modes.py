@@ -18,7 +18,7 @@ from typing import Optional
 JOBSPY_BOARDS = ("linkedin", "indeed", "zip_recruiter", "google", "glassdoor", "bayt", "naukri", "bdjobs", "direct")
 JOBSPY_DEFAULT_BOARDS = ["linkedin", "indeed", "zip_recruiter", "google"]
 LINKEDIN_COLLECTIONS = ("recommended", "top-applicant")
-CREATIVE_BOARDS = ("behance", "hollylist", "wanacreate")    # sources/creative.py BOARDS
+CREATIVE_BOARDS = ("behance", "hollylist", "wanacreate", "himalayas", "eluta")    # sources/creative.py BOARDS
 # `sources` kind -> (allowed values, what they are called in an error)
 _BOARD_LISTS = {
     "jobspy": (JOBSPY_BOARDS, "JobSpy boards"),

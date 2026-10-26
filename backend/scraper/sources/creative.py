@@ -1,19 +1,23 @@
-"""Creative boards source: Behance, Hollylist and Wana Create, read from each site's own JSON API.
+"""Creative boards source: Behance, Hollylist, Wana Create, Himalayas and Eluta, read from each
+site's own JSON API or feed.
 
 No login, no browser, no Apify key. A search picks boards in `sources`, the way a keyword
 search picks JobSpy boards; each board writes its own row into `source_breakdown`, and its
-key ("behance", "hollylist", "wanacreate") is the stored Job.source. The Apify mode has paid
-fallbacks for two of them (apify_behance, apify_hollylist) for when a site changes its API.
+key ("behance", "hollylist", "wanacreate", "himalayas", "eluta") is the stored Job.source. The
+Apify mode has paid fallbacks for two of them (apify_behance, apify_hollylist).
 
 | board      | listing                                   | description                         |
 | ---------- | ----------------------------------------- | ----------------------------------- |
 | behance    | GraphQL combinedJobListings, 50 per page  | one GraphQL query per new job       |
 | hollylist  | GraphQL getJobs, US and Europe markets    | one GraphQL query per new job       |
 | wanacreate | Typesense search with its public key      | in the listing                      |
+| himalayas  | documented public JSON API, 20 per page   | in the listing                      |
+| eluta      | RSS, 20 per page, one request per 3 s     | job page microdata, per new job     |
 
-What each board applies itself: Remote on all three; Location on Hollylist (inside a market)
-and Wana Create (exact city name); Hours old on Wana Create. Hours old is checked here for
-Hollylist (listing date) and Behance (detail date). Behance takes no location filter.
+What each board applies itself: Remote on Behance, Hollylist and Wana Create (Himalayas is
+remote only; Eluta has no remote filter); Location on Hollylist (inside a market), Wana Create
+(exact city name) and Eluta (city, 50 km). Hours old is applied by Wana Create and checked here
+for the others (listing date; Behance: detail date).
 
 Behance answers the first request with a cookie challenge (`js_challenge_value`, set by an
 inline script) and checks a double-submit token: the same random value in the `bcp` cookie
@@ -25,10 +29,14 @@ import asyncio
 import json
 import logging
 import re
+import ssl
 import time
 import uuid
+import weakref
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Awaitable, Callable, Optional
 
 import httpx
@@ -42,7 +50,7 @@ from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.filters import (build_search_exclude_sets, company_included,
                                              search_title_filters, title_kept)
 from backend.scraper._shared.html_text import html_to_text
-from backend.countries import split_country_suffix
+from backend.countries import normalize_country, split_country_suffix, supported_countries
 
 logger = logging.getLogger("jobnavigator.creative")
 
@@ -306,6 +314,147 @@ async def _wana_list(client: httpx.AsyncClient, search: Search, limit: int) -> l
     return rows[:limit]
 
 
+# ── Himalayas ───────────────────────────────────────────────────────────────
+
+_HIMALAYAS_SEARCH = "https://himalayas.app/jobs/api/search"
+_HIMALAYAS_PAGE = 20            # fixed by the API
+_HIMALAYAS_MAX_PAGES = 25
+
+
+def _himalayas_row(j: dict) -> dict:
+    places = [p for p in j.get("locationRestrictions") or [] if p]
+    period = "ANNUAL" if str(j.get("salaryPeriod") or "").lower() == "annual" else j.get("salaryPeriod")
+    sal_min, sal_max = _annual_usd(j.get("minSalary"), j.get("maxSalary"), period, j.get("currency"))
+    return _row(
+        title=j.get("title"), company=j.get("companyName") or "",
+        # The API terms ask to send applicants through applicationLink.
+        url=j.get("applicationLink") or j.get("guid") or "",
+        location="Remote: " + ", ".join(places) if places else "Remote (worldwide)",
+        description=html_to_text(j.get("description") or ""),
+        salary_min=sal_min, salary_max=sal_max, arrangement=REMOTE,
+        posted=_iso_from_ts(j.get("pubDate")))
+
+
+def _country_name(search: Search) -> str:
+    """"canada" -> "Canada": the search's Country as the English name; "" when unknown."""
+    return dict(supported_countries()).get(normalize_country(getattr(search, "country", None)) or "", "")
+
+
+async def _himalayas_list(client: httpx.AsyncClient, search: Search, limit: int) -> list:
+    """A remote-only board: every job is remote, so Remote and Location do not narrow it.
+    Country keeps the jobs open to that country, worldwide ones included (the API takes the
+    English name). Results come newest first, so paging stops at the first job older than
+    Hours old."""
+    params = {"q": _term(search), "sort": "recent"}
+    country = _country_name(search)
+    if country:
+        params["country"] = country
+    rows = []
+    for page in range(1, _HIMALAYAS_MAX_PAGES + 1):
+        resp = await client.get(_HIMALAYAS_SEARCH, params=dict(params, page=page))
+        if resp.status_code >= 400:
+            raise CreativeError(f"HTTP {resp.status_code} from the Himalayas API")
+        jobs = resp.json().get("jobs") or []
+        batch = [_himalayas_row(j) for j in jobs]
+        fresh = [r for r in batch if not _too_old(r, search.hours_old)]
+        rows += fresh
+        if len(jobs) < _HIMALAYAS_PAGE or len(fresh) < len(batch) or len(rows) >= limit:
+            break
+    return rows[:limit]
+
+
+# ── Eluta ───────────────────────────────────────────────────────────────────
+
+_ELUTA = "https://www.eluta.ca"
+# Eluta answers "Too Many Requests" (as a one-item feed) once a client spends its budget: on
+# 2026-10-26, 40 feed requests 3 s apart passed and the next one was refused. So one run
+# reads at most 2 feed pages and 6 job pages, one request every _ELUTA_GAP seconds.
+_ELUTA_MAX_PAGES = 2            # 20 items per RSS page
+_ELUTA_MAX_DETAILS = 6
+_ELUTA_GAP = 3.0
+_ELUTA_RADIUS_KM = 50
+_eluta_pace_state: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _eluta_tls() -> ssl.SSLContext:
+    """www.eluta.ca offers only TLS 1.2 with RSA key exchange (AES128-GCM-SHA256), which
+    OpenSSL 3.5 no longer offers by default (handshake failure, measured 2026-10-26). This
+    context adds those ciphers for that host only."""
+    ctx = ssl.create_default_context()
+    ctx.set_ciphers("DEFAULT:AES128-GCM-SHA256:AES256-GCM-SHA384")
+    return ctx
+
+
+async def _eluta_get(client: httpx.AsyncClient, url: str, params=None) -> httpx.Response:
+    """One Eluta request at a time per event loop, _ELUTA_GAP apart."""
+    loop = asyncio.get_running_loop()
+    lock, last = _eluta_pace_state.setdefault(loop, (asyncio.Lock(), [0.0]))
+    async with lock:
+        wait = last[0] + _ELUTA_GAP - time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
+        try:
+            return await client.get(url, params=params)
+        finally:
+            last[0] = time.monotonic()
+
+
+def _eluta_items(xml_text: bytes) -> list:
+    items = ET.fromstring(xml_text).findall("./channel/item")
+    if len(items) == 1 and (items[0].findtext("title") or "").strip() == "Too Many Requests":
+        raise CreativeError("Eluta answered Too Many Requests")
+    return items
+
+
+def _eluta_row(it) -> dict:
+    try:
+        posted = parsedate_to_datetime(it.findtext("pubDate") or "").isoformat()
+    except (TypeError, ValueError):
+        posted = None
+    return _row(
+        title=it.findtext("title"), company=(it.findtext("employer") or "").strip(),
+        url=(it.findtext("link") or "").split("?")[0], location=(it.findtext("location") or "").strip(),
+        description=html_to_text(it.findtext("description") or ""),   # a snippet until the detail fills it
+        posted=posted)
+
+
+async def _eluta_list(client: httpx.AsyncClient, search: Search, limit: int) -> list:
+    """Canadian jobs from employer career sites. The search is full text over the posting, so
+    the title filter does the narrowing. Location is a city with a 50 km radius; without one
+    the search covers Canada. Eluta has no remote filter."""
+    city = split_country_suffix(search.location or "")[0].strip()
+    q = f"{_term(search)} sort:post" + (f" radius:{_ELUTA_RADIUS_KM}" if city else "")
+    rows = []
+    for page in range(1, _ELUTA_MAX_PAGES + 1):
+        resp = await _eluta_get(client, f"{_ELUTA}/rss", {"q": q, "l": city, "pg": page})
+        if resp.status_code >= 400:
+            raise CreativeError(f"HTTP {resp.status_code} from the Eluta feed")
+        try:
+            items = _eluta_items(resp.content)
+        except CreativeError:
+            if rows:
+                break               # keep what the earlier pages gave
+            raise
+        batch = [_eluta_row(it) for it in items]
+        fresh = [r for r in batch if not _too_old(r, search.hours_old)]
+        rows += fresh
+        if len(items) < 20 or len(fresh) < len(batch) or len(rows) >= limit:
+            break
+    return rows[:limit]
+
+
+async def _eluta_detail(client: httpx.AsyncClient, row: dict) -> None:
+    """The job page carries schema.org JobPosting microdata; its description replaces the snippet."""
+    resp = await _eluta_get(client, row["url"])
+    if resp.status_code >= 400:
+        raise CreativeError(f"HTTP {resp.status_code} from {row['url']}")
+    from bs4 import BeautifulSoup
+    page = BeautifulSoup(resp.text, "html.parser")
+    desc = page.select_one('[itemtype*="JobPosting"] [itemprop="description"]')
+    if desc is not None:
+        row["description"] = html_to_text(str(desc))
+
+
 # ── boards ──────────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -313,13 +462,32 @@ class Board:
     label: str
     listing: Callable[[httpx.AsyncClient, Search, int], Awaitable[list]]
     detail: Optional[Callable[[httpx.AsyncClient, dict], Awaitable[None]]] = None
+    # Detail requests one run may make; the new rows past it wait for the next run, unsaved,
+    # so each is stored with its full text. None = no cap.
+    max_details: Optional[int] = None
 
 
 BOARDS = {
     "behance": Board("Behance", _behance_list, _behance_detail),
     "hollylist": Board("Hollylist", _hollylist_list, _hollylist_detail),
     "wanacreate": Board("Wana Create", _wana_list),
+    "himalayas": Board("Himalayas", _himalayas_list),
+    "eluta": Board("Eluta", _eluta_list, _eluta_detail, max_details=_ELUTA_MAX_DETAILS),
 }
+
+
+def _defer_over_budget(fresh: list, breakdown: dict) -> list:
+    """The new rows this run reads, with each board's max_details respected; the rest are
+    counted as `deferred` in the board's breakdown row and left for a later run."""
+    out, used = [], {}
+    for r in fresh:
+        cap = BOARDS[r["source"]].max_details
+        if cap is not None and used.get(r["source"], 0) >= cap:
+            breakdown[r["source"]]["deferred"] = breakdown[r["source"]].get("deferred", 0) + 1
+            continue
+        used[r["source"]] = used.get(r["source"], 0) + 1
+        out.append(r)
+    return out
 
 
 def configured_boards(search: Search) -> list:
@@ -327,8 +495,10 @@ def configured_boards(search: Search) -> list:
 
 
 def _client() -> httpx.AsyncClient:
+    # Eluta's TLS context applies to its host only; every other host keeps the default one.
     return httpx.AsyncClient(timeout=httpx.Timeout(30), follow_redirects=True,
-                             headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"})
+                             headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"},
+                             mounts={_ELUTA: httpx.AsyncHTTPTransport(verify=_eluta_tls())})
 
 
 def _error_text(e: BaseException) -> str:
@@ -438,6 +608,7 @@ async def run(search: Search) -> dict:
                     bump(r, "seen")
                     if make_external_id(r["company"], r["title"], r["url"]) not in existing_ids:
                         fresh.append(r)
+                fresh = _defer_over_budget(fresh, breakdown)
                 await _fill_details(client, fresh)
             # Behance dates and company names arrive with the detail query.
             late = [r for r in fresh if _rejection(r, search, include_kw, exclude_kw, global_ex, search_ex)]
@@ -521,7 +692,8 @@ async def preview(search: Search, db) -> dict:
         async with _client() as client:
             rows, breakdown = await _collect(client, search, PREVIEW_LIMIT)
             reasons = [_rejection(r, search, include_kw, exclude_kw, global_ex, search_ex) for r in rows]
-            sampled = [r for r, why in zip(rows, reasons) if why is None][:PREVIEW_DETAIL_LIMIT]
+            sampled = _defer_over_budget([r for r, why in zip(rows, reasons) if why is None],
+                                         breakdown)[:PREVIEW_DETAIL_LIMIT]
             await _fill_details(client, sampled)
         sampled_ids = {id(r) for r in sampled}
         phrases = _body_phrases(db)
