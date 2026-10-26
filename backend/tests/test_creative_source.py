@@ -23,11 +23,15 @@ class FakeSites:
 
     def __init__(self):
         self.calls = []
+        self.urls = []
         self.behance_pages = {1: [self.be_node(1), self.be_node(2, brief=True)]}
         self.holly = {None: [], "europe": []}
         self.holly_detail = {}
         self.wana_hits = []
         self.fail = set()
+        self.himalayas = {}            # page -> jobs
+        self.eluta_pages = {}          # pg -> rss xml
+        self.eluta_pages_html = {}     # path -> html
 
     @staticmethod
     def be_node(i, brief=False, company="Acme"):
@@ -40,6 +44,7 @@ class FakeSites:
         host, path = request.url.host, request.url.path
         body = json.loads(request.content) if request.content else {}
         self.calls.append((host, path, body, dict(request.headers)))
+        self.urls.append(str(request.url))
         if host in self.fail:
             return httpx.Response(503)
         if host == "www.behance.net" and path == "/joblist":
@@ -70,6 +75,13 @@ class FakeSites:
             return httpx.Response(200, json={"api_key": "k", "endpoint": "https://search.wanacreate.art"})
         if host == "search.wanacreate.art":
             return httpx.Response(200, json={"found": len(self.wana_hits), "hits": [{"document": d} for d in self.wana_hits]})
+        if host == "himalayas.app":
+            page = int(request.url.params.get("page", "1"))
+            return httpx.Response(200, json={"totalCount": 0, "jobs": self.himalayas.get(page, [])})
+        if host == "www.eluta.ca" and path == "/rss":
+            return httpx.Response(200, content=self.eluta_pages.get(int(request.url.params.get("pg", "1")), _rss([])))
+        if host == "www.eluta.ca":
+            return httpx.Response(200, text=self.eluta_pages_html.get(path, "<html></html>"))
         return httpx.Response(404)
 
     def to(self, host, path=None):
@@ -90,6 +102,31 @@ def _holly(i, public=True, market=None, added="2026-10-20T10:00:00.000Z", org="S
 
 
 # ── the board clients ───────────────────────────────────────────────────────
+
+def _rss(items) -> bytes:
+    body = "".join(
+        f"<item><title>{t}</title><link>https://www.eluta.ca/spl/{slug}?imo=1</link><employer>{e}</employer>"
+        f"<location>{loc}</location><description>&lt;span&gt;snippet&lt;/span&gt; text</description>"
+        f"<pubDate>{date}</pubDate><guid>{slug}</guid></item>"
+        for t, slug, e, loc, date in items)
+    return f'<?xml version="1.0"?><rss><channel>{body}</channel></rss>'.encode()
+
+
+def _him(i, days_old=1, places=("Canada",), salary=None):
+    j = {"title": f"Concept Artist {i}", "companyName": "Youtooz", "locationRestrictions": list(places),
+         "description": "<p>Draw <b>things</b></p>", "pubDate": int(time.time()) - days_old * 86400,
+         "applicationLink": f"https://himalayas.app/companies/youtooz/jobs/c{i}?utm_source=api",
+         "guid": f"https://himalayas.app/companies/youtooz/jobs/c{i}", "salaryPeriod": "annual",
+         "minSalary": None, "maxSalary": None, "currency": None}
+    if salary:
+        j.update(minSalary=salary[0], maxSalary=salary[1], currency=salary[2])
+    return j
+
+
+@pytest.fixture
+def eluta_now(monkeypatch):
+    monkeypatch.setattr(creative, "_ELUTA_GAP", 0)
+
 
 def test_board_keys_match_the_mode_table():
     assert tuple(creative.BOARDS) == M.CREATIVE_BOARDS
@@ -177,6 +214,104 @@ def test_wana_row_prefers_the_original_posting_url():
     assert (copied["salary_min"], copied["salary_max"]) == (60000, 80000)
     own = creative._wana_row({"id": "a2", "title": "Muralist", "salary": {"min": 35000, "currency": "INR", "period": "MONTHLY"}})
     assert own["url"] == "https://www.wanacreate.art/jobs/a2" and own["salary_min"] is None
+
+
+async def test_himalayas_sends_the_country_name_and_stops_at_old_jobs(sites):
+    sites.himalayas = {1: [_him(i) for i in range(19)] + [_him(99, days_old=30)], 2: [_him(200)]}
+    async with creative._client() as c:
+        rows = await creative._himalayas_list(c, _search(country="canada", hours_old=168), 100)
+    assert len(rows) == 19                     # the 30-day-old job ends the paging
+    asked = [u for u in sites.urls if "himalayas.app" in u]
+    assert len(asked) == 1
+    assert "country=Canada" in asked[0] and "sort=recent" in asked[0] and "page=1" in asked[0]
+    r = rows[0]
+    assert (r["url"], r["location"], r["arrangement"]) == (
+        "https://himalayas.app/companies/youtooz/jobs/c0?utm_source=api", "Remote: Canada", "remote")
+    assert r["description"] == "Draw things"
+
+
+async def test_himalayas_without_a_known_country_sends_none(sites):
+    sites.himalayas = {1: [_him(1, places=())]}
+    async with creative._client() as c:
+        rows = await creative._himalayas_list(c, _search(country="atlantis"), 10)
+    assert rows[0]["location"] == "Remote (worldwide)"
+    assert "country=" not in [u for u in sites.urls if "himalayas.app" in u][0]
+
+
+def test_himalayas_salary_is_kept_only_in_usd_per_year():
+    assert creative._himalayas_row(_him(1, salary=(90000, 120000, "USD")))["salary_min"] == 90000
+    assert creative._himalayas_row(_him(1, salary=(90000, 120000, "EUR")))["salary_min"] is None
+
+
+async def test_eluta_reads_the_feed_with_a_city_radius_and_fills_text_from_microdata(sites, eluta_now):
+    now = "Mon, 26 Oct 2026 13:56:27 GMT"
+    sites.eluta_pages = {1: _rss([("2D Animator", "2d-animator-abc", "ICON Creative Studio", "Vancouver, BC", now)])}
+    sites.eluta_pages_html = {"/spl/2d-animator-abc": (
+        '<div itemscope itemtype="http://schema.org/JobPosting"><span itemprop="title">2D Animator</span>'
+        '<div itemprop="description"><p>Animate <b>scenes</b></p><ul><li>Toon Boom</li></ul></div></div>')}
+    async with creative._client() as c:
+        rows = await creative._eluta_list(c, _search(search_term="animator", location="Vancouver, BC"), 50)
+        for r in rows:
+            r["source"] = "eluta"
+        assert rows[0]["description"] == "snippet text"
+        await creative._fill_details(c, rows)
+    r = rows[0]
+    assert (r["title"], r["company"], r["location"]) == ("2D Animator", "ICON Creative Studio", "Vancouver, BC")
+    assert r["url"] == "https://www.eluta.ca/spl/2d-animator-abc"          # ?imo=1 dropped
+    assert r["posted"].startswith("2026-10-26T13:56:27")
+    assert r["description"] == "Animate scenes\nToon Boom"
+    assert len(sites.to("www.eluta.ca", "/rss")) == 1        # one item < 20: no second page
+
+
+async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
+    async with creative._client() as c:
+        await creative._eluta_list(c, _search(search_term="illustrator", location="Vancouver"), 10)
+        await creative._eluta_list(c, _search(search_term="illustrator", location=""), 10)
+    urls = [u for u in sites.urls if "eluta.ca/rss" in u]
+    assert "radius%3A50" in urls[0] and "l=Vancouver" in urls[0] and "sort%3Apost" in urls[0]
+    assert "radius" not in urls[1]
+
+
+async def test_eluta_too_many_requests_fails_the_first_page_and_ends_later_ones(sites, eluta_now):
+    busy = _rss([("Too Many Requests", "x", "", "", "Mon, 26 Oct 2026 13:56:27 GMT")])
+    sites.eluta_pages = {1: busy}
+    async with creative._client() as c:
+        with pytest.raises(creative.CreativeError, match="Too Many Requests"):
+            await creative._eluta_list(c, _search(), 50)
+    now = "Mon, 26 Oct 2026 13:56:27 GMT"
+    sites.eluta_pages = {1: _rss([(f"Artist {i}", f"a{i}", "Co", "Vancouver, BC", now) for i in range(20)]), 2: busy}
+    async with creative._client() as c:
+        rows = await creative._eluta_list(c, _search(), 50)
+    assert len(rows) == 20
+
+
+def test_rows_past_a_board_detail_budget_wait_for_the_next_run():
+    rows = [{"source": "eluta", "i": i} for i in range(creative._ELUTA_MAX_DETAILS + 3)] + [{"source": "behance"}]
+    breakdown = {"eluta": {"seen": 0, "new": 0}, "behance": {"seen": 0, "new": 0}}
+    kept = creative._defer_over_budget(rows, breakdown)
+    assert [r.get("i") for r in kept if r["source"] == "eluta"] == list(range(creative._ELUTA_MAX_DETAILS))
+    assert any(r["source"] == "behance" for r in kept)                 # Behance has no cap
+    assert breakdown["eluta"]["deferred"] == 3 and "deferred" not in breakdown["behance"]
+
+
+async def test_run_saves_eluta_rows_up_to_the_budget_and_leaves_the_rest(sites, quiet, test_db, eluta_now, monkeypatch):
+    monkeypatch.setattr(creative, "_ELUTA_MAX_DETAILS", 2)
+    monkeypatch.setitem(creative.BOARDS, "eluta", creative.Board("Eluta", creative._eluta_list, creative._eluta_detail, 2))
+    now = "Mon, 26 Oct 2026 13:56:27 GMT"
+    sites.eluta_pages = {1: _rss([(f"Animator {i}", f"a{i}", "ICON", "Vancouver, BC", now) for i in range(5)])}
+    search = Search(name="t", search_mode="creative", search_term="animator", sources=["eluta"], location="Vancouver",
+                    results_wanted=10, hours_old=0, company_exclude=[])
+    test_db.add(search)
+    test_db.commit()
+    res = await creative.run(search)
+    assert res["source_breakdown"]["eluta"]["new"] == 2 and res["source_breakdown"]["eluta"]["deferred"] == 3
+    res = await creative.run(search)                    # the next run takes the waiting ones
+    assert res["source_breakdown"]["eluta"]["new"] == 2
+
+
+def test_eluta_tls_context_offers_the_rsa_cipher_the_site_needs():
+    names = {c["name"] for c in creative._eluta_tls().get_ciphers()}
+    assert "AES128-GCM-SHA256" in names
 
 
 async def test_collect_keeps_the_other_boards_when_one_fails(sites):

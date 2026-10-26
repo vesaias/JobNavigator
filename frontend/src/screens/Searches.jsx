@@ -89,7 +89,7 @@ const DEPTHS = [
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
 const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Applicant']]
 // backend/scraper/search_modes.py CREATIVE_BOARDS, same order
-const CREATIVE_BOARDS = [['behance', 'Behance'], ['hollylist', 'Hollylist'], ['wanacreate', 'Wana Create']]
+const CREATIVE_BOARDS = [['behance', 'Behance'], ['hollylist', 'Hollylist'], ['wanacreate', 'Wana Create'], ['himalayas', 'Himalayas'], ['eluta', 'Eluta']]
 const creativeLabel = (k) => (CREATIVE_BOARDS.find(([id]) => id === k) || [k, k])[1]
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
@@ -100,7 +100,7 @@ const noteFor = (mode) => {
   if (mode === 'apify') return ['Runs Apify actors with the API key from Settings › Apify. Apify bills your account for each result: Results wanted (at most 200) caps every board on every run, each run carries a spend cap and stops after 15 minutes, and Test fetches 20 jobs per board at most. A new Apify search starts paused: check the boards, then press Paused to resume it.', 'sm-apify']
   if (mode === 'caribbeanjobs') return ['Set the filters on caribbeanjobs.com and paste the search URL, or enter a term. The description of each result is read from its own page; Test reads at most 20 of those pages. A salary in a local currency is kept as text in the description, not as a number.', 'sm-caribbeanjobs']
   if (mode === 'trulyremote') return ['Reads TrulyRemoteWork.com’s full corpus of worldwide-remote roles. Every listing is remote with no location restriction, so you narrow it with the title and company filters below. Each new job’s description is read from its own page; Test reads at most 20 of those pages.', 'sm-trulyremote']
-  if (mode === 'creative') return ['Reads the job APIs of Behance, Hollylist and Wana Create directly: no login and no Apify key. Remote applies on every board. Location applies on Hollylist and Wana Create (city name); Behance ignores it. Hollylist members-only offers are skipped, and a salary is stored as a number only in US dollars per year. Test reads at most 20 job pages.', 'sm-creative']
+  if (mode === 'creative') return ['Reads the job APIs and feeds of Behance, Hollylist, Wana Create, Himalayas and Eluta directly: no login and no Apify key. Remote applies on Behance, Hollylist and Wana Create; Himalayas has remote jobs only, and Eluta (Canadian employer sites) has no remote filter. Location (a city name) applies on Hollylist, Wana Create and Eluta (50 km); Behance ignores it. Country applies on Himalayas only. Hollylist members-only offers are skipped, and a salary is stored as a number only in US dollars per year. Eluta is read slowly, one request every few seconds. Test reads at most 20 job pages.', 'sm-creative']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
@@ -225,8 +225,11 @@ const toPayload = (d) => {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
-  // Creative boards take a city name and no country.
-  if (d.search_mode === 'creative') p.location = d.location || ''
+  // Creative boards take a city name; Country is read by Himalayas only.
+  if (d.search_mode === 'creative') {
+    p.location = d.location || ''
+    p.country = d.country || DEFAULT_COUNTRY
+  }
   return p
 }
 
@@ -359,8 +362,10 @@ function ConfigForm({ d, set }) {
   } else if (m === 'creative') {
     fields.push(
       <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. illustrator" />,
-      <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. London"
-        sub="One city name. Behance ignores it." />,
+      <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Vancouver"
+        sub="One city name. Behance and Himalayas ignore it." />,
+      <Cell key="ctry" label="Country" value={d.country} options={countries} onChange={(v) => set({ country: v })}
+        sub="Himalayas only: jobs open to this country, worldwide jobs included." />,
       <Cell key="rem" label="Remote" value={d.is_remote} options={[['', 'Any'], ['true', 'Remote only']]} onChange={(v) => set({ is_remote: v })} />,
       <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })}
         sub="0 = no age limit. Behance freelance briefs carry no date." />,
