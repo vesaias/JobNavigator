@@ -366,10 +366,11 @@ async def _himalayas_list(client: httpx.AsyncClient, search: Search, limit: int)
 # ── Eluta ───────────────────────────────────────────────────────────────────
 
 _ELUTA = "https://www.eluta.ca"
-# Eluta answers "Too Many Requests" (as a one-item feed) once a client spends its budget: on
-# 2026-10-26, 40 feed requests 3 s apart passed and the next one was refused. So one run
-# reads at most 2 feed pages and 6 job pages, one request every _ELUTA_GAP seconds.
-_ELUTA_MAX_PAGES = 2            # 20 items per RSS page
+# Eluta refuses with a one-item feed: "Too Many Requests" after a burst, and "Too Many Feeds"
+# once an address checks more than 10 RSS feeds a day ("You may only check a maximum of 10
+# RSS feeds each day", 2026-10-26). So one run reads one feed page and at most 6 job pages,
+# one request every _ELUTA_GAP seconds, and an Eluta search should run once a day.
+_ELUTA_MAX_PAGES = 1            # 20 items per RSS page
 _ELUTA_MAX_DETAILS = 6
 _ELUTA_GAP = 3.0
 _ELUTA_RADIUS_KM = 50
@@ -400,9 +401,13 @@ async def _eluta_get(client: httpx.AsyncClient, url: str, params=None) -> httpx.
 
 
 def _eluta_items(xml_text: bytes) -> list:
+    """The feed's items; a refusal comes as one item titled "Too Many …" that links to /contact."""
     items = ET.fromstring(xml_text).findall("./channel/item")
-    if len(items) == 1 and (items[0].findtext("title") or "").strip() == "Too Many Requests":
-        raise CreativeError("Eluta answered Too Many Requests")
+    if len(items) == 1:
+        title = (items[0].findtext("title") or "").strip()
+        if title.startswith("Too Many") or (items[0].findtext("link") or "").rstrip("/").endswith("/contact"):
+            reason = " ".join((items[0].findtext("description") or "").split())[:160]
+            raise CreativeError(f"Eluta answered {title}" + (f": {reason}" if reason else ""))
     return items
 
 

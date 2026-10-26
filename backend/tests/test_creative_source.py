@@ -272,17 +272,28 @@ async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
     assert "radius" not in urls[1]
 
 
-async def test_eluta_too_many_requests_fails_the_first_page_and_ends_later_ones(sites, eluta_now):
-    busy = _rss([("Too Many Requests", "x", "", "", "Mon, 26 Oct 2026 13:56:27 GMT")])
-    sites.eluta_pages = {1: busy}
+@pytest.mark.parametrize("title", ["Too Many Requests", "Too Many Feeds"])
+async def test_eluta_refusals_fail_the_board_instead_of_becoming_jobs(sites, eluta_now, title):
+    sites.eluta_pages = {1: _rss([(title, "x", "", "", "Mon, 26 Oct 2026 13:56:27 GMT")])}
     async with creative._client() as c:
-        with pytest.raises(creative.CreativeError, match="Too Many Requests"):
+        with pytest.raises(creative.CreativeError, match=title):
             await creative._eluta_list(c, _search(), 50)
+
+
+def test_eluta_daily_feed_refusal_is_recognised_by_its_contact_link():
+    xml = (b'<rss><channel><item><title>Daily limit</title><link>https://www.eluta.ca/contact</link>'
+           b'<description>You may only check a maximum of 10 RSS feeds each day.</description></item></channel></rss>')
+    with pytest.raises(creative.CreativeError, match="10 RSS feeds each day"):
+        creative._eluta_items(xml)
+
+
+async def test_eluta_reads_one_feed_page_per_run(sites, eluta_now):
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
-    sites.eluta_pages = {1: _rss([(f"Artist {i}", f"a{i}", "Co", "Vancouver, BC", now) for i in range(20)]), 2: busy}
+    page = _rss([(f"Artist {i}", f"a{i}", "Co", "Vancouver, BC", now) for i in range(20)])
+    sites.eluta_pages = {1: page, 2: page}
     async with creative._client() as c:
         rows = await creative._eluta_list(c, _search(), 50)
-    assert len(rows) == 20
+    assert len(rows) == 20 and len(sites.to("www.eluta.ca", "/rss")) == 1
 
 
 def test_rows_past_a_board_detail_budget_wait_for_the_next_run():
