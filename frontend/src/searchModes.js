@@ -11,7 +11,7 @@ export const SEARCH_MODES = [
   { key: 'apify', label: 'Apify', badge: 'APIFY', cls: 'sm-apify', extension: false, needsQuery: false, sources: [] },
   { key: 'caribbeanjobs', label: 'CaribbeanJobs.com', badge: 'CARIBBEANJOBS.COM', cls: 'sm-caribbeanjobs', extension: false, needsQuery: true, sources: [] },
   { key: 'trulyremote', label: 'TrulyRemoteWork.com', badge: 'TRULYREMOTEWORK.COM', cls: 'sm-trulyremote', extension: false, needsQuery: false, sources: [] },
-  { key: 'creative', label: 'Creative boards', badge: 'CREATIVE', cls: 'sm-creative', extension: false, needsQuery: false, sources: ['behance', 'hollylist', 'wanacreate', 'himalayas', 'eluta'] },
+  { key: 'creative', label: 'Creative boards', badge: 'CREATIVE', cls: 'sm-creative', extension: false, needsQuery: false, sources: ['behance', 'hollylist', 'wanacreate', 'himalayas', 'eluta', 'dribbble', 'artstation', 'workwithindies'] },
   { key: 'linkedin_extension', label: 'LinkedIn Extension', badge: 'EXTENSION', cls: 'sm-extension', extension: true, needsQuery: false, sources: [] },
   { key: 'extension', label: 'Extension', badge: 'EXTENSION', cls: 'sm-extension', extension: true, needsQuery: false, sources: [] },
 ]

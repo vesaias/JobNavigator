@@ -1,5 +1,5 @@
-"""Creative boards source: Behance, Hollylist, Wana Create, Himalayas and Eluta, read from each
-site's own JSON API or feed.
+"""Creative boards source: Behance, Hollylist, Wana Create, Himalayas, Eluta, Dribbble, ArtStation
+and Work With Indies, read from each site's own JSON API or feed.
 
 No login, no browser, no Apify key. A search picks boards in `sources`, the way a keyword
 search picks JobSpy boards; each board writes its own row into `source_breakdown`, and its
@@ -13,11 +13,16 @@ Apify mode has paid fallbacks for two of them (apify_behance, apify_hollylist).
 | wanacreate | Typesense search with its public key      | in the listing                      |
 | himalayas  | documented public JSON API, 20 per page   | in the listing                      |
 | eluta      | RSS, 20 per page, one request per 3 s     | job page microdata, per new job     |
+| dribbble   | keyword RSS, ~50 newest                   | job page JSON-LD, per new job       |
+| artstation | public jobs JSON, 100 per page            | in the listing                      |
+| workwithindies | RSS, 100 newest, no search            | job page JSON-LD, per new job       |
 
 What each board applies itself: Remote on Behance, Hollylist and Wana Create (Himalayas is
 remote only; Eluta has no remote filter); Location on Hollylist (inside a market), Wana Create
-(exact city name) and Eluta (city, 50 km). Hours old is applied by Wana Create and checked here
-for the others (listing date; Behance: detail date).
+(exact city name) and Eluta (city, 50 km). Dribbble, ArtStation and Work With Indies take no
+Location, so _rejection keeps their rows in the city or remote; ArtStation filters Remote itself.
+For every board, Remote drops a row the posting calls on-site or hybrid. Hours old is applied by
+Wana Create and checked here for the others (listing date; Behance: detail date).
 
 Behance answers the first request with a cookie challenge (`js_challenge_value`, set by an
 inline script) and checks a double-submit token: the same random value in the `bcp` cookie
@@ -26,6 +31,7 @@ link); they are dropped. Detail queries run only for rows that pass the filters 
 stored yet, so a scheduled run reads a few pages; a Test reads at most PREVIEW_DETAIL_LIMIT.
 """
 import asyncio
+import html
 import json
 import logging
 import re
@@ -464,6 +470,157 @@ async def _eluta_detail(client: httpx.AsyncClient, row: dict) -> None:
         row["description"] = text
 
 
+# ── JSON-LD job pages (Dribbble, Work With Indies) ──────────────────────────
+
+def _fix_escapes(text: str) -> str:
+    """Double every backslash that does not start a valid JSON escape, reading pairs left to
+    right so an escaped backslash (\\\\) stays one escape."""
+    return re.sub(r"\\(.)", lambda m: m.group(0) if m.group(1) in '"\\/bfnrtu' else "\\\\" + m.group(1),
+                  text, flags=re.S)
+
+
+def _jobposting_ld(html_text: str) -> dict:
+    """The first schema.org JobPosting in the page's JSON-LD blocks, or {}. Work With Indies
+    writes invalid escapes such as `\\_blank`; a block that fails is parsed again with those
+    backslashes doubled."""
+    for block in re.findall(r'<script[^>]*application/ld\+json[^>]*>(.*?)</script>', html_text, re.S):
+        try:
+            data = json.loads(block, strict=False)
+        except ValueError:
+            try:
+                data = json.loads(_fix_escapes(block), strict=False)
+            except ValueError:
+                continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and "JobPosting" in str(item.get("@type")):
+                return item
+    return {}
+
+
+def _ld_place(ld: dict) -> str:
+    places = ld.get("jobLocation") or []
+    out = []
+    for p in places if isinstance(places, list) else [places]:
+        addr = (p or {}).get("address") or {}
+        parts = [addr.get(k) for k in ("addressLocality", "addressRegion", "addressCountry")]
+        out.append(", ".join(dict.fromkeys(x for x in parts if x and x != "null")))
+    return "; ".join(x for x in out if x)
+
+
+def _apply_ld(row: dict, ld: dict) -> None:
+    """Description, place and remote flag from a JobPosting; a field the page lacks keeps the feed's value."""
+    text = html_to_text(html.unescape(ld.get("description") or ""))
+    if text:
+        row["description"] = text
+    if str(ld.get("jobLocationType") or "").upper() == "TELECOMMUTE":
+        row["arrangement"] = REMOTE
+        where = (ld.get("applicantLocationRequirements") or {})
+        where = where.get("name") if isinstance(where, dict) else ""
+        row["location"] = f"Remote: {where}" if where else (row["location"] or "Remote")
+    elif _ld_place(ld):
+        row["location"] = _ld_place(ld)
+    row["company"] = row["company"] or ((ld.get("hiringOrganization") or {}).get("name") or "")
+
+
+async def _ld_detail(client: httpx.AsyncClient, row: dict) -> None:
+    resp = await client.get(row["url"])
+    if resp.status_code >= 400:
+        raise CreativeError(f"HTTP {resp.status_code} from {row['url']}")
+    _apply_ld(row, _jobposting_ld(resp.text))
+
+
+def _rss_date(text) -> Optional[str]:
+    try:
+        return parsedate_to_datetime(text or "").isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+# ── Dribbble ────────────────────────────────────────────────────────────────
+
+_DRIBBBLE_RSS = "https://dribbble.com/jobs.rss"
+_DRIBBBLE_TITLE = re.compile(r"^(?P<company>.*?) is hiring for a position of (?P<title>.*?)(?: in (?P<place>.*))?$")
+_REMOTE_WORDS = re.compile(r"\b(remote|anywhere|worldwide)\b", re.I)
+
+
+async def _dribbble_list(client: httpx.AsyncClient, search: Search, limit: int) -> list:
+    """The keyword feed (about 50 newest). The feed item has no text; the job page's JSON-LD has it."""
+    resp = await client.get(_DRIBBBLE_RSS, params={"keyword": _term(search)})
+    if resp.status_code >= 400:
+        raise CreativeError(f"HTTP {resp.status_code} from the Dribbble feed")
+    rows = []
+    for it in ET.fromstring(resp.content).findall("./channel/item"):
+        m = _DRIBBBLE_TITLE.match(" ".join((it.findtext("title") or "").split()))
+        title, place = (m.group("title"), m.group("place") or "") if m else (it.findtext("title"), "")
+        rows.append(_row(
+            title=title, company=it.findtext("{http://purl.org/dc/elements/1.1/}creator") or (m.group("company") if m else ""),
+            url=(it.findtext("link") or "").split("?")[0], location=place,
+            arrangement=REMOTE if _REMOTE_WORDS.search(place) else None, posted=_rss_date(it.findtext("pubDate"))))
+    return rows[:limit]
+
+
+# ── ArtStation ──────────────────────────────────────────────────────────────
+
+_ARTSTATION_JOBS = "https://www.artstation.com/api/v2/jobs/public/jobs.json"
+_ARTSTATION_PAGE = 100
+
+
+def _artstation_row(j: dict) -> dict:
+    places = [((l or {}).get("locality") or {}).get("formatted_name") for l in j.get("recruitment_localities") or []]
+    places = [p for p in places if p]
+    text = "\n\n".join(t for t in (html_to_text(j.get("description") or ""), html_to_text(j.get("how_to_apply") or "")) if t)
+    remote = bool(j.get("work_remotely"))
+    return _row(
+        title=j.get("title"), company=j.get("company_name") or "",
+        url=f"https://www.artstation.com/jobs/{j.get('hash_id')}" if j.get("hash_id") else "",
+        location=("Remote: " if remote else "") + "; ".join(places) if places else ("Remote" if remote else ""),
+        description=text, arrangement=REMOTE if remote else None,
+        posted=(j.get("listing_placement") or {}).get("posted_at") or j.get("created_at"))
+
+
+async def _artstation_list(client: httpx.AsyncClient, search: Search, limit: int) -> list:
+    """The whole board is about 100 jobs, two pages; `query` and `work_remotely` narrow it.
+    Location is checked here against the job's localities."""
+    params = {"per_page": _ARTSTATION_PAGE, "query": _term(search)}
+    if search.is_remote:
+        params["work_remotely"] = "true"
+    rows = []
+    for page in range(1, 6):
+        resp = await client.get(_ARTSTATION_JOBS, params=dict(params, page=page))
+        if resp.status_code >= 400:
+            raise CreativeError(f"HTTP {resp.status_code} from the ArtStation jobs API")
+        jobs = resp.json().get("data") or []
+        rows += [_artstation_row(j) for j in jobs]
+        if len(jobs) < _ARTSTATION_PAGE or len(rows) >= limit:
+            break
+    return rows[:limit]
+
+
+# ── Work With Indies ────────────────────────────────────────────────────────
+
+_WWI_RSS = "https://www.workwithindies.com/careers/rss.xml"
+_WWI_TITLE = re.compile(r"^(?P<company>.*?) is hiring an? (?P<title>.*?)(?: to work (?P<place>.*))?$")
+
+
+async def _wwi_list(client: httpx.AsyncClient, search: Search, limit: int) -> list:
+    """The 100 newest indie game jobs; the feed takes no search, so the title filter narrows it."""
+    resp = await client.get(_WWI_RSS)
+    if resp.status_code >= 400:
+        raise CreativeError(f"HTTP {resp.status_code} from the Work With Indies feed")
+    rows = []
+    for it in ET.fromstring(resp.content).findall("./channel/item"):
+        m = _WWI_TITLE.match(" ".join((it.findtext("title") or "").split()))
+        place = (m.group("place") or "") if m else ""
+        rows.append(_row(
+            title=m.group("title") if m else it.findtext("title"), company=m.group("company") if m else "",
+            url=it.findtext("link") or "", location=place,
+            description=html_to_text(it.findtext("description") or ""),
+            # "to work from CET ± 3 hours": a time-zone band is a remote job
+            arrangement=REMOTE if _REMOTE_WORDS.search(place) or place.lower().startswith("from ") else None,
+            posted=_rss_date(it.findtext("pubDate"))))
+    return rows[:limit]
+
+
 # ── boards ──────────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -474,6 +631,9 @@ class Board:
     # Detail requests one run may make; the new rows past it wait for the next run, unsaved,
     # so each is stored with its full text. None = no cap.
     max_details: Optional[int] = None
+    # The board cannot filter by city, so _rejection drops the rows outside the search's
+    # Location (remote rows stay).
+    local_city: bool = False
 
 
 BOARDS = {
@@ -482,6 +642,9 @@ BOARDS = {
     "wanacreate": Board("Wana Create", _wana_list),
     "himalayas": Board("Himalayas", _himalayas_list),
     "eluta": Board("Eluta", _eluta_list, _eluta_detail, max_details=_ELUTA_MAX_DETAILS),
+    "dribbble": Board("Dribbble", _dribbble_list, _ld_detail, local_city=True),
+    "artstation": Board("ArtStation", _artstation_list, local_city=True),
+    "workwithindies": Board("Work With Indies", _wwi_list, _ld_detail, local_city=True),
 }
 
 
@@ -580,6 +743,15 @@ def _rejection(r: dict, search: Search, include_kw, exclude_kw, global_ex: set, 
         return f"Company excluded (global): {company}"
     if company and company in search_ex:
         return f"Company excluded: {company}"
+    # Boards that cannot filter Remote or Location themselves: drop only what the posting
+    # itself contradicts; a row the posting says nothing about stays.
+    if search.is_remote and r.get("arrangement") in (ONSITE, HYBRID):
+        return f"Not remote: {r['arrangement']}"
+    city = _city(search)
+    board = BOARDS.get(r.get("source"))
+    if (board and board.local_city and city and r.get("arrangement") != REMOTE
+            and city.lower() not in (r.get("location") or "").lower()):
+        return f"Not in {city}"
     return _too_old(r, search.hours_old)
 
 
