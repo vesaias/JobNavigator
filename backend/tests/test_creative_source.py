@@ -415,6 +415,29 @@ def test_remote_drops_rows_the_posting_calls_onsite_and_unknown_rows_stay():
     assert creative._rejection(dict(creative._row(title="Illustrator"), source="dribbble"), s, [], [], set(), set()) is None
 
 
+@pytest.mark.parametrize("country,location,expected", [
+    ("canada", "Toronto, ON, Canada", None),
+    ("canada", "USA; Canada", None),
+    ("canada", "Anywhere", None),
+    ("canada", "Remote", None),                                 # no places listed
+    ("canada", "", None),
+    ("canada", "Spain; Portugal; Italy", "Not open to Canada"),
+    ("canada", "CA, USA; CO, USA", "Not open to Canada"),       # CA is California
+    ("usa", "CA, USA; CO, USA", None),
+    ("usa", "Philippines", "Not open to United States"),
+])
+def test_remote_behance_rows_must_be_open_to_the_search_country(country, location, expected):
+    row = dict(creative._row(title="Graphic Designer", location=location, arrangement="remote"), source="behance")
+    assert creative._rejection(row, _search(is_remote=True, country=country), [], [], set(), set()) == expected
+
+
+def test_the_country_rule_is_for_remote_behance_rows_only():
+    row = dict(creative._row(title="Graphic Designer", location="Spain"), source="behance")
+    assert creative._rejection(row, _search(is_remote=None, country="canada"), [], [], set(), set()) is None
+    other = dict(creative._row(title="Graphic Designer", location="Spain", arrangement="remote"), source="dribbble")
+    assert creative._rejection(other, _search(is_remote=True, country="canada"), [], [], set(), set()) is None
+
+
 def test_location_is_checked_here_only_for_boards_that_cannot_filter_it():
     s = _search(location="Vancouver, BC")
     in_city = dict(creative._row(title="Artist", location="Vancouver, BC, Canada"), source="artstation")
