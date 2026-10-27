@@ -455,9 +455,13 @@ async def _eluta_detail(client: httpx.AsyncClient, row: dict) -> None:
         raise CreativeError(f"HTTP {resp.status_code} from {row['url']}")
     from bs4 import BeautifulSoup
     page = BeautifulSoup(resp.text, "html.parser")
-    desc = page.select_one('[itemtype*="JobPosting"] [itemprop="description"]')
-    if desc is not None:
-        row["description"] = html_to_text(str(desc))
+    # The hiring organisation has its own empty <meta itemprop="description"> before the
+    # posting's <div itemprop="description">, so take the longest element that holds text.
+    texts = [html_to_text(str(el)) for el in page.select('[itemtype*="JobPosting"] [itemprop="description"]')
+             if el.name != "meta"]
+    text = max(texts, key=len, default="")
+    if text:
+        row["description"] = text
 
 
 # ── boards ──────────────────────────────────────────────────────────────────

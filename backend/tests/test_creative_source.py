@@ -246,8 +246,10 @@ def test_himalayas_salary_is_kept_only_in_usd_per_year():
 async def test_eluta_reads_the_feed_with_a_city_radius_and_fills_text_from_microdata(sites, eluta_now):
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
     sites.eluta_pages = {1: _rss([("2D Animator", "2d-animator-abc", "ICON Creative Studio", "Vancouver, BC", now)])}
+    # As on eluta.ca: the hiring organisation's empty <meta itemprop="description"> comes first.
     sites.eluta_pages_html = {"/spl/2d-animator-abc": (
         '<div itemscope itemtype="http://schema.org/JobPosting"><span itemprop="title">2D Animator</span>'
+        '<h5 itemprop="hiringOrganization" itemscope><meta itemprop="description" content=""></h5>'
         '<div itemprop="description"><p>Animate <b>scenes</b></p><ul><li>Toon Boom</li></ul></div></div>')}
     async with creative._client() as c:
         rows = await creative._eluta_list(c, _search(search_term="animator", location="Vancouver, BC"), 50)
@@ -270,6 +272,17 @@ async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
     urls = [u for u in sites.urls if "eluta.ca/rss" in u]
     assert "radius%3A50" in urls[0] and "l=Vancouver" in urls[0] and "sort%3Apost" in urls[0]
     assert "radius" not in urls[1]
+
+
+async def test_eluta_page_without_a_description_keeps_the_feed_snippet(sites, eluta_now):
+    now = "Mon, 26 Oct 2026 13:56:27 GMT"
+    sites.eluta_pages = {1: _rss([("Art Director", "ad-1", "Emily Carr", "Vancouver, BC", now)])}
+    sites.eluta_pages_html = {"/spl/ad-1": '<div itemscope itemtype="http://schema.org/JobPosting">'
+                                           '<meta itemprop="description" content=""></div>'}
+    async with creative._client() as c:
+        rows = await creative._eluta_list(c, _search(), 10)
+        await creative._eluta_detail(c, rows[0])
+    assert rows[0]["description"] == "snippet text"
 
 
 @pytest.mark.parametrize("title", ["Too Many Requests", "Too Many Feeds"])
