@@ -731,6 +731,21 @@ def _too_old(r: dict, hours_old) -> Optional[str]:
     return f"Older than {hours_old} h" if age_h > hours_old else None
 
 
+_OPEN_EVERYWHERE = re.compile(r"\b(anywhere|worldwide)\b", re.I)
+_BEHANCE_COUNTRY_NAMES = {"United States": ("united states", "usa")}   # Behance writes "CA, USA"
+
+
+def _behance_not_open_to(r: dict, country: str) -> Optional[str]:
+    """A remote Behance job lists the countries it hires from ("Spain; Portugal; Italy").
+    It is open to `country` when the list is empty or says Anywhere / Worldwide, or names
+    the country in full: "CA" alone is California in "CA, USA"."""
+    loc = (r.get("location") or "").lower()
+    names = _BEHANCE_COUNTRY_NAMES.get(country, (country.lower(),))
+    if not country or loc in ("", "remote") or _OPEN_EVERYWHERE.search(loc) or any(n in loc for n in names):
+        return None
+    return f"Not open to {country}"
+
+
 def _rejection(r: dict, search: Search, include_kw, exclude_kw, global_ex: set, search_ex: set) -> Optional[str]:
     ok, reason = title_kept(r["title"], include_kw, exclude_kw)
     if not ok:
@@ -747,6 +762,10 @@ def _rejection(r: dict, search: Search, include_kw, exclude_kw, global_ex: set, 
     # itself contradicts; a row the posting says nothing about stays.
     if search.is_remote and r.get("arrangement") in (ONSITE, HYBRID):
         return f"Not remote: {r['arrangement']}"
+    if search.is_remote and r.get("source") == "behance":
+        reason = _behance_not_open_to(r, _country_name(search))
+        if reason:
+            return reason
     city = _city(search)
     board = BOARDS.get(r.get("source"))
     if (board and board.local_city and city and r.get("arrangement") != REMOTE
