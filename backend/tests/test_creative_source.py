@@ -32,6 +32,9 @@ class FakeSites:
         self.himalayas = {}            # page -> jobs
         self.eluta_pages = {}          # pg -> rss xml
         self.eluta_pages_html = {}     # path -> html
+        self.feeds = {}                # host -> rss bytes
+        self.pages = {}                # full url -> html
+        self.artstation = {}           # page -> jobs
 
     @staticmethod
     def be_node(i, brief=False, company="Acme"):
@@ -75,6 +78,12 @@ class FakeSites:
             return httpx.Response(200, json={"api_key": "k", "endpoint": "https://search.wanacreate.art"})
         if host == "search.wanacreate.art":
             return httpx.Response(200, json={"found": len(self.wana_hits), "hits": [{"document": d} for d in self.wana_hits]})
+        if host in ("dribbble.com", "www.workwithindies.com") and (path.endswith(".rss") or path.endswith("rss.xml")):
+            return httpx.Response(200, content=self.feeds.get(host, _rss([])))
+        if str(request.url).split("?")[0] in self.pages:
+            return httpx.Response(200, text=self.pages[str(request.url).split("?")[0]])
+        if host == "www.artstation.com":
+            return httpx.Response(200, json={"total_count": 0, "data": self.artstation.get(int(request.url.params.get("page", "1")), [])})
         if host == "himalayas.app":
             page = int(request.url.params.get("page", "1"))
             return httpx.Response(200, json={"totalCount": 0, "jobs": self.himalayas.get(page, [])})
@@ -331,6 +340,89 @@ async def test_run_saves_eluta_rows_up_to_the_budget_and_leaves_the_rest(sites, 
     assert res["source_breakdown"]["eluta"]["new"] == 2 and res["source_breakdown"]["eluta"]["deferred"] == 3
     res = await creative.run(search)                    # the next run takes the waiting ones
     assert res["source_breakdown"]["eluta"]["new"] == 2
+
+
+def _feed(items) -> bytes:
+    body = "".join(f"<item><title>{t}</title><link>{link}</link><description>{d}</description>"
+                   f"<pubDate>{date}</pubDate>{extra}</item>" for t, link, d, date, extra in items)
+    return (f'<?xml version="1.0"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/"><channel>{body}'
+            f'</channel></rss>').encode()
+
+
+def _ld_page(ld: dict) -> str:
+    return f'<html><script type="application/ld+json">{json.dumps(ld)}</script></html>'
+
+
+NOW_RSS = "Mon, 26 Oct 2026 13:56:27 -0500"
+
+
+def test_fix_escapes_keeps_valid_escapes_and_doubles_the_rest():
+    raw = r'{"d": "target=\_blank \_x \n \"q\" \u00e9"}'
+    assert json.loads(creative._fix_escapes(raw), strict=False)["d"] == 'target=\_blank \_x \n "q" é'
+
+
+def test_jobposting_ld_reads_a_block_with_invalid_escapes():
+    page = '<script type="application/ld+json">{"@type": "JobPosting", "description": "&lt;a target=\_blank&gt;x"}</script>'
+    assert creative._jobposting_ld(page)["description"] == "&lt;a target=\_blank&gt;x"
+
+
+async def test_dribbble_parses_the_feed_title_and_reads_the_page(sites):
+    url = "https://dribbble.com/jobs/1-Motion-Designer"
+    sites.feeds["dribbble.com"] = _feed([(
+        "Acme is hiring for a position of Motion Designer in Remote, Anywhere", url + "?source=feed", "", NOW_RSS,
+        "<dc:creator>Acme</dc:creator>")])
+    sites.pages[url] = _ld_page({"@type": "JobPosting", "description": "<p>Animate</p>", "jobLocationType": "TELECOMMUTE",
+                                 "applicantLocationRequirements": {"@type": "Country", "name": "Canada"}})
+    async with creative._client() as c:
+        rows = await creative._dribbble_list(c, _search(search_term="motion designer"), 10)
+        for r in rows:
+            r["source"] = "dribbble"
+        assert (rows[0]["title"], rows[0]["company"], rows[0]["url"], rows[0]["arrangement"]) == (
+            "Motion Designer", "Acme", url, "remote")
+        await creative._fill_details(c, rows)
+    assert (rows[0]["description"], rows[0]["location"]) == ("Animate", "Remote: Canada")
+    assert "keyword=motion+designer" in [u for u in sites.urls if "dribbble.com/jobs.rss" in u][0]
+
+
+async def test_artstation_sends_remote_and_maps_localities(sites):
+    sites.artstation = {1: [{"hash_id": "ab1", "title": "Concept Artist", "company_name": "EA", "work_remotely": False,
+                             "description": "<p>Paint</p>", "how_to_apply": "Email us",
+                             "recruitment_localities": [{"locality": {"formatted_name": "Vancouver, BC, Canada"}}],
+                             "listing_placement": {"posted_at": "2026-10-26T00:21:54+00:00"}}]}
+    async with creative._client() as c:
+        rows = await creative._artstation_list(c, _search(search_term="artist", is_remote=True), 10)
+    r = rows[0]
+    assert (r["url"], r["location"], r["arrangement"]) == ("https://www.artstation.com/jobs/ab1", "Vancouver, BC, Canada", None)
+    assert r["description"] == "Paint\n\nEmail us" and r["posted"].startswith("2026-10-26")
+    assert "work_remotely=true" in [u for u in sites.urls if "artstation" in u][0]
+
+
+async def test_work_with_indies_reads_the_feed_and_time_zone_bands_are_remote(sites):
+    url = "https://www.workwithindies.com/careers/3guns-content-creator"
+    sites.feeds["www.workwithindies.com"] = _feed([(
+        "3Guns is hiring a Content Creator to work from Anywhere", url, "Make videos", NOW_RSS, ""),
+        ("lightconstruct is hiring a 3D Environment Artist to work from CET ± 3 hours", url + "-2", "Build", NOW_RSS, "")])
+    async with creative._client() as c:
+        rows = await creative._wwi_list(c, _search(), 10)
+    assert [(r["title"], r["company"], r["arrangement"]) for r in rows] == [
+        ("Content Creator", "3Guns", "remote"), ("3D Environment Artist", "lightconstruct", "remote")]
+
+
+def test_remote_drops_rows_the_posting_calls_onsite_and_unknown_rows_stay():
+    s = _search(is_remote=True)
+    assert creative._rejection(dict(creative._row(title="Illustrator", arrangement="onsite"), source="dribbble"),
+                               s, [], [], set(), set()) == "Not remote: onsite"
+    assert creative._rejection(dict(creative._row(title="Illustrator"), source="dribbble"), s, [], [], set(), set()) is None
+
+
+def test_location_is_checked_here_only_for_boards_that_cannot_filter_it():
+    s = _search(location="Vancouver, BC")
+    in_city = dict(creative._row(title="Artist", location="Vancouver, BC, Canada"), source="artstation")
+    elsewhere = dict(creative._row(title="Artist", location="Montreal, QC"), source="artstation")
+    remote = dict(creative._row(title="Artist", location="Remote", arrangement="remote"), source="artstation")
+    behance = dict(creative._row(title="Artist", location="Montreal, QC"), source="behance")
+    reasons = [creative._rejection(r, s, [], [], set(), set()) for r in (in_city, elsewhere, remote, behance)]
+    assert reasons == [None, "Not in Vancouver", None, None]
 
 
 def test_eluta_tls_context_offers_the_rsa_cipher_the_site_needs():

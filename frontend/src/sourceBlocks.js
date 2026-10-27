@@ -20,5 +20,5 @@ export const MODE_BLOCKS = {
 // Terms notices for modes that scrape a site which discourages automated access.
 export const MODE_TERMS = {
   caribbeanjobs: 'Terms: caribbeanjobs.com challenges automated visitors, so scraping it may break its terms of use. Use at your own risk; see LEGAL_DISCLAIMER.md.',
-  creative: 'Terms: Behance, Hollylist and Wana Create publish these APIs for their own sites, not for other clients, and Behance challenges automated visitors. Eluta’s robots.txt disallows its RSS search and its terms forbid storing its content. Reading them may break their terms of use. Himalayas allows its public API on condition that applicants go through its job link and the job is credited to Himalayas. Use at your own risk; see LEGAL_DISCLAIMER.md.',
+  creative: 'Terms: Behance, Hollylist and Wana Create publish these APIs for their own sites, not for other clients, and Behance challenges automated visitors. Eluta’s robots.txt disallows its RSS search and its terms forbid storing its content; ArtStation and Work With Indies forbid scraping in their terms. Reading them may break their terms of use. Himalayas allows its public API on condition that applicants go through its job link and the job is credited to Himalayas. Use at your own risk; see LEGAL_DISCLAIMER.md.',
 }
