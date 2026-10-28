@@ -43,6 +43,11 @@ Follow steps here manually or ask AI to: [Upgrading from 2.x](CHANGELOG.md#upgra
 │   Amazon, Uber, Meta,   │  freehire.me            │  any page               │
 │   Google                │  CaribbeanJobs.com      │                         │
 │                         │  TrulyRemoteWork.com    │                         │
+│                         │  Creative boards:       │                         │
+│                         │  Behance, Himalayas,    │                         │
+│                         │  Dribbble, ArtStation,  │                         │
+│                         │  Eluta, Wana Create,    │                         │
+│                         │  Hollylist, WWI         │                         │
 │                         │                         │                         │
 └─────────────────────────┴───────────┬─────────────┴─────────────────────────┘
                                       │
@@ -106,7 +111,7 @@ Follow steps here manually or ask AI to: [Upgrading from 2.x](CHANGELOG.md#upgra
 
 | Feature | Description |
 |---------|-------------|
-| **Discovery** | Career pages (Playwright + 13 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), Apify (Indeed, LinkedIn, Glassdoor, Greenhouse/Lever/Ashby/Workday search; not on the Apify Creator plan), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, CaribbeanJobs.com, TrulyRemoteWork.com, the Chrome extension |
+| **Discovery** | Career pages (Playwright + 13 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), Apify (Indeed, LinkedIn, Glassdoor, Greenhouse/Lever/Ashby/Workday search; not on the Apify Creator plan), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, CaribbeanJobs.com, TrulyRemoteWork.com, creative boards (Behance, Himalayas, Dribbble, ArtStation, Eluta, Wana Create, Hollylist, Work With Indies), the Chrome extension |
 | **Scoring** | Claude, OpenAI, OpenRouter, Ollama, LM Studio, Claude Code, Codex CLI, Antigravity CLI or OpenCode Go; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
 | **Résumés** | Structured base résumés, tailoring per job with a review step, 8 PDF templates (drop in your own) and a Word (.docx) export, an opt-in page footer (name, job title, company) on tailored copies, tracked links that record opens |
 | **Cover letters** | Generated from the paired résumé and persona; voice and length presets, 7 templates, PDF |
