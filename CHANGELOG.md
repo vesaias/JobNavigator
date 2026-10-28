@@ -8,6 +8,12 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
+### Added
+- **Levels.fyi apply:** a Levels.fyi job whose own data names no employer link is applied to on Levels.fyi itself, so it counts like LinkedIn Easy Apply (Direct in the Link filter, Open goes to its Levels.fyi page) instead of a Board link.
+
+### Fixed
+- **Levels.fyi jobs without text could never be scored:** when the scrape's visit to a job's Levels.fyi page failed, the job had no description, and scoring fell back to the page's visible text: only Levels.fyi's cookie banner and its "Levels.fyi Jobs" blurb, because the posting is drawn by script. The model then answered in prose and every try failed with "not valid JSON". Scoring now reads the description from the page's own data (and saves it on the job), never the banner; a job with no data left on Levels.fyi says there is no text to score. A reply that is not JSON is logged with its first 200 characters.
+
 ## [3.1] — 2026-10-27
 
 3.1 is about the posting behind each job: one job per posting however many sites list it, the employer's own link instead of a board's, and a mark on postings that have closed. It also adds a public demo and opt-in telemetry.

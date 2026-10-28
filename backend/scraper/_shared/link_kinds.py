@@ -7,8 +7,9 @@ Every job gets a `link_kind`:
 - `board`: only a job board or aggregator listing is known (LinkedIn, Indeed, Glassdoor,
   ZipRecruiter, WhatJobs, Telegram, ...). Dedup can't safely tell two board listings of one job apart,
   and you apply through the board.
-- `easy_apply`: a board listing known to have no employer link at all (LinkedIn Easy Apply, found by
-  the LinkedIn lookup). Kept when the links alone would say `board`.
+- `easy_apply`: a board listing known to have no employer link at all, applied to on the board itself:
+  LinkedIn Easy Apply (found by the LinkedIn lookup) and a levels.fyi job whose page data names no
+  apply link (levels_jobs.py). Kept when the links alone would say `board`. The dashboard shows it as Direct.
 
 A host not in `BOARD_HOSTS` counts as the company's own site: a board found in the data that is
 missing from the list is added to it.

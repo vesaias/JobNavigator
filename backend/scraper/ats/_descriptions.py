@@ -106,6 +106,11 @@ async def _fetch_job_description(url: str, job: dict = None) -> str | None:
     except Exception as e:
         logger.debug(f"ATS description fetch failed for {url}: {e}")
 
+    # A levels.fyi job page's visible text is only a cookie banner and a landing blurb
+    from backend.scraper._shared.levels_jobs import is_levels_job
+    if is_levels_job(url):
+        return None
+
     # Generic HTML fallback
     try:
         resp = await safe_get(url, timeout=15, headers={"User-Agent": _USER_AGENT})
@@ -160,6 +165,14 @@ async def _fetch_description_ats(url: str, job: dict = None) -> str | None:
     from backend.scraper.ats.workday import _parse_workday_url, _LOCALE_PATH_RE, detail_locations
 
     parsed = urlparse(url)
+
+    # ── Levels.fyi job page: the text is in its page data, the visible page is a cookie banner ──
+    from backend.scraper._shared import levels_jobs
+    if levels_jobs.is_levels_job(url):
+        data = await levels_jobs.fetch_job(url)
+        if data and job is not None and data.get("application_url") and not job.get("application_url"):
+            job["application_url"] = data["application_url"]
+        return (data or {}).get("description")
 
     # ── Oracle HCM: /sites/{site}/job/{id} ──
     # Detail API: ById finder with quoted Id (%22 = ")

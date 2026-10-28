@@ -10,6 +10,7 @@ from backend.analyzer.model_json import UNPARSEABLE_MESSAGE, parse_model_json
 from backend.models.db import SessionLocal, Job
 from backend.accounts.settings import get_setting
 from backend.scraper._shared.link_kinds import job_link
+from backend.scraper._shared.levels_jobs import is_levels_job
 
 logger = logging.getLogger("jobnavigator.cv_scorer")
 
@@ -269,11 +270,40 @@ def _job_text_from_row(job) -> str | None:
         return description.strip()
 
     cached = getattr(job, "cached_page_text", None)
-    if cached and len(cached.strip()) > 50:
+    # a levels.fyi job page caches as a cookie banner: its text is in the page data (_levels_text)
+    if cached and len(cached.strip()) > 50 and not is_levels_job(job_link(job) or ""):
         logger.info(f"Job {job.id}: using cached_page_text (no description)")
         return cached.strip()
 
     return None
+
+
+async def _levels_text(job_id, url: str) -> str | None:
+    """A levels.fyi job's description from its page data, saved on the job. A job whose data names
+    no employer link is applied to on levels.fyi, so it becomes Easy Apply (levels_jobs). Opens one
+    short session after the fetch, like _fetch_job_text."""
+    from backend.scraper._shared.levels_jobs import fetch_job
+    from backend.scraper._shared.link_kinds import BOARD, EASY_APPLY
+    data = await fetch_job(url)
+    if not data:
+        logger.info(f"Job {job_id}: no job data on its levels.fyi page")
+        return None
+    desc = data.get("description")
+    db = SessionLocal()
+    try:
+        row = db.query(Job).filter(Job.id == job_id).first()
+        if row is not None:
+            if desc and not (row.description or "").strip():
+                row.description = desc
+            if not data.get("application_url") and not row.apply_url and row.link_kind in (BOARD, None):
+                row.link_kind = EASY_APPLY
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Job {job_id}: could not save the levels.fyi description: {e}")
+    finally:
+        db.close()
+    return desc
 
 
 async def _fetch_job_text(job_id, url: str) -> str | None:
@@ -285,6 +315,8 @@ async def _fetch_job_text(job_id, url: str) -> str | None:
     """
     if not url:
         return None
+    if is_levels_job(url):
+        return await _levels_text(job_id, url)
     logger.info(f"Job {job_id}: no text available, fetching live page")
     try:
         from backend.api.routes_applications import _cache_job_page
@@ -318,7 +350,7 @@ async def _get_job_text(job: Job, db=None) -> str | None:
         return text
     if db is None:
         return None
-    text = await _fetch_job_text(job.id, getattr(job, "url", None))
+    text = await _fetch_job_text(job.id, job_link(job))
     if text and db is not None:
         try:
             db.refresh(job)
@@ -446,7 +478,7 @@ async def _score_job_inner(job: Job, cv_texts: dict, db=None, depth="light", pre
     except json.JSONDecodeError as e:
         call_success = False
         call_error = UNPARSEABLE_MESSAGE
-        logger.error(f"Failed to parse LLM response as JSON: {e}")
+        logger.error(f"Failed to parse LLM response as JSON: {e} — raw head: {(text or '')[:200]!r}")
     except Exception as e:
         call_success = False
         call_error = str(e)

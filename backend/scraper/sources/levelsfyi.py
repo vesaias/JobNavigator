@@ -13,8 +13,9 @@ from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.posting_links import counts_as_new
 from backend.scraper._shared.postings import resolve_short_links
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
-from backend.scraper._shared.urls import _clean_application_url
 from backend.scraper._shared.filters import _apply_company_filters
+from backend.scraper._shared import levels_jobs
+from backend.scraper._shared.link_kinds import EASY_APPLY
 
 logger = logging.getLogger("jobnavigator.playwright")
 
@@ -61,13 +62,12 @@ def _parse_levelsfyi_salary(location_text: str) -> tuple[str, str | None, int | 
 
 # Ids were 18 digits until 2026-10-09 and are base-36 since ("2ci7r6weraiqb"); \d+ kept only the
 # leading digits, which gave a 404 job page and merged unrelated jobs into one id.
-_JOB_ID_RE = re.compile(r"[?&]jobId=([A-Za-z0-9]+)")
+_JOB_ID_RE = levels_jobs.JOB_ID_RE
 
 
 def _levelsfyi_job_id(href: str) -> str | None:
     """The job id from a levels.fyi link, or None."""
-    m = _JOB_ID_RE.search(href or "")
-    return m.group(1) if m else None
+    return levels_jobs.job_id(href)
 
 
 async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bool = False):
@@ -152,8 +152,11 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
 
 
 async def _levelsfyi_extract_detail(page, job_url: str) -> dict:
-    """Visit a levels.fyi job detail page and extract application URL, salary and description from its __NEXT_DATA__ JSON (pageProps.initialJobDetails)."""
-    result = {"application_url": None, "salary_min": None, "salary_max": None, "description": None}
+    """Visit a levels.fyi job detail page and extract application URL, salary and description from
+    its __NEXT_DATA__ JSON (levels_jobs.job_fields). `found` is True when the page had the job's
+    data, so a missing application URL means the job is applied to on levels.fyi itself."""
+    result = {"application_url": None, "salary_min": None, "salary_max": None, "description": None,
+              "found": False}
 
     try:
         await page.goto(job_url, wait_until="domcontentloaded", timeout=20000)
@@ -166,33 +169,9 @@ async def _levelsfyi_extract_detail(page, job_url: str) -> dict:
                 try { return JSON.parse(el.textContent); } catch { return null; }
             }""")
 
-            if next_data:
-                props = next_data.get("props", {}).get("pageProps", {})
-                job_data = (
-                    props.get("initialJobDetails")
-                    or props.get("job")
-                    or props.get("jobData")
-                    or props.get("initialJob")
-                    or {}
-                )
-
-                app_url = job_data.get("applicationUrl") or job_data.get("applyUrl") or ""
-                if app_url:
-                    result["application_url"] = _clean_application_url(app_url)
-
-                desc = job_data.get("description") or ""
-                if len(desc) > 50:
-                    result["description"] = desc[:30000]
-
-                # Salary: prefer base, fallback to total (USD only)
-                currency = (job_data.get("baseSalaryCurrency") or job_data.get("currency") or "USD").upper()
-                if currency == "USD":
-                    sal_min = job_data.get("minBaseSalary") or job_data.get("minTotalSalary")
-                    sal_max = job_data.get("maxBaseSalary") or job_data.get("maxTotalSalary")
-                    if sal_min and isinstance(sal_min, (int, float)) and sal_min > 0:
-                        result["salary_min"] = int(sal_min)
-                    if sal_max and isinstance(sal_max, (int, float)) and sal_max > 0:
-                        result["salary_max"] = int(sal_max)
+            job_data = levels_jobs.job_object(next_data) if next_data else {}
+            if job_data:
+                result.update(levels_jobs.job_fields(job_data), found=True)
         except Exception as e:
             logger.debug(f"levels.fyi detail __NEXT_DATA__ extraction failed for {job_url}: {e}")
 
@@ -349,6 +328,8 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
                             detail = await _levelsfyi_extract_detail(pg, detail_url)
                             if detail.get("application_url"):
                                 j["application_url"] = detail["application_url"]
+                            elif detail.get("found"):
+                                j["levels_apply"] = True   # no employer link: applied to on levels.fyi
                             if detail.get("description"):
                                 j["description"] = detail["description"]
                             if detail.get("salary_min") and (not j.get("salary_min") or detail["salary_min"] != j["salary_min"]):
@@ -561,6 +542,8 @@ async def run(search: Search, shared=None) -> dict:
                     seen=False,
                     saved=False,
                 )
+                if j.get("levels_apply") and not apply_url:
+                    job.link_kind = EASY_APPLY   # kept on insert: link_kinds.classify
 
                 if j.get("salary_min"):
                     job.salary_min = j["salary_min"]
