@@ -8,6 +8,9 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
+### Added
+- **Cheaper Inference provider:** an OpenAI-compatible LLM gateway; one key reaches models from several labs (`gpt-5.4-mini`, `gpt-5.4`, `claude-sonnet-5`, `deepseek-v4-flash`, `glm-5.3` in the starter list). Paste the key under Settings › AI and pick **Cheaper Inference**, or set `CHEAPER_INFERENCE_API_KEY` in `.env`. The model picker searches its public catalog (text models on `/chat/completions` only). It has no effort setting, so calls get the reasoning headroom, like OpenCode Go. A missing or rejected key fails over to the fallback at once. Cost is not priced yet, so it shows as $0.
+
 ## [3.1] — 2026-10-27
 
 3.1 is about the posting behind each job: one job per posting however many sites list it, the employer's own link instead of a board's, and a mark on postings that have closed. It also adds a public demo and opt-in telemetry.

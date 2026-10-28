@@ -56,7 +56,7 @@ DEFAULT_SETTINGS = {
     "scoring_rubric": ("Score each resume using these criteria (each 0-20, sum to 0-100):\n1. SKILLS MATCH (weight: 20): How many required technical skills/tools does the candidate have?\n2. EXPERIENCE LEVEL (weight: 20): Does seniority/years match? (entry-level resume for senior role = low)\n3. DOMAIN FIT (weight: 20): Has the candidate worked in the same industry/domain?\n4. ROLE ALIGNMENT (weight: 20): Does the candidate's career trajectory match this role type?\n5. REQUIREMENTS MET (weight: 20): Does the candidate meet stated requirements (education, certs, clearance)?\n\nUse the FULL 0-100 range. 90+ = perfect match. 50-70 = decent with gaps. Below 30 = poor match.\nAvoid clustering scores — differentiate meaningfully between resumes and jobs.", "Editable resume scoring rubric"),
     "scoring_output_light": ('Return ONLY this JSON:\n{\n  "scores": {CV_NAMES_HERE: 0-100},\n  "best_cv": "CV_NAME"\n}', "Light scoring output schema"),
     "scoring_output_full": ('Return ONLY this JSON:\n{\n  "scores": {CV_NAMES_HERE: 0-100},\n  "best_cv": "CV_NAME",\n  "breakdown": {"skills": 0-20, "experience": 0-20, "domain": 0-20, "role": 0-20, "requirements": 0-20},\n  "summary": "2-3 sentence assessment of candidate-job fit",\n  "requirement_mapping": [\n    {"requirement": "JD requirement text", "cv_match": "matching CV line or null", "matched": true/false, "severity": "required or preferred"}\n  ],\n  "keyword_coverage_pct": 0-100,\n  "matched_keywords": ["keyword1", "keyword2"],\n  "missing_keywords": ["keyword3", "keyword4"],\n  "hard_blockers": ["blocker if any"],\n  "ats_tip": "one actionable ATS optimization suggestion"\n}', "Full scoring output schema with keyword analysis"),
-    "llm_provider": ("claude_api", "LLM provider: claude_api, claude_code, codex_cli, antigravity_cli, opencode_go, openai, ollama, lmstudio, openrouter"),
+    "llm_provider": ("claude_api", "LLM provider: claude_api, claude_code, codex_cli, antigravity_cli, opencode_go, openai, ollama, lmstudio, openrouter, cheaper_inference"),
     "llm_model": ("claude-sonnet-5", "LLM model name"),
     "llm_effort": ("", "Reasoning effort for the Primary model (empty = the model's default; values depend on the provider)"),
     # One key per provider (3.1): every model slot on that provider uses it. Empty = the env var of
@@ -65,6 +65,7 @@ DEFAULT_SETTINGS = {
     "openai_api_key": ("", "OpenAI API key, used by every model slot on OpenAI (empty = OPENAI_API_KEY from .env)"),
     "openrouter_api_key": ("", "OpenRouter API key, used by every model slot on OpenRouter (empty = OPENROUTER_API_KEY from .env)"),
     "opencode_api_key": ("", "OpenCode Go API key, used by every model slot on OpenCode Go (empty = OPENCODE_API_KEY from .env)"),
+    "cheaper_inference_api_key": ("", "Cheaper Inference API key, used by every model slot on Cheaper Inference (empty = CHEAPER_INFERENCE_API_KEY from .env)"),
     "claude_code_oauth_token": ("", "Claude Code subscription token from `claude setup-token` (empty = CLAUDE_CODE_OAUTH_TOKEN from .env; a member with its own Models section can set its own)"),
     # Owner-only (section llm_local): the host's local model servers. Seeded empty, so the address
     # is read at call time from LMSTUDIO_BASE_URL / OLLAMA_BASE_URL, else the built-in default (L-03:
@@ -177,6 +178,13 @@ DEFAULT_SETTINGS = {
         {"provider": "openrouter", "model": "meta-llama/llama-4-maverick"},
         {"provider": "openrouter", "model": "x-ai/grok-4.6"},
         {"provider": "openrouter", "model": "mistralai/mistral-large-2512"},
+        # Cheaper Inference — one key reaches models from several labs; ids are bare. A starter set;
+        # the full catalog is searchable in Settings (public /models list, chat models only).
+        {"provider": "cheaper_inference", "model": "gpt-5.4-mini"},
+        {"provider": "cheaper_inference", "model": "gpt-5.4"},
+        {"provider": "cheaper_inference", "model": "claude-sonnet-5"},
+        {"provider": "cheaper_inference", "model": "deepseek-v4-flash"},
+        {"provider": "cheaper_inference", "model": "glm-5.3"},
     ]), "Known LLM models per provider (JSON array, user can add custom entries)"),
     "scoring_max_concurrent": ("5", "Max parallel scoring jobs (others queue until a slot opens)"),
     "tailoring_max_concurrent": ("2", "Max concurrent resume-tailoring LLM calls"),
@@ -436,7 +444,8 @@ INT_SETTING_KEYS = _int_setting_keys()
 
 # Providers the LLM dispatcher knows how to call. "" means "inherit the primary
 # llm_provider", which every per-feature prefix does.
-_LLM_PROVIDERS = {"", "claude_api", "claude_code", "codex_cli", "antigravity_cli", "opencode_go", "openai", "ollama", "lmstudio", "openrouter"}
+_LLM_PROVIDERS = {"", "claude_api", "claude_code", "codex_cli", "antigravity_cli", "opencode_go", "openai", "ollama", "lmstudio", "openrouter",
+                  "cheaper_inference"}
 
 # Depth words. `tailor_auto_quick_score` also honours legacy boolean spellings
 # (see routes_resumes._resolve_chain_score_depth).

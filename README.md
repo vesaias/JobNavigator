@@ -72,7 +72,7 @@ Follow steps here manually or ask AI to: [Upgrading from 2.x](CHANGELOG.md#upgra
 │                              AI RESUME SCORING                              │
 │                                                                             │
 │   Providers ── Claude API/CLI, Codex CLI, Antigravity CLI, OpenCode Go,     │
-│                OpenAI, OpenRouter, Ollama, LM Studio                        │
+│                OpenAI, OpenRouter, Cheaper Inference, Ollama, LM Studio     │
 │   Depths ───── Light (scores only) or Full (report + keyword analysis)      │
 │   Multi ────── Score against multiple resumes, compare fit per role         │
 │                                                                             │
@@ -107,7 +107,7 @@ Follow steps here manually or ask AI to: [Upgrading from 2.x](CHANGELOG.md#upgra
 | Feature | Description |
 |---------|-------------|
 | **Discovery** | Career pages (Playwright + 13 ATS handlers), JobSpy (LinkedIn, Indeed, ZipRecruiter, Google), Apify (Indeed, LinkedIn, Glassdoor, Greenhouse/Lever/Ashby/Workday search; not on the Apify Creator plan), LinkedIn collections, Levels.fyi, Jobright.ai, freehire.me, CaribbeanJobs.com, TrulyRemoteWork.com, the Chrome extension |
-| **Scoring** | Claude, OpenAI, OpenRouter, Ollama, LM Studio, Claude Code, Codex CLI, Antigravity CLI or OpenCode Go; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
+| **Scoring** | Claude, OpenAI, OpenRouter, Cheaper Inference, Ollama, LM Studio, Claude Code, Codex CLI, Antigravity CLI or OpenCode Go; live model search, a model per feature; Light (score) or Full (report, keyword coverage, requirement mapping) against every base résumé; prompt caching on Anthropic |
 | **Résumés** | Structured base résumés, tailoring per job with a review step, 8 PDF templates (drop in your own) and a Word (.docx) export, an opt-in page footer (name, job title, company) on tailored copies, tracked links that record opens |
 | **Cover letters** | Generated from the paired résumé and persona; voice and length presets, 7 templates, PDF |
 | **One job per posting** | A posting key read from the link (over 30 job systems and career sites); copies of a posting or of one role (another link, another city, a repost) proven from the text and listed under Also listed, Ignored or New per kind |
@@ -189,7 +189,7 @@ If the owner allows it (asked once, changeable in Settings › Telemetry), JobNa
 | Frontend | React 18, Vite, Recharts, a token-based design system ([DESIGN-SYSTEM.md](frontend/src/DESIGN-SYSTEM.md)) |
 | Database | PostgreSQL 16 |
 | Infrastructure | Docker Compose, Caddy, nginx |
-| AI | Anthropic SDK, OpenAI SDK, Ollama, LM Studio, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode Go endpoint |
+| AI | Anthropic SDK, OpenAI SDK, Ollama, LM Studio, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode Go endpoint, Cheaper Inference endpoint |
 | Extension | Chrome Manifest V3 |
 
 ## Backups
