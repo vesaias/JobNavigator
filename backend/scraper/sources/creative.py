@@ -52,7 +52,8 @@ from backend.accounts.settings import get_setting
 from backend.analyzer.work_arrangement import HYBRID, ONSITE, REMOTE
 from backend.models.db import SessionLocal, Job, Search, get_existing_external_ids
 from backend.scraper._shared.analysis import analyze_inline, prefetch_h1b
-from backend.scraper._shared.dedup import make_external_id, make_content_hash
+from backend.scraper._shared.dedup import make_external_id, make_content_hash, mark_ignored
+from backend.scraper._shared.posting_links import counts_as_new
 from backend.scraper._shared.filters import (build_search_exclude_sets, company_included,
                                              search_title_filters, title_kept)
 from backend.scraper._shared.html_text import html_to_text
@@ -788,7 +789,7 @@ async def run(search: Search) -> dict:
     breakdown = {}
     try:
         db = SessionLocal()
-        new_jobs = kept = 0
+        new_jobs = kept = ignored_jobs = 0
         try:
             include_kw, exclude_kw = search_title_filters(search, db)
             global_ex, search_ex = build_search_exclude_sets(db, search)
@@ -817,8 +818,7 @@ async def run(search: Search) -> dict:
                 breakdown[r["source"]]["seen"] -= 1
                 bump(r, "filtered")
             late_ids = {id(r) for r in late}
-            fresh = [r for r in fresh if id(r) not in late_ids]
-            await prefetch_h1b([r.get("company") for r in fresh])
+            await prefetch_h1b([r.get("company") for r in fresh if id(r) not in late_ids])
 
             for r in fresh:
                 ext_id = make_external_id(r["company"], r["title"], r["url"])
@@ -828,6 +828,12 @@ async def run(search: Search) -> dict:
                           company=r["company"], title=r["title"], url=r["url"], source=r["source"],
                           search_id=search.id, location=r.get("location") or None,
                           description=r.get("description") or None, status="new", seen=False, saved=False)
+                if id(r) in late_ids:
+                    # Dropped after its job page was read (Behance dates arrive there): kept as
+                    # "ignored", so the next run's dedup skips it before reading the page again.
+                    mark_ignored(job)
+                    ignored_jobs += _store(db, job, ext_id, existing_ids, r)
+                    continue
                 if r.get("salary_min"):
                     job.salary_min = r["salary_min"]
                     job.salary_max = r.get("salary_max") or r["salary_min"]
@@ -837,19 +843,16 @@ async def run(search: Search) -> dict:
                 except Exception as e:
                     logger.warning(f"creative inline analysis failed for {r['title']}: {e}")
                 if job.h1b_jd_flag:
-                    logger.info(f"Skipping (body exclusion): {r['title']} @ {r.get('company') or '?'}")
+                    # Kept as "ignored" (as company scrapes do), so its page is read once.
+                    logger.info(f"Ignored (body exclusion): {r['title']} @ {r.get('company') or '?'}")
+                    mark_ignored(job)
+                if not _store(db, job, ext_id, existing_ids, r):
                     continue
-                try:
-                    with db.begin_nested():
-                        db.add(job)
-                        db.flush()
+                if job.status == "ignored":
+                    ignored_jobs += 1
+                elif counts_as_new(job):
                     new_jobs += 1
-                    existing_ids.add(ext_id)
                     breakdown[r["source"]]["new"] += 1
-                except IntegrityError:
-                    logger.debug(f"Duplicate external_id for '{r['title']}' @ {r.get('company')}, skipping")
-                except Exception as e:
-                    logger.warning(f"Insert failed for '{r['title']}' @ {r.get('company')} ({r['url']}): {e}")
 
             search_obj = db.query(Search).filter(Search.id == search.id).first()
             if search_obj:
@@ -860,9 +863,10 @@ async def run(search: Search) -> dict:
 
         duration = time.time() - start
         from backend.activity import log_activity
-        log_activity("scrape", f"creative '{search.name}': {new_jobs} new / {kept} kept in {duration:.1f}s")
-        return {"jobs_found": kept, "new_jobs": new_jobs, "error": _all_failed(breakdown),
-                "duration": duration, "source_breakdown": breakdown}
+        log_activity("scrape", f"creative '{search.name}': {new_jobs} new / {kept} kept in {duration:.1f}s"
+                     + (f" ({ignored_jobs} filtered out after the job page)" if ignored_jobs else ""))
+        return {"jobs_found": kept, "new_jobs": new_jobs, "ignored_jobs": ignored_jobs,
+                "error": _all_failed(breakdown), "duration": duration, "source_breakdown": breakdown}
     except Exception as e:
         duration = time.time() - start
         msg = _error_text(e)
@@ -871,6 +875,22 @@ async def run(search: Search) -> dict:
         log_activity("scrape", f"creative '{search.name}' failed: {msg}")
         return {"jobs_found": 0, "new_jobs": 0, "error": msg, "duration": duration,
                 "source_breakdown": breakdown}
+
+
+def _store(db, job: Job, ext_id: str, existing_ids: set, r: dict) -> bool:
+    """Insert one job; True when it was written."""
+    try:
+        with db.begin_nested():
+            db.add(job)
+            db.flush()
+    except IntegrityError:
+        logger.debug(f"Duplicate external_id for '{r['title']}' @ {r.get('company')}, skipping")
+        return False
+    except Exception as e:
+        logger.warning(f"Insert failed for '{r['title']}' @ {r.get('company')} ({r['url']}): {e}")
+        return False
+    existing_ids.add(ext_id)
+    return True
 
 
 def _body_phrases(db) -> list:
@@ -892,8 +912,8 @@ async def preview(search: Search, db) -> dict:
         async with _client() as client:
             rows, breakdown = await _collect(client, search, PREVIEW_LIMIT)
             reasons = [_rejection(r, search, include_kw, exclude_kw, global_ex, search_ex) for r in rows]
-            sampled = _defer_over_budget([r for r, why in zip(rows, reasons) if why is None],
-                                         breakdown)[:PREVIEW_DETAIL_LIMIT]
+            survivors = [r for r, why in zip(rows, reasons) if why is None]
+            sampled = _defer_over_budget(survivors, breakdown)[:PREVIEW_DETAIL_LIMIT]
             await _fill_details(client, sampled)
         sampled_ids = {id(r) for r in sampled}
         phrases = _body_phrases(db)
@@ -920,9 +940,18 @@ async def preview(search: Search, db) -> dict:
                 "has_description": len(desc) > 50, "desc_length": len(desc),
                 "kept": reason is None, "reason": reason, "posted": r.get("posted"),
             })
+        preview_note = None
+        if len(survivors) > len(sampled):
+            preview_note = (f"Details sampled: the job pages of {len(sampled)} of {len(survivors)} jobs "
+                            f"that passed the filters were read (at most {PREVIEW_DETAIL_LIMIT}, and Eluta "
+                            f"{_ELUTA_MAX_DETAILS} per run). The rest show the listing's text; a run reads "
+                            f"each new job's page.")
         return {
             "search_name": search.name,
             "duration": round(time.time() - start, 1),
+            "details_sampled": len(sampled),
+            "detail_limit": PREVIEW_DETAIL_LIMIT,
+            "preview_note": preview_note,
             "raw_count": len(rows),
             "after_filter": sum(1 for x in results if x["kept"]),
             "source_breakdown": {k: v.get("returned", 0) for k, v in breakdown.items() if not v.get("error")},

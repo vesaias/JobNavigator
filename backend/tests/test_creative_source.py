@@ -519,6 +519,55 @@ async def test_run_drops_rows_whose_detail_date_is_too_old(sites, quiet, test_db
     assert res["source_breakdown"]["behance"] == {"seen": 0, "new": 0, "returned": 1, "filtered": 1}
 
 
+async def test_a_row_dropped_after_its_page_is_kept_ignored_and_not_read_again(sites, quiet, test_db, monkeypatch):
+    search = Search(name="t", search_mode="creative", search_term="x", sources=["behance"], results_wanted=10,
+                    hours_old=1, company_exclude=[])
+    test_db.add(search)
+    test_db.commit()
+    sites.behance_pages = {1: [sites.be_node(1)]}
+    real = creative._behance_detail
+
+    async def stale(client, row):
+        await real(client, row)
+        row["posted"] = "2026-01-01T00:00:00+00:00"
+    monkeypatch.setitem(creative.BOARDS, "behance", creative.Board("Behance", creative._behance_list, stale))
+
+    res = await creative.run(search)
+    assert (res["new_jobs"], res["ignored_jobs"]) == (0, 1)
+    test_db.expire_all()
+    row = test_db.query(Job).one()
+    assert (row.status, row.content_hash) == ("ignored", None)
+
+    sites.calls.clear()
+    await creative.run(search)                         # its page is not read again
+    assert all("combinedJobListings" in c[2]["query"] for c in sites.to("www.behance.net", "/v3/graphql"))
+
+
+async def test_body_exclusion_keeps_the_job_ignored(sites, test_db, monkeypatch):
+    search = Search(name="t", search_mode="creative", search_term="x", sources=["wanacreate"], results_wanted=10,
+                    hours_old=0, company_exclude=[])
+    test_db.add(search)
+    test_db.commit()
+    sites.wana_hits = [{"id": "w1", "title": "Illustrator", "company": {"name": "Acme"}, "description": "US citizens only"}]
+
+    async def flag(job, db=None, arrangement=None):
+        job.h1b_jd_flag = True
+    monkeypatch.setattr(creative, "analyze_inline", flag)
+    monkeypatch.setattr("backend.activity.log_activity", lambda *a, **k: None)
+    res = await creative.run(search)
+    assert (res["new_jobs"], res["ignored_jobs"]) == (0, 1)
+    test_db.expire_all()
+    assert test_db.query(Job).one().status == "ignored"
+
+
+async def test_preview_says_when_it_sampled_the_job_pages(sites, test_db, monkeypatch):
+    monkeypatch.setattr(creative, "PREVIEW_DETAIL_LIMIT", 1)
+    search = Search(name="t", search_mode="creative", search_term="illustrator", sources=["behance"],
+                    hours_old=0, company_exclude=[])
+    out = await creative.preview(search, test_db)
+    assert out["details_sampled"] == 1 and "1 of 2" in out["preview_note"]
+
+
 async def test_run_reports_an_error_when_every_board_failed(sites, quiet, test_db):
     search = Search(name="t", search_mode="creative", search_term="x", sources=["hollylist"], company_exclude=[])
     test_db.add(search)
