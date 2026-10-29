@@ -3,7 +3,7 @@ import logging
 import json
 import re
 import secrets
-from backend.models.db import SessionLocal, Setting, Company, Search, Resume
+from backend.models.db import DEFAULT_COVER_LETTER_TEMPLATE, SessionLocal, Setting, Company, Search, Resume
 from backend.accounts.settings import install_row, put_setting
 from sqlalchemy import text
 from backend.analyzer.llm_client import LOCAL_LLM_URLS, REASONING_EFFORTS
@@ -232,6 +232,7 @@ DEFAULT_SETTINGS = {
         {"id": "storytelling", "label": "Storytelling", "instruction": "Open with a brief hook or narrative, then connect it to the role."},
     ]), "Editable cover-letter voice presets: list of {id, label, instruction}. The selected preset's instruction is injected into the generation prompt."),
     "cover_letter_default_voice": ("professional", "Default voice preset id for new cover letters (must match an id in cover_letter_voice_presets)"),
+    "cover_letter_template": (DEFAULT_COVER_LETTER_TEMPLATE, "Template for a new cover letter when its résumé template has no cover-letter version (a folder under backend/cover_letter_templates/; empty = Garamond Modern)"),
     "autofill_field_patterns": (json.dumps({
         "gender": ["gender", "what is your gender", "gender identity"],
         "race_ethnicity": ["race", "ethnicity", "race/ethnicity", "racial background", "ethnicities"],
