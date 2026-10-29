@@ -8,6 +8,9 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
+### Added
+- **Default cover-letter template:** Settings › Cover letters › **Default template** picks the template for a new letter whose résumé template has no cover-letter version: a blank letter, a letter from Persona, and a letter from a Modern Professional résumé. The list comes from the templates on this install, and the default is Garamond Modern. A generated letter still takes its résumé's template when that template has a cover-letter version. A member reads the owner's choice or its own, as the Cover letters section's policy says. `PATCH /api/settings` rejects a name that is not a cover-letter template on this install with 422; a stored name that the install no longer has gives Garamond Modern.
+
 ### Fixed
 - **Cover letters from a Modern Professional résumé:** a generated letter took the résumé's template, and `modern` has no cover-letter version, so the letter failed to render ("Unknown template: 'modern'"). A letter now takes the résumé's template only when a cover-letter version exists, and Garamond Modern otherwise. A letter already stored with a template this install does not have renders with Garamond Modern, as a résumé does. Garamond Modern is now the named default for new letters; before, the default was the first template folder, which is `garamond` on an install with the licensed fonts.
 

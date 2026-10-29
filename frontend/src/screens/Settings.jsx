@@ -215,6 +215,7 @@ export default function Settings() {
   const [defaults, setDefaults] = useState({})
   const [resumes, setResumes] = useState([])
   const [personaAvailable, setPersonaAvailable] = useState(false)
+  const [letterTemplates, setLetterTemplates] = useState([])
   const [query, setQuery] = useState('')
   const [backendVersion, setBackendVersion] = useState('')  // from /health; the colophon notes it only when it differs from this build
   useEffect(() => {
@@ -402,6 +403,7 @@ export default function Settings() {
     () => load(),
     // This is the Default résumé picker's entire option list — empty, it looks like a setting with nothing to choose.
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) }),
+    () => api.get('/cover-letters/templates').then(({ data }) => setLetterTemplates(Array.isArray(data) ? data : [])).catch((e) => { console.error(e); flash('Could not load the cover-letter templates — the default-template picker is empty', true) }),
     () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ }),
     () => Promise.all(['main', 'mock'].map((which) => api.get('/linkedin/session', { params: { which } }).then(({ data }) => [which, data])))
       .then((pairs) => setLi(Object.fromEntries(pairs))).catch(() => { /* silent: the LinkedIn rows read “unknown” and their own actions report their failures */ }),
@@ -506,6 +508,10 @@ export default function Settings() {
     const voiceOpts = (Array.isArray(vp) ? vp : []).filter((v) => v && v.id).map((v) => [v.id, v.label || v.id])
     const curVoice = S.cover_letter_default_voice
     if (curVoice && !voiceOpts.some((o) => o[0] === curVoice)) voiceOpts.push([curVoice, `${curVoice} — not in presets`])
+    // Same for the default template: a stored id this install does not have stays visible (letters get Garamond Modern then).
+    const tplOpts = letterTemplates.map((t) => [t.id, t.name || t.id])
+    const curTpl = S.cover_letter_template
+    if (curTpl && !tplOpts.some((o) => o[0] === curTpl)) tplOpts.push([curTpl, `${curTpl} — not on this install`])
 
     // QA F2 / D2: the owner's "Accounts" section (one account too) / a member's "Your account" comes first.
     // Their bodies are not rows (`block`), so they carry no row list and match the search by title.
@@ -586,6 +592,8 @@ export default function Settings() {
       ]],
       ['letters', '', 'Cover letters', '', [
         SEL('Default voice', 'The list comes from the voice presets below.', 'cover_letter_default_voice', voiceOpts, { w: '260px' }),
+        SEL('Default template', 'For a letter whose résumé template has no cover-letter version.', 'cover_letter_template', tplOpts, { w: '260px', dflt: 'garamond_alt',
+          info: 'A generated letter takes its résumé’s template when that template has a cover-letter version. A blank letter, a letter from Persona, and a letter from a Modern Professional résumé get this template.' }),
         E('Voice presets', 'One label and prompt per voice. Add more if you want.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
         E('Cover letter prompt', 'The generation instruction.', 'cover_letter_prompt', { sub: 'placeholders: {voice_instruction} {length_instruction} {job_description}' }),
       ]],
@@ -762,7 +770,7 @@ export default function Settings() {
       ]],
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [S, resumes, personaAvailable, trig, li, multi, isOwner, hasMe, sidx, gmail, effective])
+  }, [S, resumes, personaAvailable, letterTemplates, trig, li, multi, isOwner, hasMe, sidx, gmail, effective])
 
   // The rail's account menu lands here: `#accounts` (Manage accounts) scrolls to the
   // Accounts / Your account section, `#add-account` also opens the Add dialog. The hash is

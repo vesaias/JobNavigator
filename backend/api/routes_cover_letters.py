@@ -46,13 +46,16 @@ def _discover_templates() -> list[dict]:
     return templates
 
 
-def _default_template_id() -> str:
-    """Garamond Modern when this install has it, else the first letter template."""
+def _default_template_id(db=None) -> str:
+    """The account's `cover_letter_template` (with `db`) when this install has it, else
+    Garamond Modern when this install has it, else the first letter template."""
     from backend.api.routes_resumes import template_paths
 
     names = list(template_paths(TEMPLATES_DIR))
-    if DEFAULT_COVER_LETTER_TEMPLATE in names:
-        return DEFAULT_COVER_LETTER_TEMPLATE
+    chosen = (get_setting(db, "cover_letter_template") or "").strip() if db is not None else ""
+    for name in (chosen, DEFAULT_COVER_LETTER_TEMPLATE):
+        if name in names:
+            return name
     return names[0] if names else DEFAULT_COVER_LETTER_TEMPLATE
 
 
@@ -200,7 +203,7 @@ def create_cover_letter(body: dict, db: Session = Depends(get_db)):
         name=name,
         job_id=owned_id_or_404(db, Job, body.get("job_id")),
         resume_id=owned_id_or_404(db, Resume, body.get("resume_id")),
-        template=body.get("template", _default_template_id()),
+        template=body.get("template", _default_template_id(db)),
         page_format=body.get("page_format", "letter"),
         json_data=body.get("json_data", {}),
     )
@@ -462,6 +465,7 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
             stored_resume_id = resume_id
 
         prompt_template = get_setting(db, "cover_letter_prompt")
+        default_template = _default_template_id(db)
         voice_id, voice_instruction = resolve_voice_instruction(db, voice)
         preferences = (persona.preferences if persona else {}) or {}
 
@@ -529,7 +533,7 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
                 job_id=job_id,
                 resume_id=stored_resume_id,
                 from_persona=persona_as_base,
-                template=template or base_template or _default_template_id(),
+                template=template or base_template or default_template,
                 page_format=page_format or base_page_format or "letter",
                 json_data=json_data,
                 voice=voice_id,

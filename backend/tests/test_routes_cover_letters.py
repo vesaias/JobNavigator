@@ -366,3 +366,82 @@ def test_render_html_still_rejects_a_path():
     with pytest.raises(HTTPException) as e:
         _render_html({}, "../resume_templates/modern", "letter")
     assert e.value.status_code == 422
+
+
+# ── Default template setting (cover_letter_template) ─────────────────────────
+
+def _generate_letter(test_db, resume_template):
+    """Generate a letter from a résumé on `resume_template`; return the stored letter's template."""
+    import asyncio
+    from contextlib import asynccontextmanager
+    from unittest.mock import MagicMock
+    import backend.api.routes_cover_letters as rcl
+    from backend.models.db import CoverLetter
+
+    resume = _make_resume(test_db)
+    resume.template = resume_template
+    test_db.commit()
+    job = _make_job(test_db)
+
+    async def fake_body(*a):
+        return {"greeting": "Dear Acme,", "body_paragraphs": ["p"], "closing": "Regards,", "signature": "Jordan"}
+
+    @asynccontextmanager
+    async def fake_track(*a, **kw):
+        yield MagicMock()
+
+    asyncio.run(rcl._generate_inner(
+        str(resume.id), str(job.id), None, "concise", None, None,
+        lambda db, voice: (None, ""), fake_body, fake_track,
+    ))
+    test_db.expire_all()
+    return test_db.query(CoverLetter).filter(CoverLetter.job_id == job.id).one().template
+
+
+def test_default_template_reads_the_setting(test_db):
+    from backend.api.routes_cover_letters import _default_template_id
+
+    test_db.add(Setting(key="cover_letter_template", value="inter"))
+    test_db.commit()
+    assert _default_template_id(test_db) == "inter"
+    assert _default_template_id() == "garamond_alt"   # no db: the built-in default
+
+
+@pytest.mark.parametrize("value", ["", "modern", "../resume_templates/modern"])
+def test_default_template_ignores_a_value_with_no_letter_folder(test_db, value):
+    from backend.api.routes_cover_letters import _default_template_id
+
+    test_db.add(Setting(key="cover_letter_template", value=value))
+    test_db.commit()
+    assert _default_template_id(test_db) == "garamond_alt"
+
+
+def test_generate_uses_the_setting_for_a_resume_only_template(test_db):
+    """A résumé on `modern` (no letter version) gives the letter the chosen default."""
+    _seed_first_run(test_db)
+    test_db.add(Setting(key="cover_letter_template", value="inter"))
+    test_db.commit()
+    assert _generate_letter(test_db, "modern") == "inter"
+
+
+def test_generate_keeps_the_resume_template_over_the_setting(test_db):
+    """A résumé template with a letter version wins over the setting."""
+    _seed_first_run(test_db)
+    test_db.add(Setting(key="cover_letter_template", value="inter"))
+    test_db.commit()
+    assert _generate_letter(test_db, "raleway") == "raleway"
+
+
+def test_create_without_template_uses_the_setting(api_client, test_db):
+    _seed_first_run(test_db)
+    test_db.add(Setting(key="cover_letter_template", value="palatino"))
+    test_db.commit()
+    assert api_client.post("/api/cover-letters", json={"name": "Blank"}).json()["template"] == "palatino"
+    picked = api_client.post("/api/cover-letters", json={"name": "Picked", "template": "inter"})
+    assert picked.json()["template"] == "inter"
+
+
+@pytest.mark.parametrize("value,status", [("inter", 200), ("", 200), ("modern", 422), ("../x", 422), (5, 422)])
+def test_patch_settings_validates_cover_letter_template(api_client, test_db, value, status):
+    _seed_first_run(test_db)
+    assert api_client.patch("/api/settings", json={"cover_letter_template": value}).status_code == status

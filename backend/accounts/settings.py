@@ -82,7 +82,8 @@ _SECTIONS = [
     ("tailoring", "Tailoring", POLICY, INHERIT, ["tailoring"], [
         "cv_tailor_prompt", "persona_tailor_prompt", "tailor_auto_quick_score"]),
     ("letters", "Cover letters", POLICY, INHERIT, ["letters"], [
-        "cover_letter_default_voice", "cover_letter_voice_presets", "cover_letter_prompt"]),
+        "cover_letter_default_voice", "cover_letter_voice_presets", "cover_letter_prompt",
+        "cover_letter_template"]),
     ("autofill", "Autofill", POLICY, INHERIT, ["autofill"], [
         "autofill_default_length", "autofill_prompt", "autofill_field_patterns",
         "autofill_option_synonyms"]),
