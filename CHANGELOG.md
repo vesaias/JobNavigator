@@ -8,6 +8,9 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
+### Fixed
+- **Cover letters from a Modern Professional résumé:** a generated letter took the résumé's template, and `modern` has no cover-letter version, so the letter failed to render ("Unknown template: 'modern'"). A letter now takes the résumé's template only when a cover-letter version exists, and Garamond Modern otherwise. A letter already stored with a template this install does not have renders with Garamond Modern, as a résumé does. Garamond Modern is now the named default for new letters; before, the default was the first template folder, which is `garamond` on an install with the licensed fonts.
+
 ## [3.1] — 2026-10-27
 
 3.1 is about the posting behind each job: one job per posting however many sites list it, the employer's own link instead of a board's, and a mark on postings that have closed. It also adds a public demo and opt-in telemetry.
