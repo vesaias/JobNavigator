@@ -247,7 +247,8 @@ def test_member_own_models_without_a_key_resolves_empty(test_db, owner_key):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("provider,label", [("claude_api", "Claude API"), ("openai", "OpenAI"),
-                                            ("openrouter", "OpenRouter"), ("opencode_go", "OpenCode Go")])
+                                            ("openrouter", "OpenRouter"), ("opencode_go", "OpenCode Go"),
+                                            ("cheaper_inference", "Cheaper Inference")])
 async def test_member_own_models_call_fails_clearly_without_a_key(test_db, owner_key, monkeypatch, provider, label):
     from backend.analyzer import llm_client as L
     a, b = owner_key

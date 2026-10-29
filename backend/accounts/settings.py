@@ -45,7 +45,8 @@ _LLM_FEATURES = ("", "llm_fallback_", "scoring_", "cv_tailor_", "cover_letter_",
 # One API key per provider (3.1): every model slot on a provider uses its key, so switching a
 # slot's provider back and forth never loses or mis-sends a key. Setting = env var in lower case.
 PROVIDER_KEY_SETTINGS = {"claude_api": "anthropic_api_key", "openai": "openai_api_key",
-                         "openrouter": "openrouter_api_key", "opencode_go": "opencode_api_key"}
+                         "openrouter": "openrouter_api_key", "opencode_go": "opencode_api_key",
+                         "cheaper_inference": "cheaper_inference_api_key"}
 # The per-slot keys they replace: migrated once (seed.migrate_llm_provider_keys), then neither
 # served nor writable nor read; the rows stay one release for a downgrade.
 LEGACY_LLM_KEY_SETTINGS = ("llm_api_key", "llm_fallback_api_key", "scoring_llm_api_key",

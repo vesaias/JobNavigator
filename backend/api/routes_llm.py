@@ -1,4 +1,4 @@
-"""LLM helper endpoints — live model catalogs for the Settings model picker; OpenRouter's is public, OpenAI/Anthropic require a resolved API key, and results are cached ~1h per provider."""
+"""LLM helper endpoints — live model catalogs for the Settings model picker; OpenRouter's and Cheaper Inference's are public, OpenAI/Anthropic require a resolved API key, and results are cached ~1h per provider."""
 import os
 import re
 import time
@@ -94,6 +94,19 @@ async def _fetch_opencode_go(key: str) -> list:
     return [{"id": m.get("id"), "name": m.get("id")} for m in data if m.get("id")]
 
 
+async def _fetch_cheaper_inference() -> list:
+    """Cheaper Inference models from its public catalog (no key needed), limited to the text
+    models served on /chat/completions, the endpoint this provider calls."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get("https://api.cheaperinference.com/public/models")
+        resp.raise_for_status()
+        data = resp.json().get("models", [])
+    return [{"id": m.get("id"), "name": m.get("id"), "context_length": m.get("context_length")}
+            for m in data
+            if m.get("id") and m.get("model_type") == "text"
+            and "/v1/chat/completions" in (m.get("supported_endpoints") or [])]
+
+
 @router.get("/efforts")
 async def list_efforts():
     """Reasoning-effort values per provider for the Settings pickers; a provider not listed takes none."""
@@ -103,12 +116,12 @@ async def list_efforts():
 
 @router.get("/models")
 async def list_models(provider: str = "openrouter"):
-    """Live model catalog for a provider, cached ~1h; openrouter needs no key, openai/claude_api use a configured key or env fallback (400 if none, 502 if the provider rejects it); claude_code borrows the Anthropic key and falls back to the built-in list without one."""
+    """Live model catalog for a provider, cached ~1h; openrouter and cheaper_inference need no key, openai/claude_api use a configured key or env fallback (400 if none, 502 if the provider rejects it); claude_code borrows the Anthropic key and falls back to the built-in list without one."""
     now = time.time()
     db = SessionLocal()
     key = ""
     try:
-        if provider == "openrouter":
+        if provider in ("openrouter", "cheaper_inference"):
             pass
         elif provider == "opencode_go":
             # Go's catalog is public: an empty key (none set, or a member on own without one)
@@ -141,6 +154,8 @@ async def list_models(provider: str = "openrouter"):
         fetch = _fetch_openrouter()
     elif provider == "opencode_go":
         fetch = _fetch_opencode_go(key)
+    elif provider == "cheaper_inference":
+        fetch = _fetch_cheaper_inference()
     else:
         fetch = _fetch_openai(key) if provider == "openai" else _fetch_anthropic(key)
 

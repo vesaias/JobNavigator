@@ -54,15 +54,17 @@ const PROVIDERS = [
   ['ollama', 'Ollama (Local)'],
   ['lmstudio', 'LM Studio (Local)'],
   ['openrouter', 'OpenRouter'],
+  ['cheaper_inference', 'Cheaper Inference'],
 ]
 const PROVIDER_LABEL = Object.fromEntries(PROVIDERS)
 // providers whose catalog /api/llm/models can search live
-const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code', 'opencode_go']
+const SEARCHABLE = ['openrouter', 'openai', 'claude_api', 'claude_code', 'opencode_go', 'cheaper_inference']
 // providers that need no key
 const KEYLESS = ['claude_code', 'codex_cli', 'antigravity_cli', 'ollama', 'lmstudio', '']
 // One API key per provider (backend accounts/settings.py PROVIDER_KEY_SETTINGS): every slot on a
 // provider shows and saves the same key, so switching a slot's provider back keeps its key.
-const PROVIDER_KEY = { claude_api: 'anthropic_api_key', openai: 'openai_api_key', openrouter: 'openrouter_api_key', opencode_go: 'opencode_api_key' }
+const PROVIDER_KEY = { claude_api: 'anthropic_api_key', openai: 'openai_api_key', openrouter: 'openrouter_api_key', opencode_go: 'opencode_api_key',
+  cheaper_inference: 'cheaper_inference_api_key' }
 const keyHelp = (prov, member) => `Saved for ${PROVIDER_LABEL[prov] || prov}: every model slot on it uses this key.`
   + (member || !PROVIDER_KEY[prov] ? '' : ` Empty uses ${PROVIDER_KEY[prov].toUpperCase()} from .env.`)
 // Provider settings whose value 'claude_code' makes the Claude Code token row relevant.
@@ -531,7 +533,7 @@ export default function Settings() {
       ['models', 'AI', 'Models', '', [
         { kind: 'pair', label: 'Primary provider · model', help: 'Every AI feature uses this pair unless overridden below.',
           pKey: 'llm_provider', mKey: 'llm_model', eKey: 'llm_effort',
-          info: "Providers: Claude API, Claude Code, Codex CLI (your ChatGPT subscription), Antigravity CLI (Google subscription), OpenCode Go (subscription), OpenAI, Ollama (local), LM Studio (local), OpenRouter. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount. The subscription CLIs are meant for attended use and have plan limits; a limit hit fails over to the fallback without retrying. Reasoning effort sets how much the model thinks before it answers: higher is slower and costs more. 'default effort' keeps the model's own default. Not every model takes every level; Claude Code steps down to the nearest level, the APIs return an error. Antigravity CLI sets effort in the model name, and Ollama and LM Studio have no effort setting. Antigravity's -high models can think for 5 minutes on a tailoring or a PDF import; -medium answers in under a minute." },
+          info: "Providers: Claude API, Claude Code, Codex CLI (your ChatGPT subscription), Antigravity CLI (Google subscription), OpenCode Go (subscription), OpenAI, Ollama (local), LM Studio (local), OpenRouter, Cheaper Inference. The model list shows that provider's models, including any you added under Model catalog. OpenRouter covers every vendor with one key but has no prompt-cache discount; Cheaper Inference also reaches models from several labs with one key. The subscription CLIs are meant for attended use and have plan limits; a limit hit fails over to the fallback without retrying. Reasoning effort sets how much the model thinks before it answers: higher is slower and costs more. 'default effort' keeps the model's own default. Not every model takes every level; Claude Code steps down to the nearest level, the APIs return an error. Antigravity CLI sets effort in the model name, and Ollama and LM Studio have no effort setting. Antigravity's -high models can think for 5 minutes on a tailoring or a PDF import; -medium answers in under a minute." },
         B('API key', keyHelp(primaryProv, member), PROVIDER_KEY[primaryProv] || 'anthropic_api_key', { secret: true, mono: true, w: '340px', hide: () => !PROVIDER_KEY[primaryProv] }),
         // MT-15: the Claude Code login per account. Shown while some slot uses Claude Code, to the owner and to a member whose Models section is its own.
         B('Claude Code token', member ? 'Your own Claude subscription token.' : 'Empty uses CLAUDE_CODE_OAUTH_TOKEN from .env.',
@@ -561,7 +563,7 @@ export default function Settings() {
         LLM('Autofill', 'Model that answers application-form questions in the extension.', 'autofill_llm'),
         LLM('Email classification', 'Model that sorts Gmail replies into application events.', 'email_llm'),
         { kind: 'models', label: 'Model catalog', help: 'Add new or unlisted models and remove your additions.',
-          info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI, Claude and OpenCode Go. For Ollama/LM Studio, type the local model name. Removed models stay removed.' },
+          info: 'Add models that are not in the built-in list. Search uses the provider’s catalog for OpenRouter, OpenAI, Claude, OpenCode Go and Cheaper Inference. For Ollama/LM Studio, type the local model name. Removed models stay removed.' },
       ]],
       ['scoring', '', 'Scoring behavior', '', [
         SEL('Default résumé', 'Used when a company has no résumés of its own selected.', 'default_resume_id', resumeOpts, { w: '260px' }),

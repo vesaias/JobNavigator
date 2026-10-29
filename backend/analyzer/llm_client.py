@@ -30,7 +30,7 @@ REASONING_EFFORTS = {
 # by default (Sonnet 5, Opus 5.5, GPT-6 Sol). A cap sized for the answer alone can then go entirely to
 # reasoning and return no text, so these calls get this much more room. Tokens are billed as used.
 REASONING_HEADROOM = 16000
-_CAPPED_PROVIDERS = ("claude_api", "openai", "openrouter", "opencode_go")
+_CAPPED_PROVIDERS = ("claude_api", "openai", "openrouter", "opencode_go", "cheaper_inference")
 
 
 def _get_setting(db, key, default=""):
@@ -216,7 +216,7 @@ async def call_autofill_llm(prompt: str, system: str, max_tokens: int = 400,
 
 async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 400,
                                    cached_prefix: str | None = None):
-    """Streaming version of call_autofill_llm; claude_api, openai, openrouter and opencode_go stream natively, other providers fall back to a single full-answer chunk."""
+    """Streaming version of call_autofill_llm; claude_api, openai, openrouter, opencode_go and cheaper_inference stream natively, other providers fall back to a single full-answer chunk."""
     cfg = resolve_llm_config("autofill")
     provider, model, api_key = cfg["provider"], cfg["model"], cfg["api_key"]
     effort = _supported_effort(provider, cfg["effort"])
@@ -231,6 +231,8 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
         api_key = _openai_key(api_key)
     elif provider == "openrouter":
         api_key = _openrouter_key(api_key)
+    elif provider == "cheaper_inference":
+        api_key = _cheaper_inference_key(api_key)
     elif provider == "claude_api":
         api_key = _anthropic_key(api_key)
     if provider == "claude_api":
@@ -238,8 +240,9 @@ async def call_autofill_llm_stream(prompt: str, system: str, max_tokens: int = 4
             yield c
         return
     combined = f"{cached_prefix}\n\n{prompt}" if cached_prefix else prompt
-    if provider in ("openai", "openrouter", "opencode_go"):
-        base = {"openrouter": OPENROUTER_BASE_URL, "opencode_go": OPENCODE_GO_BASE_URL}.get(provider)
+    if provider in ("openai", "openrouter", "opencode_go", "cheaper_inference"):
+        base = {"openrouter": OPENROUTER_BASE_URL, "opencode_go": OPENCODE_GO_BASE_URL,
+                "cheaper_inference": CHEAPER_INFERENCE_BASE_URL}.get(provider)
         async for c in _stream_openai(combined, system, model, api_key, cap, base, effort, feature="autofill"):
             yield c
         return
@@ -274,6 +277,10 @@ async def _stream_claude(prompt, system, model, api_key, max_tokens, cached_pref
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # OpenRouter app attribution (lists the app on openrouter.ai/apps); ignored by other endpoints.
 OPENROUTER_HEADERS = {"HTTP-Referer": "https://github.com/vesaias/JobNavigator", "X-Title": "JobNavigator"}
+
+# Cheaper Inference is an OpenAI-compatible LLM gateway (pay per token): one key reaches models
+# from several labs, and model ids are bare (`gpt-5.4-mini`, `claude-sonnet-5`).
+CHEAPER_INFERENCE_BASE_URL = "https://api.cheaperinference.com/v1"
 
 # OpenCode Go is a subscription whose models are served over an HTTP API
 # (https://opencode.ai/zen/go/v1) with a Go API key. Go asks each client to identify itself with
@@ -324,7 +331,8 @@ def _openai_client(api_key: str, base_url: str | None, feature: str | None = Non
     else:
         headers = None
     # Never None: the SDK would then read OPENAI_API_KEY, which must not reach OpenRouter,
-    # OpenCode Go or LM Studio; OpenAI's own env key is resolved by `_openai_key` first (B3).
+    # OpenCode Go, Cheaper Inference or LM Studio; OpenAI's own env key is resolved by
+    # `_openai_key` first (B3).
     return AsyncOpenAI(api_key=api_key or "", base_url=base_url, default_headers=headers)
 
 
@@ -336,8 +344,10 @@ def _claude_effort_kwargs(effort: str) -> dict:
 def _openai_kwargs(max_tokens: int, effort: str, base_url: str | None) -> dict:
     """The output cap and effort for an OpenAI-compatible request. OpenAI's reasoning models reject
     `max_tokens`, and `max_completion_tokens` is the cap every OpenAI chat model takes; compatible
-    endpoints (OpenRouter, LM Studio) still read `max_tokens`. OpenRouter takes effort as `reasoning`."""
-    kwargs = {"max_completion_tokens" if base_url is None else "max_tokens": max_tokens}
+    endpoints (OpenRouter, LM Studio) still read `max_tokens`. Cheaper Inference serves OpenAI's
+    reasoning models too, so it gets `max_completion_tokens`. OpenRouter takes effort as `reasoning`."""
+    current_cap = base_url is None or base_url == CHEAPER_INFERENCE_BASE_URL
+    kwargs = {"max_completion_tokens" if current_cap else "max_tokens": max_tokens}
     if effort and base_url == OPENROUTER_BASE_URL:
         kwargs["extra_body"] = {"reasoning": {"effort": effort}}
     elif effort:
@@ -360,12 +370,14 @@ def _output_cap(provider: str, max_tokens: int, effort: str) -> int:
     sent max_completion_tokens=16,600 and refuse every call. "none" never reasons.
     opencode_go also reasons by default and its picker has no effort to lower, so it always
     gets the room too. Without it a scoring call (600 tokens) spends the whole cap on
-    reasoning and returns no text; the Go models accept the larger cap (probed, #25)."""
+    reasoning and returns no text; the Go models accept the larger cap (probed, #25).
+    cheaper_inference has no effort values either and its models reason by default, so it gets
+    the same room."""
     if effort == "none":
         return max_tokens
     if provider not in _CAPPED_PROVIDERS:
         return max_tokens
-    if provider == "opencode_go":
+    if provider in ("opencode_go", "cheaper_inference"):
         return max_tokens + REASONING_HEADROOM
     if provider != "claude_api" and not effort:
         return max_tokens
@@ -386,11 +398,12 @@ async def _stream_openai(prompt, system, model, api_key, max_tokens, base_url=No
 
 
 _KEYED_PROVIDERS = {"claude_api": "Claude API", "openai": "OpenAI", "openrouter": "OpenRouter",
-                    "opencode_go": "OpenCode Go"}
+                    "opencode_go": "OpenCode Go", "cheaper_inference": "Cheaper Inference"}
 OPENCODE_GO_KEY_ENV = "OPENCODE_API_KEY"
 OPENAI_KEY_ENV = "OPENAI_API_KEY"
 ANTHROPIC_KEY_ENV = "ANTHROPIC_API_KEY"
 OPENROUTER_KEY_ENV = "OPENROUTER_API_KEY"
+CHEAPER_INFERENCE_KEY_ENV = "CHEAPER_INFERENCE_API_KEY"
 
 
 def _env_key(env_name: str) -> str:
@@ -439,6 +452,17 @@ def _openrouter_key(api_key: str) -> str:
     if not key:
         raise NonRetryableLLMError(
             "No API key for OpenRouter — set it in Settings › Models (or OPENROUTER_API_KEY in .env)")
+    return key
+
+
+def _cheaper_inference_key(api_key: str) -> str:
+    """The Cheaper Inference key to send: the resolved setting, else CHEAPER_INFERENCE_API_KEY for
+    the owner and members on 'inherit'. No key at all is a config error, not a retry."""
+    key = api_key or _env_key(CHEAPER_INFERENCE_KEY_ENV)
+    if not key:
+        raise NonRetryableLLMError(
+            "No API key for Cheaper Inference — set it in Settings › Models "
+            "(or CHEAPER_INFERENCE_API_KEY in .env)")
     return key
 
 
@@ -496,6 +520,9 @@ async def _dispatch(provider: str, model: str, api_key: str,
         # OpenCode Go (subscription) over its OpenAI-compatible endpoint; the model id is bare
         # (the CLI's `opencode-go/` prefix is a CLI alias, not part of the HTTP API).
         return await _call_opencode_go(combined, system, model, api_key, max_tokens, effort=effort)
+    elif provider == "cheaper_inference":
+        # Cheaper Inference is OpenAI-API-compatible — same client, its own base URL.
+        return await _call_cheaper_inference(combined, system, model, api_key, max_tokens, effort=effort)
     elif provider == "lmstudio":
         # LM Studio serves an OpenAI-compatible API on :1234; no key (client wants a non-empty string).
         # The address is the owner's `lmstudio_base_url` setting, else LMSTUDIO_BASE_URL, else the
@@ -1126,6 +1153,23 @@ async def _call_openrouter(prompt: str, system: str, model: str, api_key: str, m
         if getattr(e, "status_code", None) == 401:
             raise NonRetryableLLMError(
                 "OpenRouter rejected the API key — check it in Settings › Models") from e
+        raise
+
+
+async def _call_cheaper_inference(prompt: str, system: str, model: str, api_key: str, max_tokens: int,
+                                  effort: str = "") -> dict:
+    """Cheaper Inference over its OpenAI-compatible API. No key, or a key it rejects (401), cannot
+    succeed on a retry, so both are NonRetryable and the fallback runs at once."""
+    api_key = _cheaper_inference_key(api_key)
+    try:
+        return await _call_openai(prompt, system, model, api_key, max_tokens,
+                                  base_url=CHEAPER_INFERENCE_BASE_URL, effort=effort)
+    except NonRetryableLLMError:
+        raise
+    except Exception as e:
+        if getattr(e, "status_code", None) == 401:
+            raise NonRetryableLLMError(
+                "Cheaper Inference rejected the API key — check it in Settings › Models") from e
         raise
 
 
