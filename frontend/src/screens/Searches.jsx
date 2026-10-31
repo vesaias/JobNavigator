@@ -89,7 +89,7 @@ const DEPTHS = [
 const SOURCES = [['linkedin', 'LinkedIn'], ['indeed', 'Indeed'], ['zip_recruiter', 'ZipRecruiter'], ['google', 'Google Jobs'], ['direct', 'Direct (Playwright)']]
 const COLLECTIONS = [['recommended', 'Recommended'], ['top-applicant', 'Top Applicant']]
 // backend/scraper/search_modes.py CREATIVE_BOARDS, same order
-const CREATIVE_BOARDS = [['behance', 'Behance'], ['hollylist', 'Hollylist'], ['wanacreate', 'Wana Create'], ['himalayas', 'Himalayas'], ['eluta', 'Eluta'], ['dribbble', 'Dribbble'], ['artstation', 'ArtStation'], ['workwithindies', 'Work With Indies']]
+const CREATIVE_BOARDS = [['behance', 'Behance'], ['hollylist', 'Hollylist'], ['wanacreate', 'Wana Create'], ['dribbble', 'Dribbble'], ['artstation', 'ArtStation'], ['workwithindies', 'Work With Indies']]
 const creativeLabel = (k) => (CREATIVE_BOARDS.find(([id]) => id === k) || [k, k])[1]
 
 // note banners reuse the mode-badge palettes (sm-levels green / sm-jobright teal)
@@ -100,7 +100,9 @@ const noteFor = (mode) => {
   if (mode === 'apify') return ['Runs Apify actors with the API key from Settings › Apify. Apify bills your account for each result: Results wanted (at most 200) caps every board on every run, each run carries a spend cap and stops after 15 minutes, and Test fetches 20 jobs per board at most. A new Apify search starts paused: check the boards, then press Paused to resume it.', 'sm-apify']
   if (mode === 'caribbeanjobs') return ['Set the filters on caribbeanjobs.com and paste the search URL, or enter a term. The description of each result is read from its own page; Test reads at most 20 of those pages. A salary in a local currency is kept as text in the description, not as a number.', 'sm-caribbeanjobs']
   if (mode === 'trulyremote') return ['Reads TrulyRemoteWork.com’s full corpus of worldwide-remote roles. Every listing is remote with no location restriction, so you narrow it with the title and company filters below. Each new job’s description is read from its own page; Test reads at most 20 of those pages.', 'sm-trulyremote']
-  if (mode === 'creative') return ['Reads the job APIs and feeds of Behance, Hollylist, Wana Create, Himalayas, Eluta, Dribbble, ArtStation and Work With Indies directly: no login and no Apify key. Remote applies on every board: where a board cannot filter it, the jobs that the posting calls on-site or hybrid are dropped. Himalayas has remote jobs only. Location (a city name) applies on Hollylist, Wana Create, Eluta (50 km), Dribbble, ArtStation and Work With Indies (remote jobs stay); Behance ignores it. Country applies on Himalayas, and on Remote searches it drops the Behance jobs that are not open to that country. Hollylist members-only offers are skipped, and a salary is stored as a number only in US dollars per year. Eluta allows 10 RSS checks a day from one address, so give a search with Eluta a run interval of 1440 minutes; it reads one feed page per run. Test reads at most 20 job pages.', 'sm-creative']
+  if (mode === 'creative') return ['Reads the job APIs and feeds of Behance, Hollylist, Wana Create, Dribbble, ArtStation and Work With Indies directly: no login and no Apify key. Remote applies on every board: where a board cannot filter it, the jobs that the posting calls on-site or hybrid are dropped. Location (a city name) applies on Hollylist, Wana Create, Dribbble, ArtStation and Work With Indies (remote jobs stay); Behance ignores it. On Remote searches, Country drops the Behance jobs that are not open to that country. Hollylist members-only offers are skipped, and a salary is stored as a number only in US dollars per year. Test reads at most 20 job pages.', 'sm-creative']
+  if (mode === 'himalayas') return ['Reads the public API of himalayas.app: no login and no key. Every job is remote, so there is no Remote or Location. Country keeps the jobs open to that country, worldwide jobs included. A salary is stored as a number only in US dollars per year.', 'sm-himalayas']
+  if (mode === 'eluta') return ['Reads Canadian jobs from employer career sites through the RSS search of eluta.ca: no login and no key. Location is a city with a 50 km radius; empty means all of Canada. Eluta has no remote filter. It allows 10 RSS checks a day from one address, so give each search a run interval of 1440 minutes. One run reads one feed page and at most 6 job pages; the other new jobs wait for the next run.', 'sm-eluta']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
@@ -157,6 +159,8 @@ const summaryOf = (s, boards = []) => {
     bits.push((s.sources || []).map(creativeLabel).join(', ') || 'no board')
     return bits.join(' · ') + last
   }
+  if (m === 'himalayas') return `“${s.search_term || ''}” · Remote${s.country ? ` · ${s.country}` : ''}${last}`
+  if (m === 'eluta') return `“${s.search_term || ''}” · ${s.location || 'Canada'}${last}`
   return `${short(s.direct_url) || 'no URL'}${last}`
 }
 
@@ -225,8 +229,8 @@ const toPayload = (d) => {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
-  // Creative boards take a city name; Country is read by Himalayas only.
-  if (d.search_mode === 'creative') {
+  // Creative boards and Eluta take a city name; Himalayas and Behance read Country.
+  if (d.search_mode === 'creative' || d.search_mode === 'himalayas' || d.search_mode === 'eluta') {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
@@ -363,13 +367,28 @@ function ConfigForm({ d, set }) {
     fields.push(
       <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. illustrator" />,
       <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Vancouver"
-        sub="One city name. Behance and Himalayas ignore it." />,
+        sub="One city name. Behance ignores it." />,
       <Cell key="ctry" label="Country" value={d.country} options={countries} onChange={(v) => set({ country: v })}
-        sub="Himalayas, and Behance on Remote searches: jobs open to this country, worldwide jobs included." />,
+        sub="Behance on Remote searches: jobs open to this country, worldwide jobs included." />,
       <Cell key="rem" label="Remote" value={d.is_remote} options={[['', 'Any'], ['true', 'Remote only']]} onChange={(v) => set({ is_remote: v })} />,
       <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })}
         sub="0 = no age limit. Behance freelance briefs carry no date." />,
       <Cell key="rw" label="Results wanted · 1–500 per board" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+    )
+  } else if (m === 'himalayas') {
+    fields.push(
+      <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. designer" />,
+      <Cell key="ctry" label="Country" value={d.country} options={countries} onChange={(v) => set({ country: v })}
+        sub="Jobs open to this country, worldwide jobs included." />,
+      <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })} sub="0 = no age limit" />,
+      <Cell key="rw" label="Results wanted · 1–500" mono type="number" min={BOUNDS.results_wanted[0]} max={BOUNDS.results_wanted[1]} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
+    )
+  } else if (m === 'eluta') {
+    fields.push(
+      <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. designer" />,
+      <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Vancouver"
+        sub="A city, 50 km around it. Empty = all of Canada." />,
+      <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })} sub="0 = no age limit" />,
     )
   } else if (m === 'trulyremote') {
     // The whole board is read on every run; this caps the new jobs whose pages one run opens.

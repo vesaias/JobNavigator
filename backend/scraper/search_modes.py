@@ -18,7 +18,7 @@ from typing import Optional
 JOBSPY_BOARDS = ("linkedin", "indeed", "zip_recruiter", "google", "glassdoor", "bayt", "naukri", "bdjobs", "direct")
 JOBSPY_DEFAULT_BOARDS = ["linkedin", "indeed", "zip_recruiter", "google"]
 LINKEDIN_COLLECTIONS = ("recommended", "top-applicant")
-CREATIVE_BOARDS = ("behance", "hollylist", "wanacreate", "himalayas", "eluta", "dribbble", "artstation",
+CREATIVE_BOARDS = ("behance", "hollylist", "wanacreate", "dribbble", "artstation",
                    "workwithindies")    # sources/creative.py BOARDS
 # `sources` kind -> (allowed values, what they are called in an error)
 _BOARD_LISTS = {
@@ -42,6 +42,7 @@ class SearchMode:
     boards: Optional[str] = None      # what `sources` holds: "jobspy" | "apify" | "collections" | "creative" | None
     needs_url: bool = False           # cannot run without direct_url
     needs_query: bool = False         # cannot run without a search term or direct_url
+    needs_term: bool = False          # cannot run without a search term
     paid: bool = False                # bills per run: new, switched and copied searches start paused
     # Shared fetch (targets.search_fetch_params): the fields a shared fetch takes at the largest
     # value among its subscribers, each account trimming its own copy; (field, default) pairs.
@@ -78,7 +79,11 @@ SEARCH_MODES: dict[str, SearchMode] = {m.key: m for m in (
     SearchMode("trulyremote", "TrulyRemoteWork.com", "trulyremote", shareable=True,
                background_test=True),
     # Not shared yet: a proof of concept; its key would be boards + term + location + remote.
-    SearchMode("creative", "Creative boards", "creative", background_test=True, boards="creative"),
+    SearchMode("creative", "Creative boards", "creative", background_test=True, boards="creative",
+               needs_term=True),
+    # Not shared yet either; their keys would be term + country and term + location.
+    SearchMode("himalayas", "Himalayas", "himalayas", background_test=True, needs_term=True),
+    SearchMode("eluta", "Eluta", "eluta", background_test=True, needs_term=True),
     SearchMode("linkedin_extension", "LinkedIn Extension", extension=True),
     SearchMode("extension", "Extension", extension=True),
 )}
@@ -142,9 +147,8 @@ def config_error(search) -> Optional[str]:
             return "Apify needs a search term before it can run"
         if not configured_presets(search):
             return "Apify needs at least one board before it can run"
-    if mode.boards == "creative":
-        if not (search.search_term or "").strip():
-            return f"{mode.label} needs a search term before it can run"
-        if not any(s in CREATIVE_BOARDS for s in (search.sources or [])):
-            return f"{mode.label} needs at least one board before it can run"
+    if mode.needs_term and not (search.search_term or "").strip():
+        return f"{mode.label} needs a search term before it can run"
+    if mode.boards == "creative" and not any(s in CREATIVE_BOARDS for s in (search.sources or [])):
+        return f"{mode.label} needs at least one board before it can run"
     return None

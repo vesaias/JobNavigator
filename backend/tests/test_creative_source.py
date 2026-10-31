@@ -1,4 +1,4 @@
-"""Creative boards source: the three board clients, the save pipeline and the mode wiring (no network)."""
+"""Creative boards source: the board clients, the job_boards.py pipeline and the mode wiring (no network)."""
 import json
 import time
 from types import SimpleNamespace
@@ -8,6 +8,7 @@ import pytest
 
 from backend.models.db import Job, Search, Setting
 from backend.scraper import search_modes as M
+from backend.scraper._shared import job_boards
 from backend.scraper.sources import creative
 
 
@@ -29,10 +30,9 @@ class FakeSites:
         self.holly_detail = {}
         self.wana_hits = []
         self.fail = set()
-        self.himalayas = {}            # page -> jobs
-        self.eluta_pages = {}          # pg -> rss xml
-        self.eluta_pages_html = {}     # path -> html
+        self.behance_apply = None      # job.applicationUrl
         self.feeds = {}                # host -> rss bytes
+        self.redirects = {}            # full url -> Location
         self.pages = {}                # full url -> html
         self.artstation = {}           # page -> jobs
 
@@ -66,6 +66,7 @@ class FakeSites:
                     "additionalDetails": "<p>Ten pages</p>", "company": "Brief Co"}}})
             return httpx.Response(200, json={"data": {"job": {
                 "description": "<p>Full <b>text</b></p>", "postedOn": int(time.time()) - 3600,
+                "applicationUrl": self.behance_apply,
                 "company": {"name": "Acme"}, "salaryMin": 70000, "salaryMax": 90000,
                 "salaryTimeframe": "ANNUAL", "salaryCurrency": "USD"}}})
         if host == "www.hollylist.com":
@@ -79,18 +80,13 @@ class FakeSites:
         if host == "search.wanacreate.art":
             return httpx.Response(200, json={"found": len(self.wana_hits), "hits": [{"document": d} for d in self.wana_hits]})
         if host in ("dribbble.com", "www.workwithindies.com") and (path.endswith(".rss") or path.endswith("rss.xml")):
-            return httpx.Response(200, content=self.feeds.get(host, _rss([])))
+            return httpx.Response(200, content=self.feeds.get(host, _feed([])))
+        if str(request.url) in self.redirects:
+            return httpx.Response(302, headers={"location": self.redirects[str(request.url)]})
         if str(request.url).split("?")[0] in self.pages:
             return httpx.Response(200, text=self.pages[str(request.url).split("?")[0]])
         if host == "www.artstation.com":
             return httpx.Response(200, json={"total_count": 0, "data": self.artstation.get(int(request.url.params.get("page", "1")), [])})
-        if host == "himalayas.app":
-            page = int(request.url.params.get("page", "1"))
-            return httpx.Response(200, json={"totalCount": 0, "jobs": self.himalayas.get(page, [])})
-        if host == "www.eluta.ca" and path == "/rss":
-            return httpx.Response(200, content=self.eluta_pages.get(int(request.url.params.get("pg", "1")), _rss([])))
-        if host == "www.eluta.ca":
-            return httpx.Response(200, text=self.eluta_pages_html.get(path, "<html></html>"))
         return httpx.Response(404)
 
     def to(self, host, path=None):
@@ -100,8 +96,8 @@ class FakeSites:
 @pytest.fixture
 def sites(monkeypatch):
     fake = FakeSites()
-    monkeypatch.setattr(creative, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(fake),
-                                                                        follow_redirects=True))
+    monkeypatch.setattr(job_boards, "http_client", lambda mounts=None: httpx.AsyncClient(
+        transport=httpx.MockTransport(fake), follow_redirects=True))
     return fake
 
 
@@ -112,38 +108,13 @@ def _holly(i, public=True, market=None, added="2026-10-20T10:00:00.000Z", org="S
 
 # ── the board clients ───────────────────────────────────────────────────────
 
-def _rss(items) -> bytes:
-    body = "".join(
-        f"<item><title>{t}</title><link>https://www.eluta.ca/spl/{slug}?imo=1</link><employer>{e}</employer>"
-        f"<location>{loc}</location><description>&lt;span&gt;snippet&lt;/span&gt; text</description>"
-        f"<pubDate>{date}</pubDate><guid>{slug}</guid></item>"
-        for t, slug, e, loc, date in items)
-    return f'<?xml version="1.0"?><rss><channel>{body}</channel></rss>'.encode()
-
-
-def _him(i, days_old=1, places=("Canada",), salary=None):
-    j = {"title": f"Concept Artist {i}", "companyName": "Youtooz", "locationRestrictions": list(places),
-         "description": "<p>Draw <b>things</b></p>", "pubDate": int(time.time()) - days_old * 86400,
-         "applicationLink": f"https://himalayas.app/companies/youtooz/jobs/c{i}?utm_source=api",
-         "guid": f"https://himalayas.app/companies/youtooz/jobs/c{i}", "salaryPeriod": "annual",
-         "minSalary": None, "maxSalary": None, "currency": None}
-    if salary:
-        j.update(minSalary=salary[0], maxSalary=salary[1], currency=salary[2])
-    return j
-
-
-@pytest.fixture
-def eluta_now(monkeypatch):
-    monkeypatch.setattr(creative, "_ELUTA_GAP", 0)
-
-
 def test_board_keys_match_the_mode_table():
     assert tuple(creative.BOARDS) == M.CREATIVE_BOARDS
 
 
 async def test_behance_passes_the_cookie_challenge_and_sends_the_same_token_twice(sites):
     sites.behance_pages[2] = [sites.be_node(3)]
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._behance_list(c, _search(is_remote=True), 10)
     assert [r["title"] for r in rows] == ["Illustrator 1", "Illustrator 2", "Illustrator 3"]
     gql = sites.to("www.behance.net", "/v3/graphql")
@@ -157,38 +128,38 @@ async def test_behance_passes_the_cookie_challenge_and_sends_the_same_token_twic
 
 async def test_behance_stops_at_the_limit(sites):
     sites.behance_pages = {p: [sites.be_node(p * 10 + i) for i in range(50)] for p in (1, 2, 3)}
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._behance_list(c, _search(), 60)
     assert len(rows) == 60 and len(sites.to("www.behance.net", "/v3/graphql")) == 2
     assert "filter" not in sites.to("www.behance.net", "/v3/graphql")[0][2]["variables"]
 
 
 async def test_behance_details_fill_text_date_and_usd_salary_and_drop_masked_fields(sites):
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._behance_list(c, _search(), 10)
         for r in rows:
             r["source"] = "behance"          # _collect sets it
-        await creative._fill_details(c, rows)
+        await job_boards._fill_details(c, rows, creative.BOARDS)
     job, brief = rows
     assert (job["description"], job["salary_min"], job["salary_max"]) == ("Full text", 70000, 90000)
-    assert job["posted"] is not None and creative._too_old(job, 2) is None
+    assert job["posted"] is not None and job_boards.too_old(job, 2) is None
     assert brief["description"] == "Draw a book\n\nTen pages"          # "####" is a masked field
     assert brief["company"] == "Brief Co" and brief["posted"] is None
 
 
 def test_annual_usd_refuses_other_currencies_periods_and_hourly_rates():
-    assert creative._annual_usd(70000, 90000, "ANNUAL", "USD") == (70000, 90000)
-    assert creative._annual_usd(70000, None, "YEARLY", "usd") == (70000, 70000)
-    assert creative._annual_usd(35000, 45000, "ANNUAL", "INR") == (None, None)
-    assert creative._annual_usd(15, 20, "ANNUAL", "USD") == (None, None)
-    assert creative._annual_usd(5000, 6000, "MONTHLY", "USD") == (None, None)
-    assert creative._annual_usd(None, None, None, None) == (None, None)
+    assert job_boards.annual_usd(70000, 90000, "ANNUAL", "USD") == (70000, 90000)
+    assert job_boards.annual_usd(70000, None, "YEARLY", "usd") == (70000, 70000)
+    assert job_boards.annual_usd(35000, 45000, "ANNUAL", "INR") == (None, None)
+    assert job_boards.annual_usd(15, 20, "ANNUAL", "USD") == (None, None)
+    assert job_boards.annual_usd(5000, 6000, "MONTHLY", "USD") == (None, None)
+    assert job_boards.annual_usd(None, None, None, None) == (None, None)
 
 
 async def test_hollylist_drops_members_only_and_merges_both_markets_newest_first(sites):
     sites.holly[None] = [_holly(1, added="2026-10-20T10:00:00Z"), _holly(2, public=False)]
     sites.holly["europe"] = [_holly(3, market="europe", added="2026-10-22T10:00:00Z")]
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._hollylist_list(c, _search(location="London, UK", is_remote=True), 10)
     assert [r["title"] for r in rows] == ["Animator 3", "Animator 1"]
     assert rows[0]["url"] == "https://www.hollylist.com/job/job-h3"
@@ -199,7 +170,7 @@ async def test_hollylist_drops_members_only_and_merges_both_markets_newest_first
 
 async def test_hollylist_pages_by_one_hundred(sites):
     sites.holly[None] = [_holly(i) for i in range(150)]
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._hollylist_market(c, _search(), None, 500)
     assert len(rows) == 150
     assert [c[2]["variables"]["skip"] for c in sites.to("www.hollylist.com")] == [0, 100]
@@ -223,123 +194,6 @@ def test_wana_row_prefers_the_original_posting_url():
     assert (copied["salary_min"], copied["salary_max"]) == (60000, 80000)
     own = creative._wana_row({"id": "a2", "title": "Muralist", "salary": {"min": 35000, "currency": "INR", "period": "MONTHLY"}})
     assert own["url"] == "https://www.wanacreate.art/jobs/a2" and own["salary_min"] is None
-
-
-async def test_himalayas_sends_the_country_name_and_stops_at_old_jobs(sites):
-    sites.himalayas = {1: [_him(i) for i in range(19)] + [_him(99, days_old=30)], 2: [_him(200)]}
-    async with creative._client() as c:
-        rows = await creative._himalayas_list(c, _search(country="canada", hours_old=168), 100)
-    assert len(rows) == 19                     # the 30-day-old job ends the paging
-    asked = [u for u in sites.urls if "himalayas.app" in u]
-    assert len(asked) == 1
-    assert "country=Canada" in asked[0] and "sort=recent" in asked[0] and "page=1" in asked[0]
-    r = rows[0]
-    assert (r["url"], r["location"], r["arrangement"]) == (
-        "https://himalayas.app/companies/youtooz/jobs/c0?utm_source=api", "Remote: Canada", "remote")
-    assert r["description"] == "Draw things"
-
-
-async def test_himalayas_without_a_known_country_sends_none(sites):
-    sites.himalayas = {1: [_him(1, places=())]}
-    async with creative._client() as c:
-        rows = await creative._himalayas_list(c, _search(country="atlantis"), 10)
-    assert rows[0]["location"] == "Remote (worldwide)"
-    assert "country=" not in [u for u in sites.urls if "himalayas.app" in u][0]
-
-
-def test_himalayas_salary_is_kept_only_in_usd_per_year():
-    assert creative._himalayas_row(_him(1, salary=(90000, 120000, "USD")))["salary_min"] == 90000
-    assert creative._himalayas_row(_him(1, salary=(90000, 120000, "EUR")))["salary_min"] is None
-
-
-async def test_eluta_reads_the_feed_with_a_city_radius_and_fills_text_from_microdata(sites, eluta_now):
-    now = "Mon, 26 Oct 2026 13:56:27 GMT"
-    sites.eluta_pages = {1: _rss([("2D Animator", "2d-animator-abc", "ICON Creative Studio", "Vancouver, BC", now)])}
-    # As on eluta.ca: the hiring organisation's empty <meta itemprop="description"> comes first.
-    sites.eluta_pages_html = {"/spl/2d-animator-abc": (
-        '<div itemscope itemtype="http://schema.org/JobPosting"><span itemprop="title">2D Animator</span>'
-        '<h5 itemprop="hiringOrganization" itemscope><meta itemprop="description" content=""></h5>'
-        '<div itemprop="description"><p>Animate <b>scenes</b></p><ul><li>Toon Boom</li></ul></div></div>')}
-    async with creative._client() as c:
-        rows = await creative._eluta_list(c, _search(search_term="animator", location="Vancouver, BC"), 50)
-        for r in rows:
-            r["source"] = "eluta"
-        assert rows[0]["description"] == "snippet text"
-        await creative._fill_details(c, rows)
-    r = rows[0]
-    assert (r["title"], r["company"], r["location"]) == ("2D Animator", "ICON Creative Studio", "Vancouver, BC")
-    assert r["url"] == "https://www.eluta.ca/spl/2d-animator-abc"          # ?imo=1 dropped
-    assert r["posted"].startswith("2026-10-26T13:56:27")
-    assert r["description"] == "Animate scenes\nToon Boom"
-    assert len(sites.to("www.eluta.ca", "/rss")) == 1        # one item < 20: no second page
-
-
-async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
-    async with creative._client() as c:
-        await creative._eluta_list(c, _search(search_term="illustrator", location="Vancouver"), 10)
-        await creative._eluta_list(c, _search(search_term="illustrator", location=""), 10)
-    urls = [u for u in sites.urls if "eluta.ca/rss" in u]
-    assert "radius%3A50" in urls[0] and "l=Vancouver" in urls[0] and "sort%3Apost" in urls[0]
-    assert "radius" not in urls[1]
-
-
-async def test_eluta_page_without_a_description_keeps_the_feed_snippet(sites, eluta_now):
-    now = "Mon, 26 Oct 2026 13:56:27 GMT"
-    sites.eluta_pages = {1: _rss([("Art Director", "ad-1", "Emily Carr", "Vancouver, BC", now)])}
-    sites.eluta_pages_html = {"/spl/ad-1": '<div itemscope itemtype="http://schema.org/JobPosting">'
-                                           '<meta itemprop="description" content=""></div>'}
-    async with creative._client() as c:
-        rows = await creative._eluta_list(c, _search(), 10)
-        await creative._eluta_detail(c, rows[0])
-    assert rows[0]["description"] == "snippet text"
-
-
-@pytest.mark.parametrize("title", ["Too Many Requests", "Too Many Feeds"])
-async def test_eluta_refusals_fail_the_board_instead_of_becoming_jobs(sites, eluta_now, title):
-    sites.eluta_pages = {1: _rss([(title, "x", "", "", "Mon, 26 Oct 2026 13:56:27 GMT")])}
-    async with creative._client() as c:
-        with pytest.raises(creative.CreativeError, match=title):
-            await creative._eluta_list(c, _search(), 50)
-
-
-def test_eluta_daily_feed_refusal_is_recognised_by_its_contact_link():
-    xml = (b'<rss><channel><item><title>Daily limit</title><link>https://www.eluta.ca/contact</link>'
-           b'<description>You may only check a maximum of 10 RSS feeds each day.</description></item></channel></rss>')
-    with pytest.raises(creative.CreativeError, match="10 RSS feeds each day"):
-        creative._eluta_items(xml)
-
-
-async def test_eluta_reads_one_feed_page_per_run(sites, eluta_now):
-    now = "Mon, 26 Oct 2026 13:56:27 GMT"
-    page = _rss([(f"Artist {i}", f"a{i}", "Co", "Vancouver, BC", now) for i in range(20)])
-    sites.eluta_pages = {1: page, 2: page}
-    async with creative._client() as c:
-        rows = await creative._eluta_list(c, _search(), 50)
-    assert len(rows) == 20 and len(sites.to("www.eluta.ca", "/rss")) == 1
-
-
-def test_rows_past_a_board_detail_budget_wait_for_the_next_run():
-    rows = [{"source": "eluta", "i": i} for i in range(creative._ELUTA_MAX_DETAILS + 3)] + [{"source": "behance"}]
-    breakdown = {"eluta": {"seen": 0, "new": 0}, "behance": {"seen": 0, "new": 0}}
-    kept = creative._defer_over_budget(rows, breakdown)
-    assert [r.get("i") for r in kept if r["source"] == "eluta"] == list(range(creative._ELUTA_MAX_DETAILS))
-    assert any(r["source"] == "behance" for r in kept)                 # Behance has no cap
-    assert breakdown["eluta"]["deferred"] == 3 and "deferred" not in breakdown["behance"]
-
-
-async def test_run_saves_eluta_rows_up_to_the_budget_and_leaves_the_rest(sites, quiet, test_db, eluta_now, monkeypatch):
-    monkeypatch.setattr(creative, "_ELUTA_MAX_DETAILS", 2)
-    monkeypatch.setitem(creative.BOARDS, "eluta", creative.Board("Eluta", creative._eluta_list, creative._eluta_detail, 2))
-    now = "Mon, 26 Oct 2026 13:56:27 GMT"
-    sites.eluta_pages = {1: _rss([(f"Animator {i}", f"a{i}", "ICON", "Vancouver, BC", now) for i in range(5)])}
-    search = Search(name="t", search_mode="creative", search_term="animator", sources=["eluta"], location="Vancouver",
-                    results_wanted=10, hours_old=0, company_exclude=[])
-    test_db.add(search)
-    test_db.commit()
-    res = await creative.run(search)
-    assert res["source_breakdown"]["eluta"]["new"] == 2 and res["source_breakdown"]["eluta"]["deferred"] == 3
-    res = await creative.run(search)                    # the next run takes the waiting ones
-    assert res["source_breakdown"]["eluta"]["new"] == 2
 
 
 def _feed(items) -> bytes:
@@ -373,13 +227,13 @@ async def test_dribbble_parses_the_feed_title_and_reads_the_page(sites):
         "<dc:creator>Acme</dc:creator>")])
     sites.pages[url] = _ld_page({"@type": "JobPosting", "description": "<p>Animate</p>", "jobLocationType": "TELECOMMUTE",
                                  "applicantLocationRequirements": {"@type": "Country", "name": "Canada"}})
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._dribbble_list(c, _search(search_term="motion designer"), 10)
         for r in rows:
             r["source"] = "dribbble"
         assert (rows[0]["title"], rows[0]["company"], rows[0]["url"], rows[0]["arrangement"]) == (
             "Motion Designer", "Acme", url, "remote")
-        await creative._fill_details(c, rows)
+        await job_boards._fill_details(c, rows, creative.BOARDS)
     assert (rows[0]["description"], rows[0]["location"]) == ("Animate", "Remote: Canada")
     assert "keyword=motion+designer" in [u for u in sites.urls if "dribbble.com/jobs.rss" in u][0]
 
@@ -389,7 +243,7 @@ async def test_artstation_sends_remote_and_maps_localities(sites):
                              "description": "<p>Paint</p>", "how_to_apply": "Email us",
                              "recruitment_localities": [{"locality": {"formatted_name": "Vancouver, BC, Canada"}}],
                              "listing_placement": {"posted_at": "2026-10-26T00:21:54+00:00"}}]}
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._artstation_list(c, _search(search_term="artist", is_remote=True), 10)
     r = rows[0]
     assert (r["url"], r["location"], r["arrangement"]) == ("https://www.artstation.com/jobs/ab1", "Vancouver, BC, Canada", None)
@@ -402,7 +256,7 @@ async def test_work_with_indies_reads_the_feed_and_time_zone_bands_are_remote(si
     sites.feeds["www.workwithindies.com"] = _feed([(
         "3Guns is hiring a Content Creator to work from Anywhere", url, "Make videos", NOW_RSS, ""),
         ("lightconstruct is hiring a 3D Environment Artist to work from CET ± 3 hours", url + "-2", "Build", NOW_RSS, "")])
-    async with creative._client() as c:
+    async with job_boards.http_client() as c:
         rows = await creative._wwi_list(c, _search(), 10)
     assert [(r["title"], r["company"], r["arrangement"]) for r in rows] == [
         ("Content Creator", "3Guns", "remote"), ("3D Environment Artist", "lightconstruct", "remote")]
@@ -410,9 +264,9 @@ async def test_work_with_indies_reads_the_feed_and_time_zone_bands_are_remote(si
 
 def test_remote_drops_rows_the_posting_calls_onsite_and_unknown_rows_stay():
     s = _search(is_remote=True)
-    assert creative._rejection(dict(creative._row(title="Illustrator", arrangement="onsite"), source="dribbble"),
-                               s, [], [], set(), set()) == "Not remote: onsite"
-    assert creative._rejection(dict(creative._row(title="Illustrator"), source="dribbble"), s, [], [], set(), set()) is None
+    assert job_boards._rejection(dict(job_boards.make_row(title="Illustrator", arrangement="onsite"), source="dribbble"),
+                               s, creative.BOARDS, [], [], set(), set()) == "Not remote: onsite"
+    assert job_boards._rejection(dict(job_boards.make_row(title="Illustrator"), source="dribbble"), s, creative.BOARDS, [], [], set(), set()) is None
 
 
 @pytest.mark.parametrize("country,location,expected", [
@@ -427,37 +281,32 @@ def test_remote_drops_rows_the_posting_calls_onsite_and_unknown_rows_stay():
     ("usa", "Philippines", "Not open to United States"),
 ])
 def test_remote_behance_rows_must_be_open_to_the_search_country(country, location, expected):
-    row = dict(creative._row(title="Graphic Designer", location=location, arrangement="remote"), source="behance")
-    assert creative._rejection(row, _search(is_remote=True, country=country), [], [], set(), set()) == expected
+    row = dict(job_boards.make_row(title="Graphic Designer", location=location, arrangement="remote"), source="behance")
+    assert job_boards._rejection(row, _search(is_remote=True, country=country), creative.BOARDS, [], [], set(), set()) == expected
 
 
 def test_the_country_rule_is_for_remote_behance_rows_only():
-    row = dict(creative._row(title="Graphic Designer", location="Spain"), source="behance")
-    assert creative._rejection(row, _search(is_remote=None, country="canada"), [], [], set(), set()) is None
-    other = dict(creative._row(title="Graphic Designer", location="Spain", arrangement="remote"), source="dribbble")
-    assert creative._rejection(other, _search(is_remote=True, country="canada"), [], [], set(), set()) is None
+    row = dict(job_boards.make_row(title="Graphic Designer", location="Spain"), source="behance")
+    assert job_boards._rejection(row, _search(is_remote=None, country="canada"), creative.BOARDS, [], [], set(), set()) is None
+    other = dict(job_boards.make_row(title="Graphic Designer", location="Spain", arrangement="remote"), source="dribbble")
+    assert job_boards._rejection(other, _search(is_remote=True, country="canada"), creative.BOARDS, [], [], set(), set()) is None
 
 
 def test_location_is_checked_here_only_for_boards_that_cannot_filter_it():
     s = _search(location="Vancouver, BC")
-    in_city = dict(creative._row(title="Artist", location="Vancouver, BC, Canada"), source="artstation")
-    elsewhere = dict(creative._row(title="Artist", location="Montreal, QC"), source="artstation")
-    remote = dict(creative._row(title="Artist", location="Remote", arrangement="remote"), source="artstation")
-    behance = dict(creative._row(title="Artist", location="Montreal, QC"), source="behance")
-    reasons = [creative._rejection(r, s, [], [], set(), set()) for r in (in_city, elsewhere, remote, behance)]
+    in_city = dict(job_boards.make_row(title="Artist", location="Vancouver, BC, Canada"), source="artstation")
+    elsewhere = dict(job_boards.make_row(title="Artist", location="Montreal, QC"), source="artstation")
+    remote = dict(job_boards.make_row(title="Artist", location="Remote", arrangement="remote"), source="artstation")
+    behance = dict(job_boards.make_row(title="Artist", location="Montreal, QC"), source="behance")
+    reasons = [job_boards._rejection(r, s, creative.BOARDS, [], [], set(), set()) for r in (in_city, elsewhere, remote, behance)]
     assert reasons == [None, "Not in Vancouver", None, None]
-
-
-def test_eluta_tls_context_offers_the_rsa_cipher_the_site_needs():
-    names = {c["name"] for c in creative._eluta_tls().get_ciphers()}
-    assert "AES128-GCM-SHA256" in names
 
 
 async def test_collect_keeps_the_other_boards_when_one_fails(sites):
     sites.fail.add("www.hollylist.com")
     sites.wana_hits = [{"id": "w1", "title": "Illustrator 1", "jobLink": "https://www.behance.net/joblist/x/1"}]
-    async with creative._client() as c:
-        rows, breakdown = await creative._collect(c, _search(), 10)
+    async with job_boards.http_client() as c:
+        rows, breakdown = await job_boards._collect(c, _search(), creative._picked(_search()), 10)
     assert breakdown["hollylist"]["error"] == "HTTP 503 from https://www.hollylist.com/graphql"
     assert breakdown["behance"]["returned"] == 2 and breakdown["wanacreate"]["returned"] == 1
     assert len(rows) == 2                    # the Wana row has the same URL as a Behance row
@@ -469,7 +318,7 @@ async def test_collect_keeps_the_other_boards_when_one_fails(sites):
 def quiet(monkeypatch):
     async def fake_analyze(job, db=None, arrangement=None):
         job.work_arrangement = arrangement
-    monkeypatch.setattr(creative, "analyze_inline", fake_analyze)
+    monkeypatch.setattr(job_boards, "analyze_inline", fake_analyze)
     monkeypatch.setattr("backend.activity.log_activity", lambda *a, **k: None)
 
 
@@ -552,7 +401,7 @@ async def test_body_exclusion_keeps_the_job_ignored(sites, test_db, monkeypatch)
 
     async def flag(job, db=None, arrangement=None):
         job.h1b_jd_flag = True
-    monkeypatch.setattr(creative, "analyze_inline", flag)
+    monkeypatch.setattr(job_boards, "analyze_inline", flag)
     monkeypatch.setattr("backend.activity.log_activity", lambda *a, **k: None)
     res = await creative.run(search)
     assert (res["new_jobs"], res["ignored_jobs"]) == (0, 1)
@@ -561,7 +410,7 @@ async def test_body_exclusion_keeps_the_job_ignored(sites, test_db, monkeypatch)
 
 
 async def test_preview_says_when_it_sampled_the_job_pages(sites, test_db, monkeypatch):
-    monkeypatch.setattr(creative, "PREVIEW_DETAIL_LIMIT", 1)
+    monkeypatch.setattr(job_boards, "PREVIEW_DETAIL_LIMIT", 1)
     search = Search(name="t", search_mode="creative", search_term="illustrator", sources=["behance"],
                     hours_old=0, company_exclude=[])
     out = await creative.preview(search, test_db)
@@ -590,6 +439,121 @@ async def test_preview_reads_details_and_saves_nothing(sites, test_db):
     assert test_db.query(Job).count() == 0
 
 
+# ── apply links: employer's link, on the board, neither ─────────────────────
+
+GREENHOUSE = "https://job-boards.greenhouse.io/acme/jobs/1"
+
+
+async def _saved(search_kw, test_db):
+    search = Search(name="t", search_mode="creative", search_term="illustrator", results_wanted=10, hours_old=0,
+                    company_exclude=[], **search_kw)
+    test_db.add(search)
+    test_db.commit()
+    res = await creative.run(search)
+    assert res["error"] is None
+    test_db.expire_all()
+    return {j.title: j for j in test_db.query(Job).all()}
+
+
+@pytest.mark.parametrize("link,apply_url,kind", [
+    (GREENHOUSE, GREENHOUSE, "direct"),                                  # names the employer's posting
+    ("https://careerspage.io/acme/designer", "https://careerspage.io/acme/designer", "direct"),   # an employer's site
+    ("https://www.behance.net/joblist/apply/1", None, "easy_apply"),     # Behance's own form
+    (None, None, "board"),
+])
+async def test_behance_full_time_job_link_kinds(sites, quiet, test_db, link, apply_url, kind):
+    sites.behance_apply = link
+    job = (await _saved({"sources": ["behance"]}, test_db))["Illustrator 1"]
+    assert (job.apply_url, job.link_kind) == (apply_url, kind)
+
+
+async def test_behance_brief_is_applied_to_on_behance(sites, quiet, test_db):
+    job = (await _saved({"sources": ["behance"]}, test_db))["Illustrator 2"]
+    assert (job.apply_url, job.link_kind) == (None, "easy_apply")
+
+
+@pytest.mark.parametrize("detail,apply_url,kind", [
+    ({"descMark": "Text", "applyAt": GREENHOUSE}, GREENHOUSE, "direct"),
+    ({"descMark": "Text", "applyAt": None}, None, "easy_apply"),
+    ({"descMark": "Text", "applyAt": "https://www.hollylist.com/apply/1"}, None, "easy_apply"),
+    ({"descMark": "Text", "applyAt": "https://www.linkedin.com/jobs/view/1"}, None, "board"),
+    ({}, None, "board"),                     # the job page gave nothing: the link is not known
+])
+async def test_hollylist_link_kinds(sites, quiet, test_db, detail, apply_url, kind):
+    sites.holly[None] = [_holly(1)]
+    sites.holly_detail = {"job-h1": detail}
+    job = (await _saved({"sources": ["hollylist"]}, test_db))["Animator 1"]
+    assert (job.apply_url, job.link_kind) == (apply_url, kind)
+
+
+@pytest.mark.parametrize("job_link,url,kind", [
+    (GREENHOUSE, GREENHOUSE, "direct"),                             # the job's url is the employer's link
+    ("https://www.linkedin.com/jobs/view/1", "https://www.linkedin.com/jobs/view/1", "board"),
+    ("", "https://www.wanacreate.art/jobs/w1", "easy_apply"),
+])
+async def test_wana_create_link_kinds(sites, quiet, test_db, job_link, url, kind):
+    sites.wana_hits = [{"id": "w1", "title": "Book Illustrator", "company": {"name": "Pages"}, "jobLink": job_link}]
+    job = (await _saved({"sources": ["wanacreate"]}, test_db))["Book Illustrator"]
+    assert (job.url, job.apply_url, job.link_kind) == (url, None, kind)
+
+
+@pytest.mark.parametrize("location,apply_url,kind", [
+    (GREENHOUSE, GREENHOUSE, "direct"),
+    ("https://apptrkr.com/1", "https://apptrkr.com/1", "direct"),
+    (None, None, "board"),                                          # no redirect: not known
+    ("https://dribbble.com/session/new", None, "board"),
+])
+async def test_dribbble_link_kinds(sites, quiet, test_db, location, apply_url, kind):
+    url = "https://dribbble.com/jobs/1-Illustrator"
+    sites.feeds["dribbble.com"] = _feed([("Acme is hiring for a position of Illustrator in Remote", url + "?source=feed", "", NOW_RSS, "")])
+    sites.pages[url] = _ld_page({"@type": "JobPosting", "description": "Draw"})
+    if location:
+        sites.redirects[url + "/apply_now"] = location
+    job = (await _saved({"sources": ["dribbble"]}, test_db))["Illustrator"]
+    assert (job.apply_url, job.link_kind) == (apply_url, kind)
+
+
+@pytest.mark.parametrize("apply_link,kind", [(GREENHOUSE, "direct"), ("", "board"), (None, "board")])
+async def test_artstation_link_kinds(sites, quiet, test_db, apply_link, kind):
+    sites.artstation = {1: [{"title": "Illustrator", "company_name": "Acme", "hash_id": "abc", "work_remotely": True,
+                             "description": "Draw", "how_to_apply": "<a href='mailto:a@b.co'>mail</a>",
+                             "apply_link": apply_link}]}
+    job = (await _saved({"sources": ["artstation"]}, test_db))["Illustrator"]
+    assert (job.apply_url, job.link_kind) == (apply_link or None, kind)
+
+
+@pytest.mark.parametrize("button,apply_url,kind", [
+    ('<a id="apply-top" href="https://acme.zohorecruit.com/jobs/1" class="apply-button">Apply</a>',
+     "https://acme.zohorecruit.com/jobs/1", "direct"),
+    ('<a href="https://tally.so/r/abc" id="apply-top">Apply</a>', "https://tally.so/r/abc", "direct"),
+    ('<a id="apply-top" href="mailto:jobs@acme.co">Apply</a>', None, "board"),
+    ('<a id="apply-top" href="https://www.linkedin.com/jobs/view/1/">Apply</a>', None, "board"),   # a board, not the employer
+    ("", None, "board"),
+])
+async def test_work_with_indies_link_kinds(sites, quiet, test_db, button, apply_url, kind):
+    url = "https://www.workwithindies.com/careers/acme-illustrator"
+    sites.feeds["www.workwithindies.com"] = _feed([("Acme is hiring an Illustrator to work remotely", url, "Draw", NOW_RSS, "")])
+    sites.pages[url] = _ld_page({"@type": "JobPosting", "description": "Draw"}) + button
+    job = (await _saved({"sources": ["workwithindies"]}, test_db))["Illustrator"]
+    assert (job.apply_url, job.link_kind) == (apply_url, kind)
+
+
+async def test_a_short_apply_link_is_stored_where_it_lands(sites, quiet, test_db, monkeypatch):
+    async def landed(urls):
+        return {u: GREENHOUSE for u in urls if u and "grnh.se" in u}
+    monkeypatch.setattr(job_boards, "resolve_short_links", landed)
+    sites.holly[None] = [_holly(1)]
+    sites.holly_detail = {"job-h1": {"descMark": "Text", "applyAt": "https://grnh.se/abc"}}
+    job = (await _saved({"sources": ["hollylist"]}, test_db))["Animator 1"]
+    assert (job.apply_url, job.link_kind) == (GREENHOUSE, "direct")
+
+
+def test_employer_apply_keeps_employer_links_only():
+    assert job_boards.employer_apply(GREENHOUSE) == GREENHOUSE
+    for link in (None, "", "mailto:jobs@acme.co", "https://www.linkedin.com/jobs/view/1", "https://dribbble.com/x"):
+        assert job_boards.employer_apply(link) is None
+
+
 # ── mode wiring ─────────────────────────────────────────────────────────────
 
 def test_config_error_needs_a_term_and_a_board():
@@ -598,6 +562,8 @@ def test_config_error_needs_a_term_and_a_board():
     assert M.config_error(Search(search_mode="creative", search_term="x", sources=[])) == \
         "Creative boards needs at least one board before it can run"
     assert M.config_error(Search(search_mode="creative", search_term="x", sources=["wanacreate"])) is None
+    assert M.config_error(Search(search_mode="creative", search_term="x", sources=["himalayas"])) == \
+        "Creative boards needs at least one board before it can run"     # its own mode now
 
 
 @pytest.fixture

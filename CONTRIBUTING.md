@@ -45,7 +45,7 @@ Add tests with the change. Backend tests run with `MT_STRICT=1`: a query with no
 
 ## Add a job-board source
 
-Copy `backend/scraper/sources/trulyremote.py` (shared fetch, detail pages, preview) and its tests (`backend/tests/test_trulyremote_*.py`).
+Copy `backend/scraper/sources/trulyremote.py` (shared fetch, detail pages, preview) and its tests (`backend/tests/test_trulyremote_*.py`). A board with its own JSON API or feed and no shared fetch needs less: describe it as a `Board` for `backend/scraper/_shared/job_boards.py`, as `sources/himalayas.py` does.
 
 1. `backend/scraper/sources/<name>.py` exposes:
    - `async def run(search, shared=None) -> dict` returning `{"jobs_found", "new_jobs", "error", "duration"}`. It runs once per subscribing account, already scoped to that account.
@@ -58,7 +58,8 @@ Copy `backend/scraper/sources/trulyremote.py` (shared fetch, detail pages, previ
    - a job you drop after reading its page, or whose description hits a body-exclusion phrase, is saved through `mark_ignored(job)` (no `content_hash`), so its URL is never read again but saving it by hand still works.
 4. Register the mode: one `SearchMode(...)` entry in `backend/scraper/search_modes.py` (label, `module`, and the flags: `shareable` to share fetches across accounts, `background_test` for a slow Test, `needs_query` / `needs_url`, `boards`, `paid`, `fetch_params`). The run dispatch, the API's mode and source checks, the Test path and shared fetches all read it.
 5. Frontend: the matching entry in `frontend/src/searchModes.js` (label, badge, `cls`, `needsQuery`, default sources; a test fails when the two tables differ), the editor fields in `frontend/src/screens/Searches.jsx`, a badge colour pair for its `cls` in `theme.css` (light and dark), and source labels in `JobFeed.jsx` and `Applications.jsx`.
-6. If its links name a posting on a job system, teach `backend/scraper/_shared/postings.py` to read the posting key (and bump `READER_VERSION`), so its jobs join the same posting from other sources.
+6. Add the board's host to `BOARD_HOSTS` in `backend/scraper/_shared/link_kinds.py`. Store the employer's link in `apply_url` when the posting names one, and set `link_kind = EASY_APPLY` when you apply on the board itself.
+7. If its links name a posting on a job system, teach `backend/scraper/_shared/postings.py` to read the posting key (and bump `READER_VERSION`), so its jobs join the same posting from other sources.
 
 ## Add an ATS handler
 
