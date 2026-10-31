@@ -79,14 +79,18 @@ def _check_default_resume(db, value) -> None:
         raise HTTPException(status_code=422, detail="default_resume_id must be \"\", \"persona\" or the id of one of your base résumés")
 
 
-def _check_cover_letter_template(value) -> None:
-    """`cover_letter_template` is "" (Garamond Modern) or a folder under
-    cover_letter_templates/ on this install; anything else is a 422."""
-    from backend.api.routes_cover_letters import TEMPLATES_DIR
-    from backend.api.routes_resumes import template_paths
+def _check_template_setting(key, value) -> None:
+    """`cover_letter_template` is "", same_as_resume, last_selected or a folder under
+    cover_letter_templates/; `resume_template` is "", last_selected or a folder under
+    resume_templates/ (on this install). Anything else is a 422."""
+    from backend.api import routes_cover_letters as CL, routes_resumes as R
+    if key == "cover_letter_template":
+        rules, folder, what = ("", CL.SAME_AS_RESUME, R.LAST_SELECTED), CL.TEMPLATES_DIR, "same_as_resume, last_selected"
+    else:
+        rules, folder, what = ("", R.LAST_SELECTED), R.TEMPLATES_DIR, "last_selected"
     v = value.strip() if isinstance(value, str) else value
-    if v != "" and v not in template_paths(TEMPLATES_DIR):
-        raise HTTPException(status_code=422, detail="cover_letter_template must be \"\" or the id of a cover-letter template")
+    if v not in rules and v not in R.template_paths(folder):
+        raise HTTPException(status_code=422, detail=f"{key} must be {what} or the id of a template on this install")
 
 
 _CHAT_KEYS = ("telegram_chat_id", "telegram_bot_mode", "telegram_bot_token")
@@ -218,8 +222,9 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
 
     if "default_resume_id" in checkable:
         _check_default_resume(db, checkable["default_resume_id"])
-    if "cover_letter_template" in checkable:
-        _check_cover_letter_template(checkable["cover_letter_template"])
+    for key in ("cover_letter_template", "resume_template"):
+        if key in checkable:
+            _check_template_setting(key, checkable[key])
     _check_telegram_chat(db, checkable, targets)
 
     warnings: list[str] = []

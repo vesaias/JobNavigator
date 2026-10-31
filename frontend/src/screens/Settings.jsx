@@ -216,6 +216,7 @@ export default function Settings() {
   const [resumes, setResumes] = useState([])
   const [personaAvailable, setPersonaAvailable] = useState(false)
   const [letterTemplates, setLetterTemplates] = useState([])
+  const [resumeTemplates, setResumeTemplates] = useState([])
   const [query, setQuery] = useState('')
   const [backendVersion, setBackendVersion] = useState('')  // from /health; the colophon notes it only when it differs from this build
   useEffect(() => {
@@ -403,6 +404,7 @@ export default function Settings() {
     () => load(),
     // This is the Default résumé picker's entire option list — empty, it looks like a setting with nothing to choose.
     () => api.get('/resumes', { params: { is_base: true } }).then(({ data }) => setResumes(data || [])).catch((e) => { console.error(e); flash('Could not load your résumés — the default-résumé picker is empty', true) }),
+    () => api.get('/resumes/templates').then(({ data }) => setResumeTemplates(Array.isArray(data) ? data : [])).catch((e) => { console.error(e); flash('Could not load the résumé templates — the default-template picker is empty', true) }),
     () => api.get('/cover-letters/templates').then(({ data }) => setLetterTemplates(Array.isArray(data) ? data : [])).catch((e) => { console.error(e); flash('Could not load the cover-letter templates — the default-template picker is empty', true) }),
     () => api.get('/persona').then(({ data }) => setPersonaAvailable(Object.keys(data?.resume_content || {}).length > 0)).catch(() => { /* silent: Persona is one optional entry in that picker */ }),
     () => Promise.all(['main', 'mock'].map((which) => api.get('/linkedin/session', { params: { which } }).then(({ data }) => [which, data])))
@@ -508,10 +510,15 @@ export default function Settings() {
     const voiceOpts = (Array.isArray(vp) ? vp : []).filter((v) => v && v.id).map((v) => [v.id, v.label || v.id])
     const curVoice = S.cover_letter_default_voice
     if (curVoice && !voiceOpts.some((o) => o[0] === curVoice)) voiceOpts.push([curVoice, `${curVoice} — not in presets`])
-    // Same for the default template: a stored id this install does not have stays visible (letters get Garamond Modern then).
-    const tplOpts = letterTemplates.map((t) => [t.id, t.name || t.id])
+    // Default template: the two rules on top, then the templates on this install. A stored id
+    // this install does not have stays visible (letters follow the résumé then).
+    const tplOpts = [['same_as_resume', 'Same as résumé'], ['last_selected', 'Last selected'],
+      ...letterTemplates.map((t) => [t.id, t.name || t.id])]
     const curTpl = S.cover_letter_template
     if (curTpl && !tplOpts.some((o) => o[0] === curTpl)) tplOpts.push([curTpl, `${curTpl} — not on this install`])
+    const resTplOpts = [['last_selected', 'Last selected'], ...resumeTemplates.map((t) => [t.id, t.name || t.id])]
+    const curResTpl = S.resume_template
+    if (curResTpl && !resTplOpts.some((o) => o[0] === curResTpl)) resTplOpts.push([curResTpl, `${curResTpl} — not on this install`])
 
     // QA F2 / D2: the owner's "Accounts" section (one account too) / a member's "Your account" comes first.
     // Their bodies are not rows (`block`), so they carry no row list and match the search by title.
@@ -584,6 +591,8 @@ export default function Settings() {
         E('Full output schema', 'JSON shape for Full runs.', 'scoring_output_full', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
       ]],
       ['tailoring', '', 'Tailoring', '', [
+        SEL('Default résumé template', 'The template a new résumé starts with.', 'resume_template', resTplOpts, { w: '260px', dflt: 'last_selected',
+          info: 'Last selected: the template you last picked in the résumé editor (yours only, never another account’s). A template: every new résumé gets it. Applies to a blank or imported résumé and one tailored from Persona; a copy tailored from a résumé keeps that résumé’s template. Before any pick, the first template on the list.' }),
         E('Résumé tailoring prompt', 'Default: rewrites only bullets that the job description makes relevant.', 'cv_tailor_prompt', { sub: 'placeholders: {job_description} {resume_json}' }),
         E('Persona tailoring prompt', 'Default: uses the Persona résumé content; falls back to the résumé prompt if empty.', 'persona_tailor_prompt', { sub: 'placeholders: {job_description} {persona_json}' }),
         B('Max parallel tailors', 'Tailoring and cover-letter generation share this limit.', 'tailoring_max_concurrent', { mono: true, int: true, w: '135px' }),
@@ -592,8 +601,8 @@ export default function Settings() {
       ]],
       ['letters', '', 'Cover letters', '', [
         SEL('Default voice', 'The list comes from the voice presets below.', 'cover_letter_default_voice', voiceOpts, { w: '260px' }),
-        SEL('Default template', 'For a letter whose résumé template has no cover-letter version.', 'cover_letter_template', tplOpts, { w: '260px', dflt: 'garamond_alt',
-          info: 'A generated letter takes its résumé’s template when that template has a cover-letter version. A blank letter, a letter from Persona, and a letter from a Modern Professional résumé get this template.' }),
+        SEL('Default template', 'The template a new letter starts with.', 'cover_letter_template', tplOpts, { w: '260px', dflt: 'same_as_resume',
+          info: 'Same as résumé: the letter takes its résumé’s template. Last selected: the template you last picked in the cover-letter editor (yours only, never another account’s). A template: every new letter gets it. When none applies (a blank letter, a letter from Persona, a Modern Professional résumé, nothing picked yet) the letter gets Garamond Modern.' }),
         E('Voice presets', 'One label and prompt per voice. Add more if you want.', 'cover_letter_voice_presets', { json: true, sub: 'JSON — id, label, instruction per voice' }),
         E('Cover letter prompt', 'The generation instruction.', 'cover_letter_prompt', { sub: 'placeholders: {voice_instruction} {length_instruction} {job_description}' }),
       ]],
@@ -770,7 +779,7 @@ export default function Settings() {
       ]],
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [S, resumes, personaAvailable, letterTemplates, trig, li, multi, isOwner, hasMe, sidx, gmail, effective])
+  }, [S, resumes, personaAvailable, letterTemplates, resumeTemplates, trig, li, multi, isOwner, hasMe, sidx, gmail, effective])
 
   // The rail's account menu lands here: `#accounts` (Manage accounts) scrolls to the
   // Accounts / Your account section, `#add-account` also opens the Add dialog. The hash is

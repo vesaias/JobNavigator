@@ -178,9 +178,34 @@ async def _get_browser():
     logger.info("Warm Playwright browser started for PDF generation")
     return _pw_browser
 
-def _default_template_id() -> str:
-    """Return the first available template ID, or 'garamond_alt' as last resort."""
+LAST_SELECTED = "last_selected"   # a template setting that means "the one this account last picked"
+
+
+def chosen_template(db, setting_key: str, last_key: str, unset: str = ""):
+    """The template the account's `setting_key` names (`unset` when it is empty): a
+    template id as stored, or for Last selected the one it last picked (`last_key`). May be
+    empty or a name this install lacks; the caller checks it against its folders."""
+    chosen = (get_setting(db, setting_key) or "").strip() or unset
+    if chosen == LAST_SELECTED:
+        return (get_setting(db, last_key) or "").strip()
+    return chosen
+
+
+def remember_template(db, last_key: str, name) -> None:
+    """A template picked by hand is the account's Last selected: its own row, never shared."""
+    from backend.accounts.settings import set_setting
+    if isinstance(name, str) and name:
+        set_setting(db, last_key, name)
+
+
+def _default_template_id(db=None) -> str:
+    """The template for a new résumé: with `db`, the account's `resume_template` (Last
+    selected by default) when this install has it; else the first template folder."""
     templates = _discover_templates()
+    if db is not None:
+        name = chosen_template(db, "resume_template", "resume_last_template", unset=LAST_SELECTED)
+        if any(t["id"] == name for t in templates):
+            return name
     return templates[0]["id"] if templates else "garamond_alt"
 
 
@@ -813,7 +838,7 @@ def create_resume(body: dict, db: Session = Depends(get_db)):
         is_base=body.get("is_base", True),
         parent_id=owned_id_or_404(db, Resume, body.get("parent_id"), "Parent resume not found"),
         job_id=owned_id_or_404(db, Job, body.get("job_id")),
-        template=body.get("template", _default_template_id()),
+        template=body.get("template", _default_template_id(db)),
         page_format=body.get("page_format", "letter"),
         json_data=checked_json_data(body.get("json_data")),
     )
@@ -1000,7 +1025,7 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                     raise RuntimeError("Tailor: persona has no resume_content at execution time")
                 base_data = persona_row.resume_content or {}
                 base_name = "Persona"
-                base_template = None
+                base_template = _default_template_id(db)   # Settings › Default résumé template
                 base_page_format = None
                 base_id_for_parent = None
             else:
@@ -1196,6 +1221,7 @@ def update_resume(resume_id: str, body: dict, db: Session = Depends(get_db)):
     # (it is also the value every later render reads — R4-T5-01).
     if "template" in body:
         validate_template_name(body["template"], TEMPLATES_DIR)
+        remember_template(db, "resume_last_template", body["template"])
     # Re-linking a résumé: the new parent / job must be the account's own (MT-5).
     body = dict(body)
     # A rename gets the same check as a create: a blank or non-string name is a 400.
@@ -1766,7 +1792,7 @@ async def import_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
     resume = Resume(
         name=name,
         is_base=True,
-        template=_default_template_id(),
+        template=_default_template_id(db),
         page_format="letter",
         json_data=json_data,
     )

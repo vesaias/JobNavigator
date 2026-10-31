@@ -3,7 +3,7 @@ import logging
 import json
 import re
 import secrets
-from backend.models.db import DEFAULT_COVER_LETTER_TEMPLATE, SessionLocal, Setting, Company, Search, Resume
+from backend.models.db import SessionLocal, Setting, Company, Search, Resume
 from backend.accounts.settings import install_row, put_setting
 from sqlalchemy import text
 from backend.analyzer.llm_client import LOCAL_LLM_URLS, REASONING_EFFORTS
@@ -232,7 +232,10 @@ DEFAULT_SETTINGS = {
         {"id": "storytelling", "label": "Storytelling", "instruction": "Open with a brief hook or narrative, then connect it to the role."},
     ]), "Editable cover-letter voice presets: list of {id, label, instruction}. The selected preset's instruction is injected into the generation prompt."),
     "cover_letter_default_voice": ("professional", "Default voice preset id for new cover letters (must match an id in cover_letter_voice_presets)"),
-    "cover_letter_template": (DEFAULT_COVER_LETTER_TEMPLATE, "Template for a new cover letter when its résumé template has no cover-letter version (a folder under backend/cover_letter_templates/; empty = Garamond Modern)"),
+    "cover_letter_template": ("same_as_resume", "Template for a new cover letter: same_as_resume (the résumé's template when it has a cover-letter version), last_selected (the template last picked in the editor), or a folder under backend/cover_letter_templates/. Garamond Modern when none applies"),
+    "cover_letter_last_template": ("", "The cover-letter template this account last picked in the editor (read by cover_letter_template = last_selected)"),
+    "resume_template": ("last_selected", "Template for a new résumé (blank, imported, tailored from Persona): last_selected (the template last picked in the résumé editor) or a folder under backend/resume_templates/. The first template when none applies; a copy of a résumé keeps that résumé's template"),
+    "resume_last_template": ("", "The résumé template this account last picked in the editor (read by resume_template = last_selected)"),
     "autofill_field_patterns": (json.dumps({
         "gender": ["gender", "what is your gender", "gender identity"],
         "race_ethnicity": ["race", "ethnicity", "race/ethnicity", "racial background", "ethnicities"],

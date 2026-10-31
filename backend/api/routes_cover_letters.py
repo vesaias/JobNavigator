@@ -46,15 +46,24 @@ def _discover_templates() -> list[dict]:
     return templates
 
 
-def _default_template_id(db=None) -> str:
-    """The account's `cover_letter_template` (with `db`) when this install has it, else
-    Garamond Modern when this install has it, else the first letter template."""
-    from backend.api.routes_resumes import template_paths
+# `cover_letter_template`: this, routes_resumes.LAST_SELECTED, or a template every new letter gets
+SAME_AS_RESUME = "same_as_resume"
+
+
+def _default_template_id(db=None, resume_template=None) -> str:
+    """The template for a new letter. Without `db`: Garamond Modern when this install has
+    it, else the first letter template. With `db`, the account's `cover_letter_template`:
+    - a template id: that template;
+    - Last selected: the template this account last picked in the editor;
+    - Same as résumé (the default, also "" or a name this install lacks): `resume_template`
+      when it has a letter version.
+    Anything that does not resolve falls back to Garamond Modern."""
+    from backend.api.routes_resumes import chosen_template, template_paths
 
     names = list(template_paths(TEMPLATES_DIR))
-    chosen = (get_setting(db, "cover_letter_template") or "").strip() if db is not None else ""
-    for name in (chosen, DEFAULT_COVER_LETTER_TEMPLATE):
-        if name in names:
+    chosen = chosen_template(db, "cover_letter_template", "cover_letter_last_template") if db is not None else None
+    for name in (chosen, resume_template, DEFAULT_COVER_LETTER_TEMPLATE):
+        if name and name in names:
             return name
     return names[0] if names else DEFAULT_COVER_LETTER_TEMPLATE
 
@@ -230,6 +239,8 @@ def update_cover_letter(cl_id: str, body: dict, db: Session = Depends(get_db)):
                "voice", "length"}
     if "template" in body:
         _validate_template(body["template"])
+        from backend.api.routes_resumes import remember_template
+        remember_template(db, "cover_letter_last_template", body["template"])
     # Re-pairing a letter: the new job / résumé must be the account's own (MT-5).
     body = dict(body)
     if "job_id" in body:
@@ -428,8 +439,6 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
     connection is held while the generation call is awaited."""
     from types import SimpleNamespace
 
-    from backend.api.routes_resumes import template_paths
-
     # -- Phase 1: read the evidence and the prompt, then release -------------
     db = SessionLocal()
     try:
@@ -459,13 +468,14 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
             if not resume:
                 raise RuntimeError("resume missing at execution time")
             resume_data = resume.json_data or {}
-            # A résumé template with no letter version (`modern`) gives the default instead.
-            base_template = resume.template if resume.template in template_paths(TEMPLATES_DIR) else None
+            base_template = resume.template
             base_page_format = resume.page_format
             stored_resume_id = resume_id
 
         prompt_template = get_setting(db, "cover_letter_prompt")
-        default_template = _default_template_id(db)
+        # Settings › Default template decides; a résumé template with no letter version
+        # (`modern`) is skipped there.
+        default_template = _default_template_id(db, base_template)
         voice_id, voice_instruction = resolve_voice_instruction(db, voice)
         preferences = (persona.preferences if persona else {}) or {}
 
@@ -533,7 +543,7 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
                 job_id=job_id,
                 resume_id=stored_resume_id,
                 from_persona=persona_as_base,
-                template=template or base_template or default_template,
+                template=template or default_template,
                 page_format=page_format or base_page_format or "letter",
                 json_data=json_data,
                 voice=voice_id,

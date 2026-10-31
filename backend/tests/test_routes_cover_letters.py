@@ -424,12 +424,70 @@ def test_generate_uses_the_setting_for_a_resume_only_template(test_db):
     assert _generate_letter(test_db, "modern") == "inter"
 
 
-def test_generate_keeps_the_resume_template_over_the_setting(test_db):
-    """A résumé template with a letter version wins over the setting."""
+def test_a_chosen_template_wins_over_the_resume_template(test_db):
+    """A template picked in Settings goes on every new letter."""
     _seed_first_run(test_db)
     test_db.add(Setting(key="cover_letter_template", value="inter"))
     test_db.commit()
+    assert _generate_letter(test_db, "raleway") == "inter"
+
+
+@pytest.mark.parametrize("value", ["same_as_resume", "", None])
+def test_same_as_resume_follows_the_resume(test_db, value):
+    _seed_first_run(test_db)
+    if value is not None:
+        test_db.add(Setting(key="cover_letter_template", value=value))
+        test_db.commit()
     assert _generate_letter(test_db, "raleway") == "raleway"
+
+
+def test_same_as_resume_gives_garamond_modern_without_a_letter_version(test_db):
+    _seed_first_run(test_db)
+    test_db.add(Setting(key="cover_letter_template", value="same_as_resume"))
+    test_db.commit()
+    assert _generate_letter(test_db, "modern") == "garamond_alt"
+
+
+def test_last_selected_is_the_template_last_picked_in_the_editor(api_client, test_db):
+    _seed_first_run(test_db)
+    test_db.add(Setting(key="cover_letter_template", value="last_selected"))
+    test_db.commit()
+    # nothing picked yet: Same as résumé
+    assert _generate_letter(test_db, "raleway") == "raleway"
+    letter = api_client.post("/api/cover-letters", json={"name": "Blank"}).json()
+    assert letter["template"] == "garamond_alt"
+    assert api_client.patch(f"/api/cover-letters/{letter['id']}", json={"template": "palatino"}).status_code == 200
+    assert api_client.post("/api/cover-letters", json={"name": "Next"}).json()["template"] == "palatino"
+    assert _generate_letter(test_db, "raleway") == "palatino"
+
+
+def test_last_selected_stays_with_the_account_that_picked_it(test_db):
+    """A member's pick is its own row; the owner's pick is never read by the member."""
+    from backend.accounts.context import use_account
+    from backend.accounts.settings import get_setting
+    from backend.api.routes_cover_letters import _default_template_id
+    from backend.api.routes_resumes import remember_template
+    from backend.models.db import Account
+
+    owner = Account(name="Owner", role="owner")
+    member = Account(name="Partner", role="member")
+    test_db.add_all([owner, member])
+    test_db.commit()
+    test_db.add(Setting(key="cover_letter_template", value="last_selected"))
+    test_db.commit()
+    with use_account(owner.id):
+        remember_template(test_db, "cover_letter_last_template", "palatino")
+        test_db.commit()
+        assert _default_template_id(test_db, "raleway") == "palatino"
+    with use_account(member.id):
+        assert not get_setting(test_db, "cover_letter_last_template")
+        remember_template(test_db, "cover_letter_last_template", "inter")
+        test_db.commit()
+    with use_account(owner.id):
+        assert get_setting(test_db, "cover_letter_last_template") == "palatino"
+    member_row = test_db.query(Setting).filter(Setting.key == "cover_letter_last_template",
+                                               Setting.account_id == member.id).one()
+    assert member_row.value == "inter"
 
 
 def test_create_without_template_uses_the_setting(api_client, test_db):
@@ -441,7 +499,8 @@ def test_create_without_template_uses_the_setting(api_client, test_db):
     assert picked.json()["template"] == "inter"
 
 
-@pytest.mark.parametrize("value,status", [("inter", 200), ("", 200), ("modern", 422), ("../x", 422), (5, 422)])
+@pytest.mark.parametrize("value,status", [("inter", 200), ("", 200), ("same_as_resume", 200), ("last_selected", 200),
+                                          ("modern", 422), ("../x", 422), (5, 422)])
 def test_patch_settings_validates_cover_letter_template(api_client, test_db, value, status):
     _seed_first_run(test_db)
     assert api_client.patch("/api/settings", json={"cover_letter_template": value}).status_code == status

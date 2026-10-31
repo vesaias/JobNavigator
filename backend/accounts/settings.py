@@ -80,10 +80,12 @@ _SECTIONS = [
     ("limits", "Parallel limits", OWNER_ONLY, INHERIT, ["scoring", "tailoring", "scheduler"], [
         "scoring_max_concurrent", "tailoring_max_concurrent", "scrape_max_concurrent"]),
     ("tailoring", "Tailoring", POLICY, INHERIT, ["tailoring"], [
-        "cv_tailor_prompt", "persona_tailor_prompt", "tailor_auto_quick_score"]),
+        "cv_tailor_prompt", "persona_tailor_prompt", "tailor_auto_quick_score", "resume_template"]),
     ("letters", "Cover letters", POLICY, INHERIT, ["letters"], [
         "cover_letter_default_voice", "cover_letter_voice_presets", "cover_letter_prompt",
         "cover_letter_template"]),
+    # The templates an account last picked in the résumé and letter editors: its own, never inherited.
+    ("last_templates", "Last picked templates", OWN_ALWAYS, OWN, [], ["resume_last_template", "cover_letter_last_template"]),
     ("autofill", "Autofill", POLICY, INHERIT, ["autofill"], [
         "autofill_default_length", "autofill_prompt", "autofill_field_patterns",
         "autofill_option_synonyms"]),
