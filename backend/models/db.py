@@ -654,6 +654,12 @@ def first_template(kind: str) -> str:
         names = []
     return names[0] if names else "traditional"
 
+
+# Garamond Modern: the cover-letter default. Named, not first_template(): a local
+# `garamond` folder sorts before it and would become the default on that install.
+DEFAULT_COVER_LETTER_TEMPLATE = "garamond_alt"
+
+
 class Resume(AccountScoped, Base):
     __tablename__ = "resumes"
 
@@ -687,7 +693,7 @@ class CoverLetter(AccountScoped, Base):
     parent_id = Column(UUID(as_uuid=True), ForeignKey("cover_letters.id", ondelete="SET NULL"), nullable=True)
     # garamond_alt (not garamond) — the garamond template dir is gitignored
     # (licensed fonts), so it may be absent on a fresh clone.
-    template = Column(String, default=lambda: first_template("cover_letter_templates"))
+    template = Column(String, default=DEFAULT_COVER_LETTER_TEMPLATE)
     page_format = Column(String, default="letter")
     json_data = Column(JSON, default={})
     # How this draft was written; lets the list/editor show it and Regenerate

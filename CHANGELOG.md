@@ -13,6 +13,7 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ### Fixed
 - **Levels.fyi jobs without text could never be scored:** when the scrape's visit to a job's Levels.fyi page failed, the job had no description, and scoring fell back to the page's visible text: only Levels.fyi's cookie banner and its "Levels.fyi Jobs" blurb, because the posting is drawn by script. The model then answered in prose and every try failed with "not valid JSON". Scoring now reads the description from the page's own data (and saves it on the job), never the banner; a job with no data left on Levels.fyi says there is no text to score. A reply that is not JSON is logged with its first 200 characters.
+- **Cover letters from a Modern Professional résumé:** a generated letter took the résumé's template, and `modern` has no cover-letter version, so the letter failed to render ("Unknown template: 'modern'"). A letter now takes the résumé's template only when a cover-letter version exists, and Garamond Modern otherwise. A letter already stored with a template this install does not have renders with Garamond Modern, as a résumé does. Garamond Modern is now the named default for new letters; before, the default was the first template folder, which is `garamond` on an install with the licensed fonts.
 
 ## [3.1] — 2026-10-27
 

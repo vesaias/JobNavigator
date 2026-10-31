@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from backend.accounts.owned import get_owned_or_404, get_persona, owned_id_or_404
-from backend.models.db import get_db, CoverLetter, Resume, Job, Persona, TracerLink, TracerClickEvent, SessionLocal
+from backend.models.db import DEFAULT_COVER_LETTER_TEMPLATE, get_db, CoverLetter, Resume, Job, Persona, TracerLink, TracerClickEvent, SessionLocal
 from backend.accounts.settings import get_setting
 from backend.api._input import str_field, uuid_filter
 from backend.job_monitor import launch_background, JobAlreadyRunningError
@@ -47,8 +47,13 @@ def _discover_templates() -> list[dict]:
 
 
 def _default_template_id() -> str:
-    templates = _discover_templates()
-    return templates[0]["id"] if templates else "garamond_alt"
+    """Garamond Modern when this install has it, else the first letter template."""
+    from backend.api.routes_resumes import template_paths
+
+    names = list(template_paths(TEMPLATES_DIR))
+    if DEFAULT_COVER_LETTER_TEMPLATE in names:
+        return DEFAULT_COVER_LETTER_TEMPLATE
+    return names[0] if names else DEFAULT_COVER_LETTER_TEMPLATE
 
 
 def _validate_template(name) -> str:
@@ -63,8 +68,15 @@ def _render_html(json_data: dict, template_name: str, page_format: str) -> str:
     from jinja2 import Environment, FileSystemLoader
     from markupsafe import Markup
 
-    from backend.api.routes_resumes import _load_template_fonts, _render_safe_links, resolve_template_dir
+    from backend.api.routes_resumes import (
+        _TEMPLATE_NAME_RE, _load_template_fonts, _render_safe_links, resolve_template_dir, template_paths,
+    )
 
+    # A stored name that is not a letter template on this install (a résumé-only one such
+    # as `modern`, a personal one) renders with the default instead of failing with a 422.
+    if (isinstance(template_name, str) and template_name not in template_paths(TEMPLATES_DIR)
+            and _TEMPLATE_NAME_RE.match(template_name)):
+        template_name = _default_template_id()
     # Same on-disk allowlist the résumé renderer uses — the folder comes from the
     # directory listing, the request name is only a key (R4-T5-01).
     template_dir = resolve_template_dir(template_name, TEMPLATES_DIR)
@@ -413,6 +425,8 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
     connection is held while the generation call is awaited."""
     from types import SimpleNamespace
 
+    from backend.api.routes_resumes import template_paths
+
     # -- Phase 1: read the evidence and the prompt, then release -------------
     db = SessionLocal()
     try:
@@ -442,7 +456,8 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
             if not resume:
                 raise RuntimeError("resume missing at execution time")
             resume_data = resume.json_data or {}
-            base_template = resume.template
+            # A résumé template with no letter version (`modern`) gives the default instead.
+            base_template = resume.template if resume.template in template_paths(TEMPLATES_DIR) else None
             base_page_format = resume.page_format
             stored_resume_id = resume_id
 

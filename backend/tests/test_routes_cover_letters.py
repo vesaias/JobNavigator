@@ -316,3 +316,53 @@ def test_generate_inner_resolves_jd_from_url(test_db, monkeypatch):
     assert seen["jd"] == "Fetched JD: fintech PM, roadmapping."
     test_db.expire_all()
     assert test_db.query(Job).filter(Job.id == job.id).first().description == seen["jd"]
+
+
+# ── Résumé-only template (`modern`) ──────────────────────────────────────────
+
+def test_generate_inner_skips_resume_only_template(test_db):
+    """A résumé on `modern` (no letter version) gives the letter Garamond Modern, not a name that 422s on render."""
+    import asyncio
+    from contextlib import asynccontextmanager
+    from unittest.mock import MagicMock
+    import backend.api.routes_cover_letters as rcl
+    from backend.models.db import CoverLetter
+
+    _seed_first_run(test_db)
+    resume = _make_resume(test_db)
+    resume.template = "modern"
+    test_db.commit()
+    job = _make_job(test_db)
+
+    async def fake_body(*a):
+        return {"greeting": "Dear Acme,", "body_paragraphs": ["p"], "closing": "Regards,", "signature": "Jordan"}
+
+    @asynccontextmanager
+    async def fake_track(*a, **kw):
+        yield MagicMock()
+
+    asyncio.run(rcl._generate_inner(
+        str(resume.id), str(job.id), None, "concise", None, None,
+        lambda db, voice: (None, ""), fake_body, fake_track,
+    ))
+
+    test_db.expire_all()
+    cl = test_db.query(CoverLetter).filter(CoverLetter.job_id == job.id).one()
+    assert cl.template == "garamond_alt"
+
+
+def test_render_html_falls_back_for_resume_only_template():
+    """A letter already stored with `modern` renders with the default instead of a 422."""
+    from backend.api.routes_cover_letters import _render_html
+
+    expected = _render_html({"greeting": "Dear Acme,"}, "garamond_alt", "letter")
+    assert _render_html({"greeting": "Dear Acme,"}, "modern", "letter") == expected
+
+
+def test_render_html_still_rejects_a_path():
+    from fastapi import HTTPException
+    from backend.api.routes_cover_letters import _render_html
+
+    with pytest.raises(HTTPException) as e:
+        _render_html({}, "../resume_templates/modern", "letter")
+    assert e.value.status_code == 422
