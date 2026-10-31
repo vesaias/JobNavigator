@@ -1,4 +1,4 @@
-"""Settings › Tailoring › Default résumé template (`resume_template`): Last selected (the
+"""Settings › Résumé & tailoring › Default résumé template (`resume_template`): Last selected (the
 default: the template this account last picked in the résumé editor) or a fixed template."""
 import pytest
 

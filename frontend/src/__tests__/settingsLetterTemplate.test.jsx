@@ -71,7 +71,7 @@ describe('Settings › Cover letters › Default template', () => {
   })
 })
 
-describe('Settings › Tailoring › Default résumé template', () => {
+describe('Settings › Résumé & tailoring › Default résumé template', () => {
   const resumePicker = async () => {
     render(<MemoryRouter initialEntries={['/settings']}><Settings /></MemoryRouter>)
     return waitFor(() => screen.getByLabelText('Default résumé template'))

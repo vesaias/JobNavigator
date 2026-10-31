@@ -79,7 +79,7 @@ _SECTIONS = [
     # Process-wide semaphores: one value for the install.
     ("limits", "Parallel limits", OWNER_ONLY, INHERIT, ["scoring", "tailoring", "scheduler"], [
         "scoring_max_concurrent", "tailoring_max_concurrent", "scrape_max_concurrent"]),
-    ("tailoring", "Tailoring", POLICY, INHERIT, ["tailoring"], [
+    ("tailoring", "Résumé & tailoring", POLICY, INHERIT, ["tailoring"], [
         "cv_tailor_prompt", "persona_tailor_prompt", "tailor_auto_quick_score", "resume_template"]),
     ("letters", "Cover letters", POLICY, INHERIT, ["letters"], [
         "cover_letter_default_voice", "cover_letter_voice_presets", "cover_letter_prompt",

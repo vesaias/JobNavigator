@@ -590,7 +590,7 @@ export default function Settings() {
         E('Light output schema', 'JSON shape for Light runs.', 'scoring_output_light', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
         E('Full output schema', 'JSON shape for Full runs.', 'scoring_output_full', { sub: 'CV_NAMES_HERE expands to your résumé names' }),
       ]],
-      ['tailoring', '', 'Tailoring', '', [
+      ['tailoring', '', 'Résumé & tailoring', '', [
         SEL('Default résumé template', 'The template a new résumé starts with.', 'resume_template', resTplOpts, { w: '260px', dflt: 'last_selected',
           info: 'Last selected: the template you last picked in the résumé editor (yours only, never another account’s). A template: every new résumé gets it. Applies to a blank or imported résumé and one tailored from Persona; a copy tailored from a résumé keeps that résumé’s template. Before any pick, the first template on the list.' }),
         E('Résumé tailoring prompt', 'Default: rewrites only bullets that the job description makes relevant.', 'cv_tailor_prompt', { sub: 'placeholders: {job_description} {resume_json}' }),
@@ -773,7 +773,7 @@ export default function Settings() {
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup'), { ownerOnly: true }),
       ]],
-      ['telemetry', 'System', 'Telemetry', '', [
+      ['telemetry', '', 'Telemetry', '', [
         { kind: 'telemetry', label: 'Allow anonymous telemetry', help: PURPOSE,
           info: SENT_SUMMARY },
       ]],
