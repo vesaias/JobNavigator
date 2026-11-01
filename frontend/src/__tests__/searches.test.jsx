@@ -160,6 +160,44 @@ describe('CaribbeanJobs · v2 Searches', () => {
   })
 })
 
+describe('Himalayas and Eluta · v2 Searches', () => {
+  beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear() })
+
+  const HIM = { ...SEARCH, id: 's5', name: 'Remote designers', search_mode: 'himalayas', search_term: 'designer', country: 'canada', direct_url: '', sources: [] }
+  const ELU = { ...SEARCH, id: 's6', name: 'Vancouver designers', search_mode: 'eluta', search_term: 'designer', location: 'Vancouver', direct_url: '', sources: [] }
+
+  it('each mode has its badge and summary', async () => {
+    mockApi([HIM, ELU])
+    renderScreen()
+    expect((await screen.findByText('HIMALAYAS')).className).toContain('sm-himalayas')
+    expect(screen.getByText('ELUTA').className).toContain('sm-eluta')
+    expect(screen.getByText(/“designer” · Remote · canada/)).toBeTruthy()
+    expect(screen.getByText(/“designer” · Vancouver/)).toBeTruthy()
+  })
+
+  it('the Himalayas editor has Country and no Location or Remote', async () => {
+    mockApi([HIM])
+    renderScreen()
+    fireEvent.click(await screen.findByText('Remote designers'))
+    await screen.findByText('Save changes')
+    expect(screen.getByText(/Every job is remote/)).toBeTruthy()
+    expect(screen.getByLabelText('Country')).toBeTruthy()
+    expect(screen.queryByLabelText('Location')).toBeNull()
+    expect(screen.queryByLabelText('Remote')).toBeNull()
+  })
+
+  it('the Eluta editor has Location, the daily-limit note and no Country', async () => {
+    mockApi([ELU])
+    renderScreen()
+    fireEvent.click(await screen.findByText('Vancouver designers'))
+    await screen.findByText('Save changes')
+    expect(screen.getByText(/run interval of 1440 minutes/)).toBeTruthy()
+    expect(screen.getByLabelText('Location')).toBeTruthy()
+    expect(screen.queryByLabelText('Country')).toBeNull()
+    expect(screen.queryByText(/Results wanted/)).toBeNull()
+  })
+})
+
 describe('TrulyRemoteWork · v2 Searches', () => {
   beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear() })
 

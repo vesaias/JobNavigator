@@ -8,8 +8,9 @@ Every job gets a `link_kind`:
   ZipRecruiter, WhatJobs, Telegram, ...). Dedup can't safely tell two board listings of one job apart,
   and you apply through the board.
 - `easy_apply`: a board listing known to have no employer link at all, applied to on the board itself:
-  LinkedIn Easy Apply (found by the LinkedIn lookup) and a levels.fyi job whose page data names no
-  apply link (levels_jobs.py). Kept when the links alone would say `board`. The dashboard shows it as Direct.
+  LinkedIn Easy Apply (found by the LinkedIn lookup), a levels.fyi job whose page data names no
+  apply link (levels_jobs.py), and Behance, Hollylist and Wana Create postings with no employer link
+  (job_boards.py). Kept when the links alone would say `board`. The dashboard shows it as Direct.
 
 A host not in `BOARD_HOSTS` counts as the company's own site: a board found in the data that is
 missing from the list is added to it.
@@ -26,7 +27,9 @@ BOARD_HOSTS = (
     "linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com", "levels.fyi", "jobright.ai",
     "caribbeanjobs.com", "trulyremotework.com", "whatjobs.com", "t.me", "hackajob.com", "haystack.cv",
     "swooped.co", "jobsyn.org", "dice.com", "monster.com", "simplyhired.com", "builtin.com",
-    "wellfound.com", "remocate.app", "teletype.in",
+    "wellfound.com", "remocate.app", "teletype.in", "behance.net", "hollylist.com", "wanacreate.art",
+    "dribbble.com", "artstation.com", "workwithindies.com", "himalayas.app", "eluta.ca",
+    "welcometothejungle.com",
     "lnkd.in",   # LinkedIn's short link lands on LinkedIn
 )
 
