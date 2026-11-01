@@ -48,6 +48,7 @@ def _him(i, days_old=1, places=("Canada",), salary=None):
     return j
 
 
+@pytest.mark.asyncio
 async def test_himalayas_sends_the_country_name_and_stops_at_old_jobs(sites):
     sites.himalayas = {1: [_him(i) for i in range(19)] + [_him(99, days_old=30)], 2: [_him(200)]}
     async with job_boards.http_client() as c:
@@ -62,6 +63,7 @@ async def test_himalayas_sends_the_country_name_and_stops_at_old_jobs(sites):
     assert r["description"] == "Draw things"
 
 
+@pytest.mark.asyncio
 async def test_himalayas_without_a_known_country_sends_none(sites):
     sites.himalayas = {1: [_him(1, places=())]}
     async with job_boards.http_client() as c:
@@ -79,6 +81,7 @@ def test_himalayas_salary_is_kept_only_in_usd_per_year():
     ("https://himalayas.app/companies/youtooz/jobs/c1?utm_source=api", "board"),     # every job sampled
     ("https://job-boards.greenhouse.io/youtooz/jobs/1", "direct"),                   # `url` holds the employer's link
 ])
+@pytest.mark.asyncio
 async def test_himalayas_link_kinds(sites, test_db, monkeypatch, link, kind):
     async def fake_analyze(job, db=None, arrangement=None):
         job.work_arrangement = arrangement

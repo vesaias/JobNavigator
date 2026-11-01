@@ -9,7 +9,7 @@ import { useSettled, useWarm, NBSP, DASH } from '../hooks'
 import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead, Tag } from '../ui'
 import { BLOCKED_BADGE, MODE_BLOCKS, MODE_TERMS, SOURCE_BLOCKS } from '../sourceBlocks'
 import { useApifyBoards, boardLabel, testCost, usd } from '../apifyBoards'
-import { MODE_OPTIONS, defaultSources, isExtensionMode, isTestable, modeBadge, needsQuery } from '../searchModes'
+import { MODE_OPTIONS, defaultSources, isExtensionMode, isTestable, modeBadge, needsQuery, needsTerm } from '../searchModes'
 import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -55,9 +55,12 @@ const isExt = isExtensionMode
 // Keyword sources have no account-based "recommended" feed, so a term or a pre-filtered URL is
 // what there is to search for. Run/Test are blocked until one is set, rather than launching a
 // run that quietly finds nothing.
-const configError = (s) => (needsQuery(s.search_mode)
-  && !(`${s.search_term || ''}`.trim() || `${s.direct_url || ''}`.trim())
-  ? 'Add a search term or a URL before running' : null)
+const configError = (s) => {
+  const term = `${s.search_term || ''}`.trim()
+  if (needsTerm(s.search_mode) && !term) return 'Add a search term before running'
+  if (needsQuery(s.search_mode) && !(term || `${s.direct_url || ''}`.trim())) return 'Add a search term or a URL before running'
+  return null
+}
 
 // A Test run is invisible to the run monitor: `POST /searches/{id}/test` runs the
 // keyword modes inline and the slow ones through a bare asyncio task into a

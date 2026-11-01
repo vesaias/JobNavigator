@@ -112,6 +112,7 @@ def test_board_keys_match_the_mode_table():
     assert tuple(creative.BOARDS) == M.CREATIVE_BOARDS
 
 
+@pytest.mark.asyncio
 async def test_behance_passes_the_cookie_challenge_and_sends_the_same_token_twice(sites):
     sites.behance_pages[2] = [sites.be_node(3)]
     async with job_boards.http_client() as c:
@@ -126,6 +127,7 @@ async def test_behance_passes_the_cookie_challenge_and_sends_the_same_token_twic
     assert (rows[1]["location"], rows[1]["arrangement"]) == ("Remote", "remote")
 
 
+@pytest.mark.asyncio
 async def test_behance_stops_at_the_limit(sites):
     sites.behance_pages = {p: [sites.be_node(p * 10 + i) for i in range(50)] for p in (1, 2, 3)}
     async with job_boards.http_client() as c:
@@ -134,6 +136,7 @@ async def test_behance_stops_at_the_limit(sites):
     assert "filter" not in sites.to("www.behance.net", "/v3/graphql")[0][2]["variables"]
 
 
+@pytest.mark.asyncio
 async def test_behance_details_fill_text_date_and_usd_salary_and_drop_masked_fields(sites):
     async with job_boards.http_client() as c:
         rows = await creative._behance_list(c, _search(), 10)
@@ -156,6 +159,7 @@ def test_annual_usd_refuses_other_currencies_periods_and_hourly_rates():
     assert job_boards.annual_usd(None, None, None, None) == (None, None)
 
 
+@pytest.mark.asyncio
 async def test_hollylist_drops_members_only_and_merges_both_markets_newest_first(sites):
     sites.holly[None] = [_holly(1, added="2026-10-20T10:00:00Z"), _holly(2, public=False)]
     sites.holly["europe"] = [_holly(3, market="europe", added="2026-10-22T10:00:00Z")]
@@ -168,6 +172,7 @@ async def test_hollylist_drops_members_only_and_merges_both_markets_newest_first
     assert (asked[None]["loc"], asked[None]["remote"], asked[None]["term"]) == ("London", True, "illustrator")
 
 
+@pytest.mark.asyncio
 async def test_hollylist_pages_by_one_hundred(sites):
     sites.holly[None] = [_holly(i) for i in range(150)]
     async with job_boards.http_client() as c:
@@ -220,6 +225,7 @@ def test_jobposting_ld_reads_a_block_with_invalid_escapes():
     assert creative._jobposting_ld(page)["description"] == "&lt;a target=\_blank&gt;x"
 
 
+@pytest.mark.asyncio
 async def test_dribbble_parses_the_feed_title_and_reads_the_page(sites):
     url = "https://dribbble.com/jobs/1-Motion-Designer"
     sites.feeds["dribbble.com"] = _feed([(
@@ -238,6 +244,7 @@ async def test_dribbble_parses_the_feed_title_and_reads_the_page(sites):
     assert "keyword=motion+designer" in [u for u in sites.urls if "dribbble.com/jobs.rss" in u][0]
 
 
+@pytest.mark.asyncio
 async def test_artstation_sends_remote_and_maps_localities(sites):
     sites.artstation = {1: [{"hash_id": "ab1", "title": "Concept Artist", "company_name": "EA", "work_remotely": False,
                              "description": "<p>Paint</p>", "how_to_apply": "Email us",
@@ -251,6 +258,7 @@ async def test_artstation_sends_remote_and_maps_localities(sites):
     assert "work_remotely=true" in [u for u in sites.urls if "artstation" in u][0]
 
 
+@pytest.mark.asyncio
 async def test_work_with_indies_reads_the_feed_and_time_zone_bands_are_remote(sites):
     url = "https://www.workwithindies.com/careers/3guns-content-creator"
     sites.feeds["www.workwithindies.com"] = _feed([(
@@ -302,6 +310,7 @@ def test_location_is_checked_here_only_for_boards_that_cannot_filter_it():
     assert reasons == [None, "Not in Vancouver", None, None]
 
 
+@pytest.mark.asyncio
 async def test_collect_keeps_the_other_boards_when_one_fails(sites):
     sites.fail.add("www.hollylist.com")
     sites.wana_hits = [{"id": "w1", "title": "Illustrator 1", "jobLink": "https://www.behance.net/joblist/x/1"}]
@@ -322,6 +331,7 @@ def quiet(monkeypatch):
     monkeypatch.setattr("backend.activity.log_activity", lambda *a, **k: None)
 
 
+@pytest.mark.asyncio
 async def test_run_saves_new_rows_and_reads_details_only_for_them(sites, quiet, test_db):
     search = Search(name="t", search_mode="creative", search_term="illustrator", sources=["behance", "wanacreate"],
                     results_wanted=10, hours_old=0, title_exclude_keywords=["senior"], company_exclude=[])
@@ -350,6 +360,7 @@ async def test_run_saves_new_rows_and_reads_details_only_for_them(sites, quiet, 
     assert all("combinedJobListings" in c[2]["query"] for c in sites.to("www.behance.net", "/v3/graphql"))
 
 
+@pytest.mark.asyncio
 async def test_run_drops_rows_whose_detail_date_is_too_old(sites, quiet, test_db, monkeypatch):
     search = Search(name="t", search_mode="creative", search_term="x", sources=["behance"], results_wanted=10,
                     hours_old=1, company_exclude=[])
@@ -368,6 +379,7 @@ async def test_run_drops_rows_whose_detail_date_is_too_old(sites, quiet, test_db
     assert res["source_breakdown"]["behance"] == {"seen": 0, "new": 0, "returned": 1, "filtered": 1}
 
 
+@pytest.mark.asyncio
 async def test_a_row_dropped_after_its_page_is_kept_ignored_and_not_read_again(sites, quiet, test_db, monkeypatch):
     search = Search(name="t", search_mode="creative", search_term="x", sources=["behance"], results_wanted=10,
                     hours_old=1, company_exclude=[])
@@ -392,6 +404,7 @@ async def test_a_row_dropped_after_its_page_is_kept_ignored_and_not_read_again(s
     assert all("combinedJobListings" in c[2]["query"] for c in sites.to("www.behance.net", "/v3/graphql"))
 
 
+@pytest.mark.asyncio
 async def test_body_exclusion_keeps_the_job_ignored(sites, test_db, monkeypatch):
     search = Search(name="t", search_mode="creative", search_term="x", sources=["wanacreate"], results_wanted=10,
                     hours_old=0, company_exclude=[])
@@ -409,6 +422,7 @@ async def test_body_exclusion_keeps_the_job_ignored(sites, test_db, monkeypatch)
     assert test_db.query(Job).one().status == "ignored"
 
 
+@pytest.mark.asyncio
 async def test_preview_says_when_it_sampled_the_job_pages(sites, test_db, monkeypatch):
     monkeypatch.setattr(job_boards, "PREVIEW_DETAIL_LIMIT", 1)
     search = Search(name="t", search_mode="creative", search_term="illustrator", sources=["behance"],
@@ -417,6 +431,7 @@ async def test_preview_says_when_it_sampled_the_job_pages(sites, test_db, monkey
     assert out["details_sampled"] == 1 and "1 of 2" in out["preview_note"]
 
 
+@pytest.mark.asyncio
 async def test_run_reports_an_error_when_every_board_failed(sites, quiet, test_db):
     search = Search(name="t", search_mode="creative", search_term="x", sources=["hollylist"], company_exclude=[])
     test_db.add(search)
@@ -426,6 +441,7 @@ async def test_run_reports_an_error_when_every_board_failed(sites, quiet, test_d
     assert res["error"] == "Hollylist: HTTP 503 from https://www.hollylist.com/graphql"
 
 
+@pytest.mark.asyncio
 async def test_preview_reads_details_and_saves_nothing(sites, test_db):
     test_db.add(Setting(key="body_exclusion_phrases", value=json.dumps(["ten pages"])))
     test_db.commit()
@@ -461,12 +477,14 @@ async def _saved(search_kw, test_db):
     ("https://www.behance.net/joblist/apply/1", None, "easy_apply"),     # Behance's own form
     (None, None, "board"),
 ])
+@pytest.mark.asyncio
 async def test_behance_full_time_job_link_kinds(sites, quiet, test_db, link, apply_url, kind):
     sites.behance_apply = link
     job = (await _saved({"sources": ["behance"]}, test_db))["Illustrator 1"]
     assert (job.apply_url, job.link_kind) == (apply_url, kind)
 
 
+@pytest.mark.asyncio
 async def test_behance_brief_is_applied_to_on_behance(sites, quiet, test_db):
     job = (await _saved({"sources": ["behance"]}, test_db))["Illustrator 2"]
     assert (job.apply_url, job.link_kind) == (None, "easy_apply")
@@ -479,6 +497,7 @@ async def test_behance_brief_is_applied_to_on_behance(sites, quiet, test_db):
     ({"descMark": "Text", "applyAt": "https://www.linkedin.com/jobs/view/1"}, None, "board"),
     ({}, None, "board"),                     # the job page gave nothing: the link is not known
 ])
+@pytest.mark.asyncio
 async def test_hollylist_link_kinds(sites, quiet, test_db, detail, apply_url, kind):
     sites.holly[None] = [_holly(1)]
     sites.holly_detail = {"job-h1": detail}
@@ -491,6 +510,7 @@ async def test_hollylist_link_kinds(sites, quiet, test_db, detail, apply_url, ki
     ("https://www.linkedin.com/jobs/view/1", "https://www.linkedin.com/jobs/view/1", "board"),
     ("", "https://www.wanacreate.art/jobs/w1", "easy_apply"),
 ])
+@pytest.mark.asyncio
 async def test_wana_create_link_kinds(sites, quiet, test_db, job_link, url, kind):
     sites.wana_hits = [{"id": "w1", "title": "Book Illustrator", "company": {"name": "Pages"}, "jobLink": job_link}]
     job = (await _saved({"sources": ["wanacreate"]}, test_db))["Book Illustrator"]
@@ -503,6 +523,7 @@ async def test_wana_create_link_kinds(sites, quiet, test_db, job_link, url, kind
     (None, None, "board"),                                          # no redirect: not known
     ("https://dribbble.com/session/new", None, "board"),
 ])
+@pytest.mark.asyncio
 async def test_dribbble_link_kinds(sites, quiet, test_db, location, apply_url, kind):
     url = "https://dribbble.com/jobs/1-Illustrator"
     sites.feeds["dribbble.com"] = _feed([("Acme is hiring for a position of Illustrator in Remote", url + "?source=feed", "", NOW_RSS, "")])
@@ -514,6 +535,7 @@ async def test_dribbble_link_kinds(sites, quiet, test_db, location, apply_url, k
 
 
 @pytest.mark.parametrize("apply_link,kind", [(GREENHOUSE, "direct"), ("", "board"), (None, "board")])
+@pytest.mark.asyncio
 async def test_artstation_link_kinds(sites, quiet, test_db, apply_link, kind):
     sites.artstation = {1: [{"title": "Illustrator", "company_name": "Acme", "hash_id": "abc", "work_remotely": True,
                              "description": "Draw", "how_to_apply": "<a href='mailto:a@b.co'>mail</a>",
@@ -530,6 +552,7 @@ async def test_artstation_link_kinds(sites, quiet, test_db, apply_link, kind):
     ('<a id="apply-top" href="https://www.linkedin.com/jobs/view/1/">Apply</a>', None, "board"),   # a board, not the employer
     ("", None, "board"),
 ])
+@pytest.mark.asyncio
 async def test_work_with_indies_link_kinds(sites, quiet, test_db, button, apply_url, kind):
     url = "https://www.workwithindies.com/careers/acme-illustrator"
     sites.feeds["www.workwithindies.com"] = _feed([("Acme is hiring an Illustrator to work remotely", url, "Draw", NOW_RSS, "")])
@@ -538,6 +561,7 @@ async def test_work_with_indies_link_kinds(sites, quiet, test_db, button, apply_
     assert (job.apply_url, job.link_kind) == (apply_url, kind)
 
 
+@pytest.mark.asyncio
 async def test_a_short_apply_link_is_stored_where_it_lands(sites, quiet, test_db, monkeypatch):
     async def landed(urls):
         return {u: GREENHOUSE for u in urls if u and "grnh.se" in u}
@@ -579,3 +603,14 @@ def test_a_new_creative_search_gets_every_board_and_refuses_others(api_client):
     r = api_client.post("/api/searches", json={"name": "c2", "search_mode": "creative", "search_term": "x",
                                                "sources": ["behance", "linkedin"]})
     assert r.status_code == 400 and "creative boards" in r.json()["detail"]
+
+
+def test_a_row_whose_detail_failed_without_text_waits_for_the_next_run():
+    """Saved empty, scoring would read the board's script-drawn page instead of the posting."""
+    from backend.scraper._shared.job_boards import _defer_failed_details
+    failed = {"source": "behance", "description": "", "detail_error": "ReadTimeout: "}
+    snippet = {"source": "eluta", "description": "Feed snippet text", "detail_error": "HTTP 503"}
+    fine = {"source": "behance", "description": "Full text"}
+    breakdown = {"behance": {"seen": 2, "new": 0}, "eluta": {"seen": 1, "new": 0}}
+    assert _defer_failed_details([failed, snippet, fine], breakdown) == [snippet, fine]
+    assert breakdown["behance"]["deferred"] == 1 and "deferred" not in breakdown["eluta"]

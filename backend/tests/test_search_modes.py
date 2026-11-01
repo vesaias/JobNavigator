@@ -23,6 +23,7 @@ def _frontend_modes():
             "label": get("label").strip("'"),
             "extension": get("extension") == "true",
             "needsQuery": get("needsQuery") == "true",
+            "needsTerm": get("needsTerm") == "true",
             "sources": re.findall(r"'([^']*)'", get("sources")),
         })
     return rows
@@ -37,6 +38,7 @@ def test_dashboard_table_matches_the_backend_table():
         assert f["label"] == b.label, f["key"]
         assert f["extension"] == b.extension, f["key"]
         assert f["needsQuery"] == b.needs_query, f["key"]
+        assert f["needsTerm"] == b.needs_term, f["key"]
         assert f["sources"] == M.default_sources(f["key"]), f["key"]
 
 

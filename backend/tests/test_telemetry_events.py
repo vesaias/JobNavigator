@@ -107,6 +107,16 @@ def test_a_shared_fetch_counts_once(test_db):
         assert E.scraper_health(test_db, SINCE, "essentials")[0]["runs"] == 1
 
 
+def test_creative_boards_report_each_board(test_db):
+    _log(test_db, source="creative", found=5, breakdown={
+        "behance": {"returned": 5}, "eluta_typo": {"returned": 1},
+        "dribbble": {"returned": 0, "error": "HTTP 403 Forbidden"}})
+    with unscoped():
+        out = {e["kind"]: e for e in E.scraper_health(test_db, SINCE, "essentials")}
+    assert out["creative:behance"]["ok"] == 1 and out["creative:dribbble"]["error_types"] == "http_403=1"
+    assert "creative:eluta_typo" not in out and "creative" not in out
+
+
 def test_jobspy_reports_each_board(test_db):
     _log(test_db, source="jobspy", found=18, breakdown={
         "indeed": {"returned": 18}, "linkedin": {"returned": 0, "error": "HTTP 429 Too Many Requests"}})

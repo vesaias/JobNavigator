@@ -66,6 +66,7 @@ def quiet(monkeypatch):
     monkeypatch.setattr("backend.activity.log_activity", lambda *a, **k: None)
 
 
+@pytest.mark.asyncio
 async def test_eluta_reads_the_feed_with_a_city_radius_and_fills_text_from_microdata(sites, eluta_now):
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
     sites.eluta_pages = {1: _rss([("2D Animator", "2d-animator-abc", "ICON Creative Studio", "Vancouver, BC", now)])}
@@ -88,6 +89,7 @@ async def test_eluta_reads_the_feed_with_a_city_radius_and_fills_text_from_micro
     assert len(sites.to("www.eluta.ca", "/rss")) == 1        # one item < 20: no second page
 
 
+@pytest.mark.asyncio
 async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
     async with job_boards.http_client() as c:
         await eluta._list(c, _search(search_term="illustrator", location="Vancouver"), 10)
@@ -97,6 +99,7 @@ async def test_eluta_query_carries_sort_and_radius(sites, eluta_now):
     assert "radius" not in urls[1]
 
 
+@pytest.mark.asyncio
 async def test_eluta_page_without_a_description_keeps_the_feed_snippet(sites, eluta_now):
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
     sites.eluta_pages = {1: _rss([("Art Director", "ad-1", "Emily Carr", "Vancouver, BC", now)])}
@@ -109,6 +112,7 @@ async def test_eluta_page_without_a_description_keeps_the_feed_snippet(sites, el
 
 
 @pytest.mark.parametrize("title", ["Too Many Requests", "Too Many Feeds"])
+@pytest.mark.asyncio
 async def test_eluta_refusals_fail_the_board_instead_of_becoming_jobs(sites, eluta_now, title):
     sites.eluta_pages = {1: _rss([(title, "x", "", "", "Mon, 26 Oct 2026 13:56:27 GMT")])}
     async with job_boards.http_client() as c:
@@ -123,6 +127,7 @@ def test_eluta_daily_feed_refusal_is_recognised_by_its_contact_link():
         eluta._items(xml)
 
 
+@pytest.mark.asyncio
 async def test_eluta_reads_one_feed_page_per_run(sites, eluta_now):
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
     page = _rss([(f"Artist {i}", f"a{i}", "Co", "Vancouver, BC", now) for i in range(20)])
@@ -142,6 +147,7 @@ def test_rows_past_a_board_detail_budget_wait_for_the_next_run():
     assert breakdown["eluta"]["deferred"] == 3 and "deferred" not in breakdown["behance"]
 
 
+@pytest.mark.asyncio
 async def test_run_saves_eluta_rows_up_to_the_budget_and_leaves_the_rest(sites, quiet, test_db, eluta_now, monkeypatch):
     monkeypatch.setitem(eluta.BOARDS, "eluta", job_boards.Board("Eluta", eluta._list, eluta._detail, 2))
     now = "Mon, 26 Oct 2026 13:56:27 GMT"
@@ -161,6 +167,7 @@ def test_eluta_tls_context_offers_the_rsa_cipher_the_site_needs():
     assert "AES128-GCM-SHA256" in names
 
 
+@pytest.mark.asyncio
 async def test_an_eluta_job_stays_a_board_link(sites, quiet, test_db, eluta_now):
     sites.eluta_pages = {1: _rss([("Animator", "a1", "ICON", "Vancouver, BC", "Mon, 26 Oct 2026 13:56:27 GMT")])}
     search = Search(name="t", search_mode="eluta", search_term="animator", results_wanted=10, hours_old=0, company_exclude=[])

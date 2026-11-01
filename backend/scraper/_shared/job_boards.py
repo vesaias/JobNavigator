@@ -150,6 +150,20 @@ def _defer_over_budget(fresh: list, breakdown: dict, boards: dict) -> list:
     return out
 
 
+def _defer_failed_details(fresh: list, breakdown: dict) -> list:
+    """Drop the rows whose detail query failed and left them with no description: saved
+    empty, scoring would fall back to reading the board's page, which these boards draw by
+    script (Behance), so the text would be the page chrome. They are counted as `deferred`
+    and read again on the next run. A row that kept a listing text (Eluta's feed snippet) stays."""
+    out = []
+    for r in fresh:
+        if r.get("detail_error") and not (r.get("description") or "").strip():
+            breakdown[r["source"]]["deferred"] = breakdown[r["source"]].get("deferred", 0) + 1
+            continue
+        out.append(r)
+    return out
+
+
 def _error_text(e: BaseException) -> str:
     return str(e) if isinstance(e, BoardError) else f"{type(e).__name__}: {e}"[:200]
 
@@ -262,6 +276,7 @@ async def run(search: Search, boards: dict, mounts=None) -> dict:
                         fresh.append(r)
                 fresh = _defer_over_budget(fresh, breakdown, boards)
                 await _fill_details(client, fresh, boards)
+                fresh = _defer_failed_details(fresh, breakdown)
             # Behance dates and company names arrive with the detail query.
             late = [r for r in fresh if rejected(r)]
             for r in late:

@@ -11,9 +11,11 @@ from backend.telemetry.categories import llm_error_category, scrape_error_catego
 from backend.telemetry.level import FULL, install_id
 
 from backend.scraper.search_modes import EXTENSION_MODES as _EXTENSION_SOURCES   # job.source of extension jobs
-from backend.scraper.search_modes import SEARCH_MODES
+from backend.scraper.search_modes import CREATIVE_BOARDS, SEARCH_MODES
 
 _SEARCH_SOURCES = {m.source for m in SEARCH_MODES.values()}   # ScrapeLog.source of searches
+# Searches whose run reads several boards: each board is its own kind (None = any board key)
+_BOARD_SPLIT = {"jobspy": None, "creative": frozenset(CREATIVE_BOARDS)}
 _LLM_SLOTS = (("primary", "llm"), ("fallback", "llm_fallback"), ("scoring", "scoring_llm"),
               ("tailor", "cv_tailor_llm"), ("letter", "cover_letter_llm"),
               ("autofill", "autofill_llm"), ("email", "email_llm"))
@@ -57,6 +59,8 @@ def heartbeat(db, event: str) -> dict:
             continue
         if mode == "keyword":
             modes.update(f"jobspy:{s}" for s in (sources or []) if isinstance(s, str))
+        elif mode == "creative":
+            modes.update(f"creative:{s}" for s in (sources or []) if s in CREATIVE_BOARDS)
         else:
             modes.add(mode or "keyword")
     companies = db.query(Company.scrape_urls).filter(Company.active.is_(True)).all()
@@ -152,12 +156,14 @@ def scraper_health(db, since, level) -> list:
             continue
         seen.add(key)
         breakdown = r.source_breakdown if isinstance(r.source_breakdown, dict) else None
-        if (r.source or "").startswith("jobspy") and breakdown:
+        prefix = "jobspy" if (r.source or "").startswith("jobspy") else r.source
+        if prefix in _BOARD_SPLIT and breakdown:
+            # one kind per board; only a board the mode knows is named (never a stray key)
             for board, val in breakdown.items():
-                if isinstance(val, dict):
-                    add(f"jobspy:{board}", val.get("returned") or 0, val.get("error"), r.duration_seconds)
+                if isinstance(val, dict) and (_BOARD_SPLIT[prefix] is None or board in _BOARD_SPLIT[prefix]):
+                    add(f"{prefix}:{board}", val.get("returned") or 0, val.get("error"), r.duration_seconds)
             if r.error:
-                add("jobspy", 0, r.error, r.duration_seconds)
+                add(prefix, 0, r.error, r.duration_seconds)
         else:
             add(r.source or "unknown", r.jobs_found, r.error, r.duration_seconds)
 
