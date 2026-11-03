@@ -327,6 +327,9 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
         'a.js-view-job',
         '.jobs-item .title a',                    # e.g. ICMPD
         '[class*="type-vacancy"] .card-title a',  # Drupal vacancy cards, e.g. EEAS
+        '.ecl-content-block__title a',            # Europa Component Library lists, e.g. EU Agencies Network
+        '.article__header__text__title a',        # Careers Marketplace, e.g. Council of Europe
+        'a[href*="/job_display/"]',               # e.g. EuroBrussels (its /jobs/<country> facets match the broad ones)
     ]
     # Broad URL-pattern selectors — only used as fallback
     broad_selectors = [
@@ -354,6 +357,7 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
 
     async def _run_selectors(selectors):
         for selector in selectors:
+            unclaimed = set()   # text-less links of this selector
             try:
                 elements = await page.query_selector_all(selector)
                 for el in elements:
@@ -385,6 +389,10 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
                         text = lines[0] if lines else ""
 
                     if not text:
+                        # A card's image link has no text: it must not claim the URL the card's
+                        # titled link (later in this same list) points to (EuroBrussels).
+                        seen_hrefs.discard(href)
+                        unclaimed.add(href)
                         if debug:
                             rejected.append({"title": "(empty)", "url": href, "selector": selector, "reason": "No text"})
                         continue
@@ -400,7 +408,8 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
                     elif debug:
                         rejected.append({"title": text, "url": href, "selector": selector, "reason": reason})
             except Exception:
-                continue
+                pass
+            seen_hrefs.update(unclaimed)
 
     await _run_selectors(specific_selectors)
 
