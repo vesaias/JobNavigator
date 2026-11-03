@@ -71,7 +71,9 @@ GARBAGE_TITLES = {
 GARBAGE_SUBSTRINGS = [
     "join talent network", "join our talent", "talent community",
     "sign up for job alert", "create job alert", "email me jobs",
-    "cookie settings", "cookie preferences", "privacy policy",
+    "cookie settings", "cookie preferences", "cookie policy", "cookie notice",
+    "use cookies",  # "How we use cookies" (the ECB careers page)
+    "privacy policy",
     "equal opportunity employer", "© 20", "open roles",
     "life at ",  # "Life at Stripe", "Life at Google", etc.
 ]

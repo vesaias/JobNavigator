@@ -325,6 +325,8 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
         '.job-listing a', '.job-card a', '.opening a',
         '[data-job] a', '.career-listing a', '[role="listitem"] a',
         'a.js-view-job',
+        '.jobs-item .title a',                    # e.g. ICMPD
+        '[class*="type-vacancy"] .card-title a',  # Drupal vacancy cards, e.g. EEAS
     ]
     # Broad URL-pattern selectors — only used as fallback
     broad_selectors = [
@@ -333,16 +335,20 @@ async def _extract_job_links_from_page(page, base_url: str, debug: bool = False)
         'a[href*="/viewjob"]', 'a[href*="/requisition"]',
         'a[href*="eightfold.ai/careers"]',
         'a[href*="/careers/"]',
+        'a[href*="JobOpeningDetails"]',           # e.g. ICMPD
     ]
 
     base_parsed = urlparse(base_url)
     seen_hrefs = set()  # track all hrefs we've checked (valid or not)
 
-    # Remove footer/header from DOM to avoid extracting garbage links
-    # (keep <nav> — pagination buttons may live inside it)
+    # Remove the page's own footer/header to avoid extracting garbage links (keep <nav>:
+    # pagination buttons may live inside it). A header or footer inside a card or the main
+    # content stays: some boards (ReliefWeb) put each job's title link in the card's <header>.
     await page.evaluate("""
         for (const tag of ['footer', 'header']) {
-            document.querySelectorAll(tag).forEach(el => el.remove());
+            document.querySelectorAll(tag).forEach(el => {
+                if (!el.parentElement || !el.parentElement.closest('article, li, main, [role="main"]')) el.remove();
+            });
         }
     """)
 
