@@ -154,6 +154,7 @@ docs/*
 !docs/board.png
 !docs/GETTING-STARTED.md
 !docs/runner-containers.jpg
+!docs/runner-containers.gif
 !docs/CLI-RUNNERS.md
 !docs/RUNNER-MANAGEMENT-PLAN.md
 docker-compose.test.yml

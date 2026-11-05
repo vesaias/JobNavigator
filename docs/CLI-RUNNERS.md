@@ -47,7 +47,11 @@ only their effective providers. The controller receives no profile list or DB
 access. Completion requests carry the resolved account ID and selected Claude
 OAuth token, under the same policy as before.
 
-![Models settings showing selected and inactive provider containers](runner-containers.jpg)
+![Recorded provider switching and automatic container startup](runner-containers.gif)
+
+Recorded with cached images; static waits are shortened. The sequence shows
+Codex, Antigravity and Claude Code becoming ready while the previous runner
+becomes inactive. [Still screenshot](runner-containers.jpg).
 
 ## Install / update
 
