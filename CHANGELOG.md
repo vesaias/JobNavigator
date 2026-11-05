@@ -8,6 +8,16 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
+- Subscription CLIs now run in separate Codex, Claude Code and Antigravity runner
+  images. A private runner manager downloads missing images and starts the runners
+  selected by any account's effective model settings, including feature overrides
+  and scoring fallback. Unselected containers drain active requests and are removed;
+  images and logins remain. Models shows progress/errors and an owner retry action.
+  Compose profiles remain available with automatic management disabled. The backend image no longer
+  installs Node.js or these CLIs. Existing Codex/Antigravity auth volumes and
+  per-account Own/Inherit policies are preserved; Claude tokens remain in settings
+  or the backend environment. See `docs/CLI-RUNNERS.md` before upgrading.
+
 ### Added
 - **Levels.fyi apply:** a Levels.fyi job whose own data names no employer link is applied to on Levels.fyi itself, so it counts like LinkedIn Easy Apply (Direct in the Link filter, Open goes to its Levels.fyi page) instead of a Board link.
 - **Default cover-letter template** (by @volkotyk): Settings › Cover letters › **Default template** picks the template a new letter starts with. **Same as résumé** (the default) gives the letter its résumé's template; **Last selected** gives it the template you last picked in the cover-letter editor, remembered per account and never shared with another; a template from the list goes on every new letter. When none applies (a blank letter, a letter from Persona, a Modern Professional résumé, nothing picked yet) the letter gets Garamond Modern. `PATCH /api/settings` rejects any other value with 422.

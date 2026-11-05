@@ -440,6 +440,16 @@ def delete_account_rows(db, account_id) -> dict:
         db.commit()
     from backend.accounts import auth as _acct_auth
     _acct_auth.invalidate_accounts_cache()   # QA F9 / T6-02
+    # Runners share these volumes, including when stopped. Tombstones prevent a
+    # queued/stale request from restoring a removed login; in-flight calls clean
+    # up again on exit. Never mark the owner's default home or another account.
+    from pathlib import Path
+    from backend.accounts.credentials import cli_account_roots
+    from backend.cli_runner.paths import deletion_marker
+    for root in cli_account_roots():
+        marker = deletion_marker(Path(root) / str(account_id))
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
     removed_dirs = []
     for path in account_dirs(account_id):
         if os.path.isdir(path):

@@ -14,6 +14,7 @@ import pytest
 from backend.accounts import credentials as C
 from backend.accounts.context import use_account
 from backend.analyzer import llm_client as L
+from backend.cli_runner import runtime as R, paths as runner_paths
 from backend.models.db import Account, SectionPolicy, Setting
 from backend.tests.r4_support import client, set_setting  # noqa: F401 (fixture)
 
@@ -212,7 +213,12 @@ def _capture_run_cli(monkeypatch, handler=None):
             return handler(cmd)
         return 0, json.dumps({"result": "ok", "is_error": False, "subtype": "success"}).encode(), b""
 
-    monkeypatch.setattr(L, "_run_cli", fake_run_cli)
+    monkeypatch.setattr(R, "_run_cli", fake_run_cli)
+
+    async def in_process(provider, prompt, system, model, max_tokens, **kwargs):
+        return await R.execute(provider, prompt, system, model, max_tokens, **kwargs)
+
+    monkeypatch.setattr(L.runner_client, "complete", in_process)
     return calls
 
 
@@ -299,6 +305,8 @@ def cli_roots(tmp_path, monkeypatch):
     monkeypatch.setattr(C, "AGY_ACCOUNTS_ROOT", str(tmp_path / "gemini" / "accounts"))
     monkeypatch.setattr(C, "CLAUDE_ACCOUNTS_ROOT", str(tmp_path / "claude" / "accounts"))
     monkeypatch.setattr(C, "LI_ACCOUNTS_ROOT", str(tmp_path / "li" / "accounts"))
+    for name in ("CODEX_ACCOUNTS_ROOT", "AGY_ACCOUNTS_ROOT", "CLAUDE_ACCOUNTS_ROOT"):
+        monkeypatch.setattr(runner_paths, name, getattr(C, name))
     return tmp_path
 
 
@@ -347,7 +355,7 @@ async def test_codex_member_not_logged_in_names_its_own_login_command(test_db, a
         with pytest.raises(L.NonRetryableLLMError) as e:
             await L._call_codex_cli("p", "s", "", 10)
     home = str(cli_roots / "codex" / "accounts" / str(b))
-    assert f"-e CODEX_HOME={home} backend codex login --device-auth" in str(e.value)
+    assert f"-e CODEX_HOME={home} codex-runner codex login --device-auth" in str(e.value)
     assert len(calls) == 1
 
 
@@ -356,11 +364,11 @@ async def test_codex_member_not_logged_in_names_its_own_login_command(test_db, a
 def _agy_setup(tmp_path, monkeypatch):
     source = tmp_path / "shipped.json"
     source.write_text(json.dumps({"permissions": {"deny": ["command(*)", "read_file(/)"]}}))
-    monkeypatch.setattr(L, "_AGY_SETTINGS_SOURCE", str(source))
+    monkeypatch.setattr(R, "_AGY_SETTINGS_SOURCE", str(source))
     default_state = tmp_path / "default-home" / ".gemini" / "antigravity-cli"
-    monkeypatch.setattr(L, "_AGY_STATE", str(default_state))
+    monkeypatch.setattr(R, "_AGY_STATE", str(default_state))
     asserted = []
-    monkeypatch.setattr(L, "_agy_assert_denied", lambda path, rules: asserted.append(rules))
+    monkeypatch.setattr(R, "_agy_assert_denied", lambda path, rules: asserted.append(rules))
 
     def handler(cmd):
         out = [{"event": "init", "conversation_id": "c-9"},
@@ -394,7 +402,7 @@ async def test_agy_member_own_runs_with_its_own_home_and_state_dir(test_db, acco
     # the transcript is cleared from the member's dir
     assert not stale.exists()
     # the override does not leak past the call
-    assert L._agy_state() == str(default_state)
+    assert R._agy_state() == str(default_state)
 
 
 @pytest.mark.asyncio
@@ -426,7 +434,7 @@ async def test_agy_member_not_logged_in_names_its_own_home(test_db, accounts, cl
     with use_account(b):
         with pytest.raises(L.NonRetryableLLMError) as e:
             await L._call_antigravity_cli("p", "s", "", 10)
-    assert f"-e HOME={cli_roots / 'gemini' / 'accounts' / str(b)} backend agy" in str(e.value)
+    assert f"-e HOME={cli_roots / 'gemini' / 'accounts' / str(b)} antigravity-runner agy" in str(e.value)
 
 
 # ── Removal deletes the CLI homes ────────────────────────────────────────────
@@ -481,14 +489,14 @@ def test_cli_login_prints_the_per_account_commands(test_db, accounts, cli_roots,
     assert cli_login.main(["codex", "partner"]) == 0
     home = cli_roots / "codex" / "accounts" / str(b)
     out = capsys.readouterr().out.splitlines()
-    assert out[0] == f"docker compose exec -it -e CODEX_HOME={home} backend codex login --device-auth"
+    assert out[0] == f"docker compose run --rm -it -e CODEX_HOME={home} codex-runner codex login --device-auth"
     assert home.is_dir()
     assert cli_login.main(["agy", str(b)]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[0] == f"docker compose exec -it -e HOME={cli_roots / 'gemini' / 'accounts' / str(b)} backend agy"
+    assert out[0] == f"docker compose run --rm -it -e HOME={cli_roots / 'gemini' / 'accounts' / str(b)} antigravity-runner agy"
     assert cli_login.main(["claude", "Partner"]) == 0
     out = capsys.readouterr().out
-    assert out.startswith("docker compose exec -it backend claude setup-token")
+    assert out.startswith("docker compose run --rm -it claude-runner claude setup-token")
     assert "Claude Code token" in out
 
 
@@ -497,7 +505,7 @@ def test_cli_login_owner_uses_the_default_homes_and_warns_inherit(test_db, accou
     a, b = accounts
     owner_name = test_db.query(Account).filter(Account.id == a).one().name
     assert cli_login.main(["codex_cli", owner_name]) == 0
-    assert capsys.readouterr().out.splitlines()[0] == "docker compose exec -it backend codex login --device-auth"
+    assert capsys.readouterr().out.splitlines()[0] == "docker compose run --rm -it codex-runner codex login --device-auth"
     assert cli_login.main(["codex", "Partner"]) == 0      # models inherit by default
     assert "inherits the owner's" in capsys.readouterr().out
     assert cli_login.main(["codex", "Nobody"]) == 1

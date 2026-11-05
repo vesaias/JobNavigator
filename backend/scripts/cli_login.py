@@ -7,7 +7,7 @@ Run inside the backend container (it reads the accounts table):
     docker compose exec backend python -m backend.scripts.cli_login claude Owner
 
 Providers: codex, agy (antigravity), claude. The account is a name (case-insensitive) or
-an id. It prints the `docker compose exec -it backend …` command to run on the host:
+an id. It prints the `docker compose run --rm -it <runner> …` command to run on the host:
 
 - codex / agy: the owner logs into the default home (~/.codex, ~/.gemini); a member gets
   its own (`CODEX_HOME=~/.codex/accounts/<id>`, agy `HOME=~/.gemini/accounts/<id>`), which
@@ -48,7 +48,7 @@ def login_lines(provider: str, account, own_logins: bool, make_dirs: bool = True
     is_owner = account.role == "owner"
     lines = []
     if provider == "claude":
-        lines.append("docker compose exec -it backend claude setup-token")
+        lines.append("docker compose run --rm -it claude-runner claude setup-token")
         if is_owner:
             lines.append("# Paste the printed token into Settings › Models › Claude Code token, "
                          "or put it in .env as CLAUDE_CODE_OAUTH_TOKEN and run `docker compose up -d backend`.")
@@ -57,22 +57,22 @@ def login_lines(provider: str, account, own_logins: bool, make_dirs: bool = True
                          "Settings › Models › Claude Code token.")
     elif provider == "codex":
         if is_owner:
-            lines.append("docker compose exec -it backend codex login --device-auth")
-            lines.append("docker compose exec backend codex login status")
+            lines.append("docker compose run --rm -it codex-runner codex login --device-auth")
+            lines.append("docker compose run --rm codex-runner codex login status")
         else:
             home = C.codex_home(account.id)
             if make_dirs:
                 os.makedirs(home, exist_ok=True)
-            lines.append(f"docker compose exec -it -e CODEX_HOME={home} backend codex login --device-auth")
-            lines.append(f"docker compose exec -e CODEX_HOME={home} backend codex login status")
+            lines.append(f"docker compose run --rm -it -e CODEX_HOME={home} codex-runner codex login --device-auth")
+            lines.append(f"docker compose run --rm -e CODEX_HOME={home} codex-runner codex login status")
     elif provider == "agy":
         if is_owner:
-            lines.append("docker compose exec -it backend agy")
+            lines.append("docker compose run --rm -it antigravity-runner agy")
         else:
             home = C.agy_home(account.id)
             if make_dirs:
                 os.makedirs(home, exist_ok=True)
-            lines.append(f"docker compose exec -it -e HOME={home} backend agy")
+            lines.append(f"docker compose run --rm -it -e HOME={home} antigravity-runner agy")
         lines.append("# Sign in when agy asks, then quit it (/quit).")
     if not is_owner and not own_logins:
         lines.append(f"# Note: {account.name}'s Models section inherits the owner's, so the owner's "

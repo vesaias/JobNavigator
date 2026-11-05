@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from backend.analyzer import llm_client
-from backend.analyzer.llm_client import NonRetryableLLMError
+from backend.cli_runner import runtime as llm_client
+from backend.cli_runner.protocol import NonRetryableLLMError
 
 
 class FakeProcess:
@@ -90,7 +90,7 @@ async def test_antigravity_not_logged_in_is_not_retryable(monkeypatch):
         stdout=_events(_result(status="ERROR", response="",
                                error="authentication failed or timed out")),
         returncode=1))
-    with pytest.raises(NonRetryableLLMError, match="not logged in.*docker compose exec"):
+    with pytest.raises(NonRetryableLLMError, match="not logged in.*docker compose run"):
         await llm_client._call_antigravity_cli("prompt", "system", "", 10)
 
 
@@ -101,7 +101,7 @@ async def test_antigravity_expired_login_is_not_retryable(monkeypatch):
         stdout=_events(_result(status="ERROR", response="",
                                error="Authentication expired. Please log back in.")),
         returncode=1))
-    with pytest.raises(NonRetryableLLMError, match="not logged in.*docker compose exec"):
+    with pytest.raises(NonRetryableLLMError, match="not logged in.*docker compose run"):
         await llm_client._call_antigravity_cli("prompt", "system", "", 10)
 
 

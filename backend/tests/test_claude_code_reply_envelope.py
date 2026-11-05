@@ -8,12 +8,7 @@ import json as _json
 
 import pytest
 
-from backend.analyzer.llm_client import NonRetryableLLMError, _call_claude_code
-
-# _call_claude_code reads the account's Claude Code token and own-login setting (MT-15),
-# so it needs the test DB rather than whatever DATABASE_URL points at.
-pytestmark = pytest.mark.usefixtures("test_db")
-
+from backend.cli_runner.runtime import NonRetryableLLMError, _call_claude_code
 
 def _cli_printing(monkeypatch, payload, rc=0, stderr=b""):
     out = payload if isinstance(payload, bytes) else _json.dumps(payload).encode()
@@ -21,7 +16,7 @@ def _cli_printing(monkeypatch, payload, rc=0, stderr=b""):
     async def fake_run_cli(cmd, stdin, env=None, timeout=None, cwd=None):
         return rc, out, stderr
 
-    monkeypatch.setattr("backend.analyzer.llm_client._run_cli", fake_run_cli)
+    monkeypatch.setattr("backend.cli_runner.runtime._run_cli", fake_run_cli)
 
 
 async def _call():
