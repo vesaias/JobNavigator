@@ -1,0 +1,39 @@
+# Each target contains exactly one CLI. No browser, application dependencies or DB.
+FROM python:3.12-slim AS runner-base
+WORKDIR /app
+ENV PYTHONPATH=/app PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY backend/cli_runner/requirements.txt /tmp/runner-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/runner-requirements.txt
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+CMD ["uvicorn", "backend.cli_runner.server:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+
+FROM runner-base AS node-base
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM node-base AS codex-runner
+RUN npm install -g @openai/codex@0.156.1 && npm cache clean --force
+ENV JN_RUNNER_PROVIDER=codex_cli
+COPY backend/__init__.py /app/backend/__init__.py
+COPY backend/cli_runner/ /app/backend/cli_runner/
+
+FROM node-base AS claude-runner
+RUN npm install -g @anthropic-ai/claude-code@2.1.281 && npm cache clean --force
+ENV JN_RUNNER_PROVIDER=claude_code
+COPY backend/__init__.py /app/backend/__init__.py
+COPY backend/cli_runner/ /app/backend/cli_runner/
+
+FROM runner-base AS antigravity-runner
+# The upstream installer cannot pin releases. This argument invalidates the cache;
+# the installed version is printed in the build log. Auto-updates stay disabled.
+ARG AGY_VERSION=1.4.3
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash \
+    && echo "agy $("$HOME/.local/bin/agy" --version) installed, AGY_VERSION=${AGY_VERSION}"
+ENV PATH="/root/.local/bin:${PATH}" AGY_CLI_DISABLE_AUTO_UPDATE=true JN_RUNNER_PROVIDER=antigravity_cli
+COPY backend/__init__.py /app/backend/__init__.py
+COPY backend/cli_runner/ /app/backend/cli_runner/
+COPY backend/antigravity-settings.json /opt/antigravity-settings.json

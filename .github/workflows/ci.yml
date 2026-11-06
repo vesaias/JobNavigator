@@ -106,6 +106,8 @@ jobs:
           context: .
           file: Dockerfile.backend
           push: false
+          load: true
+          tags: jobnavigator-backend:local
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build frontend image
@@ -116,3 +118,15 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build CLI runner images
+        run: |
+          docker buildx build --load -f Dockerfile.runner --target codex-runner -t jobnavigator-codex-runner:local .
+          docker buildx build --load -f Dockerfile.runner --target claude-runner -t jobnavigator-claude-runner:local .
+          docker buildx build --load -f Dockerfile.runner --target antigravity-runner -t jobnavigator-antigravity-runner:local .
+      - name: Check runner containers without subscription credentials
+        run: python3 tests/tools/runner_smoke.py
+      - name: Build runner manager
+        run: docker buildx build --load -f Dockerfile.runner-manager -t jobnavigator-runner-manager:local .
+      - name: Check automatic runner lifecycle and restart draining
+        run: python3 tests/tools/runner_management_smoke.py

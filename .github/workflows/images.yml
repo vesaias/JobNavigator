@@ -28,6 +28,17 @@ jobs:
             dockerfile: Dockerfile.backend
           - name: frontend
             dockerfile: Dockerfile.frontend
+          - name: runner-manager
+            dockerfile: Dockerfile.runner-manager
+          - name: codex-runner
+            dockerfile: Dockerfile.runner
+            target: codex-runner
+          - name: claude-runner
+            dockerfile: Dockerfile.runner
+            target: claude-runner
+          - name: antigravity-runner
+            dockerfile: Dockerfile.runner
+            target: antigravity-runner
     steps:
       - uses: actions/checkout@v7
 
@@ -55,6 +66,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

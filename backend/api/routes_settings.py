@@ -241,6 +241,9 @@ def update_settings(updates: dict, db: Session = Depends(get_db)):
             install_updated.append(key)
     db.commit()
 
+    from backend.runner_management import notify as notify_runners
+    notify_runners()
+
     if not install_updated:
         # A member's own values touch no process-wide state (scheduler timing, semaphores
         # and dedup params are read from install values).
@@ -346,6 +349,8 @@ def update_policy(body: dict, db: Session = Depends(get_db)):
     else:
         row.mode = mode
     db.commit()
+    from backend.runner_management import notify as notify_runners
+    notify_runners()
     return {"account_id": str(acc_id), "section": section, "mode": mode}
 
 

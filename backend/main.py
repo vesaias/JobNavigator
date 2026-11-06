@@ -109,7 +109,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:  # the next boot then backs up once more; not worth failing over
         logger.warning(f"Could not record the release marker: {e}")
 
-    yield
+    from backend.runner_management import coordinator, enabled as runner_management_enabled
+    if runner_management_enabled():
+        coordinator.start()
+    try:
+        yield
+    finally:
+        await coordinator.stop()
 
     if scheduler.running:
         scheduler.shutdown()

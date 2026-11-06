@@ -11,6 +11,39 @@ from backend.accounts.settings import get_setting
 logger = logging.getLogger("jobnavigator.llm")
 router = APIRouter(prefix="/llm", tags=["settings"])
 
+
+@router.get("/runners")
+def runner_status():
+    """Container readiness only. Members never see other accounts' requirements."""
+    from backend.runner_management import coordinator, enabled, account_providers
+    from backend.accounts.settings import is_owner_caller
+    from backend.cli_runner.protocol import SERVICES
+    if not enabled():
+        return {"enabled": False, "providers": []}
+    with SessionLocal() as db:
+        owner = is_owner_caller(db)
+        visible = SERVICES.keys() if owner else account_providers(db)
+    states = [dict(row) for row in coordinator.snapshot["providers"] if row["provider"] in visible]
+    if coordinator.error or not states:
+        states = [{"provider": provider, "state": "unknown", "required": True,
+                   "message": "Waiting for runner manager; check the controller if this persists",
+                   "downloaded_bytes": 0, "total_bytes": 0} for provider in visible]
+    return {"enabled": True, "providers": states}
+
+
+@router.post("/runners/retry", status_code=202)
+def retry_runners():
+    from backend.runner_management import coordinator, enabled
+    from backend.accounts.settings import is_owner_caller
+    with SessionLocal() as db:
+        if not is_owner_caller(db):
+            raise HTTPException(403, "Only the install owner can retry container provisioning")
+    if not enabled():
+        raise HTTPException(409, "Automatic runner management is disabled")
+    coordinator.retry_requested = True
+    coordinator.notify()
+    return {"accepted": True}
+
 _CACHE_TTL = 3600  # 1 hour
 _cache = {}  # provider, or (provider, key) for a keyed catalog -> {"at": float, "models": list}
 

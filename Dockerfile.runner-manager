@@ -1,0 +1,11 @@
+FROM python:3.12-slim
+WORKDIR /app
+ENV PYTHONPATH=/app PYTHONUNBUFFERED=1
+COPY backend/cli_runner/requirements.txt /tmp/runner-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/runner-requirements.txt httpx==0.28.1
+COPY backend/__init__.py /app/backend/__init__.py
+COPY backend/cli_runner/ /app/backend/cli_runner/
+COPY backend/runner_manager/ /app/backend/runner_manager/
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+CMD ["uvicorn", "backend.runner_manager.server:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

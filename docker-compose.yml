@@ -1,3 +1,13 @@
+x-cli-runner: &cli-runner
+  restart: unless-stopped
+  init: true
+  networks: [llm]
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
 services:
   db:
     image: postgres:16-alpine
@@ -29,6 +39,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     restart: unless-stopped
+    networks: [default, llm]
     logging:
       driver: json-file
       options:
@@ -38,11 +49,15 @@ services:
     environment:
       DATABASE_URL: postgresql://jobnavigator:${POSTGRES_PASSWORD:-password}@db:5432/jobnavigator
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      JN_RUNNER_MANAGEMENT: ${JN_RUNNER_MANAGEMENT:-1}
+      JN_RUNNER_MANAGER_URL: http://runner-manager:8000
     ports:
       - "127.0.0.1:8000:8000"   # everything external goes through Caddy on :80; the raw API stays on loopback
     depends_on:
       db:
         condition: service_healthy
+      runner-manager:
+        condition: service_started
     volumes:
       - ./backend:/app/backend
       - ./backups:/app/backups
@@ -50,6 +65,71 @@ services:
       - codex_auth:/root/.codex
       # agy keeps its OAuth token in a file here; no keyring in this image.
       - antigravity_auth:/root/.gemini
+      # Shared for account removal even while a runner is stopped.
+      - claude_accounts:/root/.claude-accounts
+      - runner_control:/run/jobnavigator-runner
+
+  runner-manager:
+    image: ghcr.io/vesaias/jobnavigator-runner-manager:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.runner-manager
+    restart: unless-stopped
+    init: true
+    networks: [llm]
+    environment:
+      # Empty = read from the manager's own container (the folder name unless COMPOSE_PROJECT_NAME is set)
+      JN_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-}
+      JN_RUNNER_MANAGEMENT: ${JN_RUNNER_MANAGEMENT:-1}
+      JN_IMAGE_TAG: ${JN_IMAGE_TAG:-latest}
+      JN_RUNNER_IMAGE_PREFIX: ${JN_RUNNER_IMAGE_PREFIX:-ghcr.io/vesaias/jobnavigator}
+      JN_RUNNER_MEMORY_MB: ${JN_RUNNER_MEMORY_MB:-0}
+      JN_RUNNER_IDLE_MINUTES: ${JN_RUNNER_IDLE_MINUTES:-10}
+    volumes:
+      # Only this restricted controller receives the Docker socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner_control:/run/jobnavigator-runner:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  codex-runner:
+    <<: *cli-runner
+    image: ghcr.io/vesaias/jobnavigator-codex-runner:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+      target: codex-runner
+    profiles: [codex, llm]
+    volumes:
+      - codex_auth:/root/.codex
+      - runner_control:/run/jobnavigator-runner:ro
+
+  claude-runner:
+    <<: *cli-runner
+    image: ghcr.io/vesaias/jobnavigator-claude-runner:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+      target: claude-runner
+    profiles: [claude, llm]
+    volumes:
+      - claude_accounts:/root/.claude-accounts
+      - runner_control:/run/jobnavigator-runner:ro
+
+  antigravity-runner:
+    <<: *cli-runner
+    image: ghcr.io/vesaias/jobnavigator-antigravity-runner:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+      target: antigravity-runner
+    profiles: [antigravity, llm]
+    volumes:
+      - antigravity_auth:/root/.gemini
+      - runner_control:/run/jobnavigator-runner:ro
 
   frontend:
     image: ghcr.io/vesaias/jobnavigator-frontend:${JN_IMAGE_TAG:-latest}
@@ -92,3 +172,8 @@ volumes:
   caddy_config:
   codex_auth:
   antigravity_auth:
+  claude_accounts:
+  runner_control:
+
+networks:
+  llm:

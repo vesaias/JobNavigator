@@ -346,15 +346,8 @@ def _own(db, account_id, key, value):
 
 
 def _capture_cli(monkeypatch):
-    from backend.analyzer import llm_client as L
-    calls = []
-
-    async def fake_run_cli(cmd, stdin, env=None, timeout=None, cwd=None):
-        calls.append(dict(env or {}))
-        return 0, json.dumps({"result": "ok", "is_error": False, "subtype": "success"}).encode(), b""
-
-    monkeypatch.setattr(L, "_run_cli", fake_run_cli)
-    return calls
+    from backend.tests.test_mt_credentials import _capture_run_cli
+    return _capture_run_cli(monkeypatch)
 
 
 async def test_member_on_own_models_without_a_token_fails_not_logged_in(test_db, accounts, monkeypatch):
@@ -378,7 +371,7 @@ async def test_member_on_own_models_without_a_token_fails_not_logged_in(test_db,
     # the owner is unaffected
     with use_account(a):
         await L._call_claude_code("p", "s", "", 100)
-    assert calls[0]["CLAUDE_CODE_OAUTH_TOKEN"] == "install-token"
+    assert calls[0]["env"]["CLAUDE_CODE_OAUTH_TOKEN"] == "install-token"
 
 
 async def test_member_on_inherit_still_uses_the_owner_token(test_db, accounts, monkeypatch):
@@ -388,4 +381,4 @@ async def test_member_on_inherit_still_uses_the_owner_token(test_db, accounts, m
     calls = _capture_cli(monkeypatch)
     with use_account(b):
         await L._call_claude_code("p", "s", "", 100)
-    assert calls[0]["CLAUDE_CODE_OAUTH_TOKEN"] == "env-owner-token"
+    assert calls[0]["env"]["CLAUDE_CODE_OAUTH_TOKEN"] == "env-owner-token"

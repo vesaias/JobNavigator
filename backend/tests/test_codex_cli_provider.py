@@ -4,8 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from backend.analyzer import llm_client
-from backend.analyzer.llm_client import NonRetryableLLMError
+from backend.cli_runner import runtime as llm_client
+from backend.analyzer import llm_client as backend_client
+from backend.cli_runner.protocol import NonRetryableLLMError
 
 
 class FakeProcess:
@@ -158,14 +159,14 @@ async def test_call_llm_skips_retries_and_goes_to_fallback_on_non_retryable(monk
     async def no_sleep(_):
         return None
 
-    monkeypatch.setattr(llm_client, "_dispatch", fake_dispatch)
-    monkeypatch.setattr(llm_client.asyncio, "sleep", no_sleep)
-    monkeypatch.setattr(llm_client, "_get_setting", lambda db, key, default="": {
+    monkeypatch.setattr(backend_client, "_dispatch", fake_dispatch)
+    monkeypatch.setattr(backend_client.asyncio, "sleep", no_sleep)
+    monkeypatch.setattr(backend_client, "_get_setting", lambda db, key, default="": {
         "llm_fallback_provider": "openai", "llm_fallback_model": "gpt-5.4-mini", "llm_fallback_api_key": "k",
     }.get(key, default))
-    monkeypatch.setattr(llm_client, "resolve_llm_config", lambda feature="", db=None: {"provider": "codex_cli", "model": "gpt-5.6-sol", "api_key": "", "effort": ""})
+    monkeypatch.setattr(backend_client, "resolve_llm_config", lambda feature="", db=None: {"provider": "codex_cli", "model": "gpt-5.6-sol", "api_key": "", "effort": ""})
 
-    res = await llm_client.call_llm("p", "s", 100)
+    res = await backend_client.call_llm("p", "s", 100)
     assert res["provider"] == "openai"
     assert attempts == ["codex_cli", "openai"]
 
@@ -179,7 +180,7 @@ async def test_call_llm_does_not_retry_a_cli_timeout(monkeypatch, fallback):
     async def fake_dispatch(provider, model, api_key, prompt, system, max_tokens, cached_prefix=None, effort=""):
         attempts.append(provider)
         if provider == "codex_cli":
-            raise llm_client.CLITimeoutError("codex timed out after 300s")
+            raise backend_client.CLITimeoutError("codex timed out after 300s")
         return {"text": "ok", "usage": {"input_tokens": 1, "output_tokens": 1, "cache_read_tokens": 0, "cache_write_tokens": 0}}
 
     async def no_sleep(_):
@@ -187,16 +188,16 @@ async def test_call_llm_does_not_retry_a_cli_timeout(monkeypatch, fallback):
 
     settings = {"llm_fallback_provider": "openai", "llm_fallback_model": "gpt-5.4-mini",
                 "llm_fallback_api_key": "k"} if fallback else {}
-    monkeypatch.setattr(llm_client, "_dispatch", fake_dispatch)
-    monkeypatch.setattr(llm_client.asyncio, "sleep", no_sleep)
-    monkeypatch.setattr(llm_client, "_get_setting", lambda db, key, default="": settings.get(key, default))
-    monkeypatch.setattr(llm_client, "resolve_llm_config", lambda feature="", db=None: {"provider": "codex_cli", "model": "gpt-5.6-sol", "api_key": "", "effort": ""})
+    monkeypatch.setattr(backend_client, "_dispatch", fake_dispatch)
+    monkeypatch.setattr(backend_client.asyncio, "sleep", no_sleep)
+    monkeypatch.setattr(backend_client, "_get_setting", lambda db, key, default="": settings.get(key, default))
+    monkeypatch.setattr(backend_client, "resolve_llm_config", lambda feature="", db=None: {"provider": "codex_cli", "model": "gpt-5.6-sol", "api_key": "", "effort": ""})
 
     if fallback:
-        res = await llm_client.call_llm("p", "s", 100)
+        res = await backend_client.call_llm("p", "s", 100)
         assert res["provider"] == "openai"
         assert attempts == ["codex_cli", "openai"]
     else:
-        with pytest.raises(llm_client.CLITimeoutError, match="timed out after 300s"):
-            await llm_client.call_llm("p", "s", 100)
+        with pytest.raises(backend_client.CLITimeoutError, match="timed out after 300s"):
+            await backend_client.call_llm("p", "s", 100)
         assert attempts == ["codex_cli"]
