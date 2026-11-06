@@ -35,8 +35,12 @@ class Catalog:
             raise ValueError("JN_RUNNER_IDLE_MINUTES must be 0 (never) or 1..1440")
 
     @classmethod
-    def environment(cls):
-        return cls(os.environ["JN_COMPOSE_PROJECT"],
+    def environment(cls, project=None):
+        """`JN_COMPOSE_PROJECT`, else `project` (the manager's own Compose project)."""
+        project = os.getenv("JN_COMPOSE_PROJECT", "").strip() or project
+        if not project:
+            raise ValueError("Compose project unknown: set JN_COMPOSE_PROJECT")
+        return cls(project,
                    os.getenv("JN_RUNNER_IMAGE_PREFIX", "ghcr.io/vesaias/jobnavigator"),
                    os.getenv("JN_IMAGE_TAG", "latest"), int(os.getenv("JN_RUNNER_MEMORY_MB", "0")),
                    int(os.getenv("JN_RUNNER_IDLE_MINUTES", "10")))

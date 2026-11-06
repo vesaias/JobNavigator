@@ -78,7 +78,8 @@ services:
     init: true
     networks: [llm]
     environment:
-      JN_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-jobnavigator}
+      # Empty = read from the manager's own container (the folder name unless COMPOSE_PROJECT_NAME is set)
+      JN_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-}
       JN_RUNNER_MANAGEMENT: ${JN_RUNNER_MANAGEMENT:-1}
       JN_IMAGE_TAG: ${JN_IMAGE_TAG:-latest}
       JN_RUNNER_IMAGE_PREFIX: ${JN_RUNNER_IMAGE_PREFIX:-ghcr.io/vesaias/jobnavigator}

@@ -31,7 +31,12 @@ def create_app(controller=None):
     management_enabled = os.getenv("JN_RUNNER_MANAGEMENT", "1").lower() in ("1", "true", "yes")
     @asynccontextmanager
     async def lifespan(app):
-        app.state.controller = controller or Controller(Docker(), Catalog.environment())
+        control = controller
+        if control is None:
+            docker = Docker()
+            project = None if os.getenv("JN_COMPOSE_PROJECT", "").strip() else await docker.own_project()
+            control = Controller(docker, Catalog.environment(project))
+        app.state.controller = control
         task = asyncio.create_task(app.state.controller.loop()) if management_enabled else None
         try:
             yield

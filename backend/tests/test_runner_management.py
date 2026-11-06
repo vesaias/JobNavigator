@@ -485,3 +485,32 @@ async def test_idle_zero_keeps_runners_running(monkeypatch):
     await settled(c)
     assert _status(c, c.catalog.name("codex_cli")) == "running"
     await c.close()
+
+
+def test_the_project_comes_from_the_managers_own_container_when_not_set(monkeypatch):
+    """An install cloned into another folder has another Compose project (jtrakproject_llm,
+    jtrakproject_claude_accounts); assuming `jobnavigator` would miss its network and logins."""
+    monkeypatch.setenv("JN_COMPOSE_PROJECT", "")
+    assert Catalog.environment("jtrakproject").network == "jtrakproject_llm"
+    with pytest.raises(ValueError, match="JN_COMPOSE_PROJECT"):
+        Catalog.environment(None)
+    monkeypatch.setenv("JN_COMPOSE_PROJECT", "explicit")
+    assert Catalog.environment("jtrakproject").project == "explicit"
+
+
+@pytest.mark.asyncio
+async def test_own_project_reads_the_compose_label(monkeypatch):
+    from backend.runner_manager.docker import Docker
+    d = Docker.__new__(Docker)
+    monkeypatch.setattr("socket.gethostname", lambda: "abc123")
+
+    async def container(name):
+        assert name == "abc123"
+        return {"Config": {"Labels": {"com.docker.compose.project": "jtrakproject"}}}
+    d.container = container
+    assert await d.own_project() == "jtrakproject"
+
+    async def missing(name):
+        raise DockerError("Docker operation failed (HTTP 500)")
+    d.container = missing
+    assert await d.own_project() is None
