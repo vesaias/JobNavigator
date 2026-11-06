@@ -8,15 +8,8 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 
 ## [Unreleased]
 
-- Subscription CLIs now run in separate Codex, Claude Code and Antigravity runner
-  images. A private runner manager downloads missing images and starts the runners
-  selected by any account's effective model settings, including feature overrides
-  and scoring fallback. Unselected containers drain active requests and are removed;
-  images and logins remain. Models shows progress/errors and an owner retry action.
-  Compose profiles remain available with automatic management disabled. The backend image no longer
-  installs Node.js or these CLIs. Existing Codex/Antigravity auth volumes and
-  per-account Own/Inherit policies are preserved; Claude tokens remain in settings
-  or the backend environment. See `docs/CLI-RUNNERS.md` before upgrading.
+### Changed
+- **Subscription CLIs in their own containers** (by @volkotyk): Claude Code, Codex and Antigravity now run in separate runner containers instead of the backend image, which drops Node.js and the CLIs (4.88 GB → 2.84 GB). A private runner manager, the only service with the Docker socket, downloads and starts just the runners that some account's model settings use (Primary, feature overrides, scoring fallback); an unselected runner finishes its calls and is removed, its image and logins are kept. A runner with no call for `JN_RUNNER_IDLE_MINUTES` (default 10) is stopped and shows Sleeping, and the next call starts it again (a few seconds), so an idle install holds only the manager (~45 MB). Settings › Models shows each runner's state with an owner Retry. Own/Inherit login policies and the existing login volumes carry over; the manager reads the Compose project from its own container, so an install in a folder not named JobNavigator works too. Compose profiles remain for running the runners by hand (`JN_RUNNER_MANAGEMENT=0`). **Read `docs/CLI-RUNNERS.md` before upgrading.**
 
 ### Added
 - **Levels.fyi apply:** a Levels.fyi job whose own data names no employer link is applied to on Levels.fyi itself, so it counts like LinkedIn Easy Apply (Direct in the Link filter, Open goes to its Levels.fyi page) instead of a Board link.

@@ -56,6 +56,7 @@ def wire(token, monkeypatch):
     return app
 
 
+@pytest.mark.asyncio
 async def test_backend_and_runner_roundtrip_preserves_login_scope(wire, monkeypatch, tmp_path):
     monkeypatch.setattr(paths, "CODEX_ACCOUNTS_ROOT", str(tmp_path / "accounts"))
     account = uuid.uuid4()
@@ -83,6 +84,7 @@ async def test_backend_and_runner_roundtrip_preserves_login_scope(wire, monkeypa
     (CLITimeoutError("deadline", b"private partial output"), CLITimeoutError),
     (RuntimeError("transient"), RuntimeError),
 ])
+@pytest.mark.asyncio
 async def test_wire_preserves_error_class_without_leaking_partial_output(wire, monkeypatch, error, expected):
     async def fail(*a, **kw):
         raise error
@@ -94,6 +96,7 @@ async def test_wire_preserves_error_class_without_leaking_partial_output(wire, m
     assert "private partial output" not in str(caught.value)
 
 
+@pytest.mark.asyncio
 async def test_unavailable_runner_and_lost_response_are_not_replayed(token, monkeypatch):
     for error in (httpx.ConnectError("offline"), httpx.ReadTimeout("lost response")):
         count = []
@@ -108,6 +111,7 @@ async def test_unavailable_runner_and_lost_response_are_not_replayed(token, monk
         assert count == [1]
 
 
+@pytest.mark.asyncio
 async def test_busy_runner_rejects_without_queueing_or_executing(token, monkeypatch):
     release = asyncio.Event()
     started = []
@@ -135,6 +139,7 @@ async def test_busy_runner_rejects_without_queueing_or_executing(token, monkeypa
             await asyncio.gather(*pending)
 
 
+@pytest.mark.asyncio
 async def test_deleted_account_is_refused_and_inflight_state_is_removed(monkeypatch, tmp_path):
     monkeypatch.setattr(paths, "CODEX_ACCOUNTS_ROOT", str(tmp_path / "accounts"))
     account = uuid.uuid4()
@@ -159,6 +164,7 @@ def test_shared_service_credential_is_stable_and_never_overwrites_an_existing_lo
     assert ensure_token() == token
 
 
+@pytest.mark.asyncio
 async def test_concurrent_requests_never_share_account_or_claude_token(monkeypatch, tmp_path):
     monkeypatch.setattr(paths, "CLAUDE_ACCOUNTS_ROOT", str(tmp_path))
     observed = []
@@ -178,6 +184,7 @@ async def test_concurrent_requests_never_share_account_or_claude_token(monkeypat
     assert runtime._own_login_account() is None and runtime._claude_code_token() == ""
 
 
+@pytest.mark.asyncio
 async def test_real_subprocess_cancellation_reaps_process_and_preserves_partial_output(tmp_path):
     pidfile = tmp_path / "pid"
     task = asyncio.create_task(runtime._run_cli(
