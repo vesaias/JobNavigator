@@ -144,6 +144,13 @@ On small hosts, `JN_RUNNER_MEMORY_MB` caps each automatically created runner
 a cap cannot consume swap. The controller itself can use a normal Compose
 `mem_limit`. Manual-profile services use their own Compose resource settings.
 
+A selected runner that gets no call for `JN_RUNNER_IDLE_MINUTES` (default 10) is
+stopped and shows **Sleeping**: its container and logins stay, so the next call
+starts it again and waits until it is ready (a few seconds). The CLI itself runs
+only during a call, so an idle runner holds only its small server; stopping it
+frees that too. `0` keeps selected runners running. Manual-profile services are
+never stopped.
+
 ## Verification
 
 With local images tagged `jobnavigator-<service>:local`, run:

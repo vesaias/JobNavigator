@@ -403,3 +403,85 @@ def test_status_filters_other_accounts_and_restricts_retry(test_db, monkeypatch)
             retry_runners()
         assert error.value.status_code == 403
     assert len(runner_status()["providers"]) == 2
+
+
+def _idle_control(monkeypatch, minutes=1):
+    monkeypatch.setattr("backend.runner_manager.controller.read_token", lambda: "test")
+    client = AsyncMock()
+    client.get.return_value = httpx.Response(200, json={"management_version": 1, "protocol": 1,
+                                                         "provider": "codex_cli", "active_requests": 0})
+    client.post.return_value = httpx.Response(200, json={"protocol": 1, "result": {"text": "ok", "usage": {}}})
+    return Controller(FakeDocker(), Catalog("isolated", "local", "test", idle_minutes=minutes), client)
+
+
+def _status(c, name):
+    return c.docker.containers[name]["State"]["Status"]
+
+
+def test_idle_minutes_is_trusted_install_configuration(monkeypatch):
+    monkeypatch.setenv("JN_COMPOSE_PROJECT", "isolated")
+    assert Catalog.environment().idle_minutes == 10
+    monkeypatch.setenv("JN_RUNNER_IDLE_MINUTES", "0")
+    assert Catalog.environment().idle_minutes == 0
+    monkeypatch.setenv("JN_RUNNER_IDLE_MINUTES", "2000")
+    with pytest.raises(ValueError, match="JN_RUNNER_IDLE_MINUTES"):
+        Catalog.environment()
+
+
+@pytest.mark.asyncio
+async def test_an_idle_runner_is_stopped_and_the_next_call_starts_it(monkeypatch):
+    c = _idle_control(monkeypatch)
+    clock = [1000.0]
+    monkeypatch.setattr("backend.runner_manager.controller.time.monotonic", lambda: clock[0])
+    name = c.catalog.name("codex_cli")
+    c.desired(["codex_cli"])
+    await settled(c)
+    assert c.states["codex_cli"].phase == "ready" and _status(c, name) == "running"
+    clock[0] += 59
+    c.schedule()
+    await settled(c)
+    assert _status(c, name) == "running"            # not idle long enough
+    clock[0] += 2
+    c.schedule()
+    await settled(c)
+    assert c.states["codex_cli"].phase == "sleeping" and _status(c, name) == "exited"
+    assert name in c.docker.containers               # stopped, not removed: logins and image stay
+    c.schedule()
+    await settled(c)
+    assert _status(c, name) == "exited"              # the loop does not start it again
+    body = Completion(protocol=1, provider="codex_cli", prompt="test", system="", model="", max_tokens=10)
+    response = await c.complete(body)
+    assert response.status_code == 200
+    assert c.states["codex_cli"].phase == "ready" and _status(c, name) == "running"
+    await c.close()
+
+
+@pytest.mark.asyncio
+async def test_a_runner_with_a_call_in_flight_is_not_stopped(monkeypatch):
+    c = _idle_control(monkeypatch)
+    clock = [1000.0]
+    monkeypatch.setattr("backend.runner_manager.controller.time.monotonic", lambda: clock[0])
+    c.desired(["codex_cli"])
+    await settled(c)
+    c.client.get.return_value = httpx.Response(200, json={"management_version": 1, "protocol": 1,
+                                                           "provider": "codex_cli", "active_requests": 1})
+    clock[0] += 3600
+    c.schedule()
+    await settled(c)
+    assert c.states["codex_cli"].phase == "ready"
+    assert _status(c, c.catalog.name("codex_cli")) == "running"
+    await c.close()
+
+
+@pytest.mark.asyncio
+async def test_idle_zero_keeps_runners_running(monkeypatch):
+    c = _idle_control(monkeypatch, minutes=0)
+    clock = [1000.0]
+    monkeypatch.setattr("backend.runner_manager.controller.time.monotonic", lambda: clock[0])
+    c.desired(["codex_cli"])
+    await settled(c)
+    clock[0] += 86400
+    c.schedule()
+    await settled(c)
+    assert _status(c, c.catalog.name("codex_cli")) == "running"
+    await c.close()

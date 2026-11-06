@@ -23,18 +23,23 @@ class Catalog:
     image_prefix: str = "ghcr.io/vesaias/jobnavigator"
     tag: str = "latest"
     memory_mb: int = 0
+    # Minutes without a call before a ready runner is stopped (0 = keep it running).
+    idle_minutes: int = 0
 
     def __post_init__(self):
         if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", self.project):
             raise ValueError("Invalid Compose project name")
         if type(self.memory_mb) is not int or (self.memory_mb != 0 and not 64 <= self.memory_mb <= 65536):
             raise ValueError("JN_RUNNER_MEMORY_MB must be 0 (unlimited) or 64..65536")
+        if type(self.idle_minutes) is not int or not 0 <= self.idle_minutes <= 1440:
+            raise ValueError("JN_RUNNER_IDLE_MINUTES must be 0 (never) or 1..1440")
 
     @classmethod
     def environment(cls):
         return cls(os.environ["JN_COMPOSE_PROJECT"],
                    os.getenv("JN_RUNNER_IMAGE_PREFIX", "ghcr.io/vesaias/jobnavigator"),
-                   os.getenv("JN_IMAGE_TAG", "latest"), int(os.getenv("JN_RUNNER_MEMORY_MB", "0")))
+                   os.getenv("JN_IMAGE_TAG", "latest"), int(os.getenv("JN_RUNNER_MEMORY_MB", "0")),
+                   int(os.getenv("JN_RUNNER_IDLE_MINUTES", "10")))
 
     @property
     def network(self):
@@ -88,6 +93,8 @@ class State:
     failures: int = 0
     starting_since: float = 0
     unknown_since: float = 0
+    last_used: float = 0       # monotonic time of the last call (or of becoming ready)
+    sleeping: bool = False     # stopped for being idle; the next call starts it
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     task: object = None
 
@@ -116,6 +123,8 @@ class Controller:
             if selected != state.desired:
                 state.failures = 0
                 state.retry_after = 0
+                state.sleeping = False
+                state.last_used = 0
             state.desired = selected
         self.schedule()
 
@@ -232,6 +241,11 @@ class Controller:
                 if not state.desired:
                     await self._remove(provider, state, container)
                     return
+                if state.sleeping:
+                    if container["State"]["Status"] != "running":
+                        state.phase, state.message = "sleeping", self._sleep_message()
+                        return
+                    state.sleeping = False   # started by hand (`docker compose up`)
                 if container["State"]["Status"] != "running":
                     state.phase, state.message = "starting", "Starting runner container"
                     await self.docker.request("POST", f"/containers/{container['Id']}/start")
@@ -246,6 +260,7 @@ class Controller:
                     state.phase, state.message = "ready", "Container ready; subscription login is checked on use"
                     state.starting_since = state.unknown_since = 0
                     state.failures = 0
+                    await self._sleep_if_idle(provider, state, container, remote)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -258,6 +273,8 @@ class Controller:
     async def complete(self, body):
         provider = body.provider
         state = self.states[provider]
+        if state.desired and state.sleeping:
+            await self.wake(provider)
         if not state.desired or state.phase != "ready":
             self.schedule()
             raise DockerError("Runner is not ready. Check provider status in Settings > Models and try again")
@@ -265,6 +282,7 @@ class Controller:
             if not state.desired or state.phase != "ready":
                 raise DockerError("Runner selection changed; try again with the current settings")
             state.active += 1
+            state.last_used = time.monotonic()
         payload = body.model_dump(mode="json")
         payload["claude_token"] = body.claude_token.get_secret_value()
         limit = AGY_TIMEOUT if provider == "antigravity_cli" else CLI_TIMEOUT + 30
@@ -276,3 +294,33 @@ class Controller:
             raise DockerError("Connection to runner lost; execution outcome is unknown and was not replayed") from None
         finally:
             state.active -= 1
+            state.last_used = time.monotonic()
+
+    def _sleep_message(self):
+        return (f"Stopped after {self.catalog.idle_minutes} idle minutes to free memory; "
+                "the next call starts it")
+
+    async def _sleep_if_idle(self, provider, state, container, remote):
+        """Stop a ready runner that has had no call for `idle_minutes` (kept, not removed)."""
+        if not self.catalog.idle_minutes or state.active or remote["active_requests"]:
+            return
+        now = time.monotonic()
+        state.last_used = state.last_used or now
+        if now - state.last_used < self.catalog.idle_minutes * 60:
+            return
+        await self.docker.request("POST", f"/containers/{container['Id']}/stop", params={"t": 10})
+        state.sleeping = True
+        state.phase, state.message = "sleeping", self._sleep_message()
+        logger.info("Runner %s stopped after %s idle minutes", provider, self.catalog.idle_minutes)
+
+    async def wake(self, provider, timeout=90):
+        """Start a sleeping runner and wait until it answers (a call waits here)."""
+        state = self.states[provider]
+        state.sleeping = False
+        state.last_used = time.monotonic()
+        deadline = time.monotonic() + timeout
+        while state.desired and time.monotonic() < deadline:
+            await self.step(provider)
+            if state.phase in ("ready", "error"):
+                return
+            await asyncio.sleep(0.5)

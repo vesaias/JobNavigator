@@ -4,7 +4,7 @@ import { Button, Helper, Label } from '../ui'
 
 const NAMES = { codex_cli: 'Codex', claude_code: 'Claude Code', antigravity_cli: 'Antigravity' }
 const PHASES = { unknown: 'Waiting', absent: 'Inactive', pulling: 'Downloading', creating: 'Creating',
-  starting: 'Starting', ready: 'Ready', draining: 'Finishing requests', removing: 'Removing', error: 'Error' }
+  starting: 'Starting', ready: 'Ready', sleeping: 'Sleeping', draining: 'Finishing requests', removing: 'Removing', error: 'Error' }
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`
 
 export default function RunnerStatus({ accountId, isOwner }) {

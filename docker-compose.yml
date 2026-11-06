@@ -83,6 +83,7 @@ services:
       JN_IMAGE_TAG: ${JN_IMAGE_TAG:-latest}
       JN_RUNNER_IMAGE_PREFIX: ${JN_RUNNER_IMAGE_PREFIX:-ghcr.io/vesaias/jobnavigator}
       JN_RUNNER_MEMORY_MB: ${JN_RUNNER_MEMORY_MB:-0}
+      JN_RUNNER_IDLE_MINUTES: ${JN_RUNNER_IDLE_MINUTES:-10}
     volumes:
       # Only this restricted controller receives the Docker socket.
       - /var/run/docker.sock:/var/run/docker.sock
