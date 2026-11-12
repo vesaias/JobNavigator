@@ -460,3 +460,79 @@ async def test_scrape_collection_reports_an_expired_session(monkeypatch, landing
     with pytest.raises(lp.LinkedInSessionExpiredError, match="session expired"):
         await lp._scrape_collection(_WallPage(), "https://www.linkedin.com/jobs/collections/recommended/",
                                     "recommended")
+
+
+@pytest.mark.parametrize("pages_before_hang", [0, 1])
+@pytest.mark.asyncio
+async def test_scrape_collection_stops_on_a_page_that_never_returns(monkeypatch, pages_before_hang):
+    """A crashed browser page blocks Playwright calls forever (6.5 days on the box)."""
+    import asyncio as real_asyncio
+    from backend.scraper.sources import linkedin_personal as lp
+
+    never = real_asyncio.Event()
+
+    async def _no_sleep(_seconds):
+        return None
+    monkeypatch.setattr(lp.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr(lp, "PAGE_TIMEOUT", 0.05)
+
+    class _Page:
+        url = "https://www.linkedin.com/jobs/collections/recommended/"
+
+        async def goto(self, _url, **_kw):
+            return None
+
+    async def not_limited(*_a, **_k):
+        return False
+    monkeypatch.setattr(lp, "_handle_rate_limit", not_limited)
+
+    calls = []
+
+    async def cards(*_a, **_k):
+        calls.append(1)
+        if len(calls) > pages_before_hang:
+            await never.wait()
+        return [{"job_id": str(len(calls))}]
+    monkeypatch.setattr(lp, "_scrape_page_with_clicks", cards)
+
+    if pages_before_hang == 0:
+        with pytest.raises(RuntimeError, match="did not finish"):
+            await lp._scrape_collection(_Page(), _Page.url, "recommended")
+    else:
+        jobs = await lp._scrape_collection(_Page(), _Page.url, "recommended")
+        assert jobs == [{"job_id": "1"}]
+
+
+@pytest.mark.parametrize("pages_before_failure", [0, 2])
+@pytest.mark.asyncio
+async def test_scrape_collection_keeps_its_jobs_when_a_later_page_does_not_load(monkeypatch, pages_before_failure):
+    """Page 3 timed out in goto and the 48 jobs of pages 1 and 2 were lost (found=0, no error)."""
+    from backend.scraper.sources import linkedin_personal as lp
+
+    async def _no_sleep(_seconds):
+        return None
+    monkeypatch.setattr(lp.asyncio, "sleep", _no_sleep)
+
+    class _Page:
+        url = "https://www.linkedin.com/jobs/collections/recommended/"
+        loads = 0
+
+        async def goto(self, _url, **_kw):
+            self.loads += 1
+            if self.loads > pages_before_failure:
+                raise RuntimeError("Page.goto: Timeout 30000ms exceeded.\nCall log: ...")
+
+    async def not_limited(*_a, **_k):
+        return False
+    monkeypatch.setattr(lp, "_handle_rate_limit", not_limited)
+
+    async def cards(page, *_a, **_k):
+        return [{"job_id": str(page.loads)}]
+    monkeypatch.setattr(lp, "_scrape_page_with_clicks", cards)
+
+    if pages_before_failure == 0:
+        with pytest.raises(RuntimeError, match="Timeout 30000ms"):
+            await lp._scrape_collection(_Page(), _Page.url, "recommended")
+    else:
+        jobs = await lp._scrape_collection(_Page(), _Page.url, "recommended")
+        assert jobs == [{"job_id": "1"}, {"job_id": "2"}]

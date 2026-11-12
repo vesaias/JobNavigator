@@ -49,6 +49,7 @@ DELAY_BETWEEN_PAGES = (2.0, 4.0)       # between pagination pages
 DELAY_BETWEEN_COLLECTIONS = (5.0, 8.0) # between collections
 DELAY_ENRICHMENT = (5.0, 8.0)          # between enrichment page visits
 DELAY_SCROLL = (1.0, 2.0)              # between scroll iterations
+PAGE_TIMEOUT = 20 * 60                 # one page of 25 cards; a slow host needs 7 min
 
 ALL_COLLECTIONS = {
     "recommended": "https://www.linkedin.com/jobs/collections/recommended/",
@@ -742,6 +743,22 @@ async def _scrape_page_with_clicks(page, seen_ids: set, collection_name: str) ->
     return jobs
 
 
+async def _open_page(page, page_url: str, label: str, collected: list) -> bool:
+    """Load one collection page. A failed load raises when no jobs are collected yet;
+    with jobs it returns False, and the caller stops and keeps them."""
+    try:
+        await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
+    except Exception as e:
+        if not collected:
+            raise
+        reason = (str(e).splitlines() or [type(e).__name__])[0]
+        logger.warning(f"LinkedIn {label} did not load ({reason}), "
+                       f"returning {len(collected)} jobs collected so far")
+        return False
+    await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+    return True
+
+
 async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]:
     """Scrape a LinkedIn collection: paginate via ?start=N, click each card for detail panel."""
     logger.info(f"Scraping LinkedIn collection: {collection_name}")
@@ -756,8 +773,8 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
         page_url = f"{url}?start={start}" if "?" not in url else f"{url}&start={start}"
         logger.info(f"Loading {collection_name} page {page_num + 1} (start={start})")
 
-        await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
-        await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+        if not await _open_page(page, page_url, f"{collection_name} page {page_num + 1}", all_jobs):
+            break
 
         # A session that died mid-run lands on the login wall: say so instead of reporting 0 jobs.
         if any(part in (page.url or "") for part in _SIGNED_OUT_URLS):
@@ -767,8 +784,8 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
 
         if await _handle_rate_limit(page, f"page {page_num + 1}"):
             rate_limit_hits += 1
-            await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+            if not await _open_page(page, page_url, f"{collection_name} page {page_num + 1}", all_jobs):
+                break
             if await _check_rate_limit(page):
                 if rate_limit_hits >= 2 or not all_jobs:
                     # No jobs collected yet or repeated — raise so caller reports error
@@ -780,7 +797,17 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
                 logger.warning(f"Still rate-limited after retry, returning {len(all_jobs)} jobs collected so far")
                 break
 
-        page_jobs = await _scrape_page_with_clicks(page, seen_ids, collection_name)
+        try:
+            page_jobs = await asyncio.wait_for(
+                _scrape_page_with_clicks(page, seen_ids, collection_name), PAGE_TIMEOUT)
+        except asyncio.TimeoutError:
+            # Playwright calls on a crashed page (mouse.wheel, evaluate) never return.
+            message = (f"LinkedIn {collection_name} page {page_num + 1} did not finish in "
+                       f"{PAGE_TIMEOUT // 60} min (the browser page stopped responding)")
+            if not all_jobs:
+                raise RuntimeError(message) from None
+            logger.warning(f"{message}, returning {len(all_jobs)} jobs collected so far")
+            break
         logger.info(f"Page {page_num + 1}: {len(page_jobs)} new jobs")
 
         if not page_jobs:

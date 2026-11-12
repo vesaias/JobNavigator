@@ -138,3 +138,38 @@ async def test_run_company_delegates_to_company_pages(monkeypatch):
     from backend.scraper.orchestrator import run_company
     await run_company(FakeCompany())
     assert called["name"] == "Acme"
+
+
+@pytest.mark.asyncio
+async def test_run_search_cancels_a_search_that_never_returns(monkeypatch):
+    """A source that hangs must fail: the scheduler runs one scrape at a time."""
+    import asyncio
+    from backend.scraper import orchestrator
+    cancelled = []
+
+    async def hangs(search):
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.append(1)
+            raise
+
+    monkeypatch.setattr("backend.scraper.sources.levelsfyi.run", hangs)
+    monkeypatch.setattr(orchestrator, "search_timeout_minutes", lambda: 0.001)
+
+    class FakeSearch:
+        id = "s-1"; search_mode = "levels_fyi"
+
+    with pytest.raises(RuntimeError, match="did not finish"):
+        await orchestrator.run_search(FakeSearch())
+    assert cancelled == [1]
+
+
+@pytest.mark.parametrize("raw, expected", [(None, 360), ("90", 90), ("0", 1), ("x", 360)])
+def test_search_timeout_minutes_reads_the_environment(monkeypatch, raw, expected):
+    from backend.scraper import orchestrator
+    if raw is None:
+        monkeypatch.delenv("JN_SEARCH_TIMEOUT_MINUTES", raising=False)
+    else:
+        monkeypatch.setenv("JN_SEARCH_TIMEOUT_MINUTES", raw)
+    assert orchestrator.search_timeout_minutes() == expected

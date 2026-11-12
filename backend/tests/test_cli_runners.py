@@ -210,3 +210,31 @@ async def test_real_subprocess_cancellation_reaps_process_and_preserves_partial_
         if not task.done():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_backend_queues_calls_above_the_runner_slots(wire, monkeypatch):
+    """Scoring starts 5 calls and the runner executes 2: the other 3 wait in the backend."""
+    release = asyncio.Event()
+    running, peak = [], []
+
+    async def run(*a, **kw):
+        running.append(1)
+        peak.append(len(running))
+        await release.wait()
+        running.pop()
+        return {"text": "ok", "usage": {}}
+
+    monkeypatch.setattr(runtime, "execute", run)
+    calls = [asyncio.create_task(runner_client.complete("codex_cli", "p", "s", "m", 10))
+             for _ in range(5)]
+    for _ in range(100):
+        if len(running) == 2:
+            break
+        await asyncio.sleep(0.001)
+    await asyncio.sleep(0.01)
+    assert len(running) == 2
+    release.set()
+    results = await asyncio.gather(*calls)
+    assert [r["text"] for r in results] == ["ok"] * 5
+    assert max(peak) == 2
