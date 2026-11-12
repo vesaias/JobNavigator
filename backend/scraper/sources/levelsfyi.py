@@ -5,6 +5,7 @@ import logging
 import re
 import time
 from datetime import datetime, timezone
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.exc import IntegrityError
 
@@ -25,6 +26,28 @@ logger = logging.getLogger("jobnavigator.playwright")
 def _is_levelsfyi(url: str) -> bool:
     """Check if URL is a levels.fyi job search page."""
     return "levels.fyi" in url.lower() and "/jobs" in url.lower()
+
+
+class LevelsFyiRefusedError(RuntimeError):
+    """Levels.fyi did not serve the listing (HTTP error or bot check); a retry cannot fix it."""
+
+
+def _listing_url(url: str) -> str:
+    """The search URL without `jobId`. That parameter only opens one job in the side panel;
+    a URL copied from the browser keeps it, and Levels.fyi answers 404 for the whole
+    listing when that job is gone."""
+    parts = urlsplit(url)
+    query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k != "jobId"]
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def _check_listing(status, title: str) -> None:
+    """Raise when the page is not a listing, so the run reports an error and not 0 jobs."""
+    if status is not None and status >= 400:
+        raise LevelsFyiRefusedError(
+            f"Levels.fyi answered HTTP {status} for the search URL; open it in a browser and save a URL that works")
+    if "confirm you are human" in (title or "").lower():
+        raise LevelsFyiRefusedError("Levels.fyi showed its bot check instead of the job list; try again later")
 
 
 def _parse_levelsfyi_salary(location_text: str) -> tuple[str, str | None, int | None, int | None]:
@@ -194,7 +217,8 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
     page_num = 0
     try:
         page = await _new_page(browser)
-        await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        response = await page.goto(_listing_url(url), wait_until="domcontentloaded", timeout=45000)
+        _check_listing(response.status if response else None, await page.title())
 
         # Wait for job cards to render (client-side decryption + React render)
         try:
@@ -353,6 +377,8 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
                 for dp in detail_pages:
                     await _close_page(dp)
 
+    except LevelsFyiRefusedError:
+        raise
     except Exception as e:
         logger.error(f"levels.fyi scraper error: {e}")
         if debug:
