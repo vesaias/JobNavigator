@@ -743,6 +743,22 @@ async def _scrape_page_with_clicks(page, seen_ids: set, collection_name: str) ->
     return jobs
 
 
+async def _open_page(page, page_url: str, label: str, collected: list) -> bool:
+    """Load one collection page. A failed load raises when no jobs are collected yet;
+    with jobs it returns False, and the caller stops and keeps them."""
+    try:
+        await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
+    except Exception as e:
+        if not collected:
+            raise
+        reason = (str(e).splitlines() or [type(e).__name__])[0]
+        logger.warning(f"LinkedIn {label} did not load ({reason}), "
+                       f"returning {len(collected)} jobs collected so far")
+        return False
+    await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+    return True
+
+
 async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]:
     """Scrape a LinkedIn collection: paginate via ?start=N, click each card for detail panel."""
     logger.info(f"Scraping LinkedIn collection: {collection_name}")
@@ -757,8 +773,8 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
         page_url = f"{url}?start={start}" if "?" not in url else f"{url}&start={start}"
         logger.info(f"Loading {collection_name} page {page_num + 1} (start={start})")
 
-        await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
-        await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+        if not await _open_page(page, page_url, f"{collection_name} page {page_num + 1}", all_jobs):
+            break
 
         # A session that died mid-run lands on the login wall: say so instead of reporting 0 jobs.
         if any(part in (page.url or "") for part in _SIGNED_OUT_URLS):
@@ -768,8 +784,8 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
 
         if await _handle_rate_limit(page, f"page {page_num + 1}"):
             rate_limit_hits += 1
-            await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(random.uniform(*DELAY_PAGE_LOAD))
+            if not await _open_page(page, page_url, f"{collection_name} page {page_num + 1}", all_jobs):
+                break
             if await _check_rate_limit(page):
                 if rate_limit_hits >= 2 or not all_jobs:
                     # No jobs collected yet or repeated — raise so caller reports error
