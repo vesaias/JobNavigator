@@ -49,6 +49,7 @@ DELAY_BETWEEN_PAGES = (2.0, 4.0)       # between pagination pages
 DELAY_BETWEEN_COLLECTIONS = (5.0, 8.0) # between collections
 DELAY_ENRICHMENT = (5.0, 8.0)          # between enrichment page visits
 DELAY_SCROLL = (1.0, 2.0)              # between scroll iterations
+PAGE_TIMEOUT = 20 * 60                 # one page of 25 cards; a slow host needs 7 min
 
 ALL_COLLECTIONS = {
     "recommended": "https://www.linkedin.com/jobs/collections/recommended/",
@@ -780,7 +781,17 @@ async def _scrape_collection(page, url: str, collection_name: str) -> list[dict]
                 logger.warning(f"Still rate-limited after retry, returning {len(all_jobs)} jobs collected so far")
                 break
 
-        page_jobs = await _scrape_page_with_clicks(page, seen_ids, collection_name)
+        try:
+            page_jobs = await asyncio.wait_for(
+                _scrape_page_with_clicks(page, seen_ids, collection_name), PAGE_TIMEOUT)
+        except asyncio.TimeoutError:
+            # Playwright calls on a crashed page (mouse.wheel, evaluate) never return.
+            message = (f"LinkedIn {collection_name} page {page_num + 1} did not finish in "
+                       f"{PAGE_TIMEOUT // 60} min (the browser page stopped responding)")
+            if not all_jobs:
+                raise RuntimeError(message) from None
+            logger.warning(f"{message}, returning {len(all_jobs)} jobs collected so far")
+            break
         logger.info(f"Page {page_num + 1}: {len(page_jobs)} new jobs")
 
         if not page_jobs:
