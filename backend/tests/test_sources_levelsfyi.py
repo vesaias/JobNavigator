@@ -73,7 +73,7 @@ def test_listing_url_drops_the_job_id(url, expected):
 def test_check_listing_raises_when_the_page_is_not_a_listing(status, title, refused):
     from backend.scraper.sources import levelsfyi
     if refused:
-        with pytest.raises(levelsfyi.LevelsFyiRefusedError):
+        with pytest.raises(levelsfyi.LevelsFyiPageError):
             levelsfyi._check_listing(status, title)
     else:
         levelsfyi._check_listing(status, title)
@@ -110,6 +110,51 @@ async def test_a_refused_listing_is_an_error_and_not_zero_jobs():
 
     import unittest.mock as mock
     with mock.patch.object(levelsfyi, "_new_page", mock.AsyncMock(return_value=_Page())),             mock.patch.object(levelsfyi, "_close_page", mock.AsyncMock()):
-        with pytest.raises(levelsfyi.LevelsFyiRefusedError, match="HTTP 404"):
+        with pytest.raises(levelsfyi.LevelsFyiPageError, match="HTTP 404"):
             await levelsfyi._scrape_levelsfyi("https://www.levels.fyi/jobs?searchText=sre&jobId=1", browser=_Browser())
     assert _Page.opened == "https://www.levels.fyi/jobs?searchText=sre"
+
+
+class _El:
+    """A minimal element: `find` maps a selector to one child, `links` are its job links."""
+
+    def __init__(self, text="", href="", find=None, links=()):
+        self.text, self.href, self.find, self.links = text, href, find or {}, list(links)
+
+    async def query_selector(self, selector):
+        return self.find.get(selector)
+
+    async def query_selector_all(self, _selector):
+        return self.links
+
+    async def get_attribute(self, _name):
+        return self.href
+
+    async def inner_text(self):
+        return self.text
+
+    async def evaluate(self, _js):
+        return self.text
+
+
+@pytest.mark.asyncio
+async def test_card_is_read_with_the_class_names_levels_uses_now():
+    """"h_Bkua_companyJobTitle" has no "__" before the name: the old selectors matched
+    nothing, every job had no title and the run reported 0 jobs with no error."""
+    from backend.scraper.sources import levelsfyi
+    link = _El(href="/jobs?jobId=3jqk36ee2r7ir", find={
+        '[class*="companyJobTitle"]': _El("Manager, Site Reliability Engineering"),
+        '[class*="companyJobLocation"]': _El("Vancouver, BC · On-site"),
+        '[class*="companyJobDate"]': _El("2 months ago"),
+    })
+    card = _El(find={"h2": _El("LayerZero Labs")}, links=[link])
+    jobs, rejected = await levelsfyi._levelsfyi_extract_jobs_from_card(card, None, set())
+    assert rejected == []
+    assert [(j["company"], j["title"], j["url"], j["date_posted"]) for j in jobs] == [
+        ("LayerZero Labs", "Manager, Site Reliability Engineering",
+         "https://www.levels.fyi/jobs?jobId=3jqk36ee2r7ir", "2 months ago")]
+
+
+def test_card_selectors_do_not_depend_on_the_css_module_prefix():
+    from backend.scraper.sources import levelsfyi
+    assert 'div:has(> [class*="companyJobsContainer"])' in levelsfyi._CARD_SELECTORS

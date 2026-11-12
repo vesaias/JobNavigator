@@ -28,8 +28,18 @@ def _is_levelsfyi(url: str) -> bool:
     return "levels.fyi" in url.lower() and "/jobs" in url.lower()
 
 
-class LevelsFyiRefusedError(RuntimeError):
-    """Levels.fyi did not serve the listing (HTTP error or bot check); a retry cannot fix it."""
+class LevelsFyiPageError(RuntimeError):
+    """The page is not a listing the scraper can read (HTTP error, bot check, changed
+    layout); a retry cannot fix it."""
+
+
+# One company card. Levels.fyi renames its CSS classes ("x__companyJobTitle" became
+# "h_Bkua_companyJobTitle"), so every selector matches the stable part of the name only.
+_CARD_SELECTORS = (
+    '[class*="company-jobs-preview-card"][class*="__container"]',
+    'div:has(> [class*="companyJobsContainer"])',
+    'div:has(> a[href*="jobId="])',
+)
 
 
 def _listing_url(url: str) -> str:
@@ -44,10 +54,10 @@ def _listing_url(url: str) -> str:
 def _check_listing(status, title: str) -> None:
     """Raise when the page is not a listing, so the run reports an error and not 0 jobs."""
     if status is not None and status >= 400:
-        raise LevelsFyiRefusedError(
+        raise LevelsFyiPageError(
             f"Levels.fyi answered HTTP {status} for the search URL; open it in a browser and save a URL that works")
     if "confirm you are human" in (title or "").lower():
-        raise LevelsFyiRefusedError("Levels.fyi showed its bot check instead of the job list; try again later")
+        raise LevelsFyiPageError("Levels.fyi showed its bot check instead of the job list; try again later")
 
 
 def _parse_levelsfyi_salary(location_text: str) -> tuple[str, str | None, int | None, int | None]:
@@ -123,7 +133,7 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
 
         title = ""
         try:
-            title_el = await link.query_selector('[class*="__companyJobTitle"]')
+            title_el = await link.query_selector('[class*="companyJobTitle"]')
             if title_el:
                 title = await title_el.evaluate("""el => {
                     const clone = el.cloneNode(true);
@@ -138,7 +148,7 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
         work_arrangement = None
         salary_min = salary_max = None
         try:
-            loc_el = await link.query_selector('[class*="__companyJobLocation"]')
+            loc_el = await link.query_selector('[class*="companyJobLocation"]')
             if loc_el:
                 loc_text = (await loc_el.inner_text()).strip()
                 location, work_arrangement, salary_min, salary_max = _parse_levelsfyi_salary(loc_text)
@@ -147,7 +157,7 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
 
         date_posted = ""
         try:
-            date_el = await link.query_selector('[class*="__companyJobDate"]')
+            date_el = await link.query_selector('[class*="companyJobDate"]')
             if date_el:
                 date_posted = (await date_el.inner_text()).strip()
         except Exception:
@@ -248,10 +258,11 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
         while page_num < max_pages:
             page_num += 1
 
-            # Primary card selector, with fallback using :has() pseudo-class
-            cards = await page.query_selector_all('[class*="company-jobs-preview-card"][class*="__container"]')
-            if not cards:
-                cards = await page.query_selector_all('div:has(> a[href*="jobId="])')
+            cards = []
+            for selector in _CARD_SELECTORS:
+                cards = await page.query_selector_all(selector)
+                if cards:
+                    break
             if not cards:
                 cards = [None]
 
@@ -267,7 +278,7 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
             # Click next pagination button
             has_next = False
             try:
-                pag_buttons = await page.query_selector_all('[class*="paginationButton"] button.MuiButton-root')
+                pag_buttons = await page.query_selector_all('[class*="paginationButton"] .MuiButton-root')
                 if not pag_buttons:
                     logger.info("levels.fyi: no pagination buttons, single page")
                     break
@@ -299,7 +310,7 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
                                 if new_first and new_first != old_first_href:
                                     break  # Content changed
                                 # Also check if MUI button got outlined class (current page)
-                                cur_btns = await page.query_selector_all('[class*="paginationButton"] button.MuiButton-root')
+                                cur_btns = await page.query_selector_all('[class*="paginationButton"] .MuiButton-root')
                                 for cb in cur_btns:
                                     cb_text = (await cb.inner_text()).strip()
                                     cb_class = await cb.get_attribute("class") or ""
@@ -327,6 +338,10 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
             if page_count == 0 and page_num > 2:
                 logger.info("levels.fyi: 0 new jobs for 2+ consecutive pages, stopping")
                 break
+
+        if not jobs and await page.query_selector('a[href*="jobId="]'):
+            raise LevelsFyiPageError(
+                "Levels.fyi lists jobs, but the scraper read none of them: the page layout changed")
 
         # ── Pass 3: Enrich jobs with detail page data (concurrent) ────────
         if jobs:
@@ -377,7 +392,7 @@ async def _scrape_levelsfyi(url: str, browser=None, debug: bool = False, max_pag
                 for dp in detail_pages:
                     await _close_page(dp)
 
-    except LevelsFyiRefusedError:
+    except LevelsFyiPageError:
         raise
     except Exception as e:
         logger.error(f"levels.fyi scraper error: {e}")
