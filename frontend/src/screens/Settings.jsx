@@ -7,6 +7,7 @@ import { describeCron, whenShort, CRON_PRESETS } from '../time'
 import api, { authFailure } from '../api'
 import { MAX_ACCOUNTS, useFlushBeforeSwitch } from '../accounts'
 import { PURPOSE, SENT_SUMMARY, TelemetrySettingRow } from '../TelemetryChoice'
+import { UpdateStatusRow } from '../UpdateCheck'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useToasts, ToastStack } from '../Toast'
 import {
@@ -777,6 +778,13 @@ export default function Settings() {
         { kind: 'apikey', label: 'Dashboard API key', help: 'Saving refreshes the session cookie so iframes keep working.' },
         BT('DB backup', 'DB snapshot now, outside the cron.', 'Run backup', () => api.post('/db/backup'), { ownerOnly: true }),
       ]],
+      ['updates', '', 'Updates', '', [
+        SEL('Check for updates', 'Compares this install with GitHub. It only reports; it never updates the install.', 'update_check_mode',
+          [['release', 'New releases'], ['commit', 'New commits on main'], ['off', 'Off']], { w: '260px', dflt: 'release',
+            info: 'New releases compares the version with the latest GitHub release. New commits on main compares the commit of this clone with the head of main; the backend reads it from the clone’s .git, which docker-compose.yml mounts read-only. Only api.github.com is called, without a token and without data about this install. To update: git pull && docker compose pull && docker compose up -d. Commits on main have no prebuilt images, so after git pull build them with docker compose up --build -d.' }),
+        B('Repository', 'The GitHub repository to compare with, as owner/name. Empty = vesaias/JobNavigator.', 'update_check_repo', { mono: true, w: '260px', placeholder: 'vesaias/JobNavigator' }),
+        { kind: 'updates', label: 'Status', help: 'The last result. GitHub is asked at most every 6 hours.' },
+      ]],
       ['telemetry', '', 'Telemetry', '', [
         { kind: 'telemetry', label: 'Allow anonymous telemetry', help: PURPOSE,
           info: SENT_SUMMARY },
@@ -1146,6 +1154,8 @@ function Row({ r, ctx }) {
         return <ApiKeyRow value={val('dashboard_api_key')} save={save} flash={flash} />
       case 'telemetry':
         return <TelemetrySettingRow />
+      case 'updates':
+        return <UpdateStatusRow mode={val('update_check_mode', 'release')} repo={val('update_check_repo')} />
       case 'readonly': {
         const set = !!val(r.key)
         if (!set) return <Helper style={{ flex: 1, minWidth: 0 }}>{r.emptyText || 'Not set'}</Helper>

@@ -61,6 +61,8 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./backups:/app/backups
+      # Read-only: the update check (backend/update_check.py) reads the running commit from it.
+      - ./.git:/app/.git:ro
       - ./backend/.linkedin_api:/root/.linkedin_api
       - codex_auth:/root/.codex
       # agy keeps its OAuth token in a file here; no keyring in this image.

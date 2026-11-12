@@ -185,3 +185,5 @@ docker compose exec -T db sh -c 'pg_restore -U $POSTGRES_USER -d $POSTGRES_DB --
 To try a copy of your data elsewhere without it scraping, mailing or backing up as the real install, set `JN_SCHEDULER_DISABLED=1` in that copy's `.env`; the scheduler then does not start (manual runs still work).
 
 Update: `git pull && docker compose pull && docker compose up -d` (or `--build` if you build from source). Tables and settings migrate on startup; nothing to run by hand. `git pull` alone is not enough — the images must be pulled or rebuilt; an image older than the code is reported in the backend log, on `/health` (`image_outdated`) and in the dashboard's health line.
+
+Update check: Settings › Updates tells you when a new release (default) or new commits on `main` are available; it never updates by itself. The commit mode reads the clone's commit from `.git`, which Compose mounts read-only into the backend; an install without a git clone gets "running commit unknown". Commits on `main` have no prebuilt images, so after `git pull` run `docker compose up --build -d` instead of `pull`. Set it to Off to send no request to GitHub.

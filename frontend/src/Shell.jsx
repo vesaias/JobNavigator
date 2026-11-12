@@ -10,6 +10,7 @@ import { initTelemetry, track, trackPage } from './telemetry'
 import { Avatar, CheckGlyph, Helper, Menu, MenuHead, MenuItem, kb } from './ui'
 import { useToasts, ToastStack } from './Toast'
 import { useVersionWarning } from './versionCheck'
+import { useUpdateNotice } from './UpdateCheck'
 import { loadDemo } from './demoHooks'
 import {
   useAccounts, switchAccount, finishSwitch, openPicker, takeSwitchedNote,
@@ -231,6 +232,7 @@ export default function Shell() {
   // the backend: an error toast once per session + the health line below
   const versionToasts = useToasts()
   const versionWarn = useVersionWarning(__APP_VERSION__, versionToasts.push)
+  useUpdateNotice(versionToasts.push)   // owner only, once per new release or head commit
   const [needAccount, setNeedAccount] = useState(false)
   useEffect(() => {
     const on = () => setNeedAccount(true)
