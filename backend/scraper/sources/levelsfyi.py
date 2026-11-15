@@ -98,6 +98,7 @@ def _parse_levelsfyi_salary(location_text: str) -> tuple[str, str | None, int | 
 _JOB_ID_RE = levels_jobs.JOB_ID_RE
 
 
+
 def _levelsfyi_job_id(href: str) -> str | None:
     """The job id from a levels.fyi link, or None."""
     return levels_jobs.job_id(href)
@@ -194,7 +195,12 @@ async def _levelsfyi_extract_detail(page, job_url: str) -> dict:
     try:
         await page.goto(job_url, wait_until="domcontentloaded", timeout=20000)
 
-        # __NEXT_DATA__ is SSR — available immediately on domcontentloaded
+        # __NEXT_DATA__ is SSR, but Levels.fyi's AWS WAF can first serve a challenge page that runs
+        # a script and reloads into the real one; wait for the data instead of reading the challenge.
+        try:
+            await page.wait_for_selector("#__NEXT_DATA__", state="attached", timeout=15000)
+        except Exception:
+            logger.debug(f"levels.fyi detail: no page data after 15 s for {job_url}")
         try:
             next_data = await page.evaluate("""() => {
                 const el = document.getElementById('__NEXT_DATA__');
