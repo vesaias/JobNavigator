@@ -10,24 +10,34 @@ function dashboardHost(serverUrl) {
   try { return new URL(serverUrl || 'http://localhost').hostname.toLowerCase() } catch { return 'localhost' }
 }
 
+let frameRulesQueue = Promise.resolve();
+
 function setupFrameRules() {
-  chrome.storage.sync.get(['serverUrl', 'previewUnblock'], (settings) => {
-    const host = dashboardHost(settings.serverUrl);
-    const DNR = chrome.declarativeNetRequest;
-    // popup toggle "Posting preview": off removes the rules entirely
-    if (settings.previewUnblock === false) {
-      chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [1, 2] }, () => console.log('Frame header rules off'));
-      return;
-    }
-    const condition = {
-      urlFilter: "*",
-      resourceTypes: [DNR.ResourceType.SUB_FRAME],
-      initiatorDomains: [host],
-      // never the dashboard's own responses: its cached-page reader is sandboxed by a CSP header
-      excludedRequestDomains: [host],
-    };
-    chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [1, 2] }, () => {
-      chrome.declarativeNetRequest.updateSessionRules({
+  frameRulesQueue = frameRulesQueue.then(() => new Promise((resolve) => {
+    chrome.storage.sync.get(['serverUrl', 'previewUnblock'], (settings) => {
+      const host = dashboardHost(settings.serverUrl);
+      const DNR = chrome.declarativeNetRequest;
+      // popup toggle "Posting preview": off removes the rules entirely
+      if (settings.previewUnblock === false) {
+        DNR.updateSessionRules({ removeRuleIds: [1, 2] }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to remove rules:', chrome.runtime.lastError.message || chrome.runtime.lastError);
+          } else {
+            console.log('Frame header rules off');
+          }
+          resolve();
+        });
+        return;
+      }
+      const condition = {
+        urlFilter: "*",
+        resourceTypes: [DNR.ResourceType.SUB_FRAME],
+        initiatorDomains: [host],
+        // never the dashboard's own responses: its cached-page reader is sandboxed by a CSP header
+        excludedRequestDomains: [host],
+      };
+      DNR.updateSessionRules({
+        removeRuleIds: [1, 2],
         addRules: [
           {
             id: 1,
@@ -56,13 +66,15 @@ function setupFrameRules() {
         ]
       }, () => {
         if (chrome.runtime.lastError) {
-          console.error('Failed to add rules:', chrome.runtime.lastError);
+          console.error('Failed to add rules:', chrome.runtime.lastError.message || chrome.runtime.lastError);
         } else {
           console.log('Frame header rules installed for frames opened by', host);
         }
+        resolve();
       });
     });
-  });
+  }));
+  return frameRulesQueue;
 }
 
 chrome.runtime.onInstalled.addListener(() => {
