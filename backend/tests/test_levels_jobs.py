@@ -174,3 +174,18 @@ def test_a_salary_string_that_is_not_a_number_is_ignored():
     out = levels_jobs.job_fields({"minBaseSalary": "competitive", "minTotalSalary": "130115", "baseSalaryCurrency": "USD"})
     assert out["salary_min"] is None    # the first non-empty field wins; a non-number gives no value
     assert levels_jobs.job_fields({"minBaseSalary": "120000", "baseSalaryCurrency": "EUR"})["salary_min"] is None
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Senior Product Manager, Commerce Platform a day ago\nPalo Alto, California, United States · $159K - $243K",
+     ("Senior Product Manager, Commerce Platform", "Palo Alto, California, United States · $159K - $243K", "a day ago")),
+    ("Product Manager, Broadband 2 days ago\nHerndon, VA · Hybrid · $102K - $184K",
+     ("Product Manager, Broadband", "Herndon, VA · Hybrid · $102K - $184K", "2 days ago")),
+    ("Staff PM, Payments\n3 weeks ago\nNew York, NY · Remote",
+     ("Staff PM, Payments", "New York, NY · Remote", "3 weeks ago")),
+    ("Program Manager\nAustin, TX", ("Program Manager", "Austin, TX", "")),
+    ("", ("", "", "")),
+])
+def test_a_job_link_is_read_from_its_text_when_class_names_change(text, expected):
+    from backend.scraper.sources.levelsfyi import _split_link_text
+    assert _split_link_text(text) == expected

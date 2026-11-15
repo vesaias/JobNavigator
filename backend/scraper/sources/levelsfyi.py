@@ -104,6 +104,33 @@ def _levelsfyi_job_id(href: str) -> str | None:
     return levels_jobs.job_id(href)
 
 
+
+_POSTED_RE = re.compile(r"\s*\b((?:\d+|an?)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday|just now)\s*$", re.I)
+
+# Company heading of the card a job link sits in, found by structure, not class names: the
+# nearest ancestor that holds an <h2>.
+_CARD_COMPANY_JS = """el => { let n = el.parentElement;
+    while (n && !n.querySelector('h2')) n = n.parentElement;
+    const h = n && n.querySelector('h2'); return h ? h.innerText.trim() : ''; }"""
+
+
+def _split_link_text(text: str) -> tuple[str, str, str]:
+    """(title, location/pay line, posted) from a job link's visible text, used when the class
+    names no longer match: the first line is the title followed by when it was posted
+    ("Senior PM, Payments 2 days ago"); the line with a middle dot is location, arrangement and pay."""
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    if not lines:
+        return "", "", ""
+    m = _POSTED_RE.search(lines[0])
+    title = lines[0][: m.start()].strip() if m else lines[0]
+    posted = m.group(1) if m else ""
+    rest = lines[1:]
+    if not posted and rest and _POSTED_RE.fullmatch(" " + rest[0]):
+        posted = rest.pop(0).strip()
+    loc = next((line for line in rest if "·" in line), rest[0] if rest else "")
+    return title, loc, posted
+
+
 async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bool = False):
     """Extract all job links from a single company card. Returns (jobs, rejected)."""
     jobs = []
@@ -164,17 +191,32 @@ async def _levelsfyi_extract_jobs_from_card(card, page, seen_ids: set, debug: bo
         except Exception:
             pass
 
+        if not title:   # the class names changed again: read the link's visible text instead
+            try:
+                title, loc_text, posted = _split_link_text(await link.inner_text())
+                if loc_text and not location:
+                    location, work_arrangement, salary_min, salary_max = _parse_levelsfyi_salary(loc_text)
+                date_posted = date_posted or posted
+            except Exception:
+                pass
+        link_company = company_name
+        if not link_company:
+            try:
+                link_company = await link.evaluate(_CARD_COMPANY_JS)
+            except Exception:
+                link_company = ""
+
         job_url = f"https://www.levels.fyi/jobs?jobId={job_id}"
 
         if not title:
             if debug:
-                rejected_list.append({"title": "(empty)", "url": job_url, "company": company_name, "reason": "No title"})
+                rejected_list.append({"title": "(empty)", "url": job_url, "company": link_company, "reason": "No title"})
             continue
 
         jobs.append({
             "title": title,
             "url": job_url,
-            "company": company_name,
+            "company": link_company,
             "location": location,
             "work_arrangement": work_arrangement,
             "salary_min": salary_min,
