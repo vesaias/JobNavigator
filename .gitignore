@@ -157,6 +157,7 @@ docs/*
 !docs/runner-containers.gif
 !docs/CLI-RUNNERS.md
 !docs/RUNNER-MANAGEMENT-PLAN.md
+!docs/MCP.md
 docker-compose.test.yml
 
 # git worktrees (isolated feature branches)

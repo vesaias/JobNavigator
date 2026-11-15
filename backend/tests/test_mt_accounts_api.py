@@ -458,6 +458,9 @@ def test_own_pin_change_needs_current_pin_and_reissues_the_cookie(client, test_d
     assert new_cookie and new_cookie != old_cookie
     # the new cookie keeps this browser in; the old one is dead
     assert browser.get("/api/auth/me").json()["account"]["id"] == str(m.id)
+    # Replace, not add: the jar keys cookies by domain too, and with httpx2 (which the
+    # TestClient uses once `mcp` installs it) the server-set new cookie is sent first.
+    browser.cookies.delete("jn_account")
     browser.cookies.set("jn_account", old_cookie)
     assert browser.get("/api/jobs").status_code == 401
     test_db.expire_all()

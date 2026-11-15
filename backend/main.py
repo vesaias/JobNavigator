@@ -1,6 +1,6 @@
 """FastAPI entry point for JobNavigator."""
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, Query, Request, HTTPException
@@ -112,8 +112,10 @@ async def lifespan(app: FastAPI):
     from backend.runner_management import coordinator, enabled as runner_management_enabled
     if runner_management_enabled():
         coordinator.start()
+    run_mcp = mcp_server.endpoint.run if mcp_server else nullcontext
     try:
-        yield
+        async with run_mcp():
+            yield
     finally:
         await coordinator.stop()
 
@@ -641,6 +643,17 @@ app.include_router(autofill_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(accounts_router, prefix="/api")
 app.include_router(gmail_router, prefix="/api")
+
+# MCP server (read tools) for MCP clients; behind the same auth middleware as the API.
+try:
+    from backend import mcp_server  # noqa: E402
+except ImportError as _mcp_err:
+    # Code pulled without rebuilding the image: the `mcp` package is not installed.
+    # The backend must still start (image_check.py reports the stale image).
+    mcp_server = None
+    logger.warning("MCP server is off: %s. Rebuild or pull the backend image.", _mcp_err)
+else:
+    app.add_route(mcp_server.PATH, mcp_server.endpoint, include_in_schema=False)
 
 
 # A malformed UUID in a path (/api/jobs/abc) makes Postgres raise DataError deep in
