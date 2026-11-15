@@ -1,4 +1,5 @@
 """HTTP transport to optional CLI runners. Account policy stays in llm_client."""
+import asyncio
 import os
 
 import httpx
@@ -6,8 +7,20 @@ import httpx
 from backend.cli_runner.auth import ensure_token
 from backend.cli_runner.protocol import (
     AGY_TIMEOUT, CLI_TIMEOUT, PROTOCOL_VERSION, SERVICES, CLITimeoutError,
-    NonRetryableLLMError,
+    RUNNER_SLOTS, NonRetryableLLMError,
 )
+
+_gates = {}  # provider -> (event loop, semaphore)
+
+
+def _gate(provider):
+    """The queue for one runner. The backend is the only client and has one event loop;
+    the test suite uses a new loop for each case, so a new loop gets a new semaphore."""
+    loop = asyncio.get_running_loop()
+    held = _gates.get(provider)
+    if held is None or held[0] is not loop:
+        held = _gates[provider] = (loop, asyncio.Semaphore(RUNNER_SLOTS))
+    return held[1]
 
 
 async def complete(provider, prompt, system, model, max_tokens, *, account_id=None,
@@ -29,10 +42,13 @@ async def complete(provider, prompt, system, model, max_tokens, *, account_id=No
     except (OSError, RuntimeError):
         raise NonRetryableLLMError("Cannot read or create the shared runner credential") from None
     try:
-        # Never inherit a host HTTP proxy for this private service connection.
-        async with httpx.AsyncClient(timeout=httpx.Timeout(limit + 10, connect=5), trust_env=False) as client:
-            response = await client.post(f"{base}/v1/complete", json=payload,
-                                         headers={"Authorization": f"Bearer {token}"})
+        # Scoring can start more calls than a runner executes (scoring_max_concurrent
+        # against RUNNER_SLOTS): the extra calls wait here and the runner rejects none.
+        async with _gate(provider):
+            # Never inherit a host HTTP proxy for this private service connection.
+            async with httpx.AsyncClient(timeout=httpx.Timeout(limit + 10, connect=5), trust_env=False) as client:
+                response = await client.post(f"{base}/v1/complete", json=payload,
+                                             headers={"Authorization": f"Bearer {token}"})
     except httpx.ConnectError:
         if enabled():
             raise NonRetryableLLMError(

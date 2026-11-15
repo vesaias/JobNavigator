@@ -4,7 +4,9 @@ scheduler + API triggers import from; internal sources/ modules are implementati
 Accounts (MT-8): run_all() is the shared-scrape fan-out — identical targets of different
 accounts are fetched once and ingested per account (see backend/scraper/targets.py). A
 manual run of one search (_run_search_by_id) or company feeds only the caller's account."""
+import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -47,7 +49,24 @@ async def run_search(search: Search, proxy_url: Optional[str] = None, shared=Non
         kwargs["proxy_url"] = proxy_url
     if mode.shareable and shared is not None:
         kwargs["shared"] = shared
-    return await module.run(search, **kwargs)
+    minutes = search_timeout_minutes()
+    try:
+        return await asyncio.wait_for(module.run(search, **kwargs), minutes * 60)
+    except asyncio.TimeoutError:
+        # The scheduler runs one scrape at a time: a search that never returns stops
+        # every later run. Cancel it and report the failure on its ScrapeLog row.
+        raise RuntimeError(
+            f"Search did not finish in {minutes} min and was cancelled"
+            " (JN_SEARCH_TIMEOUT_MINUTES)") from None
+
+
+def search_timeout_minutes() -> int:
+    """The longest time one search may run. The default is above the longest correct run:
+    LinkedIn Personal reads 2 collections of 20 pages, and a slow host needs 7 min per page."""
+    try:
+        return max(1, int(os.getenv("JN_SEARCH_TIMEOUT_MINUTES") or 360))
+    except ValueError:
+        return 360
 
 
 # ── Per-company dispatch ────────────────────────────────────────────────────

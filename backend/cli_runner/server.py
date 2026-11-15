@@ -9,7 +9,9 @@ from fastapi.responses import JSONResponse
 
 from . import runtime
 from .auth import read_token
-from .protocol import PROTOCOL_VERSION, SERVICES, CLITimeoutError, NonRetryableLLMError
+from .protocol import (
+    PROTOCOL_VERSION, RUNNER_SLOTS, SERVICES, CLITimeoutError, NonRetryableLLMError,
+)
 from .schemas import Completion
 
 
@@ -23,7 +25,7 @@ def create_app(provider=None):
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.state.active_requests = 0
     # One uvicorn worker. Fast rejection avoids minutes spent waiting outside CLI timeouts.
-    slots = asyncio.Semaphore(2)
+    slots = asyncio.Semaphore(RUNNER_SLOTS)
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
