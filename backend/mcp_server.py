@@ -27,7 +27,7 @@ _ERROR_CHARS = 500
 server = MCPServer(
     "JobNavigator",
     instructions=(
-        "A JobNavigator install: jobs, searches, companies, applications, resumes, "
+        "A JobNavigator install: jobs, searches, applications, resumes, "
         "cover letters, scrape runs and logs. All data belongs to the account of the "
         "X-Account-Token header. Most tools only read. update_jobs, tailor_resume and "
         "generate_cover_letter change data; the last two start LLM runs in the "
@@ -120,13 +120,6 @@ async def get_job(ctx: Context, job_id: str) -> str:
 async def list_searches(ctx: Context) -> str:
     """All job-board searches with their configuration and the result of the last run."""
     return await _get(ctx, "/api/searches")
-
-
-@_read_tool
-async def list_companies(ctx: Context, active: Optional[bool] = None,
-                         tier: Optional[int] = None) -> str:
-    """Tracked companies with their career-page scrape configuration and counts."""
-    return await _get(ctx, "/api/companies", active=active, tier=tier)
 
 
 @_read_tool

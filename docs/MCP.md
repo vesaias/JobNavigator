@@ -1,6 +1,6 @@
 # MCP server
 
-JobNavigator has an MCP server at `<dashboard>/api/mcp`. An MCP client, for example Claude Code, can read your jobs, searches, companies, applications and scrape logs through it.
+JobNavigator has an MCP server at `<dashboard>/api/mcp`. An MCP client, for example Claude Code, can read your jobs, searches, applications, resumes, cover letters and scrape logs through it.
 
 Most tools only read. Four tools change data: `update_jobs`, `mark_job_applied`, `tailor_resume` and `generate_cover_letter`. An MCP client asks before it calls a tool that is not read-only.
 
@@ -35,7 +35,6 @@ Then ask Claude Code, for example: "Which searches failed in their last runs?"
 | `list_jobs` | Jobs with filters (status, company, score, search, source, location, title), without the long text fields |
 | `get_job` | One job with its description and scoring report |
 | `list_searches` | Searches with their configuration and last run |
-| `list_companies` | Tracked companies with their scrape configuration |
 | `list_applications` | Applications, most recently updated first |
 | `list_scheduled_jobs` | Scheduler jobs with their next run time |
 | `list_active_runs` | Background runs in progress |
@@ -61,6 +60,8 @@ Write tools:
 Each tool is one request to the REST API with your headers: a `GET` for a read tool, the dashboard's own `POST` for a write tool. A tool therefore shows and does exactly what the same API call shows and does.
 
 `tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `list_in_flight`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
+
+There is no tool for the company list: with its scrape configuration it is too large for one reply (about 300 KB for 200 companies). `list_failing_sources` names the companies whose scrapes fail.
 
 The server does not save files. To save a PDF, download `GET /api/resumes/{id}/pdf` or `GET /api/cover-letters/{id}/pdf` on your computer with the same two headers.
 

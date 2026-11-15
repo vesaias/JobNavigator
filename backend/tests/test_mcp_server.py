@@ -51,7 +51,7 @@ def _tools(c):
 def test_tool_list_marks_the_write_tools(client):
     tools = _tools(client)
     names = {t["name"] for t in tools}
-    assert {"get_stats", "list_jobs", "get_job", "list_searches", "list_companies",
+    assert {"get_stats", "list_jobs", "get_job", "list_searches",
             "list_applications", "list_scheduled_jobs", "list_active_runs",
             "list_run_history", "get_scrape_log", "list_failing_sources",
             "get_activity_log", "list_runners", "list_in_flight", "get_run",
