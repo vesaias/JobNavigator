@@ -56,8 +56,8 @@ Then ask Claude Code, for example: "Which searches failed in their last runs?"
 | `get_activity_log` | Activity log entries |
 | `list_runners` | State of the CLI runner containers |
 | `list_in_flight` | Runs in progress per job (tailor, cover letter, scoring) |
-| `get_run` | One background run: status and the error text of a failure |
-| `list_resumes` | Resumes without their content; base resumes or tailored copies |
+| `get_run` | One background run: status, the error text of a failure, and the ids of what it created (`meta.created`) |
+| `list_resumes` | Resumes without their content; filters for base or tailored, one job, creation time, count |
 | `list_cover_letters` | Cover letters, optionally for one job |
 | `get_resume` | One resume with its content |
 | `get_cover_letter` | One cover letter with its text |
@@ -74,7 +74,9 @@ Write tools:
 
 Each tool is one request to the REST API with your headers: a `GET` for a read tool, the dashboard's own `POST` for a write tool. A tool therefore shows and does exactly what the same API call shows and does.
 
-`tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `list_in_flight`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
+`tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `get_run`. A completed tailor run names the new copy and the scoring run that follows it (`meta.created.resume_id`, `meta.created.chained_run_id`); a completed cover-letter run names the letter (`meta.created.cover_letter_id`). A run that a backend restart ended is `failed` with the error `Process restarted`.
+
+Keep replies small: `list_jobs` takes `fields` (the row keys to keep) for long lists, and `list_resumes` takes `job_id`, `created_after` and `limit`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
 
 There is no tool for the company list: with its scrape configuration it is too large for one reply (about 300 KB for 200 companies). `list_failing_sources` names the companies whose scrapes fail.
 

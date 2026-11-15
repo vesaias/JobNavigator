@@ -317,6 +317,26 @@ def _take_run_failure() -> Optional[str]:
     return reason
 
 
+# What the tracked run created, for a caller that follows it by run id: the ids go to
+# JobRun.meta["created"], because result_summary is text for people. Per task, like
+# _run_failure; a new dict on each note, so a run launched from inside another one
+# (which copies the context) never shares its parent's dict.
+_run_created: contextvars.ContextVar[Optional[dict]] = contextvars.ContextVar(
+    "jn_run_created", default=None
+)
+
+
+def note_run_created(**ids) -> None:
+    """Record ids of what the currently tracked run created (resume_id, chained_run_id, ...)."""
+    _run_created.set({**(_run_created.get() or {}), **{k: str(v) for k, v in ids.items() if v}})
+
+
+def _take_run_created() -> Optional[dict]:
+    created = _run_created.get()
+    _run_created.set(None)
+    return created
+
+
 class JobAlreadyRunningError(Exception):
     def __init__(self, job_type: str, elapsed_seconds: float):
         self.job_type = job_type
@@ -545,7 +565,8 @@ async def _gated(limiter: Optional["TaskLimiter"], running_job: "RunningJob"):
             _scrape_finished()
 
 
-def _finish_job_run(run_id: uuid.UUID, status: str, result_summary: Optional[str], error: Optional[str]) -> None:
+def _finish_job_run(run_id: uuid.UUID, status: str, result_summary: Optional[str], error: Optional[str],
+                    created: Optional[dict] = None) -> None:
     db = SessionLocal()
     try:
         # By its own (random, unique) id: an install-wide run belongs to the owner even
@@ -561,6 +582,8 @@ def _finish_job_run(run_id: uuid.UUID, status: str, result_summary: Optional[str
             run.duration_seconds = round((now - started).total_seconds(), 1)
             run.result_summary = result_summary
             run.error = sanitize_run_error(error)
+            if created:
+                run.meta = {**(run.meta or {}), "created": created}
             db.commit()
     finally:
         db.close()
@@ -646,11 +669,12 @@ async def _tracked_run(job_type, trigger, scope_key, meta, target_job_id, compan
 
     try:
         _run_failure.set(None)
+        _run_created.set(None)
         async with _gated(limiter, running_job):
             yield running_job
         reason = _take_run_failure()
         _finish_job_run(run_id, "failed" if reason else "completed",
-                        running_job.summary, reason)
+                        running_job.summary, reason, _take_run_created())
     except Exception as e:
         _finish_job_run(run_id, "failed", None, str(e))
         raise
@@ -713,6 +737,7 @@ def launch_background(
     async def _run():
         try:
             _run_failure.set(None)
+            _run_created.set(None)
             # The gate is taken here, before the worker runs, so a queued task
             # holds nothing but itself — no DB connection, no LLM slot.
             async with _gated(limiter_for_job_type(job_type), running_job):
@@ -721,7 +746,8 @@ def launch_background(
             summary = result.strip() if isinstance(result, str) and result.strip() else None
             # …but it may also have reported a failure it handled itself.
             reason = _take_run_failure()
-            _finish_job_run(run_id, "failed" if reason else "completed", summary, reason)
+            _finish_job_run(run_id, "failed" if reason else "completed", summary, reason,
+                            _take_run_created())
         except Exception as e:
             logger.error(f"Background job {job_type} failed: {e}")
             _finish_job_run(run_id, "failed", None, str(e))

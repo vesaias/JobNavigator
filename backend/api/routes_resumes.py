@@ -6,11 +6,12 @@ import logging
 import re
 import unicodedata
 import uuid as _uuid
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 from urllib.parse import quote as _url_quote, urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
@@ -18,7 +19,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from backend.accounts.owned import get_owned, get_owned_or_404, get_persona, owned_id_or_404
 from backend.models.db import get_db, Resume, TracerLink, TracerClickEvent, Job, Application, SessionLocal, utcnow, Persona
 from backend.accounts.settings import get_setting
-from backend.api._input import str_field
+from backend.api._input import str_field, uuid_filter
 from backend.analyzer.model_json import UNPARSEABLE_MESSAGE, ModelReplyError, parse_model_json
 from backend.job_monitor import launch_background, JobAlreadyRunningError
 from backend.scraper._shared.link_kinds import job_link
@@ -648,11 +649,23 @@ def list_templates():
 # ── CRUD ────────────────────────────────────────────────────────────────────
 
 @router.get("")
-def list_resumes(is_base: Optional[bool] = None, db: Session = Depends(get_db)):
-    """List all resumes. Optional filter: is_base=true for base resumes only."""
+def list_resumes(is_base: Optional[bool] = None, job_id: Optional[str] = None,
+                 created_after: Optional[datetime] = None,
+                 limit: Annotated[Optional[int], Query(ge=1, le=500)] = None,
+                 db: Session = Depends(get_db)):
+    """List resumes, most recently updated first. Optional filters: is_base=true for base
+    resumes only, job_id for the copies tailored for one job, created_after (ISO time)
+    for the resumes created later than that, limit for the newest N."""
     q = db.query(Resume).order_by(Resume.updated_at.desc())
     if is_base is not None:
         q = q.filter(Resume.is_base == is_base)
+    job_id = uuid_filter(job_id, "job_id")
+    if job_id:
+        q = q.filter(Resume.job_id == job_id)
+    if created_after is not None:
+        q = q.filter(Resume.created_at > created_after)
+    if limit is not None:
+        q = q.limit(limit)
     resumes = q.all()
     return [_resume_to_dict(r) for r in resumes]
 
@@ -1174,10 +1187,11 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
         finally:
             db.close()
 
+        chained_run_id = None
         if chain_depth and job_id:
             try:
                 from backend.analyzer.cv_scorer import score_single_job
-                launch_background(
+                chained_run_id = launch_background(
                     "analyze_job",
                     score_single_job,
                     trigger="manual",
@@ -1195,6 +1209,8 @@ async def _tailor_impl(base_resume_id: str, job_id: str | None, job_description_
                 # Non-fatal -- tailor succeeded, chain is a nice-to-have
                 logger.warning(f"Tailor chain score failed to launch: {_e}")
         logger.info(f"Tailor: created resume {tailored_id} for job {job_id}")
+        from backend.job_monitor import note_run_created
+        note_run_created(resume_id=tailored_id, chained_run_id=chained_run_id)
         # Returned string becomes JobRun.result_summary (Stats -> Run history).
         return (f"Created '{name}'"
                 + (f" - {chain_depth} score chained" if chain_depth and job_id else ""))

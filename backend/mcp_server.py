@@ -95,6 +95,7 @@ async def list_jobs(
     location: Optional[str] = None,
     title_search: Optional[str] = None,
     sort_by: Literal["date", "score", "salary", "company"] = "date",
+    fields: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
 ) -> str:
@@ -105,11 +106,16 @@ async def list_jobs(
     search from `list_searches`. `title_search` is a substring of the title.
     `limit` is 200 at most. A row has `tailored_resume_id` when the job has a tailored
     resume. Use `get_job` for the description and the scoring report.
+
+    A full row is about 1.2 KB. For more than 20 rows, give `fields`: a comma-separated
+    list of the row keys to keep, for example
+    `id,company,title,best_score,status,link,link_kind,location,tailored_resume_id,discovered_at`.
     """
     return await _get(ctx, "/api/jobs", brief=True, status=status, company=company,
                       min_score=min_score, max_score=max_score, search_id=search_id,
                       source=source, saved=saved, remote=remote, location=location,
-                      title_search=title_search, sort_by=sort_by, limit=limit, offset=offset)
+                      title_search=title_search, sort_by=sort_by, fields=fields,
+                      limit=limit, offset=offset)
 
 
 @_read_tool
@@ -203,18 +209,29 @@ async def list_in_flight(ctx: Context, job_ids: Optional[str] = None) -> str:
 
 @_read_tool
 async def get_run(ctx: Context, run_id: str) -> str:
-    """One background run by its `run_id`: status, times and the error text of a failure."""
+    """One background run by its `run_id`: status, times and the error text of a failure.
+
+    `status` is `running`, `completed` or `failed`; a run that a backend restart ended
+    is `failed` with the error `Process restarted`. A completed run has what it created
+    in `meta.created`: `resume_id` and `chained_run_id` (the scoring run that follows)
+    for `tailor_resume`, `cover_letter_id` for `generate_cover_letter`.
+    """
     return await _get(ctx, f"/api/monitor/run/{run_id}")
 
 
 @_read_tool
-async def list_resumes(ctx: Context, is_base: Optional[bool] = None) -> str:
-    """Resumes without their content.
+async def list_resumes(ctx: Context, is_base: Optional[bool] = None,
+                       job_id: Optional[str] = None, created_after: Optional[str] = None,
+                       limit: Optional[int] = None) -> str:
+    """Resumes without their content, most recently updated first.
 
     `is_base=true` keeps the base resumes. `is_base=false` keeps the copies tailored
-    for a job (they have `job_id`).
+    for a job (they have `job_id`). `job_id` keeps the copies for one job.
+    `created_after` is an ISO time. An install can have hundreds of tailored copies,
+    so give `job_id`, `created_after` or `limit` (500 at most) with `is_base=false`.
     """
-    return await _get(ctx, "/api/resumes", is_base=is_base)
+    return await _get(ctx, "/api/resumes", is_base=is_base, job_id=job_id,
+                      created_after=created_after, limit=limit)
 
 
 @_read_tool
@@ -275,8 +292,9 @@ async def tailor_resume(ctx: Context, base_resume_id: str, job_id: str) -> str:
 
     The run replaces the tailored copy that the job already has. The reply has `run_id`
     and `chain_score`: a scoring run of that depth follows the tailor and also uses the
-    runner. Wait with `list_in_flight` or `get_run`; then `get_job` has the new
-    `tailored_resume_id`. A run for the same pair that is in progress gives a 409.
+    runner. Wait with `get_run`: when it is `completed`, `meta.created` has the new
+    `resume_id` and the `chained_run_id` of that scoring run. A run for the same pair
+    that is in progress gives a 409.
     """
     return await _post(ctx, "/api/resumes/tailor", base_resume_id=base_resume_id, job_id=job_id)
 
@@ -290,8 +308,8 @@ async def generate_cover_letter(ctx: Context, resume_id: str, job_id: str,
 
     Use the tailored copy of the job as `resume_id` when it exists. With
     `cover_letter_id` the run rewrites that letter; without it the run creates a letter.
-    The reply has `run_id`. Wait with `list_in_flight` or `get_run`; then
-    `list_cover_letters` with the `job_id` has the letter.
+    The reply has `run_id`. Wait with `get_run`: when it is `completed`,
+    `meta.created.cover_letter_id` is the letter.
     """
     return await _post(ctx, "/api/cover-letters/generate", resume_id=resume_id,
                        job_id=job_id, cover_letter_id=cover_letter_id, length=length,

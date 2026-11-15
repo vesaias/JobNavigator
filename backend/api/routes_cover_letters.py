@@ -554,6 +554,8 @@ async def _generate_inner(resume_id, job_id, voice, length, template, page_forma
         db.commit()
         db.refresh(cl)
         logger.info(f"Cover letter {cl.id} {action} for job {job_id} (voice={voice_id})")
+        from backend.job_monitor import note_run_created
+        note_run_created(cover_letter_id=cl.id)
         return f"{action.capitalize()} letter for {job_label} ({voice_id or 'default'} voice)"
     finally:
         db.close()
