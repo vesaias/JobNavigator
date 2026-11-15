@@ -14,7 +14,7 @@ from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.posting_links import counts_as_new
 from backend.scraper._shared.postings import resolve_short_links
 from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
-from backend.scraper._shared.filters import _apply_company_filters
+from backend.scraper._shared.filters import _apply_company_filters, include_hit
 from backend.scraper._shared import levels_jobs
 from backend.scraper._shared.link_kinds import EASY_APPLY
 
@@ -455,7 +455,7 @@ async def run(search: Search, shared=None) -> dict:
         kept_jobs = []
         for j in raw_jobs:
             title_lower = j["title"].lower()
-            if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+            if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
                 continue
             if exclude_kw and any(re.search(r'\b' + re.escape(kw) + r'\b', title_lower) for kw in exclude_kw):
                 continue

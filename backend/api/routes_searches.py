@@ -13,6 +13,7 @@ from backend.countries import (DEFAULT_COUNTRY, normalize_country,
 from backend.models.db import get_db, Search, ScrapeLog, Job, is_acknowledged
 from backend.accounts.settings import get_setting
 from backend.scraper import search_modes as _modes
+from backend.scraper._shared.filters import include_hit, include_pattern
 
 logger = logging.getLogger("jobnavigator.routes_searches")
 
@@ -565,8 +566,8 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
 
     mask = pd.Series(True, index=jobs_df.index)
     if include_kw:
-        pattern = "|".join(include_kw)
-        mask &= jobs_df["title"].str.contains(pattern, case=False, na=False)
+        pattern = "|".join(include_pattern(kw) for kw in include_kw)
+        mask &= jobs_df["title"].str.contains(pattern, case=False, na=False, regex=True)
     if exclude_kw:
         pattern = "|".join(r'\b' + re.escape(kw) + r'\b' for kw in exclude_kw)
         mask &= ~jobs_df["title"].str.contains(pattern, case=False, na=False, regex=True)
@@ -654,7 +655,7 @@ async def test_search(search_id: str, db: Session = Depends(get_db)):
         reason = None
         if not kept:
             title_lower = title.lower()
-            if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+            if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
                 reason = f"No match for: {', '.join(include_kw)}"
             elif exclude_kw:
                 matched = [kw for kw in exclude_kw if re.search(r'\b' + re.escape(kw) + r'\b', title_lower)]
@@ -863,7 +864,7 @@ async def _test_levelsfyi_search(search, db):
         kept = True
         reason = None
 
-        if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+        if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
             kept = False
             reason = f"No match for: {', '.join(include_kw)}"
         if kept and exclude_kw:

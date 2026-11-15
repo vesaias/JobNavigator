@@ -161,9 +161,24 @@ def _parse_atom(tokens, pos):
     return ('WORD', tokens[pos]), pos + 1
 
 
+def include_pattern(kw: str) -> str:
+    """Regex for one title-include keyword: a short alphanumeric word (up to 3 letters, e.g. PM, TPM, PMO) must
+    stand as a whole word, a plural "s" allowed, so "pm" never hits "development" or "shipment"; any longer
+    keyword stays a plain substring ("product manag" still matches "management")."""
+    k = (kw or "").lower()
+    if k.strip().isalnum() and len(k.strip()) <= 3:
+        return r"\b" + re.escape(k.strip()) + r"s?\b"
+    return re.escape(k)
+
+
+def include_hit(kw: str, title_lower: str) -> bool:
+    """True when one title-include keyword matches a lower-cased title (see include_pattern)."""
+    return re.search(include_pattern(kw), title_lower) is not None
+
+
 def _eval_expr(node, title_lower):
     if node[0] == 'WORD':
-        return node[1].lower() in title_lower
+        return include_hit(node[1], title_lower)
     elif node[0] == 'AND':
         return _eval_expr(node[1], title_lower) and _eval_expr(node[2], title_lower)
     elif node[0] == 'OR':
@@ -192,7 +207,7 @@ def search_title_filters(search, db) -> tuple[list, list]:
 def title_kept(title: str, include_kw: list, exclude_kw: list) -> tuple[bool, str | None]:
     """(kept, reason): include is a substring match on any keyword, exclude a whole-word match."""
     tl = title.lower()
-    if include_kw and not any(kw.lower() in tl for kw in include_kw):
+    if include_kw and not any(include_hit(kw, tl) for kw in include_kw):
         return False, f"No match for: {', '.join(include_kw)}"
     if exclude_kw:
         matched = [kw for kw in exclude_kw if re.search(r'\b' + re.escape(kw) + r'\b', tl)]
