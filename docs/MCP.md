@@ -13,6 +13,8 @@ The MCP server uses the same two headers as the REST API. It has no access of it
 | `X-API-Key` | The install password | Settings › Advanced |
 | `X-Account-Token` | The API token of your account | Settings › Accounts › **API token** |
 
+A client inside a signed-in dashboard tab can use its session cookies in place of the two headers.
+
 With one account, `X-Account-Token` is optional. With two or more accounts it is required, and each tool returns only the data of that account. The token is valid for a year. A PIN change ends it.
 
 ## Claude Code
@@ -47,6 +49,9 @@ Then ask Claude Code, for example: "Which searches failed in their last runs?"
 | `get_run` | One background run: status and the error text of a failure |
 | `list_resumes` | Resumes without their content; base resumes or tailored copies |
 | `list_cover_letters` | Cover letters, optionally for one job |
+| `get_resume` | One resume with its content |
+| `get_cover_letter` | One cover letter with its text |
+| `get_persona` | The Persona of the account: contact data and career facts |
 
 Write tools:
 

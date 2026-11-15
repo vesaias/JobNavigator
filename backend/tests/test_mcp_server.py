@@ -55,7 +55,8 @@ def test_tool_list_marks_the_write_tools(client):
             "list_applications", "list_scheduled_jobs", "list_active_runs",
             "list_run_history", "get_scrape_log", "list_failing_sources",
             "get_activity_log", "list_runners", "list_in_flight", "get_run",
-            "list_resumes", "list_cover_letters"} | WRITE_TOOLS == names
+            "list_resumes", "list_cover_letters", "get_resume", "get_cover_letter",
+            "get_persona"} | WRITE_TOOLS == names
     assert {t["name"] for t in tools if not t["annotations"]["readOnlyHint"]} == WRITE_TOOLS
     # The request context is not a tool argument.
     assert all("ctx" not in t["inputSchema"].get("properties", {}) for t in tools)
@@ -67,7 +68,16 @@ def test_every_read_tool_reaches_its_endpoint(client, test_db):
     run = JobRun(job_type="tailor_resume", trigger="manual", status="failed", error="runner lost")
     test_db.add(run)
     test_db.commit()
-    args = {"get_job": {"job_id": str(job.id)}, "get_run": {"run_id": str(run.id)}}
+    from backend.models.db import CoverLetter, Resume
+    resume = Resume(name="Base", is_base=True, json_data={"summary": "s"})
+    test_db.add(resume)
+    test_db.commit()
+    letter = CoverLetter(name="Letter", job_id=job.id, resume_id=resume.id, json_data={"paragraphs": ["p"]})
+    test_db.add(letter)
+    test_db.commit()
+    args = {"get_job": {"job_id": str(job.id)}, "get_run": {"run_id": str(run.id)},
+            "get_resume": {"resume_id": str(resume.id)},
+            "get_cover_letter": {"cover_letter_id": str(letter.id)}}
     for tool in (t["name"] for t in _tools(client) if t["name"] not in WRITE_TOOLS):
         _data(_call(client, tool, args.get(tool)))
     assert _data(_call(client, "get_run", args["get_run"]))["error"] == "runner lost"
@@ -140,6 +150,21 @@ def test_tool_call_is_scoped_to_the_token_account(client, test_db):
     assert [j["title"] for j in as_member["jobs"]] == ["Member job"]
     as_owner = _data(_call(client, "list_jobs"))
     assert [j["title"] for j in as_owner["jobs"]] == ["Owner job"]
+
+
+def test_browser_session_cookies_reach_the_tool(client, test_db):
+    """A client that is let in by its cookies (no API headers) gets the same account in the tool."""
+    from backend.accounts.context import use_account
+    make_job(test_db, title="Owner job")
+    member = _member(test_db)
+    with use_account(member.id):
+        make_job(test_db, title="Member job")
+    client.headers.pop("X-API-Key")
+    client.headers.pop(ACT_AS)
+    assert client.post("/api/auth/set-session", json={"api_key": API_KEY}).status_code == 200
+    assert client.post("/api/auth/switch", json={"account_id": str(member.id)}).status_code == 200
+    out = _data(_call(client, "list_jobs"))
+    assert [j["title"] for j in out["jobs"]] == ["Member job"]
 
 
 def test_two_accounts_need_a_token(client, test_db):

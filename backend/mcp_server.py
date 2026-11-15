@@ -1,7 +1,7 @@
 """MCP server at /api/mcp: tools for MCP clients such as Claude Code.
 
 Each tool is one request to this backend's own REST API, sent in-process (no socket) with
-the caller's `X-API-Key` and `X-Account-Token` headers. The auth middleware in
+the caller's own credentials (`_FORWARDED`). The auth middleware in
 `backend.main` therefore checks the tool call exactly as it checks a REST call: the
 install password, the account, the account's data scope. A tool holds no query logic.
 Read tools send a GET; the few write tools send the POST that the dashboard sends for
@@ -20,8 +20,10 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
 PATH = "/api/mcp"
-# The headers the auth middleware reads from an API client. Cookies are for browsers.
-_FORWARDED = ("x-api-key", "x-account-token")
+# Every header the auth middleware reads: the two of an API client and the cookies of
+# a browser session. Whatever let the MCP request in must also let the tool's request
+# in; a subset made the tool fail with a 401 after the MCP request itself passed.
+_FORWARDED = ("x-api-key", "x-account-token", "cookie")
 _ERROR_CHARS = 500
 
 server = MCPServer(
@@ -219,6 +221,24 @@ async def list_resumes(ctx: Context, is_base: Optional[bool] = None) -> str:
 async def list_cover_letters(ctx: Context, job_id: Optional[str] = None) -> str:
     """Cover letters, most recently updated first, optionally for one job."""
     return await _get(ctx, "/api/cover-letters", job_id=job_id)
+
+
+@_read_tool
+async def get_resume(ctx: Context, resume_id: str) -> str:
+    """One resume with its content (`json_data`: header, summary, experience, skills)."""
+    return await _get(ctx, f"/api/resumes/{resume_id}")
+
+
+@_read_tool
+async def get_cover_letter(ctx: Context, cover_letter_id: str) -> str:
+    """One cover letter with its text (`json_data`), for a form that takes text, not a file."""
+    return await _get(ctx, f"/api/cover-letters/{cover_letter_id}")
+
+
+@_read_tool
+async def get_persona(ctx: Context) -> str:
+    """The Persona of the account: contact data and career facts for application forms."""
+    return await _get(ctx, "/api/persona")
 
 
 # ── Write tools ──────────────────────────────────────────────────────────────
