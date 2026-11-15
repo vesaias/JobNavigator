@@ -19,13 +19,23 @@ With one account, `X-Account-Token` is optional. With two or more accounts it is
 
 ## Claude Code
 
-Put both values in environment variables first, so that they stay out of the shell history.
+Put both values in environment variables first, so that they stay out of the shell history. Then add the server. The variable syntax depends on the shell.
+
+PowerShell:
+
+```powershell
+claude mcp add --scope user --transport http jobnavigator https://your-host/api/mcp --header "X-API-Key: $env:JN_API_KEY" --header "X-Account-Token: $env:JN_ACCOUNT_TOKEN"
+```
+
+bash or zsh:
 
 ```bash
 claude mcp add --scope user --transport http jobnavigator https://your-host/api/mcp --header "X-API-Key: ${JN_API_KEY}" --header "X-Account-Token: ${JN_ACCOUNT_TOKEN}"
 ```
 
 The shell replaces the two variables. Claude Code then stores the values in its user configuration file on your computer. Do not use `--scope project`: that scope writes the values to `.mcp.json` in the repository.
+
+Check the result with `claude mcp get jobnavigator`: each header must show a value. A variable that is not set, or the bash form in PowerShell, stores an empty header. The server then answers 401, and an older install whose proxy has no rule for `/.well-known/oauth-*` makes the client report `JSON Parse error: Unrecognized token`. Remove the server (`claude mcp remove jobnavigator`) and add it again. Start a new Claude Code session after a change.
 
 Then ask Claude Code, for example: "Which searches failed in their last runs?"
 
@@ -72,5 +82,5 @@ The server does not save files. To save a PDF, download `GET /api/resumes/{id}/p
 
 ## Notes
 
-- The transport is streamable HTTP, stateless, with JSON replies. The path is under `/api/`, so the bundled Caddy and a reverse proxy that already passes `/api/*` need no change.
+- The transport is streamable HTTP, stateless, with JSON replies. The path is under `/api/`, so a reverse proxy that already passes `/api/*` needs no change for it. The bundled Caddy also answers `/.well-known/oauth-*` with 404: an MCP client reads those paths after a 401, and the dashboard page there hides the real error. Give your own proxy the same rule.
 - The server needs the `mcp` Python package, which is part of the backend image. After an upgrade from source, rebuild the backend image. Until then the backend starts without the MCP server and writes `MCP server is off` to its log.
