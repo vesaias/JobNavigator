@@ -169,6 +169,11 @@ class RunningJob:
     # Queued behind its gate (another scrape, the scoring limit): started_at is reset when
     # the run gets its slot, so queue time is not counted as run time.
     waiting: bool = False
+    # The outcome of a launch_background run, set when it ends, for a caller that holds
+    # this object (`wait_for_run`): the failure text (None = completed) and what the run
+    # created (`note_run_created`). The JobRun row carries the same.
+    error: Optional[str] = None
+    created: Optional[dict] = None
 
 
 # Keyed by dedup key (e.g. "scrape_all" or "company_scrape:<uuid>"); a member's runs
@@ -335,6 +340,47 @@ def _take_run_created() -> Optional[dict]:
     created = _run_created.get()
     _run_created.set(None)
     return created
+
+
+# The run that the current task is, for a worker that reports progress while it runs
+# (set by launch_background and tracked_run; a run launched from inside another one
+# sets its own).
+_current_run: contextvars.ContextVar[Optional["RunningJob"]] = contextvars.ContextVar(
+    "jn_current_run", default=None
+)
+
+
+def current_run_id() -> Optional[str]:
+    run = _current_run.get()
+    return str(run.run_id) if run else None
+
+
+def save_run_meta(meta: dict) -> None:
+    """Replace the meta of the currently tracked run, in memory and on its JobRun row,
+    so a reader of the run sees its progress before it ends."""
+    run = _current_run.get()
+    if run is None:
+        return
+    run.meta = meta
+    db = SessionLocal()
+    try:
+        row = (db.query(JobRun).filter(JobRun.id == run.run_id)
+               .execution_options(jn_unscoped=True).first())
+        if row:
+            row.meta = meta
+            db.commit()
+    finally:
+        db.close()
+
+
+async def wait_for_run(run_id) -> Optional["RunningJob"]:
+    """Wait until the launch_background run with this id ends; return it with its outcome
+    (`error`, `created`), or None when no such run is running in this process.
+    `asyncio.wait`, so that cancelling the waiter does not cancel the run."""
+    run = next((r for r in _running.values() if str(r.run_id) == str(run_id)), None)
+    if run is not None and run.task is not None:
+        await asyncio.wait({run.task})
+    return run
 
 
 class JobAlreadyRunningError(Exception):
@@ -670,6 +716,7 @@ async def _tracked_run(job_type, trigger, scope_key, meta, target_job_id, compan
     try:
         _run_failure.set(None)
         _run_created.set(None)
+        _current_run.set(running_job)
         async with _gated(limiter, running_job):
             yield running_job
         reason = _take_run_failure()
@@ -738,6 +785,7 @@ def launch_background(
         try:
             _run_failure.set(None)
             _run_created.set(None)
+            _current_run.set(running_job)
             # The gate is taken here, before the worker runs, so a queued task
             # holds nothing but itself — no DB connection, no LLM slot.
             async with _gated(limiter_for_job_type(job_type), running_job):
@@ -746,10 +794,13 @@ def launch_background(
             summary = result.strip() if isinstance(result, str) and result.strip() else None
             # …but it may also have reported a failure it handled itself.
             reason = _take_run_failure()
+            running_job.error = sanitize_run_error(reason)
+            running_job.created = _take_run_created()
             _finish_job_run(run_id, "failed" if reason else "completed", summary, reason,
-                            _take_run_created())
+                            running_job.created)
         except Exception as e:
             logger.error(f"Background job {job_type} failed: {e}")
+            running_job.error = sanitize_run_error(str(e)) or "The run failed"
             _finish_job_run(run_id, "failed", None, str(e))
         finally:
             _running.pop(key, None)

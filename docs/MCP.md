@@ -2,7 +2,7 @@
 
 JobNavigator has an MCP server at `<dashboard>/api/mcp`. An MCP client, for example Claude Code, can read your jobs, searches, applications, resumes, cover letters and scrape logs through it.
 
-Most tools only read. Four tools change data: `update_jobs`, `mark_job_applied`, `tailor_resume` and `generate_cover_letter`. An MCP client asks before it calls a tool that is not read-only.
+Most tools only read. Six tools change data: `update_jobs`, `mark_job_applied`, `tailor_resume`, `generate_cover_letter`, `generate_for_jobs` and `stop_batch`. An MCP client asks before it calls a tool that is not read-only.
 
 ## Authentication
 
@@ -62,6 +62,7 @@ Then ask Claude Code, for example: "Which searches failed in their last runs?"
 | `get_resume` | One resume with its content |
 | `get_cover_letter` | One cover letter with its text |
 | `get_persona` | The Persona of the account: contact data and career facts |
+| `get_batch` | A batch of `generate_for_jobs`: status, counts, and the jobs of one state |
 
 Write tools:
 
@@ -71,8 +72,24 @@ Write tools:
 | `mark_job_applied` | Sets one job to `applied` and creates its application, as the dashboard does |
 | `tailor_resume` | Starts a background run that tailors a base resume for a job. It replaces the tailored copy that the job already has |
 | `generate_cover_letter` | Starts a background run that writes a cover letter from a resume for a job |
+| `generate_for_jobs` | Starts a batch on the server: a tailored resume and a cover letter for each job of a list |
+| `stop_batch` | Stops a batch: no more jobs start, the jobs in progress end |
 
 Each tool is one request to the REST API with your headers: a `GET` for a read tool, the dashboard's own `POST` for a write tool. A tool therefore shows and does exactly what the same API call shows and does.
+
+### Batches
+
+For more than one job, use `generate_for_jobs`. The queue is on the server, so the batch does not depend on the client: a closed session or a reloaded page does not stop it.
+
+- A batch takes 200 jobs at most. One batch runs at a time for an account; a second one gets a 409.
+- Each job goes through three runs, one after the other: the tailor, the scoring run that follows it, the cover letter. The server works on 2 jobs at a time (Settings › `tailoring_max_concurrent`), so a batch has at most 2 LLM calls in progress. Runs that you start outside the batch are not counted.
+- The tailor replaces the tailored copy that the job has. A job that has a cover letter gets that letter rewritten.
+- `get_batch` gives the counts for each state (`queued`, `tailoring`, `scoring`, `cover_letter`, `done`, `failed`, `cancelled`). Give `state` to get the jobs of that state: a `done` job has `resume_id` and `cover_letter_id`, a `failed` job has `step` and `error`.
+- A failed job does not stop the batch. A backend restart ends the batch (`status` `failed`, error `Process restarted`); start a new batch with the jobs that are not `done`.
+
+The REST form is `POST /api/generate-batches`, `GET /api/generate-batches/{id}` and `POST /api/generate-batches/{id}/stop`.
+
+### Single runs
 
 `tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `get_run`. A completed tailor run names the new copy and the scoring run that follows it (`meta.created.resume_id`, `meta.created.chained_run_id`); a completed cover-letter run names the letter (`meta.created.cover_letter_id`). A run that a backend restart ended is `failed` with the error `Process restarted`.
 

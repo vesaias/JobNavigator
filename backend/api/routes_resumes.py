@@ -903,10 +903,22 @@ def _resolve_chain_score_depth(db) -> str | None:
 @router.post("/tailor", status_code=202)
 async def tailor_resume(body: dict, db: Session = Depends(get_db)):
     """Tailor a base resume for a job in the background, returning a run_id to track via GET /api/monitor/in-flight; the response's `chain_score` reports the depth of any scoring run that will follow ('light'/'full'/'off'), since only job-linked tailors chain."""
-    base_resume_id = body.get("base_resume_id")
-    job_id = body.get("job_id")
-    job_description = body.get("job_description")
+    try:
+        run_id, chain_depth = launch_tailor(db, body.get("base_resume_id"), body.get("job_id"),
+                                            body.get("job_description"))
+        return {"run_id": run_id, "status": "running", "chain_score": chain_depth or "off"}
+    except JobAlreadyRunningError as e:
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"{e.job_type} is already running for this pair"},
+        )
 
+
+def launch_tailor(db: Session, base_resume_id, job_id, job_description=None):
+    """Check a tailor request and start its background run: (run_id, chain score depth or None).
+
+    Raises HTTPException for a request that cannot run and JobAlreadyRunningError for a
+    pair that is already running. Called by POST /tailor and by the generate batch."""
     if not base_resume_id:
         raise HTTPException(400, "base_resume_id is required")
     if not job_id and not job_description:
@@ -942,27 +954,20 @@ async def tailor_resume(body: dict, db: Session = Depends(get_db)):
         Resume.job_id == target_uuid, Resume.is_base == False
     ).first() is not None
 
-    try:
-        run_id = launch_background(
-            "tailor_resume",
-            _tailor_impl,
-            trigger="manual",
-            scope_key=scope,
-            target_job_id=target_uuid,
-            meta={"base_name": base_name, "replaces": replaces},
-            func_kwargs={
-                "base_resume_id": base_resume_id,
-                "job_id": job_id,
-                "job_description_override": job_description,
-            },
-        )
-        chain_depth = _resolve_chain_score_depth(db) if job_id else None
-        return {"run_id": run_id, "status": "running", "chain_score": chain_depth or "off"}
-    except JobAlreadyRunningError as e:
-        return JSONResponse(
-            status_code=409,
-            content={"detail": f"{e.job_type} is already running for this pair"},
-        )
+    run_id = launch_background(
+        "tailor_resume",
+        _tailor_impl,
+        trigger="manual",
+        scope_key=scope,
+        target_job_id=target_uuid,
+        meta={"base_name": base_name, "replaces": replaces},
+        func_kwargs={
+            "base_resume_id": base_resume_id,
+            "job_id": job_id,
+            "job_description_override": job_description,
+        },
+    )
+    return run_id, (_resolve_chain_score_depth(db) if job_id else None)
 
 
 def _persist_job_description(job_id, description: str) -> None:

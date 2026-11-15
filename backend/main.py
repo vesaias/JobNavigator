@@ -28,6 +28,7 @@ from backend.api.routes_autofill import router as autofill_router
 from backend.api.routes_llm import router as llm_router
 from backend.api.routes_accounts import router as accounts_router
 from backend.api.routes_gmail import router as gmail_router
+from backend.api.routes_generate_batch import router as generate_batch_router
 from backend.scraper._shared.link_kinds import job_link
 
 logging.basicConfig(level=logging.INFO)
@@ -643,6 +644,7 @@ app.include_router(autofill_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(accounts_router, prefix="/api")
 app.include_router(gmail_router, prefix="/api")
+app.include_router(generate_batch_router, prefix="/api")
 
 # MCP server (read tools) for MCP clients; behind the same auth middleware as the API.
 try:

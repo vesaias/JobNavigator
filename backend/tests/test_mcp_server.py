@@ -41,7 +41,8 @@ def test_initialize_handshake(client):
     assert "tools" in result["capabilities"]
 
 
-WRITE_TOOLS = {"update_jobs", "mark_job_applied", "tailor_resume", "generate_cover_letter"}
+WRITE_TOOLS = {"update_jobs", "mark_job_applied", "tailor_resume", "generate_cover_letter",
+               "generate_for_jobs", "stop_batch"}
 
 
 def _tools(c):
@@ -56,7 +57,7 @@ def test_tool_list_marks_the_write_tools(client):
             "list_run_history", "get_scrape_log", "list_failing_sources",
             "get_activity_log", "list_runners", "list_in_flight", "get_run",
             "list_resumes", "list_cover_letters", "get_resume", "get_cover_letter",
-            "get_persona"} | WRITE_TOOLS == names
+            "get_persona", "get_batch"} | WRITE_TOOLS == names
     assert {t["name"] for t in tools if not t["annotations"]["readOnlyHint"]} == WRITE_TOOLS
     # The request context is not a tool argument.
     assert all("ctx" not in t["inputSchema"].get("properties", {}) for t in tools)
@@ -75,9 +76,14 @@ def test_every_read_tool_reaches_its_endpoint(client, test_db):
     letter = CoverLetter(name="Letter", job_id=job.id, resume_id=resume.id, json_data={"paragraphs": ["p"]})
     test_db.add(letter)
     test_db.commit()
+    batch = JobRun(job_type="generate_batch", trigger="manual", status="completed",
+                   meta={"jobs": {str(job.id): {"state": "done"}}})
+    test_db.add(batch)
+    test_db.commit()
     args = {"get_job": {"job_id": str(job.id)}, "get_run": {"run_id": str(run.id)},
             "get_resume": {"resume_id": str(resume.id)},
-            "get_cover_letter": {"cover_letter_id": str(letter.id)}}
+            "get_cover_letter": {"cover_letter_id": str(letter.id)},
+            "get_batch": {"batch_id": str(batch.id)}}
     for tool in (t["name"] for t in _tools(client) if t["name"] not in WRITE_TOOLS):
         _data(_call(client, tool, args.get(tool)))
     assert _data(_call(client, "get_run", args["get_run"]))["error"] == "runner lost"
@@ -96,6 +102,25 @@ def test_update_jobs_returns_the_previous_values(client, test_db):
 def test_update_jobs_needs_a_field(client, test_db):
     job = make_job(test_db)
     assert _call(client, "update_jobs", {"job_ids": [str(job.id)]})["isError"]
+
+
+def test_batch_tools_reach_their_endpoints(client, test_db):
+    from backend.models.db import JobRun
+    job = make_job(test_db)
+    batch = JobRun(job_type="generate_batch", trigger="manual", status="completed",
+                   meta={"jobs": {str(job.id): {"state": "failed", "step": "tailoring", "error": "x"}}})
+    test_db.add(batch)
+    test_db.commit()
+    counts_only = _data(_call(client, "get_batch", {"batch_id": str(batch.id)}))
+    assert counts_only["counts"]["failed"] == 1 and counts_only["jobs"] == {}
+    failed = _data(_call(client, "get_batch", {"batch_id": str(batch.id), "state": "failed"}))
+    assert list(failed["jobs"]) == [str(job.id)]
+    # No LLM here: the endpoint's own checks prove that the POST arrived.
+    missing = "00000000-0000-0000-0000-000000000000"
+    start = _call(client, "generate_for_jobs", {"job_ids": [str(job.id)], "base_resume_id": missing})
+    assert start["isError"] and "404" in start["content"][0]["text"]
+    stop = _call(client, "stop_batch", {"batch_id": str(batch.id)})
+    assert stop["isError"] and "409" in stop["content"][0]["text"]
 
 
 def test_mark_job_applied_creates_the_application(client, test_db):

@@ -31,9 +31,11 @@ server = MCPServer(
     instructions=(
         "A JobNavigator install: jobs, searches, applications, resumes, "
         "cover letters, scrape runs and logs. All data belongs to the account of the "
-        "X-Account-Token header. Most tools only read. update_jobs, tailor_resume and "
-        "generate_cover_letter change data; the last two start LLM runs in the "
-        "background, so start at most 2 runs, then wait with list_in_flight."
+        "X-Account-Token header. Most tools only read. update_jobs, mark_job_applied, "
+        "tailor_resume, generate_cover_letter and generate_for_jobs change data. For "
+        "more than one job use generate_for_jobs: its queue is on the server and holds "
+        "the limit of LLM runs. With tailor_resume and generate_cover_letter, start at "
+        "most 2 runs, then wait with get_run."
     ),
 )
 
@@ -322,6 +324,44 @@ async def generate_cover_letter(ctx: Context, resume_id: str, job_id: str,
     return await _post(ctx, "/api/cover-letters/generate", resume_id=resume_id,
                        job_id=job_id, cover_letter_id=cover_letter_id, length=length,
                        voice=voice)
+
+
+@_tool(readOnlyHint=False, destructiveHint=True, idempotentHint=False)
+async def generate_for_jobs(ctx: Context, job_ids: list[str], base_resume_id: str,
+                            cover_letter: bool = True) -> str:
+    """Start a batch on the server: for each job, tailor the base resume, wait for the
+    scoring run that follows, then write the cover letter (`cover_letter=false` skips it).
+
+    200 jobs at most; one batch at a time (a second one gives a 409). The server works on
+    2 jobs at a time (the tailoring limit in Settings), so the batch needs no pacing by
+    the caller. Each tailor replaces the tailored copy that the job has, and the letter
+    of a job that has one is rewritten. The reply has `batch_id`; read the progress with
+    `get_batch`. The batch does not depend on this session: it runs to its end on the
+    server. A backend restart ends it; then start a new batch with the jobs that are
+    not `done`.
+    """
+    return await _post(ctx, "/api/generate-batches", job_ids=job_ids,
+                       base_resume_id=base_resume_id, cover_letter=cover_letter)
+
+
+@_read_tool
+async def get_batch(ctx: Context, batch_id: str, state: str = "none") -> str:
+    """A batch of `generate_for_jobs`: `status` (`running`, `completed`, `failed`),
+    `counts` for each job state, and the jobs of one state.
+
+    `state` chooses the jobs in the reply: `none` (the default: counts only), `done`,
+    `failed`, `cancelled`, `queued`, `tailoring`, `scoring`, `cover_letter`. A `done` job
+    has `resume_id` and `cover_letter_id`; a `failed` job has `step` and `error`. When
+    `status` is not `running`, a job that is not `done` got no result.
+    """
+    return await _get(ctx, f"/api/generate-batches/{batch_id}", state=state)
+
+
+@_tool(readOnlyHint=False, destructiveHint=False, idempotentHint=True)
+async def stop_batch(ctx: Context, batch_id: str) -> str:
+    """Stop a batch: it starts no more jobs. The jobs in progress run to their end, and
+    the queued jobs become `cancelled`."""
+    return await _request(ctx, "POST", f"/api/generate-batches/{batch_id}/stop")
 
 
 # ── ASGI endpoint ────────────────────────────────────────────────────────────

@@ -74,6 +74,7 @@ PARAM_MODELS = {
     "company_id": "company",
     "search_id": "search",
     "run_id": "job_run",
+    "batch_id": "job_run",          # a generate batch is a JobRun
     "resume_id": "resume",
     "base_resume_id": "resume",
     "tailored_resume_id": "tailored",

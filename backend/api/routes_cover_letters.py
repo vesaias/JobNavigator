@@ -357,6 +357,17 @@ async def export_pdf(cl_id: str, db: Session = Depends(get_db)):
 @router.post("/generate", status_code=202)
 async def generate_cover_letter(body: dict, db: Session = Depends(get_db)):
     """Generate a cover letter for a (resume, job) pair in the background; returns 202 + run_id, and with cover_letter_id rewrites that existing letter in place instead of creating a new one."""
+    try:
+        return {"run_id": launch_cover_letter(db, body), "status": "running"}
+    except JobAlreadyRunningError as e:
+        return JSONResponse(status_code=409, content={"detail": f"{e.job_type} is already running for this pair"})
+
+
+def launch_cover_letter(db: Session, body: dict) -> str:
+    """Check a cover-letter request (the body of POST /generate) and start its background run: the run_id.
+
+    Raises HTTPException for a request that cannot run and JobAlreadyRunningError for a
+    pair that is already running. Called by POST /generate and by the generate batch."""
     resume_id = body.get("resume_id")
     job_id = body.get("job_id")
     if not resume_id or not job_id:
@@ -393,26 +404,22 @@ async def generate_cover_letter(body: dict, db: Session = Depends(get_db)):
     # Regenerating scopes to the letter, so rewriting one draft never blocks
     # generating a different letter for the same pair.
     scope = f"cl:{target_id}" if target_id else f"cl:{resume_id}:{job_id}"
-    try:
-        run_id = launch_background(
-            "generate_cover_letter",
-            _generate_impl,
-            trigger="manual",
-            scope_key=scope,
-            target_job_id=_uuid.UUID(job_id) if isinstance(job_id, str) else job_id,
-            func_kwargs={
-                "resume_id": resume_id,
-                "job_id": job_id,
-                "voice": body.get("voice"),
-                "length": body.get("length", "standard"),
-                "template": body.get("template"),
-                "page_format": body.get("page_format"),
-                "cover_letter_id": target_id,
-            },
-        )
-        return {"run_id": run_id, "status": "running"}
-    except JobAlreadyRunningError as e:
-        return JSONResponse(status_code=409, content={"detail": f"{e.job_type} is already running for this pair"})
+    return launch_background(
+        "generate_cover_letter",
+        _generate_impl,
+        trigger="manual",
+        scope_key=scope,
+        target_job_id=_uuid.UUID(job_id) if isinstance(job_id, str) else job_id,
+        func_kwargs={
+            "resume_id": resume_id,
+            "job_id": job_id,
+            "voice": body.get("voice"),
+            "length": body.get("length", "standard"),
+            "template": body.get("template"),
+            "page_format": body.get("page_format"),
+            "cover_letter_id": target_id,
+        },
+    )
 
 
 async def _generate_impl(resume_id: str, job_id: str, voice: str | None, length: str,
