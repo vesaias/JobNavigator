@@ -1006,7 +1006,7 @@ def _validate_job_updates(updates: dict, allowed: set) -> None:
 
 @router.post("/bulk-update")
 def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
-    """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>]} so the frontend can reconcile stale client-side selections."""
+    """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>], "previous": {<id>: {<key>: <old value>}}} so the frontend can reconcile stale client-side selections and a caller can undo the change."""
     import uuid as _uuid
     job_ids = body.get("job_ids") or []
     updates = body.get("updates") or {}
@@ -1018,6 +1018,7 @@ def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
     _validate_job_updates(updates, allowed)
     count = 0
     not_found: list[str] = []
+    previous: dict[str, dict] = {}  # id -> the values before this call, for an undo
     for job_id in job_ids:
         # A non-uuid used to raise DataError mid-loop, so the whole batch aborted
         # with a bare 404 and every valid id in it was silently dropped
@@ -1029,14 +1030,17 @@ def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
             continue
         job = db.query(Job).filter(Job.id == parsed).first()
         if job:
+            before = {}
             for k, v in updates.items():
                 if k in allowed:
+                    before[k] = getattr(job, k)
                     setattr(job, k, v)
+            previous[str(job.id)] = before
             count += 1
         else:
             not_found.append(str(job_id))
     db.commit()
-    return {"updated": count, "not_found": not_found}
+    return {"updated": count, "not_found": not_found, "previous": previous}
 
 
 @router.get("/{job_id}")

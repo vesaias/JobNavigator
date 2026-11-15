@@ -2,7 +2,7 @@
 
 JobNavigator has an MCP server at `<dashboard>/api/mcp`. An MCP client, for example Claude Code, can read your jobs, searches, companies, applications and scrape logs through it.
 
-The server has read tools only. It cannot change data.
+Most tools only read. Four tools change data: `update_jobs`, `mark_job_applied`, `tailor_resume` and `generate_cover_letter`. An MCP client asks before it calls a tool that is not read-only.
 
 ## Authentication
 
@@ -44,8 +44,25 @@ Then ask Claude Code, for example: "Which searches failed in their last runs?"
 | `list_failing_sources` | Companies and searches whose last scrapes all failed |
 | `get_activity_log` | Activity log entries |
 | `list_runners` | State of the CLI runner containers |
+| `list_in_flight` | Runs in progress per job (tailor, cover letter, scoring) |
+| `get_run` | One background run: status and the error text of a failure |
+| `list_resumes` | Resumes without their content; base resumes or tailored copies |
+| `list_cover_letters` | Cover letters, optionally for one job |
 
-Each tool is one `GET` on the REST API with your headers, so a tool shows exactly what the same API call shows.
+Write tools:
+
+| Tool | Does |
+|---|---|
+| `update_jobs` | Sets `status`, `saved` or `seen` on many jobs. The reply has the previous values of each job, for an undo |
+| `mark_job_applied` | Sets one job to `applied` and creates its application, as the dashboard does |
+| `tailor_resume` | Starts a background run that tailors a base resume for a job. It replaces the tailored copy that the job already has |
+| `generate_cover_letter` | Starts a background run that writes a cover letter from a resume for a job |
+
+Each tool is one request to the REST API with your headers: a `GET` for a read tool, the dashboard's own `POST` for a write tool. A tool therefore shows and does exactly what the same API call shows and does.
+
+`tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `list_in_flight`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
+
+The server does not save files. To save a PDF, download `GET /api/resumes/{id}/pdf` or `GET /api/cover-letters/{id}/pdf` on your computer with the same two headers.
 
 ## Notes
 

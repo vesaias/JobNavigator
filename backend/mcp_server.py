@@ -1,9 +1,11 @@
-"""MCP server at /api/mcp: read tools for MCP clients such as Claude Code.
+"""MCP server at /api/mcp: tools for MCP clients such as Claude Code.
 
-Each tool is one GET on this backend's own REST API, sent in-process (no socket) with
+Each tool is one request to this backend's own REST API, sent in-process (no socket) with
 the caller's `X-API-Key` and `X-Account-Token` headers. The auth middleware in
 `backend.main` therefore checks the tool call exactly as it checks a REST call: the
 install password, the account, the account's data scope. A tool holds no query logic.
+Read tools send a GET; the few write tools send the POST that the dashboard sends for
+the same action.
 
 Transport: streamable HTTP, stateless, plain JSON replies (no SSE stream, no session).
 See docs/MCP.md for the client setup.
@@ -25,35 +27,51 @@ _ERROR_CHARS = 500
 server = MCPServer(
     "JobNavigator",
     instructions=(
-        "Read-only view of a JobNavigator install: jobs, searches, companies, "
-        "applications, scrape runs and logs. All data belongs to the account of the "
-        "X-Account-Token header."
+        "A JobNavigator install: jobs, searches, companies, applications, resumes, "
+        "cover letters, scrape runs and logs. All data belongs to the account of the "
+        "X-Account-Token header. Most tools only read. update_jobs, tailor_resume and "
+        "generate_cover_letter change data; the last two start LLM runs in the "
+        "background, so start at most 2 runs, then wait with list_in_flight."
     ),
 )
 
 
-def _read_tool(fn):
+def _tool(**hints):
     # structured_output=False: the reply is the API's JSON text, sent one time.
-    return server.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
-                       structured_output=False)(fn)
+    return server.tool(annotations=ToolAnnotations(openWorldHint=False, **hints),
+                       structured_output=False)
 
 
-async def _get(ctx: Context, path: str, **params) -> str:
-    """The JSON text of GET `path` on this backend, as the caller of the tool."""
+_read_tool = _tool(readOnlyHint=True)
+
+
+def _present(values: dict) -> dict:
+    return {k: v for k, v in values.items() if v is not None}
+
+
+async def _request(ctx: Context, method: str, path: str, *, params=None, body=None) -> str:
+    """The JSON text of `method path` on this backend, as the caller of the tool."""
     from backend.main import app  # at call time: backend.main imports this module
 
     sent = ctx.headers or {}
     headers = {name: sent[name] for name in _FORWARDED if sent.get(name)}
-    query = {k: v for k, v in params.items() if v is not None}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
                                  base_url="http://jobnavigator") as client:
-        resp = await client.get(path, params=query, headers=headers)
+        resp = await client.request(method, path, params=params, json=body, headers=headers)
     if resp.status_code >= 400:
-        raise ToolError(f"GET {path} returned {resp.status_code}: {resp.text[:_ERROR_CHARS]}")
+        raise ToolError(f"{method} {path} returned {resp.status_code}: {resp.text[:_ERROR_CHARS]}")
     return resp.text
 
 
-# ── Tools ────────────────────────────────────────────────────────────────────
+async def _get(ctx: Context, path: str, **params) -> str:
+    return await _request(ctx, "GET", path, params=_present(params))
+
+
+async def _post(ctx: Context, path: str, **body) -> str:
+    return await _request(ctx, "POST", path, body=_present(body))
+
+
+# ── Read tools ───────────────────────────────────────────────────────────────
 
 @_read_tool
 async def get_stats(ctx: Context) -> str:
@@ -83,7 +101,8 @@ async def list_jobs(
     `status`, `company` and `source` accept comma-separated values. `min_score` and
     `max_score` filter on the best resume score (0-100). `search_id` is the id of a
     search from `list_searches`. `title_search` is a substring of the title.
-    `limit` is 200 at most. Use `get_job` for the description and the scoring report.
+    `limit` is 200 at most. A row has `tailored_resume_id` when the job has a tailored
+    resume. Use `get_job` for the description and the scoring report.
     """
     return await _get(ctx, "/api/jobs", brief=True, status=status, company=company,
                       min_score=min_score, max_score=max_score, search_id=search_id,
@@ -176,6 +195,94 @@ async def get_activity_log(ctx: Context, type: Optional[str] = None,
 async def list_runners(ctx: Context) -> str:
     """State of the CLI runner containers (Claude Code, Codex, Antigravity)."""
     return await _get(ctx, "/api/llm/runners")
+
+
+@_read_tool
+async def list_in_flight(ctx: Context, job_ids: Optional[str] = None) -> str:
+    """Runs in progress per job: {job_id: [{job_type, meta}]}, for example `tailor_resume`.
+
+    `job_ids` is a comma-separated list of job ids. A job that is absent has no run now.
+    """
+    return await _get(ctx, "/api/monitor/in-flight", job_ids=job_ids, detail=True)
+
+
+@_read_tool
+async def get_run(ctx: Context, run_id: str) -> str:
+    """One background run by its `run_id`: status, times and the error text of a failure."""
+    return await _get(ctx, f"/api/monitor/run/{run_id}")
+
+
+@_read_tool
+async def list_resumes(ctx: Context, is_base: Optional[bool] = None) -> str:
+    """Resumes without their content.
+
+    `is_base=true` keeps the base resumes. `is_base=false` keeps the copies tailored
+    for a job (they have `job_id`).
+    """
+    return await _get(ctx, "/api/resumes", is_base=is_base)
+
+
+@_read_tool
+async def list_cover_letters(ctx: Context, job_id: Optional[str] = None) -> str:
+    """Cover letters, most recently updated first, optionally for one job."""
+    return await _get(ctx, "/api/cover-letters", job_id=job_id)
+
+
+# ── Write tools ──────────────────────────────────────────────────────────────
+
+@_tool(readOnlyHint=False, destructiveHint=False, idempotentHint=True)
+async def update_jobs(ctx: Context, job_ids: list[str], status: Optional[str] = None,
+                      saved: Optional[bool] = None, seen: Optional[bool] = None) -> str:
+    """Set `status`, `saved` or `seen` on many jobs in one call.
+
+    Usual `status` values: `new`, `saved`, `applied`, `skip`. The reply has `updated`
+    (a count), `not_found` (ids) and `previous` ({job_id: the values before this call}).
+    Keep `previous` to undo the change. For an application that was sent, use
+    `mark_job_applied`: this tool sets the status only and creates no application.
+    """
+    updates = _present({"status": status, "saved": saved, "seen": seen})
+    if not updates:
+        raise ToolError("Give at least one of status, saved, seen")
+    return await _post(ctx, "/api/jobs/bulk-update", job_ids=job_ids, updates=updates)
+
+
+@_tool(readOnlyHint=False, destructiveHint=False, idempotentHint=True)
+async def mark_job_applied(ctx: Context, job_id: str) -> str:
+    """Record that the application for one job was sent: status `applied`.
+
+    As in the dashboard, this creates the application (and the company when it is new).
+    The reply is the job with `created_application_id` and `created_company_id`.
+    """
+    return await _request(ctx, "PATCH", f"/api/jobs/{job_id}", body={"status": "applied"})
+
+
+@_tool(readOnlyHint=False, destructiveHint=True, idempotentHint=False)
+async def tailor_resume(ctx: Context, base_resume_id: str, job_id: str) -> str:
+    """Start a background LLM run that tailors a base resume for a job.
+
+    The run replaces the tailored copy that the job already has. The reply has `run_id`
+    and `chain_score`: a scoring run of that depth follows the tailor and also uses the
+    runner. Wait with `list_in_flight` or `get_run`; then `get_job` has the new
+    `tailored_resume_id`. A run for the same pair that is in progress gives a 409.
+    """
+    return await _post(ctx, "/api/resumes/tailor", base_resume_id=base_resume_id, job_id=job_id)
+
+
+@_tool(readOnlyHint=False, destructiveHint=False, idempotentHint=False)
+async def generate_cover_letter(ctx: Context, resume_id: str, job_id: str,
+                                cover_letter_id: Optional[str] = None,
+                                length: Optional[str] = None,
+                                voice: Optional[str] = None) -> str:
+    """Start a background LLM run that writes a cover letter from a resume for a job.
+
+    Use the tailored copy of the job as `resume_id` when it exists. With
+    `cover_letter_id` the run rewrites that letter; without it the run creates a letter.
+    The reply has `run_id`. Wait with `list_in_flight` or `get_run`; then
+    `list_cover_letters` with the `job_id` has the letter.
+    """
+    return await _post(ctx, "/api/cover-letters/generate", resume_id=resume_id,
+                       job_id=job_id, cover_letter_id=cover_letter_id, length=length,
+                       voice=voice)
 
 
 # ── ASGI endpoint ────────────────────────────────────────────────────────────
