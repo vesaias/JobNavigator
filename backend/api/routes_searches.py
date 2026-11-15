@@ -75,8 +75,12 @@ class SearchCreate(BaseModel):
     auto_scoring_depth: str = "off"
 
 
+# The filter lists a `brief=1` listing leaves out: often the same long lists on each search.
+_BRIEF_DROPPED = ("title_include_keywords", "title_exclude_keywords", "company_filter", "company_exclude")
+
+
 @router.get("")
-def list_searches(db: Session = Depends(get_db)):
+def list_searches(brief: bool = False, db: Session = Depends(get_db)):
     searches = db.query(Search).order_by(Search.created_at).all()
     # Latest ScrapeLog per search → surface the most recent run's outcome so the
     # UI can show a live summary/health line (mirrors what /companies does).
@@ -98,6 +102,9 @@ def list_searches(db: Session = Depends(get_db)):
     for s in searches:
         row = _search_to_dict(s, last_log.get(str(s.id)))
         row["direct_rate"] = rates.get(s.id)
+        if brief:
+            for k in _BRIEF_DROPPED:
+                row.pop(k, None)
         out.append(row)
     return out
 

@@ -125,9 +125,13 @@ async def get_job(ctx: Context, job_id: str) -> str:
 
 
 @_read_tool
-async def list_searches(ctx: Context) -> str:
-    """All job-board searches with their configuration and the result of the last run."""
-    return await _get(ctx, "/api/searches")
+async def list_searches(ctx: Context, brief: bool = True) -> str:
+    """All job-board searches with their configuration and the result of the last run.
+
+    `brief=false` adds the title and company filter lists of each search; they are long
+    and often the same on each search.
+    """
+    return await _get(ctx, "/api/searches", brief=brief)
 
 
 @_read_tool
@@ -142,9 +146,13 @@ async def list_applications(
 
 
 @_read_tool
-async def list_scheduled_jobs(ctx: Context) -> str:
-    """Scheduler jobs (scrapes, email check, digest, backup): schedule, next run, state."""
-    return await _get(ctx, "/api/scheduler/jobs")
+async def list_scheduled_jobs(ctx: Context, overrides: bool = False) -> str:
+    """Scheduler jobs (scrapes, email check, digest, backup): schedule, next run, state.
+
+    `overrides=true` adds one row for each search and each company that has its own
+    interval; an install can have more than 100 of them.
+    """
+    return await _get(ctx, "/api/scheduler/jobs", overrides=overrides)
 
 
 @_read_tool

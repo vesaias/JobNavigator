@@ -150,3 +150,25 @@ def test_job_list_rejects_an_unknown_field(client, test_db):
     make_job(test_db)
     resp = client.get("/api/jobs?fields=id,nope")
     assert resp.status_code == 422 and "nope" in resp.json()["detail"]
+
+
+# ── Compact forms of the search and scheduler lists ──────────────────────────
+
+def test_search_list_brief_drops_the_filter_lists(client, test_db):
+    from backend.tests.r4_support import make_search
+    make_search(test_db, name="SRE", title_include_keywords=["sre"], title_exclude_keywords=["intern"])
+    full = client.get("/api/searches").json()[0]
+    brief = client.get("/api/searches?brief=1").json()[0]
+    assert full["title_include_keywords"] == ["sre"]
+    assert set(full) - set(brief) == {"title_include_keywords", "title_exclude_keywords",
+                                      "company_filter", "company_exclude"}
+    assert brief["name"] == "SRE"
+
+
+def test_scheduler_list_without_overrides_has_no_company_or_search_rows(client, test_db):
+    from backend.tests.r4_support import make_company, make_search
+    make_company(test_db, name="Acme", active=True, scrape_interval_minutes=60)
+    make_search(test_db, name="SRE", active=True, run_interval_minutes=60)
+    names = lambda q: {r["name"] for r in client.get(f"/api/scheduler/jobs{q}").json()}  # noqa: E731
+    assert {"Scrape: Acme", "Search: SRE"} <= names("")
+    assert not {"Scrape: Acme", "Search: SRE"} & names("?overrides=false")

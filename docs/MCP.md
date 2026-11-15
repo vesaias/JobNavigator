@@ -76,7 +76,7 @@ Each tool is one request to the REST API with your headers: a `GET` for a read t
 
 `tailor_resume` and `generate_cover_letter` use the LLM of your model settings. Start at most 2 runs at a time, then wait with `get_run`. A completed tailor run names the new copy and the scoring run that follows it (`meta.created.resume_id`, `meta.created.chained_run_id`); a completed cover-letter run names the letter (`meta.created.cover_letter_id`). A run that a backend restart ended is `failed` with the error `Process restarted`.
 
-Keep replies small: `list_jobs` takes `fields` (the row keys to keep) for long lists, and `list_resumes` takes `job_id`, `created_after` and `limit`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
+Keep replies small: `list_jobs` takes `fields` (the row keys to keep) for long lists, and `list_resumes` takes `job_id`, `created_after` and `limit`. `list_searches` leaves out the title and company filter lists unless you give `brief=false`. `list_scheduled_jobs` leaves out the rows of searches and companies with their own interval unless you give `overrides=true`. A scoring run follows each tailor (Settings › Résumé & tailoring) and uses the runner too.
 
 There is no tool for the company list: with its scrape configuration it is too large for one reply (about 300 KB for 200 companies). `list_failing_sources` names the companies whose scrapes fail.
 

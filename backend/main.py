@@ -1373,8 +1373,12 @@ SCHEDULE_NAMES = {
 
 
 @app.get("/api/scheduler/jobs", tags=["scheduler"], summary="List scheduled jobs")
-def get_scheduler_jobs():
-    """Return all scheduler jobs with their schedule, next run time (UTC), trigger URL, and running state."""
+def get_scheduler_jobs(overrides: bool = True):
+    """Return all scheduler jobs with their schedule, next run time (UTC), trigger URL, and running state.
+
+    `overrides=false` leaves out the rows of searches and companies that have their own
+    interval (one row each, so an install with 150 such companies answers 150 rows).
+    """
     from backend.scheduler import scheduler
     from backend.models.db import Company
 
@@ -1421,6 +1425,9 @@ def get_scheduler_jobs():
             # not unlocked the owner sections); the Stats table hides Run now then
             "owner_only": job.id in _OWNER_ONLY_SCHEDULES,
         })
+
+    if not overrides:
+        return result
 
     # Per-search and per-company custom scrape intervals
     db = SessionLocal()
