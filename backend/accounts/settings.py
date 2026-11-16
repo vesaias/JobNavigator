@@ -121,6 +121,8 @@ _SECTIONS = [
     ("linkedin", "LinkedIn", POLICY, OWN, ["linkedin"], [
         "linkedin_email", "linkedin_password", "linkedin_mock_email", "linkedin_mock_password"]),
     ("advanced", "Advanced", OWNER_ONLY, INHERIT, ["advanced"], ["proxy_url", "dashboard_api_key"]),
+    # update_check.py: one check per install; members see the result, only the owner sets it
+    ("updates", "Updates", OWNER_ONLY, INHERIT, ["updates"], ["update_check_mode", "update_check_repo"]),
     # telemetry/level.py: one choice per install, the owner's (JN_TELEMETRY overrides it)
     ("telemetry", "Telemetry", OWNER_ONLY, INHERIT, ["telemetry"], ["telemetry_level"]),
     # Not a section of the Settings screen. MT-19: the token is connected from a row in Email

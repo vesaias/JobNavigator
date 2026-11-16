@@ -48,6 +48,7 @@ ALLOWLIST: dict[tuple[str, str], str] = {
     ("GET", "/api/llm/efforts"): "static reasoning-effort catalog",
     ("GET", "/api/llm/models"): "provider model catalog fetched over the network",
     ("GET", "/api/searches/countries"): "static country list",
+    ("GET", "/api/updates"): "install-wide update check fetched over the network, no account data; test_update_check.py",
 
     # Install-level sessions and bots (per-account in MT-16 / MT-17)
     ("GET", "/api/linkedin/session"): "the caller's own LinkedIn cookie jar (MT-16; owner = today's path)",
