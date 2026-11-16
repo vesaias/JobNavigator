@@ -328,7 +328,7 @@ async def generate_cover_letter(ctx: Context, resume_id: str, job_id: str,
 
 @_tool(readOnlyHint=False, destructiveHint=True, idempotentHint=False)
 async def generate_for_jobs(ctx: Context, job_ids: list[str], base_resume_id: str,
-                            cover_letter: bool = True) -> str:
+                            cover_letter: bool = True, only_missing: bool = False) -> str:
     """Start a batch on the server: for each job, tailor the base resume, wait for the
     scoring run that follows, then write the cover letter (`cover_letter=false` skips it).
 
@@ -337,30 +337,44 @@ async def generate_for_jobs(ctx: Context, job_ids: list[str], base_resume_id: st
     the caller. Each tailor replaces the tailored copy that the job has, and the letter
     of a job that has one is rewritten. The reply has `batch_id`; read the progress with
     `get_batch`. The batch does not depend on this session: it runs to its end on the
-    server. A backend restart ends it; then start a new batch with the jobs that are
-    not `done`.
+    server. A backend restart ends it; then start a new batch with the same jobs and
+    `only_missing=true`.
+
+    `only_missing=true` keeps what a job has: a job that has a tailored resume (of any
+    base) gets no tailor run, only the letter when it has none; a job that has both is
+    `skipped` with no LLM call. The reply has the number of `skipped` jobs.
     """
     return await _post(ctx, "/api/generate-batches", job_ids=job_ids,
-                       base_resume_id=base_resume_id, cover_letter=cover_letter)
+                       base_resume_id=base_resume_id, cover_letter=cover_letter,
+                       only_missing=only_missing)
 
 
 @_read_tool
 async def get_batch(ctx: Context, batch_id: str, state: str = "none") -> str:
     """A batch of `generate_for_jobs`: `status` (`running`, `completed`, `failed`),
-    `counts` for each job state, and the jobs of one state.
+    `stopped` (a stop request cancelled its queue), `counts` for each job state, and the
+    jobs of one state.
 
     `state` chooses the jobs in the reply: `none` (the default: counts only), `done`,
-    `failed`, `cancelled`, `queued`, `tailoring`, `scoring`, `cover_letter`. A `done` job
-    has `resume_id` and `cover_letter_id`; a `failed` job has `step` and `error`. When
-    `status` is not `running`, a job that is not `done` got no result.
+    `failed`, `cancelled`, `skipped`, `queued`, `tailoring`, `scoring`, `cover_letter`.
+    A `done` or `skipped` job has `resume_id` and `cover_letter_id`; a `failed` job has
+    `step` and `error`; a started job has `started_at`, a `done` or `failed` one also
+    `finished_at`. When `status` is not `running`, a job that is not `done` or `skipped`
+    got no result.
+
+    `average_job_seconds` is the mean time of a `done` job. Estimate of the time left:
+    jobs not final x `average_job_seconds` / 2 (the jobs in progress at a time).
     """
     return await _get(ctx, f"/api/generate-batches/{batch_id}", state=state)
 
 
 @_tool(readOnlyHint=False, destructiveHint=False, idempotentHint=True)
 async def stop_batch(ctx: Context, batch_id: str) -> str:
-    """Stop a batch: it starts no more jobs. The jobs in progress run to their end, and
-    the queued jobs become `cancelled`."""
+    """Stop a batch: the queued jobs become `cancelled` at once. A job in progress is not
+    interrupted: it goes through all its steps (tailor, score, cover letter), which can
+    take 1 to 2 minutes; then the batch ends as `completed` with `stopped` true.
+
+    The reply has `cancelled_now`, `in_progress` and the `counts`."""
     return await _request(ctx, "POST", f"/api/generate-batches/{batch_id}/stop")
 
 

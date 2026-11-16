@@ -73,7 +73,7 @@ Write tools:
 | `tailor_resume` | Starts a background run that tailors a base resume for a job. It replaces the tailored copy that the job already has |
 | `generate_cover_letter` | Starts a background run that writes a cover letter from a resume for a job |
 | `generate_for_jobs` | Starts a batch on the server: a tailored resume and a cover letter for each job of a list |
-| `stop_batch` | Stops a batch: no more jobs start, the jobs in progress end |
+| `stop_batch` | Stops a batch: the queued jobs are cancelled, the jobs in progress end |
 
 Each tool is one request to the REST API with your headers: a `GET` for a read tool, the dashboard's own `POST` for a write tool. A tool therefore shows and does exactly what the same API call shows and does.
 
@@ -84,8 +84,11 @@ For more than one job, use `generate_for_jobs`. The queue is on the server, so t
 - A batch takes 200 jobs at most. One batch runs at a time for an account; a second one gets a 409.
 - Each job goes through three runs, one after the other: the tailor, the scoring run that follows it, the cover letter. The server works on 2 jobs at a time (Settings › `tailoring_max_concurrent`), so a batch has at most 2 LLM calls in progress. Runs that you start outside the batch are not counted.
 - The tailor replaces the tailored copy that the job has. A job that has a cover letter gets that letter rewritten.
-- `get_batch` gives the counts for each state (`queued`, `tailoring`, `scoring`, `cover_letter`, `done`, `failed`, `cancelled`). Give `state` to get the jobs of that state: a `done` job has `resume_id` and `cover_letter_id`, a `failed` job has `step` and `error`.
-- A failed job does not stop the batch. A backend restart ends the batch (`status` `failed`, error `Process restarted`); start a new batch with the jobs that are not `done`.
+- `only_missing=true` keeps what a job has. A job that has a tailored resume (of any base resume) gets no tailor run: the batch writes only its cover letter, from that resume. A job that has the resume and the letter is `skipped`, with no LLM call.
+- `get_batch` gives the counts for each state (`queued`, `tailoring`, `scoring`, `cover_letter`, `done`, `failed`, `cancelled`, `skipped`). Give `state` to get the jobs of that state: a `done` or `skipped` job has `resume_id` and `cover_letter_id`, a `failed` job has `step` and `error`. A started job has `started_at`; a `done` or `failed` job also has `finished_at`.
+- `average_job_seconds` is the mean time of a `done` job. Estimate of the time left: jobs not final x `average_job_seconds` / 2.
+- `stop_batch` cancels the queued jobs at once. A job in progress is not interrupted: it goes through all its steps, which can take 1 to 2 minutes. Then the batch ends as `completed` with `stopped` true.
+- A failed job does not stop the batch. A backend restart ends the batch (`status` `failed`, error `Process restarted`); start a new batch with the same jobs and `only_missing=true`.
 
 The REST form is `POST /api/generate-batches`, `GET /api/generate-batches/{id}` and `POST /api/generate-batches/{id}/stop`.
 

@@ -119,6 +119,9 @@ def test_batch_tools_reach_their_endpoints(client, test_db):
     missing = "00000000-0000-0000-0000-000000000000"
     start = _call(client, "generate_for_jobs", {"job_ids": [str(job.id)], "base_resume_id": missing})
     assert start["isError"] and "404" in start["content"][0]["text"]
+    start = _call(client, "generate_for_jobs", {"job_ids": [str(job.id)], "base_resume_id": missing,
+                                                "only_missing": True})
+    assert start["isError"] and "404" in start["content"][0]["text"]
     stop = _call(client, "stop_batch", {"batch_id": str(batch.id)})
     assert stop["isError"] and "409" in stop["content"][0]["text"]
 

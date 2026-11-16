@@ -3,7 +3,7 @@ queue on the server.
 
     POST /api/generate-batches               start a batch, 202 + batch_id
     GET  /api/generate-batches/{batch_id}    its state: counts and the state of each job
-    POST /api/generate-batches/{batch_id}/stop   start no more jobs; the jobs in progress end
+    POST /api/generate-batches/{batch_id}/stop   cancel the queued jobs; the jobs in progress end
 
 A batch is one background run (`generate_batch`), so it is in Run history and a backend
 restart ends it as `failed` / `Process restarted`. Its state is the run's `meta`, written
@@ -19,6 +19,7 @@ outside the batch are not counted.
 import asyncio
 import logging
 import uuid as _uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -37,26 +38,33 @@ MAX_JOBS = 200
 # One batch for each account at a time: two would double the load on the runner.
 SCOPE = "batch"
 
-# States of a job in a batch. The last three are final.
+# States of a job in a batch. The last four are final. `skipped`: `only_missing` found
+# that the job has its resume and its letter, so the batch started no run for it.
 QUEUED, TAILORING, SCORING, COVER_LETTER = "queued", "tailoring", "scoring", "cover_letter"
-DONE, FAILED, CANCELLED = "done", "failed", "cancelled"
-STATES = (QUEUED, TAILORING, SCORING, COVER_LETTER, DONE, FAILED, CANCELLED)
+DONE, FAILED, CANCELLED, SKIPPED = "done", "failed", "cancelled", "skipped"
+STATES = (QUEUED, TAILORING, SCORING, COVER_LETTER, DONE, FAILED, CANCELLED, SKIPPED)
 
-_stop_requested: set[str] = set()   # batch run ids; in memory, as the runs themselves are
+# The meta of each batch that runs in this process, by batch id. The stop request
+# changes it, and the run sees the change (both are on the event loop).
+_live: dict[str, dict] = {}
 
 
 # ── Start ────────────────────────────────────────────────────────────────────
 
 @router.post("", status_code=202)
 async def start_batch(body: dict, db: Session = Depends(get_db)):
-    """Start a batch: {"job_ids": [...], "base_resume_id": "...", "cover_letter": true}."""
+    """Start a batch: {"job_ids": [...], "base_resume_id": "...", "cover_letter": true,
+    "only_missing": false}. `only_missing` keeps what a job has: a job with a tailored
+    resume gets no tailor run, and a job that also has a cover letter is `skipped`."""
     base_resume_id = body.get("base_resume_id")
     cover_letter = body.get("cover_letter", True)
+    only_missing = body.get("only_missing", False)
     job_ids = _job_ids(body.get("job_ids"))
     if not base_resume_id:
         raise HTTPException(400, "base_resume_id is required")
-    if not isinstance(cover_letter, bool):
-        raise HTTPException(400, "cover_letter must be true or false")
+    for name, value in (("cover_letter", cover_letter), ("only_missing", only_missing)):
+        if not isinstance(value, bool):
+            raise HTTPException(400, f"{name} must be true or false")
     if base_resume_id != "persona":   # launch_tailor checks the Persona for each job
         get_owned_or_404(db, Resume, base_resume_id, "Base resume not found")
     known = {str(r[0]) for r in db.query(Job.id).filter(Job.id.in_([_uuid.UUID(j) for j in job_ids]))}
@@ -64,15 +72,40 @@ async def start_batch(body: dict, db: Session = Depends(get_db)):
     if unknown:
         raise HTTPException(422, f"job_ids: not found {unknown[:20]}")
 
+    jobs = {j: {"state": QUEUED} for j in job_ids}
+    if only_missing:
+        for job_id, has in _existing(db, job_ids).items():
+            if "cover_letter_id" in has or not cover_letter:
+                jobs[job_id] = {"state": SKIPPED, **has}
+            else:   # the letter is missing: write it from the resume that the job has
+                jobs[job_id]["resume_id"] = has["resume_id"]
     meta = {"base_resume_id": str(base_resume_id), "cover_letter": cover_letter,
-            "jobs": {j: {"state": QUEUED} for j in job_ids}}
+            "only_missing": only_missing, "jobs": jobs}
     try:
         batch_id = mon.launch_background(
             JOB_TYPE, _batch_impl, trigger="manual", scope_key=SCOPE, meta=meta,
             func_kwargs={"meta": meta})
     except mon.JobAlreadyRunningError:
         return JSONResponse(status_code=409, content={"detail": "A generate batch is already running"})
-    return {"batch_id": batch_id, "status": "running", "jobs": len(job_ids)}
+    return {"batch_id": batch_id, "status": "running", "jobs": len(job_ids),
+            "skipped": _counts(jobs)[SKIPPED]}
+
+
+def _existing(db: Session, job_ids: list[str]) -> dict[str, dict]:
+    """What each job has already: {job_id: {"resume_id", "cover_letter_id"}}, the newest of
+    each. Only the jobs with a tailored resume are in the reply. A copy of another base
+    resume counts too: a job has one tailored copy, as on the dashboard."""
+    ids = [_uuid.UUID(j) for j in job_ids]
+    out: dict[str, dict] = {}
+    for job_id, resume_id in (db.query(Resume.job_id, Resume.id)
+                              .filter(Resume.job_id.in_(ids), Resume.is_base == False)  # noqa: E712
+                              .order_by(Resume.updated_at)):
+        out[str(job_id)] = {"resume_id": str(resume_id)}
+    for job_id, letter_id in (db.query(CoverLetter.job_id, CoverLetter.id)
+                              .filter(CoverLetter.job_id.in_(ids)).order_by(CoverLetter.updated_at)):
+        if str(job_id) in out:
+            out[str(job_id)]["cover_letter_id"] = str(letter_id)
+    return out
 
 
 def _job_ids(value) -> list[str]:
@@ -100,13 +133,16 @@ async def _batch_impl(meta: dict) -> str:
     slots = asyncio.Semaphore(mon.get_limiter("tailoring").value)
 
     def set_state(job_id: str, state: str, **fields) -> None:
-        jobs[job_id] = {**jobs[job_id], "state": state, **fields}
+        row = {**jobs[job_id], "state": state, **fields}
+        row.setdefault("started_at", _now())
+        if state in (DONE, FAILED):
+            row["finished_at"] = _now()
+        jobs[job_id] = row
         mon.save_run_meta(meta)
 
     async def one(job_id: str) -> None:
         async with slots:
-            if batch_id in _stop_requested:
-                set_state(job_id, CANCELLED)
+            if jobs[job_id]["state"] != QUEUED:   # skipped at the start, or cancelled by a stop
                 return
             try:
                 await _generate_for_job(job_id, meta, set_state)
@@ -114,10 +150,11 @@ async def _batch_impl(meta: dict) -> str:
                 logger.exception("generate batch: job %s failed", job_id)
                 set_state(job_id, FAILED, error=str(e)[:300])
 
+    _live[batch_id] = meta
     try:
         await asyncio.gather(*(one(j) for j in jobs))
     finally:
-        _stop_requested.discard(batch_id)
+        _live.pop(batch_id, None)
     # The run itself is `completed` even when jobs failed: `failed` means that the batch
     # did not get to its end (a backend restart). The counts carry the failed jobs.
     counts = _counts(jobs)
@@ -129,17 +166,19 @@ async def _generate_for_job(job_id: str, meta: dict, set_state) -> None:
     from backend.api.routes_cover_letters import launch_cover_letter
     from backend.api.routes_resumes import launch_tailor
 
-    set_state(job_id, TAILORING)
-    tailor = await _step(lambda db: launch_tailor(db, meta["base_resume_id"], job_id)[0])
-    resume_id = tailor["created"].get("resume_id")
-    if tailor["error"] or not resume_id:
-        set_state(job_id, FAILED, step=TAILORING, error=tailor["error"] or "The run created no resume")
-        return
+    resume_id = meta["jobs"][job_id].get("resume_id")   # `only_missing`: the job has its resume
+    if not resume_id:
+        set_state(job_id, TAILORING)
+        tailor = await _step(lambda db: launch_tailor(db, meta["base_resume_id"], job_id)[0])
+        resume_id = tailor["created"].get("resume_id")
+        if tailor["error"] or not resume_id:
+            set_state(job_id, FAILED, step=TAILORING, error=tailor["error"] or "The run created no resume")
+            return
 
-    chained = tailor["created"].get("chained_run_id")
-    if chained:
-        set_state(job_id, SCORING, resume_id=resume_id)
-        await mon.wait_for_run(chained)   # its result is on the job; a failed score keeps the copy
+        chained = tailor["created"].get("chained_run_id")
+        if chained:
+            set_state(job_id, SCORING, resume_id=resume_id)
+            await mon.wait_for_run(chained)   # its result is on the job; a failed score keeps the copy
 
     if not meta["cover_letter"]:
         set_state(job_id, DONE, resume_id=resume_id)
@@ -187,6 +226,19 @@ def _counts(jobs: dict) -> dict:
     return counts
 
 
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _average_job_seconds(jobs: dict) -> Optional[float]:
+    """The mean time of a `done` job, from its first run to its last. For an estimate of
+    the rest: jobs not final x this / jobs in progress at a time."""
+    times = [(datetime.fromisoformat(row["finished_at"]) - datetime.fromisoformat(row["started_at"])).total_seconds()
+             for row in jobs.values()
+             if row["state"] == DONE and row.get("started_at") and row.get("finished_at")]
+    return round(sum(times) / len(times), 1) if times else None
+
+
 # ── State and stop ───────────────────────────────────────────────────────────
 
 def _batch_run(db: Session, batch_id: str) -> JobRun:
@@ -203,8 +255,9 @@ def _batch_run(db: Session, batch_id: str) -> JobRun:
 @router.get("/{batch_id}")
 def get_batch(batch_id: str, state: Optional[str] = None, db: Session = Depends(get_db)):
     """The batch: status, counts for each state, and the jobs (`state=failed` keeps the jobs
-    in that state; `state=none` leaves the jobs out). When the batch is not `running`, a job
-    that is not `done` got no result from it."""
+    in that state; `state=none` leaves the jobs out). `stopped` tells that a stop request
+    cancelled its queue. When the batch is not `running`, a job that is not `done` or
+    `skipped` got no result from it."""
     if state is not None and state != "none" and state not in STATES:
         raise HTTPException(422, f"state must be none or one of {list(STATES)}")
     run = _batch_run(db, batch_id)
@@ -214,23 +267,38 @@ def get_batch(batch_id: str, state: Optional[str] = None, db: Session = Depends(
     return {
         "batch_id": str(run.id),
         "status": run.status,
-        "stop_requested": str(run.id) in _stop_requested,
+        "stopped": bool(meta.get("stopped")),
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
         "error": mon.sanitize_run_error(run.error),
         "base_resume_id": meta.get("base_resume_id"),
         "cover_letter": meta.get("cover_letter"),
+        "only_missing": bool(meta.get("only_missing")),
         "total": len(jobs),
         "counts": _counts(jobs),
+        "average_job_seconds": _average_job_seconds(jobs),
         "jobs": shown,
     }
 
 
 @router.post("/{batch_id}/stop")
-def stop_batch(batch_id: str, db: Session = Depends(get_db)):
-    """Start no more jobs of the batch. The jobs in progress run to their end; the queued ones become `cancelled`."""
+async def stop_batch(batch_id: str, db: Session = Depends(get_db)):
+    """Stop the batch: the queued jobs become `cancelled` now. A job in progress is not
+    interrupted: it goes through all its steps (tailor, score, cover letter), and then
+    the batch ends as `completed` with `stopped` true.
+
+    `async`, so that it runs on the event loop, between two steps of the batch run."""
     run = _batch_run(db, batch_id)
-    if run.status != "running":
+    meta = _live.get(str(run.id))
+    if run.status != "running" or meta is None:
         raise HTTPException(409, f"The batch is not running (status: {run.status})")
-    _stop_requested.add(str(run.id))
-    return {"batch_id": str(run.id), "stop_requested": True}
+    jobs = meta["jobs"]
+    cancelled = [j for j, row in jobs.items() if row["state"] == QUEUED]
+    for job_id in cancelled:
+        jobs[job_id] = {**jobs[job_id], "state": CANCELLED}
+    meta["stopped"] = True
+    run.meta = dict(meta)   # a new object, so that the session sees the change
+    db.commit()
+    counts = _counts(jobs)
+    return {"batch_id": str(run.id), "stopped": True, "cancelled_now": len(cancelled),
+            "in_progress": counts[TAILORING] + counts[SCORING] + counts[COVER_LETTER], "counts": counts}
