@@ -451,6 +451,11 @@ def _is_traceable_url(url: str) -> bool:
     return "@" not in url.split("/", 1)[0]
 
 
+# Random tracer tokens: secrets.token_urlsafe(n) is ceil(4n/3) characters, and must fit
+# tracer_links.token (String(10)); 7 bytes = 10 characters.
+_RANDOM_TOKEN_BYTES = 7
+
+
 def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
                                cover_letter_id: str = None, job_id=None) -> dict:
     """Replace header contact URLs with tracer redirect URLs, returning a modified copy; owner is exactly one of a resume (resume_id) or a cover letter (cover_letter_id), with job_id resolving the short_id for job_id token styles."""
@@ -596,9 +601,10 @@ def _rewrite_urls_with_tracers(json_data: dict, resume_id: str, db,
                             token = None   # another account's token: take a random one below
             if not token:
                 # secrets, not random: the fallback token is the only entropy a
-                # link without a job short_id has (R4-T5-07). 8 bytes ≈ 11 chars.
+                # link without a job short_id has (R4-T5-07). 7 bytes = 10 chars (56 bits),
+                # the width of tracer_links.token: 8 bytes gave 11 and Postgres refused the row.
                 for _ in range(100):
-                    token = secrets.token_urlsafe(8)
+                    token = secrets.token_urlsafe(_RANDOM_TOKEN_BYTES)
                     if _any_account_links().filter(TracerLink.token == token).first():
                         continue
                     try:

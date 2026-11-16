@@ -274,8 +274,11 @@ def test_random_tokens_are_long_and_unguessable(test_db, tracer_on):
         items = _rewrite(test_db, [{"text": "Site", "url": f"site{i}.example"}])
         tokens.add(items[0]["url"].rsplit("/", 1)[-1])
     assert len(tokens) == 5
+    width = TracerLink.__table__.c.token.type.length
     for t in tokens:
-        assert len(t) >= 8, t
+        # SQLite ignores the column width; Postgres refused an 11-character token, so a
+        # base résumé whose links had no stub could not be downloaded as PDF.
+        assert 8 <= len(t) <= width, t
 
 
 def test_random_tokens_come_from_secrets(test_db, tracer_on, monkeypatch):
