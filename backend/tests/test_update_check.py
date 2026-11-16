@@ -88,6 +88,7 @@ def test_version_tuple():
 
 # ── release mode ────────────────────────────────────────────────────────────
 
+@pytest.mark.asyncio
 async def test_newer_release_is_reported():
     newer = _bump(APP_VERSION)
     routes = {f"/repos/{REPO}/releases/latest": (200, {"tag_name": f"v{newer}", "html_url": "https://x/rel"})}
@@ -98,12 +99,14 @@ async def test_newer_release_is_reported():
     assert r["url"] == "https://x/rel"
 
 
+@pytest.mark.asyncio
 async def test_same_or_older_release_is_not_an_update():
     for tag in (f"v{APP_VERSION}", "v1.0.0"):
         async with _github({f"/repos/{REPO}/releases/latest": (200, {"tag_name": tag})}) as c:
             assert (await U.check_release(c, REPO, None))["update_available"] is False
 
 
+@pytest.mark.asyncio
 async def test_repository_without_releases():
     async with _github({}) as c:
         r = await U.check_release(c, REPO, None)
@@ -116,6 +119,7 @@ async def test_repository_without_releases():
 HEAD_ROUTE = {f"/repos/{REPO}/commits/main": (200, {"sha": NEW, "html_url": "https://x/c", "commit": {"committer": {"date": "2026-11-06T14:44:13Z"}}})}
 
 
+@pytest.mark.asyncio
 async def test_running_the_head_is_not_an_update():
     async with _github(HEAD_ROUTE) as c:
         r = await U.check_commit(c, REPO, NEW)
@@ -124,6 +128,7 @@ async def test_running_the_head_is_not_an_update():
 
 
 @pytest.mark.parametrize("status", ["ahead", "diverged"])
+@pytest.mark.asyncio
 async def test_new_commits_on_main_are_counted(status):
     routes = {**HEAD_ROUTE, f"/repos/{REPO}/compare/{OLD}...{NEW}": (200, {"status": status, "ahead_by": 5, "behind_by": 1, "html_url": "https://x/cmp"})}
     async with _github(routes) as c:
@@ -131,12 +136,14 @@ async def test_new_commits_on_main_are_counted(status):
     assert (r["update_available"], r["behind_by"], r["url"]) == (True, 5, "https://x/cmp")
 
 
+@pytest.mark.asyncio
 async def test_running_code_newer_than_main_is_not_an_update():
     routes = {**HEAD_ROUTE, f"/repos/{REPO}/compare/{OLD}...{NEW}": (200, {"status": "behind", "ahead_by": 0, "behind_by": 3})}
     async with _github(routes) as c:
         assert (await U.check_commit(c, REPO, OLD))["update_available"] is False
 
 
+@pytest.mark.asyncio
 async def test_commit_unknown_upstream_or_locally_is_undecided():
     async with _github(HEAD_ROUTE) as c:
         assert (await U.check_commit(c, REPO, OLD))["update_available"] is None   # compare 404
@@ -147,6 +154,7 @@ async def test_commit_unknown_upstream_or_locally_is_undecided():
 
 # ── cache and failures ──────────────────────────────────────────────────────
 
+@pytest.mark.asyncio
 async def test_off_sends_nothing(monkeypatch):
     calls = []
     async with _github({}, calls) as c:
@@ -154,6 +162,7 @@ async def test_off_sends_nothing(monkeypatch):
     assert r["mode"] == "off" and calls == []
 
 
+@pytest.mark.asyncio
 async def test_result_is_cached_and_force_is_rate_limited(monkeypatch):
     monkeypatch.setattr(U, "read_local_commit", lambda: None)
     calls = []
@@ -170,13 +179,14 @@ async def test_result_is_cached_and_force_is_rate_limited(monkeypatch):
         assert len(calls) == 3
 
 
+@pytest.mark.asyncio
 async def test_github_failure_is_a_result_not_an_exception(monkeypatch):
     monkeypatch.setattr(U, "read_local_commit", lambda: None)
     async with _github({f"/repos/{REPO}/releases/latest": (403, {"message": "rate limit"})}) as c:
         r = await U.update_status("release", REPO, client=c)
     assert r["update_available"] is None
     assert r["error"]
-    assert U._cache["expires"] - U._cache["fetched"] == U.ERROR_SECONDS
+    assert U._cache["expires"] - U._cache["fetched"] == pytest.approx(U.ERROR_SECONDS)
 
 
 # ── settings and the endpoint ───────────────────────────────────────────────
@@ -215,3 +225,10 @@ def test_endpoint_reads_the_settings_and_only_the_owner_forces(client, test_db, 
     assert client.get("/api/updates", params={"force": "true"}).status_code == 403
     r = client.get("/api/updates")
     assert r.status_code == 200 and r.json()["owner"] is False
+
+
+def test_the_check_is_off_until_the_owner_turns_it_on():
+    # Owner decision: no request goes to GitHub by default, as with telemetry
+    from backend.seed import DEFAULT_SETTINGS
+    assert U.DEFAULT_MODE == "off"
+    assert DEFAULT_SETTINGS["update_check_mode"][0] == "off"
