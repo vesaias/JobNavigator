@@ -15,6 +15,7 @@ from backend.accounts.settings import get_setting
 from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.posting_links import counts_as_new, employer_link
 from backend.scraper._shared.postings import is_short_link, resolve_short_link
+from backend.scraper._shared.filters import include_pattern
 
 logger = logging.getLogger("jobnavigator.scraper.sources.jobspy")
 
@@ -268,8 +269,8 @@ def apply_title_filters(jobs_df, include_keywords: list, exclude_keywords: list)
     mask = pd.Series(True, index=jobs_df.index)
 
     if include_keywords:
-        pattern = "|".join(include_keywords)
-        mask &= jobs_df["title"].str.contains(pattern, case=False, na=False)
+        pattern = "|".join(include_pattern(kw) for kw in include_keywords)
+        mask &= jobs_df["title"].str.contains(pattern, case=False, na=False, regex=True)
 
     if exclude_keywords:
         pattern = "|".join(r'\b' + re.escape(kw) + r'\b' for kw in exclude_keywords)

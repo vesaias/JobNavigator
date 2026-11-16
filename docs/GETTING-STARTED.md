@@ -131,6 +131,12 @@ Saved jobs appear in **Applications** with stages (applied, screening, interview
 
 Install: `chrome://extensions` › Developer mode › **Load unpacked** › the `extension/` folder of the repo. Open the popup, go to its settings and enter the server URL (`http://localhost`) and the dashboard API key from step 0.
 
+If you run the dashboard on a custom port (for example `http://localhost:8088`) or if the extension's requests are blocked by CORS, set `ALLOWED_ORIGINS` in `.env` to include your dashboard URL and your extension's origin (`chrome-extension://<extension-id>`, shown under the extension's **ID** on `chrome://extensions`), then recreate the backend container (`docker compose up -d backend`):
+
+```ini
+ALLOWED_ORIGINS=http://localhost,http://localhost:3000,http://localhost:80,http://localhost:8088,chrome-extension://<extension-id>
+```
+
 It gives you:
 
 - **Posting preview**: lifts the frame-blocking headers only for frames the dashboard opens, so previews of most career pages work.

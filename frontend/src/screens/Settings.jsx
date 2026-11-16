@@ -676,6 +676,7 @@ export default function Settings() {
         E('Body phrases', 'Skip postings whose description contains any of these phrases.', 'body_exclusion_phrases', { list: true, sub: 'one phrase per line · case-insensitive' }),
         E('Title exclude', 'Skip jobs whose title matches any of these words.', 'title_exclude_global', { list: true, sub: 'one phrase per line · case-insensitive' }),
         E('Company exclude', 'Skip jobs from these companies (exact name).', 'company_exclude_global', { list: true, sub: 'one company per line · exact match' }),
+        E('Allowed countries', 'Skip jobs whose known locations are all outside these countries. Jobs with no known location are kept.', 'job_countries_allowed', { list: true, sub: 'one country code per line · e.g. US, GB, DE, CH · empty = all' }),
       ]],
       ['dedup', '', 'Dedup tracking params', '', [
         E('Stripped params', 'Query params removed from job URLs before duplicate detection. All utm_* are always stripped.', 'dedup_tracking_params', { list: true, sub: 'one param per line' }),

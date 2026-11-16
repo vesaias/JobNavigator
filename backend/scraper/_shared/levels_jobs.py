@@ -46,6 +46,12 @@ def job_fields(job_data: dict) -> dict:
         for key, names in (("salary_min", ("minBaseSalary", "minTotalSalary")),
                            ("salary_max", ("maxBaseSalary", "maxTotalSalary"))):
             val = next((job_data.get(n) for n in names if job_data.get(n)), None)
+            # Levels.fyi sends the amounts as numbers, and since 2026-11 as numeric strings ("115115")
+            if isinstance(val, str):
+                try:
+                    val = float(val.replace(",", "").strip())
+                except ValueError:
+                    val = None
             if isinstance(val, (int, float)) and val > 0:
                 out[key] = int(val)
     return out

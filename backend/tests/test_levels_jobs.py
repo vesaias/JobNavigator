@@ -162,3 +162,30 @@ def test_a_levels_job_marked_easy_apply_keeps_it_on_insert(test_db):
     test_db.add(job)
     test_db.commit()
     assert job.link_kind == EASY_APPLY
+
+
+def test_salary_amounts_sent_as_numeric_strings_are_read():
+    # Levels.fyi sends "115115" instead of 115115 since 2026-11
+    out = levels_jobs.job_fields({"minBaseSalary": "115115", "maxBaseSalary": "207690", "baseSalaryCurrency": "USD"})
+    assert (out["salary_min"], out["salary_max"]) == (115115, 207690)
+
+
+def test_a_salary_string_that_is_not_a_number_is_ignored():
+    out = levels_jobs.job_fields({"minBaseSalary": "competitive", "minTotalSalary": "130115", "baseSalaryCurrency": "USD"})
+    assert out["salary_min"] is None    # the first non-empty field wins; a non-number gives no value
+    assert levels_jobs.job_fields({"minBaseSalary": "120000", "baseSalaryCurrency": "EUR"})["salary_min"] is None
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Senior Product Manager, Commerce Platform a day ago\nPalo Alto, California, United States · $159K - $243K",
+     ("Senior Product Manager, Commerce Platform", "Palo Alto, California, United States · $159K - $243K", "a day ago")),
+    ("Product Manager, Broadband 2 days ago\nHerndon, VA · Hybrid · $102K - $184K",
+     ("Product Manager, Broadband", "Herndon, VA · Hybrid · $102K - $184K", "2 days ago")),
+    ("Staff PM, Payments\n3 weeks ago\nNew York, NY · Remote",
+     ("Staff PM, Payments", "New York, NY · Remote", "3 weeks ago")),
+    ("Program Manager\nAustin, TX", ("Program Manager", "Austin, TX", "")),
+    ("", ("", "", "")),
+])
+def test_a_job_link_is_read_from_its_text_when_class_names_change(text, expected):
+    from backend.scraper.sources.levelsfyi import _split_link_text
+    assert _split_link_text(text) == expected

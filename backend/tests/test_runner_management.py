@@ -457,6 +457,32 @@ async def test_an_idle_runner_is_stopped_and_the_next_call_starts_it(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_calls_that_arrive_while_a_runner_wakes_wait_for_it(monkeypatch):
+    # Only the first call used to wake the runner; the others saw it starting and failed.
+    import time
+    real_monotonic = time.monotonic
+    c = _idle_control(monkeypatch)
+    clock = [1000.0]
+    monkeypatch.setattr("backend.runner_manager.controller.time.monotonic", lambda: clock[0])
+    c.desired(["codex_cli"])
+    await settled(c)
+    clock[0] += 61
+    c.schedule()
+    await settled(c)
+    assert c.states["codex_cli"].phase == "sleeping"
+    # `time` is shared with asyncio: give the loop its clock back so the wake's polls can sleep.
+    monkeypatch.setattr("backend.runner_manager.controller.time.monotonic", real_monotonic)
+    ready = c.client.get.return_value
+    booting = [httpx.Response(503)] * 3          # the runner answers only after a few polls
+    c.client.get.side_effect = lambda *a, **kw: booting.pop() if booting else ready
+    body = Completion(protocol=1, provider="codex_cli", prompt="test", system="", model="", max_tokens=10)
+    responses = await asyncio.gather(*(c.complete(body) for _ in range(5)))
+    assert [r.status_code for r in responses] == [200] * 5
+    assert c.states["codex_cli"].phase == "ready"
+    await c.close()
+
+
+@pytest.mark.asyncio
 async def test_a_runner_with_a_call_in_flight_is_not_stopped(monkeypatch):
     c = _idle_control(monkeypatch)
     clock = [1000.0]

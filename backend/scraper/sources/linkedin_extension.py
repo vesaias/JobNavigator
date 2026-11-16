@@ -16,6 +16,7 @@ from backend.analyzer.salary_extractor import apply_salary_to_job
 from backend.analyzer.work_arrangement import apply_arrangement_to_job
 from backend.analyzer.location import apply_location_to_job
 from backend.analyzer.h1b_checker import check_job_h1b, determine_h1b_verdict
+from backend.scraper._shared.filters import include_hit
 
 logger = logging.getLogger("jobnavigator.jobs")
 
@@ -277,7 +278,7 @@ async def enrich(linkedin_ids: list[str], db=None):
                     if ext_search:
                         title_lower = title.lower()
                         include_kw = ext_search.title_include_keywords or []
-                        if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+                        if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
                             logger.info(f"LinkedIn {lid}: title '{title}' doesn't match include filter, skipping")
                             skipped += 1
                             continue

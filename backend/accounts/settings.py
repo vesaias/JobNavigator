@@ -99,7 +99,7 @@ _SECTIONS = [
     ("backups", "Backups", OWNER_ONLY, INHERIT, ["scheduler", "advanced"], ["backup_cron"]),
     ("h1b", "H-1B", OWNER_ONLY, INHERIT, ["scheduler"], ["h1b_cron"]),
     ("exclude", "Global exclude", POLICY, OWN, ["exclude"], [
-        "body_exclusion_phrases", "title_exclude_global", "company_exclude_global"]),
+        "body_exclusion_phrases", "title_exclude_global", "company_exclude_global", "job_countries_allowed"]),
     ("dedup", "Dedup tracking params", OWNER_ONLY, INHERIT, ["dedup"], ["dedup_tracking_params"]),
     # where each kind of copy goes (posting_links.py): ignored (default) or new
     ("copies", "Copies of a posting", POLICY, INHERIT, ["copies"], [

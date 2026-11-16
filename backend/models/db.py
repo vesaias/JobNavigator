@@ -869,6 +869,10 @@ install_scoping(AccountScoped)
 from backend.scraper._shared.posting_links import install_posting_links  # noqa: E402
 install_posting_links()
 
+# After the posting links: a job outside the account's allowed countries is stored as ignored.
+from backend.scraper._shared.country_filter import install_country_filter  # noqa: E402
+install_country_filter()
+
 
 # ── Uncommitted writes (S2-01) ───────────────────────────────────────────────
 # A flushed INSERT/UPDATE/DELETE holds row and unique-index locks until the

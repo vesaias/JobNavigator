@@ -34,6 +34,7 @@ DEFAULT_SETTINGS = {
     "default_resume_id": ("", "Default base Resume ID used for scoring when no company-level Resumes are configured"),
     "company_exclude_global": (json.dumps([]), "Global company ignore list — applies to all searches"),
     "title_exclude_global": (json.dumps([]), "Global title exclude keywords — applies to all searches and companies"),
+    "job_countries_allowed": (json.dumps([]), "Allowed job countries (ISO codes such as US, GB, DE, CH) — a job whose known locations are all elsewhere is stored as ignored; empty = every country; a job with no known country always passes"),
     "linkedin_email": ("", "LinkedIn account email for personal scrape mode"),
     "linkedin_password": ("", "LinkedIn account password for personal scrape mode"),
     "linkedin_mock_email": ("", "LinkedIn mock account email for Extension Voyager API"),

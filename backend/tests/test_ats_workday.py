@@ -254,3 +254,46 @@ def test_facet_options_flattens_nested_location_groups():
     ])
     assert opts == [("jobFamilyGroup", [("a", 3)]), ("locationHierarchy2", [("office", 5)]),
                     ("locationHierarchy1", [("us", 4), ("de", 1)])]
+
+
+@pytest.fixture(autouse=True)
+def _no_retry_wait(monkeypatch):
+    monkeypatch.setattr("backend.scraper.ats.workday._RETRY_WAITS", (0, 0))
+
+
+def _client_answering(*answers):
+    """An httpx.AsyncClient stand-in whose post() returns (status, text) answers in turn."""
+    resps = []
+    for status, text in answers:
+        r = MagicMock()
+        r.status_code, r.text = status, text
+        resps.append(r)
+    client = MagicMock()
+    client.post = AsyncMock(side_effect=resps)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
+
+
+_ONE_JOB = '{"total": 1, "jobPostings": [{"title": "Senior Product Manager", "externalPath": "/job/1"}]}'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("blip", [(200, "<html>Workday is down for maintenance</html>"), (503, ""), (429, "")])
+async def test_a_maintenance_page_or_busy_answer_is_retried(monkeypatch, blip):
+    client = _client_answering(blip, (200, _ONE_JOB))
+    monkeypatch.setattr("httpx.AsyncClient", lambda **kw: client)
+    from backend.scraper.ats.workday import scrape
+    jobs = await scrape("https://visa.wd5.myworkdayjobs.com/Visa")
+    assert [j["title"] for j in jobs] == ["Senior Product Manager"]
+    assert client.post.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_board_that_keeps_answering_html_fails_with_a_clear_message(monkeypatch):
+    client = _client_answering(*[(200, "<html>bot check</html>")] * 3)
+    monkeypatch.setattr("httpx.AsyncClient", lambda **kw: client)
+    from backend.scraper.ats.workday import WorkdayUnavailable, scrape
+    with pytest.raises(WorkdayUnavailable, match="non-JSON page"):
+        await scrape("https://visa.wd5.myworkdayjobs.com/Visa")
+    assert client.post.await_count == 3

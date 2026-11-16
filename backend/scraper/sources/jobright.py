@@ -15,6 +15,7 @@ from backend.accounts.settings import get_setting, set_setting
 from backend.scraper._shared.dedup import make_external_id, make_content_hash
 from backend.scraper._shared.posting_links import counts_as_new
 from backend.scraper._shared.postings import resolve_short_links
+from backend.scraper._shared.filters import include_hit
 
 logger = logging.getLogger("jobnavigator.jobright")
 
@@ -375,7 +376,7 @@ async def run(search: Search) -> dict:
         kept_jobs = []
         for j in unique_jobs:
             title_lower = j["title"].lower()
-            if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+            if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
                 continue
             if exclude_kw and any(re.search(r'\b' + re.escape(kw) + r'\b', title_lower) for kw in exclude_kw):
                 continue
@@ -652,7 +653,7 @@ async def preview(search, db) -> dict:
             reason = None
 
             # Title filters
-            if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+            if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
                 kept = False
                 reason = f"No match for: {', '.join(include_kw)}"
             if kept and exclude_kw:
