@@ -4,6 +4,7 @@ tailor -> chained score -> cover letter one run at a time, and the batch works o
 import asyncio
 import time
 import uuid
+from datetime import datetime
 
 import pytest
 from fastapi import HTTPException
@@ -42,11 +43,11 @@ def _wait(c, batch_id):
 
 
 def _row(out, job):
-    """The row of a job without its times; a started job has `started_at`, and a `done`
-    or `failed` one has `finished_at` too."""
+    """The row of a job without its times; a started job has `started_at`, and a job in
+    a final state has `finished_at`."""
     row = dict(out["jobs"][str(job.id)])
     assert ("started_at" in row) == (row["state"] not in ("queued", "cancelled", "skipped")), row
-    assert ("finished_at" in row) == (row["state"] in ("done", "failed")), row
+    assert ("finished_at" in row) == (row["state"] in ("done", "failed", "cancelled", "skipped")), row
     row.pop("started_at", None), row.pop("finished_at", None)
     return row
 
@@ -186,6 +187,7 @@ def test_stop_cancels_the_queued_jobs(client, test_db, monkeypatch):
     now = client.get(f"{URL}/{batch_id}").json()
     assert now["status"] == "running" and now["stopped"] is True
     assert now["counts"]["cancelled"] == 4 and now["counts"]["tailoring"] == 2
+    assert all("finished_at" in r for r in now["jobs"].values() if r["state"] == "cancelled")
     assert client.post(f"{URL}/{batch_id}/stop").json()["cancelled_now"] == 0   # a second stop does no harm
     fakes.hold = False
     out = _wait(client, batch_id)
@@ -218,7 +220,11 @@ def test_only_missing_keeps_what_a_job_has(client, test_db, monkeypatch):
                                 "cover_letter_id": str(letter.id)}
     # The job with a resume and no letter: no tailor run, the letter from the resume it has.
     assert _row(out, no_letter) == {"state": "done", "resume_id": str(copies[no_letter.id].id),
-                                    "cover_letter_id": f"letter-of-{no_letter.id}"}
+                                    "cover_letter_id": f"letter-of-{no_letter.id}", "letter_only": True}
+    # The mean time counts the job that went through the tailor only.
+    full = out["jobs"][str(new.id)]
+    assert out["average_job_seconds"] == round(
+        (datetime.fromisoformat(full["finished_at"]) - datetime.fromisoformat(full["started_at"])).total_seconds(), 1)
     assert _row(out, new)["resume_id"] == f"resume-of-{new.id}"
     assert fakes.tailored == [str(new.id)]
     assert {b["job_id"] for b in fakes.letters} == {str(no_letter.id), str(new.id)}

@@ -76,9 +76,9 @@ async def start_batch(body: dict, db: Session = Depends(get_db)):
     if only_missing:
         for job_id, has in _existing(db, job_ids).items():
             if "cover_letter_id" in has or not cover_letter:
-                jobs[job_id] = {"state": SKIPPED, **has}
+                jobs[job_id] = {"state": SKIPPED, **has, "finished_at": _now()}
             else:   # the letter is missing: write it from the resume that the job has
-                jobs[job_id]["resume_id"] = has["resume_id"]
+                jobs[job_id].update(resume_id=has["resume_id"], letter_only=True)
     meta = {"base_resume_id": str(base_resume_id), "cover_letter": cover_letter,
             "only_missing": only_missing, "jobs": jobs}
     try:
@@ -231,11 +231,13 @@ def _now() -> str:
 
 
 def _average_job_seconds(jobs: dict) -> Optional[float]:
-    """The mean time of a `done` job, from its first run to its last. For an estimate of
-    the rest: jobs not final x this / jobs in progress at a time."""
+    """The mean time of a `done` job that went through the tailor, from its first run to
+    its last. A `letter_only` job is not counted: it takes about a third of that time.
+    For an estimate of the rest: jobs not final x this / jobs in progress at a time."""
     times = [(datetime.fromisoformat(row["finished_at"]) - datetime.fromisoformat(row["started_at"])).total_seconds()
              for row in jobs.values()
-             if row["state"] == DONE and row.get("started_at") and row.get("finished_at")]
+             if row["state"] == DONE and not row.get("letter_only")
+             and row.get("started_at") and row.get("finished_at")]
     return round(sum(times) / len(times), 1) if times else None
 
 
@@ -295,7 +297,7 @@ async def stop_batch(batch_id: str, db: Session = Depends(get_db)):
     jobs = meta["jobs"]
     cancelled = [j for j, row in jobs.items() if row["state"] == QUEUED]
     for job_id in cancelled:
-        jobs[job_id] = {**jobs[job_id], "state": CANCELLED}
+        jobs[job_id] = {**jobs[job_id], "state": CANCELLED, "finished_at": _now()}
     meta["stopped"] = True
     run.meta = dict(meta)   # a new object, so that the session sees the change
     db.commit()

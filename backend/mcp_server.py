@@ -355,15 +355,20 @@ async def get_batch(ctx: Context, batch_id: str, state: str = "none") -> str:
     `stopped` (a stop request cancelled its queue), `counts` for each job state, and the
     jobs of one state.
 
+    Without `state` the reply has the counts only, and `jobs` is empty: that does not
+    mean that the batch has no jobs. Give `state` to get the job rows.
+
     `state` chooses the jobs in the reply: `none` (the default: counts only), `done`,
     `failed`, `cancelled`, `skipped`, `queued`, `tailoring`, `scoring`, `cover_letter`.
     A `done` or `skipped` job has `resume_id` and `cover_letter_id`; a `failed` job has
-    `step` and `error`; a started job has `started_at`, a `done` or `failed` one also
-    `finished_at`. When `status` is not `running`, a job that is not `done` or `skipped`
-    got no result.
+    `step` and `error`; a started job has `started_at`, and each job in a final state
+    has `finished_at`. A job with `letter_only` had its resume (`only_missing`) and got
+    the letter only. When `status` is not `running`, a job that is not `done` or
+    `skipped` got no result.
 
-    `average_job_seconds` is the mean time of a `done` job. Estimate of the time left:
-    jobs not final x `average_job_seconds` / 2 (the jobs in progress at a time).
+    `average_job_seconds` is the mean time of a `done` job that went through the tailor
+    (`letter_only` jobs are not counted; they take about a third of it). Estimate of the
+    time left: jobs not final x `average_job_seconds` / 2 (the jobs in progress at a time).
     """
     return await _get(ctx, f"/api/generate-batches/{batch_id}", state=state)
 
