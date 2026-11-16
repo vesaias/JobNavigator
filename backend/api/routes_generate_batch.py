@@ -44,8 +44,9 @@ QUEUED, TAILORING, SCORING, COVER_LETTER = "queued", "tailoring", "scoring", "co
 DONE, FAILED, CANCELLED, SKIPPED = "done", "failed", "cancelled", "skipped"
 STATES = (QUEUED, TAILORING, SCORING, COVER_LETTER, DONE, FAILED, CANCELLED, SKIPPED)
 
-# The meta of each batch that runs in this process, by batch id. The stop request
-# changes it, and the run sees the change (both are on the event loop).
+# The meta of each batch that runs in this process, by batch id, from its start request
+# to the end of its run. The stop request changes it, and the run sees the change (both
+# are on the event loop).
 _live: dict[str, dict] = {}
 
 
@@ -87,6 +88,7 @@ async def start_batch(body: dict, db: Session = Depends(get_db)):
             func_kwargs={"meta": meta})
     except mon.JobAlreadyRunningError:
         return JSONResponse(status_code=409, content={"detail": "A generate batch is already running"})
+    _live[batch_id] = meta   # here, not in the run: a stop can come before the run's first step
     return {"batch_id": batch_id, "status": "running", "jobs": len(job_ids),
             "skipped": _counts(jobs)[SKIPPED]}
 
@@ -150,7 +152,6 @@ async def _batch_impl(meta: dict) -> str:
                 logger.exception("generate batch: job %s failed", job_id)
                 set_state(job_id, FAILED, error=str(e)[:300])
 
-    _live[batch_id] = meta
     try:
         await asyncio.gather(*(one(j) for j in jobs))
     finally:

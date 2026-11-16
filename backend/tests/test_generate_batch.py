@@ -198,6 +198,26 @@ def test_stop_cancels_the_queued_jobs(client, test_db, monkeypatch):
     assert client.post(f"{URL}/{batch_id}/stop").status_code == 409   # it is not running now
 
 
+def test_stop_before_the_first_step_of_the_run(client, test_db, monkeypatch):
+    """The batch is registered for a stop at the start request, not at the run's first step."""
+    import backend.job_monitor as mon
+    from backend.models.db import JobRun
+
+    def launch_that_does_not_run(job_type, func, **kw):
+        run = JobRun(job_type=job_type, trigger="manual", status="running", meta=kw["meta"])
+        test_db.add(run)
+        test_db.commit()
+        return str(run.id)
+
+    monkeypatch.setattr(mon, "launch_background", launch_that_does_not_run)
+    base, jobs = _base(test_db), [make_job(test_db) for _ in range(3)]
+    batch_id = _start(client, jobs, base).json()["batch_id"]
+    stop = client.post(f"{URL}/{batch_id}/stop")
+    assert stop.status_code == 200, stop.text
+    assert (stop.json()["cancelled_now"], stop.json()["in_progress"]) == (3, 0)
+    assert client.get(f"{URL}/{batch_id}").json()["counts"]["cancelled"] == 3
+
+
 def test_only_missing_keeps_what_a_job_has(client, test_db, monkeypatch):
     fakes = _Fakes(monkeypatch)
     base = _base(test_db)
