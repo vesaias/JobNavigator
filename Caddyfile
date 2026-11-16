@@ -18,6 +18,14 @@
         }
     }
 
+    # An MCP client that gets a 401 from /api/mcp looks for OAuth metadata here. This
+    # server has none; without this rule the frontend answers with index.html (200),
+    # and the client reports a JSON parse error in place of the 401.
+    handle /.well-known/oauth-* {
+        header Content-Type application/json
+        respond `{"detail":"Not found"}` 404
+    }
+
     # Health check
     handle /health {
         reverse_proxy backend:8000

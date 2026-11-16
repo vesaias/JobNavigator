@@ -149,13 +149,14 @@ def test_bulk_update_reports_missing_ids(client, test_db):
     r = assert_clean(client.post("/api/jobs/bulk-update", json={
         "job_ids": [str(job.id), MISSING_UUID], "updates": {"status": "skip"},
     }), 200)
-    assert r.json() == {"updated": 1, "not_found": [MISSING_UUID]}
+    assert r.json() == {"updated": 1, "not_found": [MISSING_UUID],
+                        "previous": {str(job.id): {"status": "new"}}}
 
 
 def test_bulk_update_empty_id_list_is_a_noop(client):
     r = assert_clean(client.post("/api/jobs/bulk-update",
                                 json={"job_ids": [], "updates": {"status": "skip"}}), 200)
-    assert r.json() == {"updated": 0, "not_found": []}
+    assert r.json() == {"updated": 0, "not_found": [], "previous": {}}
 
 
 def test_bulk_update_drops_keys_outside_the_allow_list(client, test_db):

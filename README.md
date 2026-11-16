@@ -192,6 +192,7 @@ Install: `chrome://extensions` › Developer mode › Load unpacked › `extensi
 |---|---|---|
 | **Telegram** | `TELEGRAM_BOT_TOKEN` (the household bot) | Notifications › Link Telegram, or its own bot |
 | **Gmail** | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET`; add `<dashboard>/api/gmail/callback` as a redirect URI | Email classification › Gmail › Connect Gmail |
+| **MCP** (Claude Code and other MCP clients) | Nothing: `<dashboard>/api/mcp`, see [docs/MCP.md](docs/MCP.md) | Accounts › API token |
 
 ## Telemetry
 

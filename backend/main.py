@@ -1,6 +1,6 @@
 """FastAPI entry point for JobNavigator."""
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, Query, Request, HTTPException
@@ -29,6 +29,7 @@ from backend.api.routes_autofill import router as autofill_router
 from backend.api.routes_llm import router as llm_router
 from backend.api.routes_accounts import router as accounts_router
 from backend.api.routes_gmail import router as gmail_router
+from backend.api.routes_generate_batch import router as generate_batch_router
 from backend.scraper._shared.link_kinds import job_link
 
 logging.basicConfig(level=logging.INFO)
@@ -113,8 +114,10 @@ async def lifespan(app: FastAPI):
     from backend.runner_management import coordinator, enabled as runner_management_enabled
     if runner_management_enabled():
         coordinator.start()
+    run_mcp = mcp_server.endpoint.run if mcp_server else nullcontext
     try:
-        yield
+        async with run_mcp():
+            yield
     finally:
         await coordinator.stop()
 
@@ -643,6 +646,18 @@ app.include_router(autofill_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(accounts_router, prefix="/api")
 app.include_router(gmail_router, prefix="/api")
+app.include_router(generate_batch_router, prefix="/api")
+
+# MCP server (read tools) for MCP clients; behind the same auth middleware as the API.
+try:
+    from backend import mcp_server  # noqa: E402
+except ImportError as _mcp_err:
+    # Code pulled without rebuilding the image: the `mcp` package is not installed.
+    # The backend must still start (image_check.py reports the stale image).
+    mcp_server = None
+    logger.warning("MCP server is off: %s. Rebuild or pull the backend image.", _mcp_err)
+else:
+    app.add_route(mcp_server.PATH, mcp_server.endpoint, include_in_schema=False)
 
 
 # A malformed UUID in a path (/api/jobs/abc) makes Postgres raise DataError deep in
@@ -1364,8 +1379,12 @@ SCHEDULE_NAMES = {
 
 
 @app.get("/api/scheduler/jobs", tags=["scheduler"], summary="List scheduled jobs")
-def get_scheduler_jobs():
-    """Return all scheduler jobs with their schedule, next run time (UTC), trigger URL, and running state."""
+def get_scheduler_jobs(overrides: bool = True):
+    """Return all scheduler jobs with their schedule, next run time (UTC), trigger URL, and running state.
+
+    `overrides=false` leaves out the rows of searches and companies that have their own
+    interval (one row each, so an install with 150 such companies answers 150 rows).
+    """
     from backend.scheduler import scheduler
     from backend.models.db import Company
 
@@ -1414,6 +1433,9 @@ def get_scheduler_jobs():
             # not unlocked the owner sections); the Stats table hides Run now then
             "owner_only": job.id in _OWNER_ONLY_SCHEDULES,
         })
+
+    if not overrides:
+        return result
 
     # Per-search and per-company custom scrape intervals
     db = SessionLocal()

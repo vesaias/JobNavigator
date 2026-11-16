@@ -123,6 +123,9 @@ def list_jobs(
     # brief=1 drops the long text fields (description, scoring report, H-1B snippet) for
     # pickers that only need title/company/scores; 200 full rows are several MB.
     brief: bool = False,
+    # fields=id,title,... keeps only those keys of each row, for a client that reads many
+    # rows and needs a few values (a full row is about 1.2 KB even with brief=1).
+    fields: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     search_id = uuid_filter(search_id, "search_id")
@@ -229,6 +232,12 @@ def list_jobs(
         for r in rows:
             for k in _BRIEF_DROPPED:
                 r.pop(k, None)
+    keep = {f.strip() for f in (fields or "").split(",") if f.strip()}
+    if keep:
+        unknown = keep - set(rows[0]) if rows else set()
+        if unknown:
+            raise HTTPException(status_code=422, detail=f"fields: unknown {sorted(unknown)}")
+        rows = [{k: v for k, v in r.items() if k in keep} for r in rows]
     return {"total": total, "jobs": rows}
 
 
@@ -1007,7 +1016,7 @@ def _validate_job_updates(updates: dict, allowed: set) -> None:
 
 @router.post("/bulk-update")
 def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
-    """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>]} so the frontend can reconcile stale client-side selections."""
+    """Bulk update multiple jobs at once (status, seen, saved); returns {"updated": count, "not_found": [<ids>], "previous": {<id>: {<key>: <old value>}}} so the frontend can reconcile stale client-side selections and a caller can undo the change."""
     import uuid as _uuid
     job_ids = body.get("job_ids") or []
     updates = body.get("updates") or {}
@@ -1019,6 +1028,7 @@ def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
     _validate_job_updates(updates, allowed)
     count = 0
     not_found: list[str] = []
+    previous: dict[str, dict] = {}  # id -> the values before this call, for an undo
     for job_id in job_ids:
         # A non-uuid used to raise DataError mid-loop, so the whole batch aborted
         # with a bare 404 and every valid id in it was silently dropped
@@ -1030,14 +1040,17 @@ def bulk_update_jobs(body: dict, db: Session = Depends(get_db)):
             continue
         job = db.query(Job).filter(Job.id == parsed).first()
         if job:
+            before = {}
             for k, v in updates.items():
                 if k in allowed:
+                    before[k] = getattr(job, k)
                     setattr(job, k, v)
+            previous[str(job.id)] = before
             count += 1
         else:
             not_found.append(str(job_id))
     db.commit()
-    return {"updated": count, "not_found": not_found}
+    return {"updated": count, "not_found": not_found, "previous": previous}
 
 
 @router.get("/{job_id}")
@@ -1135,7 +1148,13 @@ async def update_job(job_id: str, updates: dict, background_tasks: BackgroundTas
                 from backend.analyzer.h1b_checker import fetch_h1b_for_company_id
                 background_tasks.add_task(fetch_h1b_for_company_id, str(new_co.id))
 
-    result = _job_to_dict(job)
+    # The same tailored copy as GET /jobs/{id} names; without it the reply said that a
+    # job with a tailored copy had none.
+    from backend.models.db import Resume
+    tailored = db.query(Resume.id).filter(
+        Resume.job_id == job.id, Resume.is_base == False  # noqa: E712
+    ).order_by(Resume.updated_at.desc()).first()
+    result = _job_to_dict(job, tailored_resume_id=tailored[0] if tailored else None)
     result["created_application_id"] = created_application_id
     result["created_company_id"] = created_company_id
     return result
