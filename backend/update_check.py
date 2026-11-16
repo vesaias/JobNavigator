@@ -2,11 +2,11 @@
 
 The owner picks one mode (install setting `update_check_mode`):
 
-- `release` (default): GitHub's latest release of `update_check_repo` against APP_VERSION.
+- `release`: GitHub's latest release of `update_check_repo` against APP_VERSION.
 - `commit`: the head of `main` in that repository against the commit this install runs.
   The commit comes from the clone's `.git` (docker-compose.yml mounts it read-only):
   Compose bind-mounts ./backend, so the clone, not the image, is the code that runs.
-- `off`: no request leaves the install.
+- `off` (default): no request leaves the install until the owner picks another mode.
 
 Only api.github.com is called, without a token and without any data about the install.
 The anonymous limit is 60 requests an hour per address, so a result is cached for
@@ -34,7 +34,7 @@ logger = logging.getLogger("jobnavigator.update_check")
 DEFAULT_REPO = "vesaias/JobNavigator"
 BRANCH = "main"
 MODES = ("release", "commit", "off")
-DEFAULT_MODE = "release"
+DEFAULT_MODE = "off"   # the owner opts in, as for telemetry
 API = "https://api.github.com"
 TIMEOUT = 10
 CACHE_SECONDS = 6 * 3600

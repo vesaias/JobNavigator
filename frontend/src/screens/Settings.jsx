@@ -780,7 +780,7 @@ export default function Settings() {
       ]],
       ['updates', '', 'Updates', '', [
         SEL('Check for updates', 'Compares this install with GitHub. It only reports; it never updates the install.', 'update_check_mode',
-          [['release', 'New releases'], ['commit', 'New commits on main'], ['off', 'Off']], { w: '260px', dflt: 'release',
+          [['off', 'Off'], ['release', 'New releases'], ['commit', 'New commits on main']], { w: '260px', dflt: 'off',
             info: 'New releases compares the version with the latest GitHub release. New commits on main compares the commit of this clone with the head of main; the backend reads it from the clone’s .git, which docker-compose.yml mounts read-only. Only api.github.com is called, without a token and without data about this install. To update: git pull && docker compose pull && docker compose up -d. Commits on main have no prebuilt images, so after git pull build them with docker compose up --build -d.' }),
         B('Repository', 'The GitHub repository to compare with, as owner/name. Empty = vesaias/JobNavigator.', 'update_check_repo', { mono: true, w: '260px', placeholder: 'vesaias/JobNavigator' }),
         { kind: 'updates', label: 'Status', help: 'The last result. GitHub is asked at most every 6 hours.' },
@@ -1155,7 +1155,7 @@ function Row({ r, ctx }) {
       case 'telemetry':
         return <TelemetrySettingRow />
       case 'updates':
-        return <UpdateStatusRow mode={val('update_check_mode', 'release')} repo={val('update_check_repo')} />
+        return <UpdateStatusRow mode={val('update_check_mode', 'off')} repo={val('update_check_repo')} />
       case 'readonly': {
         const set = !!val(r.key)
         if (!set) return <Helper style={{ flex: 1, minWidth: 0 }}>{r.emptyText || 'Not set'}</Helper>
