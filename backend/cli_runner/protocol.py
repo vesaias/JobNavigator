@@ -3,6 +3,9 @@
 PROTOCOL_VERSION = 1
 CLI_TIMEOUT = 300
 AGY_TIMEOUT = 450
+# Calls one runner executes at a time. The runner rejects the next call; the backend
+# queues before it sends, so the wait is outside the HTTP and CLI timeouts.
+RUNNER_SLOTS = 2
 SERVICES = {
     "codex_cli": "codex-runner",
     "claude_code": "claude-runner",

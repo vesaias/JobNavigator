@@ -18,6 +18,7 @@ from backend.scraper.sources.linkedin_extension import (
     enrich as _scrape_linkedin_ids,  # noqa: F401
     _linkedin_import_progress,
 )
+from backend.scraper._shared.filters import include_hit
 
 logger = logging.getLogger("jobnavigator.jobs")
 
@@ -833,7 +834,7 @@ async def save_from_extension(body: dict, db: Session = Depends(get_db)):
         title_lower = title.lower()
         include_kw = ext_search.title_include_keywords or []
         exclude_kw = list(set((ext_search.title_exclude_keywords or []) + get_global_title_exclude(db)))
-        if include_kw and not any(kw.lower() in title_lower for kw in include_kw):
+        if include_kw and not any(include_hit(kw, title_lower) for kw in include_kw):
             filter_reject_reason = f"title-include miss: needed any of {include_kw}"
             reject_message = ("title matches none of the required keywords ("
                               + ", ".join(include_kw) + ")")

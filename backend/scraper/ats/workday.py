@@ -1,4 +1,5 @@
 """Workday ATS handler — JSON API via POST /wday/cxs/{company}/{site}/jobs; detected by hostname match on myworkdayjobs.com."""
+import asyncio
 import json
 import logging
 import re
@@ -182,6 +183,39 @@ def _split_facet(options, applied: dict, total: int):
     return min(candidates, key=rank)
 
 
+# A Workday tenant sometimes answers with a maintenance or bot-check page (HTML with status 200)
+# or a 429/5xx for a minute; one blip used to fail the whole company run with a JSONDecodeError.
+_RETRY_WAITS = (2, 5)          # seconds before the 2nd and 3rd attempt
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+class WorkdayUnavailable(RuntimeError):
+    """The Workday API kept answering with something that is not its JSON."""
+
+
+async def _post_page(client, api_url: str, payload: dict, label: str):
+    """POST one page; retries a non-JSON answer or a 429/5xx. Returns (status, data or None)."""
+    for attempt in range(len(_RETRY_WAITS) + 1):
+        resp = await client.post(api_url, json=payload, headers=_HEADERS)
+        retry = resp.status_code in _RETRY_STATUSES
+        data = None
+        if resp.status_code == 200:
+            try:
+                data = json.loads(resp.text)
+            except ValueError:
+                retry = True
+        if not retry:
+            return resp.status_code, data
+        if attempt < len(_RETRY_WAITS):
+            logger.info(f"Workday API: {label} answered {resp.status_code}"
+                        f"{' with a non-JSON page' if resp.status_code == 200 else ''}; retrying")
+            await asyncio.sleep(_RETRY_WAITS[attempt])
+    if resp.status_code == 200:
+        raise WorkdayUnavailable(f"Workday returned a non-JSON page for {label} three times "
+                                 "(maintenance or a bot check); it should work on the next run")
+    return resp.status_code, None
+
+
 async def _walk(client, api_url: str, facets: dict, label: str, debug: bool, rejected: list):
     """Page through one search. Returns (status of the first page, total, facets, postings)."""
     postings: list[dict] = []
@@ -190,14 +224,13 @@ async def _walk(client, api_url: str, facets: dict, label: str, debug: bool, rej
     first_facets = []
     while True:
         payload = {"appliedFacets": facets, "limit": _PAGE, "offset": offset, "searchText": ""}
-        resp = await client.post(api_url, json=payload, headers=_HEADERS)
-        if resp.status_code != 200:
-            logger.warning(f"Workday API returned {resp.status_code} for {label}")
+        status, data = await _post_page(client, api_url, payload, label)
+        if status != 200:
+            logger.warning(f"Workday API returned {status} for {label}")
             if debug:
                 rejected.append({"title": "(none)", "url": api_url, "selector": "workday_api",
-                                 "reason": f"HTTP {resp.status_code}"})
-            return (resp.status_code if offset == 0 else 200), total or 0, first_facets, postings
-        data = json.loads(resp.text)
+                                 "reason": f"HTTP {status}"})
+            return (status if offset == 0 else 200), total or 0, first_facets, postings
         if total is None:
             total = data.get("total", 0) or 0
             first_facets = data.get("facets") or []

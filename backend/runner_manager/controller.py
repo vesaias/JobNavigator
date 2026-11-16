@@ -277,7 +277,8 @@ class Controller:
     async def complete(self, body):
         provider = body.provider
         state = self.states[provider]
-        if state.desired and state.sleeping:
+        if state.desired and state.phase != "ready":
+            # Asleep, or still starting (another call is waking it): wait up to 90 s.
             await self.wake(provider)
         if not state.desired or state.phase != "ready":
             self.schedule()

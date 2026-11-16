@@ -24,7 +24,7 @@ from backend.accounts.settings import get_setting
 from backend.analyzer import salary_extractor
 from backend.scraper._shared.dedup import make_external_id, make_content_hash, mark_ignored
 from backend.scraper._shared.posting_links import counts_as_new
-from backend.scraper._shared.filters import build_search_exclude_sets, company_included
+from backend.scraper._shared.filters import build_search_exclude_sets, company_included, include_hit
 from backend.scraper._shared.analysis import analyze_inline, prefetch_h1b
 
 logger = logging.getLogger("jobnavigator.trulyremote")
@@ -298,7 +298,7 @@ def _title_filters(search: Search, db) -> tuple[list, list]:
 
 def _title_kept(title: str, include_kw: list, exclude_kw: list) -> tuple[bool, str | None]:
     tl = title.lower()
-    if include_kw and not any(kw.lower() in tl for kw in include_kw):
+    if include_kw and not any(include_hit(kw, tl) for kw in include_kw):
         return False, f"No match for: {', '.join(include_kw)}"
     if exclude_kw:
         matched = [kw for kw in exclude_kw if re.search(r'\b' + re.escape(kw) + r'\b', tl)]

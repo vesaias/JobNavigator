@@ -147,3 +147,35 @@ def test_apply_company_filters_global_exclude():
     titles = [j["title"] for j in kept]
     assert "Junior Developer" not in titles
     assert "Senior Developer" in titles
+
+
+def test_short_include_words_match_whole_words_only():
+    from backend.scraper._shared.filters import include_hit, match_title_expr, title_kept
+    # PM stands alone: a title word, after "Senior", before a comma or a dash, or as "PM-T"; plural allowed
+    for title in ("Senior PM, International Trading", "Staff PM - Growth", "PM", "Sr. PM-T, Payments", "PMs for Ads"):
+        assert include_hit("PM", title.lower()), title
+    # ... but never inside a longer word
+    for title in ("Business Development Lead", "Shipment Coordinator", "Equipment Planner", "Senior TPM", "PMM Lead"):
+        assert not include_hit("pm", title.lower()), title
+    assert match_title_expr("product OR program OR project OR PM", "Senior PM, International Trading")
+    assert not match_title_expr("product OR program OR project OR PM", "Development Manager")
+    assert title_kept("Staff PM, Growth", ["product manager", "pm"], [])[0]
+    assert not title_kept("Development Lead", ["pm"], [])[0]
+
+
+def test_longer_include_words_stay_substrings():
+    from backend.scraper._shared.filters import include_hit, match_title_expr
+    assert include_hit("product manag", "senior product management lead")
+    assert include_hit("program", "programme manager")
+    assert include_hit("solution", "solutions architect")
+    assert match_title_expr('"forward deploy" OR TPM', "Forward Deployed Strategist")
+    assert match_title_expr("TPM OR PMO", "Senior TPM, Payments")
+    assert match_title_expr("TPM OR PMO", "PMO Lead")
+
+
+def test_jobspy_include_filter_uses_whole_word_short_keywords():
+    import pandas as pd
+    from backend.scraper.sources.jobspy import apply_title_filters
+    df = pd.DataFrame({"title": ["Senior PM, Payments", "Business Development Manager", "Product Manager (C++)"]})
+    kept, _ = apply_title_filters(df, ["pm", "product manager (c++)"], [])
+    assert list(kept["title"]) == ["Senior PM, Payments", "Product Manager (C++)"]
