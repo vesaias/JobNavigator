@@ -18,13 +18,15 @@ _QUOTA_RE = re.compile(r"usage limit|rate limit|quota|too many requests|\b429\b"
 
 # Reasoning-effort values each provider accepts; "" sends none, so the model uses its own default.
 # The values a model takes vary inside one provider, so an unsupported pick fails with the provider's
-# own error. antigravity_cli carries the effort in the model slug; ollama and lmstudio take none.
+# own error. antigravity_cli carries the effort in the model slug; lmstudio takes none. On ollama a
+# level turns the model's thinking on, and the default leaves it off.
 REASONING_EFFORTS = {
     "claude_api": ("low", "medium", "high", "xhigh", "max"),
     "claude_code": ("low", "medium", "high", "xhigh", "max"),
     "codex_cli": ("none", "low", "medium", "high", "xhigh", "max"),
     "openai": ("none", "low", "medium", "high", "xhigh", "max"),
     "openrouter": ("none", "minimal", "low", "medium", "high", "xhigh", "max"),
+    "ollama": ("none", "low", "medium", "high"),
 }
 # The API providers count reasoning tokens against the output cap, and several current models reason
 # by default (Sonnet 5, Opus 5.5, GPT-6 Sol). A cap sized for the answer alone can then go entirely to
@@ -363,6 +365,9 @@ def _output_cap(provider: str, max_tokens: int, effort: str) -> int:
     reasoning and returns no text; the Go models accept the larger cap (probed, #25)."""
     if effort == "none":
         return max_tokens
+    if provider == "ollama":
+        # thinking is off unless a level is picked (see _call_ollama); then it needs the room too
+        return max_tokens + REASONING_HEADROOM if effort else max_tokens
     if provider not in _CAPPED_PROVIDERS:
         return max_tokens
     if provider == "opencode_go":
@@ -508,7 +513,7 @@ async def _dispatch(provider: str, model: str, api_key: str,
                                   base_url=base,
                                   extra_body={"reasoning_effort": "none"})
     elif provider == "ollama":
-        return await _call_ollama(combined, system, model, max_tokens)
+        return await _call_ollama(combined, system, model, max_tokens, effort=effort)
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")
 
@@ -745,11 +750,21 @@ async def _call_openrouter(prompt: str, system: str, model: str, api_key: str, m
         raise
 
 
-async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) -> dict:
-    """Call local Ollama instance. Returns {text, usage}."""
+# A thinking model on a local GPU can reason for many minutes before it answers.
+OLLAMA_THINKING_TIMEOUT = 900
+
+
+async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int, effort: str = "") -> dict:
+    """Call local Ollama instance. Returns {text, usage}.
+
+    Thinking models reason by default, and the reasoning counts against num_predict:
+    a scoring call then returns an empty or cut-off reply ("not valid JSON"). So thinking is off
+    unless the slot picks a reasoning effort, the same choice the LM Studio branch makes.
+    Ollama's `think` is a plain on/off switch for most models, so every level sends true."""
     import httpx
+    think = bool(effort) and effort != "none"
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=OLLAMA_THINKING_TIMEOUT if think else 120) as client:
             response = await client.post(
                 f"{local_base_url('ollama')}/api/generate",
                 json={
@@ -757,6 +772,7 @@ async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) ->
                     "prompt": prompt,
                     "system": system,
                     "stream": False,
+                    "think": think,
                     "options": {"num_predict": max_tokens},
                 },
             )
@@ -774,8 +790,16 @@ async def _call_ollama(prompt: str, system: str, model: str, max_tokens: int) ->
                            + (f": {detail}" if detail else "")) from None
     except httpx.HTTPError as e:
         raise RuntimeError(f"Ollama is not reachable ({type(e).__name__})") from None
+    text = (data.get("response") or "").strip()
+    if not text and data.get("done_reason") == "length":
+        # The reasoning filled num_predict before the answer began: a model that reasons even
+        # with thinking off, or a level whose reasoning outgrew the room. A retry
+        # would end the same way, so update error messaging instead of failing as unparseable JSON.
+        raise NonRetryableLLMError(
+            f"{model} used the whole output cap on reasoning and returned no text; "
+            + ("lower the reasoning effort" if think else "pick a reasoning effort for it in Settings › Models"))
     return {
-        "text": data["response"].strip(),
+        "text": text,
         "usage": {
             "input_tokens": data.get("prompt_eval_count", 0),
             "output_tokens": data.get("eval_count", 0),
