@@ -179,3 +179,19 @@ def test_jobspy_include_filter_uses_whole_word_short_keywords():
     df = pd.DataFrame({"title": ["Senior PM, Payments", "Business Development Manager", "Product Manager (C++)"]})
     kept, _ = apply_title_filters(df, ["pm", "product manager (c++)"], [])
     assert list(kept["title"]) == ["Senior PM, Payments", "Product Manager (C++)"]
+
+
+def test_a_title_with_doubled_spaces_still_matches():
+    # Anthropic printed "Customer  Success Manager" (two spaces); a two-word filter must still match it
+    from backend.scraper._shared.filters import _apply_company_filters, include_hit, match_title_expr, title_kept
+
+    class C:
+        title_include_expr = '"customer success" OR "account executive"'
+        title_exclude_keywords = ["public sector"]
+
+    title = "Customer  Success Manager"
+    assert include_hit("customer success", title.lower())
+    assert match_title_expr('"customer success"', title)
+    assert title_kept(title, ["customer success"], [])[0]
+    kept, _ = _apply_company_filters([{"title": title}, {"title": "Account Executive,  Public   Sector"}], C(), [])
+    assert [j["title"] for j in kept] == [title]

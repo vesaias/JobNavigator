@@ -171,9 +171,15 @@ def include_pattern(kw: str) -> str:
     return re.escape(k)
 
 
+def norm_title(title: str) -> str:
+    """A title lower-cased with its runs of whitespace as one space: boards print "Customer  Success
+    Manager" (two spaces) or break lines inside a title, and a filter word must still match it."""
+    return " ".join((title or "").lower().split())
+
+
 def include_hit(kw: str, title_lower: str) -> bool:
     """True when one title-include keyword matches a lower-cased title (see include_pattern)."""
-    return re.search(include_pattern(kw), title_lower) is not None
+    return re.search(include_pattern(kw), " ".join(title_lower.split())) is not None
 
 
 def _eval_expr(node, title_lower):
@@ -191,7 +197,7 @@ def match_title_expr(expr: str, title: str) -> bool:
     if not tokens:
         return True
     tree, _ = _parse_expr(tokens, 0)
-    return _eval_expr(tree, title.lower())
+    return _eval_expr(tree, norm_title(title))
 
 
 # ── Search title filters ──────────────────────────────────────────────────────
@@ -206,7 +212,7 @@ def search_title_filters(search, db) -> tuple[list, list]:
 
 def title_kept(title: str, include_kw: list, exclude_kw: list) -> tuple[bool, str | None]:
     """(kept, reason): include is a substring match on any keyword, exclude a whole-word match."""
-    tl = title.lower()
+    tl = norm_title(title)
     if include_kw and not any(include_hit(kw, tl) for kw in include_kw):
         return False, f"No match for: {', '.join(include_kw)}"
     if exclude_kw:
@@ -270,7 +276,7 @@ def _apply_company_filters(jobs: list[dict], company, global_title_exclude: list
     kept = []
     rejected = []
     for j in jobs:
-        title_lower = j["title"].lower()
+        title_lower = norm_title(j["title"])
         if any(re.search(r'\b' + re.escape(kw) + r'\b', title_lower) for kw in exclude_kws):
             rejected.append(j)
             continue

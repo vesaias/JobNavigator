@@ -4,6 +4,7 @@ import pytest
 
 from backend.analyzer import llm_client
 from backend.analyzer.llm_client import NonRetryableLLMError, REASONING_HEADROOM
+from backend.tests.r4_support import client  # noqa: F401  (fixture)
 
 _ANSWER = {"response": ' {"score": 80} ', "done_reason": "stop", "prompt_eval_count": 1, "eval_count": 1}
 # What Ollama returns when the reasoning fills num_predict before the answer begins.
@@ -131,8 +132,8 @@ async def test_call_llm_skips_the_retries_when_the_reasoning_used_up_the_reply(m
     assert len(calls) == 1
 
 
-def test_efforts_endpoint_lists_the_ollama_levels(api_client):
+def test_efforts_endpoint_lists_the_ollama_levels(client):
     """The Settings effort picker is built from this list, so Ollama gets one with no frontend code."""
-    r = api_client.get("/api/llm/efforts")
+    r = client.get("/api/llm/efforts")   # the keyed client: an install with a dashboard key answers 401 without it
     assert r.status_code == 200
     assert r.json()["efforts"]["ollama"] == ["none", "low", "medium", "high"]
