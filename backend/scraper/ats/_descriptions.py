@@ -229,7 +229,8 @@ async def _fetch_description_ats(url: str, job: dict = None) -> str | None:
             ext_path += "/" + part
         if company_slug and site and ext_path:
             api_url = f"{origin}/wday/cxs/{company_slug}/{site}{ext_path}"
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            from backend.scraper.ats import workday as _wd   # Cloudflare refuses httpx (see _client)
+            async with _wd._client(15) as client:
                 resp = await client.get(api_url, headers={"Accept": "application/json"})
                 if resp.status_code == 200:
                     data = json.loads(resp.text)

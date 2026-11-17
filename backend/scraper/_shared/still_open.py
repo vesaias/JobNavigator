@@ -52,6 +52,18 @@ async def _fetch(url):
     return resp.status_code, str(resp.url), resp.text[:500_000]
 
 
+async def _fetch_workday(url):
+    """(status, final url, text) of a Workday API URL through workday._client, or None. The URL
+    comes from _workday_api, which builds it only for a *.myworkdayjobs.com posting."""
+    from backend.scraper.ats import workday as _wd
+    try:
+        async with _wd._client(15) as client:
+            resp = await client.get(url, headers={"Accept": "application/json"})
+    except Exception:
+        return None
+    return resp.status_code, str(resp.url), (resp.text or "")[:500_000]
+
+
 def _greenhouse_api(url):
     p = urlparse(url)
     seg = [s for s in p.path.split("/") if s]
@@ -125,7 +137,9 @@ async def check_link(url, fetch=None):
     if api:
         endpoint = api(url)
         if endpoint:
-            answer = await _by_api(endpoint, kind.capitalize() if kind != "workday" else "Workday", fetch)
+            # Workday refuses Python's HTTP clients (workday._client); a fetch a test passes in stays.
+            api_fetch = _fetch_workday if (kind == "workday" and fetch is _fetch) else fetch
+            answer = await _by_api(endpoint, kind.capitalize() if kind != "workday" else "Workday", api_fetch)
             if answer:
                 return answer
             if kind == "workday":   # its page is an app shell that always loads: it proves nothing

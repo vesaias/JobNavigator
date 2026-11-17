@@ -5,8 +5,6 @@ import logging
 import re
 from urllib.parse import urlparse, parse_qs
 
-import httpx
-
 from backend.scraper._shared.urls import host_matches
 from backend.scraper._shared.filters import _validate_job
 from backend.scraper._shared.errors import raise_if_board_gone
@@ -138,6 +136,18 @@ _CEILING = 2000
 _MAX_SPLIT_DEPTH = 2
 _PAGE = 20  # Workday API max per request
 _HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
+
+
+def _client(timeout: float = 30):
+    """The HTTP session for every Workday API call (board listing, job detail, still-open check).
+
+    Workday's career hosts sit behind Cloudflare, which since 2026-11-17 answers 429 to the TLS
+    fingerprint of Python's HTTP clients (httpx, requests) on every request, whatever the
+    User-Agent, while curl passes from the same address. curl_cffi (already installed with
+    JobSpy) sends a Chrome fingerprint. Its AsyncSession takes the same post/get calls and
+    returns status_code / text / url, so the callers are unchanged."""
+    from curl_cffi.requests import AsyncSession
+    return AsyncSession(impersonate="chrome", timeout=timeout)
 
 
 def _facet_options(facets: list) -> list[tuple[str, list[tuple[str, int]]]]:
@@ -286,7 +296,7 @@ async def scrape(url: str, debug: bool = False) -> list[dict] | tuple:
     rejected = []
     found: dict = {}
 
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+    async with _client() as client:
         status, total = await _collect(client, api_url, applied_facets, label, debug, rejected, found)
     if status != 200 and not found:
         if not debug:

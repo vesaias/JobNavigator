@@ -297,3 +297,30 @@ async def test_a_board_that_keeps_answering_html_fails_with_a_clear_message(monk
     with pytest.raises(WorkdayUnavailable, match="non-JSON page"):
         await scrape("https://visa.wd5.myworkdayjobs.com/Visa")
     assert client.post.await_count == 3
+
+
+@pytest.mark.real_workday_client
+def test_the_workday_client_sends_a_browser_fingerprint():
+    # Cloudflare answers 429 to httpx and requests on every Workday host (2026-11-17); curl_cffi
+    # impersonating Chrome passes. No request is sent here: only the session that would send it.
+    from curl_cffi.requests import AsyncSession
+    from backend.scraper.ats.workday import _client
+    session = _client(12)
+    assert isinstance(session, AsyncSession)
+    assert session.impersonate == "chrome"
+    assert session.timeout == 12
+
+
+@pytest.mark.asyncio
+async def test_the_still_open_check_reads_workday_through_the_workday_client(monkeypatch):
+    from backend.scraper._shared import still_open
+    seen = []
+
+    async def fake(url):
+        seen.append(url)
+        return 200, url, '{"jobPostingInfo": {"title": "Account Executive"}}'
+
+    monkeypatch.setattr(still_open, "_fetch_workday", fake)
+    state, _ = await still_open.check_link("https://acme.wd5.myworkdayjobs.com/en-US/Careers/job/Berlin/Account-Executive_R123")
+    assert state == still_open.OPEN
+    assert seen and "/wday/cxs/acme/Careers/" in seen[0]

@@ -84,6 +84,21 @@ def _no_reused_fetches():
 
 
 @pytest.fixture(autouse=True)
+def _workday_over_httpx(request, monkeypatch):
+    """Production Workday calls go through curl_cffi (workday._client: Cloudflare refuses Python's
+    TLS fingerprint). Tests mock httpx, so here the factory builds an httpx client at call time and
+    each test's own httpx patch applies. Tests marked `real_workday_client` get the real one."""
+    if request.node.get_closest_marker("real_workday_client"):
+        yield
+        return
+    import httpx
+    from backend.scraper.ats import workday
+    monkeypatch.setattr(workday, "_client",
+                        lambda timeout=30: httpx.AsyncClient(timeout=timeout, follow_redirects=True))
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _mt_unscoped_by_default():
     """Tests that build their own throwaway engine (no accounts table, no owner) run
     unscoped, as before MT-2. The shared `test_db` fixture switches back to scoped and
