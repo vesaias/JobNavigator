@@ -430,18 +430,6 @@ async def run_all(force: bool = False, account_ids=None, skip=None):
             # target's due/deleted checks read fresh values.
             db.commit()
 
-        for acc in sweep_accounts:
-            # Contained: a scoring failure must not abort the rest of scrape_all
-            # (career-page scrapes below would never run).
-            with acting_as(acc):
-                try:
-                    from backend.analyzer.cv_scorer import analyze_unscored_jobs
-                    await analyze_unscored_jobs(status="new")
-                except Exception as e:
-                    logger.exception(f"Post-search scoring sweep failed (scrape continues): {e}")
-                    errors.append({"account": acc, "where": "search scoring sweep",
-                                   "error": f"{type(e).__name__}: {e}"})
-
         from backend.scraper.sources import company_pages
         cp_kwargs = {"force": force}
         if account_ids is not None:
@@ -450,6 +438,19 @@ async def run_all(force: bool = False, account_ids=None, skip=None):
             cp_kwargs["skip_company_ids"] = skip_company_ids
         company_summary = await company_pages.scrape_career_pages(**cp_kwargs) or {}
         errors.extend(company_summary.get("errors") or [])
+
+        # Scoring the search results comes after the company sweep: one LLM call per new
+        # job, so a search batch of 100 new jobs held the company scrapes back for a
+        # quarter of an hour. Contained: a scoring failure must not abort the run.
+        for acc in sweep_accounts:
+            with acting_as(acc):
+                try:
+                    from backend.analyzer.cv_scorer import analyze_unscored_jobs
+                    await analyze_unscored_jobs(status="new")
+                except Exception as e:
+                    logger.exception(f"Post-search scoring sweep failed (scrape continues): {e}")
+                    errors.append({"account": acc, "where": "search scoring sweep",
+                                   "error": f"{type(e).__name__}: {e}"})
 
         # First-run: mark all jobs as seen so only truly new ones trigger alerts
         for acc in first_run_accounts:

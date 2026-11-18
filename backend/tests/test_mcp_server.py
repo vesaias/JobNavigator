@@ -205,5 +205,9 @@ def test_two_accounts_need_a_token(client, test_db):
 def test_not_started_without_lifespan(test_db):
     from fastapi.testclient import TestClient
     from backend.main import app
-    resp = TestClient(app).post(MCP, json={}, headers=_ACCEPT)  # no `with`: no lifespan
+    from backend.models.db import Setting
+    # A keyed request, so an install whose .env sets a dashboard key answers 503, not 401.
+    test_db.add(Setting(key="dashboard_api_key", value=API_KEY))
+    test_db.commit()
+    resp = TestClient(app).post(MCP, json={}, headers={**_ACCEPT, "X-API-Key": API_KEY})  # no `with`: no lifespan
     assert resp.status_code == 503

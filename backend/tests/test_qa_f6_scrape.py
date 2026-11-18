@@ -624,6 +624,36 @@ async def test_search_deleted_mid_run_is_skipped(test_db, monkeypatch):
     assert [l.search_id for l in _logs(test_db)] == [s1.id]
 
 
+@pytest.mark.asyncio
+async def test_company_sweep_runs_before_the_search_results_are_scored(test_db, monkeypatch):
+    """Scoring is one LLM call per new job: a search that brings 100 new jobs must not hold
+    the company scrapes back until all of them are scored."""
+    import backend.analyzer.cv_scorer as cs
+    import backend.scraper.orchestrator as orch
+    from backend.scraper.sources import company_pages
+    test_db.add(Search(name="Auto", search_mode="keyword", search_term="a", active=True,
+                       auto_scoring_depth="light"))
+    test_db.commit()
+    order = []
+
+    async def _run_search(search, proxy_url=None, **kw):
+        order.append("search")
+        return {"jobs_found": 100, "new_jobs": 100, "error": None, "duration": 0}
+
+    async def _companies(**kw):
+        order.append("companies")
+        return {}
+
+    async def _sweep(status="saved"):
+        order.append(f"score {status}")
+    monkeypatch.setattr(orch, "run_search", _run_search)
+    monkeypatch.setattr(company_pages, "scrape_career_pages", _companies)
+    monkeypatch.setattr(cs, "analyze_unscored_jobs", _sweep)
+
+    out = await orch.run_all(force=True)
+    assert order == ["search", "companies", "score new"] and out["errors"] == []
+
+
 # ══ R4-04 · target URL key ════════════════════════════════════════════════════
 
 def test_target_url_keeps_fragment_and_every_query_param(test_db):
