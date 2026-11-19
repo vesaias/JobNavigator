@@ -172,3 +172,15 @@ def test_full_board_kinds():
                                  [_posting(1)], [])
     assert not mp.is_full_scrape(["https://jobs.uber.com/en/search?department=Product"], [_posting(1)], [])
     assert not mp.is_full_scrape(["https://www.amazon.jobs/en/search?base_query=pm"], [_posting(1)], [])
+
+
+def test_a_posting_date_window_is_not_a_full_board():
+    """'Posted in the last 7 days': an open job ages out of the list, so it must not count as gone."""
+    oracle = ("https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs?"
+              "lastSelectedFacet=POSTING_DATES&locationId=300000000289738&selectedPostingDatesFacet=7")
+    assert not mp.is_full_scrape([oracle], [_posting(1)], [])
+    assert mp.is_full_scrape([oracle.replace("&selectedPostingDatesFacet=7", "")], [_posting(1)], [])
+    phenom = 'POST|https://careers.x.com/widgets|{"sort":{"field":"postedDate"},"selected_fields":{"country":["Germany"]}}'
+    assert mp.is_full_scrape([phenom], [_posting(1)], [])          # sorting by date is not a window
+    windowed = phenom.replace('"country"', '"postedDate":["Last 7 days"],"country"')
+    assert not mp.is_full_scrape([windowed], [_posting(1)], [])

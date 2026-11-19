@@ -18,9 +18,32 @@ MIN_SHARE = 0.7
 REASON = "Not on the company's careers page in the last 2 scrapes"
 
 
+# Filters that keep only recent postings ("posted in the last 7 days"): a job that ages out of the
+# window leaves the list while it is still open, so such a link never reads the whole board.
+_DATE_WINDOW_KEYS = {"selectedpostingdatesfacet", "postedwithin", "posted_within", "dateposted",
+                     "date_posted", "timeposted", "time_posted", "postingdate", "posteddate", "f_tpr"}
+
+
+def _date_window(url: str) -> bool:
+    import json
+    from urllib.parse import parse_qsl, urlsplit
+    if url.startswith("POST|"):                # Phenom: POST|<url>|<json body>
+        try:
+            fields = (json.loads(url.split("|", 2)[2]) or {}).get("selected_fields") or {}
+        except (ValueError, IndexError, AttributeError):
+            return False
+        return any(v and ("date" in k.lower() or "posted" in k.lower()) for k, v in fields.items())
+    for part in (urlsplit(url).query, urlsplit(url).fragment.partition("?")[2]):
+        if any(v and k.lower() in _DATE_WINDOW_KEYS for k, v in parse_qsl(part)):
+            return True
+    return False
+
+
 def _full_board(url: str) -> bool:
     from backend.scraper.ats import (ashby, greenhouse, lever, oracle_hcm, phenom, rippling,
                                      smartrecruiters, workday)
+    if _date_window(url):
+        return False
     return any(is_(url) for is_ in (greenhouse.is_greenhouse, lever.is_lever, ashby.is_ashby,
                                     rippling.is_rippling, smartrecruiters.is_smartrecruiters,
                                     workday.is_workday, oracle_hcm.is_oracle_hcm, phenom.is_phenom))
