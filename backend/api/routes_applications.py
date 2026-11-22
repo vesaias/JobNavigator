@@ -118,10 +118,11 @@ def _extract_clean_content(raw_html: str) -> tuple:
 async def _fetch_with_playwright(url: str) -> str:
     """Fetch a page using Playwright for SPA/JS-rendered sites. Returns raw HTML."""
     from backend.scraper._shared.browser import _get_browser, _new_page, _close_page
-    from backend.scraper._shared.url_safety import assert_public_http_url
+    from backend.scraper._shared.url_safety import assert_public_http_url_async
     # Revalidate here too — this function is also reachable directly, and a
-    # single missed caller elsewhere would reopen the SSRF hole.
-    assert_public_http_url(url)
+    # single missed caller elsewhere would reopen the SSRF hole. Async wrapper:
+    # DNS must not block the event loop.
+    await assert_public_http_url_async(url)
     pw, browser = await _get_browser()
     try:
         page = await _new_page(browser)
@@ -165,7 +166,7 @@ async def _cache_job_page(job_id: str, url: str):
     is what took the container to 2.5 GB -- hence the `page_cache` gate.
     """
     from datetime import datetime, timezone
-    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
+    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url_async, UnsafeURLError
     from backend.job_monitor import get_limiter
 
     if not url:
@@ -181,7 +182,7 @@ async def _cache_job_page(job_id: str, url: str):
     # SSRF gate: user-submitted job URLs from the extension land here; without
     # it an attacker could cache http://169.254.169.254/ and read it via the UI.
     try:
-        assert_public_http_url(url)
+        await assert_public_http_url_async(url)
     except UnsafeURLError as e:
         logger.warning(f"Rejected unsafe job URL for {job_id}: {e}")
         _set_job_cache_error(job_id, f"unsafe URL: {e}")
@@ -718,11 +719,11 @@ async def extract_posting(payload: ExtractRequest):
     import re
     from urllib.parse import urlparse
     from bs4 import BeautifulSoup
-    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url, UnsafeURLError
+    from backend.scraper._shared.url_safety import safe_get, assert_public_http_url_async, UnsafeURLError
 
     url = (payload.url or "").strip()
     try:
-        assert_public_http_url(url)
+        await assert_public_http_url_async(url)
     except UnsafeURLError as e:
         raise HTTPException(status_code=400, detail=f"Unsafe URL: {e}")
 

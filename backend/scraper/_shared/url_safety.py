@@ -241,6 +241,17 @@ def assert_public_http_url(url: str) -> None:
     resolve_public_http_url(url)
 
 
+async def assert_public_http_url_async(url: str) -> None:
+    """Async version of `assert_public_http_url`: DNS runs in a worker thread.
+
+    `socket.getaddrinfo()` blocks. Calling the sync guard from async code stalls
+    the whole event loop for the duration of the lookup; a batch description
+    fetch (one lookup per job) then freezes every HTTP request, including
+    `/health`. Use this from async paths.
+    """
+    await asyncio.to_thread(assert_public_http_url, url)
+
+
 async def _resolve_public_http_url_async(url: str) -> ResolvedURL:
     """Async wrapper — runs DNS lookup on a worker thread."""
     return await asyncio.to_thread(resolve_public_http_url, url)

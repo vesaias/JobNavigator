@@ -86,14 +86,15 @@ async def _fetch_job_description(url: str, job: dict = None) -> str | None:
     writes them onto it here, so no second request is made for them.
     """
     from backend.scraper._shared.url_safety import (
-        assert_public_http_url,
+        assert_public_http_url_async,
         safe_get,
         UnsafeURLError,
     )
 
     # SSRF gate — URLs end up here from scraped JD content and extension submits.
+    # Async wrapper: DNS must not block the event loop once per job.
     try:
-        assert_public_http_url(url)
+        await assert_public_http_url_async(url)
     except UnsafeURLError as e:
         logger.warning(f"Rejected unsafe JD URL {url!r}: {e}")
         return None
