@@ -158,6 +158,7 @@ docs/*
 !docs/CLI-RUNNERS.md
 !docs/RUNNER-MANAGEMENT-PLAN.md
 !docs/MCP.md
+!docs/PODMAN-HTTPS.md
 docker-compose.test.yml
 
 # git worktrees (isolated feature branches)
