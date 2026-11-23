@@ -465,3 +465,75 @@ class TestSafeGet:
 
         out = await safe_get("https://jobs.lever.co/acme")
         assert str(out.url) == "https://jobs.lever.co/acme"
+
+
+# ── async guard: DNS must not block the event loop ───────────────────────────
+
+@pytest.mark.asyncio
+async def test_async_guard_keeps_event_loop_responsive(monkeypatch):
+    """The sync guard calls blocking getaddrinfo(); the async wrapper must offload it."""
+    import asyncio
+    import time
+
+    from backend.scraper._shared import url_safety
+
+    monkeypatch.setattr(url_safety, "resolve_public_http_url",
+                        lambda url: time.sleep(0.3))
+
+    ticks = 0
+    stop = asyncio.Event()
+
+    async def heartbeat():
+        nonlocal ticks
+        while not stop.is_set():
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    hb = asyncio.create_task(heartbeat())
+    await url_safety.assert_public_http_url_async("https://example.com")
+    stop.set()
+    await hb
+
+    assert ticks >= 10, f"event loop did not run during the guard (ticks={ticks})"
+
+
+@pytest.mark.asyncio
+async def test_description_batch_does_not_block_event_loop(monkeypatch):
+    """Ten slow DNS lookups used to freeze the whole app for the sum of their waits."""
+    import asyncio
+    import time
+
+    import backend.scraper.ats._descriptions as descriptions
+    from backend.scraper._shared import url_safety
+
+    monkeypatch.setattr(url_safety, "resolve_public_http_url",
+                        lambda url: time.sleep(0.2))
+
+    async def no_ats(url, job=None):
+        return None
+
+    async def offline(url, **kwargs):
+        raise RuntimeError("offline")
+
+    monkeypatch.setattr(descriptions, "_fetch_description_ats", no_ats)
+    monkeypatch.setattr(url_safety, "safe_get", offline)
+
+    gaps = []
+    stop = asyncio.Event()
+
+    async def heartbeat():
+        last = time.monotonic()
+        while not stop.is_set():
+            await asyncio.sleep(0.01)
+            now = time.monotonic()
+            gaps.append(now - last)
+            last = now
+
+    hb = asyncio.create_task(heartbeat())
+    jobs = [{"url": f"https://example.com/job/{i}"} for i in range(10)]
+    await descriptions._fetch_descriptions_parallel(jobs)
+    stop.set()
+    await hb
+
+    assert gaps, "heartbeat did not run"
+    assert max(gaps) < 0.15, f"event loop blocked for {max(gaps):.2f}s"
