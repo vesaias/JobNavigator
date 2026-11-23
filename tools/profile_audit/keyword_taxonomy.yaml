@@ -1,0 +1,208 @@
+# Taxonomia de palavras-chave para auditar currículos/cartas gerados.
+# Edite à vontade: o script usa isto para canonicalizar termos, agrupar categorias
+# e comparar o texto gerado com o currículo-fonte.
+version: 1
+
+categories:
+  Languages:
+    - Python
+    - Java
+    - JavaScript
+    - TypeScript
+    - PHP
+    - SQL
+    - HTML
+    - CSS
+    - Bash
+  Backend:
+    - Spring Boot
+    - Node.js
+    - Express
+    - Flask
+    - Laravel
+    - REST APIs
+    - GraphQL
+    - Microservices
+  Frontend:
+    - React
+    - Angular
+    - Tailwind CSS
+    - EJS
+    - Vite
+  Databases:
+    - PostgreSQL
+    - MySQL
+    - SQL Server
+    - Oracle Database
+    - MongoDB
+    - Firebird
+    - Redis
+  DevOps & SRE:
+    - Docker
+    - Kubernetes
+    - Docker Swarm
+    - GitHub Actions
+    - Jenkins
+    - Ansible
+    - Prometheus
+    - Grafana
+    - Zabbix
+    - OTRS
+    - Linux
+    - VMware
+    - SSH
+    - CI/CD
+  Identity & Self-hosted:
+    - Nextcloud
+    - Authelia
+    - LDAP
+    - SSO
+    - OAuth
+    - Backups
+  Architecture & Practices:
+    - DDD
+    - TDD
+    - SOLID
+    - Clean Code
+    - Microservices
+    - Legacy modernization
+    - Technical documentation
+    - Agile
+    - Scrum
+    - Code review
+  Data & Research:
+    - pandas
+    - NumPy
+    - TIMESAT
+    - Remote sensing
+    - Data analysis
+  Domains:
+    - Public sector
+    - FinTech
+    - Retail
+    - Telecommunications
+    - Payments
+    - Healthcare
+    - Education
+    - Taxation
+  Soft skills:
+    - Leadership
+    - Mentoring
+    - Communication
+    - Teamwork
+    - Problem solving
+  Other technologies:
+    - AWS
+    - Azure
+    - GCP
+    - Terraform
+    - Rust
+    - Golang
+    - C#
+    - .NET
+    - Django
+    - FastAPI
+    - Kafka
+    - RabbitMQ
+    - Elasticsearch
+    - Next.js
+    - Vue.js
+    - Svelte
+    - Playwright
+    - Selenium
+
+aliases:
+  Python: [python]
+  Java: [java]
+  JavaScript: [javascript, js]
+  TypeScript: [typescript, ts]
+  PHP: [php]
+  SQL: [sql]
+  HTML: [html]
+  CSS: [css]
+  Bash: [bash, shell script]
+  Spring Boot: [spring boot, springboot]
+  Node.js: [node.js, nodejs, node]
+  Express: [express.js, expressjs]
+  Flask: [flask]
+  Laravel: [laravel]
+  REST APIs: [rest api, rest apis, restful api, restful apis, rest]
+  GraphQL: [graphql]
+  Microservices: [microservice, microservices, micro-serviços, microsserviços]
+  React: [react.js, reactjs]
+  Angular: [angular]
+  Tailwind CSS: [tailwind, tailwindcss]
+  EJS: [ejs]
+  Vite: [vite]
+  PostgreSQL: [postgres, postgresql, psql]
+  MySQL: [mysql]
+  SQL Server: [sql server, mssql]
+  Oracle Database: [oracle database, oracle db, oracle]
+  MongoDB: [mongodb, mongo]
+  Firebird: [firebird]
+  Redis: [redis]
+  Docker: [docker]
+  Kubernetes: [kubernetes, k8s]
+  Docker Swarm: [docker swarm, swarm]
+  GitHub Actions: [github actions, gh actions]
+  Jenkins: [jenkins]
+  Ansible: [ansible]
+  Prometheus: [prometheus]
+  Grafana: [grafana]
+  Zabbix: [zabbix]
+  OTRS: [otrs]
+  Linux: [linux]
+  VMware: [vmware]
+  SSH: [ssh]
+  CI/CD: [ci/cd, cicd, continuous integration, continuous delivery, integração e entrega contínuas]
+  Nextcloud: [nextcloud]
+  Authelia: [authelia]
+  LDAP: [ldap]
+  SSO: [sso, single sign-on]
+  OAuth: [oauth, oauth2]
+  Backups: [backup, backups]
+  DDD: [ddd, domain-driven design]
+  TDD: [tdd, test-driven development]
+  SOLID: [solid]
+  Clean Code: [clean code]
+  Legacy modernization: [legacy modernization, modernização de legado, legacy migration]
+  Technical documentation: [technical documentation, documentação técnica]
+  Agile: [agile, ágil, agile methodologies]
+  Scrum: [scrum]
+  Code review: [code review, revisão de código]
+  pandas: [pandas]
+  NumPy: [numpy]
+  TIMESAT: [timesat]
+  Remote sensing: [remote sensing, sensoriamento remoto]
+  Data analysis: [data analysis, análise de dados]
+  Public sector: [public sector, setor público, public administration, administração pública]
+  FinTech: [fintech, financial services, serviços financeiros]
+  Retail: [retail, varejo]
+  Telecommunications: [telecommunications, telecom, telecomunicações]
+  Payments: [payments, payment, pagamentos]
+  Healthcare: [healthcare, saúde]
+  Education: [education, educação]
+  Taxation: [taxation, tributação, tax]
+  Leadership: [leadership, liderança]
+  Mentoring: [mentoring, mentoria]
+  Communication: [communication, comunicação]
+  Teamwork: [teamwork, trabalho em equipe]
+  Problem solving: [problem solving, resolução de problemas]
+  AWS: [aws, amazon web services]
+  Azure: [azure, microsoft azure]
+  GCP: [gcp, google cloud platform, google cloud]
+  Terraform: [terraform]
+  Rust: [rust]
+  Golang: [golang, go language]
+  C#: [c#, csharp, c sharp]
+  .NET: [.net, dotnet, asp.net]
+  Django: [django]
+  FastAPI: [fastapi, fast api]
+  Kafka: [kafka, apache kafka]
+  RabbitMQ: [rabbitmq, rabbit mq]
+  Elasticsearch: [elasticsearch, elastic search]
+  Next.js: [next.js, nextjs]
+  Vue.js: [vue.js, vuejs, vue]
+  Svelte: [svelte]
+  Playwright: [playwright]
+  Selenium: [selenium]

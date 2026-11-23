@@ -1,0 +1,44 @@
+# Example source profile (synthetic, no personal data).
+# Used by tools/profile_audit/audit_generated.py as the default --source.
+resume:
+  json_data:
+    header:
+      name: "Alex Example"
+      contact_items:
+        - text: "Remote"
+          url: ""
+        - text: "alex@example.com"
+          url: "mailto:alex@example.com"
+        - text: "linkedin.com/in/alexexample"
+          url: "https://www.linkedin.com/in/alexexample/"
+    summary: >-
+      Backend developer with 5+ years of experience building REST APIs and
+      data-heavy services with Python, PostgreSQL and Docker.
+    experience:
+      - company: "Acme Example"
+        title: "Backend Developer"
+        date: "2020 – Present"
+        location: "Remote"
+        bullets:
+          - "Built REST APIs with Python and PostgreSQL."
+          - "Containerized services with Docker and added CI/CD pipelines."
+          - "Wrote technical documentation and reviewed code."
+      - company: "Example Labs"
+        title: "Junior Developer"
+        date: "2018 – 2020"
+        location: "Remote"
+        bullets:
+          - "Maintained a Flask service and SQL reports."
+    skills:
+      Backend: "Python, Flask, REST APIs"
+      Databases: "PostgreSQL"
+      DevOps & SRE: "Docker, CI/CD"
+      Architecture & Practices: "Code review, Technical documentation"
+    education:
+      - degree: "B.Sc. Computer Science"
+        school: "Example University"
+        location: "Remote"
+        years: "2014 – 2018"
+    projects: []
+persona:
+  from_resume: true

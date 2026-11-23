@@ -1,0 +1,8 @@
+# Example generated text with unsupported claims.
+# Run:
+#   python3 tools/profile_audit/audit_generated.py \
+#     --candidate tools/profile_audit/examples/generated_bad.txt \
+#     --scan-unknown --strict
+Backend developer with 10+ years of experience.
+Built a platform with Rust, AWS and Terraform that served 2 million users.
+Used Kubernetes, PostgreSQL and React.
