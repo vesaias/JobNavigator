@@ -204,9 +204,9 @@ _LOGIN_PASSWORD = 'input[autocomplete="current-password"]:visible'
 
 
 async def _fill_login_form(page, email: str, password: str, timeout: int = 30000):
-    """Fill the credentials on an open LinkedIn login page and submit them. `_login` passes a
-    short wait so a page redirecting to the feed doesn't stall; the manual session refresh keeps
-    the full wait for a slow login page."""
+    """Fill the credentials on an open LinkedIn login page and submit them. `_login` and a
+    refresh that reuses an existing session pass a short wait so a page redirecting to the
+    feed doesn't stall; a fresh sign-in keeps the full wait for a slow login page."""
     await page.locator(_LOGIN_EMAIL).first.fill(email, timeout=timeout)
     await asyncio.sleep(random.uniform(0.5, 1.0))
     pwd = page.locator(_LOGIN_PASSWORD).first
