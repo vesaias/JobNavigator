@@ -47,6 +47,8 @@ DEFAULT_SETTINGS = {
     "jobright_session_obtained_at": ("", "UTC ISO timestamp of the last successful Jobright login. Read-only; set by the scraper."),
     # Billed per result by Apify; `_api_key` suffix keeps it redacted on GET /settings.
     "apify_api_key": ("", "Apify API token for the Apify search mode"),
+    # Billed in Firecrawl credits; `_api_key` suffix keeps it redacted on GET /settings.
+    "firecrawl_api_key": ("", "Firecrawl API key for the Firecrawl search mode"),
     "reject_cron": ("0 4 * * *", "Auto-reject cron (min hour day month dow). Empty = disabled"),
     "dedup_copy_link": ("ignored", "A copy of a posting under another link in the same city: ignored or new"),
     "dedup_copy_city": ("ignored", "A copy of a posting or role in another city: ignored or new"),

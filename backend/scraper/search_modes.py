@@ -84,6 +84,8 @@ SEARCH_MODES: dict[str, SearchMode] = {m.key: m for m in (
     # Not shared yet either; their keys would be term + country and term + location.
     SearchMode("himalayas", "Himalayas", "himalayas", background_test=True, needs_term=True),
     SearchMode("eluta", "Eluta", "eluta", background_test=True, needs_term=True),
+    # Never shared: each account's run is billed to its own Firecrawl key.
+    SearchMode("firecrawl", "Firecrawl", "firecrawl", background_test=True, needs_term=True, paid=True),
     SearchMode("linkedin_extension", "LinkedIn Extension", extension=True),
     SearchMode("extension", "Extension", extension=True),
 )}

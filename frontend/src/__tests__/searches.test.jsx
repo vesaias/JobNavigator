@@ -198,6 +198,47 @@ describe('Himalayas and Eluta · v2 Searches', () => {
   })
 })
 
+describe('Firecrawl · v2 Searches', () => {
+  beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear() })
+
+  const FC = { ...SEARCH, id: 's7', name: 'Berlin data', search_mode: 'firecrawl', search_term: 'data engineer', location: 'Berlin', is_remote: true, country: 'germany', direct_url: '', sources: [] }
+
+  it('has its badge and summary', async () => {
+    mockApi([FC])
+    renderScreen()
+    expect((await screen.findByText('FIRECRAWL')).className).toContain('sm-firecrawl')
+    expect(screen.getByText(/“data engineer” · Berlin · Remote · Greenhouse, Lever, Ashby, Workable/)).toBeTruthy()
+  })
+
+  it('the editor has Location, Country and Remote, and says it starts paused', async () => {
+    mockApi([FC])
+    renderScreen()
+    fireEvent.click(await screen.findByText('Berlin data'))
+    await screen.findByText('Save changes')
+    expect(screen.getByText(/2 per 10 search results and 1 per job page/)).toBeTruthy()
+    expect(screen.getByLabelText('Location')).toBeTruthy()
+    expect(screen.getByLabelText('Country')).toBeTruthy()
+    expect(screen.getByLabelText('Remote')).toBeTruthy()
+    expect(screen.getByText(/Results wanted · 1–100/)).toBeTruthy()
+  })
+
+  it('asks before a Test, since it costs Firecrawl credits', async () => {
+    mockApi([FC])
+    renderScreen()
+    const test = await waitFor(() => {
+      const b = screen.getAllByRole('button').find((x) => x.textContent === 'Test')
+      expect(b).toBeTruthy()
+      return b
+    })
+    fireEvent.click(test)
+    await waitFor(() => expect(screen.getAllByText('Run a paid test of “Berlin data”?').length).toBeGreaterThan(0))
+    expect(screen.getByText(/up to 20 job pages \(1 credit each\)/)).toBeTruthy()
+    expect(api.post.mock.calls.some(([p]) => p === '/searches/s7/test')).toBe(false)
+    fireEvent.click(screen.getByText('Run paid test'))
+    await waitFor(() => expect(api.post.mock.calls.some(([p]) => p === '/searches/s7/test')).toBe(true))
+  })
+})
+
 describe('TrulyRemoteWork · v2 Searches', () => {
   beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear() })
 

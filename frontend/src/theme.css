@@ -87,6 +87,7 @@
   --sm-creative-bg:#f6e6e6; --sm-creative-fg:#8a3b3b;
   --sm-himalayas-bg:#e3ecf7; --sm-himalayas-fg:#2f5688;
   --sm-eluta-bg:#f5ecdc; --sm-eluta-fg:#7a5a1e;
+  --sm-firecrawl-bg:#fbe7dc; --sm-firecrawl-fg:#9a3f14;
   --sm-extension-bg:#f1efe8; --sm-extension-fg:#57534a;
   --rail:#22211c; --rail-text:#a8a396; --rail-dim:#948d7a; --rail-accent:#8dbb9f; --rail-line:#2e2c24; --rail-ink:#f6f3ea;
 
@@ -493,6 +494,7 @@
   --sm-creative-bg:#3a2424; --sm-creative-fg:#dca3a3;
   --sm-himalayas-bg:#1f2b3a; --sm-himalayas-fg:#a3c0e0;
   --sm-eluta-bg:#352c1c; --sm-eluta-fg:#d6bd8b;
+  --sm-firecrawl-bg:#3a2419; --sm-firecrawl-fg:#eeac86;
   --sm-extension-bg:#34322c; --sm-extension-fg:#b5b0a3;
   --rail:#100f0b; --rail-text:#948f82; --rail-dim:#8a8371; --rail-accent:#8dbb9f;
   /* light alphas vanish against #1e1c17 — dark surfaces need a higher alpha
@@ -1999,6 +2001,7 @@
 .jn-v2 .sm-creative{background:var(--sm-creative-bg);color:var(--sm-creative-fg)}
 .jn-v2 .sm-himalayas{background:var(--sm-himalayas-bg);color:var(--sm-himalayas-fg)}
 .jn-v2 .sm-eluta{background:var(--sm-eluta-bg);color:var(--sm-eluta-fg)}
+.jn-v2 .sm-firecrawl{background:var(--sm-firecrawl-bg);color:var(--sm-firecrawl-fg)}
 .jn-v2 .sm-extension{background:var(--sm-extension-bg);color:var(--sm-extension-fg)}
 
 

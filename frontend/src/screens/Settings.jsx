@@ -754,6 +754,11 @@ export default function Settings() {
           flash(data.inherited ? 'Key works — the owner’s Apify key, shared with you' : `Key works — Apify account ${data.username}`)
         }),
       ]],
+      ['firecrawl', '', 'Firecrawl', '', [
+        B('Firecrawl API key', 'Used by Firecrawl searches. Each run costs Firecrawl credits on this account.', 'firecrawl_api_key',
+          { secret: true, mono: true, w: '340px', placeholder: 'fc-…',
+            info: 'Copy the key from firecrawl.dev › API keys. It is stored in your database and is never sent back to the browser. Each account has its own key; a member who inherits this section runs on the owner’s key, and the owner’s Firecrawl account pays.' }),
+      ]],
       ['jobright', '', 'Jobright.ai', '', [
         B('Email', 'Your Jobright account.', 'jobright_email', { w: '260px' }),
         B('Password', 'Stored locally.', 'jobright_password', { secret: true, w: '260px' }),
