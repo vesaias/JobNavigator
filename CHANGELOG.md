@@ -110,6 +110,9 @@ Releases are named major.minor ("3.0"); tags before 3.0 carry a `.0` patch (`v2.
 - **Prebuilt images for ARM** (by @volkotyk): the backend and frontend images are published for `linux/arm64` as well as `linux/amd64`, so an ARM host (Apple Silicon, Raspberry Pi, RK35xx boards) runs `docker compose pull` instead of building Chromium from source. The arm64 build runs under QEMU in the same job, so the backend image takes about 12 minutes on a cold cache.
 - **Antigravity CLI 1.4.3 in the backend image** (by @volkotyk): `AGY_VERSION` is now 1.4.3, so the next `docker compose build backend` reinstalls the CLI instead of keeping a cached 1.2.13 layer. Flags, the deny list and the result event were checked against 1.4.3.
 
+### Fixed
+- **LinkedIn session refresh failed when the browser was already signed in:** `/login` redirects a live session to the feed, so the username field never renders and the refresh waited out the field's timeout (`Locator.fill: Timeout 30000ms exceeded`) before failing. The refresh now checks the session before filling and again if the field times out, then saves the live session — the same guard the scraper's own login already uses. A fresh sign-in (mock account) keeps the longer wait for a slow login page.
+
 ## [3.0] — 2026-10-17
 
 JobNavigator becomes a household install: one server, up to five accounts, each with its own data. An existing install keeps everything it has: the data becomes the owner's account, and with one account the dashboard looks and behaves as before.

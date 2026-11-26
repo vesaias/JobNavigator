@@ -102,8 +102,18 @@ async def _login_and_save(email, password, which: str = MOCK) -> int:
                         wait_until="domcontentloaded", timeout=30000)
         await asyncio.sleep(2)
 
-        if "/feed" not in page.url and "/jobs" not in page.url:
-            await lp._fill_login_form(page, email, password)
+        # An authenticated session redirects /login to the feed, so the username field never
+        # renders. The redirect can still be in flight when we look, so check the session
+        # itself and, if the fill then races the redirect, take a signed-in page as a login
+        # instead of waiting out the field (the same guard linkedin_personal._login uses).
+        # A fresh sign-in has no session to redirect, so it keeps the longer wait.
+        if not await lp._is_logged_in(page, context):
+            try:
+                await lp._fill_login_form(page, email, password,
+                                          timeout=30000 if fresh else 10000)
+            except Exception:
+                if not await lp._is_logged_in(page, context):
+                    raise
             try:
                 await page.wait_for_url(
                     lambda u: "/feed" in u or "/jobs" in u or "/checkpoint" in u,
@@ -113,7 +123,7 @@ async def _login_and_save(email, password, which: str = MOCK) -> int:
             if "/checkpoint" in page.url or "/challenge" in page.url:
                 if not await _solve_pin(page, which):
                     return 1
-            elif "/login" in page.url:
+            elif "/login" in page.url and not await lp._is_logged_in(page, context):
                 print("Still on login page — wrong credentials?")
                 return 1
 

@@ -382,3 +382,96 @@ async def test_member_on_inherit_still_uses_the_owner_token(test_db, accounts, m
     with use_account(b):
         await L._call_claude_code("p", "s", "", 100)
     assert calls[0]["env"]["CLAUDE_CODE_OAUTH_TOKEN"] == "env-owner-token"
+
+
+# ── LinkedIn session refresh: /login redirects to the feed ──────────────────
+
+class _RedirectPage:
+    """Starts on /login; the live-session redirect lands on /feed while the fill waits."""
+    def __init__(self):
+        self.url = "https://www.linkedin.com/login"
+
+    async def goto(self, url, **kwargs):
+        self.url = "https://www.linkedin.com/login"
+
+    async def wait_for_url(self, predicate, timeout=0):
+        self.url = "https://www.linkedin.com/feed/"
+
+
+class _RefreshCtx:
+    async def cookies(self):
+        return [{"name": "li_at", "value": "fresh", "domain": ".linkedin.com"}]
+
+    async def clear_cookies(self):
+        pass
+
+
+class _RBrowser:
+    async def close(self):
+        pass
+
+
+class _RPW:
+    async def stop(self):
+        pass
+
+
+async def test_refresh_takes_a_login_redirect_as_signed_in(monkeypatch, test_db, accounts, roots):
+    """The Locator.fill timeout when /login redirects to the feed must not fail the refresh:
+    the page is signed in, so the session is saved (the guard linkedin_personal._login uses)."""
+    from backend import refresh_linkedin_session as rls
+    from backend.scraper.sources import linkedin_personal as lp
+    from backend.accounts.context import use_account
+
+    page = _RedirectPage()
+    seen = {}
+
+    async def fake_get():
+        return _RPW(), _RBrowser(), _RefreshCtx(), page
+    monkeypatch.setattr(lp, "_get_linkedin_browser", fake_get)
+
+    async def fake_is_logged_in(p, context=None):
+        return "/feed" in p.url
+    monkeypatch.setattr(lp, "_is_logged_in", fake_is_logged_in)
+
+    async def fake_fill(p, email, password, timeout=30000):
+        seen["timeout"] = timeout
+        p.url = "https://www.linkedin.com/feed/"   # the redirect wins while the field waits
+        raise TimeoutError("Locator.fill: Timeout 10000ms exceeded")
+    monkeypatch.setattr(lp, "_fill_login_form", fake_fill)
+
+    async def me(p):
+        return 200
+    monkeypatch.setattr(lp, "_voyager_me_status", me)
+
+    a, _b = accounts
+    with use_account(a):
+        assert await rls._login_and_save("e", "p", which=rls.MAIN) == 0
+
+    assert seen["timeout"] == 10000                 # a live session must not stall 30 s
+    jar = roots / "tmp" / "linkedin_cookies.json"
+    assert json.loads(jar.read_text())[0]["name"] == "li_at"
+
+
+async def test_refresh_still_fails_when_the_form_times_out_and_no_session(monkeypatch, test_db, accounts, roots):
+    from backend import refresh_linkedin_session as rls
+    from backend.scraper.sources import linkedin_personal as lp
+    from backend.accounts.context import use_account
+
+    page = _RedirectPage()
+
+    async def fake_get():
+        return _RPW(), _RBrowser(), _RefreshCtx(), page
+    monkeypatch.setattr(lp, "_get_linkedin_browser", fake_get)
+
+    async def never_logged_in(p, context=None):
+        return False
+    monkeypatch.setattr(lp, "_is_logged_in", never_logged_in)
+
+    async def fills_timeout(p, email, password, timeout=30000):
+        raise TimeoutError("Locator.fill: Timeout 10000ms exceeded")
+    monkeypatch.setattr(lp, "_fill_login_form", fills_timeout)
+
+    a, _b = accounts
+    with use_account(a), pytest.raises(TimeoutError):
+        await rls._login_and_save("e", "p", which=rls.MAIN)
