@@ -9,7 +9,7 @@ import { useSettled, useWarm, NBSP, DASH } from '../hooks'
 import { Button, Card, Check, CopyGlyph, Dot, FlaskGlyph, FooterRow, HeaderRow, Heading, Helper, IconButton, Input, Label, Link, Menu, MenuItem, ModalPanel, PageTitle, Pill, Rule, Segmented, Select, Spinner, TableHead, Tag } from '../ui'
 import { BLOCKED_BADGE, MODE_BLOCKS, MODE_TERMS, SOURCE_BLOCKS } from '../sourceBlocks'
 import { useApifyBoards, boardLabel, testCost, usd } from '../apifyBoards'
-import { MODE_OPTIONS, defaultSources, isExtensionMode, isTestable, modeBadge, needsQuery, needsTerm } from '../searchModes'
+import { MODE_OPTIONS, defaultSources, isExtensionMode, isPaid, isTestable, modeBadge, needsQuery, needsTerm } from '../searchModes'
 import '../theme.css'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -106,6 +106,7 @@ const noteFor = (mode) => {
   if (mode === 'creative') return ['Reads the job APIs and feeds of Behance, Hollylist, Wana Create, Dribbble, ArtStation and Work With Indies directly: no login and no Apify key. Remote applies on every board: where a board cannot filter it, the jobs that the posting calls on-site or hybrid are dropped. Location (a city name) applies on Hollylist, Wana Create, Dribbble, ArtStation and Work With Indies (remote jobs stay); Behance ignores it. On Remote searches, Country drops the Behance jobs that are not open to that country. Hollylist members-only offers are skipped, and a salary is stored as a number only in US dollars per year. Test reads at most 20 job pages.', 'sm-creative']
   if (mode === 'himalayas') return ['Reads the public API of himalayas.app: no login and no key. Every job is remote, so there is no Remote or Location. Country keeps the jobs open to that country, worldwide jobs included. A salary is stored as a number only in US dollars per year.', 'sm-himalayas']
   if (mode === 'eluta') return ['Reads Canadian jobs from employer career sites through the RSS search of eluta.ca: no login and no key. Location is a city with a 50 km radius; empty means all of Canada. Eluta has no remote filter. It allows 10 RSS checks a day from one address, so give each search a run interval of 1440 minutes. One run reads one feed page and at most 6 job pages; the other new jobs wait for the next run.', 'sm-eluta']
+  if (mode === 'firecrawl') return ['Searches the job boards that employers host on Greenhouse, Lever, Ashby and Workable through the Firecrawl Search API, with the key from Settings › Firecrawl. Each link is the employer’s own posting, and each new job’s page is read once. Each run costs Firecrawl credits on that key: 2 per 10 search results and 1 per job page; Test reads at most 20 pages. A new Firecrawl search starts paused: check the term and Results wanted, then press Paused to resume it.', 'sm-firecrawl']
   if (mode === 'extension') return ['Jobs come from the “Save to Job Feed” button on any website. The filters and auto-score depth below apply to each job as it is saved.', 'sm-levels']
   if (mode === 'linkedin_extension') return ['Jobs are captured while you browse linkedin.com/jobs/collections pages. The filters below are applied on import.', 'sm-levels']
   return null
@@ -164,6 +165,7 @@ const summaryOf = (s, boards = []) => {
   }
   if (m === 'himalayas') return `“${s.search_term || ''}” · Remote${s.country ? ` · ${s.country}` : ''}${last}`
   if (m === 'eluta') return `“${s.search_term || ''}” · ${s.location || 'Canada'}${last}`
+  if (m === 'firecrawl') return [`“${s.search_term || ''}”`, s.location, s.is_remote && 'Remote', 'Greenhouse, Lever, Ashby, Workable'].filter(Boolean).join(' · ') + last
   return `${short(s.direct_url) || 'no URL'}${last}`
 }
 
@@ -232,8 +234,8 @@ const toPayload = (d) => {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
-  // Creative boards and Eluta take a city name; Himalayas and Behance read Country.
-  if (d.search_mode === 'creative' || d.search_mode === 'himalayas' || d.search_mode === 'eluta') {
+  // Creative boards, Eluta and Firecrawl take a city name; Himalayas, Behance and Firecrawl read Country.
+  if (d.search_mode === 'creative' || d.search_mode === 'himalayas' || d.search_mode === 'eluta' || d.search_mode === 'firecrawl') {
     p.location = d.location || ''
     p.country = d.country || DEFAULT_COUNTRY
   }
@@ -392,6 +394,19 @@ function ConfigForm({ d, set }) {
       <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Vancouver"
         sub="A city, 50 km around it. Empty = all of Canada." />,
       <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })} sub="0 = no age limit" />,
+    )
+  } else if (m === 'firecrawl') {
+    fields.push(
+      <Cell key="term" label="Search term · required" mono value={d.search_term} onChange={(v) => set({ search_term: v })} placeholder="e.g. data engineer"
+        sub="Searched as one phrase; put your own quotes in to search several." />,
+      <Cell key="loc" label="Location" value={d.location} onChange={(v) => set({ location: v })} placeholder="e.g. Berlin"
+        sub="One city name, added to the search." />,
+      <Cell key="ctry" label="Country" value={d.country} options={countries} onChange={(v) => set({ country: v })}
+        sub="Where the search runs from: set it to the job's country." />,
+      <Cell key="rem" label="Remote" value={d.is_remote} options={[['', 'Any'], ['true', 'Remote only']]} onChange={(v) => set({ is_remote: v })} />,
+      <Cell key="ho" label="Hours old · 0–720" mono type="number" min={BOUNDS.hours_old[0]} max={BOUNDS.hours_old[1]} value={d.hours_old} onChange={(v) => set({ hours_old: v })}
+        sub="0 = no age limit. Rounded up to the last hour, day, week or month." />,
+      <Cell key="rw" label="Results wanted · 1–100" mono type="number" min={BOUNDS.results_wanted[0]} max={100} value={d.results_wanted} onChange={(v) => set({ results_wanted: v })} />,
     )
   } else if (m === 'trulyremote') {
     // The whole board is read on every run; this caps the new jobs whose pages one run opens.
@@ -630,17 +645,20 @@ export default function Searches() {
   // The shell re-reads its rail badges on this event — every mutation that
   // changes how many searches exist fires it.
   const bumpCounts = () => window.dispatchEvent(new CustomEvent('jn:counts-changed'))
-  // The backend starts a new (or newly switched) Apify search paused, since every run bills
-  // the Apify account; say so, or the card's "Paused" would look like a glitch.
+  // The backend starts a new (or newly switched) search of a paid mode paused, since every run
+  // bills the user's account; say so, or the card's "Paused" would look like a glitch.
   const notePaused = (row, verb) => {
-    if (row?.search_mode === 'apify' && row.active === false) pushToast({ kind: 'success', msg: `“${row.name}” ${verb} paused. Apify bills every run, so resume it once the boards and Results wanted look right` })
+    if (!isPaid(row?.search_mode) || row.active !== false) return
+    const why = row.search_mode === 'apify' ? 'Apify bills every run, so resume it once the boards and Results wanted look right'
+      : 'Every run costs Firecrawl credits, so resume it once the term and Results wanted look right'
+    pushToast({ kind: 'success', msg: `“${row.name}” ${verb} paused. ${why}` })
   }
   const save = async (s) => {
     if (busy) return
     setBusy(s.id)
     try {
       const { data } = await api.patch(`/searches/${s.id}`, toPayload(draft)); setEditing(null); load(); loadAux()
-      if (s.search_mode !== 'apify' && data?.search_mode === 'apify' && s.active) { bumpCounts(); notePaused(data, 'is') }
+      if (s.search_mode !== data?.search_mode && isPaid(data?.search_mode) && s.active) { bumpCounts(); notePaused(data, 'is') }
     } catch (e) { fail(e, 'Could not save this search') }
     finally { if (mounted.current) setBusy(null) }
   }
@@ -738,11 +756,20 @@ export default function Searches() {
     if (rec.runId && rec.id) { setTestingId(rec.id); setTestTab('all'); pollTest(rec.id, rec.name, rec.runId) }
   }, [pollTest])
 
-  // An Apify Test is a paid run: name the cost and ask first (the other modes test for free).
+  // A Test of a paid mode spends the user's money or credits: name the cost and ask first.
   const askTest = (s) => {
     if (testingId) return
-    if (s.search_mode !== 'apify') { runTest(s); return }
+    if (!isPaid(s.search_mode)) { runTest(s); return }
     setMenuFor(null)
+    if (s.search_mode === 'firecrawl') {
+      setConfirm({
+        title: `Run a paid test of “${s.name}”?`,
+        body: 'This test costs Firecrawl credits on your key: one search (2 credits per 10 results) and up to 20 job pages (1 credit each). Nothing is saved.',
+        label: 'Run paid test',
+        onConfirm: () => { setConfirm(null); runTest(s) },
+      })
+      return
+    }
     const keys = (s.sources || []).filter((k) => apifyBoards.some((b) => b.value === k))
     const { est, max } = testCost(apifyBoards, keys)
     const per = (apifyBoards[0] && apifyBoards[0].preview_limit) || 20
@@ -814,7 +841,7 @@ export default function Searches() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px', background: 'var(--recessed)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
               <ConfigForm d={newDraft} set={(p) => setNewDraft((x) => ({ ...x, ...p }))} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-                <Helper>{newDraft.search_mode === 'apify' ? 'Starts paused: resume it on its card when the boards look right' : 'Runs at the next scheduled scrape after you create it'}</Helper>
+                <Helper>{newDraft.search_mode === 'apify' ? 'Starts paused: resume it on its card when the boards look right' : isPaid(newDraft.search_mode) ? 'Starts paused: resume it on its card when the search looks right' : 'Runs at the next scheduled scrape after you create it'}</Helper>
                 <Button variant="secondary" size="sm" onClick={() => { setNewOpen(false); setNewDraft(NEW_DRAFT) }} style={{ marginLeft: 'auto' }}>Cancel</Button>
                 <Button size="sm" onClick={create} busy={busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create search'}</Button>
               </div>

@@ -25,6 +25,7 @@ def _frontend_modes():
             "needsQuery": get("needsQuery") == "true",
             "needsTerm": get("needsTerm") == "true",
             "sources": re.findall(r"'([^']*)'", get("sources")),
+            "paid": "paid: true" in line,
         })
     return rows
 
@@ -40,6 +41,7 @@ def test_dashboard_table_matches_the_backend_table():
         assert f["needsQuery"] == b.needs_query, f["key"]
         assert f["needsTerm"] == b.needs_term, f["key"]
         assert f["sources"] == M.default_sources(f["key"]), f["key"]
+        assert f["paid"] == b.paid, f["key"]
 
 
 def test_no_hand_written_mode_lists_are_left():

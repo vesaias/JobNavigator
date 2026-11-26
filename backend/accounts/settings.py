@@ -118,6 +118,8 @@ _SECTIONS = [
     # PR #28: a paid credential. 'own' (default) = the member's own token or none, never the
     # owner's; 'inherit' = the member's Apify searches bill the owner's Apify account.
     ("apify", "Apify", POLICY, OWN, ["apify"], ["apify_api_key"]),
+    # A paid credential: a member uses their own key unless the section inherits the owner's.
+    ("firecrawl", "Firecrawl", POLICY, OWN, ["firecrawl"], ["firecrawl_api_key"]),
     ("linkedin", "LinkedIn", POLICY, OWN, ["linkedin"], [
         "linkedin_email", "linkedin_password", "linkedin_mock_email", "linkedin_mock_password"]),
     ("advanced", "Advanced", OWNER_ONLY, INHERIT, ["advanced"], ["proxy_url", "dashboard_api_key"]),
